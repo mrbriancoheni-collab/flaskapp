@@ -53,7 +53,29 @@
         class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         placeholder="••••••••"
       >
-      <p class="text-xs text-gray-500 mt-1">At least 12 characters with uppercase, lowercase, number, and symbol. You'll get a verification email.</p>
+      <div class="mt-2 space-y-1">
+        <div class="flex items-center gap-2 text-xs">
+          <span id="pwd-check-length" class="text-gray-400">○</span>
+          <span class="text-gray-600">At least 12 characters</span>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span id="pwd-check-upper" class="text-gray-400">○</span>
+          <span class="text-gray-600">One uppercase letter</span>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span id="pwd-check-lower" class="text-gray-400">○</span>
+          <span class="text-gray-600">One lowercase letter</span>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span id="pwd-check-number" class="text-gray-400">○</span>
+          <span class="text-gray-600">One number</span>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span id="pwd-check-symbol" class="text-gray-400">○</span>
+          <span class="text-gray-600">One symbol (!@#$%^&*...)</span>
+        </div>
+      </div>
+      <p class="text-xs text-gray-500 mt-2 italic">You'll receive a verification email after registration.</p>
     </div>
 
     <button
@@ -81,5 +103,48 @@
       rBtn.textContent = 'Creating...';
     }
   });
+
+  // Real-time password validation
+  const pwdInput = document.getElementById('password');
+  const checks = {
+    length: document.getElementById('pwd-check-length'),
+    upper: document.getElementById('pwd-check-upper'),
+    lower: document.getElementById('pwd-check-lower'),
+    number: document.getElementById('pwd-check-number'),
+    symbol: document.getElementById('pwd-check-symbol')
+  };
+
+  function validatePassword() {
+    if (!pwdInput) return;
+
+    const pwd = pwdInput.value;
+    const validation = {
+      length: pwd.length >= 12,
+      upper: /[A-Z]/.test(pwd),
+      lower: /[a-z]/.test(pwd),
+      number: /[0-9]/.test(pwd),
+      symbol: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)
+    };
+
+    // Update each indicator
+    Object.keys(validation).forEach(key => {
+      const indicator = checks[key];
+      if (!indicator) return;
+
+      if (validation[key]) {
+        indicator.textContent = '✓';
+        indicator.classList.remove('text-gray-400');
+        indicator.classList.add('text-green-600', 'font-semibold');
+      } else {
+        indicator.textContent = '○';
+        indicator.classList.remove('text-green-600', 'font-semibold');
+        indicator.classList.add('text-gray-400');
+      }
+    });
+  }
+
+  if (pwdInput) {
+    pwdInput.addEventListener('input', validatePassword);
+  }
 </script>
 {% endblock %}

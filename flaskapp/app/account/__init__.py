@@ -387,4 +387,43 @@ def connect(provider: str):
 
 @account_bp.route("/stripe/webhook", methods=["POST"], endpoint="stripe_webhook")
 def stripe_webhook():
-    return jsonify({"ok": True}), 200
+    """
+    Stripe webhook handler for subscription and payment events.
+    Verifies webhook signature and processes events.
+    """
+    import stripe
+    from app.services.stripe_service import process_webhook_event
+
+    payload = request.data
+    sig_header = request.headers.get("Stripe-Signature")
+    webhook_secret = current_app.config.get("STRIPE_WEBHOOK_SECRET")
+
+    if not webhook_secret:
+        current_app.logger.error("STRIPE_WEBHOOK_SECRET not configured")
+        return jsonify({"error": "Webhook secret not configured"}), 500
+
+    try:
+        # Verify webhook signature
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, webhook_secret
+        )
+    except ValueError as e:
+        # Invalid payload
+        current_app.logger.error(f"Invalid webhook payload: {e}")
+        return jsonify({"error": "Invalid payload"}), 400
+    except stripe.error.SignatureVerificationError as e:
+        # Invalid signature
+        current_app.logger.error(f"Invalid webhook signature: {e}")
+        return jsonify({"error": "Invalid signature"}), 400
+
+    # Process the event
+    try:
+        handled = process_webhook_event(event)
+        if handled:
+            return jsonify({"status": "success", "event": event["type"]}), 200
+        else:
+            # Event type not handled (not an error)
+            return jsonify({"status": "ignored", "event": event["type"]}), 200
+    except Exception as e:
+        current_app.logger.error(f"Error processing webhook: {e}", exc_info=True)
+        return jsonify({"error": "Processing failed"}), 500

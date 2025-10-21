@@ -1,7 +1,7 @@
 # app/billing/init.py
 from __future__ import annotations
 from flask import Blueprint, render_template
-from app.auth.session import login_required
+from app.auth.session_utils import login_required
 
 billing_bp = Blueprint("billing", __name__, url_prefix="/billing")
 

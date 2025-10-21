@@ -576,10 +576,10 @@ def create_app():
 
     # ---- Request hooks (auth + impersonation) ------------------------------
     try:
-        from app.auth.session import before_request_hook
+        from app.auth.session_utils import before_request_hook
         app.before_request(before_request_hook)
     except Exception:
-        app.logger.exception("Failed to register before_request_hook (auth/session)")
+        app.logger.exception("Failed to register before_request_hook (auth/session_utils)")
 
     # ---- Post-registration safety stubs ------------------------------------
     if "reports_bp.index" not in app.view_functions:

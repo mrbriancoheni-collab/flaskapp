@@ -1,7 +1,7 @@
 # app/account/routes.py
 from __future__ import annotations
 from flask import Blueprint, g, render_template
-from app.auth.session import login_required
+from app.auth.session_utils import login_required
 
 account_bp = Blueprint("account", __name__, url_prefix="/account")
 

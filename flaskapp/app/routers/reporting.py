@@ -25,7 +25,7 @@ def results_get(request: Request, db: Session = Depends(get_db)):
 @router.post("/results/pull")
 def results_pull(db: Session = Depends(get_db)):
     auth = db.query(GoogleAdsAuth).first()
-    client = client_from_refresh(decrypt(auth.refresh_token), auth.manager_customer_id)
+    client = client_from_refresh(auth.get_refresh_token(), auth.manager_customer_id)
     metrics = fetch_kpis(client, auth.customer_id, days=14)
     # save snapshot
     snap = PerformanceSnapshot(user_id=auth.user_id, customer_id=auth.customer_id, as_of_date=date.today(), metrics=metrics)
@@ -44,7 +44,7 @@ def results_suggest(db: Session = Depends(get_db)):
 def results_apply(suggestion_id: int, db: Session = Depends(get_db)):
     auth = db.query(GoogleAdsAuth).first()
     s = db.get(Suggestions, suggestion_id)
-    client = client_from_refresh(decrypt(auth.refresh_token), auth.manager_customer_id)
+    client = client_from_refresh(auth.get_refresh_token(), auth.manager_customer_id)
     apply_suggestion(client, auth.customer_id, s.suggestion_json)
     s.accepted = True
     db.add(s); db.commit()

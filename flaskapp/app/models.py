@@ -273,13 +273,45 @@ class GoogleAdsAuth(db.Model):
 
     manager_customer_id = db.Column(String(32), nullable=True)
     customer_id = db.Column(String(32), nullable=False)
-    refresh_token = db.Column(Text, nullable=False)   # consider encrypting at rest
+    refresh_token = db.Column(Text, nullable=False)   # ENCRYPTED at rest
 
     created_at = db.Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     def __repr__(self) -> str:
         return f"<GoogleAdsAuth cid={self.customer_id} user_id={self.user_id}>"
+
+    def set_refresh_token(self, token: str):
+        """Store refresh token in encrypted format."""
+        from app.crypto_utils import encrypt_string
+        from flask import current_app
+        try:
+            self.refresh_token = encrypt_string(token)
+        except Exception as e:
+            # Fallback to plaintext if encryption not configured (dev mode)
+            current_app.logger.warning(f"Failed to encrypt GoogleAds refresh token: {e}")
+            self.refresh_token = token
+
+    def get_refresh_token(self) -> Optional[str]:
+        """Retrieve and decrypt refresh token, with backward compatibility for plaintext."""
+        from app.crypto_utils import decrypt_string, is_encrypted
+        from flask import current_app
+
+        if not self.refresh_token:
+            return None
+
+        try:
+            if is_encrypted(self.refresh_token):
+                return decrypt_string(self.refresh_token)
+            else:
+                # Legacy plaintext token - log warning for migration tracking
+                current_app.logger.warning(
+                    f"GoogleAdsAuth {self.id} has unencrypted refresh_token (customer_id={self.customer_id})"
+                )
+                return self.refresh_token
+        except Exception as e:
+            current_app.logger.error(f"Failed to decrypt GoogleAdsAuth {self.id} refresh_token: {e}")
+            return None
 
 
 # ---- Heatmap points (generic lead/customer locations) ----

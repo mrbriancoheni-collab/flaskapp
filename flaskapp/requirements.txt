@@ -23,6 +23,13 @@ cryptography>=42.0
 flask-limiter>=3.7
 redis>=5.0
 
+# Background jobs (no Redis required)
+APScheduler>=3.10
+
+# Email (optional - choose one)
+sendgrid>=6.11  # For SendGrid provider
+# OR use built-in smtplib for SMTP (no extra package needed)
+
 google-ads>=25.0
 google-api-python-client==2.136.0
 google-auth==2.34.0

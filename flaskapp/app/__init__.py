@@ -799,6 +799,13 @@ def create_app():
 
     _check_email_config()
 
+    # Initialize background job scheduler
+    try:
+        from app.background_jobs import init_scheduler
+        init_scheduler(app)
+    except Exception:
+        app.logger.exception("Failed to initialize background job scheduler")
+
     return app
 
 

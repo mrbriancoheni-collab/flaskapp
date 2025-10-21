@@ -215,8 +215,14 @@ def portal():
     # Get Stripe customer
     customer = StripeCustomer.query.filter_by(user_id=user_id).first()
 
+    # Get payment history
+    payments = Payment.query.filter_by(user_id=user_id).order_by(
+        Payment.created_at.desc()
+    ).limit(10).all()
+
     return render_template(
         "billing/portal.html",
         subscriptions=subscriptions,
-        customer=customer
+        customer=customer,
+        payments=payments
     )

@@ -1,20 +1,107 @@
-{% extends "base.html" %}
+{% extends "base_app.html" %}
+{% set SECTION = 'billing' %}
+{% block title %}Choose a Plan · {{ app_name }}{% endblock %}
+
 {% block content %}
-<h2>Choose a plan</h2>
-<div class="row">
-  {% for p in plans %}
-  <div class="column">
-    <div class="banner--upgrade">
-      <h4>{{ p.name }}</h4>
-      <p><strong>${{ p.price }}</strong>/{{ 'mo' if p.id != 'annual' else 'yr' }}</p>
-      <ul>
-        {% for b in p.benefits %}<li>{{ b }}</li>{% endfor %}
-      </ul>
-      <form method="post" action="#">
-        <button type="button" disabled>Continue (wire to Stripe)</button>
-      </form>
+<div class="max-w-6xl mx-auto space-y-8">
+
+  <!-- Header -->
+  <div class="text-center">
+    <h1 class="text-3xl font-bold text-gray-900">Choose Your Plan</h1>
+    <p class="text-gray-500 mt-2">Select the plan that best fits your business needs</p>
+  </div>
+
+  <!-- Pricing Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+    {% for p in plans %}
+    <div class="rounded-lg border {% if p.id == 'monthly' %}border-violet-500 shadow-lg{% else %}border-gray-200{% endif %} bg-white overflow-hidden">
+      {% if p.id == 'monthly' %}
+      <div class="bg-violet-600 text-white text-center py-2 text-sm font-medium">
+        Most Popular
+      </div>
+      {% endif %}
+
+      <div class="p-6">
+        <h3 class="text-xl font-semibold text-gray-900">{{ p.name }}</h3>
+
+        <div class="mt-4 flex items-baseline gap-1">
+          <span class="text-4xl font-bold text-gray-900">${{ p.price }}</span>
+          {% if p.id != 'free' %}
+          <span class="text-gray-500">/{{ 'month' if p.id == 'monthly' else 'year' }}</span>
+          {% endif %}
+        </div>
+
+        {% if p.id == 'annual' %}
+        <p class="mt-1 text-sm text-green-600 font-medium">Save $189/year</p>
+        {% endif %}
+
+        <!-- Features -->
+        <ul class="mt-6 space-y-3">
+          {% for b in p.benefits %}
+          <li class="flex items-start gap-2">
+            <i class="fas fa-check text-green-500 mt-1"></i>
+            <span class="text-gray-600 text-sm">{{ b }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+
+        <!-- CTA Button -->
+        <div class="mt-8">
+          {% if p.id == 'free' %}
+            {% if current_subscription %}
+            <button disabled
+                    class="w-full px-4 py-3 border border-gray-300 text-gray-500 rounded-md cursor-not-allowed">
+              Current Plan
+            </button>
+            {% else %}
+            <button disabled
+                    class="w-full px-4 py-3 border border-gray-300 text-gray-500 rounded-md cursor-not-allowed">
+              Free Forever
+            </button>
+            {% endif %}
+          {% else %}
+            <form method="POST" action="{{ url_for('billing.subscribe') }}">
+              <input type="hidden" name="plan_type" value="{{ p.id }}">
+              <button type="submit"
+                      class="w-full px-4 py-3 {% if p.id == 'monthly' %}bg-violet-600 hover:bg-violet-700{% else %}bg-gray-900 hover:bg-gray-800{% endif %} text-white rounded-md transition font-medium">
+                {% if current_subscription and current_subscription.status in ['active', 'trialing'] %}
+                  Switch to {{ p.name }}
+                {% else %}
+                  Get Started
+                {% endif %}
+              </button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- FAQ -->
+  <div class="mt-16 max-w-3xl mx-auto">
+    <h2 class="text-2xl font-semibold text-center mb-8">Frequently Asked Questions</h2>
+    <div class="space-y-4">
+      <details class="bg-white rounded-lg border p-4">
+        <summary class="font-medium cursor-pointer">Can I change plans later?</summary>
+        <p class="mt-2 text-sm text-gray-600">
+          Yes! You can upgrade or downgrade your plan at any time. Changes are prorated automatically.
+        </p>
+      </details>
+      <details class="bg-white rounded-lg border p-4">
+        <summary class="font-medium cursor-pointer">What payment methods do you accept?</summary>
+        <p class="mt-2 text-sm text-gray-600">
+          We accept all major credit cards through Stripe. Your payment information is secure and never stored on our servers.
+        </p>
+      </details>
+      <details class="bg-white rounded-lg border p-4">
+        <summary class="font-medium cursor-pointer">Can I cancel anytime?</summary>
+        <p class="mt-2 text-sm text-gray-600">
+          Absolutely. You can cancel your subscription at any time. You'll continue to have access until the end of your billing period.
+        </p>
+      </details>
     </div>
   </div>
-  {% endfor %}
+
 </div>
 {% endblock %}

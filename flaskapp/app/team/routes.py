@@ -18,6 +18,7 @@ from app.team import team_bp
 from app import db
 from app.models import User, Account
 from app.models_team import TeamInvite, TeamMember, can_add_team_member, get_account_seat_usage, get_account_seat_limit
+from app.models_audit import AuditAction, log_team_action, log_subscription_action
 from app.auth.session_utils import login_required
 from app.auth.permissions import require_permission, require_admin, check_seat_limit, can_manage_user
 
@@ -113,6 +114,16 @@ def invite():
 
     db.session.add(invite)
     db.session.commit()
+
+    # Audit log
+    log_team_action(
+        AuditAction.TEAM_MEMBER_INVITED,
+        account_id=g.user.account_id,
+        actor_id=g.user.id,
+        email=email,
+        role=role,
+        invite_id=invite.id
+    )
 
     # Send invitation email
     try:
@@ -324,37 +335,8 @@ def send_team_invite_email(invite: TeamInvite, inviter: User):
         invite: TeamInvite model instance
         inviter: User who sent the invite
     """
-    from flask import render_template_string
-
-    # Get account name
-    account = Account.query.get(invite.account_id)
-    account_name = account.name if account else "a team"
-
-    invite_url = get_invite_url(invite)
-
-    # Simple email template (replace with proper email template)
-    subject = f"{inviter.name} invited you to join {account_name}"
-
-    body = f"""
-    Hi there!
-
-    {inviter.name} ({inviter.email}) has invited you to join {account_name} as a {invite.role}.
-
-    Click the link below to accept the invitation:
-    {invite_url}
-
-    This invitation will expire in 7 days.
-
-    If you don't have an account yet, you'll be able to create one when you click the link.
-
-    Thanks!
-    """
-
-    # TODO: Use proper email service (SendGrid, AWS SES, etc.)
-    current_app.logger.info(f"[EMAIL] To: {invite.email}, Subject: {subject}, Body: {body}")
-
-    # Placeholder - implement actual email sending
-    # send_email(to=invite.email, subject=subject, body=body)
+    from app.services.email_service import send_team_invite_email as send_invite
+    return send_invite(invite, inviter)
 
 
 def get_invite_url(invite: TeamInvite) -> str:

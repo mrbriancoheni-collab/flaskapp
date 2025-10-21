@@ -753,6 +753,38 @@ def create_app():
         from flask import current_app
         return {"app": current_app, "config": current_app.config}
 
+    # ---- Email configuration validation ------------------------------------
+    def _check_email_config():
+        """Check if email is properly configured and warn if not."""
+        mail_server = app.config.get("MAIL_SERVER")
+        mail_sender = app.config.get("MAIL_DEFAULT_SENDER")
+
+        if not mail_server or not mail_sender:
+            app.logger.warning(
+                "⚠️  Email not configured! Set MAIL_SERVER and MAIL_DEFAULT_SENDER. "
+                "Email verification and password reset will not work."
+            )
+            return False
+
+        # Check for port/protocol mismatch
+        mail_port = app.config.get("MAIL_PORT", 587)
+        use_ssl = app.config.get("MAIL_USE_SSL", False)
+        use_tls = app.config.get("MAIL_USE_TLS", True)
+
+        if mail_port == 465 and not use_ssl:
+            app.logger.warning(
+                "⚠️  Email config issue: Port 465 requires MAIL_USE_SSL=1"
+            )
+        elif mail_port == 587 and not use_tls:
+            app.logger.warning(
+                "⚠️  Email config issue: Port 587 typically requires MAIL_USE_TLS=1"
+            )
+
+        app.logger.info(f"✓ Email configured: {mail_sender} via {mail_server}:{mail_port}")
+        return True
+
+    _check_email_config()
+
     return app
 
 

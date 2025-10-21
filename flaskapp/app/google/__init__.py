@@ -1785,19 +1785,89 @@ def ads_debug_config():
 @google_bp.route("/ads", methods=["GET"], endpoint="ads_ui")
 @login_required
 def ads_ui():
+    # Redirect to new hierarchical campaigns view
+    return redirect(url_for("google_bp.ads_campaigns"))
+
+# ---- New Hierarchical Ads Views ----
+
+@google_bp.route("/ads/campaigns", methods=["GET"], endpoint="ads_campaigns")
+@login_required
+def ads_campaigns():
+    """Level 1: Campaigns list view"""
     aid = current_account_id()
     connected = _is_connected(aid, "ads")
     ai = _ai_enabled()
     ads_data = _get_ads_state(aid)
-    sugg_key = f"ads_suggestions_{aid}"
-    suggestions = session.get(sugg_key) or {}
-    _ = _get_ads_custom_prompt(aid)
     return render_template(
-        "google/ads.html",
+        "google/ads_campaigns.html",
         connected=connected,
         ai_connected=ai,
         ads_data=ads_data,
-        suggestions=suggestions,
+        epn=request.endpoint,
+    )
+
+@google_bp.route("/ads/campaign/<campaign_id>", methods=["GET"], endpoint="ads_campaign_detail")
+@login_required
+def ads_campaign_detail(campaign_id: str):
+    """Level 2: Campaign detail with ad groups"""
+    aid = current_account_id()
+    ads_data = _get_ads_state(aid)
+
+    # Find the campaign
+    campaign = next((c for c in ads_data.get("campaigns", []) if c["id"] == campaign_id), None)
+    if not campaign:
+        flash("Campaign not found.", "error")
+        return redirect(url_for("google_bp.ads_campaigns"))
+
+    # Get ad groups for this campaign
+    ad_groups = [g for g in ads_data.get("ad_groups", []) if g.get("campaign_id") == campaign_id]
+
+    # Get all ad group IDs for counting keywords
+    ad_group_ids = [g["id"] for g in ad_groups]
+    keywords = [k for k in ads_data.get("keywords", []) if k.get("ad_group_id") in ad_group_ids]
+    ads = [a for a in ads_data.get("ads", []) if a.get("ad_group_id") in ad_group_ids]
+
+    return render_template(
+        "google/ads_campaign_detail.html",
+        campaign=campaign,
+        ad_groups=ad_groups,
+        keywords=keywords,
+        ads=ads,
+        total_keywords=len(keywords),
+        epn=request.endpoint,
+    )
+
+@google_bp.route("/ads/campaign/<campaign_id>/adgroup/<adgroup_id>", methods=["GET"], endpoint="ads_adgroup_detail")
+@login_required
+def ads_adgroup_detail(campaign_id: str, adgroup_id: str):
+    """Level 3: Ad group detail with tabs (keywords, ads, negatives)"""
+    aid = current_account_id()
+    ads_data = _get_ads_state(aid)
+
+    # Find the campaign and ad group
+    campaign = next((c for c in ads_data.get("campaigns", []) if c["id"] == campaign_id), None)
+    ad_group = next((g for g in ads_data.get("ad_groups", []) if g["id"] == adgroup_id), None)
+
+    if not campaign or not ad_group:
+        flash("Campaign or ad group not found.", "error")
+        return redirect(url_for("google_bp.ads_campaigns"))
+
+    # Get keywords, ads, and negatives for this ad group
+    keywords = [k for k in ads_data.get("keywords", []) if k.get("ad_group_id") == adgroup_id]
+    ads = [a for a in ads_data.get("ads", []) if a.get("ad_group_id") == adgroup_id]
+
+    # Negatives can be at campaign or ad group level
+    negatives = [n for n in ads_data.get("negatives", [])
+                 if (n.get("scope") == "Ad Group" and n.get("parent_id") == adgroup_id) or
+                    (n.get("scope") == "Campaign" and n.get("parent_id") == campaign_id)]
+
+    return render_template(
+        "google/ads_adgroup_detail.html",
+        campaign=campaign,
+        ad_group=ad_group,
+        keywords=keywords,
+        ads=ads,
+        negatives=negatives,
         epn=request.endpoint,
     )
 
@@ -2442,35 +2512,171 @@ def ads_pick_account():
             return redirect(url_for("google_bp.ads_ui"))
     return render_template("google/ads_account_pick.html", ids=ids)
 
-@google_bp.route("/ads/campaign/new", methods=["POST"], endpoint="ads_campaign_new")
+@google_bp.route("/ads/campaign/create", methods=["POST"], endpoint="ads_campaign_create")
 @login_required
-def ads_campaign_new():
-    return _ads_not_implemented()
+def ads_campaign_create():
+    """Create a new campaign"""
+    aid = current_account_id()
+    ads_data = _get_ads_state(aid)
 
-@google_bp.route("/ads/campaign/<int:cid>/edit", methods=["POST"], endpoint="ads_campaign_edit")
-@login_required
-def ads_campaign_edit(cid: int):
-    return _ads_not_implemented()
+    # Generate new campaign ID
+    existing_ids = [int(c["id"].split("-")[1]) for c in ads_data.get("campaigns", []) if "-" in c["id"]]
+    new_id = f"C-{max(existing_ids) + 1 if existing_ids else 1001}"
 
-@google_bp.route("/ads/campaign/<int:cid>/delete", methods=["POST"], endpoint="ads_campaign_delete")
-@login_required
-def ads_campaign_delete(cid: int):
-    return _ads_not_implemented()
+    new_campaign = {
+        "id": new_id,
+        "name": request.form.get("name", "New Campaign"),
+        "type": request.form.get("type", "SEARCH"),
+        "status": request.form.get("status", "Paused"),
+        "daily_budget": float(request.form.get("daily_budget", 50)),
+        "bidding": request.form.get("bidding", "Manual CPC"),
+        "target": float(request.form.get("target")) if request.form.get("target") else None
+    }
 
-@google_bp.route("/ads/adgroup/new/<int:cid>", methods=["POST"], endpoint="ads_adgroup_new")
-@login_required
-def ads_adgroup_new(cid: int):
-    return _ads_not_implemented()
+    ads_data.setdefault("campaigns", []).append(new_campaign)
+    _save_ads_state(aid, ads_data)
+    flash(f"Campaign '{new_campaign['name']}' created successfully.", "success")
+    return redirect(url_for("google_bp.ads_campaigns"))
 
-@google_bp.route("/ads/adgroup/<int:gid>/edit", methods=["POST"], endpoint="ads_adgroup_edit")
+@google_bp.route("/ads/campaign/update", methods=["POST"], endpoint="ads_campaign_update")
 @login_required
-def ads_adgroup_edit(gid: int):
-    return _ads_not_implemented()
+def ads_campaign_update():
+    """Update an existing campaign"""
+    aid = current_account_id()
+    ads_data = _get_ads_state(aid)
+    campaign_id = request.form.get("id")
 
-@google_bp.route("/ads/adgroup/<int:gid>/delete", methods=["POST"], endpoint="ads_adgroup_delete")
+    campaign = next((c for c in ads_data.get("campaigns", []) if c["id"] == campaign_id), None)
+    if not campaign:
+        flash("Campaign not found.", "error")
+        return redirect(url_for("google_bp.ads_campaigns"))
+
+    campaign["name"] = request.form.get("name", campaign["name"])
+    campaign["type"] = request.form.get("type", campaign["type"])
+    campaign["status"] = request.form.get("status", campaign["status"])
+    campaign["daily_budget"] = float(request.form.get("daily_budget", campaign.get("daily_budget", 50)))
+    campaign["bidding"] = request.form.get("bidding", campaign["bidding"])
+    campaign["target"] = float(request.form.get("target")) if request.form.get("target") else None
+
+    _save_ads_state(aid, ads_data)
+    flash(f"Campaign '{campaign['name']}' updated successfully.", "success")
+    return redirect(url_for("google_bp.ads_campaign_detail", campaign_id=campaign_id))
+
+@google_bp.route("/ads/campaign/delete", methods=["POST"], endpoint="ads_campaign_delete")
 @login_required
-def ads_adgroup_delete(gid: int):
-    return _ads_not_implemented()
+def ads_campaign_delete():
+    """Delete a campaign and all its ad groups, keywords, and ads"""
+    aid = current_account_id()
+    ads_data = _get_ads_state(aid)
+    campaign_id = request.form.get("id")
+
+    # Find and remove campaign
+    campaigns = ads_data.get("campaigns", [])
+    campaign = next((c for c in campaigns if c["id"] == campaign_id), None)
+
+    if not campaign:
+        flash("Campaign not found.", "error")
+        return redirect(url_for("google_bp.ads_campaigns"))
+
+    # Remove campaign
+    ads_data["campaigns"] = [c for c in campaigns if c["id"] != campaign_id]
+
+    # Remove all ad groups in this campaign
+    ad_group_ids = [g["id"] for g in ads_data.get("ad_groups", []) if g.get("campaign_id") == campaign_id]
+    ads_data["ad_groups"] = [g for g in ads_data.get("ad_groups", []) if g.get("campaign_id") != campaign_id]
+
+    # Remove all keywords in those ad groups
+    ads_data["keywords"] = [k for k in ads_data.get("keywords", []) if k.get("ad_group_id") not in ad_group_ids]
+
+    # Remove all ads in those ad groups
+    ads_data["ads"] = [a for a in ads_data.get("ads", []) if a.get("ad_group_id") not in ad_group_ids]
+
+    # Remove campaign-level negatives
+    ads_data["negatives"] = [n for n in ads_data.get("negatives", [])
+                              if not (n.get("scope") == "Campaign" and n.get("parent_id") == campaign_id)]
+
+    _save_ads_state(aid, ads_data)
+    flash(f"Campaign '{campaign['name']}' and all its ad groups deleted.", "success")
+    return redirect(url_for("google_bp.ads_campaigns"))
+
+@google_bp.route("/ads/adgroup/create", methods=["POST"], endpoint="ads_adgroup_create")
+@login_required
+def ads_adgroup_create():
+    """Create a new ad group"""
+    aid = current_account_id()
+    ads_data = _get_ads_state(aid)
+    campaign_id = request.form.get("campaign_id")
+
+    # Generate new ad group ID
+    existing_ids = [int(g["id"].split("-")[1]) for g in ads_data.get("ad_groups", []) if "-" in g["id"]]
+    new_id = f"AG-{max(existing_ids) + 1 if existing_ids else 2001}"
+
+    new_ad_group = {
+        "id": new_id,
+        "campaign_id": campaign_id,
+        "name": request.form.get("name", "New Ad Group"),
+        "status": request.form.get("status", "Enabled")
+    }
+
+    ads_data.setdefault("ad_groups", []).append(new_ad_group)
+    _save_ads_state(aid, ads_data)
+    flash(f"Ad group '{new_ad_group['name']}' created successfully.", "success")
+    return redirect(url_for("google_bp.ads_campaign_detail", campaign_id=campaign_id))
+
+@google_bp.route("/ads/adgroup/update", methods=["POST"], endpoint="ads_adgroup_update")
+@login_required
+def ads_adgroup_update():
+    """Update an existing ad group"""
+    aid = current_account_id()
+    ads_data = _get_ads_state(aid)
+    adgroup_id = request.form.get("id")
+    campaign_id = request.form.get("campaign_id")
+
+    ad_group = next((g for g in ads_data.get("ad_groups", []) if g["id"] == adgroup_id), None)
+    if not ad_group:
+        flash("Ad group not found.", "error")
+        return redirect(url_for("google_bp.ads_campaign_detail", campaign_id=campaign_id))
+
+    ad_group["name"] = request.form.get("name", ad_group["name"])
+    ad_group["status"] = request.form.get("status", ad_group["status"])
+
+    _save_ads_state(aid, ads_data)
+    flash(f"Ad group '{ad_group['name']}' updated successfully.", "success")
+    return redirect(url_for("google_bp.ads_campaign_detail", campaign_id=campaign_id))
+
+@google_bp.route("/ads/adgroup/delete", methods=["POST"], endpoint="ads_adgroup_delete")
+@login_required
+def ads_adgroup_delete():
+    """Delete an ad group and all its keywords and ads"""
+    aid = current_account_id()
+    ads_data = _get_ads_state(aid)
+    adgroup_id = request.form.get("id")
+    campaign_id = request.form.get("campaign_id")
+
+    # Find and remove ad group
+    ad_groups = ads_data.get("ad_groups", [])
+    ad_group = next((g for g in ad_groups if g["id"] == adgroup_id), None)
+
+    if not ad_group:
+        flash("Ad group not found.", "error")
+        return redirect(url_for("google_bp.ads_campaign_detail", campaign_id=campaign_id))
+
+    # Remove ad group
+    ads_data["ad_groups"] = [g for g in ad_groups if g["id"] != adgroup_id]
+
+    # Remove all keywords in this ad group
+    ads_data["keywords"] = [k for k in ads_data.get("keywords", []) if k.get("ad_group_id") != adgroup_id]
+
+    # Remove all ads in this ad group
+    ads_data["ads"] = [a for a in ads_data.get("ads", []) if a.get("ad_group_id") != adgroup_id]
+
+    # Remove ad group-level negatives
+    ads_data["negatives"] = [n for n in ads_data.get("negatives", [])
+                              if not (n.get("scope") == "Ad Group" and n.get("parent_id") == adgroup_id)]
+
+    _save_ads_state(aid, ads_data)
+    flash(f"Ad group '{ad_group['name']}' and all its keywords/ads deleted.", "success")
+    return redirect(url_for("google_bp.ads_campaign_detail", campaign_id=campaign_id))
 
 @google_bp.route("/ads/ad/new/<int:gid>", methods=["POST"], endpoint="ads_ad_new")
 @login_required

@@ -410,6 +410,20 @@ def create_app():
         app.logger.exception("Failed to import account_bp")
 
     try:
+        from app.billing.routes import billing_bp
+        app.register_blueprint(billing_bp)
+        app.logger.info("billing_bp registered at /billing")
+    except Exception:
+        app.logger.exception("Failed to register billing_bp")
+
+    try:
+        from app.team import team_bp
+        app.register_blueprint(team_bp)
+        app.logger.info("team_bp registered at /team")
+    except Exception:
+        app.logger.exception("Failed to register team_bp")
+
+    try:
         from app.onboarding_bp import onboarding_bp
         app.register_blueprint(onboarding_bp)
         app.logger.info("onboarding_bp registered")

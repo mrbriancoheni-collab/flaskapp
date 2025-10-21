@@ -192,6 +192,67 @@ def _create_account_and_user(name: str, email: str, password: str):
         return user_res.lastrowid
 
 
+def _create_user_from_invite(name: str, email: str, password: str, invite):
+    """
+    Create a user and join existing account via team invite.
+    Returns new user_id or None if email already exists.
+
+    Args:
+        name: User's full name
+        email: User's email
+        password: User's password
+        invite: TeamInvite model instance
+
+    Returns:
+        New user_id or None if email exists
+    """
+    email_n = _normalize_email(email)
+    pwd_hash = generate_password_hash(password)
+
+    with db.engine.begin() as conn:
+        # Check if email already exists
+        exist = conn.execute(
+            text("SELECT id FROM users WHERE email=:e LIMIT 1"),
+            {"e": email_n},
+        ).fetchone()
+        if exist:
+            return None
+
+        # Create user in invited account with specified role
+        user_res = conn.execute(
+            text(
+                """
+                INSERT INTO users
+                  (account_id, name, email, password_hash, role, email_verified, created_at)
+                VALUES
+                  (:aid, :n, :e, :ph, :role, 0, NOW())
+                """
+            ),
+            {
+                "aid": invite.account_id,
+                "n": name or email_n,
+                "e": email_n,
+                "ph": pwd_hash,
+                "role": invite.role
+            },
+        )
+        user_id = user_res.lastrowid
+
+        # Mark invite as accepted
+        conn.execute(
+            text(
+                """
+                UPDATE team_invites
+                SET status = 'accepted', accepted_at = NOW()
+                WHERE id = :invite_id
+                """
+            ),
+            {"invite_id": invite.id}
+        )
+
+        return user_id
+
+
 # ---- itsdangerous (email verification & password reset tokens) -------------
 def _s():
     secret = current_app.config.get("SECRET_KEY")
@@ -284,6 +345,7 @@ def register():
         name = (request.form.get("name") or "").strip()
         email = _normalize_email(request.form.get("email", ""))
         password = request.form.get("password", "")
+        invite_token = request.form.get("invite_token", "").strip()
 
         errs = []
         if not name:
@@ -298,15 +360,37 @@ def register():
         if not ok_pw and msg_pw:
             errs.append(msg_pw)
 
+        # Check if invite exists and is valid
+        invite = None
+        if invite_token:
+            from app.models_team import TeamInvite
+            invite = TeamInvite.query.filter_by(token=invite_token).first()
+            if invite and not invite.is_valid():
+                errs.append("This invitation has expired or is no longer valid.")
+                invite = None
+            elif invite and invite.email.lower() != email.lower():
+                errs.append("This invitation was sent to a different email address.")
+                invite = None
+
         if errs:
             for e in errs:
                 flash(e, "error")
-            return render_template("register.html", next=next_url)
+            return render_template("register.html", next=next_url, invite_token=invite_token)
 
-        user_id = _create_account_and_user(name, email, password)
-        if not user_id:
-            flash("An account with that email already exists. Please log in.", "error")
-            return redirect(url_for("auth_bp.login", next=next_url))
+        # Create user (with or without invite)
+        if invite:
+            # Join existing account via invite
+            user_id = _create_user_from_invite(name, email, password, invite)
+            if not user_id:
+                flash("An account with that email already exists. Please log in.", "error")
+                return redirect(url_for("auth_bp.login", next=next_url))
+            flash(f"Welcome! You've joined as {invite.role}.", "success")
+        else:
+            # Create new account + owner user
+            user_id = _create_account_and_user(name, email, password)
+            if not user_id:
+                flash("An account with that email already exists. Please log in.", "error")
+                return redirect(url_for("auth_bp.login", next=next_url))
 
         _set_login_session(user_id, email)
 
@@ -324,7 +408,15 @@ def register():
         return redirect(_post_auth_target())
 
     # GET
-    return render_template("register.html", next=request.args.get("next", ""))
+    invite_token = request.args.get("invite_token", "")
+    invite_email = None
+    if invite_token:
+        from app.models_team import TeamInvite
+        invite = TeamInvite.query.filter_by(token=invite_token).first()
+        if invite and invite.is_valid():
+            invite_email = invite.email
+
+    return render_template("register.html", next=request.args.get("next", ""), invite_token=invite_token, invite_email=invite_email)
 
 
 # --- /signup alias -> same as /register ---

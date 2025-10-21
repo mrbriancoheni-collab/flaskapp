@@ -139,8 +139,13 @@
       {# Description #}
       <div class="col-span-1 md:col-span-2">
         <label class="block text-sm font-medium text-gray-700">Description</label>
-        <textarea name="description" rows="5" class="mt-1 w-full rounded-md border px-3 py-2">{{ (profile.description if profile and profile.description else (sample_profile.description if sample_profile else 'Eco-friendly, high-quality residential and commercial cleaning serving Greater Sacramento. Transparent pricing, vetted pros, and a 100% happiness guarantee.')) | trim }}</textarea>
-        <p class="mt-1 text-xs text-gray-500">Tip: Keep it clear, concise, and keyword-rich. The AI Optimizer can suggest improvements.</p>
+        <textarea name="description" id="gmb-description" rows="5" class="mt-1 w-full rounded-md border px-3 py-2">{{ (profile.description if profile and profile.description else (sample_profile.description if sample_profile else 'Eco-friendly, high-quality residential and commercial cleaning serving Greater Sacramento. Transparent pricing, vetted pros, and a 100% happiness guarantee.')) | trim }}</textarea>
+        <div class="mt-1 flex items-center justify-between">
+          <p class="text-xs text-gray-500">Tip: Keep it clear, concise, and keyword-rich. The AI Optimizer can suggest improvements.</p>
+          <p class="text-xs" id="gmb-description-counter">
+            <span id="gmb-description-count">0</span><span class="text-gray-500"> / 750</span>
+          </p>
+        </div>
       </div>
 
       {# Phone & Website #}
@@ -371,6 +376,38 @@ profileForm?.addEventListener('submit', () => {
     saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
   }
 });
+
+// Character counter for description
+const descTextarea = document.getElementById('gmb-description');
+const descCount = document.getElementById('gmb-description-count');
+const descCounter = document.getElementById('gmb-description-counter');
+
+function updateDescriptionCounter() {
+  if (!descTextarea || !descCount || !descCounter) return;
+
+  const length = descTextarea.value.length;
+  const maxLength = 750;
+
+  descCount.textContent = length;
+
+  // Color coding based on length
+  if (length > maxLength) {
+    descCount.classList.add('text-red-600', 'font-semibold');
+    descCount.classList.remove('text-amber-600', 'text-gray-700');
+  } else if (length > maxLength * 0.9) {
+    descCount.classList.add('text-amber-600', 'font-semibold');
+    descCount.classList.remove('text-red-600', 'text-gray-700');
+  } else {
+    descCount.classList.add('text-gray-700');
+    descCount.classList.remove('text-red-600', 'text-amber-600', 'font-semibold');
+  }
+}
+
+if (descTextarea) {
+  descTextarea.addEventListener('input', updateDescriptionCounter);
+  // Initialize counter on page load
+  updateDescriptionCounter();
+}
 </script>
 <script>
 async function runGmbOptimizer() {

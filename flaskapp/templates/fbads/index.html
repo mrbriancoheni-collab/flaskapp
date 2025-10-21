@@ -1,0 +1,23 @@
+{% extends "base_app.html" %}
+{% block title %}Facebook Ads{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+  <div>
+    <h1 class="text-2xl font-semibold">Facebook Ads</h1>
+    <p class="text-gray-500">Connect Facebook Ads to bring leads and spend into your dashboard.</p>
+  </div>
+
+  {% if connected %}
+    <div class="rounded border bg-green-50 border-green-200 text-green-800 px-4 py-3">
+      Connected. Data will appear on your dashboard.
+    </div>
+  {% else %}
+    <a href="{{ url_for('fbads_bp.connect') }}"
+       class="rounded bg-indigo-600 text-white px-3 py-2 inline-flex items-center hover:bg-indigo-700">
+      Connect Facebook
+    </a>
+  {% endif %}
+
+  <a href="{{ url_for('account_bp.dashboard') }}" class="inline-flex mt-2 rounded border px-3 py-2 text-gray-700 hover:bg-gray-50">Back to Dashboard</a>
+</div>
+{% endblock %}

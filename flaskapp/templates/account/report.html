@@ -1,0 +1,70 @@
+{% extends "base_app.html" %}
+{% block title %}{{ card.name }} ¡¤ Report{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold">{{ card.name }} Report</h1>
+      <p class="text-gray-500">Overview & recent activity</p>
+    </div>
+    <a href="{{ url_for('account_bp.dashboard') }}" class="rounded-md border px-3 py-2 text-gray-700 hover:bg-gray-50">Back to Dashboard</a>
+  </div>
+
+  {% if card.get('coming_soon') %}
+    <div class="rounded-lg border bg-white p-6 text-gray-600">
+      {{ card.name }} reporting is coming soon.
+    </div>
+  {% else %}
+    <div class="rounded-lg border bg-white p-6">
+      {% if card.data and card.data.get('sample') %}
+        <div class="relative">
+          <div class="text-sm text-gray-500 mb-3">Showing sample data until this account is connected.</div>
+          <div class="sample-overlay"><span>SAMPLE</span></div>
+        </div>
+      {% endif %}
+
+      {% if provider == 'wp' and (card.data and not card.data.get('sample')) %}
+        <div class="space-y-6">
+          <div>
+            <div class="text-sm text-gray-500">Site</div>
+            <div class="text-lg font-medium">{{ card.data.site.name or 'n/a' }}</div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="rounded-lg border p-4">
+              <div class="font-medium mb-2">Recent Posts</div>
+              <ul class="space-y-2 text-sm">
+                {% for p in card.data.posts %}
+                  <li class="flex items-center justify-between">
+                    <span class="line-clamp-1">{{ p.title }}</span>
+                    <a class="text-indigo-600 hover:underline" href="{{ p.link }}" target="_blank">View</a>
+                  </li>
+                {% else %}
+                  <li class="text-gray-500">No posts found.</li>
+                {% endfor %}
+              </ul>
+            </div>
+            <div class="rounded-lg border p-4">
+              <div class="font-medium mb-2">Recent Pages</div>
+              <ul class="space-y-2 text-sm">
+                {% for pg in card.data.pages %}
+                  <li class="flex items-center justify-between">
+                    <span class="line-clamp-1">{{ pg.title }}</span>
+                    <a class="text-indigo-600 hover:underline" href="{{ pg.link }}" target="_blank">View</a>
+                  </li>
+                {% else %}
+                  <li class="text-gray-500">No pages found.</li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+        </div>
+      {% else %}
+        <div class="text-gray-600">
+          Detailed reporting for <b>{{ card.name }}</b> is coming online.
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

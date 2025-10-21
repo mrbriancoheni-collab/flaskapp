@@ -1,0 +1,18 @@
+{% extends 'base_public.html' %}
+{% block title %}Email Verification · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="max-w-md mx-auto bg-white border rounded-xl p-6 md:p-8">
+  {% if ok %}
+    <h1 class="text-2xl font-semibold mb-2">Email verified</h1>
+    <p class="text-gray-600">Thanks! Your email is now confirmed.</p>
+  {% else %}
+    <h1 class="text-2xl font-semibold mb-2">Verification problem</h1>
+    <p class="text-gray-600">The link was invalid or expired.</p>
+    <form method="post" action="{{ url_for('auth_bp.resend_verification') }}" class="mt-4">
+      <input name="email" type="email" placeholder="you@example.com" required class="w-full border rounded px-3 py-2 mb-3">
+      <button class="w-full px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Resend verification email</button>
+    </form>
+  {% endif %}
+  <a href="{{ url_for(ep('login')) }}" class="inline-block mt-6 text-indigo-600 hover:underline">Back to login</a>
+</section>
+{% endblock %}

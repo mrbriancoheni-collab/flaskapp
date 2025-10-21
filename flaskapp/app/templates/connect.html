@@ -1,0 +1,48 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>Connect Google Ads & Upload</h2>
+
+<div class="card">
+  {% if not developer_token_set %}
+  <p class="muted">Set GOOGLE_ADS_DEVELOPER_TOKEN in your environment before proceeding.</p>
+  {% endif %}
+  <a class="button" href="/oauth/google-ads/start">Connect Google Ads</a>
+</div>
+
+{% if request.query_params.get('refresh') %}
+<div class="card">
+  <h3>Finish Connection</h3>
+  <form method="post" action="/connect/save">
+    <input type="hidden" name="refresh" value="{{ request.query_params.get('refresh') }}">
+    <input type="hidden" name="login" value="{{ request.query_params.get('login') }}">
+    <label>Customer ID (e.g., 123-456-7890)
+      <input name="customer_id" required>
+    </label>
+    <button type="submit">Save</button>
+  </form>
+</div>
+{% endif %}
+
+{% if auth %}
+<div class="card">
+  <h3>Approved Drafts</h3>
+  <table class="table">
+    <thead><tr><th>ID</th><th>Profile</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for d in request.app.state.db.query(app.models.CampaignDraft).filter_by(status="approved").all() %}
+      <tr>
+        <td>{{d.id}}</td>
+        <td>{{d.profile_id}}</td>
+        <td>{{d.status}}</td>
+        <td>
+          <form method="post" action="/upload/{{d.id}}">
+            <button type="submit">Upload to Google Ads</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

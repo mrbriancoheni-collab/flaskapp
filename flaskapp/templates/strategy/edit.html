@@ -1,0 +1,333 @@
+{# templates/strategy/edit.html #}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Edit Strategy – {{ ms.name or 'Strategy' }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0b0f15;
+      --panel: #121826;
+      --muted: #9aa4b2;
+      --text: #e5eefc;
+      --accent: #5b9cff;
+      --accent-2: #47d6b2;
+      --danger: #ff5b7f;
+      --border: #1f2937;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0;
+      background: var(--bg); color: var(--text);
+      font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .wrap { max-width: 1200px; margin: 32px auto; padding: 0 16px; }
+    header { margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
+    header h1 { font-size: 22px; margin: 0; font-weight: 650; }
+    .grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; }
+    .card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px;
+    }
+    .card h2 { margin: 0 0 12px; font-size: 16px; font-weight: 650; }
+    .row { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+    .row-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .row-1 { grid-template-columns: 1fr; }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    input[type="text"], input[type="number"], textarea, select {
+      width: 100%; background: #0f1523; color: var(--text);
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 10px 12px; outline: none;
+    }
+    textarea { min-height: 110px; resize: vertical; }
+    .help { color: var(--muted); font-size: 12px; margin-top: 6px; }
+    .btnbar { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .btn {
+      appearance: none; border: 1px solid var(--border); background: #0f1523;
+      color: var(--text); padding: 10px 14px; border-radius: 10px; cursor: pointer;
+    }
+    .btn-primary { background: var(--accent); border-color: #3a7be0; color: #fff; }
+    .btn-green { background: var(--accent-2); border-color: #2cbf9a; color: #00140f; }
+    .btn-danger { background: var(--danger); border-color: #e04464; color: #fff; }
+    .muted { color: var(--muted); }
+    .kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Ubuntu Mono", Consolas, "Liberation Mono", monospace;
+      background: #0b111d; border: 1px solid var(--border); border-radius: 6px; padding: 0 6px;
+      color: #c5d3ff; font-size: 12px;
+    }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .strategy-html {
+      background: #0b111d; border: 1px dashed #263246; border-radius: 12px; padding: 14px;
+      max-height: 65vh; overflow: auto;
+    }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); font-size: 12px; margin-right: 6px; }
+    hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
+    .goal-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-bottom: 8px; }
+    .small { font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Editing: {{ ms.name or 'Marketing Strategy' }}</h1>
+      <span class="pill">ID {{ ms.id }}</span>
+      {% if ms.account_id %}<span class="pill">Account {{ ms.account_id }}</span>{% endif %}
+    </header>
+
+    <div class="grid">
+      <!-- LEFT: Edit Form -->
+      <div class="card">
+        <h2>Strategy Details</h2>
+        <form method="post" action="{{ url_for('strategy_bp.save', strategy_id=ms.id) }}">
+          <div class="row">
+            <div>
+              <label for="name">Name</label>
+              <input id="name" name="name" type="text" value="{{ ms.name or '' }}" />
+            </div>
+            <div>
+              <label for="brand_voice">Brand Voice</label>
+              <input id="brand_voice" name="brand_voice" type="text" value="{{ ms.brand_voice or '' }}" placeholder="e.g., Helpful, Expert, Friendly" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="business_name">Business Name</label>
+              <input id="business_name" name="business_name" type="text" value="{{ ms.business_name or '' }}" />
+            </div>
+            <div>
+              <label for="website">Website</label>
+              <input id="website" name="website" type="text" value="{{ ms.website or '' }}" placeholder="https://example.com" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="industry">Industry</label>
+              <input id="industry" name="industry" type="text" value="{{ ms.industry or '' }}" />
+            </div>
+            <div>
+              <label for="budget">Monthly Budget (USD)</label>
+              <input id="budget" name="budget" type="number" step="0.01" min="0" value="{{ (ms.budget_cents or 0) / 100.0 }}" />
+              <div class="help">Stored internally as cents.</div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="locations">Locations (CSV)</label>
+              <input id="locations" name="locations" type="text" value="{{ (ms.locations or []) | join(', ') }}" />
+            </div>
+            <div>
+              <label for="pov_ids">POV IDs (CSV of integers)</label>
+              <input id="pov_ids" name="pov_ids" type="text" value="{{ (ms.pov_ids or []) | join(', ') }}" />
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="row-1">
+            <div>
+              <label for="positioning">Positioning & Value Proposition</label>
+              <textarea id="positioning" name="positioning" placeholder="Your differentiators, value promise, proof...">{{ ms.positioning or '' }}</textarea>
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="message_core">Core Message</label>
+              <textarea id="message_core" name="message_core" placeholder="Short, compelling value message.">{{ (ms.messaging or {}).get('core', '') }}</textarea>
+            </div>
+            <div>
+              <label for="competitors">Competitors (CSV)</label>
+              <input id="competitors" name="competitors" type="text" value="{% set _comps = (ms.competitors or []) %}{% for c in _comps %}{{ (c.name if c is mapping else c) }}{% if not loop.last %}, {% endif %}{% endfor %}" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="primary_keywords">Primary Keywords (CSV)</label>
+              <input id="primary_keywords" name="primary_keywords" type="text" value="{{ (ms.primary_keywords or []) | join(', ') }}" />
+            </div>
+            <div>
+              <label for="extra_keywords">Additional Keywords (CSV)</label>
+              <input id="extra_keywords" name="extra_keywords" type="text" value="{{ (ms.extra_keywords or []) | join(', ') }}" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="channels">Channels (CSV)</label>
+              <input id="channels" name="channels" type="text" value="{{ (ms.channels or []) | join(', ') }}" placeholder="SEO, Content, Email, PPC" />
+            </div>
+            <div>
+              <label for="kpis">KPIs (CSV)</label>
+              <input id="kpis" name="kpis" type="text" value="{{ (ms.kpis or []) | join(', ') }}" placeholder="MQLs, SQLs, ROAS" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="offers">Offers (CSV)</label>
+              <input id="offers" name="offers" type="text" value="{{ (ms.offers or []) | join(', ') }}" />
+            </div>
+            <div>
+              <label for="tools">Tools / Stack (CSV)</label>
+              <input id="tools" name="tools" type="text" value="{{ (ms.tools or []) | join(', ') }}" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="constraints">Constraints (CSV)</label>
+              <input id="constraints" name="constraints" type="text" value="{{ (ms.constraints or []) | join(', ') }}" />
+            </div>
+            <div>
+              <label for="audience_notes">Audience Notes</label>
+              <textarea id="audience_notes" name="audience_notes" placeholder="Pain points, JTBD, insights...">{{ (ms.target_audience or {}).get('notes','') }}</textarea>
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="audience_segments">Audience Segments (CSV)</label>
+              <input id="audience_segments" name="audience_segments" type="text" value="{{ ((ms.target_audience or {}).get('segments') or []) | join(', ') }}" />
+            </div>
+            <div>
+              <label>Goals</label>
+              <div id="goals">
+                {# existing goals -> editable list inputs named goals[] #}
+                {% set _goals = ms.goals or [] %}
+                {% if _goals %}
+                  {% for g in _goals %}
+                    <div class="goal-row">
+                      <input type="text" name="goals[]" value="{{ (g.goal if g is mapping else g) }}" />
+                      <button class="btn btn-danger small" type="button" onclick="this.parentElement.remove()">Remove</button>
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  <div class="goal-row">
+                    <input type="text" name="goals[]" value="" placeholder="e.g., Increase MQLs by 30% in 90 days" />
+                    <button class="btn btn-danger small" type="button" onclick="this.parentElement.remove()">Remove</button>
+                  </div>
+                {% endif %}
+              </div>
+              <div class="btnbar">
+                <button class="btn" type="button" onclick="addGoal()">+ Add Goal</button>
+              </div>
+              <div class="help">Each row becomes a measurable goal.</div>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="row-1">
+            <div>
+              <label for="strategy_html">Strategy Document (HTML)</label>
+              <textarea id="strategy_html" name="strategy_html" style="min-height: 220px;" placeholder="This can be auto-generated by AI, or edited by hand.">{{ ms.strategy_html or '' }}</textarea>
+              <div class="help">When you click <span class="kbd">Save</span>, this raw HTML is stored as-is.</div>
+            </div>
+          </div>
+
+          <div class="btnbar">
+            <button class="btn btn-primary" type="submit">Save</button>
+            <a class="btn" href="{{ url_for('strategy_bp.index') }}">Back</a>
+          </div>
+        </form>
+      </div>
+
+      <!-- RIGHT: Live Render + AI Assist -->
+      <div>
+        <div class="card">
+          <h2>Rendered Strategy</h2>
+          {% if ms.strategy_html %}
+            <div class="strategy-html">{{ ms.strategy_html | safe }}</div>
+          {% else %}
+            <p class="muted">No strategy HTML yet. Use the <strong>AI Assist</strong> panel below or write your own in the editor, then click <span class="kbd">Save</span>.</p>
+          {% endif %}
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+          <h2>AI Assist</h2>
+          <form method="post" action="{{ url_for('strategy_bp.generate', strategy_id=ms.id) }}">
+            <div class="row">
+              <div>
+                <label for="ai_objective">Objective</label>
+                <select id="ai_objective" name="ai_objective">
+                  {# values should be labels; backend maps to internal keys #}
+                  {% set _obj = 'Lead Generation' %}
+                  <option {% if (request.form.get('ai_objective') or _obj) == 'Lead Generation' %}selected{% endif %}>Lead Generation</option>
+                  <option {% if request.form.get('ai_objective') == 'Sales' %}selected{% endif %}>Sales</option>
+                  <option {% if request.form.get('ai_objective') == 'Awareness' %}selected{% endif %}>Awareness</option>
+                  <option {% if request.form.get('ai_objective') == 'Retention' %}selected{% endif %}>Retention</option>
+                </select>
+              </div>
+              <div>
+                <label for="ai_depth">Depth</label>
+                <select id="ai_depth" name="ai_depth">
+                  <option value="light">Light</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="full">Full</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row">
+              <div>
+                <label for="ai_priority_channels">Priority Channels (CSV)</label>
+                <input id="ai_priority_channels" name="ai_priority_channels" type="text" placeholder="e.g., SEO, Email" />
+                <div class="help">Optional hint to guide AI channel/campaign choices.</div>
+              </div>
+              <div>
+                <label for="section">Generate Section</label>
+                <select id="section" name="section">
+                  <option value="">(Full Strategy)</option>
+                  <option value="goals">Goals</option>
+                  <option value="positioning">Positioning</option>
+                  <option value="messaging">Messaging</option>
+                  <option value="audience">Audience</option>
+                  <option value="channels">Channels</option>
+                  <option value="keywords">Keywords</option>
+                  <option value="competitors">Competitors</option>
+                  <option value="offers">Offers</option>
+                  <option value="constraints">Constraints</option>
+                  <option value="tools">Tools</option>
+                  <option value="kpis">KPIs</option>
+                  <option value="timeline">Timeline</option>
+                  <option value="campaigns">Campaigns (Content Plan)</option>
+                </select>
+                <div class="help">Pick one to update just that area — or leave blank to generate the full plan.</div>
+              </div>
+            </div>
+
+            <div class="btnbar">
+              <button class="btn btn-green" type="submit">Generate with AI</button>
+              <span class="muted small">Requires paid plan and an OpenAI API key in config.</span>
+            </div>
+          </form>
+          <hr>
+          <p class="small muted">Tip: If you only want AI to propose campaigns, choose <strong>Campaigns (Content Plan)</strong>. We default to <em>zero</em> campaigns on create — AI can add them later based on your inputs.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function addGoal() {
+      const wrap = document.getElementById('goals');
+      const row = document.createElement('div');
+      row.className = 'goal-row';
+      row.innerHTML = `
+        <input type="text" name="goals[]" value="" placeholder="New measurable goal..." />
+        <button class="btn btn-danger small" type="button" onclick="this.parentElement.remove()">Remove</button>
+      `;
+      wrap.appendChild(row);
+      // scroll into view for convenience
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  </script>
+</body>
+</html>

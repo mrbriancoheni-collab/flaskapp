@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en" class="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  {% if csrf_token %}<meta name="csrf-token" content="{{ csrf_token() }}">{% endif %}
+  <title>{% block title %}{{ app_name }} – App{% endblock %}</title>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-HZBKX56R65"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-HZBKX56R65');
+</script>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <link rel="icon" href="{{ url_for('static', filename='brand/favicon.ico') }}" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='brand/icons/fieldsprout-icon-32.png') }}">
+  <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='brand/icons/fieldsprout-icon-16.png') }}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='brand/icons/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='brand/site.webmanifest') }}">
+  <meta name="theme-color" content="#7c3aed">
+
+  <style>
+    :root{
+      --brand:#7c3aed;
+      --brand-dark:#6d28d9;
+      --gray-50:#f9fafb;
+      --gray-100:#f3f4f6;
+      --gray-200:#e5e7eb;
+      --gray-500:#6b7280;
+      --gray-900:#111827;
+      --indigo-50:#eef2ff;
+      --indigo-600:#4f46e5;
+    }
+    .nav-link{display:inline-flex;align-items:center;gap:.5rem;transition:background-color .15s,color .15s;border-radius:.375rem;}
+    .nav-link:hover{background-color:rgba(0,0,0,.04);}
+    .nav-link i{width:1.125rem;text-align:center;flex:0 0 auto;}
+
+    /* Three-column shell tweaks */
+    .primary-btn{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:.75rem;}
+    .primary-btn:hover{background-color:rgba(255,255,255,.08);}
+    .primary-btn.active{background:linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.08));border:1px solid rgba(255,255,255,.2);}
+
+    .secondary-link{display:flex;align-items:center;gap:.5rem;padding:.5rem .625rem;border-radius:.5rem;color:#111827;}
+    .secondary-link:hover{background:#eef2ff;}
+    .secondary-link.active{background:#eef2ff;color:#4f46e5;font-weight:600;}
+
+    .sidebar-label{display:flex;align-items:center;gap:.5rem;padding:.25rem .625rem .5rem .625rem;font-size:.75rem;font-weight:700;letter-spacing:.04em;color:#6b7280;text-transform:uppercase}
+
+    .btn-primary-hero{
+      display:inline-flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.75rem 1rem;font-weight:700;border-radius:.75rem;
+      color:#fff;background:linear-gradient(90deg,var(--brand),var(--brand-dark));box-shadow:0 4px 14px rgba(124,58,237,.4);
+      transition:transform .1s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .btn-primary-hero:hover{background:var(--brand-dark);transform:translateY(-1px);box-shadow:0 6px 18px rgba(124,58,237,.5);}
+    .fs-chip{display:inline-flex;align-items:center;justify-content:center;text-align:center;min-width:72px;padding:0 .5rem;}
+  </style>
+
+  <script defer src="{{ url_for('static', filename='js/app_shell.js') }}"></script>
+  <script defer src="{{ url_for('static', filename='js/onboarding.js') }}"></script>
+
+  <script>
+  (function(){
+    function openModal(){var m=document.getElementById('onboard-modal'); if(!m) return; m.classList.remove('hidden'); m.classList.add('flex');}
+    function closeModal(){var m=document.getElementById('onboard-modal'); if(!m) return; m.classList.add('hidden'); m.classList.remove('flex');}
+    window.FSOnboard={open:openModal,close:closeModal};
+    function bind(){
+      document.querySelectorAll('.onboard-launch').forEach(function(el){el.addEventListener('click',function(e){e.preventDefault();openModal();});});
+      var x=document.getElementById('onboard-close'); if(x) x.addEventListener('click',closeModal);
+      var modal=document.getElementById('onboard-modal'); if(modal) modal.addEventListener('click',function(e){ if(e.target===modal) closeModal();});
+    }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind); else bind();
+  })();
+  </script>
+
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-T7TTGMPH');</script>
+  <!-- End GTM -->
+</head>
+
+<body id="body" class="min-h-screen flex flex-col bg-gray-50 text-gray-900">
+
+  {# --------------------- Active section detection ---------------------- #}
+  {% set bp = request.blueprint or '' %}
+  {% set path = request.path or '' %}
+  {% set epn = request.endpoint or '' %}
+
+  {% set SECTION = 'strategy' %}
+  {% if bp == 'glsa_bp' or path.startswith('/account/glsa') %}
+    {% set SECTION = 'glsa' %}
+  {% elif bp == 'fbads_bp' or path.startswith('/account/fbads') %}
+    {% set SECTION = 'fbads' %}
+  {% elif bp == 'yelp_bp' or path.startswith('/account/yelp') %}
+    {% set SECTION = 'yelp' %}
+  {% elif bp == 'gmb_bp' or path.startswith('/account/gmb') %}
+    {% set SECTION = 'gmb' %}
+  {% elif bp == 'seo_bp' or path.startswith('/account/seo') %}
+    {% set SECTION = 'seo' %}
+  {% elif bp == 'reports_bp' or path.startswith('/account/reports') %}
+    {% set SECTION = 'reports' %}
+  {% elif bp == 'maps_bp' or path.startswith('/account/maps') %}
+    {% set SECTION = 'maps' %}
+  {% elif bp == 'campaigns_bp' or path.startswith('/account/campaigns') %}
+    {% set SECTION = 'campaigns' %}
+  {% elif bp == 'wp_bp' or path.startswith('/account/wp') %}
+    {% set SECTION = 'wp' %}
+  {% elif bp == 'google_bp' or path.startswith('/account/google') %}
+    {% set SECTION = 'google' %}
+  {% elif 'account_bp.' in epn or path.startswith('/account') %}
+    {% set SECTION = 'account' %}
+  {% endif %}
+
+  <!-- Mobile header (simple) -->
+  <header class="md:hidden bg-white border-b">
+    <div class="h-14 px-4 flex items-center justify-between">
+      <a href="{{ url_for(ep('home')) }}" class="flex items-center space-x-2 font-semibold">
+        <img src="{{ url_for('static', filename='brand/logos/fieldsprout-wordmark.svg') }}" alt="FieldSprout" style="height:40px;width:auto;">
+      </a>
+      <button id="mobile-menu-btn" class="p-2 rounded hover:bg-gray-100" aria-label="Open menu">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+    </div>
+    <nav id="mobile-menu" class="hidden border-t bg-white px-4 py-3 space-y-1 pb-16">
+      {% if not (current_user_profile and current_user_profile.is_complete()) %}
+        <a href="#" class="onboard-launch btn-primary-hero w-full">
+          <i class="fa-solid fa-rocket"></i>
+          <span>Get Started</span>
+        </a>
+      {% endif %}
+      
+      <a href="{{ url_for('account_bp.dashboard') }}" class="primary-btn {% if SECTION=='dashboard' %}active{% endif %}" title="Dashboard">
+        <i class="fa-solid fa-house"></i>
+      </a>
+
+      <!-- Flat Google submenu items for mobile -->
+      <div class="pt-2 text-xs font-semibold text-gray-500 uppercase">Google</div>
+      <a class="block px-2 py-2 rounded nav-link" href="{{ url_for('google_bp.index') }}">
+        <i class="fa-solid fa-gauge"></i><span>Overview / Connect</span>
+      </a>
+      {% if has_endpoint('google_bp.ads_ui') %}
+        <a href="{{ url_for('google_bp.ads_ui') }}" class="block px-2 py-2 nav-link">
+          <i class="fa-solid fa-bullseye"></i><span>Google Ads</span>
+        </a>
+      {% endif %}
+      {% if has_endpoint('google_bp.gsc_ui') %}
+        <a href="{{ url_for('google_bp.gsc_ui') }}" class="block px-2 py-2 nav-link">
+          <i class="fa-solid fa-magnifying-glass"></i><span>Search Console</span>
+        </a>
+      {% endif %}
+      {% if has_endpoint('google_bp.ga_ui') %}
+        <a href="{{ url_for('google_bp.ga_ui') }}" class="block px-2 py-2 nav-link">
+          <i class="fa-solid fa-chart-line"></i><span>Analytics</span>
+        </a>
+      {% endif %}
+      {% if has_endpoint('gmb_bp.index') %}
+        <a class="block px-2 py-2 nav-link" href="{{ url_for('gmb_bp.index') }}">
+          <i class="fa-brands fa-google"></i><span>Google Business</span>
+        </a>
+      {% endif %}
+
+      {% if has_endpoint('glsa_bp.index') %}
+        <a href="{{ url_for('glsa_bp.index') }}" class="block px-2 py-2 nav-link">
+          <i class="fa-solid fa-bullhorn"></i><span>Local Services Ads</span>
+        </a>
+        {% if has_endpoint('glsa_bp.leads_page') %}
+          <a href="{{ url_for('glsa_bp.leads_page') }}" class="block px-2 py-2 nav-link">
+              <i class="fa-solid fa-inbox"></i><span>Review Leads</span>
+            </a>
+        {% endif %}
+        {% if has_endpoint('glsa_bp.optimize') %}
+          <a href="{{ url_for('glsa_bp.optimize') }}" class="block pl-7 pr-2 py-1 text-sm nav-link">Optimize Profiles</a>
+        {% endif %}
+      {% endif %}
+
+      <!-- {% if has_endpoint('fbads_bp.index') %}
+        <a href="{{ url_for('fbads_bp.index') }}" class="block px-2 py-2 nav-link"><i class="fa-brands fa-facebook"></i><span>Facebook Ads</span></a>
+        {% if has_endpoint('fbads_bp.leads') %}
+          <a href="{{ url_for('fbads_bp.leads') }}" class="block pl-7 pr-2 py-1 text-sm nav-link">Review Leads</a>
+        {% endif %}
+        {% if has_endpoint('fbads_bp.profile_edit') %}
+          <a href="{{ url_for('fbads_bp.profile_edit') }}" class="block pl-7 pr-2 py-1 text-sm nav-link">Edit Facebook Profile</a>
+        {% endif %}
+      {% endif %} -->
+
+      {% if has_endpoint('gmb_bp.index') %}
+        <a href="{{ url_for('gmb_bp.index') }}" class="block px-2 py-2 nav-link"><i class="fa-brands fa-google"></i><span>Google Business</span></a>
+        {% if has_endpoint('gmb_bp.reviews') %}
+          <a href="{{ url_for('gmb_bp.reviews') }}" class="block pl-7 pr-2 py-1 text-sm nav-link">Profile Review</a>
+        {% endif %}
+        {% if has_endpoint('gmb_bp.ai_responses') %}
+          <a href="{{ url_for('gmb_bp.ai_responses') }}" class="block pl-7 pr-2 py-1 text-sm nav-link">AI Review Responses</a>
+        {% endif %}
+        {% if has_endpoint('gmb_bp.requests_email') %}
+          <a href="{{ url_for('gmb_bp.requests_email') }}" class="block pl-7 pr-2 py-1 text-sm nav-link">Review Requests (Email)</a>
+        {% endif %}
+      {% endif %}
+
+      <a href="{{ url_for(ep('pricing')) if has_endpoint('pricing') else '#' }}" class="block px-2 py-2 nav-link"><i class="fa-solid fa-tags"></i><span>Upgrade</span></a>
+      {% if is_logged_in() and has_endpoint('account_profile') %}
+        <a href="{{ url_for(ep('account_profile')) }}" class="block px-2 py-2 nav-link"><i class="fa-solid fa-user"></i><span>Account</span></a>
+      {% endif %}
+      {% if has_endpoint('logout') %}
+        <a href="{{ url_for(ep('logout')) }}" class="block px-2 py-2 nav-link"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+      {% endif %}
+    </nav>
+
+    <!-- Mobile support bar (fixed at bottom) -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-3 text-sm text-gray-700">
+      Need support?<br/><a href="cs@fieldsprout.io">cs@fieldsprout.io</a>
+    </div>
+  </header>
+
+  <!-- Desktop three-column shell -->
+  <div class="hidden md:flex flex-1 min-h-0">
+    <!-- PRIMARY SIDEBAR (icons only) -->
+    <aside class="w-16 bg-gray-900 text-white flex flex-col items-center py-4 space-y-3">
+      <a href="{{ url_for(ep('home')) }}" class="mb-4" title="{{ app_name }}">
+        <img src="{{ url_for('static', filename='brand/icons/fieldsprout-icon-32.png') }}" alt="FS" class="w-8 h-8">
+      </a>
+
+      <!-- <a href="{{ url_for('strategy_bp.index') }}" class="primary-btn {% if SECTION=='strategy' %}active{% endif %}" title="Strategy"><i class="fa-solid fa-lightbulb"></i></a> -->
+      <a href="{{ url_for('google_bp.index') }}" class="primary-btn {% if SECTION=='google' %}active{% endif %}" title="Google"><i class="fa-brands fa-google"></i></a>
+      <a href="{{ url_for('glsa_bp.index') }}" class="primary-btn {% if SECTION=='glsa' %}active{% endif %}" title="Local Services Ads"><i class="fa-solid fa-bullhorn"></i></a>
+      <!-- <a href="{{ url_for('fbads_bp.index') }}" class="primary-btn {% if SECTION=='fbads' %}active{% endif %}" title="Facebook Ads"><i class="fa-brands fa-facebook-f"></i></a> -->
+      <!-- <a href="{{ url_for('yelp_bp.index') }}" class="primary-btn {% if SECTION=='yelp' %}active{% endif %}" title="Yelp"><i class="fa-brands fa-yelp"></i></a> -->
+      <a href="{{ url_for('gmb_bp.index') }}" class="primary-btn {% if SECTION=='gmb' %}active{% endif %}" title="Google Business"><i class="fa-brands fa-google"></i></a>
+      <a href="{{ url_for('reports_bp.index') }}" class="primary-btn {% if SECTION=='reports' %}active{% endif %}" title="Reporting"><i class="fa-solid fa-gauge-high"></i></a>
+
+      <div class="mt-auto flex flex-col items-center space-y-3">
+        {% if has_endpoint('pricing') %}
+          <a href="{{ url_for(ep('pricing')) }}" class="primary-btn" title="Upgrade"><i class="fa-solid fa-tags"></i></a>
+        {% endif %}
+        {% if is_logged_in() and has_endpoint('account_profile') %}
+          <a href="{{ url_for(ep('account_profile')) }}" class="primary-btn {% if SECTION=='account' %}active{% endif %}" title="Account"><i class="fa-solid fa-user"></i></a>
+        {% endif %}
+        {% if has_endpoint('logout') %}
+          <a href="{{ url_for(ep('logout')) }}" class="primary-btn" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+        {% endif %}
+      </div>
+    </aside>
+
+    <!-- SECONDARY SIDEBAR (contextual menu) -->
+    <aside class="w-64 bg-white border-r px-3 py-4 overflow-y-auto flex flex-col">
+      <a href="{{ url_for(ep('home')) }}" class="hidden lg:flex items-center gap-2 px-2 py-2 mb-2 hover:text-indigo-600">
+        <img src="{{ url_for('static', filename='brand/logos/fieldsprout-wordmark.svg') }}" alt="FieldSprout" style="height:32px;width:auto;">
+      </a>
+
+      {% if not (current_user_profile and current_user_profile.is_complete()) %}
+        <div class="rounded-2xl border bg-white p-4 shadow-sm mb-4">
+          <div class="flex items-center justify-between">
+            <div class="font-semibold text-gray-900">Finish Setup</div>
+            <span class="text-[10px] uppercase tracking-wide rounded-full bg-purple-50 text-[var(--brand)] px-2 py-1 border border-purple-100">Important</span>
+          </div>
+          <p class="mt-1 text-sm text-gray-600">Complete your profile to unlock campaigns & automations.</p>
+          <a href="#" class="onboard-launch btn-primary-hero mt-3">
+            <i class="fa-solid fa-rocket"></i>
+            <span>Get Started</span>
+            <span class="fs-chip ml-2 inline-flex items-center rounded-full bg-white/20 px-2 py-0.5 text-xs">5–7 mins</span>
+          </a>
+        </div>
+      {% endif %}
+      
+      <div class="sidebar-label"><a href="{{ url_for('account_bp.dashboard') }}" class="primary-btn {% if SECTION=='dashboard' %}active{% endif %}" title="Dashboard">
+          <i class="fa-solid fa-house"></i>Dashboard
+        </a></div>
+
+      {% if SECTION == 'strategy' %}
+        <!-- strategy links placeholder -->
+      {% elif SECTION == 'google' %}
+        <div class="sidebar-label"><i class="fa-brands fa-google"></i>Google</div>
+
+        {% set g_items = [
+          ('google_bp.index',  'Overview / Connect', 'fa-solid fa-gauge'),
+          ('google_bp.ads_ui', 'Google Ads',         'fa-solid fa-bullseye'),
+          ('google_bp.gsc_ui', 'Search Console',     'fa-solid fa-magnifying-glass'),
+          ('google_bp.ga_ui',  'Analytics',          'fa-solid fa-chart-line'),
+          ('gmb_bp.index',     'Google Business',    'fa-brands fa-google'),
+        ] %}
+
+        {% for ep, label, icon in g_items %}
+          {% if has_endpoint(ep) %}
+            <a class="secondary-link {% if epn==ep %}active{% endif %}" href="{{ url_for(ep) }}">
+              <i class="{{ icon }}"></i><span>{{ label }}</span>
+            </a>
+          {% endif %}
+        {% endfor %}
+
+      {% elif SECTION == 'glsa' %}
+        <div class="sidebar-label"><i class="fa-solid fa-bullhorn"></i>Local Services Ads</div>
+        <a class="secondary-link {% if epn=='glsa_bp.index' %}active{% endif %}" href="{{ url_for('glsa_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview</span></a>
+        <a class="secondary-link {% if epn=='glsa_bp.leads_page' %}active{% endif %}" href="{{ url_for('glsa_bp.leads_page') }}"><i class="fa-solid fa-inbox"></i><span>Review Leads</span></a>
+        <a class="secondary-link {% if epn=='glsa_bp.optimize' %}active{% endif %}" href="{{ url_for('glsa_bp.optimize') }}"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimize Profiles</span></a>
+      {% elif SECTION == 'fbads' %}
+        <!-- <div class="sidebar-label"><i class="fa-brands fa-facebook"></i>Facebook Ads</div>
+        <a class="secondary-link {% if epn=='fbads_bp.index' %}active{% endif %}" href="{{ url_for('fbads_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview</span></a>
+        <a class="secondary-link {% if epn=='fbads_bp.leads' %}active{% endif %}" href="{{ url_for('fbads_bp.leads') }}"><i class="fa-solid fa-inbox"></i><span>Review Leads</span></a>
+        <a class="secondary-link {% if epn=='fbads_bp.profile_edit' %}active{% endif %}" href="{{ url_for('fbads_bp.profile_edit') }}"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimize FB Profiles</span></a> -->
+      {% elif SECTION == 'gmb' %}
+        <div class="sidebar-label"><i class="fa-brands fa-google"></i>Google Business</div>
+        <a class="secondary-link {% if epn=='gmb_bp.index' %}active{% endif %}" href="{{ url_for('gmb_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview</span></a>
+        <a class="secondary-link {% if epn=='gmb_bp.reviews' %}active{% endif %}" href="{{ url_for('gmb_bp.reviews') }}"><i class="fa-regular fa-file-lines"></i><span>Profile Review</span></a>
+        <a class="secondary-link {% if epn=='gmb_bp.ai_responses' %}active{% endif %}" href="{{ url_for('gmb_bp.ai_responses') }}"><i class="fa-solid fa-robot"></i><span>AI Review Responses</span></a>
+        <a class="secondary-link {% if epn=='gmb_bp.requests_email' %}active{% endif %}" href="{{ url_for('gmb_bp.requests_email') }}"><i class="fa-regular fa-envelope"></i><span>Review Requests (Email)</span></a>
+      {% elif SECTION == 'reports' %}
+        <div class="sidebar-label"><i class="fa-solid fa-gauge-high"></i>Reporting</div>
+        <a class="secondary-link {% if epn=='reports_bp.index' %}active{% endif %}" href="{{ url_for('reports_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview</span></a>
+        <a class="secondary-link {% if epn=='reports_bp.cpl_dashboard' %}active{% endif %}" href="{{ url_for('reports_bp.cpl_dashboard') }}"><i class="fa-solid fa-dollar-sign"></i><span>Cost per Lead/Customer</span></a>
+      {% elif SECTION == 'account' %}
+        <div class="sidebar-label"><i class="fa-solid fa-user"></i>Account</div>
+        {% if has_endpoint('settings_business') %}
+          <a class="secondary-link" href="{{ url_for(ep('settings_business')) }}"><i class="fa-solid fa-briefcase"></i><span>Business Profile</span></a>
+        {% endif %}
+        {% if has_endpoint('account_profile') %}
+          <a class="secondary-link" href="{{ url_for(ep('account_profile')) }}"><i class="fa-regular fa-id-card"></i><span>Account Settings</span></a>
+        {% endif %}
+        {% if has_endpoint('pricing') %}
+          <a class="secondary-link" href="{{ url_for(ep('pricing')) }}"><i class="fa-solid fa-tags"></i><span>Upgrade</span></a>
+        {% endif %}
+        {% if has_endpoint('logout') %}
+          <a class="secondary-link" href="{{ url_for(ep('logout')) }}"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+        {% endif %}
+      {% endif %}
+
+      <!-- Secondary desktop nav sticky bottom support -->
+      <div class="mt-auto sticky bottom-0 bg-white pt-3">
+        <div class="border-t pt-3 text-sm text-gray-700">
+          Need support<br/>cs@fieldsprout.io
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 p-8 overflow-y-auto">
+        {% if session.get('impersonated_user_id') and session.get('impersonator_user_id') %}
+        <div class="bg-yellow-100 border-b border-yellow-200 text-yellow-900 text-sm px-4 py-2 flex items-center justify-between">
+          <div>⚠️ You are impersonating a user (ID {{ session.get('impersonated_user_id') }}). Actions will be performed as them.</div>
+          <form method="post" action="{{ url_for('admin_bp.stop_impersonation') }}">
+            <button class="px-3 py-1 rounded bg-yellow-600 text-white text-xs">Stop impersonating</button>
+          </form>
+        </div>
+        {% endif %}
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="max-w-6xl mx-auto mb-4 space-y-2">
+            {% for category, message in messages %}
+              {% set tone = 'bg-indigo-50 text-indigo-800 border-indigo-200' %}
+              {% if category in ['error','danger'] %}{% set tone = 'bg-red-50 text-red-800 border-red-200' %}{% endif %}
+              {% if category in ['success'] %}{% set tone = 'bg-green-50 text-green-800 border-green-200' %}{% endif %}
+              {% if category in ['warning'] %}{% set tone = 'bg-yellow-50 text-yellow-800 border-yellow-200' %}{% endif %}
+              <div class="border rounded px-3 py-2 {{ tone }}">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <div class="max-w-6xl mx-auto">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+
+  <!-- Onboarding Modal -->
+  <div id="onboard-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="absolute inset-0 bg-black/40"></div>
+    <div class="relative bg-white w-full max-w-2xl mx-4 rounded-2xl shadow-xl border overflow-hidden">
+      <div class="px-5 py-4 border-b flex items-center justify-between">
+        <div>
+          <div class="text-xs text-gray-500">Business onboarding</div>
+          <div class="text-lg font-semibold">Let’s tune your strategy</div>
+        </div>
+        <button id="onboard-close" class="p-2 rounded-lg hover:bg-gray-100" aria-label="Close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="px-5 pt-4">
+        <div class="w-full bg-gray-200 rounded-full h-2">
+          <div id="onboard-progress" class="bg-[var(--brand)] h-2 rounded-full" style="width:0%"></div>
+        </div>
+        <div id="onboard-step-label" class="mt-2 text-xs text-gray-500">Step 1 of 8</div>
+      </div>
+
+      <div id="onboard-body" class="p-5 space-y-4">
+        <div class="text-center text-gray-500">Loading…</div>
+      </div>
+
+      <div class="px-5 py-4 border-t flex items-center justify-between">
+        <button id="onboard-back" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded" disabled>
+          <i class="fa-solid fa-angle-left"></i><span class="ml-2">Back</span>
+        </button>
+        <div class="flex items-center gap-2">
+          <button id="onboard-save-exit" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded hidden">Save & exit</button>
+          <button id="onboard-next" class="px-5 py-2 rounded text-white bg-[var(--brand)] hover:bg-[var(--brand-dark)]">
+            <span>Next</span><i class="fa-solid fa-angle-right ml-2"></i>
+          </button>
+          <button id="onboard-finish" class="px-5 py-2 rounded text-white bg-[var(--brand)] hover:bg-[var(--brand-dark)] hidden">
+            <span>Finish</span><i class="fa-solid fa-check ml-2"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-white border-t mt-8">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between text-sm text-gray-600">
+      <div>&copy; {{ current_year or "2025" }} FieldSprout. A Localized Growth, Inc. Company. All rights reserved.</div>
+      <div class="flex space-x-4 mt-2 md:mt-0">
+        <a href="https://fieldsprout.io/privacy-policy" target="_blank" rel="noopener" class="hover:text-indigo-600">Privacy Policy</a>
+        <a href="https://fieldsprout.io/terms-of-service" target="_blank" rel="noopener" class="hover:text-indigo-600">Terms of Service</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      var btn=document.getElementById('mobile-menu-btn');
+      var menu=document.getElementById('mobile-menu');
+      if(btn&&menu){ btn.addEventListener('click',function(){ menu.classList.toggle('hidden');}); }
+    })();
+  </script>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var t=document.querySelector('meta[name="csrf-token"]')?.content;
+    if(!t) return;
+    document.querySelectorAll('form[method="post"]:not([data-no-auto-csrf])').forEach(function(f){
+      if(!f.querySelector('input[name="csrf_token"]')){
+        var i=document.createElement('input');
+        i.type='hidden'; i.name='csrf_token'; i.value=t; f.appendChild(i);
+      }
+    });
+  });
+  </script>
+<script>
+(function(){
+  function csrf() {
+    var m = document.querySelector('meta[name="csrf-token"]');
+    return m ? m.content : '';
+  }
+  async function draftForReview(payload) {
+    const res = await fetch("{{ url_for('gmb_bp.reviews_ai_draft') }}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrf(),
+      },
+      body: JSON.stringify(payload),
+      credentials: "same-origin"
+    });
+    return res.json();
+  }
+
+  function toast(msg, type){
+    console.log(type ? type+":" : "", msg);
+  }
+
+  function currentBusinessName(){
+    return "{{ business_name|default('', true) }}";
+  }
+
+  function onClickGenerate(e){
+    const btn = e.currentTarget;
+    const id = btn.dataset.reviewId;
+    const author = btn.dataset.author || "";
+    const rating = parseInt(btn.dataset.rating || "0", 10);
+    const text = btn.dataset.text || "";
+    const toneSel = document.querySelector('#tone-select')
+    const tone = toneSel ? toneSel.value : "friendly";
+
+    const ta = document.querySelector('#reply-'+id);
+    if (!ta){ return; }
+
+    btn.disabled = true;
+    const orig = btn.textContent;
+    btn.textContent = "Generating…";
+
+    draftForReview({
+      text,
+      author,
+      rating,
+      tone,
+      business_name: currentBusinessName()
+    }).then(function(json){
+      if(json && json.ok){
+        ta.value = json.draft;
+      }else{
+        toast(json && json.error ? json.error : "Failed to generate.", "error");
+      }
+    }).catch(function(err){
+      toast(err && err.message || "Network error", "error");
+    }).finally(function(){
+      btn.disabled = false;
+      btn.textContent = orig;
+    });
+  }
+
+  function bind(){
+    document.querySelectorAll('.ai-draft-btn').forEach(function(b){
+      b.addEventListener('click', onClickGenerate);
+    });
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind); else bind();
+})();
+</script>
+
+  <!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-T7TTGMPH" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <!-- End GTM (noscript) -->
+</body>
+</html>

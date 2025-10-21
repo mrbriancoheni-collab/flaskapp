@@ -1,0 +1,9 @@
+{% extends "base_app.html" %}
+{% block title %}Maps – Zip Coverage{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-semibold mb-4">Zipcode Coverage</h1>
+<p class="text-gray-600 mb-3">Zips currently covered:</p>
+<ul class="list-disc pl-6">
+  {% for z in zips %}<li>{{ z }}</li>{% endfor %}
+</ul>
+{% endblock %}

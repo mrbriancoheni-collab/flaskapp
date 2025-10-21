@@ -1,0 +1,326 @@
+{# templates/public/home.html #}
+{% extends "base_public.html" %}
+{% block title %}FieldSprout — Get Found. Book More Jobs with AI{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 bg-gradient-to-b from-primary-50 via-white to-white"></div>
+  <div class="container-max relative py-20 lg:py-28 text-center">
+    <span class="badge">Revenue AI for Local Pros</span>
+    <h1 class="mt-6 text-4xl md:text-6xl font-extrabold tracking-tight">
+      Get Found. <span class="text-primary-700">Book Jobs.</span> Grow Leads.
+    </h1>
+    <p class="mt-3 text-sm text-gray-600">Simplify marketing • Reduce costs • Increase leads • Grow revenue</p>
+    <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+      FieldSprout’s AI agents build and optimize your local campaigns across Google, Facebook/Instagram, and your website—cutting waste, increasing qualified leads, and booking more jobs automatically.
+    </p>
+
+  </div>
+</section>
+
+<!-- LOGO STRIP (SVG pills; no broken images) -->
+<section aria-label="Trusted by" class="py-6">
+  <div class="container-max">
+    <div class="flex items-center justify-center gap-4 sm:gap-6 md:gap-8 flex-wrap opacity-90">
+      <!-- Google -->
+      <span class="logo-pill text-gray-700">
+        <span class="logo-dot" style="background:#ea4335"></span>
+        <span class="logo-dot" style="background:#fbbc05"></span>
+        <span class="logo-dot" style="background:#34a853"></span>
+        <span class="logo-dot" style="background:#4285f4"></span>
+        <span class="ml-1">Google</span>
+      </span>
+      <!-- Meta -->
+      <span class="logo-pill text-gray-700">
+        <svg width="16" height="12" viewBox="0 0 24 14" fill="none" aria-hidden="true"><path d="M3 11C5 6 7 3 9 3s4 3 6 8c1-3 2-5 4-5 3 0 4 8-1 8-3 0-5-7-8-7S6 11 3 11Z" stroke="#1e3a8a" stroke-width="1.6"/></svg>
+        <span class="ml-1">Meta</span>
+      </span>
+      <!-- Yelp -->
+      <span class="logo-pill text-gray-700">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="#c81e1e" aria-hidden="true"><path d="M11 2a1 1 0 0 1 2 0l1 8a1 1 0 0 1-2 0l-1-8ZM5 8a1 1 0 0 1 1.4 0L12 13a1 1 0 1 1-1.4 1.4L5 9.4A1 1 0 0 1 5 8Zm14 0a1 1 0 0 1 0 1.4l-5.6 5.6A1 1 0 0 1 12 13l5.6-5.6A1 1 0 0 1 19 8ZM12 18l1 4a1 1 0 0 1-2 0l1-4Z"/></svg>
+        <span class="ml-1">Yelp</span>
+      </span>
+      <!-- Nextdoor -->
+      <span class="logo-pill text-gray-700">
+        <span class="logo-dot" style="background:#00b246"></span><span class="ml-1">Nextdoor</span>
+      </span>
+      <!-- Stripe -->
+      <span class="logo-pill text-gray-700">
+        <span class="logo-dot" style="background:#635bff"></span><span class="ml-1">Stripe</span>
+      </span>
+    </div>
+  </div>
+</section>
+
+<!-- WHY -->
+<section id="how" class="section">
+  <div class="container-max grid lg:grid-cols-2 gap-14 items-center">
+    <div>
+      <span class="badge">Why FieldSprout</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Revenue AI built for home & local services</h2>
+      <p class="mt-4 text-gray-600">We combine rich local search signals, AI agents, and your business settings to create campaigns your market actually searches for — then we follow up to get more jobs on your calendar.</p>
+      <ul class="mt-6 space-y-3">
+        <li class="flex gap-3"><span class="text-primary-700">✓</span><span><strong>Get found</strong> on Google, Maps, and local directories.</span></li>
+        <li class="flex gap-3"><span class="text-primary-700">✓</span><span><strong>Book jobs</strong> with instant text/email follow-ups & reminders.</span></li>
+        <li class="flex gap-3"><span class="text-primary-700">✓</span><span><strong>Grow leads</strong> with review boosts & referral nudges.</span></li>
+      </ul>
+      <div class="mt-8 flex gap-3">
+        {% if has_endpoint('signup') %}
+          <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary">Start Now</a>
+        {% elif has_endpoint('register') %}
+          <a href="{{ url_for(ep('register')) }}" class="btn btn-primary">Start Now</a>
+        {% else %}
+          <a href="/signup" class="btn btn-primary">Start Now</a>
+        {% endif %}
+        <a href="#demo" class="btn btn-outline">Watch demo</a>
+      </div>
+    </div>
+
+    <!-- Screenshot substitute (no external image) -->
+    <div class="relative">
+      <div class="rounded-3xl p-1 bg-gradient-to-br from-accent-600 to-primary-600 shadow-soft">
+        <div class="rounded-3xl overflow-hidden bg-white">
+          <div class="aspect-[16/10] w-full grid grid-cols-3 gap-2 p-4">
+            <div class="bg-primary-50 rounded-lg"></div>
+            <div class="bg-primary-100 rounded-lg"></div>
+            <div class="bg-primary-200 rounded-lg"></div>
+            <div class="bg-primary-100 rounded-lg"></div>
+            <div class="bg-primary-200 rounded-lg"></div>
+            <div class="bg-primary-50 rounded-lg"></div>
+          </div>
+        </div>
+      </div>
+      <div class="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-soft p-4 border border-gray-100">
+        <p class="text-sm">“We doubled booked jobs in 60 days.” — <strong>Marina, HVAC</strong></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOW IT WORKS 1–2–3 -->
+  <div class="container-max mt-14">
+    <div class="rounded-3xl bg-white p-6 md:p-8 border border-gray-100 shadow-soft">
+      <div class="grid md:grid-cols-3 gap-6">
+        <div>
+          <div class="text-sm font-semibold text-primary-700">1</div>
+          <h3 class="mt-2 font-semibold">Connect your accounts</h3>
+          <p class="mt-2 text-gray-600">Link Google, Meta, forms, and call tracking. One place to see what’s working.</p>
+        </div>
+        <div>
+          <div class="text-sm font-semibold text-primary-700">2</div>
+          <h3 class="mt-2 font-semibold">AI reviews demand signals</h3>
+          <p class="mt-2 text-gray-600">We analyze local searches, intent, and past jobs to find ready-to-book customers.</p>
+        </div>
+        <div>
+          <div class="text-sm font-semibold text-primary-700">3</div>
+          <h3 class="mt-2 font-semibold">Optimization suggestions (or auto)</h3>
+          <p class="mt-2 text-gray-600">Approve clear recommendations—or let agents act within your budget guardrails.</p>
+        </div>
+      </div>
+      <div class="mt-6">
+        {% if has_endpoint('signup') %}
+          <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary">Start Now</a>
+        {% elif has_endpoint('register') %}
+          <a href="{{ url_for(ep('register')) }}" class="btn btn-primary">Start Now</a>
+        {% else %}
+          <a href="/signup" class="btn btn-primary">Start Now</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" class="section bg-gradient-to-b from-white to-primary-50/50">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto">
+      <span class="badge">AI Modules</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Power your lead engine — from search to scheduled</h2>
+      <p class="mt-4 text-gray-600">Pick the modules you need today. Add more as you grow.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="rounded-2xl bg-white p-6 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold">CAI</div>
+        <h3 class="mt-4 font-semibold text-lg">Campaign AI</h3>
+        <p class="mt-2 text-gray-600">Start with zero campaigns. FieldSprout builds high-intent ads & pages from your services and locations.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-1">
+          <li>Google & Maps coverage</li><li>Auto-generated service pages</li><li>Live keyword matching</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-6 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold">SEO</div>
+        <h3 class="mt-4 font-semibold text-lg">SEO Agent</h3>
+        <p class="mt-2 text-gray-600">Rank for “near me” terms with AI-written content and automatic internal links.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-1">
+          <li>Local schema & GBP sync</li><li>Blog & city pages</li><li>Weekly site fixes</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-6 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold">ADS</div>
+        <h3 class="mt-4 font-semibold text-lg">Ads Optimizer</h3>
+        <p class="mt-2 text-gray-600">Always-on tuning of bids, budgets, and negatives to lower CPL.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-1">
+          <li>Google & Meta</li><li>Call & form tracking</li><li>ROAS & cost guardrails</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-6 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold">REV</div>
+        <h3 class="mt-4 font-semibold text-lg">Review Boost</h3>
+        <p class="mt-2 text-gray-600">More 5-star reviews → higher ranks → more booked jobs. Automated, compliant nudges.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-1">
+          <li>Smart timing & templates</li><li>Link to Google/Yelp</li><li>Negative feedback deflection</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROOF -->
+<section id="proof" class="section">
+  <div class="container-max">
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100 text-center">
+        <div class="text-5xl font-extrabold text-primary-700">50%</div>
+        <p class="mt-2 text-gray-600">faster campaign launch</p>
+      </div>
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100 text-center">
+        <div class="text-5xl font-extrabold text-primary-700">4.8/5</div>
+        <p class="mt-2 text-gray-600">average customer rating</p>
+      </div>
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100 text-center">
+        <div class="text-5xl font-extrabold text-primary-700">2–3x</div>
+        <p class="mt-2 text-gray-600">more qualified leads</p>
+      </div>
+    </div>
+
+    <!-- Agent activity proof card -->
+    <div class="mt-6 rounded-xl bg-white p-4 shadow-soft border border-gray-100 max-w-2xl">
+      <div class="text-sm text-gray-600">Agent Activity</div>
+      <ul class="mt-2 text-sm text-gray-700 space-y-1">
+        <li>• Paused 3 low-intent keywords (saved $184/week)</li>
+        <li>• Shifted $35/day to “water heater repair” (CPL ↓ 22%)</li>
+        <li>• Auto-texted 7 new leads within 60 seconds</li>
+      </ul>
+    </div>
+
+    <div class="mt-12 grid lg:grid-cols-3 gap-6">
+      <blockquote class="rounded-2xl p-6 bg-white shadow-soft border border-gray-100">
+        <p class="text-lg">“Calls went up 62% in month one. The AI pages match exactly what people search for.”</p>
+        <footer class="mt-4 text-sm text-gray-600">— Anthony, Plumbing Owner</footer>
+      </blockquote>
+      <blockquote class="rounded-2xl p-6 bg-white shadow-soft border border-gray-100">
+        <p class="text-lg">“Set it and it keeps booking jobs. We just show up and do the work.”</p>
+        <footer class="mt-4 text-sm text-gray-600">— Priya, Pest Control</footer>
+      </blockquote>
+      <blockquote class="rounded-2xl p-6 bg-white shadow-soft border border-gray-100">
+        <p class="text-lg">“Lower CPL on Google and more reviews — that combo crushed our slow season.”</p>
+        <footer class="mt-4 text-sm text-gray-600">— Marco, HVAC</footer>
+      </blockquote>
+    </div>
+
+    <div class="mt-8 text-center">
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary">Start Now</a>
+      {% elif has_endpoint('register') %}
+        <a href="{{ url_for(ep('register')) }}" class="btn btn-primary">Start Now</a>
+      {% else %}
+        <a href="/signup" class="btn btn-primary">Start Now</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- INDUSTRIES -->
+<section id="industries" class="section bg-gradient-to-b from-primary-50/60 to-white">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto">
+      <span class="badge">Built for local</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Works across every service vertical</h2>
+      <p class="mt-4 text-gray-600">Launch with your services. We create the campaigns that win in your area.</p>
+    </div>
+
+    <div class="mt-10 grid md:grid-cols-3 gap-6">
+      {% set tiles = [
+        ('Plumbing','Clogs, leaks, installs'),
+        ('HVAC','Tune-ups, repairs, installs'),
+        ('Roofing','Storm damage, replacements'),
+        ('Landscaping','Mowing, cleanups, design'),
+        ('Pest Control','Termites, roaches, wasps'),
+        ('Electrical','Panels, EV chargers, wiring')
+      ] %}
+      {% for name,desc in tiles %}
+      <div class="rounded-2xl bg-white p-6 border border-gray-100 shadow-soft">
+        <div class="flex items-center justify-between">
+          <h3 class="font-semibold">{{ name }}</h3>
+          <span class="text-xs px-2 py-1 rounded-full bg-highlight-400/20 text-amber-700">High Intent</span>
+        </div>
+        <p class="mt-2 text-gray-600">{{ desc }}</p>
+        {% if has_endpoint('signup') %}
+          <a href="{{ url_for(ep('signup')) }}" class="mt-4 inline-flex text-primary-700 hover:underline">See sample campaigns →</a>
+        {% elif has_endpoint('register') %}
+          <a href="{{ url_for(ep('register')) }}" class="mt-4 inline-flex text-primary-700 hover:underline">See sample campaigns →</a>
+        {% else %}
+          <a href="/signup" class="mt-4 inline-flex text-primary-700 hover:underline">See sample campaigns →</a>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="section">
+  <div class="container-max">
+    <div class="grid lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+        <h2 class="text-3xl md:text-5xl font-extrabold">Simple pricing that scales with you</h2>
+        <p class="mt-4 text-gray-600">Start Now. Paid plans add ads optimization, multi-location SEO, and advanced automations.</p>
+        <ul class="mt-6 grid sm:grid-cols-2 gap-4">
+          <li class="flex gap-3"><span class="text-primary-700">✓</span><span>Unlimited service pages</span></li>
+          <li class="flex gap-3"><span class="text-primary-700">✓</span><span>Call & form tracking</span></li>
+          <li class="flex gap-3"><span class="text-primary-700">✓</span><span>Review Boost automations</span></li>
+          <li class="flex gap-3"><span class="text-primary-700">✓</span><span>No contracts, cancel anytime</span></li>
+        </ul>
+      </div>
+      <div class="rounded-3xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="text-sm font-semibold text-primary-700">Starter</div>
+        <div class="mt-2 text-5xl font-extrabold">$250/mo.</div>
+        <p class="text-gray-600">or save with our annual plan.</p>
+        {% if has_endpoint('signup') %}
+          <a href="{{ url_for(ep('signup')) }}" class="mt-6 w-full btn btn-primary text-center">Start Now</a>
+        {% elif has_endpoint('register') %}
+          <a href="{{ url_for(ep('register')) }}" class="mt-6 w-full btn btn-primary text-center">Start Now</a>
+        {% else %}
+          <a href="/signup" class="mt-6 w-full btn btn-primary text-center">Start Now</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA (lighter than footer but not white) -->
+<section class="relative overflow-hidden bg-primary-100">
+  <div class="absolute inset-0 bg-gradient-to-br from-primary-100 via-primary-200 to-primary-300"></div>
+
+  <div class="container-max relative py-16 text-center text-gray-900">
+    <h2 class="text-3xl md:text-5xl font-extrabold">Win more jobs with Revenue AI</h2>
+    <p class="mt-3 text-gray-700">Launch campaigns from your services. We’ll handle the rest — search to scheduled.</p>
+    <div class="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary">Start Now</a>
+      {% elif has_endpoint('register') %}
+        <a href="{{ url_for(ep('register')) }}" class="btn btn-primary">Start Now</a>
+      {% else %}
+        <a href="/signup" class="btn btn-primary">Start Now</a>
+      {% endif %}
+      <a href="#demo" class="btn btn-outline">Watch demo</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

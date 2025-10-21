@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Choose a plan</h2>
+<div class="row">
+  {% for p in plans %}
+  <div class="column">
+    <div class="banner--upgrade">
+      <h4>{{ p.name }}</h4>
+      <p><strong>${{ p.price }}</strong>/{{ 'mo' if p.id != 'annual' else 'yr' }}</p>
+      <ul>
+        {% for b in p.benefits %}<li>{{ b }}</li>{% endfor %}
+      </ul>
+      <form method="post" action="#">
+        <button type="button" disabled>Continue (wire to Stripe)</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

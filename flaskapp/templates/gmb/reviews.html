@@ -1,0 +1,393 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'gmb' %}
+{% block title %}Google Business Profile — Reviews{% endblock %}
+
+{% block content %}
+{% set _connected = (acct is defined and acct) or (connected is defined and connected) %}
+
+<div class="max-w-7xl mx-auto space-y-6">
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Google Business Profile — Reviews</h1>
+      <p class="text-gray-500 text-sm">Monitor, filter, and reply to your latest reviews.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      {% if not _connected %}
+        <a href="{{ url_for('gmb_bp.start') }}"
+           class="rounded-md bg-emerald-600 text-white px-4 py-2 text-sm hover:bg-emerald-700">
+          <i class="fa-solid fa-link mr-2"></i>Connect GBP
+        </a>
+      {% endif %}
+      <a href="{{ url_for('gmb_bp.profile') }}"
+         class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">
+         <i class="fa-regular fa-id-card mr-2"></i>Profile
+      </a>
+    </div>
+  </div>
+
+  {% if not _connected %}
+    <div class="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 p-3 text-sm">
+      You are viewing <span class="font-medium">sample reviews</span>. Connect your account to load live reviews.
+    </div>
+  {% endif %}
+
+  {# ------- Sample data fallback ------- #}
+  {% set _summary = summary if summary is defined and summary else {
+    'avg': 4.6,
+    'count': 238,
+    'last30': 18,
+    'responseRate': 0.72
+  } %}
+  {% set _reviews = reviews if reviews is defined and reviews else [
+    {'id': 'r101', 'author':'Sam R.',  'rating':5, 'time':'2025-09-12 09:41', 'text':'Super fast, very professional. No more ants in my kitchen!', 'owner_reply': {'time':'2025-09-12 12:08', 'text':'Thanks Sam! Glad we could help.'}},
+    {'id': 'r102', 'author':'Maya L.', 'rating':4, 'time':'2025-09-10 16:03', 'text':'Tech arrived early and did a great job. A bit pricey but worth it.', 'owner_reply': None},
+    {'id': 'r103', 'author':'Andre D.','rating':3, 'time':'2025-09-08 11:29', 'text':'Service was okay. Needed a second visit.', 'owner_reply': None},
+    {'id': 'r104', 'author':'Chris P.','rating':5, 'time':'2025-09-05 14:22', 'text':'Rodent issue solved the same day. Amazing!', 'owner_reply': {'time':'2025-09-05 15:10', 'text':'Appreciate the review!'}},
+    {'id': 'r105', 'author':'Jin K.',  'rating':2, 'time':'2025-09-03 10:12', 'text':'Crew was late and missed a spot. They did return to fix it.', 'owner_reply': {'time':'2025-09-04 09:30', 'text':'Sorry about the delay — thanks for letting us make it right.'}}
+  ] %}
+
+  <!-- KPI cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="rounded-xl border bg-white p-4">
+      <div class="text-xs uppercase text-gray-500">Average Rating</div>
+      <div class="mt-1 flex items-end gap-2">
+        <div class="text-2xl font-semibold">{{ '%.1f'|format(_summary.avg) }}</div>
+        <div class="text-xs text-gray-500">/ 5</div>
+      </div>
+    </div>
+    <div class="rounded-xl border bg-white p-4">
+      <div class="text-xs uppercase text-gray-500">Total Reviews</div>
+      <div class="text-2xl font-semibold mt-1">{{ _summary.count }}</div>
+    </div>
+    <div class="rounded-xl border bg-white p-4">
+      <div class="text-xs uppercase text-gray-500">New (30d)</div>
+      <div class="text-2xl font-semibold mt-1">{{ _summary.last30 }}</div>
+    </div>
+    <div class="rounded-xl border bg-white p-4">
+      <div class="text-xs uppercase text-gray-500">Response Rate</div>
+      <div class="text-2xl font-semibold mt-1">{{ (100 * _summary.responseRate)|round(0) }}%</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" action="" class="rounded-xl border bg-white p-4">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">Search</label>
+        <input name="q" value="{{ request.args.get('q','') if request else '' }}" class="w-full rounded-md border-gray-300" placeholder="Text or author"/>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">Min Rating</label>
+        <select name="min_rating" class="w-full rounded-md border-gray-300 text-sm">
+          {% for r in [5,4,3,2,1] %}
+            {% set sel = (request.args.get('min_rating')|int == r) if request else false %}
+            <option value="{{ r }}" {% if sel %}selected{% endif %}>{{ r }}+</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">Has Reply</label>
+        <select name="has_reply" class="w-full rounded-md border-gray-300 text-sm">
+          {% set v = request.args.get('has_reply') if request else '' %}
+          <option value="" {% if v=='' %}selected{% endif %}>Any</option>
+          <option value="1" {% if v=='1' %}selected{% endif %}>Yes</option>
+          <option value="0" {% if v=='0' %}selected{% endif %}>No</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">Since</label>
+        <input name="since" type="date" value="{{ request.args.get('since','') if request else '' }}" class="w-full rounded-md border-gray-300"/>
+      </div>
+      <div class="flex items-end gap-2">
+        <button class="rounded-md bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500">Apply</button>
+
+        <!-- Bulk AI button opens email verify modal -->
+        <button type="button" id="bulk-ai-open"
+                class="rounded-md border px-4 py-2 text-sm hover:bg-gray-50">
+          <i class="fa-solid fa-robot mr-2"></i>Automate with AI
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <!-- Reviews list -->
+  <div class="rounded-xl border bg-white">
+    <div class="p-3 border-b flex flex-wrap items-center gap-3">
+      <div class="text-sm text-gray-700">Bulk actions:</div>
+      <select id="bulk-action" class="rounded-md border-gray-300 text-sm">
+        <option value="">Select...</option>
+        <option value="mark_reviewed">Mark Reviewed</option>
+        <option value="request_reply">Request Reply</option>
+        <option value="export_csv">Export CSV</option>
+        <option value="ai_draft">AI: Draft Replies</option>
+      </select>
+      <button id="bulk-run" class="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50">Run</button>
+      <div id="bulk-status" class="text-sm text-gray-500"></div>
+    </div>
+
+    <div class="divide-y">
+      {% for r in _reviews %}
+      <div class="p-4" data-review-id="{{ r.id }}">
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex-1">
+            <div class="flex items-center gap-2">
+              <div class="font-medium">{{ r.author }}</div>
+              <div class="flex items-center gap-1 text-amber-500" aria-label="{{ r.rating }} stars">
+                {% for i in range(0, r.rating) %}★{% endfor %}
+                {% for i in range(0, 5 - r.rating) %}☆{% endfor %}
+              </div>
+              <div class="text-xs text-gray-500">{{ r.time }}</div>
+            </div>
+            <div class="mt-2 text-sm text-gray-800 whitespace-pre-wrap review-text">{{ r.text }}</div>
+
+            {% if r.owner_reply %}
+              <div class="mt-3 rounded-lg border bg-gray-50 p-3">
+                <div class="text-xs text-gray-500 mb-1">Owner reply · {{ r.owner_reply.time }}</div>
+                <div class="text-sm text-gray-800 whitespace-pre-wrap">{{ r.owner_reply.text }}</div>
+                <div class="mt-2">
+                  <a href="#" class="rounded-md border px-2.5 py-1 text-xs hover:bg-white">Edit reply</a>
+                  <a href="#" class="rounded-md border px-2.5 py-1 text-xs hover:bg-white">Delete reply</a>
+                </div>
+              </div>
+            {% else %}
+              <form method="post" action="#" class="mt-3 space-y-2 one-reply-form">
+                <label class="block text-xs text-gray-600">Write a public reply</label>
+                <textarea name="reply_{{ r.id }}" rows="3"
+                          class="w-full rounded-md border-gray-300 reply-textarea"
+                          placeholder="Thanks for the review!"></textarea>
+
+                <div class="flex flex-wrap items-center gap-2">
+                  <button class="rounded-md bg-indigo-600 text-white px-3 py-1.5 text-sm hover:bg-indigo-500" type="button">
+                    Post reply
+                  </button>
+
+                  <!-- AI draft button -->
+                  <button class="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50 btn-ai-draft"
+                          type="button"
+                          data-review-id="{{ r.id }}"
+                          data-author="{{ r.author }}"
+                          data-rating="{{ r.rating }}">
+                    <i class="fa-solid fa-robot mr-1"></i>AI draft
+                  </button>
+
+                  <!-- Tone -->
+                  <label class="text-xs text-gray-600 ml-2">Tone:</label>
+                  <select class="rounded-md border-gray-300 text-xs tone-select">
+                    <option value="friendly">Friendly</option>
+                    <option value="professional">Professional</option>
+                    <option value="apologetic">Apologetic</option>
+                    <option value="enthusiastic">Enthusiastic</option>
+                  </select>
+
+                  <!-- Status -->
+                  <span class="text-xs text-gray-500 ai-status hidden">Drafting…</span>
+                </div>
+              </form>
+            {% endif %}
+          </div>
+
+          <div class="shrink-0">
+            <input type="checkbox" class="mt-1 rounded border-gray-300 bulk-select"
+                   aria-label="Select review {{ r.id }}"/>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="p-3 border-t flex items-center justify-between text-sm text-gray-600">
+      <div>Showing {{ _reviews|length }} of {{ _summary.count }}</div>
+      <div class="flex items-center gap-1">
+        <a class="rounded-md border px-2 py-1 hover:bg-gray-50" href="#">Prev</a>
+        <a class="rounded-md border px-2 py-1 hover:bg-gray-50" href="#">Next</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Email verification modal for bulk automation -->
+<div id="email-verify-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+  <div class="absolute inset-0 bg-black/40"></div>
+  <div class="relative bg-white w-full max-w-md mx-4 rounded-2xl shadow-xl border overflow-hidden">
+    <div class="px-5 py-4 border-b flex items-center justify-between">
+      <div class="text-lg font-semibold">Verify email to automate replies</div>
+      <button id="ev-close" class="p-2 rounded-lg hover:bg-gray-100" aria-label="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="p-5 space-y-3">
+      <p class="text-sm text-gray-600">
+        We’ll send a confirmation email before posting AI-generated replies in bulk.
+      </p>
+      <label class="block text-sm">Email</label>
+      <input id="ev-email" type="email" class="w-full rounded-md border-gray-300" placeholder="you@business.com" />
+      <div id="ev-error" class="text-sm text-red-600 hidden"></div>
+    </div>
+
+    <div class="px-5 py-4 border-t flex items-center justify-end gap-2">
+      <button id="ev-cancel" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded">Cancel</button>
+      <button id="ev-confirm" class="px-5 py-2 rounded text-white bg-indigo-600 hover:bg-indigo-500">
+        Confirm & continue
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  const CSRF = meta ? meta.content : null;
+
+  function toast(msg, ok=true){
+    const el = document.createElement('div');
+    el.className = "fixed bottom-4 right-4 z-50 px-3 py-2 rounded shadow text-sm " +
+                   (ok ? "bg-emerald-600 text-white" : "bg-red-600 text-white");
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(()=>{ el.remove(); }, 2600);
+  }
+
+  async function aiDraftOne(container){
+    const textEl = container.querySelector('.review-text');
+    const outEl = container.querySelector('.reply-textarea');
+    const tone = container.querySelector('.tone-select')?.value || 'friendly';
+    const status = container.querySelector('.ai-status');
+
+    const btn = container.querySelector('.btn-ai-draft');
+    const author = btn?.dataset.author || '';
+    const rating = parseInt(btn?.dataset.rating || '0', 10) || 0;
+    const reviewText = textEl ? textEl.textContent.trim() : '';
+
+    if(!reviewText || !outEl) return;
+
+    status?.classList.remove('hidden');
+    try{
+      const resp = await fetch("{{ url_for('gmb_bp.reviews_ai_draft') }}", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(CSRF ? {"X-CSRFToken": CSRF} : {})
+        },
+        body: JSON.stringify({
+          text: reviewText,
+          author: author,
+          rating: rating,
+          tone: tone,
+          business_name: "{{ (current_user and current_user.business_name) if current_user is defined else '' }}"
+        })
+      });
+      const data = await resp.json();
+      if(!resp.ok || !data.ok){
+        throw new Error(data.error || ('HTTP '+resp.status));
+      }
+      outEl.value = data.draft;
+      toast("AI draft added");
+    }catch(e){
+      console.error(e);
+      toast("AI draft failed: " + (e.message || e), false);
+    }finally{
+      status?.classList.add('hidden');
+    }
+  }
+
+  function getSelectedReviewContainers(){
+    const rows = Array.from(document.querySelectorAll('[data-review-id]'));
+    return rows.filter(r => r.querySelector('.bulk-select')?.checked);
+  }
+
+  // One-by-one AI buttons
+  document.querySelectorAll('.btn-ai-draft').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const row = e.currentTarget.closest('[data-review-id]');
+      if(row) aiDraftOne(row);
+    });
+  });
+
+  // Bulk actions (quick path)
+  const bulkRun = document.getElementById('bulk-run');
+  const bulkActionSel = document.getElementById('bulk-action');
+  const bulkStatus = document.getElementById('bulk-status');
+
+  bulkRun?.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    const action = bulkActionSel?.value || '';
+    const selected = getSelectedReviewContainers();
+    if(!action) return toast("Choose an action", false);
+    if(selected.length === 0) return toast("Select at least one review", false);
+
+    if(action === 'ai_draft'){
+      // prompt email modal instead for safety
+      openEmailModal();
+      return;
+    }
+
+    // Stub other actions
+    bulkStatus.textContent = "Running…";
+    setTimeout(()=>{ bulkStatus.textContent = "Done."; toast("Bulk action complete"); }, 800);
+  });
+
+  // Email verification modal + bulk AI flow
+  const modal = document.getElementById('email-verify-modal');
+  const openBtn = document.getElementById('bulk-ai-open');
+  const closeBtn = document.getElementById('ev-close');
+  const cancelBtn = document.getElementById('ev-cancel');
+  const confirmBtn = document.getElementById('ev-confirm');
+  const emailInput = document.getElementById('ev-email');
+  const emailError = document.getElementById('ev-error');
+
+  function openEmailModal(){
+    if(!modal) return;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    emailError?.classList.add('hidden');
+    emailError.textContent = "";
+  }
+  function closeEmailModal(){
+    if(!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  openBtn?.addEventListener('click', (e)=>{ e.preventDefault(); openEmailModal(); });
+  closeBtn?.addEventListener('click', (e)=>{ e.preventDefault(); closeEmailModal(); });
+  cancelBtn?.addEventListener('click', (e)=>{ e.preventDefault(); closeEmailModal(); });
+
+  confirmBtn?.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    const email = (emailInput?.value || '').trim();
+    if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+      emailError.textContent = "Enter a valid email.";
+      emailError.classList.remove('hidden');
+      return;
+    }
+
+    // TODO: call server to send verification if you want a real check
+    // For now, proceed to bulk AI drafting on selected rows:
+    closeEmailModal();
+
+    const selected = getSelectedReviewContainers();
+    if(selected.length === 0){
+      return toast("Select at least one review", false);
+    }
+
+    bulkStatus.textContent = "Drafting with AI…";
+    let ok = 0, fail = 0;
+    for(const row of selected){
+      try{
+        /* eslint-disable no-await-in-loop */
+        await aiDraftOne(row);
+        ok++;
+      }catch(_e){
+        fail++;
+      }
+    }
+    bulkStatus.textContent = "Done.";
+    toast(`AI drafted ${ok} replies${fail ? (", " + fail + " failed") : ""}`);
+  });
+})();
+</script>
+{% endblock %}

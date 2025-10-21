@@ -1,0 +1,17 @@
+{% extends "base_app.html" %}
+{% block title %}Facebook Ads - Reports{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+  <h1 class="text-2xl font-semibold mb-4">Facebook Ads</h1>
+  {% if connected %}
+    <div class="mb-4 text-gray-700">Account: <b>{{ account.name }}</b></div>
+    <div class="rounded border bg-white p-4">
+      <div class="text-gray-600 mb-2">Leads (last 30 days)</div>
+      <div class="text-3xl font-bold">{{ leads_30d }}</div>
+    </div>
+  {% else %}
+    <div class="mb-4 text-gray-600">Not connected.</div>
+    <a href="{{ url_for('fbads_bp.connect') }}" class="text-indigo-600 hover:underline">Connect Facebook Ads</a>
+  {% endif %}
+</div>
+{% endblock %}

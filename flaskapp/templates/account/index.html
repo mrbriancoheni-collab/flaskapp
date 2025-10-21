@@ -1,0 +1,9 @@
+{% extends 'base_app.html' %}
+{% block title %}Account – {{ app_name }}{% endblock %}
+{% block content %}
+<div class="max-w-2xl">
+  <h1 class="text-2xl font-semibold mb-4">Account</h1>
+  <p class="text-gray-600 mb-4">Manage your profile and billing.</p>
+  <a href="{{ url_for('account_bp.account_profile') }}" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Go to Profile</a>
+</div>
+{% endblock %}

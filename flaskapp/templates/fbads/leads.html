@@ -1,0 +1,85 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'fbads' %}
+
+{% block title %}Facebook Ads — Leads{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Facebook Leads</h1>
+      <p class="text-gray-500 text-sm">Review and manage leads captured from your lead forms.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="{{ url_for('fbads_bp.export_leads_csv') }}" class="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">Export CSV</a>
+    </div>
+  </div>
+
+  {% set sample_leads = [
+    {'id': 501, 'created_at': '2025-09-10 14:22', 'full_name': 'Jane Alvarez', 'email': 'jane@example.com', 'phone': '(916) 555-1020', 'campaign': 'Pest – Sacramento', 'adset': 'General Pest', 'ad': 'Eco-Friendly Pest Control', 'status': 'New', 'notes': ''},
+    {'id': 502, 'created_at': '2025-09-11 09:05', 'full_name': 'Marcus Lee', 'email': 'marcus@example.com', 'phone': '(916) 555-2040', 'campaign': 'Pest – Sacramento', 'adset': 'Ant Control', 'ad': '$99 Pest Inspection', 'status': 'Contacted', 'notes': 'Left voicemail'},
+    {'id': 503, 'created_at': '2025-09-12 16:41', 'full_name': 'Priya Patel', 'email': 'priya@example.com', 'phone': '(916) 555-7788', 'campaign': 'Termite – Citrus Heights', 'adset': 'Termite Inspection', 'ad': 'Termite Inspection', 'status': 'Qualified', 'notes': 'Booked for Tue 2pm'}
+  ] %}
+
+  {% set leads = (fb_leads if fb_leads is defined and fb_leads else sample_leads) %}
+  {% set connected = (connected if connected is defined else False) %}
+
+  {% if not connected %}
+    <div class="mb-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 p-3 text-sm">
+      You are viewing <span class="font-medium">sample data</span>. Connect Facebook Ads to load live leads.
+    </div>
+  {% endif %}
+
+  <div class="rounded-xl border bg-white overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+        <tr>
+          <th class="px-4 py-3 text-left">Lead</th>
+          <th class="px-4 py-3 text-left">Contact</th>
+          <th class="px-4 py-3 text-left">Source</th>
+          <th class="px-4 py-3 text-left">Status</th>
+          <th class="px-4 py-3 text-left">Notes</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        {% for l in leads %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3">
+            <div class="font-medium">{{ l.full_name }}</div>
+            <div class="text-xs text-gray-500">#{{ l.id }} · {{ l.created_at }}</div>
+          </td>
+          <td class="px-4 py-3">
+            <div>{{ l.email }}</div>
+            <div class="text-xs text-gray-600">{{ l.phone }}</div>
+          </td>
+          <td class="px-4 py-3">
+            <div class="text-sm">{{ l.campaign }}</div>
+            <div class="text-xs text-gray-500">{{ l.adset }} · {{ l.ad }}</div>
+          </td>
+          <td class="px-4 py-3">
+            <form method="post" action="{{ url_for('fbads_bp.update_lead_status') }}">
+              <input type="hidden" name="lead_id" value="{{ l.id }}"/>
+              <select name="status" class="rounded-md border-gray-300 text-xs" onchange="this.form.submit()">
+                {% for s in ['New','Contacted','Qualified','Won','Lost'] %}
+                  <option value="{{ s }}" {% if l.status==s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+              </select>
+            </form>
+          </td>
+          <td class="px-4 py-3">
+            <form method="post" action="{{ url_for('fbads_bp.update_lead_notes') }}">
+              <input type="hidden" name="lead_id" value="{{ l.id }}"/>
+              <input name="notes" value="{{ l.notes }}" class="w-56 rounded-md border-gray-300 text-sm" placeholder="Add note..."/>
+            </form>
+          </td>
+          <td class="px-4 py-3 text-right">
+            <a href="{{ url_for('fbads_bp.lead_detail', lead_id=l.id) }}" class="rounded-md border px-2.5 py-1.5 text-xs hover:bg-gray-50">View</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

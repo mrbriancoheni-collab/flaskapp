@@ -1,0 +1,21 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'fbads' %}
+
+{% block title %}Facebook Ads — Lead Detail{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-semibold tracking-tight">Lead #{{ lead.id }}</h1>
+    <a href="{{ url_for('fbads_bp.leads') }}" class="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">Back to Leads</a>
+  </div>
+
+  <div class="rounded-xl border bg-white p-4 space-y-3">
+    <div><span class="text-gray-600 text-sm">Name:</span> <span class="font-medium">{{ lead.full_name }}</span></div>
+    <div><span class="text-gray-600 text-sm">Email:</span> <span>{{ lead.email }}</span></div>
+    <div><span class="text-gray-600 text-sm">Phone:</span> <span>{{ lead.phone }}</span></div>
+    <div><span class="text-gray-600 text-sm">Status:</span> <span>{{ lead.status }}</span></div>
+    <div><span class="text-gray-600 text-sm">Notes:</span> <span>{{ lead.notes }}</span></div>
+  </div>
+</div>
+{% endblock %}

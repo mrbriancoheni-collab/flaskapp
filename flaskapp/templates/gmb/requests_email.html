@@ -1,0 +1,49 @@
+{# templates/gmb/requests_email.html #}
+{% extends "base_app.html" %}
+{% block title %}Google Business - Review Requests (Email){% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold">Review Requests (Email)</h1>
+      <p class="text-gray-500">Send and track email review requests</p>
+    </div>
+    <a href="{{ url_for('gmb_bp.index') }}" class="rounded-md border px-3 py-2 text-gray-700 hover:bg-gray-50">Back</a>
+  </div>
+
+  {% if not connected %}
+    <div class="relative rounded-lg border bg-white p-6 overflow-hidden">
+      <div class="text-sm text-gray-500 mb-3">Connect Google Business to send review requests that link to your profile.</div>
+
+      <div class="space-y-3 opacity-70">
+        <div class="rounded-lg bg-gray-50 p-4">
+          <div class="text-sm text-gray-500 mb-1">Recent requests (sample)</div>
+          <ul class="list-disc ml-5 text-sm text-gray-700">
+            <li>jane@example.com - Sent - Opened</li>
+            <li>sam@example.com - Sent</li>
+          </ul>
+        </div>
+      </div>
+
+      {# diagonal SAMPLE overlay #}
+      <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div class="rotate-[-20deg] text-5xl sm:text-6xl font-extrabold tracking-widest text-gray-300/60">
+          SAMPLE
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <a href="{{ url_for('gmb_bp.start') }}" class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
+          Connect Google Business
+        </a>
+      </div>
+    </div>
+  {% else %}
+    <div class="rounded-lg border bg-white p-6">
+      <div class="text-sm text-gray-500 mb-2">Connected· Your email requests will appear here.</div>
+      <p class="text-gray-700">This page will show request status (sent/opened/clicked) and templates.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>{{ APP_NAME }}{% if title %} — {{ title }}{% endif %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="https://unpkg.com/milligram/dist/milligram.min.css"/>
+  <style>
+    .container{max-width:860px;margin:2rem auto}
+    .banner--upgrade{background:#f5f9ff;border:1px solid #dfeaff;padding:1rem;border-radius:.5rem}
+  </style>
+</head>
+<body>
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div role="alert" aria-live="polite">
+        {% for cat,msg in messages %}
+          <p class="{{ cat }}">{{ msg }}</p>
+        {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

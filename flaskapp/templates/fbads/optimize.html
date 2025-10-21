@@ -1,0 +1,42 @@
+{% extends "base_app.html" %}
+{% block title %}Optimize Facebook Page{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-semibold mb-4">Optimize Facebook Page</h1>
+
+<div class="mb-3 space-x-2">
+  <a class="px-3 py-2 rounded border" href="{{ url_for('fbads_bp.index') }}">Back</a>
+  <form method="post" action="{{ url_for('fbads_bp.optimize') }}" class="inline">
+    <button class="px-3 py-2 rounded text-white bg-[var(--brand)]">Generate AI Suggestions</button>
+  </form>
+</div>
+
+<div class="grid md:grid-cols-2 gap-6">
+  <div class="border rounded p-4">
+    <h2 class="font-semibold mb-2">Current Profile</h2>
+    {% if profile %}
+      <p><strong>Page:</strong> {{ profile.name or '-' }}</p>
+      <p><strong>About:</strong> {{ profile.about or '-' }}</p>
+      <p><strong>Description:</strong> {{ profile.description or '-' }}</p>
+      <p><strong>Website:</strong> {{ profile.website or '-' }}</p>
+      <p><strong>Phone:</strong> {{ (profile.phone or profile.location.phone) if profile.location else (profile.phone or '-') }}</p>
+    {% else %}
+      <div class="text-sm text-gray-600">No live profile loaded.</div>
+    {% endif %}
+  </div>
+
+  <div class="border rounded p-4">
+    <h2 class="font-semibold mb-2">AI Suggestions</h2>
+    {% if suggestions %}
+      <form method="post" action="{{ url_for('fbads_bp.optimize_apply') }}" class="space-y-3">
+        <div>
+          <label class="block text-sm mb-1">About (1â€“2 sentences)</label>
+          <textarea name="about" rows="2" class="w-full border rounded px-3 py-2">{{ suggestions.about }}</textarea>
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Description</label>
+          <textarea name="description" rows="6" class="w-full border rounded px-3 py-2">{{ suggestions.description }}</textarea>
+        </div>
+        <button class="px-3 py-2 rounded text-white bg-[var(--brand)]">Apply Updates</button>
+      </form>
+    {% else %}
+      <div class="text-sm text-gray-600">Click â€œGenerate AI Suggestionsâ€

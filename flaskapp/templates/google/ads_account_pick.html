@@ -1,0 +1,23 @@
+{% extends "base_app.html" %}
+{% block title %}Choose Google Ads Account{% endblock %}
+{% block content %}
+<div class="max-w-xl space-y-4">
+  <h1 class="text-xl font-semibold">Choose your Google Ads account</h1>
+  {% if not ids %}
+    <div class="rounded border bg-yellow-50 text-yellow-900 p-3">
+      We couldn't find any Ads accounts for this user. Make sure you have admin access or connect a different Google login.
+    </div>
+  {% else %}
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="block text-sm text-gray-600 mb-1">Google Ads customer ID</label>
+      <select name="customer_id" class="border rounded px-3 py-2 w-64">
+        {% for cid in ids %}<option value="{{ cid }}">{{ cid }}</option>{% endfor %}
+      </select>
+      <div class="mt-3">
+        <button class="px-4 py-2 rounded text-white bg-[var(--brand)] hover:bg-[var(--brand-dark)]">Save</button>
+      </div>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,276 @@
+{# templates/reports/index.html #}
+{% extends "base_app.html" %}
+{% set SECTION = 'reports' %}
+{% block title %}Account Reports{% endblock %}
+
+{% block content %}
+{# Fallbacks so the page still renders if view forgot to pass data #}
+{% set _connected = connected if connected is defined else {} %}
+{% set _ga = ga if ga is defined and ga else {
+  "property_name": "Demo Property (GA4)",
+  "period": "Last 28 days",
+  "sessions": 4280, "users": 3675, "new_users": 3012, "engaged_sessions": 2890,
+  "avg_engagement_time": "0m:58s", "conversions": 196, "revenue": 18420.00,
+  "notes": "Traffic stable week-over-week; engagement improved after hero CTA update.",
+  "wow_sessions_delta": 6.2, "wow_conv_delta": 9.8
+} %}
+{% set _gsc = gsc if gsc is defined and gsc else {
+  "site": "https://example.com/", "period": "Last 28 days",
+  "clicks": 3120, "impressions": 142500, "ctr": 2.19, "position": 14.6,
+  "top_queries": [
+    {"q": "emergency plumber", "clicks": 460, "position": 6.4},
+    {"q": "water heater install", "clicks": 380, "position": 8.2},
+    {"q": "plumber near me", "clicks": 295, "position": 10.1}
+  ],
+  "notes": "Clicks rose after adding FAQ schema to service pages.",
+  "wow_clicks_delta": 5.4, "wow_ctr_delta": 0.2
+} %}
+{% set _cards = cards if cards is defined and cards else [
+  {"product":"ads","title":"Google Ads","connected":false,"data":{
+    "account_name":"Demo Plumbing Co.","period":"Last 30 days","spend":4210.77,
+    "clicks":1980,"impr":88400,"conv":146,"cpa":28.82,"roas":5.1,
+    "highlights":["Emergency campaign drove 62% of conversions with 18% lower CPA.",
+                  "Added negatives: free, diy — cut wasted spend by ~8%."]}},
+  {"product":"gmb","title":"Business Profile","connected":false,"data":{
+    "location":"Clean Finish Cleaning Service","period":"Last 30 days",
+    "profile_views":6240,"calls":132,"directions":88,"website_visits":410,
+    "reviews":{"new":23,"avg_rating":4.8},
+    "notes":"Photos updated 2 weeks ago; +11% profile views WoW."}},
+  {"product":"lsa","title":"Local Services Ads","connected":false,"data":{
+    "business":"Demo Plumbing Co.","period":"Last 30 days",
+    "leads":74,"booked":29,"avg_cost_per_lead":42.10,"disputes":{"filed":2,"won":1},
+    "notes":"Peak lead volume on Mondays; consider bid adjustments Fri–Sun."}}
+] %}
+
+<div class="max-w-7xl mx-auto space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold">Account Reports</h1>
+      <p class="text-gray-500 text-sm">High-level Analytics & Search Console, plus insights from connected channels.</p>
+    </div>
+  </div>
+
+  {# ---- GA + GSC Overview ---- #}
+  <div class="grid md:grid-cols-2 gap-4">
+    <section class="rounded-lg border bg-white p-4">
+      <header class="flex items-center justify-between mb-3">
+        <div>
+          <div class="text-xs text-gray-500">Google Analytics</div>
+          <h2 class="text-lg font-semibold">{{ _ga.property_name }}</h2>
+          <div class="text-xs text-gray-500">{{ _ga.period }}</div>
+        </div>
+        <a class="text-sm rounded-md border px-3 py-1.5 hover:bg-gray-50"
+           href="{{ url_for('reports_bp.google_analytics') }}">Open</a>
+      </header>
+      <div class="grid grid-cols-2 gap-3 text-sm">
+        <div class="rounded-md border p-3">
+          <div class="text-xs text-gray-500">Sessions</div>
+          <div class="text-xl font-semibold">{{ _ga.sessions }}</div>
+          <div class="text-xs {% if _ga.wow_sessions_delta>=0 %}text-green-600{% else %}text-rose-600{% endif %}">
+            {{ '%0.1f'|format(_ga.wow_sessions_delta|default(0.0)) }}% WoW
+          </div>
+        </div>
+        <div class="rounded-md border p-3">
+          <div class="text-xs text-gray-500">Users</div>
+          <div class="text-xl font-semibold">{{ _ga.users }}</div>
+        </div>
+        <div class="rounded-md border p-3">
+          <div class="text-xs text-gray-500">Engaged Sessions</div>
+          <div class="text-xl font-semibold">{{ _ga.engaged_sessions }}</div>
+        </div>
+        <div class="rounded-md border p-3">
+          <div class="text-xs text-gray-500">Avg Engagement</div>
+          <div class="text-xl font-semibold">{{ _ga.avg_engagement_time }}</div>
+        </div>
+        <div class="rounded-md border p-3">
+          <div class="text-xs text-gray-500">Conversions</div>
+          <div class="text-xl font-semibold">{{ _ga.conversions }}</div>
+          <div class="text-xs {% if _ga.wow_conv_delta>=0 %}text-green-600{% else %}text-rose-600{% endif %}">
+            {{ '%0.1f'|format(_ga.wow_conv_delta|default(0.0)) }}% WoW
+          </div>
+        </div>
+        <div class="rounded-md border p-3">
+          <div class="text-xs text-gray-500">Revenue</div>
+          <div class="text-xl font-semibold">${{ '%0.2f'|format(_ga.revenue|default(0.0)) }}</div>
+        </div>
+      </div>
+      {% if _ga.notes %}
+        <p class="mt-3 text-xs text-gray-600">{{ _ga.notes }}</p>
+      {% endif %}
+    </section>
+
+    <section class="rounded-lg border bg-white p-4">
+      <header class="flex items-center justify-between mb-3">
+        <div>
+          <div class="text-xs text-gray-500">Google Search Console</div>
+          <h2 class="text-lg font-semibold">{{ _gsc.site }}</h2>
+          <div class="text-xs text-gray-500">{{ _gsc.period }}</div>
+        </div>
+        <a class="text-sm rounded-md border px-3 py-1.5 hover:bg-gray-50"
+           href="{{ url_for('reports_bp.google_search_console') }}">Open</a>
+      </header>
+      <div class="grid grid-cols-2 gap-3 text-sm">
+        <div class="rounded-md border p-3">
+          <div class="text-xs text-gray-500">Clicks</div>
+          <div class="text-xl font-semibold">{{ _gsc.clicks }}</div>
+          <div class="text-xs {% if _gsc.wow_clicks_delta>=0 %}text-green-600{% else %}text-rose-600{% endif %}">
+            {{ '%0.1f'|format(_gsc.wow_clicks_delta|default(0.0)) }}% WoW
+          </div>
+        </div>
+        <div class="rounded-md border p-3">
+          <div class="text-xs text-gray-500">Impressions</div>
+          <div class="text-xl font-semibold">{{ _gsc.impressions }}</div>
+        </div>
+        <div class="rounded-md border p-3">
+          <div class="text-xs text-gray-500">CTR</div>
+          <div class="text-xl font-semibold">{{ '%0.2f'|format(_gsc.ctr|default(0.0)) }}%</div>
+        </div>
+        <div class="rounded-md border p-3">
+          <div class="text-xs text-gray-500">Avg Position</div>
+          <div class="text-xl font-semibold">{{ '%0.1f'|format(_gsc.position|default(0.0)) }}</div>
+        </div>
+      </div>
+
+      {% if _gsc.top_queries %}
+      <div class="mt-4">
+        <div class="text-xs text-gray-500 mb-1">Top Queries</div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm border">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="p-2 text-left">Query</th>
+                <th class="p-2 text-right">Clicks</th>
+                <th class="p-2 text-right">Position</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for q in _gsc.top_queries %}
+              <tr class="border-t">
+                <td class="p-2">{{ q.q }}</td>
+                <td class="p-2 text-right">{{ q.clicks }}</td>
+                <td class="p-2 text-right">{{ '%0.1f'|format(q.position|default(0.0)) }}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if _gsc.notes %}
+        <p class="mt-3 text-xs text-gray-600">{{ _gsc.notes }}</p>
+      {% endif %}
+    </section>
+  </div>
+
+  {# ---- Connected Channels & Insights ---- #}
+  <section class="rounded-lg border bg-white p-4">
+    <header class="flex items-center justify-between mb-3">
+      <h2 class="text-lg font-semibold">Channels & Insights</h2>
+      <div class="text-xs text-gray-500">Uses live data when connected, otherwise sample data.</div>
+    </header>
+
+    <div class="grid md:grid-cols-3 gap-4">
+      {% for c in _cards %}
+      <article class="rounded-md border p-4 flex flex-col">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-semibold">{{ c.title }}</h3>
+          {% if c.connected %}
+            <span class="inline-flex items-center rounded-full bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 text-[11px]">Connected</span>
+          {% else %}
+            <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 text-[11px]">Sample</span>
+          {% endif %}
+        </div>
+
+        {# Product-specific small summary #}
+        {% if c.product == 'ads' %}
+          <div class="text-sm grid grid-cols-2 gap-2">
+            <div class="rounded border p-2">
+              <div class="text-[11px] text-gray-500">Spend</div>
+              <div class="font-semibold">${{ '%0.2f'|format(c.data.spend|default(0.0)) }}</div>
+            </div>
+            <div class="rounded border p-2">
+              <div class="text-[11px] text-gray-500">Conv</div>
+              <div class="font-semibold">{{ c.data.conv }}</div>
+            </div>
+            <div class="rounded border p-2">
+              <div class="text-[11px] text-gray-500">CPA</div>
+              <div class="font-semibold">${{ '%0.2f'|format(c.data.cpa|default(0.0)) }}</div>
+            </div>
+            <div class="rounded border p-2">
+              <div class="text-[11px] text-gray-500">ROAS</div>
+              <div class="font-semibold">{{ '%0.1f'|format(c.data.roas|default(0.0)) }}x</div>
+            </div>
+          </div>
+          {% if c.data.highlights %}
+          <ul class="mt-3 text-xs text-gray-600 list-disc pl-4 space-y-1">
+            {% for h in c.data.highlights %}<li>{{ h }}</li>{% endfor %}
+          </ul>
+          {% endif %}
+        {% elif c.product == 'gmb' %}
+          <div class="text-sm grid grid-cols-2 gap-2">
+            <div class="rounded border p-2">
+              <div class="text-[11px] text-gray-500">Profile Views</div>
+              <div class="font-semibold">{{ c.data.profile_views }}</div>
+            </div>
+            <div class="rounded border p-2">
+              <div class="text-[11px] text-gray-500">Calls</div>
+              <div class="font-semibold">{{ c.data.calls }}</div>
+            </div>
+            <div class="rounded border p-2">
+              <div class="text-[11px] text-gray-500">Directions</div>
+              <div class="font-semibold">{{ c.data.directions }}</div>
+            </div>
+            <div class="rounded border p-2">
+              <div class="text-[11px] text-gray-500">Website Visits</div>
+              <div class="font-semibold">{{ c.data.website_visits }}</div>
+            </div>
+          </div>
+          <p class="mt-3 text-xs text-gray-600">Reviews: {{ c.data.reviews.new }} new, {{ '%0.1f'|format(c.data.reviews.avg_rating|default(0.0)) }}★ avg.</p>
+          {% if c.data.notes %}<p class="mt-1 text-xs text-gray-600">{{ c.data.notes }}</p>{% endif %}
+        {% elif c.product == 'lsa' %}
+          <div class="text-sm grid grid-cols-2 gap-2">
+            <div class="rounded border p-2">
+              <div class="text-[11px] text-gray-500">Leads</div>
+              <div class="font-semibold">{{ c.data.leads }}</div>
+            </div>
+            <div class="rounded border p-2">
+              <div class="text-[11px] text-gray-500">Booked</div>
+              <div class="font-semibold">{{ c.data.booked }}</div>
+            </div>
+            <div class="rounded border p-2">
+              <div class="text-[11px] text-gray-500">Avg CPL</div>
+              <div class="font-semibold">${{ '%0.2f'|format(c.data.avg_cost_per_lead|default(0.0)) }}</div>
+            </div>
+            <div class="rounded border p-2">
+              <div class="text-[11px] text-gray-500">Disputes</div>
+              <div class="font-semibold">{{ c.data.disputes.filed }} filed / {{ c.data.disputes.won }} won</div>
+            </div>
+          </div>
+          {% if c.data.notes %}<p class="mt-3 text-xs text-gray-600">{{ c.data.notes }}</p>{% endif %}
+        {% endif %}
+
+        <div class="mt-4 pt-3 border-t">
+          {% if c.product == 'ads' %}
+            <a class="text-sm rounded-md border px-3 py-1.5 hover:bg-gray-50"
+               href="{{ url_for('reports_bp.google_ads') }}">Open report</a>
+            <a class="ml-2 text-sm rounded-md border px-3 py-1.5 hover:bg-gray-50"
+               href="{{ url_for('google_bp.ads_ui') }}">Manage</a>
+          {% elif c.product == 'gmb' %}
+            <a class="text-sm rounded-md border px-3 py-1.5 hover:bg-gray-50"
+               href="{{ url_for('reports_bp.google_business') }}">Open report</a>
+            <a class="ml-2 text-sm rounded-md border px-3 py-1.5 hover:bg-gray-50"
+               href="{{ url_for('gmb_bp.index') }}">Manage</a>
+          {% elif c.product == 'lsa' %}
+            <a class="text-sm rounded-md border px-3 py-1.5 hover:bg-gray-50"
+               href="{{ url_for('reports_bp.index') }}">Open report</a>
+            <a class="ml-2 text-sm rounded-md border px-3 py-1.5 hover:bg-gray-50"
+               href="{{ url_for('glsa_bp.leads_page') }}">Manage</a>
+          {% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

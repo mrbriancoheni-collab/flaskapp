@@ -1,0 +1,93 @@
+{% extends 'base_public.html' %}
+{% block title %}Log in – {{ app_name }}{% endblock %}
+{% block content %}
+<div class="w-full max-w-md mx-auto bg-white border rounded-xl p-6 md:p-8">
+  <h1 class="text-2xl font-semibold mb-6">Welcome back</h1>
+
+  <form method="post" class="space-y-4" novalidate id="login-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ next or request.args.get('next','') }}">
+    <!-- simple honeypot -->
+    <input type="text" name="company" tabindex="-1" autocomplete="off" class="hidden" aria-hidden="true">
+
+    <div>
+      <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+      <input
+        id="email"
+        name="email"
+        type="email"
+        inputmode="email"
+        autocomplete="email"
+        required
+        value="{{ request.values.get('email', request.args.get('email','')) }}"
+        class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        placeholder="you@business.com"
+      >
+    </div>
+
+    <div>
+      <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+      <input
+        id="password"
+        name="password"
+        type="password"
+        autocomplete="current-password"
+        required
+        minlength="6"
+        class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        placeholder="••••••••"
+      >
+    </div>
+
+    <button
+      id="login-submit"
+      type="submit"
+      class="w-full px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500"
+    >
+      Log in
+    </button>
+  </form>
+
+  <!-- Forgot password -->
+  <p class="text-sm text-gray-600 mt-4">
+    <a href="{{ url_for('auth_bp.forgot_password') }}" class="text-indigo-600 hover:underline">
+      Forgot your password?
+    </a>
+  </p>
+
+  {# Show "Resend verification email" ONLY after a submission #}
+  {% if request.method == 'POST' %}
+    <form class="mt-2" method="post" action="{{ url_for('auth_bp.resend_verification') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input
+        type="hidden"
+        name="email"
+        value="{{ request.form.get('email', '') }}"
+      >
+      <button type="submit" class="text-sm text-indigo-600 hover:underline">
+        Resend verification email
+      </button>
+    </form>
+  {% endif %}
+
+  <!-- Sign up -->
+  <p class="text-sm text-gray-600 mt-4">
+    New here?
+    <a href="{{ url_for(ep('register'), next=request.args.get('next','')) }}" class="text-indigo-600 hover:underline">
+      Create an account
+    </a>
+  </p>
+</div>
+
+<script>
+  // Prevent double-submits
+  const form = document.getElementById('login-form');
+  const btn = document.getElementById('login-submit');
+  form?.addEventListener('submit', () => {
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Signing in...';
+    }
+  });
+</script>
+{% endblock %}

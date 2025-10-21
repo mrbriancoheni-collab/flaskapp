@@ -1,0 +1,271 @@
+{% extends "base_app.html" %}
+{% block title %}New Marketing Strategy{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-semibold mb-4">Create Strategy</h1>
+
+<!-- Top AI: Full Strategy -->
+<form method="post" action="{{ url_for('strategy_bp.ai_new') }}" class="border rounded p-3 space-y-3 mb-4" data-spinner>
+  <div class="font-medium">AI: Complete Strategy (fills the entire form)</div>
+  <div class="grid md:grid-cols-3 gap-4">
+    <div>
+      <label class="block text-sm font-medium mb-1">Objective</label>
+      <select name="ai_objective" class="w-full border rounded px-3 py-2">
+        <option{% if request.form.ai_objective=='Lead Generation' %} selected{% endif %}>Lead Generation</option>
+        <option{% if request.form.ai_objective=='Sales' %} selected{% endif %}>Sales</option>
+        <option{% if request.form.ai_objective=='Awareness' %} selected{% endif %}>Awareness</option>
+        <option{% if request.form.ai_objective=='Retention' %} selected{% endif %}>Retention</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Depth</label>
+      <select name="ai_depth" class="w-full border rounded px-3 py-2">
+        <option value="light" {% if request.form.ai_depth=='light' %}selected{% endif %}>Light</option>
+        <option value="medium" {% if not request.form.ai_depth or request.form.ai_depth=='medium' %}selected{% endif %}>Medium</option>
+        <option value="full" {% if request.form.ai_depth=='full' %}selected{% endif %}>Full</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Priority Channels (CSV)</label>
+      <input name="ai_priority_channels" class="w-full border rounded px-3 py-2" value="{{ request.form.ai_priority_channels or '' }}" placeholder="SEO, Email">
+    </div>
+  </div>
+
+  <!-- carry current form values through the AI request -->
+  <input type="hidden" name="section" value="">
+  {% set vf_ = vf %}
+  {% for k,v in {
+    'name': vf_.name, 'business_name': vf_.business_name, 'website': vf_.website, 'industry': vf_.industry,
+    'locations': (vf_.locations or [])|join(', '), 'pov_ids': (vf_.pov_ids or [])|join(', '),
+    'goals': (vf_.goals or [])|join(', '), 'positioning': vf_.positioning, 'message_core': vf_.messaging.core,
+    'brand_voice': vf_.brand_voice, 'audience_notes': vf_.audience_notes, 'audience_segments': (vf_.audience_segments or [])|join(', '),
+    'primary_keywords': (vf_.primary_keywords or [])|join(', '), 'extra_keywords': (vf_.extra_keywords or [])|join(', '),
+    'channels': (vf_.channels or [])|join(', '), 'competitors': (vf_.competitors or [])|join(', '),
+    'offers': (vf_.offers or [])|join(', '), 'constraints': (vf_.constraints or [])|join(', '),
+    'tools': (vf_.tools or [])|join(', '), 'kpis': (vf_.kpis or [])|join(', '),
+    'budget': vf_.budget, 'phase1_weeks': vf_.phase1_weeks
+  }.items() %}
+    <input type="hidden" name="{{ k }}" value="{{ v }}">
+  {% endfor %}
+
+  <button class="px-4 py-2 rounded border">AI: Complete Strategy</button>
+</form>
+
+<!-- Main form users will save to create the strategy -->
+<form method="post" action="{{ url_for('strategy_bp.create') }}" class="space-y-6" data-spinner>
+
+  <!-- Basics -->
+  <div class="border rounded p-3 space-y-3">
+    <div class="font-medium text-lg">Basics</div>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Strategy Name</label>
+        <input name="name" class="w-full border rounded px-3 py-2" value="{{ vf.name }}">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Business Name</label>
+        <div class="flex gap-2">
+          <input name="business_name" class="w-full border rounded px-3 py-2" value="{{ vf.business_name }}">
+          <!-- AI single item -->
+          <button formaction="{{ url_for('strategy_bp.ai_new') }}" name="section" value="positioning" class="px-3 py-2 border rounded" title="AI help uses overall context">AI</button>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Website</label>
+        <input name="website" class="w-full border rounded px-3 py-2" value="{{ vf.website }}">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Industry</label>
+        <div class="flex gap-2">
+          <input name="industry" class="w-full border rounded px-3 py-2" value="{{ vf.industry }}">
+          <button formaction="{{ url_for('strategy_bp.ai_new') }}" name="section" value="keywords" class="px-3 py-2 border rounded" title="AI suggest keywords from industry">AI</button>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Locations (CSV)</label>
+        <input name="locations" class="w-full border rounded px-3 py-2" value="{{ (vf.locations or [])|join(', ') }}">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">POV IDs (CSV)</label>
+        <input name="pov_ids" class="w-full border rounded px-3 py-2" value="{{ (vf.pov_ids or [])|join(', ') }}">
+      </div>
+    </div>
+  </div>
+
+  <!-- Goals -->
+  <div class="border rounded p-3 space-y-3">
+    <div class="flex items-center justify-between">
+      <div class="font-medium text-lg">Goals</div>
+      <button formaction="{{ url_for('strategy_bp.ai_new') }}" name="section" value="goals" class="px-3 py-1 rounded border">AI</button>
+    </div>
+    <input name="goals" class="w-full border rounded px-3 py-2" value="{{ (vf.goals or [])|join(', ') }}" placeholder="Increase MQLs by 30% in 90 days">
+  </div>
+
+  <!-- Positioning -->
+  <div class="border rounded p-3 space-y-3">
+    <div class="flex items-center justify-between">
+      <div class="font-medium text-lg">Positioning & Value Proposition</div>
+      <button formaction="{{ url_for('strategy_bp.ai_new') }}" name="section" value="positioning" class="px-3 py-1 rounded border">AI</button>
+    </div>
+    <textarea name="positioning" rows="3" class="w-full border rounded px-3 py-2" placeholder="Why you win; your value prop">{{ vf.positioning }}</textarea>
+  </div>
+
+  <!-- Messaging -->
+  <div class="border rounded p-3 space-y-3">
+    <div class="flex items-center justify-between">
+      <div class="font-medium text-lg">Messaging</div>
+      <button formaction="{{ url_for('strategy_bp.ai_new') }}" name="section" value="messaging" class="px-3 py-1 rounded border">AI</button>
+    </div>
+    <input name="message_core" class="w-full border rounded px-3 py-2" value="{{ vf.messaging.core }}" placeholder="Clear, compelling statement">
+    <div>
+      <label class="block text-sm font-medium mb-1">Brand Voice</label>
+      <input name="brand_voice" class="w-full border rounded px-3 py-2" value="{{ vf.brand_voice }}" placeholder="e.g., Expert, Friendly, Playful">
+    </div>
+  </div>
+
+  <!-- Audience -->
+  <div class="border rounded p-3 space-y-3">
+    <div class="flex items-center justify-between">
+      <div class="font-medium text-lg">Target Audience</div>
+      <button formaction="{{ url_for('strategy_bp.ai_new') }}" name="section" value="audience" class="px-3 py-1 rounded border">AI</button>
+    </div>
+    <textarea name="audience_notes" rows="3" class="w-full border rounded px-3 py-2" placeholder="Who buys and why">{{ vf.audience_notes }}</textarea>
+    <input name="audience_segments" class="w-full border rounded px-3 py-2" value="{{ (vf.audience_segments or [])|join(', ') }}" placeholder="Primary buyers, Influencers">
+  </div>
+
+  <!-- Keywords -->
+  <div class="border rounded p-3 space-y-3">
+    <div class="flex items-center justify-between">
+      <div class="font-medium text-lg">Keywords</div>
+      <button formaction="{{ url_for('strategy_bp.ai_new') }}" name="section" value="keywords" class="px-3 py-1 rounded border">AI</button>
+    </div>
+    <input name="primary_keywords" class="w-full border rounded px-3 py-2" value="{{ (vf.primary_keywords or [])|join(', ') }}" placeholder="best crm software, crm for startups">
+    <input name="extra_keywords" class="w-full border rounded px-3 py-2" value="{{ (vf.extra_keywords or [])|join(', ') }}" placeholder="pipeline management, contact management">
+  </div>
+
+  <!-- Channels -->
+  <div class="border rounded p-3 space-y-3">
+    <div class="flex items-center justify-between">
+      <div class="font-medium text-lg">Channels & Tactics</div>
+      <button formaction="{{ url_for('strategy_bp.ai_new') }}" name="section" value="channels" class="px-3 py-1 rounded border">AI</button>
+    </div>
+    <input name="channels" class="w-full border rounded px-3 py-2" value="{{ (vf.channels or [])|join(', ') }}" placeholder="SEO, Content, Email, PPC">
+  </div>
+
+  <!-- Competitors -->
+  <div class="border rounded p-3 space-y-3">
+    <div class="flex items-center justify-between">
+      <div class="font-medium text-lg">Competitors</div>
+      <button formaction="{{ url_for('strategy_bp.ai_new') }}" name="section" value="competitors" class="px-3 py-1 rounded border">AI</button>
+    </div>
+    <input name="competitors" class="w-full border rounded px-3 py-2" value="{{ (vf.competitors or [])|join(', ') }}" placeholder="Competitor A, Competitor B">
+  </div>
+
+  <!-- Offers -->
+  <div class="border rounded p-3 space-y-3">
+    <div class="flex items-center justify-between">
+      <div class="font-medium text-lg">Offers</div>
+      <button formaction="{{ url_for('strategy_bp.ai_new') }}" name="section" value="offers" class="px-3 py-1 rounded border">AI</button>
+    </div>
+    <input name="offers" class="w-full border rounded px-3 py-2" value="{{ (vf.offers or [])|join(', ') }}" placeholder="Free consult, First-month discount">
+  </div>
+
+  <!-- Constraints -->
+  <div class="border rounded p-3 space-y-3">
+    <div class="flex items-center justify-between">
+      <div class="font-medium text-lg">Constraints</div>
+      <button formaction="{{ url_for('strategy_bp.ai_new') }}" name="section" value="constraints" class="px-3 py-1 rounded border">AI</button>
+    </div>
+    <input name="constraints" class="w-full border rounded px-3 py-2" value="{{ (vf.constraints or [])|join(', ') }}" placeholder="Limited content capacity">
+  </div>
+
+  <!-- Tools -->
+  <div class="border rounded p-3 space-y-3">
+    <div class="flex items-center justify-between">
+      <div class="font-medium text-lg">Tools / Stack</div>
+      <button formaction="{{ url_for('strategy_bp.ai_new') }}" name="section" value="tools" class="px-3 py-1 rounded border">AI</button>
+    </div>
+    <input name="tools" class="w-full border rounded px-3 py-2" value="{{ (vf.tools or [])|join(', ') }}" placeholder="GA4, GSC, CRM">
+  </div>
+
+  <!-- KPIs -->
+  <div class="border rounded p-3 space-y-3">
+    <div class="flex items-center justify-between">
+      <div class="font-medium text-lg">KPIs</div>
+      <button formaction="{{ url_for('strategy_bp.ai_new') }}" name="section" value="kpis" class="px-3 py-1 rounded border">AI</button>
+    </div>
+    <input name="kpis" class="w-full border rounded px-3 py-2" value="{{ (vf.kpis or [])|join(', ') }}" placeholder="MQLs, SQLs, CPL, ROAS">
+  </div>
+
+  <!-- Budget & Phase 1 -->
+  <div class="border rounded p-3 space-y-3">
+    <div class="font-medium text-lg">Budget & First Phase</div>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Monthly Budget (USD)</label>
+        <input name="budget" type="number" step="0.01" class="w-full border rounded px-3 py-2" value="{{ vf.budget }}">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Phase 1 Weeks</label>
+        <input name="phase1_weeks" type="number" class="w-full border rounded px-3 py-2" value="{{ vf.phase1_weeks }}">
+      </div>
+    </div>
+  </div>
+
+  <!-- (Optional) full-AI on create -->
+  <div class="border rounded p-3 space-y-2">
+    <label class="inline-flex items-center gap-2">
+      <input type="checkbox" name="use_ai_full" value="1">
+      <span>After saving, let AI refine and complete the full strategy</span>
+    </label>
+    <div class="grid md:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Objective</label>
+        <select name="ai_objective" class="w-full border rounded px-3 py-2">
+          <option>Lead Generation</option>
+          <option>Sales</option>
+          <option>Awareness</option>
+          <option>Retention</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Depth</label>
+        <select name="ai_depth" class="w-full border rounded px-3 py-2">
+          <option value="light">Light</option>
+          <option value="medium" selected>Medium</option>
+          <option value="full">Full</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Priority Channels (CSV)</label>
+        <input name="ai_priority_channels" class="w-full border rounded px-3 py-2" placeholder="SEO, Email">
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Save -->
+  <div class="flex items-center gap-2">
+    <button class="px-4 py-2 rounded bg-[var(--brand)] text-white">Save</button>
+    <a class="px-4 py-2 rounded border" href="{{ url_for('strategy_bp.index') }}">Cancel</a>
+  </div>
+</form>
+
+<!-- Spinner Overlay -->
+<div id="spinner-overlay" class="hidden fixed inset-0 bg-black/30 z-50">
+  <div class="absolute inset-0 flex items-center justify-center">
+    <div class="spinner h-14 w-14 border-4 rounded-full border-white/30 border-t-white animate-spin"></div>
+  </div>
+</div>
+
+<style>
+  .animate-spin { animation: spin 1s linear infinite; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+<script>
+  (function(){
+    const overlay = document.getElementById('spinner-overlay');
+    document.querySelectorAll('form[data-spinner]').forEach(form => {
+      form.addEventListener('submit', () => { overlay && overlay.classList.remove('hidden'); });
+    });
+  })();
+</script>
+{% endblock %}

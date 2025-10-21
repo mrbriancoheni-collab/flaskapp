@@ -33,6 +33,7 @@
             </a>
           {% endif %}
           <form method="post" action="{{ url_for('google_bp.disconnect', product='lsa') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50" type="submit">
               Disconnect
             </button>
@@ -62,6 +63,7 @@
               </a>
             {% endif %}
             <form method="post" action="{{ url_for('google_bp.disconnect', product=key) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50" type="submit">
                 Disconnect
               </button>

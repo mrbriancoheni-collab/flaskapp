@@ -33,6 +33,7 @@
       <div class="flex items-center gap-2">
         {% if connected %}
           <form method="post" action="{{ url_for('gmb_bp.disconnect') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="rounded-md border px-3 py-2 hover:bg-gray-50" type="submit">
               <i class="fa-solid fa-plug-circle-xmark mr-2"></i>Disconnect
             </button>

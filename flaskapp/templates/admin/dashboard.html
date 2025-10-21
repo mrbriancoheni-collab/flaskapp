@@ -95,6 +95,7 @@
         <li class="flex items-center justify-between">
           <span>{{ u.email }}</span>
           <form method="post" action="{{ url_for('admin_bp.impersonate', user_id=u.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="px-3 py-1 rounded bg-indigo-600 text-white text-xs">Impersonate</button>
           </form>
         </li>

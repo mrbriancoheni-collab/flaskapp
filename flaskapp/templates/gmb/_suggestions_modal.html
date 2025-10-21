@@ -8,6 +8,7 @@
 
   {% if has_suggestions %}
   <form method="post" action="{{ url_for('gmb_bp.apply_suggestions') }}" class="gmb-modal__body">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <!-- TITLE -->
     {% if suggestions.title %}
       <section class="gmb-card">

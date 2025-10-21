@@ -118,6 +118,7 @@
           method="post"
           action="{{ url_for('gmb_bp.update_profile', demo=0 if connected else 1) }}"
           class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       {# Name #}
       <div class="col-span-1">
         <label class="block text-sm font-medium text-gray-700">Business Name</label>
@@ -332,7 +333,13 @@
 </script>
         
 <script>
-document.getElementById('gmb-ai-btn')?.addEventListener('click', async () => {
+// AI Optimizer button loading state
+const aiBtn = document.getElementById('gmb-ai-btn');
+aiBtn?.addEventListener('click', async () => {
+  const originalText = aiBtn.innerHTML;
+  aiBtn.disabled = true;
+  aiBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Running AI Optimizer...';
+
   try {
     const res = await fetch("{{ url_for('gmb_bp.optimize_profile_json') }}", {
       method: "POST",
@@ -345,9 +352,23 @@ document.getElementById('gmb-ai-btn')?.addEventListener('click', async () => {
       location.href = "{{ url_for('gmb_bp.index') }}?show=suggestions";
     } else {
       alert("AI Optimizer failed: " + (data.error || "unknown error"));
+      aiBtn.disabled = false;
+      aiBtn.innerHTML = originalText;
     }
   } catch (e) {
     alert("Network error running AI Optimizer");
+    aiBtn.disabled = false;
+    aiBtn.innerHTML = originalText;
+  }
+});
+
+// Save Changes button loading state
+const saveBtn = document.querySelector('button[form="gmb-profile-form"]');
+const profileForm = document.getElementById('gmb-profile-form');
+profileForm?.addEventListener('submit', () => {
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
   }
 });
 </script>

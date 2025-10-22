@@ -20,8 +20,8 @@
     </div>
     <div class="flex items-center gap-2">
       {% if not connected_gsc %}
-        {# Use absolute URL + next to avoid Google redirect_uri mismatch from nested pages #}
-        <a href="{{ url_for('google_bp.connect_search_console', _external=True, next=request.url) }}"
+        {# Use dedicated GSC OAuth flow (same as dashboard) #}
+        <a href="{{ url_for('google_bp.connect_gsc') }}"
            class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
           <i class="fa-brands fa-google"></i> Connect Search Console
         </a>

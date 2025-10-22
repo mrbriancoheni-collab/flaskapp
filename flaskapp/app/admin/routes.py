@@ -328,3 +328,215 @@ def crm_update(contact_id: int):
     _audit("crm_update", note=f"id={item.id} {item.business_name}")
     flash("Contact updated.", "success")
     return redirect(url_for("admin_bp.crm_detail", contact_id=item.id))
+
+
+# ============================================================================
+# Google Ads AI Optimization - Admin Pages
+# ============================================================================
+
+@admin_bp.get("/google-ads/recommendations")
+@login_required
+@require_admin
+def google_ads_recommendations():
+    """View all Google Ads AI recommendations and their change log."""
+    from app.models_ads import OptimizerRecommendation, OptimizerAction
+
+    # Get filter parameters
+    status_filter = request.args.get('status', 'all')
+    account_id = request.args.get('account_id', type=int)
+    category = request.args.get('category', 'all')
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+
+    # Build query
+    query = OptimizerRecommendation.query
+
+    if status_filter != 'all':
+        query = query.filter(OptimizerRecommendation.status == status_filter)
+
+    if account_id:
+        query = query.filter(OptimizerRecommendation.account_id == account_id)
+
+    if category != 'all':
+        query = query.filter(OptimizerRecommendation.category == category)
+
+    # Order by most recent first
+    query = query.order_by(desc(OptimizerRecommendation.created_at))
+
+    # Paginate
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    recommendations = pagination.items
+
+    # Get accounts for filter dropdown
+    accounts_with_recs = db.session.query(
+        OptimizerRecommendation.account_id,
+        Account.name
+    ).join(
+        Account, OptimizerRecommendation.account_id == Account.id
+    ).distinct().all()
+
+    # Get actions for each recommendation
+    rec_ids = [r.id for r in recommendations]
+    actions = {}
+    if rec_ids:
+        all_actions = OptimizerAction.query.filter(
+            OptimizerAction.recommendation_id.in_(rec_ids)
+        ).all()
+        for action in all_actions:
+            if action.recommendation_id not in actions:
+                actions[action.recommendation_id] = []
+            actions[action.recommendation_id].append(action)
+
+    # Get user names for actions
+    user_ids = set()
+    for action_list in actions.values():
+        for action in action_list:
+            if action.applied_by:
+                user_ids.add(action.applied_by)
+
+    users = {}
+    if user_ids:
+        user_records = User.query.filter(User.id.in_(user_ids)).all()
+        users = {u.id: u for u in user_records}
+
+    # Get account names
+    account_ids = set(r.account_id for r in recommendations if r.account_id)
+    account_names = {}
+    if account_ids:
+        account_records = Account.query.filter(Account.id.in_(account_ids)).all()
+        account_names = {a.id: a.name or f"Account #{a.id}" for a in account_records}
+
+    # Get category stats
+    category_stats = db.session.query(
+        OptimizerRecommendation.category,
+        db.func.count(OptimizerRecommendation.id).label('count')
+    ).filter(
+        OptimizerRecommendation.status == 'open'
+    ).group_by(OptimizerRecommendation.category).all()
+
+    # Get status stats
+    status_stats = db.session.query(
+        OptimizerRecommendation.status,
+        db.func.count(OptimizerRecommendation.id).label('count')
+    ).group_by(OptimizerRecommendation.status).all()
+
+    return render_template(
+        "admin/google_ads_recommendations.html",
+        recommendations=recommendations,
+        pagination=pagination,
+        actions=actions,
+        users=users,
+        account_names=account_names,
+        accounts_with_recs=accounts_with_recs,
+        category_stats=dict(category_stats),
+        status_stats=dict(status_stats),
+        status_filter=status_filter,
+        account_id_filter=account_id,
+        category_filter=category
+    )
+
+
+@admin_bp.get("/google-ads/settings")
+@login_required
+@require_admin
+def google_ads_settings():
+    """View and edit Google Ads AI optimization settings."""
+    import os
+
+    # Get current settings from environment/config
+    settings = {
+        'HIGH_SPEND_DAILY_THRESHOLD': os.getenv('HIGH_SPEND_DAILY_THRESHOLD', '1000'),
+        'MEDIUM_SPEND_DAILY_THRESHOLD': os.getenv('MEDIUM_SPEND_DAILY_THRESHOLD', '500'),
+        'OPENAI_MODEL': os.getenv('OPENAI_MODEL', 'gpt-4o-mini'),
+        'OPENAI_API_KEY_SET': bool(os.getenv('OPENAI_API_KEY')),
+    }
+
+    # Get scheduler job status
+    try:
+        scheduler = current_app.scheduler
+        jobs_info = []
+        for job_id in ['generate_google_ads_insights_weekly', 'generate_google_ads_insights_daily']:
+            job = scheduler.get_job(job_id)
+            if job:
+                jobs_info.append({
+                    'id': job.id,
+                    'name': job.name or job.id.replace('_', ' ').title(),
+                    'next_run': job.next_run_time.isoformat() if job.next_run_time else None,
+                    'trigger': str(job.trigger)
+                })
+    except:
+        jobs_info = []
+
+    # Get recent insights stats
+    from app.models_ads import OptimizerRecommendation
+
+    stats = {
+        'total_recommendations': OptimizerRecommendation.query.count(),
+        'open_recommendations': OptimizerRecommendation.query.filter_by(status='open').count(),
+        'applied_recommendations': OptimizerRecommendation.query.filter_by(status='applied').count(),
+        'dismissed_recommendations': OptimizerRecommendation.query.filter_by(status='dismissed').count(),
+    }
+
+    # Get accounts with Google Ads connected
+    accounts_with_ads = Account.query.filter(
+        Account.google_ads_connected == True
+    ).count()
+
+    return render_template(
+        "admin/google_ads_settings.html",
+        settings=settings,
+        jobs_info=jobs_info,
+        stats=stats,
+        accounts_with_ads=accounts_with_ads
+    )
+
+
+@admin_bp.post("/google-ads/settings")
+@login_required
+@require_admin
+def google_ads_settings_update():
+    """Update Google Ads AI optimization settings."""
+    import os
+
+    # Note: These settings need to be updated in the actual code file
+    # or via environment variables and app restart
+    # This is a placeholder for the UI - actual implementation would need
+    # to write to a config file or environment variable management system
+
+    high_spend = request.form.get('high_spend_threshold', '1000')
+    medium_spend = request.form.get('medium_spend_threshold', '500')
+
+    # For now, just flash a message explaining what needs to be done
+    flash(
+        f"To apply these settings, update your environment variables:\n"
+        f"HIGH_SPEND_DAILY_THRESHOLD={high_spend}\n"
+        f"MEDIUM_SPEND_DAILY_THRESHOLD={medium_spend}\n"
+        f"Then restart the application.",
+        "info"
+    )
+
+    _audit("google_ads_settings_update", note=f"high={high_spend}, medium={medium_spend}")
+
+    return redirect(url_for("admin_bp.google_ads_settings"))
+
+
+@admin_bp.post("/google-ads/trigger-job/<job_id>")
+@login_required
+@require_admin
+def google_ads_trigger_job(job_id: str):
+    """Manually trigger a Google Ads insights job."""
+    try:
+        scheduler = current_app.scheduler
+        job = scheduler.get_job(job_id)
+
+        if job:
+            # Trigger job to run immediately
+            job.modify(next_run_time=datetime.now())
+            flash(f"Job '{job_id}' triggered successfully. It will run shortly.", "success")
+            _audit("google_ads_trigger_job", note=f"job_id={job_id}")
+        else:
+            flash(f"Job '{job_id}' not found.", "error")
+    except Exception as e:
+        flash(f"Failed to trigger job: {str(e)}", "error")
+
+    return redirect(url_for("admin_bp.google_ads_settings"))

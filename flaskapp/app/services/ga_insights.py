@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from flask import current_app
 from app import db
-from app.models_optimizer import OptimizerRecommendation, OptimizerAction
+from app.models_ads import OptimizerRecommendation, OptimizerAction
 
 # Configuration
 HIGH_SESSIONS_THRESHOLD = int(os.environ.get('HIGH_SESSIONS_THRESHOLD', 10000))  # 10k+ sessions/week = high traffic

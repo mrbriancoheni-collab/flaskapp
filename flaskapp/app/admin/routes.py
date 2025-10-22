@@ -555,3 +555,101 @@ def google_ads_trigger_job(job_id: str):
         flash(f"Failed to trigger job: {str(e)}", "error")
 
     return redirect(url_for("admin_bp.google_ads_settings"))
+
+
+# ============================================================================
+# AI Prompts Management
+# ============================================================================
+
+@admin_bp.get("/ai-prompts")
+@login_required
+@require_admin
+def ai_prompts_list():
+    """View and manage AI prompts for all services."""
+    from app.models_ads import AIPrompt
+    from app.services.ai_prompts_init import initialize_ai_prompts
+
+    # Check if prompts exist, if not initialize
+    prompt_count = AIPrompt.query.count()
+    if prompt_count == 0:
+        initialized = initialize_ai_prompts()
+        flash(f"Initialized {initialized} default AI prompts.", "success")
+
+    prompts = AIPrompt.query.order_by(AIPrompt.prompt_key).all()
+
+    return render_template(
+        "admin/ai_prompts.html",
+        prompts=prompts
+    )
+
+
+@admin_bp.get("/ai-prompts/<int:prompt_id>")
+@login_required
+@require_admin
+def ai_prompt_edit(prompt_id: int):
+    """Edit a specific AI prompt."""
+    from app.models_ads import AIPrompt
+
+    prompt = AIPrompt.query.get_or_404(prompt_id)
+
+    return render_template(
+        "admin/ai_prompt_edit.html",
+        prompt=prompt
+    )
+
+
+@admin_bp.post("/ai-prompts/<int:prompt_id>")
+@login_required
+@require_admin
+def ai_prompt_update(prompt_id: int):
+    """Update a specific AI prompt."""
+    from app.models_ads import AIPrompt
+
+    prompt = AIPrompt.query.get_or_404(prompt_id)
+
+    # Update fields
+    prompt.name = request.form.get('name', '').strip()
+    prompt.description = request.form.get('description', '').strip()
+    prompt.system_message = request.form.get('system_message', '').strip()
+    prompt.prompt_template = request.form.get('prompt_template', '').strip()
+    prompt.model = request.form.get('model', 'gpt-4o-mini').strip()
+
+    try:
+        prompt.temperature = float(request.form.get('temperature', 0.7))
+    except ValueError:
+        prompt.temperature = 0.7
+
+    try:
+        prompt.max_tokens = int(request.form.get('max_tokens', 2000))
+    except ValueError:
+        prompt.max_tokens = 2000
+
+    prompt.is_active = request.form.get('is_active') == 'on'
+    prompt.updated_by = current_user.id
+
+    db.session.commit()
+
+    flash(f"Updated prompt '{prompt.name}' successfully.", "success")
+    _audit("ai_prompt_update", note=f"prompt_id={prompt_id}, key={prompt.prompt_key}")
+
+    return redirect(url_for("admin_bp.ai_prompts_list"))
+
+
+@admin_bp.post("/ai-prompts/init")
+@login_required
+@require_admin
+def ai_prompts_initialize():
+    """Initialize or reset AI prompts to defaults."""
+    from app.services.ai_prompts_init import initialize_ai_prompts
+
+    force = request.form.get('force') == 'on'
+    count = initialize_ai_prompts(force=force)
+
+    if force:
+        flash(f"Reset {count} AI prompts to default values.", "success")
+    else:
+        flash(f"Initialized {count} missing AI prompts.", "success")
+
+    _audit("ai_prompts_init", note=f"force={force}, count={count}")
+
+    return redirect(url_for("admin_bp.ai_prompts_list"))

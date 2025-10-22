@@ -289,20 +289,35 @@ class OptimizerRecommendation(db.Model):
     id = db.Column(db.BigInteger, primary_key=True)
     account_id = db.Column(db.BigInteger, index=True, nullable=True)
 
-    scope_type = db.Column(db.String(32), nullable=False)  # 'campaign'|'ad_group'|'keyword'|'ad'|'account'
-    scope_id = db.Column(db.BigInteger, nullable=False, index=True)
+    # Legacy fields (for Google Ads)
+    scope_type = db.Column(db.String(32), nullable=True)  # 'campaign'|'ad_group'|'keyword'|'ad'|'account'
+    scope_id = db.Column(db.BigInteger, nullable=True, index=True)
 
-    category = db.Column(db.String(64), nullable=False)  # 'wasted_spend'|'budget'|'bidding'|'rsa'|'qs'|...
+    # New unified fields (for all Google products)
+    source_type = db.Column(db.String(32), nullable=True, index=True)  # 'google_ads'|'google_analytics'|'search_console'
+    source_id = db.Column(db.String(255), nullable=True, index=True)  # Property ID, Site URL, Customer ID, etc.
+
+    category = db.Column(db.String(64), nullable=False)  # 'wasted_spend'|'budget'|'bidding'|'content'|'keywords'|...
     title = db.Column(db.String(255), nullable=False)
     details = db.Column(db.Text, nullable=False)
     expected_impact = db.Column(db.String(255), nullable=True)
-    severity = db.Column(db.Integer, nullable=False, default=3)  # 1=high ... 5=low
-    suggested_action_json = db.Column(db.Text, nullable=False)  # JSON payload describing mutations
+    severity = db.Column(db.Integer, nullable=False, default=3)  # 1=critical ... 5=long-term
+
+    # Legacy field
+    suggested_action_json = db.Column(db.Text, nullable=True)  # JSON payload describing mutations
+
+    # New unified fields
+    action_data = db.Column(db.Text, nullable=True)  # JSON action data
+    data_points = db.Column(db.Text, nullable=True)  # JSON array of supporting metrics
+    confidence = db.Column(db.Float, nullable=True)  # 0.0-1.0 confidence score
 
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
-    status = db.Column(db.String(16), nullable=False, default="open")  # open|applied|ignored
+    status = db.Column(db.String(16), nullable=False, default="open")  # open|applied|dismissed|superseded
 
-    __table_args__ = (db.Index("ix_opt_scope", "scope_type", "scope_id"),)
+    __table_args__ = (
+        db.Index("ix_opt_scope", "scope_type", "scope_id"),
+        db.Index("ix_opt_source", "source_type", "source_id"),
+    )
 
 
 class OptimizerAction(db.Model):
@@ -317,6 +332,58 @@ class OptimizerAction(db.Model):
     )
     applied_by = db.Column(db.BigInteger, nullable=True)
     applied_at = db.Column(db.DateTime, nullable=True)
-    change_set_json = db.Column(db.Text, nullable=False)  # JSON list of mutations sent to Ads API
+
+    # Legacy fields (for Google Ads API mutations)
+    change_set_json = db.Column(db.Text, nullable=True)  # JSON list of mutations sent to Ads API
     result_json = db.Column(db.Text, nullable=True)       # API response or error payload
-    status = db.Column(db.String(16), nullable=False, default="pending")  # pending|success|failed
+    status = db.Column(db.String(16), nullable=True, default="pending")  # pending|success|failed
+
+    # New unified fields
+    action_type = db.Column(db.String(16), nullable=True)  # 'applied'|'dismissed'
+    notes = db.Column(db.Text, nullable=True)  # Optional notes (e.g., dismissal reason)
+
+
+class AIPrompt(db.Model):
+    """
+    Stores AI prompts for different Google product optimization features.
+    Allows admins to edit prompts without code changes, and keeps them secure (server-side only).
+    """
+    __tablename__ = "ai_prompts"
+
+    id = db.Column(db.BigInteger, primary_key=True)
+
+    # Identifier for the prompt (e.g., 'google_ads_main', 'google_analytics_main', 'search_console_main')
+    prompt_key = db.Column(db.String(64), unique=True, nullable=False, index=True)
+
+    # Human-readable name
+    name = db.Column(db.String(255), nullable=False)
+
+    # Description of what this prompt does
+    description = db.Column(db.Text, nullable=True)
+
+    # The actual prompt template
+    # Can include placeholders like {data}, {timeframe}, {metrics}, etc.
+    prompt_template = db.Column(db.Text, nullable=False)
+
+    # System message (optional, for chat-based models)
+    system_message = db.Column(db.Text, nullable=True)
+
+    # Model to use (e.g., 'gpt-4o-mini', 'gpt-4')
+    model = db.Column(db.String(64), nullable=False, default='gpt-4o-mini')
+
+    # Temperature setting (0.0 - 2.0)
+    temperature = db.Column(db.Float, nullable=False, default=0.7)
+
+    # Max tokens for response
+    max_tokens = db.Column(db.Integer, nullable=False, default=2000)
+
+    # Active status
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    # Audit fields
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+    updated_by = db.Column(db.BigInteger, nullable=True)  # User ID who last updated
+
+    def __repr__(self):
+        return f"<AIPrompt {self.prompt_key}: {self.name}>"

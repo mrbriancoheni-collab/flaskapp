@@ -65,5 +65,13 @@ class Config:
     # SendGrid settings (if using SendGrid provider)
     SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
 
+    # Sentry error tracking and monitoring
+    SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
+    SENTRY_ENVIRONMENT = os.environ.get("SENTRY_ENVIRONMENT", os.environ.get("ENVIRONMENT", "production"))
+    SENTRY_RELEASE = os.environ.get("SENTRY_RELEASE", os.environ.get("GIT_COMMIT", "unknown"))
+    SENTRY_TRACES_SAMPLE_RATE = float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.1"))  # 10% of requests
+    SENTRY_PROFILES_SAMPLE_RATE = float(os.environ.get("SENTRY_PROFILES_SAMPLE_RATE", "0.1"))  # 10% profiling
+    SENTRY_SAMPLE_RATE = float(os.environ.get("SENTRY_SAMPLE_RATE", "1.0"))  # 100% of errors
+
     # Optional
     BASE_URL = os.environ.get("BASE_URL", "")

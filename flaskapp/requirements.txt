@@ -30,6 +30,9 @@ APScheduler>=3.10
 sendgrid>=6.11  # For SendGrid provider
 # OR use built-in smtplib for SMTP (no extra package needed)
 
+# Error tracking and monitoring
+sentry-sdk[flask]>=1.40  # Includes Flask, SQLAlchemy, and logging integrations
+
 google-ads>=25.0
 google-api-python-client==2.136.0
 google-auth==2.34.0

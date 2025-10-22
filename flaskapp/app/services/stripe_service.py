@@ -40,27 +40,36 @@ def get_or_create_stripe_customer(user_id: str, email: str, name: Optional[str] 
     Returns:
         StripeCustomer model instance
     """
+    from app.monitoring import start_span, add_breadcrumb
+
     # Check if customer already exists
-    existing = StripeCustomer.query.filter_by(user_id=user_id).first()
-    if existing:
-        return existing
+    with start_span("db.query", "Check existing Stripe customer"):
+        existing = StripeCustomer.query.filter_by(user_id=user_id).first()
+        if existing:
+            add_breadcrumb("Found existing Stripe customer", category="billing", data={"customer_id": existing.stripe_customer_id})
+            return existing
 
     # Create new Stripe customer
     get_stripe_client()
-    stripe_customer = stripe.Customer.create(
-        email=email,
-        name=name,
-        metadata={"user_id": user_id}
-    )
+
+    with start_span("stripe.api", "Create Stripe customer"):
+        stripe_customer = stripe.Customer.create(
+            email=email,
+            name=name,
+            metadata={"user_id": user_id}
+        )
 
     # Save to database
     customer = StripeCustomer(
         user_id=user_id,
         stripe_customer_id=stripe_customer.id
     )
-    db.session.add(customer)
-    db.session.commit()
 
+    with start_span("db.insert", "Save Stripe customer to database"):
+        db.session.add(customer)
+        db.session.commit()
+
+    add_breadcrumb("Created new Stripe customer", category="billing", data={"customer_id": stripe_customer.id})
     current_app.logger.info(f"Created Stripe customer {stripe_customer.id} for user {user_id}")
     return customer
 

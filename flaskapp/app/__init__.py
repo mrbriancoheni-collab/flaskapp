@@ -799,6 +799,13 @@ def create_app():
 
     _check_email_config()
 
+    # Initialize error tracking and monitoring
+    try:
+        from app.monitoring import init_sentry
+        init_sentry(app)
+    except Exception:
+        app.logger.exception("Failed to initialize Sentry monitoring")
+
     # Initialize background job scheduler
     try:
         from app.background_jobs import init_scheduler

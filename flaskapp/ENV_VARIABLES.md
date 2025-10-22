@@ -11,6 +11,7 @@ Complete reference for all environment variables used in the FieldSprout applica
 - [Google Integrations](#google-integrations)
 - [Encryption](#encryption)
 - [Background Jobs](#background-jobs)
+- [Error Tracking (Sentry)](#error-tracking-sentry)
 - [Optional Features](#optional-features)
 
 ---
@@ -297,6 +298,87 @@ python migrate_encrypt_credentials.py            # Encrypt existing data
 
 ---
 
+## Error Tracking (Sentry)
+
+**Complete Setup Guide:** See `SENTRY_SETUP.md` for detailed instructions
+
+### `SENTRY_DSN` (Required for Error Tracking)
+**Description:** Sentry Data Source Name - unique identifier for your project
+**Example:** `https://abc123def456@o123456.ingest.sentry.io/789012`
+**Where to get:** https://sentry.io → Project Settings → Client Keys (DSN)
+**⚠️ Critical:** Keep this secret! Each environment should have its own DSN
+
+**Setup:**
+```bash
+# 1. Create account at https://sentry.io
+# 2. Create a Flask project
+# 3. Copy the DSN
+export SENTRY_DSN="your-dsn-here"
+```
+
+### `SENTRY_ENVIRONMENT`
+**Description:** Environment name for filtering errors in Sentry dashboard
+**Options:** `production`, `staging`, `development`, `qa`
+**Default:** `production`
+**Example:** `SENTRY_ENVIRONMENT=production`
+**Notes:** Use different projects (DSNs) for each environment, not just tags
+
+### `SENTRY_RELEASE`
+**Description:** Release version or git commit hash for tracking deployments
+**Example:** `fieldsprout@1.0.0` or `abc123def` (git commit SHA)
+**Default:** Auto-detected from `GIT_COMMIT` environment variable
+**Benefits:**
+- Track which release introduced a bug
+- See error trends per release
+- Regression detection
+
+**Set automatically from Git:**
+```bash
+export SENTRY_RELEASE=$(git rev-parse HEAD)
+```
+
+### `SENTRY_TRACES_SAMPLE_RATE`
+**Description:** Percentage of requests to track for performance monitoring (APM)
+**Range:** `0.0` to `1.0` (0% to 100%)
+**Default:** `0.1` (10% of requests)
+**Recommendations:**
+- **Low traffic (< 1k req/day):** `1.0` (100%)
+- **Medium traffic (1k-100k req/day):** `0.1` (10%)
+- **High traffic (> 100k req/day):** `0.01` (1%)
+
+**Example:**
+```bash
+# Production (moderate traffic)
+SENTRY_TRACES_SAMPLE_RATE=0.1
+
+# Development (all requests)
+SENTRY_TRACES_SAMPLE_RATE=1.0
+```
+
+### `SENTRY_PROFILES_SAMPLE_RATE`
+**Description:** Percentage of traced requests to profile (detailed performance data)
+**Range:** `0.0` to `1.0`
+**Default:** `0.1` (10% of traced requests)
+**Notes:** Profiling adds overhead - keep low in production
+
+### `SENTRY_SAMPLE_RATE`
+**Description:** Percentage of error events to send to Sentry
+**Range:** `0.0` to `1.0`
+**Default:** `1.0` (send all errors)
+**Use Case:** Rate limiting if you hit quota limits
+
+**What Gets Tracked:**
+- ✅ All unhandled exceptions automatically
+- ✅ User context (email, ID, role, account)
+- ✅ Request details (URL, method, headers)
+- ✅ Database query performance
+- ✅ External API call duration
+- ✅ Breadcrumbs (user actions leading to error)
+- ✅ Stack traces with source code
+- ✅ Release and environment tagging
+
+---
+
 ## Optional Features
 
 ### OpenAI Integration
@@ -357,6 +439,12 @@ GOOGLE_ADS_REDIRECT_URI=https://app.fieldsprout.com/oauth/google-ads/callback
 # Background Jobs
 SCHEDULER_MAX_WORKERS=5
 AUDIT_LOG_RETENTION_DAYS=90
+
+# Error Tracking
+SENTRY_DSN=https://abc123def@o123456.ingest.sentry.io/789012
+SENTRY_ENVIRONMENT=production
+SENTRY_TRACES_SAMPLE_RATE=0.1
+SENTRY_PROFILES_SAMPLE_RATE=0.1
 
 # Optional
 OPENAI_API_KEY=sk-proj-abc123...

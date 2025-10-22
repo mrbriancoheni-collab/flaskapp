@@ -284,6 +284,100 @@ Return ONLY valid JSON array of recommendations, no additional text.'''
         gmb_prompt.is_active = True
         count += 1
 
+    # Facebook Ads Profile Optimization Prompt
+    fbads_profile_prompt = AIPrompt.query.filter_by(prompt_key='fbads_profile_main').first()
+    if not fbads_profile_prompt or force:
+        if not fbads_profile_prompt:
+            fbads_profile_prompt = AIPrompt(prompt_key='fbads_profile_main')
+            db.session.add(fbads_profile_prompt)
+
+        fbads_profile_prompt.name = 'Facebook Ads Profile Optimization'
+        fbads_profile_prompt.description = 'Main prompt for optimizing Facebook Page profiles for better ad performance'
+        fbads_profile_prompt.system_message = 'You are a Facebook Page optimization expert providing data-driven recommendations in JSON format.'
+        fbads_profile_prompt.prompt_template = '''You are a Facebook Page optimization expert. Analyze the following Facebook Page profile and provide actionable recommendations to improve page engagement, trust signals, and conversion.
+
+PAGE PROFILE:
+- Page Name: {page_name}
+- Category: {category}
+- About: {about} ({about_length} characters)
+- Description: {description} ({description_length} characters)
+- Website: {website}
+- CTA Button: {cta_button}
+- Cover Photo: {cover_photo}
+- Profile Photo: {profile_photo}
+
+Provide 3-5 specific, actionable recommendations in JSON format. Each recommendation should include:
+- title: Brief, action-oriented title
+- description: Detailed explanation (2-3 sentences)
+- category: One of [page_info, about, description, cta, cover_photo, profile_photo]
+- severity: 1=critical issue, 2=high-impact opportunity, 3=quick win, 4-5=long-term optimization
+- expected_impact: Specific metric improvement (e.g., "Increase page engagement by 15-20%")
+- data_points: Array of key metrics supporting this recommendation
+- action: Dict with type and implementation details
+
+Focus on:
+1. About section optimization (clarity, local SEO, value proposition)
+2. Description completeness (400-600 chars, services, proof, service area, CTA)
+3. Call-to-action button selection (Book Now, Get Quote, Learn More, etc.)
+4. Visual branding (cover photo, profile photo quality and consistency)
+5. Page category selection (primary category alignment with business)
+
+Return ONLY valid JSON array of recommendations, no additional text.'''
+        fbads_profile_prompt.model = 'gpt-4o-mini'
+        fbads_profile_prompt.temperature = 0.7
+        fbads_profile_prompt.max_tokens = 1500
+        fbads_profile_prompt.is_active = True
+        count += 1
+
+    # Facebook Ads Campaign Optimization Prompt
+    fbads_campaigns_prompt = AIPrompt.query.filter_by(prompt_key='fbads_campaigns_main').first()
+    if not fbads_campaigns_prompt or force:
+        if not fbads_campaigns_prompt:
+            fbads_campaigns_prompt = AIPrompt(prompt_key='fbads_campaigns_main')
+            db.session.add(fbads_campaigns_prompt)
+
+        fbads_campaigns_prompt.name = 'Facebook Ads Campaign Optimization'
+        fbads_campaigns_prompt.description = 'Main prompt for optimizing Facebook Ads campaigns based on performance data'
+        fbads_campaigns_prompt.system_message = 'You are a Facebook Ads campaign optimization expert providing data-driven recommendations in JSON format.'
+        fbads_campaigns_prompt.prompt_template = '''You are a Facebook Ads campaign optimization expert. Analyze the following campaign performance data and provide actionable recommendations to improve ROAS, reduce costs, and increase conversions.
+
+CAMPAIGN SUMMARY:
+- Active Campaigns: {campaigns_count}
+- Total Spend: {total_spend}
+- Total Impressions: {total_impressions}
+- Total Clicks: {total_clicks}
+- Average CPC: {avg_cpc}
+- Average CPM: {avg_cpm}
+- Average CTR: {avg_ctr}
+
+TOP CAMPAIGNS:
+{campaigns_data}
+
+Provide 5-8 specific, actionable recommendations in JSON format. Each recommendation should include:
+- title: Brief, action-oriented title
+- description: Detailed explanation (2-3 sentences)
+- category: One of [budget, targeting, creative, bidding, placement, audience, conversion]
+- severity: 1=critical issue, 2=high-impact opportunity, 3=quick win, 4-5=long-term optimization
+- expected_impact: Specific metric improvement (e.g., "Reduce CPA by 20-25%")
+- data_points: Array of key metrics supporting this recommendation
+- action: Dict with type and implementation details
+
+Focus on:
+1. Budget allocation (redistribute spend to top performers)
+2. Audience targeting (lookalike audiences, interest targeting refinement)
+3. Creative optimization (ad copy, images, video, headlines)
+4. Bidding strategy (CBO vs ABO, bid cap optimization)
+5. Placement optimization (feed, stories, reels, audience network)
+6. Conversion tracking (pixel events, custom conversions)
+7. Ad scheduling (dayparting based on performance)
+
+Return ONLY valid JSON array of recommendations, no additional text.'''
+        fbads_campaigns_prompt.model = 'gpt-4o-mini'
+        fbads_campaigns_prompt.temperature = 0.7
+        fbads_campaigns_prompt.max_tokens = 2500
+        fbads_campaigns_prompt.is_active = True
+        count += 1
+
     db.session.commit()
     return count
 

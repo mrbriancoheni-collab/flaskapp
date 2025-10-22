@@ -7,7 +7,7 @@
   <div class="flex items-center justify-between mb-6">
     <div>
       <h1 class="text-2xl font-bold">AI Optimization Recommendations</h1>
-      <p class="text-sm text-gray-600 mt-1">View and track all AI-generated recommendations across Google Ads, Analytics, Search Console, Local Services Ads, and Google My Business</p>
+      <p class="text-sm text-gray-600 mt-1">View and track all AI-generated recommendations across Google Ads, Analytics, Search Console, Local Services Ads, Google My Business, and Facebook Ads</p>
     </div>
     <div class="flex gap-2">
       <a href="{{ url_for('admin_bp.google_ads_settings') }}"
@@ -53,6 +53,7 @@
           <option value="search_console" {% if source_type_filter == 'search_console' %}selected{% endif %}>Search Console</option>
           <option value="glsa" {% if source_type_filter == 'glsa' %}selected{% endif %}>Local Services Ads</option>
           <option value="gmb" {% if source_type_filter == 'gmb' %}selected{% endif %}>Google My Business</option>
+          <option value="fbads" {% if source_type_filter == 'fbads' %}selected{% endif %}>Facebook Ads</option>
         </select>
       </div>
 
@@ -106,6 +107,14 @@
           <option value="photos" {% if category_filter == 'photos' %}selected{% endif %}>Photos</option>
           <option value="posts" {% if category_filter == 'posts' %}selected{% endif %}>Posts</option>
           <option value="attributes" {% if category_filter == 'attributes' %}selected{% endif %}>Attributes</option>
+          <option value="page_info" {% if category_filter == 'page_info' %}selected{% endif %}>Page Info</option>
+          <option value="about" {% if category_filter == 'about' %}selected{% endif %}>About</option>
+          <option value="cta" {% if category_filter == 'cta' %}selected{% endif %}>CTA</option>
+          <option value="cover_photo" {% if category_filter == 'cover_photo' %}selected{% endif %}>Cover Photo</option>
+          <option value="profile_photo" {% if category_filter == 'profile_photo' %}selected{% endif %}>Profile Photo</option>
+          <option value="audience" {% if category_filter == 'audience' %}selected{% endif %}>Audience</option>
+          <option value="creative" {% if category_filter == 'creative' %}selected{% endif %}>Creative</option>
+          <option value="placement" {% if category_filter == 'placement' %}selected{% endif %}>Placement</option>
         </select>
       </div>
 

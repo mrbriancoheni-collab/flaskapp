@@ -638,3 +638,95 @@ def optimize_ads_json():
             "Duplicate best audience with new creative",
             "Test Advantage+ placements"
         ], sample=summary[:10])
+
+
+# --------- AI Insights (New unified recommendation system) ----------
+@fbads_bp.post("/insights.json", endpoint="insights_json")
+@login_required
+def insights_json():
+    """Generate AI-powered optimization insights for Facebook Ads profile and campaigns."""
+    aid = current_account_id()
+
+    try:
+        payload = request.get_json(force=True) or {}
+    except Exception:
+        return jsonify({"ok": False, "error": "invalid_json"}), 400
+
+    profile_data = payload.get("profile") or {}
+    campaign_data = payload.get("campaign_data")
+    regenerate = bool(payload.get("regenerate", False))
+
+    # Import insights service
+    from app.services.fbads_insights import generate_fbads_insights
+
+    try:
+        insights = generate_fbads_insights(aid, profile_data, campaign_data, regenerate=regenerate)
+        return jsonify(insights)
+    except Exception as e:
+        current_app.logger.exception("Error generating FB Ads insights")
+        return jsonify({
+            "ok": False,
+            "error": str(e),
+            "summary": "Failed to generate insights.",
+            "recommendations": []
+        }), 500
+
+
+@fbads_bp.post("/apply-recommendation", endpoint="apply_recommendation")
+@login_required
+def apply_recommendation():
+    """Apply a FB Ads recommendation."""
+    aid = current_account_id()
+
+    try:
+        payload = request.get_json(force=True) or {}
+    except Exception:
+        return jsonify({"ok": False, "error": "invalid_json"}), 400
+
+    recommendation_id = payload.get("recommendation_id")
+    if not recommendation_id:
+        return jsonify({"ok": False, "error": "recommendation_id required"}), 400
+
+    # Import insights service
+    from app.services.fbads_insights import apply_fbads_recommendation
+    from app.auth.utils import current_user_id
+
+    user_id = current_user_id()
+
+    try:
+        result = apply_fbads_recommendation(aid, recommendation_id, user_id)
+        return jsonify(result)
+    except Exception as e:
+        current_app.logger.exception("Error applying FB Ads recommendation")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@fbads_bp.post("/dismiss-recommendation", endpoint="dismiss_recommendation")
+@login_required
+def dismiss_recommendation():
+    """Dismiss a FB Ads recommendation."""
+    aid = current_account_id()
+
+    try:
+        payload = request.get_json(force=True) or {}
+    except Exception:
+        return jsonify({"ok": False, "error": "invalid_json"}), 400
+
+    recommendation_id = payload.get("recommendation_id")
+    if not recommendation_id:
+        return jsonify({"ok": False, "error": "recommendation_id required"}), 400
+
+    reason = payload.get("reason")
+
+    # Import insights service
+    from app.services.fbads_insights import dismiss_fbads_recommendation
+    from app.auth.utils import current_user_id
+
+    user_id = current_user_id()
+
+    try:
+        result = dismiss_fbads_recommendation(aid, recommendation_id, user_id, reason)
+        return jsonify(result)
+    except Exception as e:
+        current_app.logger.exception("Error dismissing FB Ads recommendation")
+        return jsonify({"ok": False, "error": str(e)}), 500

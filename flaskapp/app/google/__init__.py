@@ -2994,6 +2994,158 @@ def oauth_callback():
         return redirect(url_for("google_bp.gsc_ui"))
     return redirect(url_for("google_bp.index"))
 
+# ========================== GA Insights Routes ==========================
+
+@google_bp.route("/ga/insights.json", methods=["POST"], endpoint="ga_insights_json")
+@login_required
+def ga_insights_json():
+    """Generate AI insights for Google Analytics property."""
+    from app.services.ga_insights import generate_ga_insights
+
+    aid = current_account_id()
+    data = request.get_json() if request.is_json else {}
+    property_id = data.get("property_id", "")
+    regenerate = bool(data.get("regenerate", False))
+
+    if not property_id:
+        return jsonify({"ok": False, "error": "Missing property_id"}), 400
+
+    try:
+        insights = generate_ga_insights(aid, property_id, regenerate=regenerate)
+        return jsonify({"ok": True, **insights})
+    except Exception as e:
+        current_app.logger.error(f"Error generating GA insights: {e}", exc_info=True)
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@google_bp.route("/ga/apply-recommendation", methods=["POST"], endpoint="ga_apply_recommendation")
+@login_required
+def ga_apply_recommendation():
+    """Apply a GA recommendation."""
+    from app.services.ga_insights import apply_ga_recommendation
+
+    data = request.get_json() if request.is_json else request.form
+    recommendation_id = data.get("recommendation_id")
+
+    if not recommendation_id:
+        return jsonify({"ok": False, "error": "Missing recommendation_id"}), 400
+
+    try:
+        recommendation_id = int(recommendation_id)
+    except:
+        return jsonify({"ok": False, "error": "Invalid recommendation_id"}), 400
+
+    success, message = apply_ga_recommendation(recommendation_id, current_user.id)
+
+    if success:
+        return jsonify({"ok": True, "message": message})
+    else:
+        return jsonify({"ok": False, "error": message}), 400
+
+
+@google_bp.route("/ga/dismiss-recommendation", methods=["POST"], endpoint="ga_dismiss_recommendation")
+@login_required
+def ga_dismiss_recommendation():
+    """Dismiss a GA recommendation."""
+    from app.services.ga_insights import dismiss_ga_recommendation
+
+    data = request.get_json() if request.is_json else request.form
+    recommendation_id = data.get("recommendation_id")
+    reason = data.get("reason", "")
+
+    if not recommendation_id:
+        return jsonify({"ok": False, "error": "Missing recommendation_id"}), 400
+
+    try:
+        recommendation_id = int(recommendation_id)
+    except:
+        return jsonify({"ok": False, "error": "Invalid recommendation_id"}), 400
+
+    success, message = dismiss_ga_recommendation(recommendation_id, current_user.id, reason)
+
+    if success:
+        return jsonify({"ok": True, "message": message})
+    else:
+        return jsonify({"ok": False, "error": message}), 400
+
+
+# ========================== GSC Insights Routes ==========================
+
+@google_bp.route("/gsc/insights.json", methods=["POST"], endpoint="gsc_insights_json")
+@login_required
+def gsc_insights_json():
+    """Generate AI SEO insights for Google Search Console property."""
+    from app.services.gsc_insights import generate_gsc_insights
+
+    aid = current_account_id()
+    data = request.get_json() if request.is_json else {}
+    site_url = data.get("site_url", "")
+    regenerate = bool(data.get("regenerate", False))
+
+    if not site_url:
+        return jsonify({"ok": False, "error": "Missing site_url"}), 400
+
+    try:
+        insights = generate_gsc_insights(aid, site_url, regenerate=regenerate)
+        return jsonify({"ok": True, **insights})
+    except Exception as e:
+        current_app.logger.error(f"Error generating GSC insights: {e}", exc_info=True)
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@google_bp.route("/gsc/apply-recommendation", methods=["POST"], endpoint="gsc_apply_recommendation")
+@login_required
+def gsc_apply_recommendation():
+    """Apply a GSC recommendation."""
+    from app.services.gsc_insights import apply_gsc_recommendation
+
+    data = request.get_json() if request.is_json else request.form
+    recommendation_id = data.get("recommendation_id")
+
+    if not recommendation_id:
+        return jsonify({"ok": False, "error": "Missing recommendation_id"}), 400
+
+    try:
+        recommendation_id = int(recommendation_id)
+    except:
+        return jsonify({"ok": False, "error": "Invalid recommendation_id"}), 400
+
+    success, message = apply_gsc_recommendation(recommendation_id, current_user.id)
+
+    if success:
+        return jsonify({"ok": True, "message": message})
+    else:
+        return jsonify({"ok": False, "error": message}), 400
+
+
+@google_bp.route("/gsc/dismiss-recommendation", methods=["POST"], endpoint="gsc_dismiss_recommendation")
+@login_required
+def gsc_dismiss_recommendation():
+    """Dismiss a GSC recommendation."""
+    from app.services.gsc_insights import dismiss_gsc_recommendation
+
+    data = request.get_json() if request.is_json else request.form
+    recommendation_id = data.get("recommendation_id")
+    reason = data.get("reason", "")
+
+    if not recommendation_id:
+        return jsonify({"ok": False, "error": "Missing recommendation_id"}), 400
+
+    try:
+        recommendation_id = int(recommendation_id)
+    except:
+        return jsonify({"ok": False, "error": "Invalid recommendation_id"}), 400
+
+    success, message = dismiss_gsc_recommendation(recommendation_id, current_user.id, reason)
+
+    if success:
+        return jsonify({"ok": True, "message": message})
+    else:
+        return jsonify({"ok": False, "error": message}), 400
+
+
+# ========================== Disconnect Route ==========================
+
 @google_bp.route("/disconnect/<product>", methods=["POST", "GET"], endpoint="disconnect")
 @login_required
 def disconnect(product: str):

@@ -105,62 +105,32 @@
     </form>
   </div>
 
-  <!-- AI Insights -->
-  <div class="rounded-lg border bg-white p-4">
-    <details id="gaAiPanel" class="group" open>
-      <summary class="list-none cursor-pointer inline-flex items-center gap-2 rounded-md border px-3 py-2 hover:bg-gray-50 select-none">
-        <i class="fa-solid fa-wand-magic-sparkles"></i>
-        <span class="font-medium">AI Insights</span>
-        <span class="ml-2 text-xs text-gray-400">(beta)</span>
-      </summary>
-      <div class="mt-3 rounded-md border border-dashed p-3 bg-gray-50">
-        <div class="flex items-center justify-between mb-3">
-          <div class="text-xs text-gray-500">Summarize trends and suggest actions for the selected timeframe.</div>
-          <button id="genAiBtn" type="button"
-                  class="inline-flex items-center gap-2 rounded-md bg-slate-800 px-3 py-1.5 text-white hover:bg-slate-900">
-            <svg id="aiSpinner" class="hidden animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-            </svg>
-            <span>Generate Insights</span>
-          </button>
+  <!-- AI Insights Panel -->
+  <div class="rounded-lg border bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100 p-6">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center">
+          <i class="fa-solid fa-wand-magic-sparkles text-xl"></i>
         </div>
-
-        <div id="aiStatus" class="text-xs text-gray-500 mb-2"></div>
-
-        <div class="space-y-4">
-          <div>
-            <div class="text-xs text-gray-500 mb-1">Summary</div>
-            <div class="text-sm" id="aiSummary">
-              {{ (ga_ai.summary if ga_ai is defined) or 'No summary available.' }}
-            </div>
-          </div>
-
-          <div class="grid md:grid-cols-2 gap-4">
-            <div>
-              <div class="text-xs text-gray-500 mb-1">Insights</div>
-              <ul class="list-disc pl-5 text-sm space-y-1" id="aiInsights">
-                {% if ga_ai is defined and ga_ai.insights %}
-                  {% for i in ga_ai.insights %}<li>{{ i }}</li>{% endfor %}
-                {% else %}
-                  <li class="text-gray-400">No insights available.</li>
-                {% endif %}
-              </ul>
-            </div>
-            <div>
-              <div class="text-xs text-gray-500 mb-1">Recommended Improvements</div>
-              <ul class="list-disc pl-5 text-sm space-y-1" id="aiImprovements">
-                {% if ga_ai is defined and ga_ai.improvements %}
-                  {% for i in ga_ai.improvements %}<li>{{ i }}</li>{% endfor %}
-                {% else %}
-                  <li class="text-gray-400">No recommendations available.</li>
-                {% endif %}
-              </ul>
-            </div>
-          </div>
+        <div>
+          <h3 class="font-semibold text-gray-900">AI-Powered Analytics Insights</h3>
+          <p class="text-sm text-gray-600">Get personalized optimization recommendations powered by GPT-4</p>
         </div>
       </div>
-    </details>
+      <button id="genGAInsightsBtn" type="button" onclick="generateGAInsights('{{ ga_selected_id or '' }}')"
+              class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-white hover:bg-blue-700 transition-colors font-medium shadow-md">
+        <i class="fa-solid fa-sparkles"></i>
+        <span>Generate Insights</span>
+      </button>
+    </div>
+    {% if not ai_enabled %}
+      <div class="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+        <i class="fa-solid fa-info-circle text-amber-600 mt-0.5"></i>
+        <div class="text-sm text-amber-900">
+          <strong>AI not configured.</strong> Set the <code class="bg-amber-100 px-1 rounded">OPENAI_API_KEY</code> environment variable to enable AI insights.
+        </div>
+      </div>
+    {% endif %}
   </div>
 
   {# If connected, do NOT render demo numbers (avoid flash). Otherwise render demo. #}
@@ -342,6 +312,9 @@
   details > summary { outline: none; }
 </style>
 
+{# Include GA AI Insights Modal #}
+{% include 'google/components/ga_insights_modal.html' %}
+
 <script>
   window.GA_ENDPOINTS = {
     props: "{{ url_for('google_bp.ga_properties_json') }}",
@@ -353,4 +326,5 @@
   };
 </script>
 <script src="{{ url_for('static', filename='js/google_ga.js', v=config.get('ASSET_VERSION', 1)) }}" defer></script>
+<script src="{{ url_for('static', filename='js/ga_insights.js', v=config.get('ASSET_VERSION', 1)) }}" defer></script>
 {% endblock %}

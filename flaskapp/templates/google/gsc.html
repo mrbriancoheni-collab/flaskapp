@@ -121,17 +121,33 @@
     </div>
   </div>
 
-  <!-- AI Insights (text) -->
-  {% if insights %}
-  <div class="rounded-lg border bg-white p-4">
-    <div class="flex items-center gap-2 mb-2">
-      <i class="fa-solid fa-wand-magic-sparkles"></i>
-      <div class="font-medium">AI Insights</div>
-      <span class="ml-2 text-xs text-gray-400">(beta)</span>
+  <!-- AI SEO Insights Panel -->
+  <div class="rounded-lg border bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-100 p-6">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center">
+          <i class="fa-solid fa-magnifying-glass text-xl"></i>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-900">AI-Powered SEO Insights</h3>
+          <p class="text-sm text-gray-600">Get personalized SEO optimization recommendations powered by GPT-4</p>
+        </div>
+      </div>
+      <button id="genGSCInsightsBtn" type="button" onclick="generateGSCInsights('{{ gsc.site_url or '' }}')"
+              class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-6 py-3 text-white hover:bg-emerald-700 transition-colors font-medium shadow-md">
+        <i class="fa-solid fa-sparkles"></i>
+        <span>Optimize SEO</span>
+      </button>
     </div>
-    <div class="text-sm whitespace-pre-line">{{ insights }}</div>
+    {% if not connected_gsc %}
+      <div class="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+        <i class="fa-solid fa-info-circle text-amber-600 mt-0.5"></i>
+        <div class="text-sm text-amber-900">
+          <strong>Not connected.</strong> Connect to Google Search Console to generate SEO insights.
+        </div>
+      </div>
+    {% endif %}
   </div>
-  {% endif %}
 
   <!-- Tables -->
   <div class="grid lg:grid-cols-2 gap-4">
@@ -313,4 +329,9 @@
   // Initial fetch
   fetchData();
 </script>
+
+{# Include GSC AI Insights Modal #}
+{% include 'google/components/gsc_insights_modal.html' %}
+
+<script src="{{ url_for('static', filename='js/gsc_insights.js', v=config.get('ASSET_VERSION', 1)) }}" defer></script>
 {% endblock %}

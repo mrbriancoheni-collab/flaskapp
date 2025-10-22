@@ -338,11 +338,12 @@ def crm_update(contact_id: int):
 @login_required
 @require_admin
 def google_ads_recommendations():
-    """View all Google Ads AI recommendations and their change log."""
+    """View all AI recommendations (Google Ads, Analytics, Search Console) and their change log."""
     from app.models_ads import OptimizerRecommendation, OptimizerAction
 
     # Get filter parameters
     status_filter = request.args.get('status', 'all')
+    source_type_filter = request.args.get('source_type', 'all')  # NEW: Filter by source
     account_id = request.args.get('account_id', type=int)
     category = request.args.get('category', 'all')
     page = request.args.get('page', 1, type=int)
@@ -353,6 +354,10 @@ def google_ads_recommendations():
 
     if status_filter != 'all':
         query = query.filter(OptimizerRecommendation.status == status_filter)
+
+    # NEW: Filter by source type
+    if source_type_filter != 'all':
+        query = query.filter(OptimizerRecommendation.source_type == source_type_filter)
 
     if account_id:
         query = query.filter(OptimizerRecommendation.account_id == account_id)
@@ -420,6 +425,14 @@ def google_ads_recommendations():
         db.func.count(OptimizerRecommendation.id).label('count')
     ).group_by(OptimizerRecommendation.status).all()
 
+    # NEW: Get source type stats
+    source_type_stats = db.session.query(
+        OptimizerRecommendation.source_type,
+        db.func.count(OptimizerRecommendation.id).label('count')
+    ).filter(
+        OptimizerRecommendation.status == 'open'
+    ).group_by(OptimizerRecommendation.source_type).all()
+
     return render_template(
         "admin/google_ads_recommendations.html",
         recommendations=recommendations,
@@ -430,7 +443,9 @@ def google_ads_recommendations():
         accounts_with_recs=accounts_with_recs,
         category_stats=dict(category_stats),
         status_stats=dict(status_stats),
+        source_type_stats=dict(source_type_stats),  # NEW
         status_filter=status_filter,
+        source_type_filter=source_type_filter,  # NEW
         account_id_filter=account_id,
         category_filter=category
     )

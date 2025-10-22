@@ -1,0 +1,200 @@
+{# Google Search Console AI Insights Modal #}
+<div id="gscInsightsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
+
+    {# Header #}
+    <div class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-2xl font-bold flex items-center gap-2">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            Search Console SEO Insights
+          </h2>
+          <p class="text-sm text-emerald-100 mt-1">Powered by OpenAI GPT-4</p>
+        </div>
+        <button onclick="closeGSCInsightsModal()" class="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-colors">
+          <i class="fa-solid fa-times text-xl"></i>
+        </button>
+      </div>
+    </div>
+
+    {# Content Container #}
+    <div class="overflow-y-auto" style="max-height: calc(90vh - 100px);">
+
+      {# Loading State #}
+      <div id="gscInsightsLoading" class="p-12">
+        <div class="flex flex-col items-center justify-center">
+          <div class="animate-spin rounded-full h-16 w-16 border-4 border-emerald-200 border-t-emerald-600 mb-6"></div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2" id="gscLoadingMessage">Analyzing your search performance...</h3>
+          <p class="text-sm text-gray-600 mb-8">This may take 10-20 seconds</p>
+
+          {# Progress Steps #}
+          <div class="w-full max-w-md space-y-3">
+            <div id="gscStep1" class="flex items-center gap-3 text-sm text-gray-400 transition-all duration-300">
+              <i class="fa-regular fa-circle"></i>
+              <span>Reviewing search rankings...</span>
+            </div>
+            <div id="gscStep2" class="flex items-center gap-3 text-sm text-gray-400 transition-all duration-300">
+              <i class="fa-regular fa-circle"></i>
+              <span>Analyzing click-through rates...</span>
+            </div>
+            <div id="gscStep3" class="flex items-center gap-3 text-sm text-gray-400 transition-all duration-300">
+              <i class="fa-regular fa-circle"></i>
+              <span>Finding SEO opportunities...</span>
+            </div>
+            <div id="gscStep4" class="flex items-center gap-3 text-sm text-gray-400 transition-all duration-300">
+              <i class="fa-regular fa-circle"></i>
+              <span>Generating recommendations...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# Results #}
+      <div id="gscInsightsResults" class="hidden">
+
+        {# Summary #}
+        <div class="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-100 p-6">
+          <h3 class="text-sm font-medium text-emerald-900 mb-2">SEO Summary</h3>
+          <p id="gscInsightsSummary" class="text-gray-700 leading-relaxed"></p>
+        </div>
+
+        {# No Recommendations State #}
+        <div id="gscNoRecommendations" class="hidden p-12 text-center">
+          <i class="fa-solid fa-check-circle text-5xl text-green-600 mb-4"></i>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">SEO Performing Well</h3>
+          <p class="text-gray-600">No critical SEO opportunities found at this time.</p>
+        </div>
+
+        {# Critical Issues #}
+        <div id="gscCriticalSection" class="hidden border-b">
+          <div class="bg-red-50 px-6 py-4">
+            <button onclick="toggleGSCSection('gscCritical')" class="w-full flex items-center justify-between text-left">
+              <div class="flex items-center gap-3">
+                <span class="inline-block bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded">CRITICAL</span>
+                <h3 class="text-base font-semibold text-red-900">SEO Issues Requiring Immediate Attention <span id="gscCriticalCount"></span></h3>
+              </div>
+              <i id="gscCriticalChevron" class="fa-solid fa-chevron-down text-red-600 transition-transform"></i>
+            </button>
+          </div>
+          <div id="gscCriticalCards" class="p-6 space-y-4 bg-red-50"></div>
+        </div>
+
+        {# High Impact #}
+        <div id="gscHighImpactSection" class="hidden border-b">
+          <div class="bg-orange-50 px-6 py-4">
+            <button onclick="toggleGSCSection('gscHighImpact')" class="w-full flex items-center justify-between text-left">
+              <div class="flex items-center gap-3">
+                <span class="inline-block bg-orange-600 text-white text-xs font-bold px-2.5 py-1 rounded">HIGH IMPACT</span>
+                <h3 class="text-base font-semibold text-orange-900">High-Impact SEO Opportunities <span id="gscHighImpactCount"></span></h3>
+              </div>
+              <i id="gscHighImpactChevron" class="fa-solid fa-chevron-down text-orange-600 transition-transform"></i>
+            </button>
+          </div>
+          <div id="gscHighImpactCards" class="hidden p-6 space-y-4 bg-orange-50"></div>
+        </div>
+
+        {# Quick Wins #}
+        <div id="gscQuickWinsSection" class="hidden border-b">
+          <div class="bg-green-50 px-6 py-4">
+            <button onclick="toggleGSCSection('gscQuickWins')" class="w-full flex items-center justify-between text-left">
+              <div class="flex items-center gap-3">
+                <span class="inline-block bg-green-600 text-white text-xs font-bold px-2.5 py-1 rounded">QUICK WINS</span>
+                <h3 class="text-base font-semibold text-green-900">Quick SEO Wins <span id="gscQuickWinsCount"></span></h3>
+              </div>
+              <i id="gscQuickWinsChevron" class="fa-solid fa-chevron-down text-green-600 transition-transform"></i>
+            </button>
+          </div>
+          <div id="gscQuickWinsCards" class="hidden p-6 space-y-4 bg-green-50"></div>
+        </div>
+
+        {# Long-Term #}
+        <div id="gscLongTermSection" class="hidden border-b">
+          <div class="bg-blue-50 px-6 py-4">
+            <button onclick="toggleGSCSection('gscLongTerm')" class="w-full flex items-center justify-between text-left">
+              <div class="flex items-center gap-3">
+                <span class="inline-block bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded">LONG-TERM</span>
+                <h3 class="text-base font-semibold text-blue-900">Long-Term SEO Strategy <span id="gscLongTermCount"></span></h3>
+              </div>
+              <i id="gscLongTermChevron" class="fa-solid fa-chevron-down text-blue-600 transition-transform"></i>
+            </button>
+          </div>
+          <div id="gscLongTermCards" class="hidden p-6 space-y-4 bg-blue-50"></div>
+        </div>
+
+      </div>
+
+    </div>
+
+    {# Footer Actions #}
+    <div class="border-t bg-gray-50 px-6 py-4 flex items-center justify-between">
+      <div class="text-sm text-gray-600">
+        <i class="fa-solid fa-info-circle mr-1"></i>
+        SEO insights are refreshed every 6 hours
+      </div>
+      <div class="flex gap-3">
+        <button onclick="exportGSCInsights()" class="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors text-sm font-medium">
+          <i class="fa-solid fa-download mr-1"></i> Export
+        </button>
+        <button onclick="closeGSCInsightsModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors text-sm font-medium">
+          Close
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{# Insight Card Template #}
+<template id="gscInsightCardTemplate">
+  <div class="border rounded-lg p-4 bg-white hover:shadow-md transition-shadow">
+    <div class="flex gap-4">
+
+      {# Icon #}
+      <div class="flex-shrink-0">
+        <div class="w-10 h-10 rounded-full bg-opacity-10 flex items-center justify-center">
+          <i class="gsc-insight-icon text-xl"></i>
+        </div>
+      </div>
+
+      {# Content #}
+      <div class="flex-1">
+        <h4 class="font-semibold text-gray-900 mb-2 gsc-insight-title"></h4>
+        <p class="text-sm text-gray-600 mb-3 gsc-insight-description"></p>
+
+        {# Metrics #}
+        <div class="flex items-center gap-4 mb-3 text-xs">
+          <div class="flex items-center gap-1">
+            <i class="fa-solid fa-chart-line text-green-600"></i>
+            <span class="font-medium text-gray-700">Impact:</span>
+            <span class="gsc-insight-impact"></span>
+          </div>
+          <div class="flex items-center gap-1">
+            <i class="fa-solid fa-crosshairs text-emerald-600"></i>
+            <span class="font-medium text-gray-700">Confidence:</span>
+            <span class="gsc-insight-confidence font-semibold"></span>
+          </div>
+        </div>
+
+        {# Confidence Bar #}
+        <div class="w-full bg-gray-200 rounded-full h-1.5 mb-3">
+          <div class="gsc-insight-confidence-bar bg-emerald-600 h-1.5 rounded-full transition-all duration-300"></div>
+        </div>
+
+        {# Action Buttons #}
+        <div class="flex gap-2">
+          <button class="apply-btn px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium transition-colors">
+            <i class="fa-solid fa-check mr-1"></i> Apply
+          </button>
+          <button class="details-btn px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-medium transition-colors">
+            <i class="fa-solid fa-eye mr-1"></i> Details
+          </button>
+          <button class="dismiss-btn px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-medium transition-colors">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</template>

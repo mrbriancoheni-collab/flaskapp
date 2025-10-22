@@ -1,0 +1,220 @@
+{# templates/google/components/insights_modal.html - AI Insights Modal Component #}
+
+<!-- AI Insights Modal -->
+<div id="insightsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-lg shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
+
+    <!-- Header -->
+    <div class="px-6 py-4 border-b flex items-center justify-between bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+      <div class="flex items-center gap-3">
+        <i class="fa-solid fa-wand-magic-sparkles text-2xl"></i>
+        <div>
+          <h2 class="text-xl font-semibold">AI Optimization Insights</h2>
+          <p class="text-sm text-indigo-100">Powered by OpenAI GPT-4</p>
+        </div>
+      </div>
+      <button onclick="closeInsightsModal()" class="text-white hover:text-gray-200 transition-colors">
+        <i class="fa-solid fa-times text-2xl"></i>
+      </button>
+    </div>
+
+    <!-- Loading State -->
+    <div id="insightsLoading" class="p-12 text-center">
+      <div class="inline-block animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-indigo-600 mb-6"></div>
+      <p class="text-lg font-medium text-gray-700 mb-2" id="loadingMessage">Analyzing your Google Ads account...</p>
+      <p class="text-sm text-gray-500 mb-6">This may take 10-15 seconds</p>
+
+      <div class="max-w-md mx-auto space-y-3">
+        <div class="flex items-center gap-3 text-sm text-gray-500 transition-all duration-300" id="step1">
+          <i class="fa-solid fa-spinner fa-spin text-indigo-600"></i>
+          <span>Reviewing campaign performance...</span>
+        </div>
+        <div class="flex items-center gap-3 text-sm text-gray-400 transition-all duration-300" id="step2">
+          <i class="fa-regular fa-circle"></i>
+          <span>Analyzing keyword data...</span>
+        </div>
+        <div class="flex items-center gap-3 text-sm text-gray-400 transition-all duration-300" id="step3">
+          <i class="fa-regular fa-circle"></i>
+          <span>Checking budget efficiency...</span>
+        </div>
+        <div class="flex items-center gap-3 text-sm text-gray-400 transition-all duration-300" id="step4">
+          <i class="fa-regular fa-circle"></i>
+          <span>Generating recommendations...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Container -->
+    <div id="insightsResults" class="hidden">
+      <!-- Summary Section -->
+      <div class="p-6 bg-gradient-to-r from-gray-50 to-blue-50 border-b">
+        <div class="flex items-start gap-3">
+          <i class="fa-solid fa-chart-line text-2xl text-indigo-600 mt-1"></i>
+          <div>
+            <h3 class="font-semibold text-gray-900 mb-2">Executive Summary</h3>
+            <p class="text-gray-700 leading-relaxed" id="insightsSummary"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scrollable Recommendations -->
+      <div class="overflow-y-auto" style="max-height: calc(90vh - 280px);">
+        <!-- Critical Issues Section -->
+        <div id="criticalSection" class="hidden">
+          <div class="px-6 py-4 bg-red-50 border-b border-red-100 flex items-center justify-between cursor-pointer hover:bg-red-100 transition-colors" onclick="toggleSection('critical')">
+            <div class="flex items-center gap-3">
+              <span class="bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">CRITICAL</span>
+              <h3 class="font-semibold text-red-900">Issues Requiring Immediate Attention</h3>
+              <span class="text-sm text-red-700 font-medium" id="criticalCount"></span>
+            </div>
+            <i class="fa-solid fa-chevron-down text-red-600 transition-transform" id="criticalChevron"></i>
+          </div>
+          <div id="criticalCards" class="p-6 space-y-4 bg-red-50/30"></div>
+        </div>
+
+        <!-- High Impact Section -->
+        <div id="highImpactSection" class="hidden">
+          <div class="px-6 py-4 bg-orange-50 border-b border-orange-100 flex items-center justify-between cursor-pointer hover:bg-orange-100 transition-colors" onclick="toggleSection('highImpact')">
+            <div class="flex items-center gap-3">
+              <span class="bg-orange-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">HIGH IMPACT</span>
+              <h3 class="font-semibold text-orange-900">High-Impact Opportunities</h3>
+              <span class="text-sm text-orange-700 font-medium" id="highImpactCount"></span>
+            </div>
+            <i class="fa-solid fa-chevron-down text-orange-600 transition-transform" id="highImpactChevron"></i>
+          </div>
+          <div id="highImpactCards" class="p-6 space-y-4 bg-orange-50/30"></div>
+        </div>
+
+        <!-- Quick Wins Section -->
+        <div id="quickWinsSection" class="hidden">
+          <div class="px-6 py-4 bg-green-50 border-b border-green-100 flex items-center justify-between cursor-pointer hover:bg-green-100 transition-colors" onclick="toggleSection('quickWins')">
+            <div class="flex items-center gap-3">
+              <span class="bg-green-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">QUICK WIN</span>
+              <h3 class="font-semibold text-green-900">Quick Wins</h3>
+              <span class="text-sm text-green-700 font-medium" id="quickWinsCount"></span>
+            </div>
+            <i class="fa-solid fa-chevron-down text-green-600 transition-transform" id="quickWinsChevron"></i>
+          </div>
+          <div id="quickWinsCards" class="p-6 space-y-4 bg-green-50/30 hidden"></div>
+        </div>
+
+        <!-- Long Term Section -->
+        <div id="longTermSection" class="hidden">
+          <div class="px-6 py-4 bg-blue-50 border-b border-blue-100 flex items-center justify-between cursor-pointer hover:bg-blue-100 transition-colors" onclick="toggleSection('longTerm')">
+            <div class="flex items-center gap-3">
+              <span class="bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">LONG-TERM</span>
+              <h3 class="font-semibold text-blue-900">Long-Term Optimizations</h3>
+              <span class="text-sm text-blue-700 font-medium" id="longTermCount"></span>
+            </div>
+            <i class="fa-solid fa-chevron-down text-blue-600 transition-transform" id="longTermChevron"></i>
+          </div>
+          <div id="longTermCards" class="p-6 space-y-4 bg-blue-50/30 hidden"></div>
+        </div>
+
+        <!-- No Recommendations -->
+        <div id="noRecommendations" class="hidden p-12 text-center">
+          <i class="fa-solid fa-check-circle text-5xl text-green-600 mb-4"></i>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">All Looking Good!</h3>
+          <p class="text-gray-600">Your account is well-optimized. Check back later for new insights.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-6 py-4 border-t bg-gray-50 flex items-center justify-between">
+      <div class="flex gap-3">
+        <button onclick="exportInsights()" class="text-sm text-gray-600 hover:text-gray-800 transition-colors">
+          <i class="fa-solid fa-download mr-1"></i> Export Report
+        </button>
+        <button onclick="scheduleReview()" class="text-sm text-gray-600 hover:text-gray-800 transition-colors">
+          <i class="fa-solid fa-clock mr-1"></i> Schedule Review
+        </button>
+      </div>
+      <button onclick="closeInsightsModal()" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">
+        Close
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Insight Card Template -->
+<template id="insightCardTemplate">
+  <div class="border border-gray-300 rounded-lg p-5 hover:shadow-lg transition-all bg-white">
+    <div class="flex items-start justify-between mb-3">
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-2">
+          <i class="insight-icon text-xl"></i>
+          <h4 class="font-semibold text-gray-900 text-lg insight-title"></h4>
+        </div>
+        <p class="text-sm text-gray-600 leading-relaxed insight-description"></p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-6 mb-4 text-sm">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-chart-line text-gray-400"></i>
+        <span class="text-gray-600">Impact:</span>
+        <span class="font-semibold insight-impact"></span>
+      </div>
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-bullseye text-gray-400"></i>
+        <span class="text-gray-600">Confidence:</span>
+        <span class="font-semibold insight-confidence"></span>
+      </div>
+    </div>
+
+    <!-- Confidence Bar -->
+    <div class="mb-4">
+      <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all insight-confidence-bar" style="width: 0%"></div>
+      </div>
+    </div>
+
+    <div class="flex gap-2">
+      <button class="apply-btn flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-sm hover:shadow-md">
+        <i class="fa-solid fa-check mr-1"></i> Apply Now
+      </button>
+      <button class="details-btn px-4 py-2.5 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+        <i class="fa-solid fa-info-circle mr-1"></i> Details
+      </button>
+      <button class="dismiss-btn px-4 py-2.5 border-2 border-gray-300 rounded-lg hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition-colors">
+        <i class="fa-solid fa-times"></i>
+      </button>
+    </div>
+  </div>
+</template>
+
+<style>
+/* Smooth animations */
+#insightsModal {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+#insightsModal > div {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.transition-transform {
+  transition: transform 0.2s ease;
+}
+
+.rotate-180 {
+  transform: rotate(180deg);
+}
+</style>

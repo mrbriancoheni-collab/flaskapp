@@ -129,7 +129,31 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
-    app.logger.info("Registered 3 scheduled background jobs")
+    # Generate Google Ads AI insights (weekly on Monday at 8 AM UTC)
+    # Note: High-spend accounts are checked daily by a separate daily job
+    scheduler.add_job(
+        func=generate_google_ads_insights_weekly,
+        trigger='cron',
+        day_of_week='mon',
+        hour=8,
+        minute=0,
+        id='generate_google_ads_insights_weekly',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    # Daily check for high-spend Google Ads accounts (daily at 9 AM UTC)
+    scheduler.add_job(
+        func=generate_google_ads_insights_daily,
+        trigger='cron',
+        hour=9,
+        minute=0,
+        id='generate_google_ads_insights_daily',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    app.logger.info("Registered 5 scheduled background jobs")
 
 
 # ===== Scheduled Job Functions =====
@@ -281,6 +305,152 @@ def send_welcome_emails(app: Flask):
 
         except Exception as e:
             current_app.logger.error(f"Error sending welcome emails: {e}", exc_info=True)
+
+
+def generate_google_ads_insights_weekly(app: Flask):
+    """
+    Generate AI insights for all Google Ads accounts (weekly schedule).
+
+    Skips high-spend accounts that get daily analysis.
+    """
+    with app.app_context():
+        from app.services.google_ads_insights import generate_ai_insights, should_run_daily_analysis, get_account_performance_data
+        from app.models import Account
+        from app import db
+
+        try:
+            current_app.logger.info("Starting weekly Google Ads insights generation")
+
+            # Get all accounts with Google Ads connected
+            accounts = Account.query.filter(
+                Account.google_ads_connected == True,
+                Account.status == 'active'
+            ).all()
+
+            if not accounts:
+                current_app.logger.info("No active Google Ads accounts found")
+                return
+
+            processed_count = 0
+            skipped_high_spend = 0
+            error_count = 0
+
+            for account in accounts:
+                try:
+                    # Get account spend to determine frequency
+                    perf_data = get_account_performance_data(account.id, days=7)
+                    daily_spend = perf_data.get("account_summary", {}).get("daily_spend_avg", 0)
+
+                    # Skip high-spend accounts (they get daily analysis)
+                    frequency_check = should_run_daily_analysis(account.id, daily_spend)
+                    if frequency_check is True or frequency_check == "twice_weekly":
+                        current_app.logger.info(
+                            f"Skipping account {account.id} (high-spend: ${daily_spend:.2f}/day - gets daily/twice-weekly analysis)"
+                        )
+                        skipped_high_spend += 1
+                        continue
+
+                    # Generate insights
+                    current_app.logger.info(f"Generating weekly insights for account {account.id}")
+                    insights = generate_ai_insights(account.id, scope="all", regenerate=True)
+
+                    processed_count += 1
+
+                    # TODO: Send email notification if critical issues found
+                    critical_count = len([
+                        r for r in insights.get("recommendations", [])
+                        if r.get("severity") == 1
+                    ])
+
+                    if critical_count > 0:
+                        current_app.logger.info(
+                            f"Account {account.id}: Found {critical_count} critical issues"
+                        )
+                        # send_insights_email(account, insights) # Uncomment when email service is ready
+
+                except Exception as e:
+                    current_app.logger.error(
+                        f"Error generating insights for account {account.id}: {e}",
+                        exc_info=True
+                    )
+                    error_count += 1
+                    continue
+
+            current_app.logger.info(
+                f"Weekly Google Ads insights complete: "
+                f"processed={processed_count}, skipped_high_spend={skipped_high_spend}, errors={error_count}"
+            )
+
+        except Exception as e:
+            current_app.logger.error(f"Error in weekly Google Ads insights job: {e}", exc_info=True)
+
+
+def generate_google_ads_insights_daily(app: Flask):
+    """
+    Generate AI insights for high-spend Google Ads accounts (daily schedule).
+
+    Only processes accounts with spend >= $500/day.
+    """
+    with app.app_context():
+        from app.services.google_ads_insights import generate_ai_insights, should_run_daily_analysis, get_account_performance_data
+        from app.models import Account
+        from app import db
+
+        try:
+            current_app.logger.info("Starting daily Google Ads insights generation for high-spend accounts")
+
+            # Get all accounts with Google Ads connected
+            accounts = Account.query.filter(
+                Account.google_ads_connected == True,
+                Account.status == 'active'
+            ).all()
+
+            if not accounts:
+                current_app.logger.info("No active Google Ads accounts found")
+                return
+
+            processed_count = 0
+            skipped_low_spend = 0
+            error_count = 0
+
+            for account in accounts:
+                try:
+                    # Get account spend to determine frequency
+                    perf_data = get_account_performance_data(account.id, days=7)
+                    daily_spend = perf_data.get("account_summary", {}).get("daily_spend_avg", 0)
+
+                    # Only process high-spend accounts
+                    frequency_check = should_run_daily_analysis(account.id, daily_spend)
+                    if frequency_check is not True:
+                        skipped_low_spend += 1
+                        continue
+
+                    # Generate insights
+                    current_app.logger.info(
+                        f"Generating daily insights for high-spend account {account.id} (${daily_spend:.2f}/day)"
+                    )
+                    insights = generate_ai_insights(account.id, scope="all", regenerate=True)
+
+                    processed_count += 1
+
+                    # Send email notification for high-spend accounts (always notify for daily)
+                    # send_insights_email(account, insights) # Uncomment when email service is ready
+
+                except Exception as e:
+                    current_app.logger.error(
+                        f"Error generating insights for account {account.id}: {e}",
+                        exc_info=True
+                    )
+                    error_count += 1
+                    continue
+
+            current_app.logger.info(
+                f"Daily Google Ads insights complete: "
+                f"processed={processed_count}, skipped_low_spend={skipped_low_spend}, errors={error_count}"
+            )
+
+        except Exception as e:
+            current_app.logger.error(f"Error in daily Google Ads insights job: {e}", exc_info=True)
 
 
 # ===== Manual Job Execution =====

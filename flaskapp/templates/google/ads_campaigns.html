@@ -157,6 +157,9 @@
   </div>
 </div>
 
+{# AI Insights Modal #}
+{% include 'google/components/insights_modal.html' %}
+
 {# New Campaign Modal #}
 <div id="newCampaignModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
   <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
@@ -337,6 +340,9 @@
   </div>
 </div>
 
+{# Include AI Insights JavaScript #}
+<script src="{{ url_for('static', filename='js/google_ads_insights.js') }}" nonce="{{ g.csp_nonce }}"></script>
+
 <script nonce="{{ g.csp_nonce }}">
 // Campaign data from backend
 const campaignsData = {{ _data.campaigns | tojson }};
@@ -410,16 +416,14 @@ function deleteCampaign() {
   form.submit();
 }
 
-function aiOptimize() {
-  alert('AI Optimize feature - would call /ads/optimize.json');
-}
+// aiOptimize() is now defined in google_ads_insights.js
 
 function refreshData() {
   window.location.reload();
 }
 
 function runAIReview() {
-  alert('AI Review feature - would call /ads/ai-summary.json');
+  aiOptimize(); // Use the same AI insights modal
 }
 
 // Close modals on escape key

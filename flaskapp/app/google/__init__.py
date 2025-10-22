@@ -2016,33 +2016,42 @@ def ads_prompt_save():
     return redirect(url_for("google_bp.ads_ui"))
 
 def _generate_ads_suggestions(aid: int, scope: str = "all", regenerate: bool = False) -> dict:
-    _ = _get_ads_state(aid)
-    sugs: dict[str, list[dict]] = {}
-    if scope in ("all", "campaigns"):
-        sugs["campaigns"] = [
-            {"id": "S-C-1", "change": "Raise budget +10% for 'Emergency Plumbing - Search' (hitting target tCPA)."},
-            {"id": "S-C-2", "change": "Switch paused 'Water Heater Install' to Max Conv with target CPA of $70."},
-        ]
-    if scope in ("all", "adgroups"):
-        sugs["adgroups"] = [{"id": "S-G-1", "change": "Split 'Near Me' into Mobile/Desktop for device bid mods."}]
-    if scope in ("all", "keywords"):
-        sugs["keywords"] = [
-            {"id": "S-K-1", "change": "Promote [emergency plumber near me] to exact and raise CPC to $10.50."},
-            {"id": "S-K-2", "change": "Pause low-perf 'plumber 24 hours' broad; add phrase variant."},
-        ]
-    if scope in ("all", "negatives"):
-        sugs["negatives"] = [{"id": "S-N-1", "change": "Add account-level negatives: 'free', 'DIY'."}]
-    if scope in ("all", "ads"):
-        sugs["ads"] = [
-            {"id": "S-A-1", "change": "New headline: 'Local Plumber in 30–60 Minutes'"},
-            {"id": "S-A-2", "change": "Add benefit callout: 'No Trip Fees • Upfront Pricing'"},
-        ]
-    if scope in ("all", "extensions"):
-        sugs["extensions"] = [{"id": "S-E-1", "change": "Add sitelinks to Finance, Coupons, Same-Day Service."}]
-    if scope in ("all", "landing"):
-        sugs["landing"] = [{"id": "S-L-1", "change": "Add sticky mobile CTA on /water-heaters, compress hero image to <200 KB."}]
-    session[f"ads_suggestions_{aid}"] = sugs
-    return sugs
+    """
+    Generate AI-powered optimization suggestions for Google Ads account.
+
+    Args:
+        aid: Account ID
+        scope: Analysis scope (all, campaigns, keywords, etc.)
+        regenerate: Force regeneration even if recent insights exist
+
+    Returns:
+        Dictionary with summary and categorized recommendations
+    """
+    from app.services.google_ads_insights import generate_ai_insights, categorize_recommendations
+
+    try:
+        # Generate insights using AI service
+        insights = generate_ai_insights(aid, scope=scope, regenerate=regenerate)
+
+        # Categorize for easier consumption
+        categorized = categorize_recommendations(insights.get("recommendations", []))
+
+        # Store in session for backwards compatibility
+        session[f"ads_suggestions_{aid}"] = insights
+
+        return insights
+
+    except Exception as e:
+        current_app.logger.error(f"Failed to generate AI suggestions: {e}", exc_info=True)
+
+        # Fallback to basic suggestions
+        fallback = {
+            "summary": "AI insights are temporarily unavailable. Please try again later.",
+            "recommendations": [],
+            "error": str(e)
+        }
+        session[f"ads_suggestions_{aid}"] = fallback
+        return fallback
 
 @google_bp.route("/ads/optimize.json", methods=["POST", "GET"], endpoint="ads_optimize_json")
 @login_required
@@ -2141,9 +2150,62 @@ def ads_update():
     flash("Google Ads changes saved.", "success")
     return redirect(url_for("google_bp.ads_ui"))
 
+@google_bp.route("/ads/apply-recommendation", methods=["POST"], endpoint="ads_apply_recommendation")
+@login_required
+def ads_apply_recommendation():
+    """Apply a single AI recommendation."""
+    from app.services.google_ads_insights import apply_recommendation
+    from flask_login import current_user
+
+    data = request.get_json() if request.is_json else request.form
+    recommendation_id = data.get("recommendation_id")
+
+    if not recommendation_id:
+        return jsonify({"ok": False, "error": "Missing recommendation_id"}), 400
+
+    try:
+        recommendation_id = int(recommendation_id)
+    except:
+        return jsonify({"ok": False, "error": "Invalid recommendation_id"}), 400
+
+    success, message = apply_recommendation(recommendation_id, current_user.id)
+
+    if success:
+        return jsonify({"ok": True, "message": message})
+    else:
+        return jsonify({"ok": False, "error": message}), 400
+
+
+@google_bp.route("/ads/dismiss-recommendation", methods=["POST"], endpoint="ads_dismiss_recommendation")
+@login_required
+def ads_dismiss_recommendation():
+    """Dismiss a recommendation."""
+    from app.services.google_ads_insights import dismiss_recommendation
+
+    data = request.get_json() if request.is_json else request.form
+    recommendation_id = data.get("recommendation_id")
+    reason = data.get("reason", "")
+
+    if not recommendation_id:
+        return jsonify({"ok": False, "error": "Missing recommendation_id"}), 400
+
+    try:
+        recommendation_id = int(recommendation_id)
+    except:
+        return jsonify({"ok": False, "error": "Invalid recommendation_id"}), 400
+
+    success, message = dismiss_recommendation(recommendation_id, reason)
+
+    if success:
+        return jsonify({"ok": True, "message": message})
+    else:
+        return jsonify({"ok": False, "error": message}), 400
+
+
 @google_bp.route("/ads/apply-suggestions", methods=["POST", "GET"], endpoint="ads_apply_suggestions")
 @login_required
 def ads_apply_suggestions():
+    """Legacy route for applying multiple suggestions."""
     if request.method == "GET":
         flash("No suggestions selected.", "info")
         return redirect(url_for("google_bp.ads_ui"))

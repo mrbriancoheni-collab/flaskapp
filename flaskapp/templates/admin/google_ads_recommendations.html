@@ -7,7 +7,7 @@
   <div class="flex items-center justify-between mb-6">
     <div>
       <h1 class="text-2xl font-bold">AI Optimization Recommendations</h1>
-      <p class="text-sm text-gray-600 mt-1">View and track all AI-generated recommendations across Google Ads, Analytics, and Search Console</p>
+      <p class="text-sm text-gray-600 mt-1">View and track all AI-generated recommendations across Google Ads, Analytics, Search Console, Local Services Ads, and Google My Business</p>
     </div>
     <div class="flex gap-2">
       <a href="{{ url_for('admin_bp.google_ads_settings') }}"
@@ -51,6 +51,8 @@
           <option value="google_ads" {% if source_type_filter == 'google_ads' %}selected{% endif %}>Google Ads</option>
           <option value="google_analytics" {% if source_type_filter == 'google_analytics' %}selected{% endif %}>Google Analytics</option>
           <option value="search_console" {% if source_type_filter == 'search_console' %}selected{% endif %}>Search Console</option>
+          <option value="glsa" {% if source_type_filter == 'glsa' %}selected{% endif %}>Local Services Ads</option>
+          <option value="gmb" {% if source_type_filter == 'gmb' %}selected{% endif %}>Google My Business</option>
         </select>
       </div>
 
@@ -95,6 +97,15 @@
           <option value="technical_seo" {% if category_filter == 'technical_seo' %}selected{% endif %}>Technical SEO</option>
           <option value="ctr_optimization" {% if category_filter == 'ctr_optimization' %}selected{% endif %}>CTR Optimization</option>
           <option value="rankings" {% if category_filter == 'rankings' %}selected{% endif %}>Rankings</option>
+          <option value="service_areas" {% if category_filter == 'service_areas' %}selected{% endif %}>Service Areas</option>
+          <option value="reviews" {% if category_filter == 'reviews' %}selected{% endif %}>Reviews</option>
+          <option value="profile" {% if category_filter == 'profile' %}selected{% endif %}>Profile</option>
+          <option value="responsiveness" {% if category_filter == 'responsiveness' %}selected{% endif %}>Responsiveness</option>
+          <option value="profile_info" {% if category_filter == 'profile_info' %}selected{% endif %}>Profile Info</option>
+          <option value="description" {% if category_filter == 'description' %}selected{% endif %}>Description</option>
+          <option value="photos" {% if category_filter == 'photos' %}selected{% endif %}>Photos</option>
+          <option value="posts" {% if category_filter == 'posts' %}selected{% endif %}>Posts</option>
+          <option value="attributes" {% if category_filter == 'attributes' %}selected{% endif %}>Attributes</option>
         </select>
       </div>
 

@@ -979,6 +979,97 @@ def insights_regenerate():
     return redirect(url_for("gmb_bp.insights"))
 
 
+# --------- AI Insights (New unified recommendation system) ----------
+@gmb_bp.route("/insights.json", methods=["POST"], endpoint="insights_json")
+@login_required
+def insights_json():
+    """Generate AI-powered optimization insights for GMB profile."""
+    aid = current_account_id()
+
+    try:
+        payload = request.get_json(force=True) or {}
+    except Exception:
+        return jsonify({"ok": False, "error": "invalid_json"}), 400
+
+    profile_data = payload.get("profile") or {}
+    regenerate = bool(payload.get("regenerate", False))
+
+    # Import insights service
+    from app.services.gmb_insights import generate_gmb_insights
+
+    try:
+        insights = generate_gmb_insights(aid, profile_data, regenerate=regenerate)
+        return jsonify(insights)
+    except Exception as e:
+        current_app.logger.exception("Error generating GMB insights")
+        return jsonify({
+            "ok": False,
+            "error": str(e),
+            "summary": "Failed to generate insights.",
+            "recommendations": []
+        }), 500
+
+
+@gmb_bp.route("/apply-recommendation", methods=["POST"], endpoint="apply_recommendation")
+@login_required
+def apply_recommendation():
+    """Apply a GMB recommendation."""
+    aid = current_account_id()
+
+    try:
+        payload = request.get_json(force=True) or {}
+    except Exception:
+        return jsonify({"ok": False, "error": "invalid_json"}), 400
+
+    recommendation_id = payload.get("recommendation_id")
+    if not recommendation_id:
+        return jsonify({"ok": False, "error": "recommendation_id required"}), 400
+
+    # Import insights service
+    from app.services.gmb_insights import apply_gmb_recommendation
+    from app.auth.utils import current_user_id
+
+    user_id = current_user_id()
+
+    try:
+        result = apply_gmb_recommendation(aid, recommendation_id, user_id)
+        return jsonify(result)
+    except Exception as e:
+        current_app.logger.exception("Error applying GMB recommendation")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@gmb_bp.route("/dismiss-recommendation", methods=["POST"], endpoint="dismiss_recommendation")
+@login_required
+def dismiss_recommendation():
+    """Dismiss a GMB recommendation."""
+    aid = current_account_id()
+
+    try:
+        payload = request.get_json(force=True) or {}
+    except Exception:
+        return jsonify({"ok": False, "error": "invalid_json"}), 400
+
+    recommendation_id = payload.get("recommendation_id")
+    if not recommendation_id:
+        return jsonify({"ok": False, "error": "recommendation_id required"}), 400
+
+    reason = payload.get("reason")
+
+    # Import insights service
+    from app.services.gmb_insights import dismiss_gmb_recommendation
+    from app.auth.utils import current_user_id
+
+    user_id = current_user_id()
+
+    try:
+        result = dismiss_gmb_recommendation(aid, recommendation_id, user_id, reason)
+        return jsonify(result)
+    except Exception as e:
+        current_app.logger.exception("Error dismissing GMB recommendation")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 # --------- Blueprint-level error handler ----------
 @gmb_bp.app_errorhandler(Exception)
 def _gmb_any_err(e: Exception):

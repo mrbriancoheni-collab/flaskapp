@@ -61,6 +61,34 @@
     </div>
   </div>
 
+  {# AI Insights Panel #}
+  <div class="rounded-lg border bg-gradient-to-r from-green-50 to-teal-50 border-green-100 p-6">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-full bg-green-600 text-white flex items-center justify-center">
+          <i class="fa-solid fa-store text-xl"></i>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-900">AI-Powered GMB Insights</h3>
+          <p class="text-sm text-gray-600">Get personalized Google My Business optimization recommendations powered by GPT-4</p>
+        </div>
+      </div>
+      <button id="genGMBInsightsBtn" type="button" onclick="generateGMBInsightsFromPage()"
+              class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-6 py-3 text-white hover:bg-green-700 transition-colors font-medium shadow-md">
+        <i class="fa-solid fa-sparkles"></i>
+        <span>Generate Insights</span>
+      </button>
+    </div>
+    {% if not connected %}
+      <div class="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+        <i class="fa-solid fa-info-circle text-amber-600 mt-0.5"></i>
+        <div class="text-sm text-amber-900">
+          <strong>Demo mode.</strong> Using sample profile data. Connect to Google Business to analyze your live profile and get personalized recommendations.
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
   {# DEMO MODE banner when not connected #}
   {% if not connected %}
     <div class="rounded-md border border-indigo-200 bg-indigo-50 p-4 flex items-start gap-3">
@@ -429,5 +457,35 @@ async function runGmbOptimizer() {
     btn?.removeAttribute('disabled');
   }
 }
+
+/**
+ * Helper function to collect GMB profile data and trigger insights generation
+ */
+function generateGMBInsightsFromPage() {
+  // Collect profile data from hidden inputs or visible fields
+  const profileData = {
+    name: document.getElementById('gmb-name')?.textContent || document.getElementById('edit-name')?.value || '',
+    primary_category: document.getElementById('gmb-primary-cat')?.textContent || document.getElementById('edit-primary-cat')?.value || '',
+    categories: [], // Extract from page if available
+    description: document.getElementById('gmb-desc')?.textContent || document.getElementById('edit-desc')?.value || '',
+    address: document.getElementById('gmb-address')?.textContent || '',
+    phone: document.getElementById('gmb-phone')?.textContent || '',
+    website: document.getElementById('gmb-website')?.textContent || '',
+    hours: document.getElementById('gmb-hours')?.textContent || '',
+    photos_count: 0,  // Could be extracted from page
+    reviews_count: 0, // Could be extracted from page
+    rating: 0,        // Could be extracted from page
+    posts_count: 0,   // Could be extracted from page
+    attributes: []    // Could be extracted from page
+  };
+
+  // Call the insights generation function
+  generateGMBInsights(profileData);
+}
 </script>
+
+{# Include GMB AI Insights Modal #}
+{% include 'gmb/components/gmb_insights_modal.html' %}
+
+<script src="{{ url_for('static', filename='js/gmb_insights.js', v=config.get('ASSET_VERSION', 1)) }}" defer></script>
 {% endblock %}

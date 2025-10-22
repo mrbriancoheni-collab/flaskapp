@@ -146,6 +146,7 @@ def _call_openai_for_gsc_insights(gsc_data: Dict) -> List[Dict]:
     """
     try:
         import openai
+        from app.services.ai_prompts_init import get_prompt_for_service
 
         api_key = os.environ.get('OPENAI_API_KEY')
         if not api_key:
@@ -159,49 +160,47 @@ def _call_openai_for_gsc_insights(gsc_data: Dict) -> List[Dict]:
         top_queries = gsc_data.get('top_queries', [])[:15]
         low_ctr_queries = gsc_data.get('low_ctr_queries', [])[:10]
 
-        prompt = f"""You are an SEO expert specializing in Google Search Console optimization. Analyze the following GSC data and provide actionable SEO recommendations.
+        # Load prompt from database
+        prompt_config = get_prompt_for_service('search_console_main')
 
-SITE PERFORMANCE (Last 30 Days):
-- Total Clicks: {summary.get('clicks', 0):,}
-- Total Impressions: {summary.get('impressions', 0):,}
-- Average CTR: {summary.get('avg_ctr', 0):.2%}
-- Average Position: {summary.get('avg_position', 0):.1f}
+        if not prompt_config:
+            current_app.logger.warning("Search Console prompt not found in database, using fallback")
+            # Fallback if database prompt not available
+            system_message = "You are an SEO expert providing data-driven optimization recommendations in JSON format."
+            model = OPENAI_MODEL
+            temperature = 0.7
+            max_tokens = 2000
 
-TOP PERFORMING PAGES:
-{json.dumps(top_pages, indent=2)}
+            prompt = f"""Analyze GSC data and provide 5-10 SEO recommendations in JSON array format.
+Clicks: {summary.get('clicks', 0)}, Impressions: {summary.get('impressions', 0)}, CTR: {summary.get('avg_ctr', 0):.2%}
+TOP QUERIES: {json.dumps(top_queries, indent=2)}
+Return JSON array of recommendations."""
+        else:
+            # Use database prompt
+            system_message = prompt_config.get('system_message', '')
+            model = prompt_config.get('model', 'gpt-4o-mini')
+            temperature = prompt_config.get('temperature', 0.7)
+            max_tokens = prompt_config.get('max_tokens', 2000)
 
-TOP QUERIES:
-{json.dumps(top_queries, indent=2)}
-
-LOW CTR QUERIES (High impressions, low clicks):
-{json.dumps(low_ctr_queries, indent=2)}
-
-Provide 5-10 specific, actionable SEO recommendations in JSON format. Each recommendation should include:
-- title: Brief, action-oriented title
-- description: Detailed explanation (2-3 sentences)
-- category: One of [keywords, content, technical_seo, ctr_optimization, rankings, schema, mobile]
-- severity: 1=critical issue, 2=high-impact opportunity, 3=quick win, 4-5=long-term SEO
-- expected_impact: Specific metric improvement (e.g., "Increase organic clicks by 15-20%")
-- data_points: Array of key metrics supporting this recommendation
-- action: Dict with implementation steps
-
-Focus on:
-1. High-impression, low-CTR queries (title/meta optimization)
-2. Pages ranking 4-10 (content improvement to reach page 1)
-3. Declining rankings (content refresh needed)
-4. Technical SEO issues
-5. Content gap opportunities
-
-Return ONLY valid JSON array of recommendations, no additional text."""
+            # Format the prompt template with actual data
+            prompt = prompt_config.get('prompt_template', '').format(
+                clicks=f"{summary.get('clicks', 0):,}",
+                impressions=f"{summary.get('impressions', 0):,}",
+                avg_ctr=f"{summary.get('avg_ctr', 0):.2%}",
+                avg_position=f"{summary.get('avg_position', 0):.1f}",
+                top_pages=json.dumps(top_pages, indent=2),
+                top_queries=json.dumps(top_queries, indent=2),
+                low_ctr_queries=json.dumps(low_ctr_queries, indent=2)
+            )
 
         response = openai.chat.completions.create(
-            model=OPENAI_MODEL,
+            model=model,
             messages=[
-                {"role": "system", "content": "You are an SEO expert providing data-driven optimization recommendations in JSON format."},
+                {"role": "system", "content": system_message},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.7,
-            max_tokens=2000
+            temperature=temperature,
+            max_tokens=max_tokens
         )
 
         content = response.choices[0].message.content.strip()

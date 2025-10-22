@@ -289,75 +289,71 @@ def generate_ai_insights(account_id: int, scope: str = "all", regenerate: bool =
 
 
 def _call_openai_for_insights(account_id: int, perf_data: Dict, scope: str) -> Dict:
-    """Call OpenAI API to generate insights."""
+    """Call OpenAI API to generate insights using database-stored prompts."""
+    from app.services.ai_prompts_init import get_prompt_for_service
+
     api_key = current_app.config.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise ValueError("OPENAI_API_KEY not configured")
 
-    model = current_app.config.get("OPENAI_MODEL", "gpt-4o-mini")
+    # Load prompt from database
+    prompt_config = get_prompt_for_service('google_ads_main')
 
-    # Build system prompt
-    system_prompt = """You are an expert Google Ads optimization consultant. Analyze the provided account performance data and generate actionable optimization recommendations.
+    if not prompt_config:
+        current_app.logger.warning("Google Ads prompt not found in database, using fallback")
+        # Fallback to basic prompt if database prompt not available
+        system_prompt = "You are an expert Google Ads optimization consultant providing data-driven recommendations in JSON format."
+        model = "gpt-4o-mini"
+        temperature = 0.3
+        max_tokens = 2000
 
-Focus on:
-- Budget efficiency and wasted spend
-- Underperforming campaigns, ad groups, and keywords
-- High-potential opportunities being limited by budget
-- Bid strategy optimization
-- Negative keyword opportunities
-- Ad copy and creative improvements
-- Landing page optimization
-
-Be specific, quantify expected impact when possible, and prioritize recommendations by potential ROI."""
-
-    # Build user prompt with data
-    user_prompt = f"""Analyze this Google Ads account and provide optimization recommendations.
+        user_prompt = f"""Analyze this Google Ads account and provide 5-10 optimization recommendations in JSON format.
 
 ACCOUNT PERFORMANCE (Last 30 days):
 - Total Spend: ${perf_data['account_summary']['total_spend']:.2f}
 - Total Conversions: {perf_data['account_summary']['total_conversions']}
 - Average CPA: ${perf_data['account_summary']['avg_cpa']:.2f}
 - Average CTR: {perf_data['account_summary']['avg_ctr']:.2%}
-- Daily Spend: ${perf_data['account_summary']['daily_spend_avg']:.2f}
 
-TOP CAMPAIGNS:
-{json.dumps(perf_data['campaigns'][:10], indent=2)}
+TOP CAMPAIGNS: {json.dumps(perf_data['campaigns'][:10], indent=2)}
+TOP KEYWORDS: {json.dumps(perf_data['keywords'][:20], indent=2)}
+SEARCH TERMS: {json.dumps(perf_data['search_terms'][:15], indent=2)}
 
-TOP KEYWORDS:
-{json.dumps(perf_data['keywords'][:20], indent=2)}
+Return JSON with: {{"summary": "...", "recommendations": [...]}}"""
+    else:
+        # Use database prompt
+        system_prompt = prompt_config.get('system_message', '')
+        model = prompt_config.get('model', 'gpt-4o-mini')
+        temperature = prompt_config.get('temperature', 0.7)
+        max_tokens = prompt_config.get('max_tokens', 2000)
 
-SEARCH TERMS:
-{json.dumps(perf_data['search_terms'][:15], indent=2)}
+        # Format the prompt template with actual data
+        performance_summary = f"""- Total Spend: ${perf_data['account_summary']['total_spend']:.2f}
+- Total Conversions: {perf_data['account_summary']['total_conversions']}
+- Average CPA: ${perf_data['account_summary']['avg_cpa']:.2f}
+- Average CTR: {perf_data['account_summary']['avg_ctr']:.2%}
+- Daily Spend: ${perf_data['account_summary']['daily_spend_avg']:.2f}"""
 
-Return a JSON object with this exact structure:
-{{
-  "summary": "3-5 sentence executive summary of account health and top opportunities",
-  "recommendations": [
-    {{
-      "category": "budget|bidding|keywords|ads|targeting|negatives|landing_pages",
-      "severity": 1-5 (1=critical/immediate action, 2=high impact, 3=quick win, 4=medium priority, 5=long-term),
-      "title": "Brief, actionable title (max 80 chars)",
-      "description": "Detailed explanation of the issue and recommended action (2-3 sentences)",
-      "expected_impact": "Quantified expected result (e.g., 'Save $340/month' or 'Generate 12 more conversions/month')",
-      "data_points": ["Key metric 1", "Key metric 2"],
-      "action": {{
-        "type": "increase_budget|decrease_budget|pause_keyword|add_negative|change_bid_strategy|etc",
-        "target_id": "campaign_id or keyword_id or null",
-        "target_name": "Campaign or keyword name",
-        "params": {{"budget": 100, "change": "+20%"}}
-      }}
-    }}
-  ]
-}}
+        campaigns_data = json.dumps(perf_data['campaigns'][:10], indent=2)
+        ad_groups_data = json.dumps(perf_data.get('ad_groups', [])[:10], indent=2) if 'ad_groups' in perf_data else "[]"
+        keywords_data = json.dumps(perf_data['keywords'][:20], indent=2)
+        search_terms_data = json.dumps(perf_data['search_terms'][:15], indent=2)
 
-Provide 5-12 recommendations total, prioritizing by potential impact and ease of implementation."""
+        user_prompt = prompt_config.get('prompt_template', '').format(
+            performance_summary=performance_summary,
+            campaigns_data=campaigns_data,
+            ad_groups_data=ad_groups_data,
+            keywords_data=keywords_data,
+            search_terms_data=search_terms_data
+        )
 
     # Call OpenAI
     client = OpenAI(api_key=api_key)
 
     response = client.chat.completions.create(
         model=model,
-        temperature=0.3,
+        temperature=temperature,
+        max_tokens=max_tokens,
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": system_prompt},

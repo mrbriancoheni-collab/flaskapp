@@ -146,6 +146,7 @@ def _call_openai_for_ga_insights(ga_data: Dict) -> List[Dict]:
     """
     try:
         import openai
+        from app.services.ai_prompts_init import get_prompt_for_service
 
         api_key = os.environ.get('OPENAI_API_KEY')
         if not api_key:
@@ -159,52 +160,50 @@ def _call_openai_for_ga_insights(ga_data: Dict) -> List[Dict]:
         top_sources = ga_data.get('top_sources', [])[:10]
         conversions = ga_data.get('conversions', [])[:5]
 
-        prompt = f"""You are a Google Analytics optimization expert. Analyze the following GA4 data and provide actionable recommendations.
+        # Load prompt from database
+        prompt_config = get_prompt_for_service('google_analytics_main')
 
-PROPERTY PERFORMANCE (Last 30 Days):
-- Sessions: {summary.get('sessions', 0):,}
-- Users: {summary.get('users', 0):,}
-- Engagement Rate: {summary.get('engagement_rate', 0):.2%}
-- Avg Session Duration: {summary.get('avg_session_duration', 0):.1f}s
-- Conversions: {summary.get('conversions', 0)}
-- Conversion Rate: {summary.get('conversion_rate', 0):.2%}
-- Revenue: ${summary.get('revenue', 0):,.2f}
+        if not prompt_config:
+            current_app.logger.warning("Google Analytics prompt not found in database, using fallback")
+            # Fallback if database prompt not available
+            system_message = "You are a Google Analytics expert providing data-driven optimization recommendations in JSON format."
+            model = OPENAI_MODEL
+            temperature = 0.7
+            max_tokens = 2000
 
-TOP PAGES:
-{json.dumps(top_pages, indent=2)}
+            prompt = f"""Analyze GA4 data and provide 5-10 recommendations in JSON array format.
+Sessions: {summary.get('sessions', 0)}, Users: {summary.get('users', 0)}, Engagement: {summary.get('engagement_rate', 0):.2%}
+TOP PAGES: {json.dumps(top_pages, indent=2)}
+Return JSON array of recommendations."""
+        else:
+            # Use database prompt
+            system_message = prompt_config.get('system_message', '')
+            model = prompt_config.get('model', 'gpt-4o-mini')
+            temperature = prompt_config.get('temperature', 0.7)
+            max_tokens = prompt_config.get('max_tokens', 2000)
 
-TOP TRAFFIC SOURCES:
-{json.dumps(top_sources, indent=2)}
-
-CONVERSION EVENTS:
-{json.dumps(conversions, indent=2)}
-
-Provide 5-10 specific, actionable recommendations in JSON format. Each recommendation should include:
-- title: Brief, action-oriented title
-- description: Detailed explanation (2-3 sentences)
-- category: One of [content, traffic_sources, conversions, engagement, technical, user_experience]
-- severity: 1=critical issue, 2=high-impact opportunity, 3=quick win, 4-5=long-term optimization
-- expected_impact: Specific metric improvement (e.g., "Increase conversion rate by 15-20%")
-- data_points: Array of key metrics supporting this recommendation
-- action: Dict with implementation steps
-
-Focus on:
-1. Content optimization for high-traffic pages with low engagement
-2. Traffic source opportunities (underperforming channels)
-3. Conversion funnel improvements
-4. User engagement enhancements
-5. Technical performance issues
-
-Return ONLY valid JSON array of recommendations, no additional text."""
+            # Format the prompt template with actual data
+            prompt = prompt_config.get('prompt_template', '').format(
+                sessions=f"{summary.get('sessions', 0):,}",
+                users=f"{summary.get('users', 0):,}",
+                engagement_rate=f"{summary.get('engagement_rate', 0):.2%}",
+                avg_session_duration=f"{summary.get('avg_session_duration', 0):.1f}",
+                conversions=summary.get('conversions', 0),
+                conversion_rate=f"{summary.get('conversion_rate', 0):.2%}",
+                revenue=f"{summary.get('revenue', 0):,.2f}",
+                top_pages=json.dumps(top_pages, indent=2),
+                top_sources=json.dumps(top_sources, indent=2),
+                conversions_data=json.dumps(conversions, indent=2)
+            )
 
         response = openai.chat.completions.create(
-            model=OPENAI_MODEL,
+            model=model,
             messages=[
-                {"role": "system", "content": "You are a Google Analytics expert providing data-driven optimization recommendations in JSON format."},
+                {"role": "system", "content": system_message},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.7,
-            max_tokens=2000
+            temperature=temperature,
+            max_tokens=max_tokens
         )
 
         content = response.choices[0].message.content.strip()

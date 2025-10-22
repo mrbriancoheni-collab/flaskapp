@@ -1,0 +1,186 @@
+{# templates/glsa/components/glsa_insights_modal.html #}
+{# AI Insights Modal for Google Local Services Ads #}
+
+<!-- Modal Container -->
+<div id="glsaInsightsModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+
+    <!-- Header - Purple/Violet theme for GLSA -->
+    <div class="bg-gradient-to-r from-purple-600 to-violet-600 text-white p-6 flex items-center justify-between">
+      <div>
+        <h2 class="text-2xl font-bold mb-1">Local Services Ads AI Insights</h2>
+        <p class="text-purple-100 text-sm">Powered by OpenAI GPT-4 • Lead generation optimization recommendations</p>
+      </div>
+      <button onclick="closeGLSAInsightsModal()" class="text-white hover:bg-white/20 rounded-full p-2 transition-colors">
+        <i class="fa-solid fa-times text-xl"></i>
+      </button>
+    </div>
+
+    <!-- Content Area -->
+    <div class="flex-1 overflow-y-auto">
+
+      <!-- Loading State -->
+      <div id="glsaInsightsLoading" class="p-12">
+        <div class="max-w-2xl mx-auto">
+          <!-- Progress Icon -->
+          <div class="flex justify-center mb-6">
+            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-violet-500 flex items-center justify-center shadow-lg">
+              <i class="fa-solid fa-wrench text-white text-3xl"></i>
+            </div>
+          </div>
+
+          <!-- Main Loading Message -->
+          <h3 class="text-xl font-semibold text-center text-gray-900 mb-2">Analyzing Your LSA Profile</h3>
+          <p id="glsaLoadingMessage" class="text-center text-gray-600 mb-8">Reviewing profile data...</p>
+
+          <!-- Progressive Steps -->
+          <div class="space-y-4">
+            <div id="glsaStep1" class="flex items-center gap-3 text-sm text-gray-400 transition-all duration-300">
+              <i class="fa-regular fa-circle"></i>
+              <span>Reviewing categories and service areas...</span>
+            </div>
+            <div id="glsaStep2" class="flex items-center gap-3 text-sm text-gray-400 transition-all duration-300">
+              <i class="fa-regular fa-circle"></i>
+              <span>Analyzing reviews and reputation...</span>
+            </div>
+            <div id="glsaStep3" class="flex items-center gap-3 text-sm text-gray-400 transition-all duration-300">
+              <i class="fa-regular fa-circle"></i>
+              <span>Checking budget and lead goals...</span>
+            </div>
+            <div id="glsaStep4" class="flex items-center gap-3 text-sm text-gray-400 transition-all duration-300">
+              <i class="fa-regular fa-circle"></i>
+              <span>Generating recommendations...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results State -->
+      <div id="glsaInsightsResults" class="hidden p-6">
+        <!-- Summary -->
+        <div class="bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-100 rounded-lg p-4 mb-6">
+          <div class="flex items-start gap-3">
+            <i class="fa-solid fa-lightbulb text-purple-600 text-xl mt-0.5"></i>
+            <div>
+              <h3 class="font-semibold text-gray-900 mb-1">Analysis Summary</h3>
+              <p id="glsaInsightsSummary" class="text-gray-700 text-sm">Analysis complete.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- No Recommendations Message -->
+        <div id="glsaNoRecommendations" class="hidden text-center py-12">
+          <i class="fa-solid fa-check-circle text-5xl text-green-600 mb-4"></i>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Profile Looking Good!</h3>
+          <p class="text-gray-600">No optimization recommendations at this time. Keep monitoring your performance.</p>
+        </div>
+
+        <!-- Critical Issues Section -->
+        <div id="glsaCriticalSection" class="hidden mb-6">
+          <div class="flex items-center justify-between mb-3 cursor-pointer" onclick="toggleGLSASection('glsaCritical')">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-exclamation-triangle text-red-600 text-lg"></i>
+              <h3 class="font-semibold text-gray-900">Critical Issues <span id="glsaCriticalCount" class="text-gray-500 text-sm">(0)</span></h3>
+            </div>
+            <i id="glsaCriticalChevron" class="fa-solid fa-chevron-down text-gray-400 transition-transform"></i>
+          </div>
+          <div id="glsaCriticalCards" class="space-y-3"></div>
+        </div>
+
+        <!-- High-Impact Opportunities Section -->
+        <div id="glsaHighImpactSection" class="hidden mb-6">
+          <div class="flex items-center justify-between mb-3 cursor-pointer" onclick="toggleGLSASection('glsaHighImpact')">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-rocket text-orange-600 text-lg"></i>
+              <h3 class="font-semibold text-gray-900">High-Impact Opportunities <span id="glsaHighImpactCount" class="text-gray-500 text-sm">(0)</span></h3>
+            </div>
+            <i id="glsaHighImpactChevron" class="fa-solid fa-chevron-down text-gray-400 transition-transform"></i>
+          </div>
+          <div id="glsaHighImpactCards" class="space-y-3"></div>
+        </div>
+
+        <!-- Quick Wins Section -->
+        <div id="glsaQuickWinsSection" class="hidden mb-6">
+          <div class="flex items-center justify-between mb-3 cursor-pointer" onclick="toggleGLSASection('glsaQuickWins')">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-bolt text-green-600 text-lg"></i>
+              <h3 class="font-semibold text-gray-900">Quick Wins <span id="glsaQuickWinsCount" class="text-gray-500 text-sm">(0)</span></h3>
+            </div>
+            <i id="glsaQuickWinsChevron" class="fa-solid fa-chevron-down text-gray-400 transition-transform"></i>
+          </div>
+          <div id="glsaQuickWinsCards" class="hidden space-y-3"></div>
+        </div>
+
+        <!-- Long-Term Optimizations Section -->
+        <div id="glsaLongTermSection" class="hidden mb-6">
+          <div class="flex items-center justify-between mb-3 cursor-pointer" onclick="toggleGLSASection('glsaLongTerm')">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-chess text-blue-600 text-lg"></i>
+              <h3 class="font-semibold text-gray-900">Long-Term Strategy <span id="glsaLongTermCount" class="text-gray-500 text-sm">(0)</span></h3>
+            </div>
+            <i id="glsaLongTermChevron" class="fa-solid fa-chevron-down text-gray-400 transition-transform"></i>
+          </div>
+          <div id="glsaLongTermCards" class="hidden space-y-3"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Actions -->
+    <div class="border-t bg-gray-50 p-4 flex items-center justify-between">
+      <button onclick="exportGLSAInsights()" class="text-gray-600 hover:text-gray-900 text-sm font-medium">
+        <i class="fa-solid fa-download mr-1"></i> Export Report
+      </button>
+      <button onclick="closeGLSAInsightsModal()" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">
+        Close
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Card Template -->
+<template id="glsaInsightCardTemplate">
+  <div class="border border-gray-200 rounded-lg p-4 bg-white hover:shadow-md transition-shadow">
+    <div class="flex items-start gap-3">
+      <!-- Icon -->
+      <div class="flex-shrink-0">
+        <i class="glsa-insight-icon text-xl"></i>
+      </div>
+
+      <!-- Content -->
+      <div class="flex-1 min-w-0">
+        <h4 class="glsa-insight-title font-semibold text-gray-900 mb-1"></h4>
+        <p class="glsa-insight-description text-sm text-gray-600 mb-3"></p>
+
+        <!-- Expected Impact -->
+        <div class="bg-purple-50 border border-purple-100 rounded-md p-2 mb-3">
+          <div class="text-xs text-purple-700 font-medium mb-0.5">Expected Impact</div>
+          <div class="glsa-insight-impact text-sm text-purple-900"></div>
+        </div>
+
+        <!-- Confidence -->
+        <div class="mb-3">
+          <div class="flex items-center justify-between text-xs text-gray-600 mb-1">
+            <span>Confidence</span>
+            <span class="glsa-insight-confidence font-semibold"></span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-1.5">
+            <div class="glsa-insight-confidence-bar bg-gradient-to-r from-purple-500 to-violet-500 h-1.5 rounded-full transition-all duration-300"></div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-2">
+          <button class="apply-btn flex-1 bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors text-sm font-medium">
+            <i class="fa-solid fa-check mr-1"></i> Apply
+          </button>
+          <button class="details-btn px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm">
+            <i class="fa-solid fa-info-circle"></i>
+          </button>
+          <button class="dismiss-btn px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm text-gray-600">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

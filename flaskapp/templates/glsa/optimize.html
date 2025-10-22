@@ -24,6 +24,34 @@
 
   {# ---------- Overview ---------- #}
   <section class="tab-panel" id="tab-overview" role="tabpanel" aria-labelledby="tabbtn-overview">
+    <!-- AI Insights Panel -->
+    <div class="rounded-lg border bg-gradient-to-r from-purple-50 to-violet-50 border-purple-100 p-6 mb-6">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-full bg-purple-600 text-white flex items-center justify-center">
+            <i class="fa-solid fa-wrench text-xl"></i>
+          </div>
+          <div>
+            <h3 class="font-semibold text-gray-900">AI-Powered LSA Insights</h3>
+            <p class="text-sm text-gray-600">Get personalized Local Services Ads optimization recommendations powered by GPT-4</p>
+          </div>
+        </div>
+        <button id="genGLSAInsightsBtn" type="button" onclick="generateGLSAInsightsFromPage()"
+                class="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-6 py-3 text-white hover:bg-purple-700 transition-colors font-medium shadow-md">
+          <i class="fa-solid fa-sparkles"></i>
+          <span>Generate Insights</span>
+        </button>
+      </div>
+      {% if not connected %}
+        <div class="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+          <i class="fa-solid fa-info-circle text-amber-600 mt-0.5"></i>
+          <div class="text-sm text-amber-900">
+            <strong>Sample mode.</strong> Using sample profile data. Connect to Google LSA to analyze your live profile and get personalized recommendations.
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
     <div class="card mb16">
       <div class="card-body">
         {% if not connected %}
@@ -635,4 +663,42 @@
   .msg.assistant { background:#f2f4f7; }
   .chat-input-row { display:flex; gap:.5rem; margin-top:.5rem; }
 </style>
+
+{# Include GLSA AI Insights Modal #}
+{% include 'glsa/components/glsa_insights_modal.html' %}
+
+<script>
+  /**
+   * Helper function to collect profile data from page and trigger insights generation
+   */
+  function generateGLSAInsightsFromPage() {
+    // Collect profile data from the hidden JSON or from form
+    const profileInput = document.getElementById('profile-json');
+    let profileData = {};
+
+    if (profileInput && profileInput.value) {
+      try {
+        profileData = JSON.parse(profileInput.value);
+      } catch (e) {
+        console.error('Error parsing profile JSON:', e);
+      }
+    }
+
+    // Also collect answers from questionnaire if filled
+    const answersForm = document.querySelector('form[name="answers"]');
+    if (answersForm) {
+      const formData = new FormData(answersForm);
+      const answers = {};
+      for (let [key, value] of formData.entries()) {
+        answers[key] = value;
+      }
+      profileData.answers = answers;
+    }
+
+    // Call the insights generation function
+    generateGLSAInsights(profileData);
+  }
+</script>
+
+<script src="{{ url_for('static', filename='js/glsa_insights.js', v=config.get('ASSET_VERSION', 1)) }}" defer></script>
 {% endblock %}

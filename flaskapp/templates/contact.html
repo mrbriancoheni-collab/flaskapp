@@ -1,54 +1,140 @@
 {% extends 'base_public.html' %}
-{% block title %}Contact ¡¤ {{ app_name }}{% endblock %}
+{% block title %}Contact Â· {{ app_name }}{% endblock %}
 
 {% block content %}
-<section class="max-w-3xl mx-auto px-4 py-12">
-  <h1 class="text-2xl font-semibold mb-6">Contact Us</h1>
+<section class="max-w-5xl mx-auto px-4 py-12">
+  <div class="text-center mb-12">
+    <span class="inline-flex items-center px-4 py-2 rounded-full bg-primary-100 text-primary-700 text-sm font-semibold mb-4">
+      ðŸ’¬ Get in touch
+    </span>
+    <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
+      We're Here to Help
+    </h1>
+    <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+      Have a question about FieldSprout? Want to discuss your marketing needs? Drop us a message and we'll get back to you within 24 hours.
+    </p>
+  </div>
 
-  <form method="post" class="bg-white border rounded-xl p-6 space-y-4" novalidate>
-    {# CSRF (WTForms or fallback) #}
-    {% if form is defined and form.hidden_tag is defined %}
-      {{ form.hidden_tag() }}
-    {% elif csrf_token is defined %}
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    {% endif %}
+  <div class="grid lg:grid-cols-3 gap-8">
+    <!-- Contact Form -->
+    <div class="lg:col-span-2">
+      <div class="bg-white border-2 border-gray-200 rounded-2xl p-8 shadow-lg">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">Send us a message</h2>
 
-    {# Honeypot to deter bots #}
-    <input type="text" name="company" tabindex="-1" autocomplete="off" class="hidden" aria-hidden="true">
+        <form method="post" class="space-y-5" novalidate>
+          {# CSRF (WTForms or fallback) #}
+          {% if form is defined and form.hidden_tag is defined %}
+            {{ form.hidden_tag() }}
+          {% elif csrf_token is defined %}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% endif %}
 
-    <div>
-      <label for="email" class="block text-sm mb-1">Your Email</label>
-      <input
-        id="email"
-        name="email"
-        type="email"
-        inputmode="email"
-        autocomplete="email"
-        required
-        maxlength="254"
-        class="w-full border rounded px-3 py-2"
-        placeholder="you@business.com"
-        value="{{ request.form.get('email','') }}"
-      />
+          {# Honeypot to deter bots #}
+          <input type="text" name="company" tabindex="-1" autocomplete="off" class="hidden" aria-hidden="true">
+
+          <div>
+            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Your Email</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              inputmode="email"
+              autocomplete="email"
+              required
+              maxlength="254"
+              class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+              placeholder="you@business.com"
+              value="{{ request.form.get('email','') }}"
+            />
+          </div>
+
+          <div>
+            <label for="message" class="block text-sm font-medium text-gray-700 mb-1">Message</label>
+            <textarea
+              id="message"
+              name="message"
+              rows="6"
+              required
+              maxlength="4000"
+              class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors resize-y"
+              placeholder="How can we help you?"
+            >{{ request.form.get('message','') }}</textarea>
+            <p class="text-xs text-gray-500 mt-2">Please avoid sharing sensitive information like passwords or payment details.</p>
+          </div>
+
+          <button class="w-full px-6 py-4 bg-gradient-to-r from-primary-600 to-accent-600 text-white font-bold text-lg rounded-lg hover:from-primary-700 hover:to-accent-700 focus:ring-4 focus:ring-primary-300 shadow-lg transition-all transform hover:scale-105" type="submit">
+            Send Message
+            <svg class="w-5 h-5 ml-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+            </svg>
+          </button>
+        </form>
+      </div>
     </div>
 
-    <div>
-      <label for="message" class="block text-sm mb-1">Message</label>
-      <textarea
-        id="message"
-        name="message"
-        rows="5"
-        required
-        maxlength="4000"
-        class="w-full border rounded px-3 py-2"
-        placeholder="How can we help?"
-      >{{ request.form.get('message','') }}</textarea>
-      <p class="text-xs text-gray-500 mt-1">Please avoid sharing sensitive information.</p>
-    </div>
+    <!-- Contact Info & Quick Links -->
+    <div class="space-y-6">
+      <!-- Response Time -->
+      <div class="bg-gradient-to-br from-primary-600 to-accent-600 rounded-2xl p-6 text-white shadow-lg">
+        <div class="flex items-center gap-3 mb-3">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <h3 class="text-xl font-bold">Quick Response</h3>
+        </div>
+        <p class="text-primary-100">
+          We typically respond to all inquiries within 24 hours during business days.
+        </p>
+      </div>
 
-    <button class="px-5 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700" type="submit">
-      Send
-    </button>
-  </form>
+      <!-- Support Hours -->
+      <div class="bg-white border-2 border-gray-200 rounded-xl p-6 shadow-sm">
+        <div class="flex items-center gap-3 mb-3">
+          <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          <h3 class="font-bold text-gray-900">Support Hours</h3>
+        </div>
+        <div class="text-sm text-gray-600 space-y-1">
+          <p><strong>Monday - Friday:</strong> 9am - 6pm EST</p>
+          <p><strong>Saturday:</strong> 10am - 4pm EST</p>
+          <p><strong>Sunday:</strong> Closed</p>
+        </div>
+      </div>
+
+      <!-- FAQ Link -->
+      <div class="bg-white border-2 border-gray-200 rounded-xl p-6 shadow-sm">
+        <div class="flex items-center gap-3 mb-3">
+          <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <h3 class="font-bold text-gray-900">Common Questions</h3>
+        </div>
+        <p class="text-sm text-gray-600 mb-3">
+          Looking for quick answers? Check our FAQ page for commonly asked questions.
+        </p>
+        <a href="{{ url_for(ep('pricing')) }}#faq" class="inline-flex items-center text-primary-600 hover:text-primary-700 font-semibold text-sm hover:underline">
+          View FAQ
+          <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
+        </a>
+      </div>
+
+      <!-- Not a customer yet? -->
+      <div class="bg-primary-50 border-2 border-primary-200 rounded-xl p-6">
+        <h3 class="font-bold text-gray-900 mb-2">Not a customer yet?</h3>
+        <p class="text-sm text-gray-600 mb-4">
+          Start your free 14-day trial today. No credit card required.
+        </p>
+        <a href="{{ url_for(ep('register')) }}" class="inline-flex items-center justify-center w-full px-4 py-2 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors">
+          Start Free Trial
+          <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
 </section>
 {% endblock %}

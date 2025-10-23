@@ -3,24 +3,146 @@
 
 {% block content %}
 <section class="section">
-  <div class="max-w-3xl mx-auto">
-    <span class="chip mb-4"><i class="fa-solid fa-helmet-safety"></i> Built for blue-collar pros</span>
-    <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight">Our job is to get you more jobs</h1>
-    <p class="mt-4 text-gray-700">
-      We built {{ app_name }} for local service companies—plumbers, roofers, HVAC, cleaners, landscapers, and more.
-      Marketing should be simple, fast, and actually work. That’s the whole point here.
-    </p>
-    <p class="mt-3 text-gray-700">
-      We turn your business details into clear offers and ready-to-use posts and ads. You keep doing the work you’re proud of; we keep your schedule full.
-    </p>
+  <div class="max-w-4xl mx-auto">
+    <div class="text-center mb-12">
+      <span class="inline-flex items-center px-4 py-2 rounded-full bg-primary-100 text-primary-700 text-sm font-semibold mb-4">
+        🛠️ Built for blue-collar pros
+      </span>
+      <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900">
+        Our job is to get you more jobs
+      </h1>
+      <p class="mt-6 text-xl text-gray-600 max-w-2xl mx-auto">
+        We built {{ app_name }} for local service companies—plumbers, roofers, HVAC, cleaners, landscapers, and more.
+        Marketing should be simple, fast, and actually work.
+      </p>
+    </div>
 
-    <div class="mt-8 p-6 bg-gray-50 border rounded-2xl">
-      <h2 class="text-xl font-semibold">What we believe</h2>
-      <ul class="mt-3 space-y-2 text-gray-700">
-        <li>• Simple beats complicated.</li>
-        <li>• Clear words beat buzzwords.</li>
-        <li>• Consistency beats one-off pushes.</li>
-      </ul>
+    <!-- Mission -->
+    <div class="bg-white rounded-2xl p-8 md:p-12 border-2 border-gray-200 shadow-lg mb-12">
+      <h2 class="text-3xl font-bold text-gray-900 mb-6">What We Do</h2>
+      <p class="text-lg text-gray-700 mb-4">
+        We turn your business details into clear offers and ready-to-use posts and ads. You keep doing the work you're proud of—we keep your schedule full.
+      </p>
+      <p class="text-lg text-gray-700">
+        No marketing degree required. No confusing dashboards. Just more qualified leads at a lower cost, powered by AI that actually understands local service businesses.
+      </p>
+    </div>
+
+    <!-- Values -->
+    <div class="grid md:grid-cols-3 gap-6 mb-12">
+      <div class="bg-gradient-to-br from-primary-50 to-white rounded-xl p-6 border border-primary-200">
+        <div class="w-12 h-12 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold text-xl mb-4">
+          1
+        </div>
+        <h3 class="text-xl font-bold text-gray-900 mb-3">Simple beats complicated</h3>
+        <p class="text-gray-700">
+          We strip away the jargon and complexity. If it doesn't help you get more jobs, it doesn't belong in our product.
+        </p>
+      </div>
+
+      <div class="bg-gradient-to-br from-accent-50 to-white rounded-xl p-6 border border-accent-200">
+        <div class="w-12 h-12 rounded-full bg-accent-600 flex items-center justify-center text-white font-bold text-xl mb-4">
+          2
+        </div>
+        <h3 class="text-xl font-bold text-gray-900 mb-3">Clear words beat buzzwords</h3>
+        <p class="text-gray-700">
+          No "synergy" or "leveraging ecosystems." We speak like real business owners because we work with them every day.
+        </p>
+      </div>
+
+      <div class="bg-gradient-to-br from-green-50 to-white rounded-xl p-6 border border-green-200">
+        <div class="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-xl mb-4">
+          3
+        </div>
+        <h3 class="text-xl font-bold text-gray-900 mb-3">Consistency beats one-off pushes</h3>
+        <p class="text-gray-700">
+          Marketing works when it's steady. Our AI keeps your campaigns optimized daily, not just when you remember to check.
+        </p>
+      </div>
+    </div>
+
+    <!-- Results Section -->
+    <div class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-8 md:p-12 text-white mb-12">
+      <h2 class="text-3xl font-bold mb-6">Results That Matter</h2>
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="text-center">
+          <div class="text-5xl font-extrabold text-accent-400 mb-2">2-3x</div>
+          <div class="text-lg">More qualified leads</div>
+          <div class="text-sm text-gray-400 mt-1">on average</div>
+        </div>
+        <div class="text-center">
+          <div class="text-5xl font-extrabold text-accent-400 mb-2">50%</div>
+          <div class="text-lg">Lower cost per lead</div>
+          <div class="text-sm text-gray-400 mt-1">typical savings</div>
+        </div>
+        <div class="text-center">
+          <div class="text-5xl font-extrabold text-accent-400 mb-2">10min</div>
+          <div class="text-lg">Setup time</div>
+          <div class="text-sm text-gray-400 mt-1">to get started</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Who We Serve -->
+    <div class="mb-12">
+      <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center">Who We Serve</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="flex items-start gap-4 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+          <div class="flex-shrink-0 text-3xl">🔧</div>
+          <div>
+            <h3 class="font-semibold text-gray-900 mb-2">HVAC & Plumbing</h3>
+            <p class="text-gray-600 text-sm">Emergency service optimization, seasonal campaign automation, and service-area targeting</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-4 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+          <div class="flex-shrink-0 text-3xl">🏠</div>
+          <div>
+            <h3 class="font-semibold text-gray-900 mb-2">Roofing & Contractors</h3>
+            <p class="text-gray-600 text-sm">Storm response advertising, project-based lead gen, and quality filtering</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-4 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+          <div class="flex-shrink-0 text-3xl">🌳</div>
+          <div>
+            <h3 class="font-semibold text-gray-900 mb-2">Landscaping & Tree Service</h3>
+            <p class="text-gray-600 text-sm">Seasonal campaigns, weather-triggered ads, and service package promotions</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-4 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+          <div class="flex-shrink-0 text-3xl">🧹</div>
+          <div>
+            <h3 class="font-semibold text-gray-900 mb-2">Cleaning & Restoration</h3>
+            <p class="text-gray-600 text-sm">Recurring service optimization, emergency response ads, and review generation</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA Section -->
+    <div class="text-center bg-primary-50 rounded-2xl p-8 md:p-12 border border-primary-200">
+      <h2 class="text-3xl font-bold text-gray-900 mb-4">
+        Ready to Grow Your Business?
+      </h2>
+      <p class="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+        Join 500+ local service businesses using FieldSprout to get more leads, lower costs, and grow revenue.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="{{ url_for(ep('register')) }}" class="inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-primary-600 to-accent-600 text-white font-bold text-lg rounded-lg hover:from-primary-700 hover:to-accent-700 shadow-lg transition-all transform hover:scale-105">
+          Start Free Trial
+          <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+          </svg>
+        </a>
+        <a href="{{ url_for(ep('pricing')) }}" class="inline-flex items-center justify-center px-8 py-4 border-2 border-primary-600 text-primary-600 font-semibold text-lg rounded-lg hover:bg-primary-50 transition-colors">
+          View Pricing
+        </a>
+      </div>
+      <p class="text-sm text-gray-500 mt-6">
+        No credit card required • 14-day free trial • Cancel anytime
+      </p>
     </div>
   </div>
 </section>

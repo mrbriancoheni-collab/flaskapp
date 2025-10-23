@@ -744,6 +744,68 @@ def create_app():
         from app.cron_tasks import run_daily
         run_daily(app, db)
 
+    # ---- Performance metrics commands --------------------------------------
+    @app.cli.command("pull-historical-data")
+    def pull_historical_data_command():
+        """
+        Pull historical performance data from all connected APIs.
+        Usage: flask pull-historical-data --account-id 1 --months 12
+        """
+        import click
+        account_id = click.prompt('Account ID', type=int)
+        months = click.prompt('Number of months to pull', type=int, default=12)
+        force = click.confirm('Force re-import existing data?', default=False)
+
+        from app.services.historical_data_pull import pull_all_historical_data
+
+        click.echo(f"\n🔄 Pulling {months} months of historical data for account {account_id}...")
+        click.echo("This may take a few minutes...\n")
+
+        with app.app_context():
+            results = pull_all_historical_data(account_id, months=months, force=force)
+
+        click.echo("\n" + "="*60)
+        click.echo(f"✅ Historical Data Pull Complete!")
+        click.echo("="*60)
+        click.echo(f"Period: {results.get('period')}")
+        click.echo(f"Total records imported: {results.get('total_imported', 0)}")
+        click.echo("\nResults by channel:")
+
+        for channel, result in results.get('channels', {}).items():
+            status = "✅" if result.get('success') else "❌"
+            imported = result.get('imported', 0)
+            error = result.get('error', '')
+
+            click.echo(f"  {status} {channel:20s}: {imported:4d} records" +
+                      (f" (Error: {error})" if error else ""))
+
+        click.echo("\n")
+
+    @app.cli.command("check-historical-data")
+    def check_historical_data_command():
+        """Check what historical data exists for an account."""
+        import click
+        account_id = click.prompt('Account ID', type=int)
+
+        from app.services.historical_data_pull import check_existing_data
+
+        channels = ['google_ads', 'google_analytics', 'search_console', 'glsa', 'gmb', 'fbads']
+
+        click.echo(f"\n📊 Historical Data Status for Account {account_id}")
+        click.echo("="*60)
+
+        with app.app_context():
+            for channel in channels:
+                data = check_existing_data(account_id, channel)
+
+                if data['has_data']:
+                    click.echo(f"✅ {channel:20s}: {data['count']:5d} records " +
+                              f"({data['earliest_date']} to {data['latest_date']})")
+                else:
+                    click.echo(f"❌ {channel:20s}: No data")
+
+        click.echo("\n")
+
     # ---- CSRF error handler (friendly UX) ----------------------------------
     if CSRFError is not None:
         @app.errorhandler(CSRFError)

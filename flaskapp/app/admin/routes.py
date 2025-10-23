@@ -653,3 +653,71 @@ def ai_prompts_initialize():
     _audit("ai_prompts_init", note=f"force={force}, count={count}")
 
     return redirect(url_for("admin_bp.ai_prompts_list"))
+
+
+# ============================================================================
+# Historical Performance Data Management
+# ============================================================================
+
+@admin_bp.route("/performance-metrics")
+@login_required
+@require_admin
+def performance_metrics():
+    """Performance metrics management page."""
+    from app.services.historical_data_pull import check_existing_data
+
+    # Get list of accounts
+    accounts = Account.query.order_by(Account.id).all()
+
+    # Check data status for first account (or selected account)
+    selected_account_id = request.args.get('account_id', type=int)
+    if not selected_account_id and accounts:
+        selected_account_id = accounts[0].id
+
+    data_status = {}
+    if selected_account_id:
+        channels = ['google_ads', 'google_analytics', 'search_console', 'glsa', 'gmb', 'fbads']
+        for channel in channels:
+            data_status[channel] = check_existing_data(selected_account_id, channel)
+
+    return render_template(
+        "admin/performance_metrics.html",
+        accounts=accounts,
+        selected_account_id=selected_account_id,
+        data_status=data_status
+    )
+
+
+@admin_bp.route("/performance-metrics/pull", methods=["POST"])
+@login_required
+@require_admin
+def performance_metrics_pull():
+    """Trigger historical data pull for an account."""
+    from app.services.historical_data_pull import pull_all_historical_data
+
+    account_id = request.form.get('account_id', type=int)
+    months = request.form.get('months', type=int, default=12)
+    force = request.form.get('force') == 'on'
+
+    if not account_id:
+        flash("Account ID is required", "error")
+        return redirect(url_for("admin_bp.performance_metrics"))
+
+    # Run the pull
+    try:
+        current_app.logger.info(f"Starting historical data pull for account {account_id}, {months} months")
+        results = pull_all_historical_data(account_id, months=months, force=force)
+
+        total = results.get('total_imported', 0)
+        if total > 0:
+            flash(f"Successfully imported {total} records from {months} months of data", "success")
+        else:
+            flash("No new data imported. Check channel connections or try force=true.", "warning")
+
+        _audit("historical_data_pull", target_account_id=account_id, note=f"months={months}, imported={total}")
+
+    except Exception as e:
+        current_app.logger.exception(f"Error pulling historical data: {e}")
+        flash(f"Error pulling historical data: {str(e)}", "error")
+
+    return redirect(url_for("admin_bp.performance_metrics", account_id=account_id))

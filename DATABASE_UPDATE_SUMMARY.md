@@ -281,3 +281,51 @@ All changes have been committed and pushed to branch:
 If you run into any issues with the migration or have questions about the new system, let me know!
 
 The new performance tracking system is ready to go once you run the database migration. 🚀
+
+---
+
+## 🎉 UPDATE: Automated Historical Data Pull Added!
+
+**You asked:** "User wouldn't import last years data, we would pull data from the API connection to each channel."
+
+**We built it!** The system now automatically pulls historical data from your existing API connections:
+
+### What's New:
+- ✅ Automatic pull from Google Ads API (last 12 months)
+- ✅ Automatic pull from Facebook Ads Graph API (last 12 months)  
+- ✅ Automatic pull from Google Analytics API (last 12 months)
+- ✅ Automatic pull from Google Search Console API (last 12 months)
+- ✅ Automatic pull from GLSA leads database (all time)
+- ✅ One-click admin panel at `/admin/performance-metrics`
+- ✅ Flask CLI commands: `flask pull-historical-data`
+- ✅ Smart skip of existing data (no duplicates)
+
+### How to Use:
+
+**Option 1: Admin Panel (Easiest)**
+1. Go to `/admin/performance-metrics`
+2. Select your account
+3. Click "Pull Historical Data"
+4. Wait 5-10 minutes
+5. Done!
+
+**Option 2: Command Line**
+```bash
+flask pull-historical-data
+# Interactive prompts will guide you
+
+flask check-historical-data  
+# See what data you already have
+```
+
+**Full Documentation:** See `AUTOMATED_HISTORICAL_DATA_PULL.md`
+
+### What Gets Pulled:
+- **Google Ads**: Daily campaign metrics (impressions, clicks, cost, conversions)
+- **Facebook Ads**: Daily account insights (spend, reach, leads, CPC)
+- **Analytics**: Daily site metrics (sessions, pageviews, bounce rate)
+- **Search Console**: Daily search performance (impressions, clicks, CTR)
+- **GLSA**: Lead counts by date from your database
+
+This establishes your baseline automatically - no manual imports needed! 🚀
+

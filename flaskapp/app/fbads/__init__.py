@@ -360,6 +360,23 @@ def callback():
     aid = current_account_id()
     _store_fb_token(aid, data.get("access_token"), data.get("expires_in"))
     flash("Facebook connected.", "success")
+
+    # Auto-trigger historical data pull
+    try:
+        from app.services.auto_historical_pull import trigger_pull_for_newly_connected_channel
+
+        result = trigger_pull_for_newly_connected_channel(aid, 'fbads', months=12)
+        if result.get('triggered'):
+            flash(
+                "Historical Facebook Ads data (last 12 months) is being pulled in the background.",
+                "info"
+            )
+            current_app.logger.info(
+                f"Auto-triggered Facebook Ads historical pull for account {aid}"
+            )
+    except Exception as e:
+        current_app.logger.exception(f"Auto FB Ads historical pull trigger failed: {e}")
+
     return redirect(url_for("fbads_bp.index"))
 
 @fbads_bp.post("/disconnect", endpoint="disconnect")

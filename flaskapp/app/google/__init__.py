@@ -2487,6 +2487,26 @@ def gsc_callback():
             flash("Connected to Google. Please sign in again to finalize linking.", "warning")
 
         flash("Google Search Console connected.", "success")
+
+        # Auto-trigger historical data pull
+        try:
+            from app.services.auto_historical_pull import trigger_pull_for_newly_connected_channel
+            from app.auth.utils import current_account_id
+
+            aid = current_account_id()
+            if aid:
+                result = trigger_pull_for_newly_connected_channel(aid, 'search_console', months=12)
+                if result.get('triggered'):
+                    flash(
+                        "Historical search data (last 12 months) is being pulled in the background.",
+                        "info"
+                    )
+                    current_app.logger.info(
+                        f"Auto-triggered GSC historical pull for account {aid}"
+                    )
+        except Exception as e:
+            current_app.logger.exception(f"Auto GSC historical pull trigger failed: {e}")
+
         return redirect(url_for("google_bp.gsc_ui"))
 
     except Exception as e:
@@ -2977,6 +2997,35 @@ def oauth_callback():
             current_app.logger.exception("Listing accessible Ads customers failed")
 
     flash(f"Connected Google {product.upper()} successfully.", "success")
+
+    # Auto-trigger historical data pull for newly connected channel
+    try:
+        from app.services.auto_historical_pull import trigger_pull_for_newly_connected_channel
+
+        # Map product to source_type
+        source_type_map = {
+            'ads': 'google_ads',
+            'ga': 'google_analytics',
+            'gsc': 'search_console',
+            'lsa': 'glsa',
+            'gmb': 'gmb'
+        }
+
+        source_type = source_type_map.get(product)
+        if source_type:
+            result = trigger_pull_for_newly_connected_channel(aid, source_type, months=12)
+            if result.get('triggered'):
+                flash(
+                    "Historical data (last 12 months) is being pulled in the background. "
+                    "This may take a few minutes.",
+                    "info"
+                )
+                current_app.logger.info(
+                    f"Auto-triggered historical pull for account {aid}, product {product}"
+                )
+    except Exception as e:
+        # Don't block OAuth flow if auto-pull fails
+        current_app.logger.exception(f"Auto historical pull trigger failed: {e}")
 
     nxt = session.pop("google_oauth_next", None)
     if nxt:

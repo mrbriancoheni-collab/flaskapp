@@ -376,3 +376,103 @@ A: Run `flask check-historical-data` to see what data exists.
 5. View YoY reports!
 
 That's it! 🎉
+
+---
+
+## 🎉 NEW: Automatic Pull on Connection
+
+**Historical data now pulls automatically when you connect a channel!**
+
+### How It Works
+
+When a user connects any API channel, the system automatically:
+
+1. **Detects the connection** (OAuth callback completes)
+2. **Checks if historical data exists** (skips if recent data present)
+3. **Triggers background pull** (last 12 months)
+4. **User sees notification**: "Historical data is being pulled in the background"
+5. **Continues without waiting** (user can navigate away)
+6. **Data arrives within 5-10 minutes** (runs in background thread)
+
+### Channels with Auto-Pull
+
+✅ **Google Ads** - Auto-pulls after OAuth  
+✅ **Facebook Ads** - Auto-pulls after OAuth  
+✅ **Google Analytics** - Auto-pulls after OAuth  
+✅ **Google Search Console** - Auto-pulls after OAuth  
+✅ **GLSA** - Auto-pulls after OAuth  
+✅ **GMB** - Auto-pulls after OAuth  
+
+### User Experience
+
+**Before (manual):**
+1. Connect Google Ads
+2. Go to admin panel
+3. Click "Pull Historical Data"
+4. Wait 5 minutes
+5. Done
+
+**Now (automatic):**
+1. Connect Google Ads
+2. See message: "Historical data is being pulled in background"
+3. Continue using the app
+4. Data appears within 5-10 minutes
+5. Done!
+
+### Smart Skip Logic
+
+The auto-pull will **NOT run** if:
+- Historical data already exists for that channel
+- Latest data is less than 7 days old
+- Auto-pull is disabled in config (`AUTO_HISTORICAL_PULL_ENABLED=False`)
+
+This prevents duplicate pulls and respects rate limits.
+
+### Disabling Auto-Pull
+
+To disable automatic historical pulling, set in your config:
+
+```python
+# In config.py or environment variable
+AUTO_HISTORICAL_PULL_ENABLED = False
+```
+
+Or via environment:
+```bash
+export AUTO_HISTORICAL_PULL_ENABLED=false
+```
+
+### Manual Pull Still Available
+
+You can still manually trigger pulls:
+- Admin panel: `/admin/performance-metrics`
+- CLI: `flask pull-historical-data`
+- Useful for: Re-importing, forcing updates, pulling older data
+
+### Background Processing
+
+- Runs in **daemon thread** (non-blocking)
+- **Doesn't slow down** OAuth flow
+- **Logs progress** to application logs
+- **Error recovery** per channel (one failure doesn't affect others)
+
+### Monitoring Auto-Pulls
+
+Check application logs:
+```bash
+grep "Auto-triggered historical pull" app.log
+
+# Example output:
+# 2025-10-23 14:32:11 [INFO] Auto-triggered historical pull for account 1, product ads
+# 2025-10-23 14:32:12 [INFO] ✓ Background historical pull started for account 1, source google_ads
+# 2025-10-23 14:37:45 [INFO] ✓ Auto-pull completed for account 1, source google_ads: 365 records imported
+```
+
+---
+
+## Summary: No More Manual Steps!
+
+✅ **Old way:** Connect → Admin panel → Click button → Wait  
+✅ **New way:** Connect → Automatic pull → Continue using app  
+
+Users now get historical data automatically without any extra steps! 🚀

@@ -387,3 +387,72 @@ class AIPrompt(db.Model):
 
     def __repr__(self):
         return f"<AIPrompt {self.prompt_key}: {self.name}>"
+
+
+class PerformanceMetrics(db.Model):
+    """
+    Unified storage for historical performance metrics across all platforms.
+    Stores daily snapshots for trend analysis, reporting, and AI insights.
+    """
+    __tablename__ = "performance_metrics"
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    account_id = db.Column(db.BigInteger, index=True, nullable=False)
+
+    # Source identification
+    source_type = db.Column(db.String(32), nullable=False, index=True)
+    # Values: 'google_ads', 'google_analytics', 'search_console', 'glsa', 'gmb', 'fbads'
+
+    source_id = db.Column(db.String(255), nullable=True, index=True)
+    # Property ID, Site URL, Customer ID, Page ID, etc.
+
+    # Time dimension
+    date = db.Column(db.Date, nullable=False, index=True)
+    timeframe = db.Column(db.String(16), nullable=False, default='daily')
+    # Values: 'daily', 'weekly', 'monthly'
+
+    # Entity hierarchy (optional, for drilldown)
+    entity_type = db.Column(db.String(32), nullable=True, index=True)
+    # For Google Ads: 'account', 'campaign', 'ad_group', 'ad', 'keyword'
+    # For Analytics: 'property', 'page', 'source', 'campaign'
+    # For GSC: 'site', 'page', 'query'
+    # For GLSA: 'account', 'lead'
+    # For GMB: 'location', 'post'
+    # For FB Ads: 'page', 'campaign', 'ad_set', 'ad'
+
+    entity_id = db.Column(db.String(255), nullable=True, index=True)
+    entity_name = db.Column(db.String(255), nullable=True)
+
+    # Core metrics (flexible JSON blob for source-specific metrics)
+    metrics_json = db.Column(db.Text, nullable=False)
+    # Examples:
+    # Google Ads: {"impressions": 1000, "clicks": 50, "cost": 25.50, "conversions": 5}
+    # Analytics: {"sessions": 500, "pageviews": 1200, "bounce_rate": 45.2, "avg_session_duration": 120}
+    # GSC: {"impressions": 5000, "clicks": 200, "ctr": 4.0, "position": 12.5}
+    # GLSA: {"leads": 10, "phone_calls": 5, "messages": 3, "bookings": 2}
+    # GMB: {"views": 500, "searches": 300, "actions": 50, "calls": 10}
+    # FB Ads: {"reach": 10000, "impressions": 15000, "clicks": 200, "spend": 50.00}
+
+    # Computed aggregates (for quick queries without parsing JSON)
+    impressions = db.Column(db.BigInteger, nullable=True)
+    clicks = db.Column(db.BigInteger, nullable=True)
+    spend = db.Column(db.Float, nullable=True)  # In dollars
+    conversions = db.Column(db.Float, nullable=True)
+
+    # Audit fields
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    __table_args__ = (
+        # Unique constraint: one record per account/source/entity/date
+        db.UniqueConstraint(
+            "account_id", "source_type", "source_id", "entity_type", "entity_id", "date", "timeframe",
+            name="uq_perf_metrics"
+        ),
+        # Composite indexes for common queries
+        db.Index("ix_perf_account_source_date", "account_id", "source_type", "date"),
+        db.Index("ix_perf_source_entity_date", "source_type", "entity_type", "date"),
+    )
+
+    def __repr__(self):
+        return f"<PerformanceMetrics {self.source_type} {self.date} entity={self.entity_type}:{self.entity_id}>"

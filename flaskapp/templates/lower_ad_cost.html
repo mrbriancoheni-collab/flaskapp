@@ -1,26 +1,235 @@
 {% extends "base_public.html" %}
 {% set SECTION = 'solutions' %}
+{% block title %}Lower Ad Cost — FieldSprout Solutions{% endblock %}
 {% block content %}
-<section class="mx-auto max-w-5xl py-12 px-4">
-  <h1 class="text-3xl font-semibold">Lower Ad Cost</h1>
-  <p class="mt-3 text-lg text-slate-700">Pay less for each lead. Keep the good clicks. Stop the bad ones.</p>
 
-  <div class="grid md:grid-cols-3 gap-6 mt-8">
-    <div class="p-6 rounded-xl border">
-      <h3 class="font-medium">Stop Waste</h3>
-      <p class="text-slate-600 mt-2">We block bad searches and spots that don’t bring jobs.</p>
-    </div>
-    <div class="p-6 rounded-xl border">
-      <h3 class="font-medium">Spend Smart</h3>
-      <p class="text-slate-600 mt-2">Shift money to the words and zips that win.</p>
-    </div>
-    <div class="p-6 rounded-xl border">
-      <h3 class="font-medium">Better Leads</h3>
-      <p class="text-slate-600 mt-2">Catch spam and duplicates so your team saves time.</p>
-    </div>
+<!-- Hero Section -->
+<section class="max-w-6xl mx-auto px-6 py-16 text-center">
+  <div class="inline-flex items-center gap-2 px-4 py-2 bg-primary-100 text-primary-700 rounded-full font-semibold text-sm mb-6">
+    💸 LOWER AD COST
   </div>
 
-  <a class="inline-flex mt-8 px-5 py-3 rounded-lg bg-emerald-600 text-white" href="/audit">Show my waste report</a>
-  <p class="mt-4 text-sm text-slate-500">Most shops cut cost per lead 15–30% in the first month.</p>
+  <h1 class="text-5xl md:text-6xl font-extrabold text-gray-900 mb-6 leading-tight">
+    Pay less for each lead
+  </h1>
+
+  <p class="text-xl text-gray-600 mb-10 max-w-3xl mx-auto">
+    Keep the good clicks. Stop the bad ones. Our AI finds and eliminates waste so every dollar works harder.
+  </p>
+
+  <div class="flex flex-col sm:flex-row gap-4 justify-center">
+    <a href="/audit" class="inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-primary-600 to-accent-600 text-white font-bold text-lg rounded-lg hover:from-primary-700 hover:to-accent-700 focus:ring-4 focus:ring-primary-300 shadow-lg transition-all transform hover:scale-105">
+      Show My Waste Report
+      <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+      </svg>
+    </a>
+    <a href="/demo" class="inline-flex items-center justify-center px-8 py-4 bg-white text-primary-600 font-bold text-lg rounded-lg border-2 border-primary-600 hover:bg-primary-50 focus:ring-4 focus:ring-primary-300 shadow-lg transition-all">
+      See It In Action
+    </a>
+  </div>
 </section>
+
+<!-- Stats Section -->
+<section class="bg-gradient-to-br from-gray-900 to-gray-800 text-white py-16">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="grid md:grid-cols-3 gap-8 text-center">
+      <div class="bg-white bg-opacity-10 rounded-2xl p-6 backdrop-blur-sm">
+        <div class="text-5xl font-extrabold text-accent-400 mb-2">−25%</div>
+        <div class="text-lg font-semibold">Lower CPL</div>
+        <div class="text-sm text-gray-300 mt-1">Average in first 30 days</div>
+      </div>
+
+      <div class="bg-white bg-opacity-10 rounded-2xl p-6 backdrop-blur-sm">
+        <div class="text-5xl font-extrabold text-accent-400 mb-2">−40%</div>
+        <div class="text-lg font-semibold">Wasted Spend</div>
+        <div class="text-sm text-gray-300 mt-1">Eliminated by AI optimization</div>
+      </div>
+
+      <div class="bg-white bg-opacity-10 rounded-2xl p-6 backdrop-blur-sm">
+        <div class="text-5xl font-extrabold text-accent-400 mb-2">$4.2k</div>
+        <div class="text-lg font-semibold">Avg Monthly Savings</div>
+        <div class="text-sm text-gray-300 mt-1">For shops spending $15k+/mo</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How We Do It -->
+<section class="max-w-6xl mx-auto px-6 py-16">
+  <div class="text-center mb-12">
+    <h2 class="text-4xl font-bold text-gray-900 mb-4">Three ways we cut your cost</h2>
+    <p class="text-xl text-gray-600">Automatic optimizations that run 24/7</p>
+  </div>
+
+  <div class="grid md:grid-cols-3 gap-8">
+    <!-- Stop Waste -->
+    <div class="bg-white rounded-2xl border-2 border-gray-200 p-8 shadow-lg hover:shadow-xl transition-shadow">
+      <div class="w-14 h-14 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mb-4">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+        </svg>
+      </div>
+      <h3 class="text-2xl font-bold text-gray-900 mb-3">Stop Waste</h3>
+      <p class="text-gray-700 mb-4">We block bad searches and spots that don't bring jobs.</p>
+      <ul class="space-y-2 text-sm text-gray-600">
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 font-bold mt-0.5">•</span>
+          <span>Auto-pause low-intent keywords</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 font-bold mt-0.5">•</span>
+          <span>Block unprofitable ZIP codes</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 font-bold mt-0.5">•</span>
+          <span>Identify and stop click fraud</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Spend Smart -->
+    <div class="bg-white rounded-2xl border-2 border-primary-600 p-8 shadow-lg hover:shadow-xl transition-shadow relative">
+      <div class="absolute -top-4 left-1/2 transform -translate-x-1/2">
+        <span class="inline-flex items-center px-4 py-1 rounded-full bg-gradient-to-r from-primary-600 to-accent-600 text-white text-sm font-bold shadow-lg">
+          ⭐ Most Impact
+        </span>
+      </div>
+      <div class="w-14 h-14 rounded-full bg-gradient-to-br from-primary-600 to-accent-600 flex items-center justify-center mb-4">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+        </svg>
+      </div>
+      <h3 class="text-2xl font-bold text-gray-900 mb-3">Spend Smart</h3>
+      <p class="text-gray-700 mb-4">Shift money to the words and zips that win.</p>
+      <ul class="space-y-2 text-sm text-gray-600">
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 font-bold mt-0.5">•</span>
+          <span>Boost budgets on high-converting campaigns</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 font-bold mt-0.5">•</span>
+          <span>Bid higher in profitable service areas</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 font-bold mt-0.5">•</span>
+          <span>Scale winners automatically</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Better Leads -->
+    <div class="bg-white rounded-2xl border-2 border-gray-200 p-8 shadow-lg hover:shadow-xl transition-shadow">
+      <div class="w-14 h-14 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center mb-4">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </div>
+      <h3 class="text-2xl font-bold text-gray-900 mb-3">Better Leads</h3>
+      <p class="text-gray-700 mb-4">Catch spam and duplicates so your team saves time.</p>
+      <ul class="space-y-2 text-sm text-gray-600">
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 font-bold mt-0.5">•</span>
+          <span>Filter out spam before they reach your phone</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 font-bold mt-0.5">•</span>
+          <span>Detect duplicate submissions</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 font-bold mt-0.5">•</span>
+          <span>Score lead quality in real-time</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Typical Savings Calculator -->
+<section class="bg-gray-50 py-16">
+  <div class="max-w-4xl mx-auto px-6">
+    <div class="bg-white rounded-2xl border-2 border-gray-200 p-10 shadow-xl">
+      <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center">Typical monthly savings</h2>
+
+      <div class="space-y-6">
+        <div class="flex items-center justify-between pb-4 border-b border-gray-200">
+          <div>
+            <div class="text-lg font-semibold text-gray-900">Current monthly ad spend</div>
+            <div class="text-sm text-gray-600">Your investment in Google, Facebook, LSA</div>
+          </div>
+          <div class="text-3xl font-bold text-gray-900">$15,000</div>
+        </div>
+
+        <div class="flex items-center justify-between pb-4 border-b border-gray-200">
+          <div>
+            <div class="text-lg font-semibold text-gray-900">Typical waste (25-35%)</div>
+            <div class="text-sm text-gray-600">Bad keywords, wrong ZIPs, spam clicks</div>
+          </div>
+          <div class="text-3xl font-bold text-red-600">$4,500</div>
+        </div>
+
+        <div class="flex items-center justify-between pb-4 border-b border-gray-200">
+          <div>
+            <div class="text-lg font-semibold text-gray-900">FieldSprout eliminates (~70%)</div>
+            <div class="text-sm text-gray-600">Automated optimization + manual cleanup</div>
+          </div>
+          <div class="text-3xl font-bold text-green-600">$3,150</div>
+        </div>
+
+        <div class="flex items-center justify-between bg-gradient-to-br from-primary-50 to-white rounded-xl p-6">
+          <div>
+            <div class="text-2xl font-bold text-gray-900">Monthly savings</div>
+            <div class="text-sm text-gray-600">Put it back into working campaigns or pocket it</div>
+          </div>
+          <div class="text-5xl font-extrabold text-primary-600">$3,150</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Testimonial -->
+<section class="max-w-4xl mx-auto px-6 py-16">
+  <div class="bg-white border-2 border-gray-200 rounded-2xl p-8 shadow-xl">
+    <div class="flex items-center gap-1 mb-4">
+      <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+      <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+      <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+      <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+      <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+    </div>
+    <blockquote class="text-xl text-gray-700 italic mb-6">
+      "The waste report was eye-opening. We were spending $800/month on searches like 'hvac jobs near me' and 'hvac schools' that brought zero customers. Cut that in week one and our cost per lead dropped 28%."
+    </blockquote>
+    <div class="flex items-center gap-4">
+      <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary-600 to-accent-600 flex items-center justify-center text-white font-bold text-lg">
+        D
+      </div>
+      <div>
+        <div class="font-bold text-gray-900">David Chen</div>
+        <div class="text-gray-600 text-sm">Owner, Chen Air Conditioning (Las Vegas)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Final CTA -->
+<section class="bg-gradient-to-br from-primary-600 to-accent-600 py-16">
+  <div class="max-w-4xl mx-auto px-6 text-center">
+    <h2 class="text-4xl font-bold text-white mb-6">Ready to cut your ad costs?</h2>
+    <p class="text-xl text-primary-100 mb-8">Most shops cut cost per lead 15-30% in the first month</p>
+
+    <a href="/audit" class="inline-flex items-center justify-center px-8 py-4 bg-white text-primary-600 font-bold text-lg rounded-lg hover:bg-gray-100 shadow-xl transition-all transform hover:scale-105">
+      Show My Waste Report
+      <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+      </svg>
+    </a>
+
+    <p class="text-primary-100 mt-6 text-sm">
+      14-day free trial • No credit card required • Cancel anytime
+    </p>
+  </div>
+</section>
+
 {% endblock %}

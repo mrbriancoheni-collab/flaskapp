@@ -14,7 +14,7 @@
   </div>
 
   <!-- Tool Cards -->
-  <div class="grid md:grid-cols-2 gap-6">
+  <div class="grid md:grid-cols-3 gap-6">
     <!-- LinkedIn Ads Optimizer -->
     <a href="{{ url_for('linkedin_bp.ads') }}" class="group block rounded-xl border bg-white hover:shadow-lg transition p-6">
       <div class="flex items-start justify-between mb-4">
@@ -55,6 +55,28 @@
         </div>
         <div>
           <i class="fa-solid fa-user-tie mr-1"></i>Personal Brand
+        </div>
+      </div>
+    </a>
+
+    <!-- Schedule Manager -->
+    <a href="{{ url_for('linkedin_bp.schedule') }}" class="group block rounded-xl border bg-white hover:shadow-lg transition p-6">
+      <div class="flex items-start justify-between mb-4">
+        <div class="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 text-xl">
+          <i class="fa-solid fa-calendar-days"></i>
+        </div>
+        <i class="fa-solid fa-arrow-right text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition"></i>
+      </div>
+      <h2 class="text-lg font-semibold mb-2">Scheduled Posts</h2>
+      <p class="text-sm text-gray-600 mb-4">
+        View and manage your scheduled LinkedIn posts. Plan up to 1 week ahead with 1 post per day.
+      </p>
+      <div class="flex items-center gap-4 text-xs text-gray-500">
+        <div>
+          <i class="fa-solid fa-clock mr-1"></i>Schedule Posts
+        </div>
+        <div>
+          <i class="fa-solid fa-list mr-1"></i>Manage Queue
         </div>
       </div>
     </a>

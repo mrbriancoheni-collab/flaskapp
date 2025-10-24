@@ -3,9 +3,11 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from flask_login import login_required, current_user
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, date, timedelta
 
+from app import db
 from app.auth.utils import current_account_id
+from app.models_linkedin import LinkedInScheduledPost
 
 logger = logging.getLogger(__name__)
 
@@ -278,4 +280,232 @@ Generate the post now:"""
 
     except Exception as e:
         logger.exception("Error generating LinkedIn post")
+        return jsonify({"error": str(e)}), 500
+
+
+@linkedin_bp.route("/schedule")
+@login_required
+def schedule():
+    """View scheduled posts calendar"""
+    account_id = current_account_id()
+    if not account_id:
+        flash("Unable to determine account", "error")
+        return redirect(url_for("linkedin_bp.index"))
+
+    # Get all scheduled posts for this account
+    scheduled_posts = LinkedInScheduledPost.get_scheduled_for_account(account_id, status="scheduled")
+
+    return render_template(
+        "linkedin/schedule.html",
+        scheduled_posts=scheduled_posts,
+        ai_available=_AI_OK,
+    )
+
+
+@linkedin_bp.route("/schedule/save", methods=["POST"])
+@login_required
+def schedule_save():
+    """Save a scheduled post"""
+    account_id = current_account_id()
+    if not account_id:
+        return jsonify({"error": "Unable to determine account"}), 400
+
+    try:
+        # Get form data
+        post_text = request.form.get("post_text", "").strip()
+        scheduled_date_str = request.form.get("scheduled_date", "").strip()
+        scheduled_time = request.form.get("scheduled_time", "09:00").strip()
+
+        # Get metadata
+        expertise = request.form.get("expertise", "")
+        industry = request.form.get("industry", "")
+        topic = request.form.get("topic", "")
+        tone = request.form.get("tone", "")
+
+        # Validation
+        if not post_text:
+            return jsonify({"error": "Post text is required"}), 400
+
+        if not scheduled_date_str:
+            return jsonify({"error": "Scheduled date is required"}), 400
+
+        # Parse and validate date
+        try:
+            scheduled_date = datetime.strptime(scheduled_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
+
+        # Validate date is in the future
+        today = date.today()
+        if scheduled_date < today:
+            return jsonify({"error": "Cannot schedule posts in the past"}), 400
+
+        # Validate date is within 1 week
+        max_date = today + timedelta(days=7)
+        if scheduled_date > max_date:
+            return jsonify({"error": "Can only schedule up to 1 week in advance"}), 400
+
+        # Check if already scheduled for this date (1 post per day limit)
+        existing = LinkedInScheduledPost.get_for_date(account_id, scheduled_date)
+        if existing:
+            return jsonify({
+                "error": f"You already have a post scheduled for {scheduled_date.strftime('%B %d, %Y')}. Only 1 post per day allowed."
+            }), 400
+
+        # Create scheduled post
+        scheduled_post = LinkedInScheduledPost(
+            account_id=account_id,
+            post_text=post_text,
+            scheduled_date=scheduled_date,
+            scheduled_time=scheduled_time,
+            expertise=expertise,
+            industry=industry,
+            topic=topic,
+            tone=tone,
+            status="scheduled"
+        )
+
+        db.session.add(scheduled_post)
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": f"Post scheduled for {scheduled_date.strftime('%B %d, %Y')}",
+            "post": scheduled_post.to_dict()
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Error saving scheduled post")
+        return jsonify({"error": str(e)}), 500
+
+
+@linkedin_bp.route("/schedule/list", methods=["GET"])
+@login_required
+def schedule_list():
+    """Get list of scheduled posts as JSON"""
+    account_id = current_account_id()
+    if not account_id:
+        return jsonify({"error": "Unable to determine account"}), 400
+
+    try:
+        scheduled_posts = LinkedInScheduledPost.get_scheduled_for_account(account_id, status="scheduled")
+        return jsonify({
+            "posts": [post.to_dict() for post in scheduled_posts],
+            "count": len(scheduled_posts)
+        })
+
+    except Exception as e:
+        logger.exception("Error fetching scheduled posts")
+        return jsonify({"error": str(e)}), 500
+
+
+@linkedin_bp.route("/schedule/<int:post_id>/delete", methods=["POST", "DELETE"])
+@login_required
+def schedule_delete(post_id):
+    """Delete/cancel a scheduled post"""
+    account_id = current_account_id()
+    if not account_id:
+        return jsonify({"error": "Unable to determine account"}), 400
+
+    try:
+        # Find the post
+        post = LinkedInScheduledPost.query.filter_by(
+            id=post_id,
+            account_id=account_id
+        ).first()
+
+        if not post:
+            return jsonify({"error": "Scheduled post not found"}), 404
+
+        # Only allow deletion of scheduled posts
+        if post.status != "scheduled":
+            return jsonify({"error": f"Cannot delete post with status: {post.status}"}), 400
+
+        # Delete the post
+        db.session.delete(post)
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Scheduled post deleted"
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Error deleting scheduled post")
+        return jsonify({"error": str(e)}), 500
+
+
+@linkedin_bp.route("/schedule/<int:post_id>/update", methods=["POST", "PUT"])
+@login_required
+def schedule_update(post_id):
+    """Update a scheduled post"""
+    account_id = current_account_id()
+    if not account_id:
+        return jsonify({"error": "Unable to determine account"}), 400
+
+    try:
+        # Find the post
+        post = LinkedInScheduledPost.query.filter_by(
+            id=post_id,
+            account_id=account_id
+        ).first()
+
+        if not post:
+            return jsonify({"error": "Scheduled post not found"}), 404
+
+        # Only allow updating of scheduled posts
+        if post.status != "scheduled":
+            return jsonify({"error": f"Cannot update post with status: {post.status}"}), 400
+
+        # Get update data
+        post_text = request.form.get("post_text")
+        scheduled_date_str = request.form.get("scheduled_date")
+        scheduled_time = request.form.get("scheduled_time")
+
+        # Update fields if provided
+        if post_text is not None:
+            post.post_text = post_text.strip()
+
+        if scheduled_date_str:
+            try:
+                new_date = datetime.strptime(scheduled_date_str, "%Y-%m-%d").date()
+
+                # Validate new date
+                today = date.today()
+                if new_date < today:
+                    return jsonify({"error": "Cannot schedule posts in the past"}), 400
+
+                max_date = today + timedelta(days=7)
+                if new_date > max_date:
+                    return jsonify({"error": "Can only schedule up to 1 week in advance"}), 400
+
+                # Check if another post exists on new date
+                if new_date != post.scheduled_date:
+                    existing = LinkedInScheduledPost.get_for_date(account_id, new_date)
+                    if existing and existing.id != post_id:
+                        return jsonify({
+                            "error": f"You already have a post scheduled for {new_date.strftime('%B %d, %Y')}"
+                        }), 400
+
+                post.scheduled_date = new_date
+
+            except ValueError:
+                return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
+
+        if scheduled_time:
+            post.scheduled_time = scheduled_time.strip()
+
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Scheduled post updated",
+            "post": post.to_dict()
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Error updating scheduled post")
         return jsonify({"error": str(e)}), 500

@@ -1,0 +1,48 @@
+{% extends "base_admin.html" %}
+{% block title %}CRM Contact – {{ super() }}{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+  <h1 class="text-xl font-semibold">{{ item.business_name }}</h1>
+  <div class="flex gap-2">
+    <a href="{{ url_for('admin_bp.crm_edit', contact_id=item.id) }}" class="px-3 py-2 rounded border">Edit</a>
+    <form method="post" action="{{ url_for('admin_bp.crm_delete', contact_id=item.id) }}" onsubmit="return confirm('Delete this contact?')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+      <button class="px-3 py-2 rounded bg-red-600 text-white">Delete</button>
+    </form>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+  <div class="bg-white border rounded p-4">
+    <div class="mb-2"><span class="font-medium">Lifecycle stage:</span>
+      <form method="post" action="{{ url_for('admin_bp.crm_stage', contact_id=item.id) }}" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+        <select name="stage" class="border rounded px-2 py-1 text-sm" onchange="this.form.submit()">
+          {% for s in STAGES %}
+            <option value="{{ s }}" {% if item.stage==s %}selected{% endif %}>{{ s|capitalize }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+    <div class="mb-1"><span class="font-medium">Contact:</span> {{ item.contact_name or '—' }}</div>
+    <div class="mb-1"><span class="font-medium">Email:</span> {{ item.email or '—' }}</div>
+    <div class="mb-1"><span class="font-medium">Phone:</span> {{ item.phone or '—' }}</div>
+    <div class="mb-1"><span class="font-medium">Domain:</span> {{ item.domain or '—' }}</div>
+    <div class="mb-1"><span class="font-medium">Source:</span> {{ item.source or '—' }}</div>
+    <div class="mb-1"><span class="font-medium">Owner:</span> {{ item.owner_user_id or '—' }}</div>
+    <div class="text-gray-500 mt-2">Updated {{ item.updated_at.strftime('%Y-%m-%d %H:%M') }}</div>
+  </div>
+
+  <div class="bg-white border rounded p-4">
+    <div class="font-medium mb-2">Address</div>
+    <div>{{ item.address1 or '' }} {{ item.address2 or '' }}</div>
+    <div>{{ item.city or '' }} {{ item.region or '' }} {{ item.postal_code or '' }}</div>
+    <div>{{ item.country or '' }}</div>
+  </div>
+
+  <div class="md:col-span-2 bg-white border rounded p-4">
+    <div class="font-medium mb-2">Notes</div>
+    <pre class="whitespace-pre-wrap">{{ item.notes or '—' }}</pre>
+  </div>
+</div>
+{% endblock %}

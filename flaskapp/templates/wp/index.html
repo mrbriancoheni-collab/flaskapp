@@ -1,0 +1,28 @@
+{% extends "base_app.html" %}
+{% block title %}WordPress{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold">WordPress</h1>
+      <p class="text-gray-500">Connect with an Application Password to pull posts & pages.</p>
+    </div>
+    <a href="{{ url_for('account_bp.dashboard') }}" class="rounded-md border px-3 py-2 text-gray-700 hover:bg-gray-50">Back</a>
+  </div>
+
+  <div class="rounded-lg border bg-white p-6">
+    {% if connected %}
+      <div class="text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2 text-sm inline-block">Connected</div>
+      <div class="mt-4">
+        <a href="{{ url_for('account_bp.report', provider='wp') }}" class="text-indigo-600 text-sm hover:underline">View report</a>
+      </div>
+    {% else %}
+      {% if has_endpoint('wp_bp.connect') %}
+        <a href="{{ url_for('wp_bp.connect') }}" class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-white hover:bg-indigo-700">Add Site</a>
+      {% else %}
+        <div class="text-sm text-gray-500">Please expose a <code>wp_bp.connect</code> route for entering your Site URL, Username, and App Password.</div>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

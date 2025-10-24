@@ -1,0 +1,37 @@
+{% extends "base_app.html" %}
+{% block title %}Google OAuth Tokens{% endblock %}
+{% block content %}
+<h1 class="text-xl font-semibold mb-4">Google OAuth Tokens (Current Account)</h1>
+<table class="min-w-full border text-sm">
+  <thead class="bg-gray-50">
+    <tr>
+      <th class="p-2 border">id</th>
+      <th class="p-2 border">product</th>
+      <th class="p-2 border">has_access</th>
+      <th class="p-2 border">has_refresh</th>
+      <th class="p-2 border">token_expiry (UTC)</th>
+      <th class="p-2 border">ga_property_id</th>
+      <th class="p-2 border">ga_property_name</th>
+      <th class="p-2 border">gsc_site</th>
+      <th class="p-2 border">updated_at</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+    <tr>
+      <td class="p-2 border">{{ r.id }}</td>
+      <td class="p-2 border">{{ r.product }}</td>
+      <td class="p-2 border">{{ 'yes' if r.has_access else 'no' }}</td>
+      <td class="p-2 border">{{ 'yes' if r.has_refresh else 'no' }}</td>
+      <td class="p-2 border">{{ r.token_expiry or '—' }}</td>
+      <td class="p-2 border">{{ r.ga_property_id or '—' }}</td>
+      <td class="p-2 border">{{ r.ga_property_name or '—' }}</td>
+      <td class="p-2 border">{{ r.gsc_site or '—' }}</td>
+      <td class="p-2 border">{{ r.updated_at }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="9" class="p-4 text-center">No rows for this account.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

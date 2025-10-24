@@ -1,0 +1,26 @@
+{% extends "base_app.html" %}
+{% block title %}Marketing Strategy – Index{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+  <h1 class="text-2xl font-semibold">Marketing Strategy</h1>
+  <a href="{{ url_for('strategy_bp.new') }}" class="px-4 py-2 rounded bg-[var(--brand)] text-white">Create Strategy</a>
+</div>
+
+{% if items and items|length %}
+  <div class="space-y-2">
+    {% for it in items %}
+      <div class="border rounded p-3 flex items-center justify-between">
+        <div>
+          <div class="font-medium">{{ it.name or "Untitled Strategy" }}</div>
+          <div class="text-sm text-gray-500">Updated: {{ it.updated_at }}</div>
+        </div>
+        <div class="space-x-2">
+          <a class="px-3 py-1 rounded border" href="{{ url_for('strategy_bp.edit', strategy_id=it.id) }}">Edit</a>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="text-gray-600">No strategies yet. Click “Create Strategy” to begin.</div>
+{% endif %}
+{% endblock %}

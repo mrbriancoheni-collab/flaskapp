@@ -1,0 +1,60 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>Campaign Builder</h2>
+<div class="card grid grid-2">
+  <form method="get" action="/builder">
+    <label>Company Profile
+      <select name="profile_id">
+        {% for p in profiles %}
+        <option value="{{p.id}}" {% if p.id==active_profile_id %}selected{% endif %}>{{p.company_name}}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Load</button>
+  </form>
+
+  {% if active_profile_id %}
+  <form method="post" action="/builder/generate">
+    <input type="hidden" name="profile_id" value="{{active_profile_id}}">
+    <label>Top services count
+      <select name="top_n_services">
+        <option>1</option><option>2</option><option selected>3</option>
+      </select>
+    </label>
+    <button type="submit">One‑Touch: Build Top Services</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if draft %}
+<div class="card">
+  <h3>Current Draft ({{draft.status}})</h3>
+  <pre class="muted" style="max-height:320px;overflow:auto">{{draft.draft_json | tojson(indent=2)}}</pre>
+  <div>
+    <a class="button" href="/builder/export/{{draft.id}}">Export to Excel</a>
+    <form style="display:inline" method="post" action="/builder/approve/{{draft.id}}">
+      <button type="submit">Approve</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% if active_profile_id %}
+<div class="card">
+  <h3>Manual Add</h3>
+  <form method="post" action="/builder/manual/add">
+    <input type="hidden" name="profile_id" value="{{active_profile_id}}">
+    <div class="grid grid-2">
+      <label>Campaign Name <input name="campaign_name" required></label>
+      <label>Ad Group Name <input name="adgroup_name" required></label>
+      <label>Match Type
+        <select name="match_type"><option>Exact</option><option>Phrase</option></select>
+      </label>
+      <label>Keyword <input name="keyword" placeholder="[water damage repair]"></label>
+      <label>Final URL <input name="final_url" placeholder="https://example.com/service"></label>
+    </div>
+    <button type="submit">Add to Draft</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

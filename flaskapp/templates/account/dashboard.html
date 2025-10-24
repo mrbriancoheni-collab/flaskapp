@@ -1,0 +1,224 @@
+{# templates/account/dashboard.html #}
+{% extends "base_app.html" %}
+{% set SECTION = 'dashboard' %}
+{% block title %}Dashboard · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-8">
+
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold">Welcome to your dashboard</h1>
+      <p class="text-gray-500">
+        {{ connected_count }}/{{ total_count }} connections complete ({{ connected_percent }}%).
+        {% if not is_paid %}
+          <span class="ml-2 text-rose-600 font-medium">Upgrade to unlock full reports.</span>
+        {% endif %}
+      </p>
+    </div>
+    {% if not is_paid %}
+      <a href="{{ url_for('account_bp.connect', provider='wp') }}"
+         class="rounded-md bg-rose-600 text-white px-4 py-2 hover:bg-rose-700">Go Pro</a>
+    {% endif %}
+  </div>
+
+  <!-- Getting Started -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="rounded-lg border bg-white p-4">
+      <div class="text-sm text-gray-500">Step 1</div>
+      <div class="font-medium">Connect your accounts</div>
+      <div class="mt-2 text-sm text-gray-500">Google, Facebook, WordPress…</div>
+    </div>
+    <div class="rounded-lg border bg-white p-4">
+      <div class="text-sm text-gray-500">Step 2</div>
+      <div class="font-medium">Verify data is flowing</div>
+      <div class="mt-2 text-sm text-gray-500">Cards below will switch off sample.</div>
+    </div>
+    <div class="rounded-lg border bg-white p-4">
+      <div class="text-sm text-gray-500">Step 3</div>
+      <div class="font-medium">Review & Optimize Performance</div>
+      <div class="mt-2 text-sm text-gray-500">Use reports to iterate weekly.</div>
+    </div>
+    <div class="rounded-lg border bg-white p-4">
+      <div class="text-sm text-gray-500">Step 4</div>
+      <div class="font-medium">Invite your team</div>
+      <div class="mt-2 text-sm text-gray-500">Share access & collaborate.</div>
+    </div>
+  </div>
+
+  <!-- Connections (added 'lsa' key) -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    {% for key in ['ga','ads','lsa','gsc','gmb','facebook','wp','yelp'] %}
+      {% set card = cards.get(key) %}
+      {% if card %}
+        {% set clickable = (card.connected and not card.get('disabled') and not card.get('coming_soon')) %}
+
+        {# Decide destination when the card is clickable #}
+        {% if clickable %}
+          {% if key == 'ads' %}
+            {% set href = url_for('google_bp.ads_ui') %}
+          {% elif key == 'lsa' %}
+            {% set href = url_for('glsa_bp.index') %}
+          {% elif key == 'ga' %}
+            {% set href = url_for('google_bp.ga_ui') %}
+          {% elif key == 'gsc' %}
+            {% set href = url_for('google_bp.gsc_ui') %}
+          {% elif key == 'gmb' %}
+            {% set href = url_for('gmb_bp.index') %}
+          {% else %}
+            {% set href = url_for('reports_bp.index') if has_endpoint('reports_bp.index') else '#' %}
+          {% endif %}
+        {% else %}
+          {% set href = '#' %}
+        {% endif %}
+
+        {# Fallback connect URL if the view didn't supply one #}
+        {% if card.connect_url %}
+          {% set connect_url = card.connect_url %}
+        {% else %}
+          {% if key == 'ads' %}
+            {% set connect_url = url_for('google_bp.connect_ads') %}
+          {% elif key == 'lsa' %}
+            {% set connect_url = url_for('google_bp.connect_lsa') %}
+          {% elif key == 'ga' %}
+            {% set connect_url = url_for('google_bp.connect_ga') %}
+          {% elif key == 'gsc' %}
+            {% set connect_url = url_for('google_bp.connect_gsc') %}
+          {% elif key == 'gmb' %}
+            {% set connect_url = url_for('google_bp.connect_gmb') %}
+          {% else %}
+            {% set connect_url = '#' %}
+          {% endif %}
+        {% endif %}
+
+        {% set wrapper_tag = 'a' if clickable else 'div' %}
+
+        <{{ wrapper_tag }} {% if clickable %}href="{{ href }}"{% endif %}
+          class="relative block rounded-lg border bg-white p-4 shadow-sm hover:shadow-md transition">
+
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="text-sm text-gray-500">{{ card.name }}</div>
+              <div class="mt-1 text-xs {% if card.connected %}text-green-600{% else %}text-gray-500{% endif %}">
+                {% if card.connected %}
+                  Connected{% if card.last_sync %} • last sync {{ card.last_sync.strftime('%Y-%m-%d %H:%M') }}{% endif %}
+                {% else %}
+                  Not connected
+                {% endif %}
+              </div>
+            </div>
+
+            {% if (not card.connected) and (not card.get('coming_soon')) and connect_url and connect_url != '#' %}
+              <a href="{{ connect_url }}"
+                 class="ml-3 rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50">Connect</a>
+            {% endif %}
+          </div>
+
+          {% if card.get('coming_soon') %}
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div class="-rotate-12 text-3xl font-extrabold uppercase tracking-widest opacity-50 bg-white/80 px-6 py-2 border-2 border-gray-400">
+                Coming Soon
+              </div>
+            </div>
+          {% else %}
+            <!-- BODY -->
+            <div class="mt-4 min-h-[120px] relative rounded-md bg-gray-50 p-4">
+              {% if card.data and card.data.get('sample') %}
+                <!-- Diagonal centered Sample overlay -->
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div class="-rotate-12 text-4xl font-extrabold uppercase tracking-widest opacity-50 bg-white/70 px-8 py-2 border-2 border-gray-400">
+                    Sample
+                  </div>
+                </div>
+              {% endif %}
+
+              {# Special renderings by key (optional) #}
+              {% if key == 'facebook' and (card.connected and card.data and not card.data.get('sample')) %}
+                <!-- <div class="grid grid-cols-3 gap-3 text-center">
+                  <div>
+                    <div class="text-xs text-gray-500">Leads (7d)</div>
+                    <div class="text-xl font-semibold">{{ card.data.last_7d }}</div>
+                  </div>
+                  <div>
+                    <div class="text-xs text-gray-500">Leads (30d)</div>
+                    <div class="text-xl font-semibold">{{ card.data.last_30d }}</div>
+                  </div>
+                  <div>
+                    <div class="text-xs text-gray-500">Total Leads</div>
+                    <div class="text-xl font-semibold">{{ card.data.total }}</div>
+                  </div>
+                </div> -->
+
+              {% elif key == 'lsa' %}
+                {# LSA card: small callouts or simple label #}
+                {% if card.connected and card.data and not card.data.get('sample') %}
+                  <div class="grid grid-cols-3 gap-3 text-center">
+                    <div>
+                      <div class="text-xs text-gray-500">Active Leads (30d)</div>
+                      <div class="text-xl font-semibold">{{ card.data.leads_30d|default('—') }}</div>
+                    </div>
+                    <div>
+                      <div class="text-xs text-gray-500">Avg Rating</div>
+                      <div class="text-xl font-semibold">{{ card.data.rating|default('—') }}</div>
+                    </div>
+                    <div>
+                      <div class="text-xs text-gray-500">Review Count</div>
+                      <div class="text-xl font-semibold">{{ card.data.reviews|default('—') }}</div>
+                    </div>
+                  </div>
+                {% else %}
+                  <div class="text-sm text-gray-600">
+                    Connect Local Services Ads to review leads and optimize your profile.
+                  </div>
+                {% endif %}
+
+              {% elif key == 'wp' and (card.connected and card.data and not card.data.get('sample')) %}
+                {% if card.error %}
+                  <div class="text-sm text-amber-700">Connected, but we couldn’t read from the REST API: {{ card.error }}</div>
+                {% endif %}
+                <div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="rounded border bg-white p-3">
+                    <div class="font-medium">Recent Posts</div>
+                    <ul class="mt-2 space-y-2 text-sm">
+                      {% for p in card.data.posts %}
+                        <li class="flex items-center justify-between">
+                          <span class="line-clamp-1">{{ p.title }}</span>
+                          <a class="text-indigo-600 hover:underline" href="{{ p.link }}" target="_blank">View</a>
+                        </li>
+                      {% else %}
+                        <li class="text-gray-500">No posts found.</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                  <div class="rounded border bg-white p-3">
+                    <div class="font-medium">Recent Pages</div>
+                    <ul class="mt-2 space-y-2 text-sm">
+                      {% for pg in card.data.pages %}
+                        <li class="flex items-center justify-between">
+                          <span class="line-clamp-1">{{ pg.title }}</span>
+                          <a class="text-indigo-600 hover:underline" href="{{ pg.link }}" target="_blank">View</a>
+                        </li>
+                      {% else %}
+                        <li class="text-gray-500">No pages found.</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                </div>
+
+              {% else %}
+                <div class="text-sm text-gray-600">
+                  {% if card.connected %}
+                    Connected — data population is handled by the provider page.
+                  {% else %}
+                    {{ card.data.label }}
+                  {% endif %}
+                </div>
+              {% endif %}
+            </div>
+          {% endif %}
+        </{{ wrapper_tag }}>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

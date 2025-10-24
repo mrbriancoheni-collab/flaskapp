@@ -1,0 +1,49 @@
+import os
+
+class Config:
+    SECRET_KEY = os.environ.get("SECRET_KEY", "change-this")
+    SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_DATABASE_URI")
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Stripe keys
+    STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
+    STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
+
+    # Use the new env var names
+    STRIPE_MONTHLY_PRICE_ID = os.environ.get("STRIPE_MONTHLY_PRICE_ID", "")
+    STRIPE_YEARLY_PRICE_ID = os.environ.get("STRIPE_YEARLY_PRICE_ID", "")
+
+    # Backward-compat fallback if you still had the old names set
+    if not STRIPE_MONTHLY_PRICE_ID:
+        STRIPE_MONTHLY_PRICE_ID = os.environ.get("STRIPE_PRICE_BASIC", "")
+    if not STRIPE_YEARLY_PRICE_ID:
+        STRIPE_YEARLY_PRICE_ID = os.environ.get("STRIPE_PRICE_PRO", "")
+
+    GOOGLE_ADS_DEVELOPER_TOKEN = os.getenv("GOOGLE_ADS_DEVELOPER_TOKEN") or None
+    GOOGLE_ADS_LOGIN_CUSTOMER_ID = (os.getenv("GOOGLE_ADS_LOGIN_CUSTOMER_ID") or "").replace("-", "") or None
+    GOOGLE_ADS_CLIENT_ID = os.getenv("GOOGLE_ADS_CLIENT_ID","")
+    GOOGLE_ADS_CLIENT_SECRET = os.getenv("GOOGLE_ADS_CLIENT_SECRET","")
+    GOOGLE_ADS_REDIRECT_URI = os.getenv("GOOGLE_ADS_REDIRECT_URI","http://localhost:8000/oauth/google-ads/callback")
+    APP_FERNET_KEY = os.getenv("APP_FERNET_KEY","")  # set in prod
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY","")
+    
+    GMB_INSIGHTS_MAX_PER_RUN = 25      # how many accounts per daily run
+    GMB_INSIGHTS_INTERVAL_DAYS = 27    # minimum days between insights per account
+
+    GOOGLE_OAUTH_SCOPES = tuple(
+        s.strip() for s in os.getenv(
+            "GOOGLE_OAUTH_SCOPES",
+            "https://www.googleapis.com/auth/webmasters.readonly"
+        ).split(",")
+    )
+
+    # Password policy (3c)
+    PASSWORD_MIN_LENGTH = 12
+    PASSWORD_REQUIRE_UPPER = True
+    PASSWORD_REQUIRE_LOWER = True
+    PASSWORD_REQUIRE_DIGIT = True
+    PASSWORD_REQUIRE_SPECIAL = True
+    PASSWORD_USE_ZXCVBN = False  # set True if you install zxcvbn
+
+    # Optional
+    BASE_URL = os.environ.get("BASE_URL", "")

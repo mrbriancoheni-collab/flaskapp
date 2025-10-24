@@ -1,0 +1,23 @@
+{% extends "base_app.html" %}
+{% block title %}SEO – GSC Rankings{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-semibold mb-4">GSC Rankings</h1>
+<div class="border rounded overflow-x-auto">
+  <table class="min-w-full text-sm">
+    <thead class="bg-gray-50">
+      <tr><th class="px-3 py-2 text-left">Query</th><th class="px-3 py-2 text-left">Clicks</th><th class="px-3 py-2 text-left">Impr</th><th class="px-3 py-2 text-left">CTR</th><th class="px-3 py-2 text-left">Avg Pos</th></tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+        <tr class="odd:bg-white even:bg-gray-50">
+          <td class="px-3 py-2">{{ r.query }}</td>
+          <td class="px-3 py-2">{{ r.clicks }}</td>
+          <td class="px-3 py-2">{{ r.impr }}</td>
+          <td class="px-3 py-2">{{ r.ctr }}</td>
+          <td class="px-3 py-2">{{ r.pos }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

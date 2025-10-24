@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Users · Fieldspark AI{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-semibold mb-4">Users</h1>
+
+<div class="bg-white border border-slate-200 rounded-xl p-4">
+  <div class="flex items-center justify-between mb-4">
+    <input class="border rounded-lg px-3 py-2 w-64" placeholder="Search users" />
+    <a href="#" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-600 text-white">
+      <i class="fa-solid fa-user-plus"></i><span>Invite User</span>
+    </a>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="text-left text-slate-500">
+        <tr>
+          <th class="py-2">Name</th>
+          <th class="py-2">Email</th>
+          <th class="py-2">Role</th>
+          <th class="py-2">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        <!-- Fill with real users later -->
+        <tr>
+          <td class="py-3">Example User</td>
+          <td class="py-3">example@acme.com</td>
+          <td class="py-3"><span class="px-2 py-1 rounded bg-slate-100">Owner</span></td>
+          <td class="py-3">
+            <a class="text-indigo-600 hover:underline" href="#">Edit</a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

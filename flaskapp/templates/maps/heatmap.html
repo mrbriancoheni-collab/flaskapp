@@ -1,0 +1,14 @@
+{% extends "base_app.html" %}
+{% block title %}Heatmap – {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="text-xl font-semibold mb-4">Customer/Service Heatmap</h1>
+<div id="map" class="h-[70vh] rounded border"></div>
+<script>
+  const points = {{ points_json|safe }};
+  // TODO: initialize your map lib (Leaflet/MapLibre/Google) and render points as a heat layer.
+</script>
+<p class="mt-4 text-sm text-gray-600">
+  Add data at
+  <a class="text-indigo-600 underline" href="{{ url_for('maps_bp.heatmap_ingest') }}">Heatmap → Ingest</a>.
+</p>
+{% endblock %}

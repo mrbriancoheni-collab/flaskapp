@@ -1,0 +1,12 @@
+{% extends "base_app.html" %}
+{% block title %}Heatmap Ingest – {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="text-xl font-semibold mb-4">Heatmap: CSV Ingest</h1>
+<form method="post" enctype="multipart/form-data" class="space-y-3">
+  <input type="file" name="file" accept=".csv" class="block">
+  <button class="px-4 py-2 rounded bg-indigo-600 text-white">Upload</button>
+</form>
+<p class="mt-4 text-sm text-gray-600">
+  Headers: <code>name, email, phone, address, city, state, zip, latitude, longitude, source, occurred_at</code>
+</p>
+{% endblock %}

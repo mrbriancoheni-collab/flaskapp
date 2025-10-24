@@ -1,0 +1,316 @@
+{# templates/google/gsc.html #}
+{% extends "base_app.html" %}
+{% set SECTION = 'google' %}
+{% block title %}Google Search Console{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold">Google Search Console</h1>
+      <p class="text-gray-600">
+        {% if connected_gsc %}
+          Connected to: {{ (gsc.site_url or gsc.property) if gsc else 'Site' }}
+        {% else %}
+          <span class="inline-flex items-center rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-[11px] mr-2">Not Connected</span>
+          Connect to pull live data.
+        {% endif %}
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      {% if not connected_gsc %}
+        {# Use absolute URL + next to avoid Google redirect_uri mismatch from nested pages #}
+        <a href="{{ url_for('google_bp.connect_search_console', _external=True, next=request.url) }}"
+           class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
+          <i class="fa-brands fa-google"></i> Connect Search Console
+        </a>
+      {% else %}
+        <form method="post" action="{{ url_for('google_bp.disconnect', product='gsc') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="rounded-md border px-3 py-2 hover:bg-gray-50" type="submit">
+            <i class="fa-solid fa-plug-circle-xmark mr-2"></i>Disconnect
+          </button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Site selector + timeframe -->
+  <div class="rounded-lg border bg-white p-4">
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-gray-600">Property</label>
+        <select id="gscSite" class="min-w-[320px] rounded-md border px-2 py-1 text-sm">
+          <option value="">{{ gsc.site_url if gsc and gsc.site_url else 'Loading…' }}</option>
+        </select>
+        <button id="gscSave" class="btn btn-primary">Save</button>
+        <span id="gscMsg" class="text-sm text-gray-500"></span>
+      </div>
+
+      <div class="flex items-center gap-2 ml-auto">
+        <label for="tf" class="text-sm text-gray-600">Timeframe</label>
+        {% set tf = request.args.get('timeframe', '28d') %}
+        <select id="tf" class="rounded-md border px-2 py-1 text-sm">
+          <option value="7d"  {{ 'selected' if tf=='7d'  else '' }}>Last 7 days</option>
+          <option value="14d" {{ 'selected' if tf=='14d' else '' }}>Last 14 days</option>
+          <option value="28d" {{ 'selected' if tf=='28d' else '' }}>Last 28 days</option>
+          <option value="30d" {{ 'selected' if tf=='30d' else '' }}>Last 30 days</option>
+          <option value="90d" {{ 'selected' if tf=='90d' else '' }}>Last 90 days</option>
+        </select>
+
+        {% if 'google_bp.gsc_optimize' in current_app.view_functions %}
+          <button id="gscOptimizeBtn"
+                  class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+                  title="Use AI to suggest SEO improvements">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span>Optimize</span>
+          </button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% set g = (gsc if gsc else {
+    "property": "Search Console property",
+    "site_url": "",
+    "period": "Last 28 days",
+    "clicks": 0, "impressions": 0, "ctr_pct": 0.0, "avg_position": 0.0,
+    "top_queries": [], "top_pages": []
+  }) %}
+
+  <!-- KPIs -->
+  <div class="rounded-lg border bg-white p-4 relative" id="gscCard">
+    <div id="gscOverlay" class="hidden absolute inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center z-10">
+      <div class="flex items-center gap-3 text-gray-700">
+        <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+        <span class="text-sm">Loading GSC data…</span>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-xs text-gray-500">Property</div>
+        <div class="font-medium" id="gscProp">{{ g.site_url or g.property }}</div>
+      </div>
+      <div class="text-sm text-gray-500">
+        <span id="gscPeriod">{{ g.period }}</span>
+      </div>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+      <div class="rounded-md border p-3">
+        <div class="text-xs text-gray-500">Clicks</div>
+        <div class="text-xl font-semibold" data-field="clicks">{{ g.clicks }}</div>
+      </div>
+      <div class="rounded-md border p-3">
+        <div class="text-xs text-gray-500">Impressions</div>
+        <div class="text-xl font-semibold" data-field="impressions">{{ g.impressions }}</div>
+      </div>
+      <div class="rounded-md border p-3">
+        <div class="text-xs text-gray-500">CTR</div>
+        <div class="text-xl font-semibold" data-field="ctr_pct">{{ g.ctr_pct }}%</div>
+      </div>
+      <div class="rounded-md border p-3">
+        <div class="text-xs text-gray-500">Avg Position</div>
+        <div class="text-xl font-semibold" data-field="avg_position">{{ g.avg_position }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Insights (text) -->
+  {% if insights %}
+  <div class="rounded-lg border bg-white p-4">
+    <div class="flex items-center gap-2 mb-2">
+      <i class="fa-solid fa-wand-magic-sparkles"></i>
+      <div class="font-medium">AI Insights</div>
+      <span class="ml-2 text-xs text-gray-400">(beta)</span>
+    </div>
+    <div class="text-sm whitespace-pre-line">{{ insights }}</div>
+  </div>
+  {% endif %}
+
+  <!-- Tables -->
+  <div class="grid lg:grid-cols-2 gap-4">
+    <div class="rounded-lg border bg-white p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div class="font-medium">Top Pages</div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="text-left text-gray-500">
+              <th class="py-2 pr-3">Page</th>
+              <th class="py-2 pr-3">Clicks</th>
+              <th class="py-2 pr-3">Impr.</th>
+              <th class="py-2 pr-3">CTR</th>
+              <th class="py-2 pr-3">Pos.</th>
+            </tr>
+          </thead>
+          <tbody id="rowsPages">
+            {% for row in g.top_pages %}
+            <tr class="border-t">
+              <td class="py-2 pr-3 font-mono">{{ row.page or row.url }}</td>
+              <td class="py-2 pr-3">{{ row.clicks }}</td>
+              <td class="py-2 pr-3">{{ row.impressions }}</td>
+              <td class="py-2 pr-3">{{ row.ctr_pct }}%</td>
+              <td class="py-2 pr-3">{{ row.position }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="rounded-lg border bg-white p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div class="font-medium">Top Queries</div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="text-left text-gray-500">
+              <th class="py-2 pr-3">Query</th>
+              <th class="py-2 pr-3">Clicks</th>
+              <th class="py-2 pr-3">Impr.</th>
+              <th class="py-2 pr-3">CTR</th>
+              <th class="py-2 pr-3">Pos.</th>
+            </tr>
+          </thead>
+          <tbody id="rowsQueries">
+            {% for row in g.top_queries %}
+            <tr class="border-t">
+              <td class="py-2 pr-3 font-mono">{{ row.query }}</td>
+              <td class="py-2 pr-3">{{ row.clicks }}</td>
+              <td class="py-2 pr-3">{{ row.impressions }}</td>
+              <td class="py-2 pr-3">{{ row.ctr_pct }}%</td>
+              <td class="py-2 pr-3">{{ row.position }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const GSC = {
+    sitesUrl: "{{ url_for('google_bp.gsc_sites_json') }}",
+    selectUrl: "{{ url_for('google_bp.gsc_select_site') }}",
+    dataUrl: "{{ url_for('google_bp.gsc_data') }}",
+    optimizeUrl: "{% if 'google_bp.gsc_optimize' in current_app.view_functions %}{{ url_for('google_bp.gsc_optimize') }}{% endif %}",
+    csrf: "{{ csrf_token() }}"
+  };
+
+  // Populate sites dropdown
+  (async function loadSites(){
+    try {
+      const res = await fetch(GSC.sitesUrl, { credentials: 'same-origin' });
+      if (!res.ok) return;
+      const j = await res.json();
+      const sel = document.getElementById('gscSite');
+      sel.innerHTML = '';
+      (j.sites || []).forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.siteUrl; opt.textContent = s.siteUrl;
+        if (j.selected && j.selected === s.siteUrl) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      if (!sel.value && j.selected) {
+        const opt = document.createElement('option');
+        opt.value = j.selected; opt.textContent = j.selected;
+        opt.selected = true; sel.appendChild(opt);
+      }
+    } catch(e){ console.warn(e); }
+  })();
+
+  // Save selected site
+  document.getElementById('gscSave').addEventListener('click', async () => {
+    const site = document.getElementById('gscSite').value;
+    const msg = document.getElementById('gscMsg');
+    msg.textContent = 'Saving…';
+    try {
+      const res = await fetch(GSC.selectUrl + '?site_url=' + encodeURIComponent(site), {
+        method:'GET', credentials:'same-origin'
+      });
+      const j = await res.json();
+      msg.textContent = j.ok ? 'Saved.' : (j.error || 'Failed.');
+      if (j.ok) fetchData();
+    } catch(e){ console.error(e); msg.textContent = 'Failed.'; }
+  });
+
+  // Fetch data (timeframe change)
+  document.getElementById('tf').addEventListener('change', fetchData);
+
+  async function fetchData(){
+    const overlay = document.getElementById('gscOverlay');
+    overlay.classList.remove('hidden');
+    const tf = document.getElementById('tf').value || '28d';
+    try {
+      const res = await fetch(GSC.dataUrl + '?timeframe=' + encodeURIComponent(tf), { credentials:'same-origin' });
+      const j = await res.json();
+      // KPIs
+      document.querySelector('[data-field="clicks"]').textContent = (j.summary?.clicks ?? j.clicks) || 0;
+      document.querySelector('[data-field="impressions"]').textContent = (j.summary?.impressions ?? j.impressions) || 0;
+      document.querySelector('[data-field="ctr_pct"]').textContent = ((j.summary?.ctr_pct ?? j.ctr_pct) || 0) + '%';
+      document.querySelector('[data-field="avg_position"]').textContent = (j.summary?.avg_position ?? j.avg_position) || 0;
+      document.getElementById('gscPeriod').textContent = j.period || '';
+      // Tables
+      const tp = j.top_pages || [];
+      const tq = j.top_queries || [];
+      const rowsP = document.getElementById('rowsPages'); rowsP.innerHTML = '';
+      tp.forEach(r => {
+        rowsP.insertAdjacentHTML('beforeend',
+          `<tr class="border-t">
+             <td class="py-2 pr-3 font-mono">${(r.page||r.url)||''}</td>
+             <td class="py-2 pr-3">${r.clicks||0}</td>
+             <td class="py-2 pr-3">${r.impressions||0}</td>
+             <td class="py-2 pr-3">${(r.ctr_pct||0)}%</td>
+             <td class="py-2 pr-3">${r.position||0}</td>
+           </tr>`);
+      });
+      const rowsQ = document.getElementById('rowsQueries'); rowsQ.innerHTML = '';
+      tq.forEach(r => {
+        rowsQ.insertAdjacentHTML('beforeend',
+          `<tr class="border-t">
+             <td class="py-2 pr-3 font-mono">${r.query||''}</td>
+             <td class="py-2 pr-3">${r.clicks||0}</td>
+             <td class="py-2 pr-3">${r.impressions||0}</td>
+             <td class="py-2 pr-3">${(r.ctr_pct||0)}%</td>
+             <td class="py-2 pr-3">${r.position||0}</td>
+           </tr>`);
+      });
+    } catch(e){ console.error(e); }
+    finally { overlay.classList.add('hidden'); }
+  }
+
+  // Optimize button
+  (function(){
+    const btn = document.getElementById('gscOptimizeBtn');
+    if (!btn || !GSC.optimizeUrl) return;
+    btn.addEventListener('click', async () => {
+      if (btn.disabled) return;
+      const old = btn.innerHTML;
+      btn.disabled = true; btn.innerHTML = 'Queuing…';
+      try {
+        const res = await fetch(GSC.optimizeUrl, {
+          method:'POST',
+          headers:{ 'Content-Type': 'application/json', 'X-CSRFToken': GSC.csrf },
+          body: JSON.stringify({ scope:'all' }),
+          credentials:'same-origin'
+        });
+        const j = await res.json().catch(()=>({}));
+        alert(j.message || 'Optimization queued');
+      } catch(e){ console.error(e); alert('Could not start optimization'); }
+      finally { btn.disabled = false; btn.innerHTML = old; }
+    });
+  })();
+
+  // Initial fetch
+  fetchData();
+</script>
+{% endblock %}

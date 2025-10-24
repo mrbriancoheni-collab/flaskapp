@@ -1,0 +1,110 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'fbads' %}
+
+{% block title %}Facebook Ads — Edit Profile{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Facebook Ads Profile</h1>
+      <p class="text-gray-500 text-sm">Manage your Facebook connection, business info, and lead routing.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="{{ url_for('fbads_bp.index') }}" class="inline-flex items-center rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">Back</a>
+
+      {% if profile and profile.connected %}
+        <form method="post" action="{{ url_for('fbads_bp.disconnect') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}"/>
+          <button class="inline-flex items-center rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">Disconnect</button>
+        </form>
+      {% else %}
+        <a href="{{ url_for('fbads_bp.connect') }}" class="inline-flex items-center rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500">Connect</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% set sample_profile = {
+    'connected': False,
+    'page_name': 'Clean Finish Pest Control',
+    'page_id': '1234567890',
+    'ad_account_id': 'act_987654321',
+    'pixel_id': '112233445566',
+    'timezone': 'America/Los_Angeles',
+    'currency': 'USD',
+    'business_name': 'Clean Finish, LLC',
+    'website': 'https://www.cleanfinish.co',
+    'phone': '(916) 555-0199',
+    'address': '1234 Main St, Sacramento, CA 95814',
+    'daily_spend_cap': 250.00,
+    'lead_destination': 'email',
+    'webhook_url': '',
+    'notifications_email': 'leads@cleanfinish.co',
+    'auto_approve_leads': True,
+    'notes': ''
+  } %}
+
+  {% set p = profile if profile else sample_profile %}
+
+  {% if not (profile and profile.connected) %}
+    <div class="mb-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 p-3 text-sm">
+      You are viewing <span class="font-medium">sample data</span>. Connect Facebook to load and edit live values.
+    </div>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('fbads_bp.profile_edit_post') }}" class="space-y-6">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}"/>
+
+    <div class="rounded-xl border bg-white p-4">
+      <h2 class="text-lg font-semibold mb-3">Connection</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div><label class="block text-xs text-gray-600 mb-1">Page Name</label><input name="page_name" value="{{ p.page_name }}" class="w-full rounded-md border-gray-300"/></div>
+        <div><label class="block text-xs text-gray-600 mb-1">Page ID</label><input name="page_id" value="{{ p.page_id }}" class="w-full rounded-md border-gray-300"/></div>
+        <div><label class="block text-xs text-gray-600 mb-1">Ad Account ID</label><input name="ad_account_id" value="{{ p.ad_account_id }}" class="w-full rounded-md border-gray-300"/></div>
+        <div><label class="block text-xs text-gray-600 mb-1">Pixel ID</label><input name="pixel_id" value="{{ p.pixel_id }}" class="w-full rounded-md border-gray-300"/></div>
+        <div><label class="block text-xs text-gray-600 mb-1">Timezone (IANA)</label><input name="timezone" value="{{ p.timezone }}" class="w-full rounded-md border-gray-300" placeholder="America/Los_Angeles"/></div>
+        <div><label class="block text-xs text-gray-600 mb-1">Currency</label><input name="currency" value="{{ p.currency }}" class="w-full rounded-md border-gray-300" placeholder="USD"/></div>
+      </div>
+    </div>
+
+    <div class="rounded-xl border bg-white p-4">
+      <h2 class="text-lg font-semibold mb-3">Business Info</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div><label class="block text-xs text-gray-600 mb-1">Business Name</label><input name="business_name" value="{{ p.business_name }}" class="w-full rounded-md border-gray-300"/></div>
+        <div><label class="block text-xs text-gray-600 mb-1">Website</label><input name="website" value="{{ p.website }}" class="w-full rounded-md border-gray-300"/></div>
+        <div><label class="block text-xs text-gray-600 mb-1">Phone</label><input name="phone" value="{{ p.phone }}" class="w-full rounded-md border-gray-300"/></div>
+        <div><label class="block text-xs text-gray-600 mb-1">Address</label><input name="address" value="{{ p.address }}" class="w-full rounded-md border-gray-300"/></div>
+      </div>
+    </div>
+
+    <div class="rounded-xl border bg-white p-4">
+      <h2 class="text-lg font-semibold mb-3">Spend & Lead Routing</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div><label class="block text-xs text-gray-600 mb-1">Daily Spend Cap (USD)</label><input name="daily_spend_cap" type="number" step="0.01" value="{{ p.daily_spend_cap }}" class="w-full rounded-md border-gray-300"/></div>
+        <div>
+          <label class="block text-xs text-gray-600 mb-1">Lead Destination</label>
+          {% set opts = ['email','webhook','crm'] %}
+          <select name="lead_destination" class="w-full rounded-md border-gray-300 text-sm">
+            {% for opt in opts %}<option value="{{ opt }}" {% if p.lead_destination==opt %}selected{% endif %}>{{ opt|capitalize }}</option>{% endfor %}
+          </select>
+        </div>
+        <div><label class="block text-xs text-gray-600 mb-1">Notifications Email</label><input name="notifications_email" type="email" value="{{ p.notifications_email }}" class="w-full rounded-md border-gray-300"/></div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div><label class="block text-xs text-gray-600 mb-1">Webhook URL (if Destination = Webhook)</label><input name="webhook_url" value="{{ p.webhook_url }}" class="w-full rounded-md border-gray-300" placeholder="https://example.com/webhook"/></div>
+        <div class="flex items-end"><label class="inline-flex items-center gap-2"><input type="checkbox" name="auto_approve_leads" {% if p.auto_approve_leads %}checked{% endif %} class="rounded border-gray-300"><span class="text-sm">Auto-approve incoming leads</span></label></div>
+      </div>
+    </div>
+
+    <div class="rounded-xl border bg-white p-4">
+      <h2 class="text-lg font-semibold mb-3">Notes</h2>
+      <textarea name="notes" rows="4" class="w-full rounded-md border-gray-300" placeholder="Internal notes for this account…">{{ p.notes }}</textarea>
+    </div>
+
+    <div class="flex justify-end gap-3">
+      <a href="{{ url_for('fbads_bp.index') }}" class="rounded-md border px-4 py-2 text-sm hover:bg-gray-50">Cancel</a>
+      <button class="rounded-md bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500">Save Changes</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,374 @@
+{# templates/gmb/index.html #}
+{% extends "base_app.html" %}
+{% set SECTION = 'gmb' %}
+{% block title %}Google Business (GMB){% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold">Google Business</h1>
+      <p class="text-gray-500">Connect to manage reviews and Business Profile details.</p>
+    </div>
+    <a href="{{ url_for('account_bp.dashboard') }}" class="rounded-md border px-3 py-2 text-gray-700 hover:bg-gray-50">Back to Dashboard</a>
+  </div>
+
+  {# Connection banner #}
+  <div class="rounded-lg border bg-white p-6">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        {% if connected %}
+          <span class="inline-flex items-center rounded-full bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 text-xs font-medium">
+            <i class="fa-solid fa-circle-check mr-1"></i> Connected
+          </span>
+          <div class="text-lg font-medium">Google Business</div>
+        {% else %}
+          <span class="inline-flex items-center rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-xs font-medium">
+            <i class="fa-solid fa-circle-exclamation mr-1"></i> Not Connected
+          </span>
+          <div class="text-lg font-medium">Google Business</div>
+        {% endif %}
+      </div>
+
+      <div class="flex items-center gap-2">
+        {% if connected %}
+          <form method="post" action="{{ url_for('gmb_bp.disconnect') }}">
+            <button class="rounded-md border px-3 py-2 hover:bg-gray-50" type="submit">
+              <i class="fa-solid fa-plug-circle-xmark mr-2"></i>Disconnect
+            </button>
+          </form>
+        {% else %}
+          <a href="{{ url_for('gmb_bp.start') }}"
+             class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
+            <i class="fa-solid fa-link"></i> Connect Google Business
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Primary actions #}
+    <div class="mt-4 flex flex-wrap gap-2">
+      <a href="{{ url_for('gmb_bp.reviews') }}" class="rounded-md border px-3 py-2 hover:bg-gray-50">
+        <i class="fa-regular fa-star mr-2"></i>Reviews
+      </a>
+      <a href="{{ url_for('gmb_bp.ai_responses') }}" class="rounded-md border px-3 py-2 hover:bg-gray-50">
+        <i class="fa-solid fa-robot mr-2"></i>AI Review Responses
+      </a>
+      <a href="{{ url_for('gmb_bp.requests_email') }}" class="rounded-md border px-3 py-2 hover:bg-gray-50">
+        <i class="fa-regular fa-envelope mr-2"></i>Review Requests (Email)
+      </a>
+    </div>
+  </div>
+
+  {# DEMO MODE banner when not connected #}
+  {% if not connected %}
+    <div class="rounded-md border border-indigo-200 bg-indigo-50 p-4 flex items-start gap-3">
+      <i class="fa-solid fa-flask text-indigo-600 mt-0.5"></i>
+      <div class="text-sm text-indigo-900">
+        <div class="font-medium">Demo Mode: editing sample data (no API calls).</div>
+        <p class="mt-1">Use this to demonstrate the UI/UX and optimization flow to reviewers. Changes persist to your session only.</p>
+      </div>
+    </div>
+  {% endif %}
+
+  {# Profile section #}
+  <div class="rounded-lg border bg-white">
+    <div class="flex items-center justify-between p-6 border-b">
+      <div class="flex items-center gap-2">
+        <h2 class="text-lg font-medium">Business Profile</h2>
+        {% if not connected %}
+          <span class="ml-2 inline-flex items-center rounded-full bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 text-[11px]">Sample Data</span>
+        {% endif %}
+      </div>
+      <div class="flex items-center gap-2">
+        {# AI connection pill #}
+        {% if ai_connected %}
+          <span class="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-xs">
+            <i class="fa-solid fa-sparkles mr-1"></i> AI: Connected
+          </span>
+        {% else %}
+          <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 text-xs" title="Set OPENAI_API_KEY to enable">
+            <i class="fa-regular fa-circle-dashed mr-1"></i> AI: Not configured
+          </span>
+        {% endif %}
+
+        {# Run optimizer via AJAX so we can show spinner and auto-open modal #}
+        <button id="gmb-ai-btn"
+                class="inline-flex items-center gap-2 px-3 py-2 rounded text-white bg-[var(--brand)] hover:bg-[var(--brand-dark)]">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Run AI Optimizer
+        </button>
+
+        {% if suggestions %}
+          <button type="button" class="inline-flex items-center gap-2 rounded-md border px-3 py-2 hover:bg-gray-50" id="btnViewSuggestions">
+            <i class="fa-solid fa-lightbulb"></i>
+            View AI Suggestions
+          </button>
+        {% endif %}
+
+        {# In demo mode we still allow saving (to session). Backend should accept ?demo=1. #}
+        <button form="gmb-profile-form" type="submit" class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
+          <i class="fa-solid fa-floppy-disk"></i>
+          Save Changes
+        </button>
+      </div>
+    </div>
+
+    {# Editable form ALWAYS enabled so sample data can be edited #}
+    <form id="gmb-profile-form"
+          method="post"
+          action="{{ url_for('gmb_bp.update_profile', demo=0 if connected else 1) }}"
+          class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+      {# Name #}
+      <div class="col-span-1">
+        <label class="block text-sm font-medium text-gray-700">Business Name</label>
+        <input name="name" value="{{ (profile.name if connected and profile else (profile.name if profile else (sample_profile.name if sample_profile else 'Clean Finish Cleaning Service'))) | default('', true) }}" class="mt-1 w-full rounded-md border px-3 py-2">
+      </div>
+      {# Primary Category #}
+      <div class="col-span-1">
+        <label class="block text-sm font-medium text-gray-700">Primary Category</label>
+        <input name="primary_category" value="{{ (profile.primary_category if connected and profile else (profile.primary_category if profile else (sample_profile.primary_category if sample_profile else 'House Cleaning Service'))) | default('', true) }}" class="mt-1 w-full rounded-md border px-3 py-2">
+      </div>
+
+      {# Additional Categories #}
+      <div class="col-span-1 md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700">Additional Categories (comma-separated)</label>
+        <input name="additional_categories" value="{{ (profile.additional_categories|join(', ') if (profile and profile.additional_categories) else (sample_profile.additional_categories|join(', ') if sample_profile and sample_profile.additional_categories else 'Janitorial Service, Window Cleaning Service')) }}" class="mt-1 w-full rounded-md border px-3 py-2">
+      </div>
+
+      {# Description #}
+      <div class="col-span-1 md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700">Description</label>
+        <textarea name="description" rows="5" class="mt-1 w-full rounded-md border px-3 py-2">{{ (profile.description if profile and profile.description else (sample_profile.description if sample_profile else 'Eco-friendly, high-quality residential and commercial cleaning serving Greater Sacramento. Transparent pricing, vetted pros, and a 100% happiness guarantee.')) | trim }}</textarea>
+        <p class="mt-1 text-xs text-gray-500">Tip: Keep it clear, concise, and keyword-rich. The AI Optimizer can suggest improvements.</p>
+      </div>
+
+      {# Phone & Website #}
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Phone</label>
+        <input name="phone" value="{{ (profile.phone if profile and profile.phone else (sample_profile.phone if sample_profile else '(916) 555-0198')) | default('', true) }}" class="mt-1 w-full rounded-md border px-3 py-2">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Website</label>
+        <input name="website" value="{{ (profile.website if profile and profile.website else (sample_profile.website if sample_profile else 'https://cleanfinish.example.com')) | default('', true) }}" class="mt-1 w-full rounded-md border px-3 py-2">
+      </div>
+
+      {# Address #}
+      <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700">Address</label>
+        <input name="address" value="{{ (profile.address if profile and profile.address else (sample_profile.address if sample_profile else '8213 Northam Dr, Antelope, CA 95843')) | default('', true) }}" class="mt-1 w-full rounded-md border px-3 py-2">
+      </div>
+
+      {# Service Area(s) #}
+      <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700">Service Areas (comma-separated)</label>
+        <input name="service_areas" value="{{ (profile.service_areas|join(', ') if profile and profile.service_areas else (sample_profile.service_areas|join(', ') if sample_profile and sample_profile.service_areas else 'Sacramento, Roseville, Citrus Heights, Elk Grove')) }}" class="mt-1 w-full rounded-md border px-3 py-2">
+      </div>
+
+      {# Hours - keep simple (key: value per line) #}
+      <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700">Hours (one per line, e.g. Mon-Fri: 8am–6pm)</label>
+        <textarea name="hours" rows="4" class="mt-1 w-full rounded-md border px-3 py-2">{{ (profile.hours_text if profile and profile.hours_text else (sample_profile.hours_text if sample_profile else 'Mon–Fri: 8:00 AM – 6:00 PM\nSat: 9:00 AM – 2:00 PM\nSun: Closed')) | trim }}</textarea>
+      </div>
+
+      {# Attributes #}
+      <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700">Attributes (comma-separated, e.g. Women-led, Veteran-owned, Eco-friendly)</label>
+        <input name="attributes" value="{{ (profile.attributes|join(', ') if profile and profile.attributes else (sample_profile.attributes|join(', ') if sample_profile and sample_profile.attributes else 'Eco-friendly, Women-led, Locally owned')) }}" class="mt-1 w-full rounded-md border px-3 py-2">
+      </div>
+
+      {# Photos note #}
+      <div class="md:col-span-2">
+        <div class="rounded-md border border-dashed p-4 text-sm text-gray-600">
+          <div class="font-medium text-gray-800 mb-1">Photos</div>
+          <p>
+            Manage photos and cover images from the
+            <a class="text-indigo-600 underline" href="{{ url_for('gmb_bp.photos') if connected else url_for('gmb_bp.start') }}">Photos</a> page.
+            {% if not connected %}Connect your account to upload media.{% endif %}
+          </p>
+        </div>
+      </div>
+    </form>
+
+    {# Small notice row; suggestions now live in modal #}
+    <div class="border-t p-6 bg-gray-50">
+      {% if suggestions %}
+        <p class="text-sm text-gray-700">
+          AI suggestions are ready.
+          <button type="button" class="text-indigo-600 font-medium hover:underline" id="btnViewSuggestionsInline">Open suggestions</button>.
+        </p>
+      {% else %}
+        <p class="text-sm text-gray-600">No suggestions yet. Click <span class="font-medium">AI Optimizer</span> to generate improvements based on your current profile.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {# --- RATIONALE panel for Google API review team --- #}
+  <div class="rounded-lg border bg-white p-6">
+    <div class="flex items-center justify-between">
+      <h3 class="text-base font-semibold">Why we’re requesting access to the Google Business Profile API</h3>
+      <button type="button" class="text-sm text-indigo-600 hover:underline" onclick="const e=document.getElementById('rationaleBody'); e.classList.toggle('hidden')">
+        Toggle details
+      </button>
+    </div>
+    <div id="rationaleBody" class="mt-3 text-sm text-gray-700 space-y-2">
+      <p>Our application helps local businesses manage and optimize their Google Business Profiles responsibly. API access enables:</p>
+      <ul class="list-disc pl-5 space-y-1">
+        <li><strong>Accurate profile sync</strong>: Read/update core entity fields (name, description, categories, service areas, attributes, hours) to ensure parity between our UI and the live profile.</li>
+        <li><strong>Review management</strong>: Fetch reviews and <em>post owner replies</em> from a unified inbox, with audit logging and user permissions.</li>
+        <li><strong>Content quality & compliance</strong>: Generate AI suggestions with clear human review UX; we never auto-publish. API is only called when users explicitly apply changes.</li>
+        <li><strong>Insights-driven optimization</strong>: Read performance/insights endpoints to surface measurable improvements (e.g., calls, direction requests, views).</li>
+        <li><strong>Reduced support load</strong>: Avoid error-prone manual copy/paste; enforce validation (e.g., category limits, text lengths) before calling the API.</li>
+        <li><strong>Least-privilege design</strong>: We scope tokens to GBP only, refresh securely, and respect user revocation. No data is shared outside the owning account.</li>
+      </ul>
+      <p class="text-xs text-gray-500">In Demo Mode (no API), this page shows the exact UI/UX and workflows reviewers will see. With API access, the same UX will sync changes to GBP only after explicit user confirmation.</p>
+    </div>
+  </div>
+
+  {% if not connected %}
+    {# Educational panel when not connected #}
+    <div class="rounded-lg border bg-white p-6">
+      <h3 class="text-base font-medium mb-2">Why connect your Google Business Profile?</h3>
+      <ul class="list-disc pl-5 text-sm text-gray-700 space-y-1">
+        <li>Edit and sync your Business Profile information directly.</li>
+        <li>Respond to reviews with AI-assisted drafts.</li>
+        <li>Track profile completeness and get optimization tips.</li>
+      </ul>
+      <div class="mt-4">
+        <a href="{{ url_for('gmb_bp.start') }}" class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
+          <i class="fa-solid fa-link"></i> Connect Google Business
+        </a>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+{# Spinner overlay (hidden by default) #}
+<div id="aiOverlay" class="fixed inset-0 z-[60] hidden items-center justify-center bg-white/70 backdrop-blur-sm">
+  <div class="flex flex-col items-center gap-3 text-gray-700">
+    <svg class="animate-spin h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+    </svg>
+    <div class="text-sm">AI is thinking…</div>
+  </div>
+</div>
+
+{# Include the modal (expects: suggestions, profile, connected) #}
+{% include 'gmb/_suggestions_modal.html' %}
+
+{# Scripts: open modal, run optimizer via JSON, show spinner, handle Turbo/HTMX #}
+<script>
+(function () {
+  function openSuggestionsModal() {
+    var modal = document.getElementById('gmbSuggestionsModal');
+    if (!modal) return;
+    if (!('showModal' in modal) && window.dialogPolyfill) {
+      window.dialogPolyfill.registerDialog(modal);
+    }
+    try {
+      if (typeof modal.showModal === 'function') modal.showModal();
+      else { modal.setAttribute('open','open'); document.body.style.overflow = 'hidden'; }
+    } catch (e) { console.error('open modal error', e); }
+  }
+
+  function autoOpenIfQuery() {
+    var params = new URLSearchParams(window.location.search || '');
+    if (params.get('show') === 'suggestions') openSuggestionsModal();
+  }
+
+  // Spinner helpers
+  var overlay = null;
+  function showOverlay(){ overlay = overlay || document.getElementById('aiOverlay'); if (overlay){ overlay.classList.remove('hidden'); overlay.classList.add('flex'); } }
+  function hideOverlay(){ overlay = overlay || document.getElementById('aiOverlay'); if (overlay){ overlay.classList.add('hidden'); overlay.classList.remove('flex'); } }
+
+  // Wire buttons
+  function wireButtons() {
+    var runBtn = document.getElementById('btnRunOptimizer');
+    if (runBtn && !runBtn._wired) {
+      runBtn._wired = true;
+      runBtn.addEventListener('click', async function () {
+        showOverlay();
+        try {
+          const resp = await fetch('{{ url_for("gmb_bp.optimize_profile_json") }}', {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'fetch' },
+            credentials: 'same-origin'
+          });
+          const data = await resp.json();
+          if (!resp.ok || !data.ok) throw new Error(data.error || 'AI optimize failed');
+          const url = new URL(window.location.href);
+          url.searchParams.set('show', 'suggestions');
+          window.history.replaceState({}, '', url.toString());
+          openSuggestionsModal();
+        } catch (e) {
+          console.error(e);
+          alert('Could not run AI Optimizer. Please try again.');
+        } finally {
+          hideOverlay();
+        }
+      });
+    }
+
+    var viewBtn = document.getElementById('btnViewSuggestions');
+    if (viewBtn && !viewBtn._wired) {
+      viewBtn._wired = true;
+      viewBtn.addEventListener('click', openSuggestionsModal);
+    }
+    var viewInline = document.getElementById('btnViewSuggestionsInline');
+    if (viewInline && !viewInline._wired) {
+      viewInline._wired = true;
+      viewInline.addEventListener('click', openSuggestionsModal);
+    }
+  }
+
+  // Lifecycle hooks for different navigations
+  document.addEventListener('DOMContentLoaded', function(){ autoOpenIfQuery(); wireButtons(); });
+  window.addEventListener('load', function(){ autoOpenIfQuery(); wireButtons(); });
+  document.addEventListener('turbo:load', function(){ autoOpenIfQuery(); wireButtons(); });
+  document.addEventListener('turbo:render', function(){ autoOpenIfQuery(); wireButtons(); });
+  document.addEventListener('htmx:afterSettle', function(){ autoOpenIfQuery(); wireButtons(); });
+  window.addEventListener('pageshow', function(){ autoOpenIfQuery(); wireButtons(); });
+})();
+</script>
+        
+<script>
+document.getElementById('gmb-ai-btn')?.addEventListener('click', async () => {
+  try {
+    const res = await fetch("{{ url_for('gmb_bp.optimize_profile_json') }}", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (data.ok) {
+      // reload to show the suggestions panel (stored in session)
+      location.href = "{{ url_for('gmb_bp.index') }}?show=suggestions";
+    } else {
+      alert("AI Optimizer failed: " + (data.error || "unknown error"));
+    }
+  } catch (e) {
+    alert("Network error running AI Optimizer");
+  }
+});
+</script>
+<script>
+async function runGmbOptimizer() {
+  const btn = document.getElementById('gmb-ai-opt-btn');
+  btn?.setAttribute('disabled', 'disabled');
+  try {
+    const res = await fetch("/account/gmb/optimize.json", { method: "POST" });
+    const data = await res.json();
+    if (data.ok) {
+      // show your modal / hydrate the suggestions panel
+      window.location = "/account/gmb?show=suggestions";
+    } else {
+      alert("AI Optimizer failed: " + (data.error || "Unknown error"));
+    }
+  } catch (e) {
+    alert("Network error running optimizer.");
+  } finally {
+    btn?.removeAttribute('disabled');
+  }
+}
+</script>
+{% endblock %}

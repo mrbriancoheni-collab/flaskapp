@@ -1,0 +1,107 @@
+{% extends "base_admin.html" %}
+{% block title %}Admin – Dashboard{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold">Admin Dashboard</h1>
+  <div class="text-sm">
+    Active subs: <span class="font-semibold">{{ subs_active }}</span> ·
+    Canceled: <span class="font-semibold">{{ subs_canceled }}</span>
+  </div>
+</div>
+
+<div class="grid md:grid-cols-2 gap-6">
+  <div class="bg-white border rounded-xl p-4">
+    <div class="font-semibold mb-2">Recent Accounts</div>
+    <ul class="text-sm space-y-1">
+      {% for a in accounts %}
+        <li class="flex items-center justify-between">
+          <a class="underline" href="{{ url_for('admin_bp.account_detail', account_id=a.id) }}">{{ a.name or ('Account #'+a.id|string) }}</a>
+          <span class="text-gray-500">{{ a.plan }}/{{ a.status }}</span>
+        </li>
+      {% else %}
+        <li class="text-gray-500">No accounts yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+  
+  {# New Paid Customers #}
+<section class="card">
+  <div class="card-header">
+    <h2>New paid customers</h2>
+    <a class="muted" href="{{ url_for('admin_bp.accounts') }}">View all ›</a>
+  </div>
+
+{# --- New paid customers --- #}
+{% if paid_new is not none %}
+<div class="card">
+  <div class="card-header">
+    <h3>New paid customers</h3>
+    <small class="muted">
+      Shows recent accounts with active/trialing subscriptions
+      {% if config.PAID_PLANS %}or plan in {{ config.PAID_PLANS|join(', ') }}{% endif %}.
+    </small>
+  </div>
+  <div class="card-body p-0">
+    {% if paid_new %}
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th>Primary user</th>
+            <th>Plan/Status</th>
+            <th>Created</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for acct in paid_new %}
+          {% set pu = paid_new_primary_user.get(acct.id) %}
+          <tr>
+            <td>{{ acct.name }}</td>
+            <td>
+              {% if pu %}
+                <a href="mailto:{{ pu.email }}">{{ pu.name or pu.email }}</a>
+                <div class="muted">{{ pu.email }}</div>
+              {% else %}
+                <span class="muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {# show whatever fields exist #}
+              {% if hasattr(acct, 'plan') and acct.plan %}{{ acct.plan }}
+              {% elif hasattr(acct, 'plan_code') and acct.plan_code %}{{ acct.plan_code }}
+              {% elif hasattr(acct, 'status') and acct.status %}{{ acct.status }}
+              {% else %}<span class="muted">—</span>{% endif %}
+            </td>
+            <td>{{ acct.created_at.strftime('%Y-%m-%d') if acct.created_at else '' }}</td>
+            <td class="text-right">
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin_bp.account_detail', account_id=acct.id) }}">View</a>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="p-3 muted">No recent paid accounts found.</div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+  <div class="bg-white border rounded-xl p-4">
+    <div class="font-semibold mb-2">Recent Users</div>
+    <ul class="text-sm space-y-1">
+      {% for u in users %}
+        <li class="flex items-center justify-between">
+          <span>{{ u.email }}</span>
+          <form method="post" action="{{ url_for('admin_bp.impersonate', user_id=u.id) }}">
+            <button class="px-3 py-1 rounded bg-indigo-600 text-white text-xs">Impersonate</button>
+          </form>
+        </li>
+      {% else %}
+        <li class="text-gray-500">No users yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

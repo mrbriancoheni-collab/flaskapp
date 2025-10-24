@@ -1,0 +1,37 @@
+{% extends "base_admin.html" %}
+{% block title %}Admin – Logs{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Admin Audit Logs</h1>
+<div class="bg-white border rounded-xl overflow-hidden">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="text-left px-3 py-2">Time (UTC)</th>
+        <th class="text-left px-3 py-2">Admin</th>
+        <th class="text-left px-3 py-2">Action</th>
+        <th class="text-left px-3 py-2">Target</th>
+        <th class="text-left px-3 py-2">Note</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows.items %}
+      <tr class="border-t">
+        <td class="px-3 py-2">{{ r.created_at }}</td>
+        <td class="px-3 py-2">{{ r.admin_user_id }}</td>
+        <td class="px-3 py-2">{{ r.action }}</td>
+        <td class="px-3 py-2">acct {{ r.target_account_id }} / user {{ r.target_user_id }}</td>
+        <td class="px-3 py-2">{{ r.note }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="px-3 py-4 text-gray-500">No logs.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="mt-4 flex items-center justify-end gap-2 text-sm">
+  {% if rows.has_prev %}<a class="underline" href="{{ url_for('admin_bp.logs', page=rows.prev_num, per=rows.per_page) }}">Prev</a>{% endif %}
+  <span>Page {{ rows.page }} / {{ rows.pages or 1 }}</span>
+  {% if rows.has_next %}<a class="underline" href="{{ url_for('admin_bp.logs', page=rows.next_num, per=rows.per_page) }}">Next</a>{% endif %}
+</div>
+{% endblock %}

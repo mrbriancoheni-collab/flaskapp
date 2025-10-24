@@ -37,3 +37,7 @@ google-analytics-data==0.18.19
 google-auth==2.34.0
 google-auth-httplib2==0.2.0
 google-auth-oauthlib==1.2.1
+
+# Web scraping for SERP scraper
+requests>=2.31
+beautifulsoup4>=4.12

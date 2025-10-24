@@ -1,0 +1,357 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'team' %}
+{% block title %}Team Members · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-8">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold text-gray-900">Team Members</h1>
+      <p class="text-gray-500 mt-1">
+        Manage team access and permissions.
+        {% if seat_limit %}
+          Using {{ seat_usage }}/{{ seat_limit }} seats.
+        {% else %}
+          Unlimited seats on {{ account.plan|capitalize }} plan.
+        {% endif %}
+      </p>
+    </div>
+    {% if can_add_member %}
+      <button onclick="document.getElementById('invite-modal').classList.remove('hidden')"
+              class="rounded-md bg-violet-600 text-white px-4 py-2 hover:bg-violet-700 transition flex items-center gap-2">
+        <i class="fas fa-user-plus"></i>
+        Invite Member
+      </button>
+    {% else %}
+      <button disabled
+              class="rounded-md bg-gray-300 text-gray-500 px-4 py-2 cursor-not-allowed flex items-center gap-2">
+        <i class="fas fa-lock"></i>
+        Seat Limit Reached
+      </button>
+    {% endif %}
+  </div>
+
+  <!-- Upgrade Notice if at limit -->
+  {% if not can_add_member %}
+  <div class="rounded-lg border border-amber-200 bg-amber-50 p-4">
+    <div class="flex items-start gap-3">
+      <i class="fas fa-exclamation-triangle text-amber-600 mt-0.5"></i>
+      <div class="flex-1">
+        <h3 class="font-medium text-amber-900">Team Seat Limit Reached</h3>
+        <p class="text-sm text-amber-800 mt-1">
+          You've reached your {{ seat_limit }} seat limit on the {{ account.plan|capitalize }} plan.
+          Upgrade to add more team members.
+        </p>
+        <a href="{{ url_for('billing.choose_plan') }}"
+           class="inline-block mt-2 text-sm font-medium text-amber-900 underline hover:text-amber-800">
+          View Upgrade Options →
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Current Team Members -->
+  <div class="bg-white rounded-lg border">
+    <div class="px-6 py-4 border-b">
+      <h2 class="text-lg font-medium text-gray-900">Current Members ({{ team_members|length }})</h2>
+    </div>
+
+    <div class="divide-y">
+      {% for member in team_members %}
+      <div class="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition">
+        <!-- Member Info -->
+        <div class="flex items-center gap-4 flex-1">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+            {{ member.name[0]|upper }}
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center gap-2">
+              <h3 class="font-medium text-gray-900">{{ member.name }}</h3>
+              {% if member.id == g.user.id %}
+                <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">You</span>
+              {% endif %}
+            </div>
+            <p class="text-sm text-gray-500">{{ member.email }}</p>
+          </div>
+        </div>
+
+        <!-- Role Badge -->
+        <div class="flex items-center gap-3">
+          {% if member.role == 'owner' %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-violet-100 text-violet-800">
+              <i class="fas fa-crown mr-1.5 text-xs"></i>
+              Owner
+            </span>
+          {% elif member.role == 'admin' %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+              <i class="fas fa-shield-alt mr-1.5 text-xs"></i>
+              Admin
+            </span>
+          {% else %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+              <i class="fas fa-user mr-1.5 text-xs"></i>
+              Member
+            </span>
+          {% endif %}
+
+          <!-- Actions Dropdown -->
+          {% if g.user.role in ['owner', 'admin'] and member.id != g.user.id %}
+          <div class="relative" x-data="{ open: false }">
+            <button @click="open = !open" @click.away="open = false"
+                    class="p-2 hover:bg-gray-100 rounded-md transition">
+              <i class="fas fa-ellipsis-v text-gray-500"></i>
+            </button>
+
+            <!-- Dropdown Menu -->
+            <div x-show="open" x-cloak
+                 class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-10">
+
+              {% if g.user.role == 'owner' %}
+              <!-- Change Role -->
+              <button onclick="changeRole({{ member.id }}, '{{ member.role }}')"
+                      class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                <i class="fas fa-exchange-alt text-gray-400"></i>
+                Change Role
+              </button>
+              {% endif %}
+
+              <!-- Remove -->
+              {% if (g.user.role == 'owner') or (g.user.role == 'admin' and member.role == 'member') %}
+              <button onclick="removeMember({{ member.id }}, '{{ member.name }}')"
+                      class="w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50 flex items-center gap-2">
+                <i class="fas fa-user-minus text-red-400"></i>
+                Remove
+              </button>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Pending Invitations -->
+  {% if pending_invites %}
+  <div class="bg-white rounded-lg border">
+    <div class="px-6 py-4 border-b">
+      <h2 class="text-lg font-medium text-gray-900">Pending Invitations ({{ pending_invites|length }})</h2>
+    </div>
+
+    <div class="divide-y">
+      {% for invite in pending_invites %}
+      <div class="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition">
+        <!-- Invite Info -->
+        <div class="flex items-center gap-4 flex-1">
+          <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+            <i class="fas fa-envelope"></i>
+          </div>
+          <div class="flex-1">
+            <h3 class="font-medium text-gray-900">{{ invite.email }}</h3>
+            <p class="text-sm text-gray-500">
+              Invited {{ invite.created_at.strftime('%b %d, %Y') }} ·
+              Expires {{ invite.expires_at.strftime('%b %d, %Y') }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Status & Actions -->
+        <div class="flex items-center gap-3">
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
+            <i class="fas fa-clock mr-1.5 text-xs"></i>
+            Pending as {{ invite.role|capitalize }}
+          </span>
+
+          <button onclick="revokeInvite({{ invite.id }}, '{{ invite.email }}')"
+                  class="p-2 hover:bg-red-50 rounded-md text-red-600 transition">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Leave Team (if not sole owner) -->
+  {% if g.user.role != 'owner' or (team_members|selectattr('role', 'equalto', 'owner')|list|length > 1) %}
+  <div class="bg-white rounded-lg border border-red-200">
+    <div class="px-6 py-4">
+      <h3 class="font-medium text-gray-900">Leave Team</h3>
+      <p class="text-sm text-gray-500 mt-1">
+        Remove yourself from this team. You'll lose access to all team resources.
+      </p>
+      <form method="POST" action="{{ url_for('team.leave_team') }}"
+            onsubmit="return confirm('Are you sure you want to leave this team? This action cannot be undone.');"
+            class="mt-3">
+        <button type="submit"
+                class="rounded-md bg-red-600 text-white px-4 py-2 text-sm hover:bg-red-700 transition">
+          Leave Team
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- Invite Modal -->
+<div id="invite-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg max-w-md w-full mx-4">
+    <div class="px-6 py-4 border-b flex items-center justify-between">
+      <h3 class="text-lg font-semibold">Invite Team Member</h3>
+      <button onclick="document.getElementById('invite-modal').classList.add('hidden')"
+              class="text-gray-400 hover:text-gray-600">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <form method="POST" action="{{ url_for('team.invite') }}" class="p-6 space-y-4">
+      <!-- Email -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+        <input type="email" name="email" required
+               placeholder="colleague@example.com"
+               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-500">
+      </div>
+
+      <!-- Role -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+        <select name="role" required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-500">
+          <option value="member">Member - View and manage content</option>
+          <option value="admin">Admin - Full access except billing</option>
+          {% if g.user.role == 'owner' %}
+          <option value="owner">Owner - Full administrative access</option>
+          {% endif %}
+        </select>
+        <p class="text-xs text-gray-500 mt-1">
+          <a href="#" class="text-violet-600 hover:underline">Learn more about roles</a>
+        </p>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-3 pt-2">
+        <button type="button"
+                onclick="document.getElementById('invite-modal').classList.add('hidden')"
+                class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition">
+          Cancel
+        </button>
+        <button type="submit"
+                class="flex-1 px-4 py-2 bg-violet-600 text-white rounded-md hover:bg-violet-700 transition">
+          Send Invitation
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Alpine.js for dropdowns -->
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+<!-- JavaScript for actions -->
+<script>
+function removeMember(userId, userName) {
+  if (!confirm(`Remove ${userName} from the team? They will lose access immediately.`)) {
+    return;
+  }
+
+  fetch(`/team/members/${userId}/remove`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  })
+  .catch(error => {
+    alert('Failed to remove member: ' + error);
+  });
+}
+
+function changeRole(userId, currentRole) {
+  const roleOptions = {
+    'member': 'Member',
+    'admin': 'Admin',
+    'owner': 'Owner'
+  };
+
+  let newRole = prompt(`Change role for this user. Enter: member, admin, or owner\n\nCurrent role: ${currentRole}`);
+  if (!newRole) return;
+
+  newRole = newRole.toLowerCase().trim();
+  if (!['member', 'admin', 'owner'].includes(newRole)) {
+    alert('Invalid role. Must be: member, admin, or owner');
+    return;
+  }
+
+  if (newRole === currentRole) {
+    alert('User already has this role');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('role', newRole);
+
+  fetch(`/team/members/${userId}/role`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+    },
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  })
+  .catch(error => {
+    alert('Failed to change role: ' + error);
+  });
+}
+
+function revokeInvite(inviteId, email) {
+  if (!confirm(`Revoke invitation for ${email}?`)) {
+    return;
+  }
+
+  fetch(`/team/invite/${inviteId}/revoke`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  })
+  .catch(error => {
+    alert('Failed to revoke invitation: ' + error);
+  });
+}
+</script>
+
+<style>
+[x-cloak] { display: none !important; }
+</style>
+{% endblock %}

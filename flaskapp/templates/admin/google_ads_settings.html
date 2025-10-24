@@ -1,0 +1,301 @@
+{% extends "base_admin.html" %}
+{% block title %}Admin – Google Ads AI Settings{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold">Google Ads AI Optimization Settings</h1>
+      <p class="text-sm text-gray-600 mt-1">Configure spend thresholds, schedules, and AI behavior</p>
+    </div>
+    <div class="flex gap-2">
+      <a href="{{ url_for('admin_bp.google_ads_recommendations') }}"
+         class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors">
+        <i class="fa-solid fa-list mr-1"></i> View Recommendations
+      </a>
+      <a href="{{ url_for('admin_bp.dashboard') }}"
+         class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Back to Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- System Status -->
+  <div class="bg-white border rounded-lg p-6 mb-6">
+    <h2 class="text-lg font-semibold mb-4">System Status</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <h3 class="text-sm font-medium text-gray-700 mb-3">Configuration</h3>
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-600">OpenAI API Key</span>
+            {% if settings.OPENAI_API_KEY_SET %}
+              <span class="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
+                <i class="fa-solid fa-check-circle mr-1"></i> Configured
+              </span>
+            {% else %}
+              <span class="inline-flex items-center px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-medium">
+                <i class="fa-solid fa-times-circle mr-1"></i> Missing
+              </span>
+            {% endif %}
+          </div>
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-600">OpenAI Model</span>
+            <span class="font-medium text-gray-900">{{ settings.OPENAI_MODEL }}</span>
+          </div>
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-600">Accounts with Google Ads</span>
+            <span class="font-medium text-gray-900">{{ accounts_with_ads }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="text-sm font-medium text-gray-700 mb-3">Insights Stats</h3>
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-600">Total Recommendations</span>
+            <span class="font-medium text-gray-900">{{ stats.total_recommendations }}</span>
+          </div>
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-600">Open</span>
+            <span class="font-medium text-blue-600">{{ stats.open_recommendations }}</span>
+          </div>
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-600">Applied</span>
+            <span class="font-medium text-green-600">{{ stats.applied_recommendations }}</span>
+          </div>
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-600">Dismissed</span>
+            <span class="font-medium text-gray-600">{{ stats.dismissed_recommendations }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Spend Thresholds Configuration -->
+  <div class="bg-white border rounded-lg p-6 mb-6">
+    <h2 class="text-lg font-semibold mb-4">Spend Thresholds</h2>
+    <p class="text-sm text-gray-600 mb-6">
+      Configure daily spend thresholds to determine analysis frequency for Google Ads accounts.
+    </p>
+
+    <form method="post" action="{{ url_for('admin_bp.google_ads_settings') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="space-y-6">
+        <!-- High Spend Threshold -->
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div class="flex items-start gap-3">
+            <div class="bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1">
+              <i class="fa-solid fa-fire"></i>
+            </div>
+            <div class="flex-1">
+              <label class="block text-sm font-medium text-gray-900 mb-1">
+                High-Spend Daily Threshold
+              </label>
+              <p class="text-xs text-gray-600 mb-3">
+                Accounts spending above this amount per day will receive <strong>daily AI analysis</strong> (9 AM UTC)
+              </p>
+              <div class="flex items-center gap-2">
+                <span class="text-gray-700">$</span>
+                <input type="number"
+                       name="high_spend_threshold"
+                       value="{{ settings.HIGH_SPEND_DAILY_THRESHOLD }}"
+                       class="w-32 border rounded-md px-3 py-2 text-sm"
+                       min="0"
+                       step="100"
+                       required>
+                <span class="text-gray-600 text-sm">per day</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-2">
+                <strong>Current:</strong> ${{ settings.HIGH_SPEND_DAILY_THRESHOLD }}/day → Daily analysis
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Medium Spend Threshold -->
+        <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+          <div class="flex items-start gap-3">
+            <div class="bg-orange-600 text-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1">
+              <i class="fa-solid fa-chart-line"></i>
+            </div>
+            <div class="flex-1">
+              <label class="block text-sm font-medium text-gray-900 mb-1">
+                Medium-Spend Daily Threshold
+              </label>
+              <p class="text-xs text-gray-600 mb-3">
+                Accounts between this threshold and high-spend will receive <strong>twice-weekly analysis</strong> (future feature)
+              </p>
+              <div class="flex items-center gap-2">
+                <span class="text-gray-700">$</span>
+                <input type="number"
+                       name="medium_spend_threshold"
+                       value="{{ settings.MEDIUM_SPEND_DAILY_THRESHOLD }}"
+                       class="w-32 border rounded-md px-3 py-2 text-sm"
+                       min="0"
+                       step="100"
+                       required>
+                <span class="text-gray-600 text-sm">per day</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-2">
+                <strong>Current:</strong> ${{ settings.MEDIUM_SPEND_DAILY_THRESHOLD }}/day → Twice weekly (not yet implemented)
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Default (Low Spend) -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div class="flex items-start gap-3">
+            <div class="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1">
+              <i class="fa-solid fa-calendar-week"></i>
+            </div>
+            <div class="flex-1">
+              <label class="block text-sm font-medium text-gray-900 mb-1">
+                Standard (Low-Spend) Accounts
+              </label>
+              <p class="text-xs text-gray-600 mb-3">
+                Accounts spending below medium threshold receive <strong>weekly analysis</strong> (Monday 8 AM UTC)
+              </p>
+              <p class="text-sm font-medium text-gray-900">
+                < ${{ settings.MEDIUM_SPEND_DAILY_THRESHOLD }}/day → Weekly analysis
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Note about changes -->
+      <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div class="flex gap-3">
+          <i class="fa-solid fa-info-circle text-yellow-600 mt-0.5"></i>
+          <div class="text-sm text-gray-700">
+            <p class="font-medium mb-1">Note about threshold changes:</p>
+            <p>
+              These thresholds are currently defined in the code. To change them permanently, you'll need to:
+            </p>
+            <ol class="list-decimal ml-5 mt-2 space-y-1">
+              <li>Set environment variables: <code class="bg-yellow-100 px-1 rounded">HIGH_SPEND_DAILY_THRESHOLD</code> and <code class="bg-yellow-100 px-1 rounded">MEDIUM_SPEND_DAILY_THRESHOLD</code></li>
+              <li>Or edit <code class="bg-yellow-100 px-1 rounded">app/services/google_ads_insights.py</code> (lines 26-28)</li>
+              <li>Restart the application for changes to take effect</li>
+            </ol>
+            <p class="mt-2">
+              The form below will show you the command to run, but won't apply changes automatically.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex gap-3">
+        <button type="submit"
+                class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors font-medium">
+          <i class="fa-solid fa-save mr-2"></i> Show Update Instructions
+        </button>
+        <button type="reset"
+                class="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors">
+          Reset
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Scheduled Jobs -->
+  <div class="bg-white border rounded-lg p-6 mb-6">
+    <h2 class="text-lg font-semibold mb-4">Scheduled Jobs</h2>
+    <p class="text-sm text-gray-600 mb-4">
+      Background jobs that generate AI insights automatically
+    </p>
+
+    {% if jobs_info %}
+      <div class="space-y-4">
+        {% for job in jobs_info %}
+          <div class="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <h3 class="font-medium text-gray-900">{{ job.name }}</h3>
+                <p class="text-sm text-gray-600 mt-1">{{ job.trigger }}</p>
+                {% if job.next_run %}
+                  <p class="text-xs text-gray-500 mt-1">
+                    <i class="fa-solid fa-clock mr-1"></i>
+                    Next run: {{ job.next_run[:19] }} UTC
+                  </p>
+                {% endif %}
+              </div>
+              <form method="post" action="{{ url_for('admin_bp.google_ads_trigger_job', job_id=job.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit"
+                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
+                        onclick="return confirm('Trigger this job to run immediately?')">
+                  <i class="fa-solid fa-play mr-1"></i> Run Now
+                </button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="text-center py-8 text-gray-500">
+        <i class="fa-solid fa-calendar-xmark text-4xl mb-2"></i>
+        <p>No scheduled jobs found. The scheduler may not be running.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Quick Reference -->
+  <div class="bg-white border rounded-lg p-6">
+    <h2 class="text-lg font-semibold mb-4">Quick Reference</h2>
+    <div class="space-y-4 text-sm">
+      <div>
+        <h3 class="font-medium text-gray-900 mb-2">Current Threshold Logic</h3>
+        <table class="w-full text-left border">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-2 border-b">Daily Spend</th>
+              <th class="px-4 py-2 border-b">Analysis Frequency</th>
+              <th class="px-4 py-2 border-b">Schedule</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            <tr>
+              <td class="px-4 py-2">≥ ${{ settings.HIGH_SPEND_DAILY_THRESHOLD }}/day</td>
+              <td class="px-4 py-2"><strong>Daily</strong></td>
+              <td class="px-4 py-2">Every day at 9 AM UTC</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-2">${{ settings.MEDIUM_SPEND_DAILY_THRESHOLD }} - ${{ (settings.HIGH_SPEND_DAILY_THRESHOLD|int - 1) }}/day</td>
+              <td class="px-4 py-2">Twice weekly*</td>
+              <td class="px-4 py-2">*Not yet implemented</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-2">< ${{ settings.MEDIUM_SPEND_DAILY_THRESHOLD }}/day</td>
+              <td class="px-4 py-2"><strong>Weekly</strong></td>
+              <td class="px-4 py-2">Every Monday at 8 AM UTC</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <h3 class="font-medium text-gray-900 mb-2">Configuration File Location</h3>
+        <code class="block bg-gray-100 p-3 rounded text-xs">
+          app/services/google_ads_insights.py<br>
+          Lines 26-28
+        </code>
+      </div>
+
+      <div>
+        <h3 class="font-medium text-gray-900 mb-2">Environment Variables</h3>
+        <code class="block bg-gray-100 p-3 rounded text-xs">
+          HIGH_SPEND_DAILY_THRESHOLD={{ settings.HIGH_SPEND_DAILY_THRESHOLD }}<br>
+          MEDIUM_SPEND_DAILY_THRESHOLD={{ settings.MEDIUM_SPEND_DAILY_THRESHOLD }}<br>
+          OPENAI_MODEL={{ settings.OPENAI_MODEL }}
+        </code>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,369 @@
+{# templates/google/ads_adgroup_detail.html - Level 3: Ad Group Detail with Tabs #}
+{% extends "base_app.html" %}
+{% set SECTION = 'google' %}
+{% block title %}{{ ad_group.name }} - {{ campaign.name }} - Google Ads{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+  {# Breadcrumbs #}
+  <nav class="flex items-center text-sm text-gray-500">
+    <a href="{{ url_for('google_bp.ads_campaigns') }}" class="hover:text-gray-700">
+      <i class="fa-solid fa-bullhorn mr-1"></i> Google Ads
+    </a>
+    <i class="fa-solid fa-chevron-right mx-2 text-xs"></i>
+    <a href="{{ url_for('google_bp.ads_campaign_detail', campaign_id=campaign.id) }}" class="hover:text-gray-700">
+      {{ campaign.name }}
+    </a>
+    <i class="fa-solid fa-chevron-right mx-2 text-xs"></i>
+    <span class="text-gray-900 font-medium">{{ ad_group.name }}</span>
+  </nav>
+
+  {# Ad Group Header #}
+  <div class="rounded-lg border bg-white p-6">
+    <div class="flex items-start justify-between">
+      <div class="flex-1">
+        <div class="flex items-center gap-3 mb-2">
+          <h1 class="text-2xl font-semibold">{{ ad_group.name }}</h1>
+          <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
+            {% if ad_group.status == 'Enabled' %}bg-green-50 text-green-700 border border-green-200
+            {% else %}bg-gray-50 text-gray-600 border border-gray-200{% endif %}">
+            {% if ad_group.status == 'Enabled' %}● {% endif %}{{ ad_group.status }}
+          </span>
+        </div>
+
+        <div class="text-sm text-gray-500 mb-4">
+          Campaign: <span class="font-medium text-gray-700">{{ campaign.name }}</span>
+        </div>
+
+        <div class="grid grid-cols-5 gap-6">
+          <div>
+            <div class="text-xs text-gray-500 mb-1">Keywords</div>
+            <div class="text-lg font-semibold">{{ keywords|length }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500 mb-1">Ads</div>
+            <div class="text-lg font-semibold">{{ ads|length }}</div>
+          </div>
+          {% if keywords %}
+            {% set enabled_kw = keywords | selectattr('status', 'equalto', 'Enabled') | list %}
+            {% set avg_cpc = (keywords | map(attribute='cpc') | select | sum) / (keywords | map(attribute='cpc') | select | list | length) if keywords | map(attribute='cpc') | select | list else 0 %}
+            {% set total_conv = keywords | map(attribute='conv') | select | sum %}
+            <div>
+              <div class="text-xs text-gray-500 mb-1">Active Keywords</div>
+              <div class="text-lg font-semibold">{{ enabled_kw|length }}</div>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500 mb-1">Avg CPC</div>
+              <div class="text-lg font-semibold">${{ "%.2f"|format(avg_cpc) if avg_cpc else '--' }}</div>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500 mb-1">Conversions</div>
+              <div class="text-lg font-semibold">{{ total_conv if total_conv else 0 }}</div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="flex gap-2">
+        <button type="button"
+                class="rounded-md border px-3 py-2 hover:bg-gray-50"
+                onclick="editAdGroup()">
+          <i class="fa-solid fa-pen mr-2"></i>Edit
+        </button>
+        <a href="{{ url_for('google_bp.ads_campaign_detail', campaign_id=campaign.id) }}"
+           class="rounded-md border px-3 py-2 hover:bg-gray-50">
+          <i class="fa-solid fa-arrow-left mr-2"></i>Back to Ad Groups
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {# Tabs #}
+  <div class="rounded-lg border bg-white">
+    <div class="border-b">
+      <nav class="flex space-x-8 px-6" aria-label="Tabs">
+        <button onclick="showTab('keywords')" id="tab-keywords"
+                class="tab-button border-b-2 border-indigo-600 py-4 px-1 text-sm font-medium text-indigo-600">
+          <i class="fa-solid fa-key mr-2"></i>Keywords ({{ keywords|length }})
+        </button>
+        <button onclick="showTab('ads')" id="tab-ads"
+                class="tab-button border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">
+          <i class="fa-solid fa-rectangle-ad mr-2"></i>Ads ({{ ads|length }})
+        </button>
+        <button onclick="showTab('negatives')" id="tab-negatives"
+                class="tab-button border-b-2 border-transparent py-4 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">
+          <i class="fa-solid fa-ban mr-2"></i>Negative Keywords ({{ negatives|length }})
+        </button>
+      </nav>
+    </div>
+
+    {# Keywords Tab #}
+    <div id="content-keywords" class="tab-content p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-medium">Keywords</h2>
+        <button type="button"
+                class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+                onclick="showNewKeywordModal()">
+          <i class="fa-solid fa-plus"></i> Add Keyword
+        </button>
+      </div>
+
+      {% if keywords %}
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="border-b">
+              <tr class="text-left text-gray-500">
+                <th class="py-3 pr-4 font-medium">Keyword</th>
+                <th class="py-3 pr-4 font-medium">Match Type</th>
+                <th class="py-3 pr-4 font-medium">Status</th>
+                <th class="py-3 pr-4 font-medium text-right">CPC</th>
+                <th class="py-3 pr-4 font-medium text-right">Conversions</th>
+                <th class="py-3 pr-4 font-medium text-right">CPA</th>
+                <th class="py-3 pr-4 font-medium"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for kw in keywords %}
+              <tr class="border-b hover:bg-gray-50">
+                <td class="py-3 pr-4 font-medium">{{ kw.text }}</td>
+                <td class="py-3 pr-4">
+                  <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700">
+                    {{ kw.match }}
+                  </span>
+                </td>
+                <td class="py-3 pr-4">
+                  <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
+                    {% if kw.status == 'Enabled' %}bg-green-50 text-green-700
+                    {% else %}bg-gray-100 text-gray-600{% endif %}">
+                    {{ kw.status }}
+                  </span>
+                </td>
+                <td class="py-3 pr-4 text-right">${{ "%.2f"|format(kw.cpc) if kw.cpc else '--' }}</td>
+                <td class="py-3 pr-4 text-right">{{ kw.conv if kw.conv else 0 }}</td>
+                <td class="py-3 pr-4 text-right">${{ "%.2f"|format(kw.cpa) if kw.cpa else '--' }}</td>
+                <td class="py-3 pr-4 text-right">
+                  <button type="button"
+                          class="text-gray-400 hover:text-gray-600"
+                          onclick="editKeyword('{{ kw.id }}')">
+                    <i class="fa-solid fa-pen"></i>
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-12">
+          <i class="fa-solid fa-key text-4xl text-gray-300 mb-3"></i>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">No keywords yet</h3>
+          <p class="text-gray-500 mb-4">Add keywords to trigger your ads in search results</p>
+          <button type="button"
+                  class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+                  onclick="showNewKeywordModal()">
+            <i class="fa-solid fa-plus"></i> Add Your First Keyword
+          </button>
+        </div>
+      {% endif %}
+    </div>
+
+    {# Ads Tab #}
+    <div id="content-ads" class="tab-content p-6 hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-medium">Responsive Search Ads</h2>
+        <button type="button"
+                class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+                onclick="showNewAdModal()">
+          <i class="fa-solid fa-plus"></i> Create Ad
+        </button>
+      </div>
+
+      {% if ads %}
+        <div class="space-y-4">
+          {% for ad in ads %}
+          <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+            {# Ad Preview #}
+            <div class="bg-gray-50 rounded-md p-4 mb-4">
+              <div class="text-xs text-gray-500 mb-2">Ad Preview</div>
+              <div class="space-y-1">
+                <div class="text-blue-600 text-lg">{{ ad.h1 }} | {{ ad.h2 }}</div>
+                <div class="text-green-700 text-sm">example.com/{{ ad.path }}</div>
+                <div class="text-gray-600">{{ ad.h3 }}</div>
+                <div class="text-sm text-gray-600">{{ ad.d1 }}</div>
+              </div>
+            </div>
+
+            {# Ad Details #}
+            <div class="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <div class="text-gray-500">Headline 1</div>
+                <div class="font-medium">{{ ad.h1 }} <span class="text-gray-400">({{ ad.h1|length }}/30)</span></div>
+              </div>
+              <div>
+                <div class="text-gray-500">Headline 2</div>
+                <div class="font-medium">{{ ad.h2 }} <span class="text-gray-400">({{ ad.h2|length }}/30)</span></div>
+              </div>
+              <div>
+                <div class="text-gray-500">Headline 3</div>
+                <div class="font-medium">{{ ad.h3 }} <span class="text-gray-400">({{ ad.h3|length }}/30)</span></div>
+              </div>
+              <div>
+                <div class="text-gray-500">Description</div>
+                <div class="font-medium">{{ ad.d1 }} <span class="text-gray-400">({{ ad.d1|length }}/90)</span></div>
+              </div>
+              <div>
+                <div class="text-gray-500">Path</div>
+                <div class="font-medium">{{ ad.path }}</div>
+              </div>
+            </div>
+
+            <div class="mt-4 flex items-center justify-end gap-2">
+              <button type="button"
+                      class="rounded-md border px-3 py-2 hover:bg-gray-50"
+                      onclick="editAd('{{ ad.id }}')">
+                <i class="fa-solid fa-pen mr-2"></i>Edit
+              </button>
+              <button type="button"
+                      class="rounded-md border border-red-300 text-red-600 px-3 py-2 hover:bg-red-50"
+                      onclick="deleteAd('{{ ad.id }}')">
+                <i class="fa-solid fa-trash mr-2"></i>Delete
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center py-12">
+          <i class="fa-solid fa-rectangle-ad text-4xl text-gray-300 mb-3"></i>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">No ads yet</h3>
+          <p class="text-gray-500 mb-4">Create responsive search ads for this ad group</p>
+          <button type="button"
+                  class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+                  onclick="showNewAdModal()">
+            <i class="fa-solid fa-plus"></i> Create Your First Ad
+          </button>
+        </div>
+      {% endif %}
+    </div>
+
+    {# Negative Keywords Tab #}
+    <div id="content-negatives" class="tab-content p-6 hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-medium">Negative Keywords</h2>
+        <button type="button"
+                class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+                onclick="showNewNegativeModal()">
+          <i class="fa-solid fa-plus"></i> Add Negative Keyword
+        </button>
+      </div>
+
+      {% if negatives %}
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="border-b">
+              <tr class="text-left text-gray-500">
+                <th class="py-3 pr-4 font-medium">Keyword</th>
+                <th class="py-3 pr-4 font-medium">Scope</th>
+                <th class="py-3 pr-4 font-medium"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for neg in negatives %}
+              <tr class="border-b hover:bg-gray-50">
+                <td class="py-3 pr-4 font-medium">{{ neg.text }}</td>
+                <td class="py-3 pr-4">
+                  <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-red-50 text-red-700">
+                    {{ neg.scope }}
+                  </span>
+                </td>
+                <td class="py-3 pr-4 text-right">
+                  <button type="button"
+                          class="text-red-400 hover:text-red-600"
+                          onclick="deleteNegative('{{ neg.id }}')">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-12">
+          <i class="fa-solid fa-ban text-4xl text-gray-300 mb-3"></i>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">No negative keywords yet</h3>
+          <p class="text-gray-500 mb-4">Add negative keywords to prevent your ads from showing for unwanted searches</p>
+          <button type="button"
+                  class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+                  onclick="showNewNegativeModal()">
+            <i class="fa-solid fa-plus"></i> Add Negative Keyword
+          </button>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{# MODALS - New Keyword, Edit Keyword, New Ad, Edit Ad, New Negative, Edit Ad Group #}
+{# Due to length, I'll create these in a separate file or continuation #}
+
+<script nonce="{{ g.csp_nonce }}">
+// Data from backend
+const keywords Data = {{ keywords | tojson }};
+const adsData = {{ ads | tojson }};
+const negativesData = {{ negatives | tojson }};
+
+// Tab switching
+function showTab(tabName) {
+  // Hide all tabs
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.tab-button').forEach(el => {
+    el.classList.remove('border-indigo-600', 'text-indigo-600');
+    el.classList.add('border-transparent', 'text-gray-500');
+  });
+
+  // Show selected tab
+  document.getElementById('content-' + tabName).classList.remove('hidden');
+  const button = document.getElementById('tab-' + tabName);
+  button.classList.add('border-indigo-600', 'text-indigo-600');
+  button.classList.remove('border-transparent', 'text-gray-500');
+}
+
+// Modal functions (placeholder - will implement with modals)
+function showNewKeywordModal() {
+  alert('New Keyword modal - to be implemented');
+}
+
+function editKeyword(id) {
+  alert('Edit Keyword ' + id + ' - to be implemented');
+}
+
+function showNewAdModal() {
+  alert('New Ad modal - to be implemented');
+}
+
+function editAd(id) {
+  alert('Edit Ad ' + id + ' - to be implemented');
+}
+
+function deleteAd(id) {
+  if (confirm('Delete this ad?')) {
+    alert('Delete Ad ' + id + ' - to be implemented');
+  }
+}
+
+function showNewNegativeModal() {
+  alert('New Negative Keyword modal - to be implemented');
+}
+
+function deleteNegative(id) {
+  if (confirm('Delete this negative keyword?')) {
+    alert('Delete Negative ' + id + ' - to be implemented');
+  }
+}
+
+function editAdGroup() {
+  alert('Edit Ad Group modal - to be implemented');
+}
+</script>
+{% endblock %}

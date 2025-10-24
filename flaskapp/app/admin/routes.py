@@ -2,6 +2,7 @@
 from __future__ import annotations
 from datetime import datetime
 from typing import Optional
+import logging
 
 from flask import (
     Blueprint, request, render_template, redirect, url_for, flash,
@@ -13,6 +14,8 @@ from app.extensions import db
 from app.auth.session import login_required
 from app.auth.decorators import require_admin_cloaked as require_admin
 from app.models import Account, User, CRMContact, CRM_STAGES
+
+logger = logging.getLogger(__name__)
 
 # Try to import Subscription if your project has it
 try:
@@ -328,3 +331,147 @@ def crm_update(contact_id: int):
     _audit("crm_update", note=f"id={item.id} {item.business_name}")
     flash("Contact updated.", "success")
     return redirect(url_for("admin_bp.crm_detail", contact_id=item.id))
+
+
+# -------------------------
+# SERP Scraper for Lead Generation
+# -------------------------
+@admin_bp.get("/serp-scraper")
+@login_required
+@require_admin
+def serp_scraper():
+    """Show the SERP scraper form"""
+    return render_template("admin/serp_scraper.html")
+
+
+@admin_bp.post("/serp-scraper")
+@login_required
+@require_admin
+def serp_scraper_run():
+    """Run the SERP scraper and add results to CRM"""
+    from app.services.serp_scraper import scrape_home_services
+
+    service_type = request.form.get("service_type", "").strip()
+    location = request.form.get("location", "").strip()
+    max_results = min(int(request.form.get("max_results", 20)), 50)
+    auto_add = request.form.get("auto_add") == "on"
+
+    if not service_type or not location:
+        flash("Service type and location are required.", "warning")
+        return redirect(url_for("admin_bp.serp_scraper"))
+
+    try:
+        # Run the scraper
+        leads = scrape_home_services(service_type, location, max_results)
+
+        if not leads:
+            flash("No leads found for this search.", "warning")
+            return redirect(url_for("admin_bp.serp_scraper"))
+
+        # Store results in session for review
+        session["scraper_results"] = [
+            {
+                "business_name": lead.business_name,
+                "domain": lead.domain,
+                "phone": lead.phone,
+                "city": lead.city,
+                "region": lead.region,
+                "source": lead.source,
+                "ad_type": lead.ad_type,
+                "snippet": lead.snippet,
+            }
+            for lead in leads
+        ]
+        session.modified = True
+
+        # Auto-add to CRM if requested
+        added_count = 0
+        if auto_add:
+            for lead in leads:
+                # Check if already exists (by domain or business name)
+                existing = None
+                if lead.domain:
+                    existing = CRMContact.query.filter_by(domain=lead.domain).first()
+                if not existing and lead.business_name:
+                    existing = CRMContact.query.filter_by(business_name=lead.business_name).first()
+
+                if not existing:
+                    contact = CRMContact(
+                        business_name=lead.business_name or "Unknown",
+                        domain=lead.domain,
+                        phone=lead.phone,
+                        city=lead.city,
+                        region=lead.region,
+                        source=f"{lead.source} ({service_type})",
+                        stage="stranger",
+                        notes=f"Ad Type: {lead.ad_type}\n{lead.snippet or ''}"
+                    )
+                    db.session.add(contact)
+                    added_count += 1
+
+            db.session.commit()
+            _audit("serp_scrape", note=f"service={service_type} location={location} added={added_count}")
+            flash(f"Found {len(leads)} leads, added {added_count} new contacts to CRM.", "success")
+        else:
+            flash(f"Found {len(leads)} leads. Review below before adding to CRM.", "success")
+
+        return render_template("admin/serp_results.html", leads=leads, auto_added=auto_add, added_count=added_count)
+
+    except Exception as e:
+        logger.exception("Error running SERP scraper")
+        flash(f"Error scraping: {str(e)}", "error")
+        return redirect(url_for("admin_bp.serp_scraper"))
+
+
+@admin_bp.post("/serp-scraper/add-selected")
+@login_required
+@require_admin
+def serp_scraper_add_selected():
+    """Add selected leads from scraper results to CRM"""
+    selected_indices = request.form.getlist("selected")
+    results = session.get("scraper_results", [])
+
+    if not selected_indices or not results:
+        flash("No leads selected.", "warning")
+        return redirect(url_for("admin_bp.serp_scraper"))
+
+    added_count = 0
+    for idx_str in selected_indices:
+        try:
+            idx = int(idx_str)
+            if 0 <= idx < len(results):
+                lead = results[idx]
+
+                # Check if already exists
+                existing = None
+                if lead.get("domain"):
+                    existing = CRMContact.query.filter_by(domain=lead["domain"]).first()
+                if not existing and lead.get("business_name"):
+                    existing = CRMContact.query.filter_by(business_name=lead["business_name"]).first()
+
+                if not existing:
+                    contact = CRMContact(
+                        business_name=lead.get("business_name") or "Unknown",
+                        domain=lead.get("domain"),
+                        phone=lead.get("phone"),
+                        city=lead.get("city"),
+                        region=lead.get("region"),
+                        source=lead.get("source", "google_serp"),
+                        stage="stranger",
+                        notes=f"Ad Type: {lead.get('ad_type')}\n{lead.get('snippet', '')}"
+                    )
+                    db.session.add(contact)
+                    added_count += 1
+
+        except (ValueError, IndexError):
+            continue
+
+    db.session.commit()
+    _audit("serp_add_selected", note=f"added={added_count}")
+
+    # Clear session results
+    session.pop("scraper_results", None)
+    session.modified = True
+
+    flash(f"Added {added_count} contacts to CRM.", "success")
+    return redirect(url_for("admin_bp.crm_list"))

@@ -4,98 +4,48 @@
 <div class="flex items-center justify-between mb-6">
   <h1 class="text-2xl font-bold">Admin Dashboard</h1>
   <div class="text-sm">
-    Active subs: <span class="font-semibold">{{ subs_active }}</span> ·
-    Canceled: <span class="font-semibold">{{ subs_canceled }}</span>
+    {% if subs_active is not none %}
+      Active subs: <span class="font-semibold">{{ subs_active }}</span> ·
+      Canceled: <span class="font-semibold">{{ subs_canceled }}</span>
+    {% endif %}
   </div>
 </div>
 
-<div class="grid md:grid-cols-2 gap-6">
+<div class="grid md:grid-cols-2 gap-6 mb-6">
+  <!-- Recent Accounts -->
   <div class="bg-white border rounded-xl p-4">
-    <div class="font-semibold mb-2">Recent Accounts</div>
-    <ul class="text-sm space-y-1">
+    <div class="font-semibold mb-3">Recent Accounts</div>
+    <ul class="text-sm space-y-2">
       {% for a in accounts %}
         <li class="flex items-center justify-between">
-          <a class="underline" href="{{ url_for('admin_bp.account_detail', account_id=a.id) }}">{{ a.name or ('Account #'+a.id|string) }}</a>
-          <span class="text-gray-500">{{ a.plan }}/{{ a.status }}</span>
+          <a class="underline text-blue-600 hover:text-blue-800" href="{{ url_for('admin_bp.account_detail', account_id=a.id) }}">
+            {{ a.name or ('Account #' + a.id|string) }}
+          </a>
+          <span class="text-gray-500 text-xs">
+            {% if a.plan %}{{ a.plan }}{% endif %}
+            {% if a.status %}/{{ a.status }}{% endif %}
+          </span>
         </li>
       {% else %}
         <li class="text-gray-500">No accounts yet.</li>
       {% endfor %}
     </ul>
-  </div>
-  
-  {# New Paid Customers #}
-<section class="card">
-  <div class="card-header">
-    <h2>New paid customers</h2>
-    <a class="muted" href="{{ url_for('admin_bp.accounts') }}">View all ›</a>
+    <div class="mt-4 pt-3 border-t">
+      <a href="{{ url_for('admin_bp.accounts') }}" class="text-sm text-blue-600 hover:underline">View all accounts →</a>
+    </div>
   </div>
 
-{# --- New paid customers --- #}
-{% if paid_new is not none %}
-<div class="card">
-  <div class="card-header">
-    <h3>New paid customers</h3>
-    <small class="muted">
-      Shows recent accounts with active/trialing subscriptions
-      {% if config.PAID_PLANS %}or plan in {{ config.PAID_PLANS|join(', ') }}{% endif %}.
-    </small>
-  </div>
-  <div class="card-body p-0">
-    {% if paid_new %}
-      <table class="table table-sm mb-0">
-        <thead>
-          <tr>
-            <th>Account</th>
-            <th>Primary user</th>
-            <th>Plan/Status</th>
-            <th>Created</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-        {% for acct in paid_new %}
-          {% set pu = paid_new_primary_user.get(acct.id) %}
-          <tr>
-            <td>{{ acct.name }}</td>
-            <td>
-              {% if pu %}
-                <a href="mailto:{{ pu.email }}">{{ pu.name or pu.email }}</a>
-                <div class="muted">{{ pu.email }}</div>
-              {% else %}
-                <span class="muted">—</span>
-              {% endif %}
-            </td>
-            <td>
-              {# show whatever fields exist #}
-              {% if hasattr(acct, 'plan') and acct.plan %}{{ acct.plan }}
-              {% elif hasattr(acct, 'plan_code') and acct.plan_code %}{{ acct.plan_code }}
-              {% elif hasattr(acct, 'status') and acct.status %}{{ acct.status }}
-              {% else %}<span class="muted">—</span>{% endif %}
-            </td>
-            <td>{{ acct.created_at.strftime('%Y-%m-%d') if acct.created_at else '' }}</td>
-            <td class="text-right">
-              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin_bp.account_detail', account_id=acct.id) }}">View</a>
-            </td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <div class="p-3 muted">No recent paid accounts found.</div>
-    {% endif %}
-  </div>
-</div>
-{% endif %}
-
+  <!-- Recent Users -->
   <div class="bg-white border rounded-xl p-4">
-    <div class="font-semibold mb-2">Recent Users</div>
-    <ul class="text-sm space-y-1">
+    <div class="font-semibold mb-3">Recent Users</div>
+    <ul class="text-sm space-y-2">
       {% for u in users %}
-        <li class="flex items-center justify-between">
-          <span>{{ u.email }}</span>
-          <form method="post" action="{{ url_for('admin_bp.impersonate', user_id=u.id) }}">
-            <button class="px-3 py-1 rounded bg-indigo-600 text-white text-xs">Impersonate</button>
+        <li class="flex items-center justify-between gap-2">
+          <span class="truncate">{{ u.email }}</span>
+          <form method="post" action="{{ url_for('admin_bp.impersonate', user_id=u.id) }}" class="inline">
+            <button type="submit" class="px-3 py-1 rounded bg-indigo-600 text-white text-xs hover:bg-indigo-700">
+              Impersonate
+            </button>
           </form>
         </li>
       {% else %}
@@ -103,5 +53,88 @@
       {% endfor %}
     </ul>
   </div>
+</div>
+
+<!-- New Paid Customers -->
+{% if paid_new %}
+<div class="bg-white border rounded-xl p-4">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-semibold">New Paid Customers</h2>
+    <a class="text-sm text-gray-600 hover:underline" href="{{ url_for('admin_bp.accounts') }}">View all →</a>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 border-b">
+        <tr>
+          <th class="px-3 py-2 text-left font-medium text-gray-700">Account</th>
+          <th class="px-3 py-2 text-left font-medium text-gray-700">Primary User</th>
+          <th class="px-3 py-2 text-left font-medium text-gray-700">Plan/Status</th>
+          <th class="px-3 py-2 text-left font-medium text-gray-700">Created</th>
+          <th class="px-3 py-2 text-right font-medium text-gray-700">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for acct in paid_new %}
+        {% set pu = paid_new_primary_user.get(acct.id) %}
+        <tr class="border-b hover:bg-gray-50">
+          <td class="px-3 py-2">{{ acct.name or 'Unnamed' }}</td>
+          <td class="px-3 py-2">
+            {% if pu %}
+              <a href="mailto:{{ pu.email }}" class="text-blue-600 hover:underline">
+                {{ pu.name or pu.email }}
+              </a>
+              {% if pu.name %}
+              <div class="text-xs text-gray-500">{{ pu.email }}</div>
+              {% endif %}
+            {% else %}
+              <span class="text-gray-400">—</span>
+            {% endif %}
+          </td>
+          <td class="px-3 py-2">
+            {% if acct.plan %}{{ acct.plan }}
+            {% elif acct.plan_code %}{{ acct.plan_code }}
+            {% elif acct.status %}{{ acct.status }}
+            {% else %}<span class="text-gray-400">—</span>{% endif %}
+          </td>
+          <td class="px-3 py-2">
+            {{ acct.created_at.strftime('%Y-%m-%d') if acct.created_at else '—' }}
+          </td>
+          <td class="px-3 py-2 text-right">
+            <a class="px-3 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+               href="{{ url_for('admin_bp.account_detail', account_id=acct.id) }}">
+              View
+            </a>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="bg-white border rounded-xl p-4">
+  <div class="text-gray-500 text-sm">No recent paid accounts found.</div>
+</div>
+{% endif %}
+
+<!-- Quick Links -->
+<div class="mt-6 grid md:grid-cols-4 gap-4">
+  <a href="{{ url_for('admin_bp.accounts') }}" class="p-4 bg-white border rounded-xl hover:shadow-md transition">
+    <div class="text-sm text-gray-600">All Accounts</div>
+    <div class="text-2xl font-bold mt-1">→</div>
+  </a>
+  <a href="{{ url_for('admin_bp.crm_list') }}" class="p-4 bg-white border rounded-xl hover:shadow-md transition">
+    <div class="text-sm text-gray-600">CRM Contacts</div>
+    <div class="text-2xl font-bold mt-1">→</div>
+  </a>
+  <a href="{{ url_for('admin_bp.serp_scraper') }}" class="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl hover:shadow-md transition">
+    <div class="text-sm text-blue-700 font-medium">🔍 SERP Scraper</div>
+    <div class="text-xs text-blue-600 mt-1">Find leads on Google</div>
+  </a>
+  <a href="{{ url_for('admin_bp.logs') }}" class="p-4 bg-white border rounded-xl hover:shadow-md transition">
+    <div class="text-sm text-gray-600">Audit Logs</div>
+    <div class="text-2xl font-bold mt-1">→</div>
+  </a>
 </div>
 {% endblock %}

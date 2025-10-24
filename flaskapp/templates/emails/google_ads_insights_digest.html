@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Ads Optimization Insights</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <table role="presentation" style="width: 100%; max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 32px 24px; text-align: center;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; line-height: 1.2;">
+                                 Google Ads Insights
+                            </h1>
+                            <p style="margin: 8px 0 0; color: #e0e7ff; font-size: 14px;">
+                                {{ insights_count }} optimization opportunities found
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Executive Summary -->
+                    <tr>
+                        <td style="padding: 24px; border-bottom: 1px solid #e5e7eb;">
+                            <h2 style="margin: 0 0 12px; color: #1f2937; font-size: 18px; font-weight: 600;">
+                                Executive Summary
+                            </h2>
+                            <p style="margin: 0; color: #4b5563; font-size: 14px; line-height: 1.6;">
+                                {{ summary }}
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Critical Issues -->
+                    {% if critical_recommendations %}
+                    <tr>
+                        <td style="padding: 24px; background-color: #fef2f2;">
+                            <div style="display: inline-block; background-color: #dc2626; color: #ffffff; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 12px; margin-bottom: 12px;">
+                                CRITICAL
+                            </div>
+                            <h3 style="margin: 0 0 16px; color: #991b1b; font-size: 16px; font-weight: 600;">
+                                Issues Requiring Immediate Attention ({{ critical_recommendations|length }})
+                            </h3>
+                            {% for rec in critical_recommendations %}
+                            <div style="margin-bottom: 16px; padding: 16px; background-color: #ffffff; border-left: 4px solid #dc2626; border-radius: 4px;">
+                                <h4 style="margin: 0 0 8px; color: #1f2937; font-size: 14px; font-weight: 600;">
+                                    {{ rec.title }}
+                                </h4>
+                                <p style="margin: 0 0 8px; color: #4b5563; font-size: 13px; line-height: 1.5;">
+                                    {{ rec.description }}
+                                </p>
+                                <div style="display: flex; align-items: center; gap: 16px; font-size: 12px;">
+                                    <span style="color: #059669; font-weight: 600;">
+                                        💰 {{ rec.expected_impact }}
+                                    </span>
+                                    <span style="color: #6b7280;">
+                                        🎯 Confidence: {{ (rec.confidence * 100)|round|int }}%
+                                    </span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% endif %}
+
+                    <!-- High Impact Opportunities -->
+                    {% if high_impact_recommendations %}
+                    <tr>
+                        <td style="padding: 24px; background-color: #fffbeb;">
+                            <div style="display: inline-block; background-color: #ea580c; color: #ffffff; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 12px; margin-bottom: 12px;">
+                                HIGH IMPACT
+                            </div>
+                            <h3 style="margin: 0 0 16px; color: #92400e; font-size: 16px; font-weight: 600;">
+                                High-Impact Opportunities ({{ high_impact_recommendations|length }})
+                            </h3>
+                            {% for rec in high_impact_recommendations[:3] %}
+                            <div style="margin-bottom: 16px; padding: 16px; background-color: #ffffff; border-left: 4px solid #ea580c; border-radius: 4px;">
+                                <h4 style="margin: 0 0 8px; color: #1f2937; font-size: 14px; font-weight: 600;">
+                                    {{ rec.title }}
+                                </h4>
+                                <p style="margin: 0 0 8px; color: #4b5563; font-size: 13px; line-height: 1.5;">
+                                    {{ rec.description }}
+                                </p>
+                                <div style="display: flex; align-items: center; gap: 16px; font-size: 12px;">
+                                    <span style="color: #059669; font-weight: 600;">
+                                        📈 {{ rec.expected_impact }}
+                                    </span>
+                                    <span style="color: #6b7280;">
+                                        🎯 Confidence: {{ (rec.confidence * 100)|round|int }}%
+                                    </span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% if high_impact_recommendations|length > 3 %}
+                            <p style="margin: 12px 0 0; color: #6b7280; font-size: 13px; text-align: center;">
+                                + {{ high_impact_recommendations|length - 3 }} more high-impact opportunities
+                            </p>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endif %}
+
+                    <!-- Quick Wins -->
+                    {% if quick_wins_recommendations %}
+                    <tr>
+                        <td style="padding: 24px; background-color: #f0fdf4;">
+                            <div style="display: inline-block; background-color: #16a34a; color: #ffffff; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 12px; margin-bottom: 12px;">
+                                QUICK WINS
+                            </div>
+                            <h3 style="margin: 0 0 12px; color: #166534; font-size: 16px; font-weight: 600;">
+                                Quick Wins ({{ quick_wins_recommendations|length }})
+                            </h3>
+                            <ul style="margin: 0; padding-left: 20px; color: #374151; font-size: 13px; line-height: 1.8;">
+                                {% for rec in quick_wins_recommendations[:5] %}
+                                <li>{{ rec.title }}</li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                    </tr>
+                    {% endif %}
+
+                    <!-- CTA Button -->
+                    <tr>
+                        <td style="padding: 32px 24px; text-align: center; background-color: #f9fafb;">
+                            <a href="{{ dashboard_url }}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 14px; box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3);">
+                                View All {{ insights_count }} Insights →
+                            </a>
+                            <p style="margin: 16px 0 0; color: #6b7280; font-size: 12px;">
+                                Review and apply recommendations directly from your dashboard
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Performance Snapshot -->
+                    <tr>
+                        <td style="padding: 24px; border-top: 1px solid #e5e7eb;">
+                            <h3 style="margin: 0 0 16px; color: #1f2937; font-size: 16px; font-weight: 600;">
+                                📊 Performance Snapshot (Last 30 Days)
+                            </h3>
+                            <table style="width: 100%; font-size: 13px;">
+                                <tr>
+                                    <td style="padding: 8px 0; color: #6b7280;">Total Spend:</td>
+                                    <td style="padding: 8px 0; color: #1f2937; font-weight: 600; text-align: right;">${{ "%.2f"|format(performance.total_spend) }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #6b7280;">Conversions:</td>
+                                    <td style="padding: 8px 0; color: #1f2937; font-weight: 600; text-align: right;">{{ performance.total_conversions }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #6b7280;">Average CPA:</td>
+                                    <td style="padding: 8px 0; color: #1f2937; font-weight: 600; text-align: right;">${{ "%.2f"|format(performance.avg_cpa) }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: #6b7280;">Average CTR:</td>
+                                    <td style="padding: 8px 0; color: #1f2937; font-weight: 600; text-align: right;">{{ "%.2f"|format(performance.avg_ctr * 100) }}%</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 24px; text-align: center; background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0 0 8px; color: #6b7280; font-size: 12px;">
+                                Questions? Just reply to this email or visit our <a href="{{ help_url }}" style="color: #4f46e5; text-decoration: none;">Help Center</a>
+                            </p>
+                            <p style="margin: 0; color: #9ca3af; font-size: 11px;">
+                                © {{ current_year }} FieldSprout. All rights reserved.
+                            </p>
+                            <p style="margin: 8px 0 0; font-size: 11px;">
+                                <a href="{{ unsubscribe_url }}" style="color: #6b7280; text-decoration: none;">Unsubscribe</a> |
+                                <a href="{{ preferences_url }}" style="color: #6b7280; text-decoration: none;">Email Preferences</a>
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

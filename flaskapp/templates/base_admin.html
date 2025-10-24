@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  {% if csrf_token %}<meta name="csrf-token" content="{{ csrf_token() }}">{% endif %}
+  <title>{% block title %}Admin – {{ app_name }}{% endblock %}</title>
+
+  <!-- Tailwind + Font Awesome (match main app stack) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <link rel="icon" href="{{ url_for('static', filename='brand/favicon.ico') }}" sizes="any">
+
+  <style>
+    :root{
+      --brand:#7c3aed; --brand-dark:#6d28d9;
+    }
+    .primary-btn{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:.75rem;}
+    .primary-btn:hover{background-color:rgba(255,255,255,.08);}
+    .primary-btn.active{background:linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.08));border:1px solid rgba(255,255,255,.2);}
+    .secondary-link{display:flex;align-items:center;gap:.5rem;padding:.5rem .625rem;border-radius:.5rem;color:#111827;}
+    .secondary-link:hover{background:#eef2ff;}
+    .secondary-link.active{background:#eef2ff;color:#4f46e5;font-weight:600;}
+    .sidebar-label{display:flex;align-items:center;gap:.5rem;padding:.25rem .625rem .5rem .625rem;font-size:.75rem;font-weight:700;letter-spacing:.04em;color:#6b7280;text-transform:uppercase}
+  </style>
+
+  <script>
+    // Auto-inject CSRF inputs into POST forms if missing
+    document.addEventListener('DOMContentLoaded', function () {
+      var t=document.querySelector('meta[name="csrf-token"]')?.content;
+      if(!t) return;
+      document.querySelectorAll('form[method="post"]:not([data-no-auto-csrf])').forEach(function(f){
+        if(!f.querySelector('input[name="csrf_token"]')){
+          var i=document.createElement('input');
+          i.type='hidden'; i.name='csrf_token'; i.value=t; f.appendChild(i);
+        }
+      });
+    });
+  </script>
+</head>
+
+<body class="min-h-screen flex flex-col bg-gray-50 text-gray-900">
+
+  <!-- Admin shell -->
+  <div class="flex-1 min-h-0 flex">
+
+    <!-- PRIMARY SIDEBAR (icons only) -->
+    <aside class="w-16 bg-gray-900 text-white flex flex-col items-center py-4 space-y-3">
+      <a href="{{ url_for('admin_bp.dashboard') }}" class="mb-4" title="{{ app_name }} Admin">
+        <img src="{{ url_for('static', filename='brand/icons/fieldsprout-icon-32.png') }}" alt="FS" class="w-8 h-8">
+      </a>
+
+      <a href="{{ url_for('admin_bp.dashboard') }}" class="primary-btn {% if request.endpoint=='admin_bp.dashboard' %}active{% endif %}" title="Dashboard">
+        <i class="fa-solid fa-gauge"></i>
+      </a>
+      <a href="{{ url_for('admin_bp.accounts') }}" class="primary-btn {% if request.endpoint in ['admin_bp.accounts','admin_bp.account_detail'] %}active{% endif %}" title="Accounts">
+        <i class="fa-solid fa-briefcase"></i>
+      </a>
+      <a href="{{ url_for('admin_bp.crm_list') }}" class="primary-btn {% if request.endpoint in ['admin_bp.crm_list','admin_bp.crm_new','admin_bp.crm_detail','admin_bp.crm_edit'] %}active{% endif %}" title="CRM">
+        <i class="fa-solid fa-address-book"></i>
+      </a>
+      <a href="{{ url_for('admin_bp.logs') }}" class="primary-btn {% if request.endpoint=='admin_bp.logs' %}active{% endif %}" title="Audit Logs">
+        <i class="fa-solid fa-clipboard-list"></i>
+      </a>
+
+      <!-- Bottom cluster: Account / Logout -->
+      <div class="mt-auto flex flex-col items-center space-y-3">
+        {% if has_endpoint('account_bp.dashboard') %}
+          <a href="{{ url_for('account_bp.dashboard') }}" class="primary-btn" title="Back to App">
+            <i class="fa-solid fa-house"></i>
+          </a>
+        {% endif %}
+
+        {% if has_endpoint('logout') %}
+          <!-- Use POST for logout to respect CSRF and side-effects -->
+          <form method="post" action="{{ url_for(ep('logout')) }}">
+            <button type="submit" class="primary-btn" title="Logout" aria-label="Logout">
+              <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </aside>
+
+    <!-- SECONDARY SIDEBAR (admin navigation) -->
+    <aside class="w-64 bg-white border-r px-3 py-4 overflow-y-auto flex flex-col">
+      <a href="{{ url_for('admin_bp.dashboard') }}" class="hidden lg:flex items-center gap-2 px-2 py-2 mb-2 hover:text-indigo-600">
+        <img src="{{ url_for('static', filename='brand/logos/fieldsprout-wordmark.svg') }}" alt="FieldSprout" style="height:32px;width:auto;">
+        <span class="text-sm uppercase text-gray-500">Admin</span>
+      </a>
+
+      <div class="sidebar-label"><i class="fa-solid fa-sliders"></i>Admin</div>
+
+      <a class="secondary-link {% if request.endpoint=='admin_bp.dashboard' %}active{% endif %}" href="{{ url_for('admin_bp.dashboard') }}">
+        <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
+      </a>
+      <a class="secondary-link {% if request.endpoint in ['admin_bp.accounts','admin_bp.account_detail'] %}active{% endif %}" href="{{ url_for('admin_bp.accounts') }}">
+        <i class="fa-solid fa-briefcase"></i><span>Accounts</span>
+      </a>
+      <a class="secondary-link {% if request.endpoint in ['admin_bp.crm_list','admin_bp.crm_new','admin_bp.crm_detail','admin_bp.crm_edit'] %}active{% endif %}" href="{{ url_for('admin_bp.crm_list') }}">
+        <i class="fa-solid fa-address-book"></i><span>CRM</span>
+      </a>
+      <a class="secondary-link {% if request.endpoint=='admin_bp.logs' %}active{% endif %}" href="{{ url_for('admin_bp.logs') }}">
+        <i class="fa-solid fa-clipboard-list"></i><span>Audit Logs</span>
+      </a>
+
+      <!-- Sticky support block -->
+      <div class="mt-auto sticky bottom-0 bg-white pt-3">
+        <div class="border-t pt-3 text-sm text-gray-700">
+          Need support<br/>cs@fieldsprout.io
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 p-6 overflow-y-auto">
+
+      {% if session.get('impersonated_user_id') and session.get('impersonator_user_id') %}
+        <div class="bg-yellow-100 border border-yellow-200 text-yellow-900 text-sm px-4 py-2 mb-4 rounded">
+          <div class="flex items-center justify-between">
+            <div>⚠️ You are impersonating user ID {{ session.get('impersonated_user_id') }}. Actions will be performed as them.</div>
+            <form method="post" action="{{ url_for('admin_bp.stop_impersonation') }}">
+              <button class="px-3 py-1 rounded bg-yellow-600 text-white text-xs">Stop impersonating</button>
+            </form>
+          </div>
+        </div>
+      {% endif %}
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="mb-4 space-y-2">
+            {% for category, message in messages %}
+              {% set tone = 'bg-indigo-50 text-indigo-800 border-indigo-200' %}
+              {% if category in ['error','danger'] %}{% set tone = 'bg-red-50 text-red-800 border-red-200' %}{% endif %}
+              {% if category in ['success'] %}{% set tone = 'bg-green-50 text-green-800 border-green-200' %}{% endif %}
+              {% if category in ['warning'] %}{% set tone = 'bg-yellow-50 text-yellow-800 border-yellow-200' %}{% endif %}
+              <div class="border rounded px-3 py-2 {{ tone }}">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <div class="max-w-6xl">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+</body>
+</html>

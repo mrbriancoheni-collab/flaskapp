@@ -1,0 +1,347 @@
+{% extends "base_public.html" %}
+{% set SECTION = 'solutions' %}
+{% block title %}Analytics & Reporting — Track What Actually Matters{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 bg-gradient-to-b from-primary-50 via-white to-white"></div>
+  <div class="container-max relative py-20 lg:py-28 text-center">
+    <span class="badge">📊 Analytics & Reporting</span>
+    <h1 class="mt-6 text-4xl md:text-6xl font-extrabold tracking-tight">
+      Track <span class="text-primary-700">What Actually Matters</span>
+    </h1>
+    <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+      Forget vanity metrics. FieldSprout tracks the numbers that matter—cost per booked job, revenue attribution, and true ROI. See exactly which channels, campaigns, and keywords are worth your money.
+    </p>
+    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary">See Your Dashboard</a>
+      {% elif has_endpoint('register') %}
+        <a href="{{ url_for(ep('register')) }}" class="btn btn-primary">See Your Dashboard</a>
+      {% else %}
+        <a href="/signup" class="btn btn-primary">See Your Dashboard</a>
+      {% endif %}
+      <a href="#features" class="btn btn-outline">Explore Features</a>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-16">
+  <div class="container-max">
+    <div class="grid md:grid-cols-3 gap-8 text-center text-white">
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">1-Click</div>
+        <p class="mt-2 text-gray-300">access to all your marketing data</p>
+      </div>
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">Real-Time</div>
+        <p class="mt-2 text-gray-300">dashboard updates every 15 minutes</p>
+      </div>
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">Zero</div>
+        <p class="mt-2 text-gray-300">manual spreadsheet exports</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section class="section">
+  <div class="container-max">
+    <div class="rounded-3xl bg-white p-8 md:p-12 shadow-soft border border-gray-100">
+      <div class="grid lg:grid-cols-2 gap-10 items-center">
+        <div>
+          <span class="badge">The Problem</span>
+          <h2 class="mt-4 text-3xl md:text-4xl font-extrabold">You're drowning in data but starving for insights</h2>
+          <p class="mt-4 text-gray-600">Google Ads, Meta Ads, LSA, call tracking, forms, CRM—each platform has its own dashboard. Good luck figuring out what's actually working.</p>
+          <ul class="mt-6 space-y-4 text-gray-600">
+            <li class="flex gap-3">
+              <span class="text-red-600 text-xl">✗</span>
+              <span>Log into 7 different platforms to see the full picture</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-red-600 text-xl">✗</span>
+              <span>Spend hours building manual reports in spreadsheets</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-red-600 text-xl">✗</span>
+              <span>Can't connect ad spend to actual booked jobs</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-red-600 text-xl">✗</span>
+              <span>No idea which channel is delivering the best ROI</span>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <span class="badge text-primary-700">The Solution</span>
+          <h2 class="mt-4 text-2xl md:text-3xl font-extrabold">One dashboard. Every metric. Real-time.</h2>
+          <p class="mt-4 text-gray-600">FieldSprout unifies all your marketing data into a single, beautiful dashboard that shows you what's working—and what's not.</p>
+          <ul class="mt-6 space-y-4 text-gray-600">
+            <li class="flex gap-3">
+              <span class="text-primary-700 text-xl">✓</span>
+              <span>All channels in one place—Google, Meta, LSA, organic</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-700 text-xl">✓</span>
+              <span>Auto-generated reports sent weekly or monthly</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-700 text-xl">✓</span>
+              <span>Full funnel tracking from click to booked job to revenue</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-700 text-xl">✓</span>
+              <span>True ROI by channel, campaign, and keyword</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" class="section bg-gradient-to-b from-white to-primary-50/50">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto">
+      <span class="badge">Dashboard Features</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">The metrics that matter</h2>
+      <p class="mt-4 text-gray-600">Built by marketers for service businesses. We track the KPIs that actually drive your bottom line.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-2 gap-8">
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">💵</div>
+        <h3 class="mt-4 font-semibold text-xl">Cost Per Booked Job (CPBJ)</h3>
+        <p class="mt-3 text-gray-600">The #1 metric that matters. See exactly how much you're paying per scheduled job—not just per click or lead.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Full funnel tracking: ad → lead → estimate → booked job</li>
+          <li>Compare CPBJ across all channels</li>
+          <li>Trend analysis over time</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">📞</div>
+        <h3 class="mt-4 font-semibold text-xl">Call & Form Tracking</h3>
+        <p class="mt-3 text-gray-600">Know which keywords and ads are generating phone calls and form fills. Call recordings included for quality control.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Dynamic number insertion by source</li>
+          <li>Call recording & transcription</li>
+          <li>Lead source attribution</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">🎯</div>
+        <h3 class="mt-4 font-semibold text-xl">Channel Performance</h3>
+        <p class="mt-3 text-gray-600">Compare Google Ads vs. Meta vs. LSA vs. organic. Shift budget to what's working, cut what's not.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Side-by-side channel comparison</li>
+          <li>ROI by channel & campaign</li>
+          <li>Attribution modeling (first-touch, last-touch, multi-touch)</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">🔍</div>
+        <h3 class="mt-4 font-semibold text-xl">Keyword-Level Insights</h3>
+        <p class="mt-3 text-gray-600">See which search terms are generating booked jobs—not just clicks. Double down on winners, pause losers.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Conversion rate by keyword</li>
+          <li>Quality score tracking</li>
+          <li>Search term mining</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">💰</div>
+        <h3 class="mt-4 font-semibold text-xl">Revenue Attribution</h3>
+        <p class="mt-3 text-gray-600">Connect CRM data to see actual revenue generated from each channel. Know your true ROAS, not just estimates.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>CRM integration (ServiceTitan, Housecall Pro, etc.)</li>
+          <li>Job value & upsell tracking</li>
+          <li>LTV analysis by acquisition source</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">📧</div>
+        <h3 class="mt-4 font-semibold text-xl">Automated Reporting</h3>
+        <p class="mt-3 text-gray-600">Weekly or monthly reports delivered to your inbox. Share with partners, investors, or franchisees with one click.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Customizable report templates</li>
+          <li>White-label branding options</li>
+          <li>PDF & Excel export</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- REPORTING OPTIONS -->
+<section class="section">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto">
+      <span class="badge">Reporting Formats</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Reports built for your audience</h2>
+      <p class="mt-4 text-gray-600">Different stakeholders need different views. We've got pre-built templates for all of them.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-3 gap-6">
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <h3 class="font-semibold text-xl">Owner Dashboard</h3>
+        <p class="mt-3 text-gray-600">High-level KPIs: ROAS, CPBJ, total booked jobs, revenue attribution. See the big picture at a glance.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Month-over-month trends</li>
+          <li>Budget vs. actual spend</li>
+          <li>ROI by channel</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <h3 class="font-semibold text-xl">Manager Dashboard</h3>
+        <p class="mt-3 text-gray-600">Campaign-level detail: CPL, conversion rates, ad performance, landing page stats. Perfect for day-to-day optimization.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Campaign comparison tables</li>
+          <li>A/B test results</li>
+          <li>Opportunity recommendations</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <h3 class="font-semibold text-xl">Executive Summary</h3>
+        <p class="mt-3 text-gray-600">Board-ready reports with charts, insights, and commentary. Perfect for investors, partners, or franchise leadership.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Professional PDF format</li>
+          <li>Custom branding</li>
+          <li>Auto-scheduled delivery</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="section bg-gradient-to-b from-white to-primary-50/30">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <span class="badge">Customer Success</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Data clarity, better decisions</h2>
+      <p class="mt-4 text-gray-600">Local businesses share how unified analytics helped them make smarter marketing investments.</p>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"Finally I can see my true cost per job. Turns out Facebook was 60% cheaper than Google for us. Shifted budget and booked 18 more jobs last month."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">AJ</div>
+          <div>
+            <p class="font-semibold">Alex Johnson</p>
+            <p class="text-sm text-gray-600">Junk Removal, Atlanta GA</p>
+          </div>
+        </footer>
+      </div>
+
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"The automated weekly reports save me 4 hours every Monday. I just forward them to my business partner and we're aligned on what's working."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">SN</div>
+          <div>
+            <p class="font-semibold">Samantha Nguyen</p>
+            <p class="text-sm text-gray-600">Carpet Cleaning, San Jose CA</p>
+          </div>
+        </footer>
+      </div>
+
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"Revenue attribution changed everything. Discovered one keyword was driving $22K in job value per month. Tripled the budget on it."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">PO</div>
+          <div>
+            <p class="font-semibold">Paul O'Brien</p>
+            <p class="text-sm text-gray-600">Basement Waterproofing, Boston MA</p>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST SIGNALS -->
+<section class="section">
+  <div class="container-max">
+    <div class="rounded-3xl bg-gradient-to-br from-primary-50 to-primary-100 p-8 md:p-12">
+      <div class="grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          <h3 class="text-2xl md:text-4xl font-extrabold">Tracking 2.4M+ jobs across 1,800+ businesses</h3>
+          <p class="mt-4 text-gray-700">FieldSprout's analytics platform processes millions of data points every day to give local businesses clarity on their marketing ROI.</p>
+        </div>
+        <div class="grid grid-cols-2 gap-6">
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">2.4M+</div>
+            <p class="text-sm text-gray-600 mt-1">Jobs tracked</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">15min</div>
+            <p class="text-sm text-gray-600 mt-1">Dashboard refresh rate</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">50+</div>
+            <p class="text-sm text-gray-600 mt-1">Data sources integrated</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">99.9%</div>
+            <p class="text-sm text-gray-600 mt-1">Platform uptime</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 py-16">
+  <div class="container-max relative text-center text-white">
+    <h2 class="text-3xl md:text-5xl font-extrabold">See the full picture—finally</h2>
+    <p class="mt-4 text-lg text-primary-100 max-w-2xl mx-auto">Stop guessing which channels are working. Get real-time clarity on cost per booked job, revenue attribution, and true ROI.</p>
+    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">See Your Dashboard</a>
+      {% elif has_endpoint('register') %}
+        <a href="{{ url_for(ep('register')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">See Your Dashboard</a>
+      {% else %}
+        <a href="/signup" class="btn bg-white text-primary-700 hover:bg-gray-100">See Your Dashboard</a>
+      {% endif %}
+      <a href="#features" class="btn btn-outline border-white text-white hover:bg-white/10">Explore Features</a>
+    </div>
+    <p class="mt-4 text-sm text-primary-200">Free demo • Real data, real insights • No spreadsheets required</p>
+  </div>
+</section>
+
+{% endblock %}

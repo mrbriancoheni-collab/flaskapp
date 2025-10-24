@@ -1,0 +1,313 @@
+{% extends "base_public.html" %}
+{% set SECTION = 'solutions' %}
+{% block title %}Get More Reviews — Automate 5-Star Growth{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 bg-gradient-to-b from-primary-50 via-white to-white"></div>
+  <div class="container-max relative py-20 lg:py-28 text-center">
+    <span class="badge">⭐ Review Automation</span>
+    <h1 class="mt-6 text-4xl md:text-6xl font-extrabold tracking-tight">
+      Turn Happy Customers Into <span class="text-primary-700">5-Star Reviews</span>
+    </h1>
+    <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+      More reviews = higher rankings = more booked jobs. FieldSprout automates timing, sends branded requests via SMS & email, and deflects negative feedback—all while staying 100% compliant.
+    </p>
+    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary">Start Growing Reviews</a>
+      {% elif has_endpoint('register') %}
+        <a href="{{ url_for(ep('register')) }}" class="btn btn-primary">Start Growing Reviews</a>
+      {% else %}
+        <a href="/signup" class="btn btn-primary">Start Growing Reviews</a>
+      {% endif %}
+      <a href="#how-it-works" class="btn btn-outline">See How It Works</a>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-16">
+  <div class="container-max">
+    <div class="grid md:grid-cols-3 gap-8 text-center text-white">
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">4.2x</div>
+        <p class="mt-2 text-gray-300">more Google reviews in 90 days</p>
+      </div>
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">89%</div>
+        <p class="mt-2 text-gray-300">response rate on requests</p>
+      </div>
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">98%</div>
+        <p class="mt-2 text-gray-300">platform compliance score</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works" class="section">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto">
+      <span class="badge">How It Works</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">The smart way to build social proof</h2>
+      <p class="mt-4 text-gray-600">Simple 3-step automation that runs in the background while you focus on delivering great service.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-3 gap-6">
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-14 w-14 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center text-2xl font-bold">1</div>
+        <h3 class="mt-4 font-semibold text-xl">Perfect Timing</h3>
+        <p class="mt-3 text-gray-600">Automatically send review requests 2-4 hours after job completion—when satisfaction is highest and memories are fresh.</p>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-14 w-14 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center text-2xl font-bold">2</div>
+        <h3 class="mt-4 font-semibold text-xl">Branded Outreach</h3>
+        <p class="mt-3 text-gray-600">Send clean SMS & email templates with one-click links to Google, Yelp, or Facebook. No friction, high conversion.</p>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-14 w-14 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center text-2xl font-bold">3</div>
+        <h3 class="mt-4 font-semibold text-xl">Smart Follow-Up</h3>
+        <p class="mt-3 text-gray-600">Auto-send polite reminders if no review after 3 days. Deflect negative feedback to private channels before it goes public.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section bg-gradient-to-b from-white to-primary-50/50">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto">
+      <span class="badge">Smart Features</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Everything you need to grow 5-star reputation</h2>
+      <p class="mt-4 text-gray-600">Powerful automation built for local service businesses who care about compliance and customer experience.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-2 gap-8">
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">📱</div>
+        <h3 class="mt-4 font-semibold text-xl">SMS & Email Templates</h3>
+        <p class="mt-3 text-gray-600">Pre-built, conversion-optimized messages that match your brand voice. One-click links to Google, Yelp, Facebook, and more.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Personalized with customer name & service</li>
+          <li>Mobile-optimized for tap-to-review</li>
+          <li>A/B tested messaging templates</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">🛡️</div>
+        <h3 class="mt-4 font-semibold text-xl">Negative Feedback Deflection</h3>
+        <p class="mt-3 text-gray-600">Catch unhappy customers before they post publicly. Route low ratings to private feedback forms where you can make it right.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Pre-review sentiment screening</li>
+          <li>Private resolution workflows</li>
+          <li>Turn detractors into promoters</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">🤖</div>
+        <h3 class="mt-4 font-semibold text-xl">AI-Powered Responses</h3>
+        <p class="mt-3 text-gray-600">Automatically respond to new reviews with on-brand, personalized replies. Show future customers you care about every experience.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Context-aware thank you messages</li>
+          <li>Professional issue acknowledgment</li>
+          <li>Maintains your brand tone</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">✅</div>
+        <h3 class="mt-4 font-semibold text-xl">100% Compliant</h3>
+        <p class="mt-3 text-gray-600">Built-in respect for Google's policies, TCPA regulations, and messaging opt-out rules. Never risk your listings or reputation.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>No incentivized reviews</li>
+          <li>Automatic opt-out handling</li>
+          <li>Platform TOS monitoring</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY REVIEWS MATTER -->
+<section class="section">
+  <div class="container-max">
+    <div class="rounded-3xl bg-white p-8 md:p-12 shadow-soft border border-gray-100">
+      <div class="grid lg:grid-cols-2 gap-10 items-center">
+        <div>
+          <span class="badge">The Review Advantage</span>
+          <h2 class="mt-4 text-3xl md:text-4xl font-extrabold">Why reviews are your #1 growth lever</h2>
+          <p class="mt-4 text-gray-600">Reviews aren't vanity metrics—they're revenue drivers. Here's how more 5-star reviews compound your growth:</p>
+          <ul class="mt-6 space-y-4">
+            <li class="flex gap-3">
+              <span class="text-primary-700 text-xl">✓</span>
+              <div>
+                <strong class="block">Higher Search Rankings</strong>
+                <span class="text-gray-600">Google ranks businesses with more recent reviews above competitors</span>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-700 text-xl">✓</span>
+              <div>
+                <strong class="block">Better Ad Performance</strong>
+                <span class="text-gray-600">Star ratings in Local Service Ads increase click-through by 15-30%</span>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-700 text-xl">✓</span>
+              <div>
+                <strong class="block">More Booked Jobs</strong>
+                <span class="text-gray-600">87% of consumers read reviews before choosing a local service provider</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="grid grid-cols-2 gap-6">
+          <div class="text-center p-6 rounded-2xl bg-primary-50">
+            <div class="text-4xl font-extrabold text-primary-700">93%</div>
+            <p class="text-sm text-gray-600 mt-2">of consumers check reviews before hiring</p>
+          </div>
+          <div class="text-center p-6 rounded-2xl bg-primary-50">
+            <div class="text-4xl font-extrabold text-primary-700">15+</div>
+            <p class="text-sm text-gray-600 mt-2">reviews needed to build trust</p>
+          </div>
+          <div class="text-center p-6 rounded-2xl bg-primary-50">
+            <div class="text-4xl font-extrabold text-primary-700">4.5★</div>
+            <p class="text-sm text-gray-600 mt-2">minimum rating consumers expect</p>
+          </div>
+          <div class="text-center p-6 rounded-2xl bg-primary-50">
+            <div class="text-4xl font-extrabold text-primary-700">2-5x</div>
+            <p class="text-sm text-gray-600 mt-2">ROI from review automation</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="section bg-gradient-to-b from-white to-primary-50/30">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <span class="badge">Customer Success</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Real results from local pros</h2>
+      <p class="mt-4 text-gray-600">See how service businesses are using FieldSprout to build unstoppable social proof.</p>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"Went from 11 reviews to 94 in 4 months. Our phone rings way more now—FieldSprout paid for itself in week 3."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">TW</div>
+          <div>
+            <p class="font-semibold">Tom Wilson</p>
+            <p class="text-sm text-gray-600">Electrical Services, Austin TX</p>
+          </div>
+        </footer>
+      </div>
+
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"Love the negative deflection feature. Caught 3 unhappy customers before they went public and turned them into 5-star reviews."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">SP</div>
+          <div>
+            <p class="font-semibold">Sarah Patel</p>
+            <p class="text-sm text-gray-600">HVAC Pros, Orlando FL</p>
+          </div>
+        </footer>
+      </div>
+
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"Set it and forget it. We get 15-20 new Google reviews every month now. Moved from page 2 to #1 in our area."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">MC</div>
+          <div>
+            <p class="font-semibold">Mike Chen</p>
+            <p class="text-sm text-gray-600">Plumbing Solutions, Denver CO</p>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST SIGNALS -->
+<section class="section">
+  <div class="container-max">
+    <div class="rounded-3xl bg-gradient-to-br from-primary-50 to-primary-100 p-8 md:p-12">
+      <div class="grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          <h3 class="text-2xl md:text-4xl font-extrabold">Join 2,400+ businesses growing their reputation</h3>
+          <p class="mt-4 text-gray-700">From solo techs to multi-location franchises, FieldSprout's review automation helps local pros build the social proof they need to win.</p>
+        </div>
+        <div class="grid grid-cols-2 gap-6">
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">85K+</div>
+            <p class="text-sm text-gray-600 mt-1">Reviews generated</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">4.8★</div>
+            <p class="text-sm text-gray-600 mt-1">Avg customer rating</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">Zero</div>
+            <p class="text-sm text-gray-600 mt-1">Policy violations</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">24hr</div>
+            <p class="text-sm text-gray-600 mt-1">Setup time</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 py-16">
+  <div class="container-max relative text-center text-white">
+    <h2 class="text-3xl md:text-5xl font-extrabold">Start building unstoppable social proof today</h2>
+    <p class="mt-4 text-lg text-primary-100 max-w-2xl mx-auto">More reviews mean higher rankings, better ads, and more booked jobs. Let's automate it.</p>
+    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Start Free Trial</a>
+      {% elif has_endpoint('register') %}
+        <a href="{{ url_for(ep('register')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Start Free Trial</a>
+      {% else %}
+        <a href="/signup" class="btn bg-white text-primary-700 hover:bg-gray-100">Start Free Trial</a>
+      {% endif %}
+      <a href="#how-it-works" class="btn btn-outline border-white text-white hover:bg-white/10">Learn More</a>
+    </div>
+    <p class="mt-4 text-sm text-primary-200">No credit card required • 14-day free trial • Cancel anytime</p>
+  </div>
+</section>
+
+{% endblock %}

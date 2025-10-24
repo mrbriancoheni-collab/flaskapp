@@ -1,0 +1,127 @@
+{% extends 'base_app.html' %}
+{% block title %}Business Profile – {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-semibold mb-4">Business Profile</h1>
+
+<form method="post" class="bg-white border rounded-xl p-6 grid md:grid-cols-2 gap-4" id="biz-form" novalidate>
+  {# CSRF: if WTForms is used elsewhere you might have form.hidden_tag();
+     otherwise fall back to global csrf_token() #}
+  {% if form is defined and form.hidden_tag is defined %}
+    {{ form.hidden_tag() }}
+  {% elif csrf_token is defined %}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% endif %}
+
+  {# Simple honeypot to deter bots #}
+  <input type="text" name="company" tabindex="-1" autocomplete="off" class="hidden" aria-hidden="true">
+
+  {# Let the template work with dict or object profiles #}
+  {% set p = profile if profile is mapping else {} %}
+
+  <div>
+    <label for="business_name" class="block text-sm mb-1">Business Name</label>
+    <input id="business_name" name="business_name" required autocomplete="organization"
+           value="{{ p.get('business_name', profile.business_name|default('')) }}"
+           class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+  </div>
+
+  <div>
+    <label for="industry" class="block text-sm mb-1">Industry</label>
+    <input id="industry" name="industry"
+           value="{{ p.get('industry', profile.industry|default('')) }}"
+           class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+  </div>
+
+  <div>
+    <label for="service_quality" class="block text-sm mb-1">Service Quality (e.g., premium, budget)</label>
+    <input id="service_quality" name="service_quality"
+           value="{{ p.get('service_quality', profile.service_quality|default('')) }}"
+           class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+  </div>
+
+  <div>
+    <label for="price_point" class="block text-sm mb-1">Price Point (e.g., low, mid, high)</label>
+    <input id="price_point" name="price_point"
+           value="{{ p.get('price_point', profile.price_point|default('')) }}"
+           class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+  </div>
+
+  <div class="md:col-span-2">
+    <label for="target_audience" class="block text-sm mb-1">Target Audience</label>
+    <input id="target_audience" name="target_audience"
+           value="{{ p.get('target_audience', profile.target_audience|default('')) }}"
+           class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+  </div>
+
+  <div class="md:col-span-2">
+    <label for="services" class="block text-sm mb-1">Primary Services</label>
+    <textarea id="services" name="services" rows="2"
+              class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ p.get('services', profile.services|default('')) }}</textarea>
+  </div>
+
+  <div class="md:col-span-2">
+    <label for="service_area" class="block text-sm mb-1">Service Area</label>
+    <input id="service_area" name="service_area" autocomplete="address-level2"
+           value="{{ p.get('service_area', profile.service_area|default('')) }}"
+           class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+  </div>
+
+  <div class="md:col-span-2">
+    <label for="brand_voice" class="block text-sm mb-1">Brand Voice</label>
+    <input id="brand_voice" name="brand_voice"
+           value="{{ p.get('brand_voice', profile.brand_voice|default('')) }}"
+           class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+  </div>
+
+  <div class="md:col-span-2">
+    <label for="unique_value" class="block text-sm mb-1">Unique Value</label>
+    <textarea id="unique_value" name="unique_value" rows="2"
+              class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ p.get('unique_value', profile.unique_value|default('')) }}</textarea>
+  </div>
+
+  <div>
+    <label for="website" class="block text-sm mb-1">Website</label>
+    <input id="website" name="website" type="url" inputmode="url" autocomplete="url"
+           placeholder="https://example.com"
+           value="{{ p.get('website', profile.website|default('')) }}"
+           class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+  </div>
+
+  <div>
+    <label for="phone" class="block text-sm mb-1">Phone</label>
+    <input id="phone" name="phone" type="tel" inputmode="tel"
+           pattern="\\+?[0-9\\s\\-\\(\\)]{7,}"
+           autocomplete="tel"
+           placeholder="(555) 123-4567"
+           value="{{ p.get('phone', profile.phone|default('')) }}"
+           class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+  </div>
+
+  <div class="md:col-span-2">
+    <label for="email" class="block text-sm mb-1">Email</label>
+    <input id="email" name="email" type="email" inputmode="email" autocomplete="email"
+           value="{{ p.get('email', profile.email|default('')) }}"
+           class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+  </div>
+
+  <div class="md:col-span-2">
+    <button id="save-btn" class="px-5 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500">
+      Save Profile
+    </button>
+  </div>
+</form>
+
+<script>
+  // Prevent double submits
+  (function () {
+    const form = document.getElementById('biz-form');
+    const btn  = document.getElementById('save-btn');
+    form?.addEventListener('submit', function () {
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Saving…';
+      }
+    });
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,257 @@
+{% extends "base_public.html" %}
+{% set SECTION = 'solutions' %}
+{% block title %}Smart Ad Spend — Only When You Have Openings{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 bg-gradient-to-b from-primary-50 via-white to-white"></div>
+  <div class="container-max relative py-20 lg:py-28 text-center">
+    <span class="badge">📅 Smart Scheduling</span>
+    <h1 class="mt-6 text-4xl md:text-6xl font-extrabold tracking-tight">
+      Spend When <span class="text-primary-700">You Have Openings</span>
+    </h1>
+    <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+      Match your ads to your crew's free time. No more slow days or overload. FieldSprout auto-adjusts your ad spend based on your real-time capacity—filling gaps when you need work, pulling back when you're booked.
+    </p>
+    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary">Start Now</a>
+      {% elif has_endpoint('register') %}
+        <a href="{{ url_for(ep('register')) }}" class="btn btn-primary">Start Now</a>
+      {% else %}
+        <a href="/signup" class="btn btn-primary">Start Now</a>
+      {% endif %}
+      <a href="/connect/calendar" class="btn btn-outline">Sync Calendar</a>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-16">
+  <div class="container-max">
+    <div class="grid md:grid-cols-3 gap-8 text-center text-white">
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">87%</div>
+        <p class="mt-2 text-gray-300">reduction in wasted ad spend</p>
+      </div>
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">30%</div>
+        <p class="mt-2 text-gray-300">higher capacity utilization</p>
+      </div>
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">24/7</div>
+        <p class="mt-2 text-gray-300">automated bid adjustments</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto">
+      <span class="badge">How It Works</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Set it once, let AI do the rest</h2>
+      <p class="mt-4 text-gray-600">Connect your scheduling system and define your capacity rules. Our AI handles the optimization in real-time.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-3 gap-6">
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-14 w-14 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center text-2xl font-bold">1</div>
+        <h3 class="mt-4 font-semibold text-xl">Connect Your Calendar</h3>
+        <p class="mt-3 text-gray-600">Link your scheduling software (ServiceTitan, Housecall Pro, Google Calendar, or any iCal feed). We monitor your openings in real-time.</p>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-14 w-14 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center text-2xl font-bold">2</div>
+        <h3 class="mt-4 font-semibold text-xl">Set Your Rules</h3>
+        <p class="mt-3 text-gray-600">Define your target capacity (e.g., 80%), max daily spend, and booking goals. Our AI learns your ideal schedule rhythm.</p>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-14 w-14 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center text-2xl font-bold">3</div>
+        <h3 class="mt-4 font-semibold text-xl">Auto-Adjust 24/7</h3>
+        <p class="mt-3 text-gray-600">When bookings drop, ads ramp up. When you're full, spend pauses. Always optimized for your current availability.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section bg-gradient-to-b from-white to-primary-50/50">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto">
+      <span class="badge">Smart Features</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Intelligent spend control</h2>
+      <p class="mt-4 text-gray-600">Advanced automation that understands your business patterns and market conditions.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-2 gap-8">
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">📊</div>
+        <h3 class="mt-4 font-semibold text-xl">Auto Up & Down</h3>
+        <p class="mt-3 text-gray-600">When your schedule fills up, we automatically pull back. When it opens, we push ads harder. No manual intervention needed.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Real-time capacity monitoring</li>
+          <li>Dynamic budget allocation</li>
+          <li>Prevents overbooking stress</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">🌦️</div>
+        <h3 class="mt-4 font-semibold text-xl">Season & Weather Triggers</h3>
+        <p class="mt-3 text-gray-600">Built-in boosts for busy seasons and weather-driven demand spikes. HVAC in summer heat, plumbing after freezes, roofing after storms.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Weather API integration</li>
+          <li>Seasonal trend patterns</li>
+          <li>Emergency service surge pricing</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">🎯</div>
+        <h3 class="mt-4 font-semibold text-xl">Quick Offers & Promos</h3>
+        <p class="mt-3 text-gray-600">Turn on special promotions that match the day's capacity. Fill slow Tuesday mornings with targeted discount ads.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Time-of-day pricing</li>
+          <li>Last-minute fill campaigns</li>
+          <li>Same-day service boosters</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">🔄</div>
+        <h3 class="mt-4 font-semibold text-xl">Multi-Channel Coordination</h3>
+        <p class="mt-3 text-gray-600">Adjusts spend across Google, Meta, and local service ads simultaneously. One capacity signal, all channels optimized.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Cross-platform budget shifting</li>
+          <li>Channel performance weighting</li>
+          <li>Unified reporting dashboard</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="section">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <span class="badge">Customer Success</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Built by pros, for pros</h2>
+      <p class="mt-4 text-gray-600">See how local service businesses are using capacity-based spending to maximize ROI.</p>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"We were burning $2K/month on leads we couldn't even schedule. Now FieldSprout automatically pauses ads when we're at 85% capacity. Game changer."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">RG</div>
+          <div>
+            <p class="font-semibold">Robert Garcia</p>
+            <p class="text-sm text-gray-600">HVAC Pro, Phoenix AZ</p>
+          </div>
+        </footer>
+      </div>
+
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"Love the weather triggers. After a storm, our ads automatically boost without me doing anything. Filled 23 jobs in 48 hours."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">JM</div>
+          <div>
+            <p class="font-semibold">Jennifer Martinez</p>
+            <p class="text-sm text-gray-600">Roofing Contractor, Dallas TX</p>
+          </div>
+        </footer>
+      </div>
+
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"Set it once six months ago and haven't touched it. Steady flow of jobs, no feast-or-famine cycles. Our crew loves it."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">DL</div>
+          <div>
+            <p class="font-semibold">David Lee</p>
+            <p class="text-sm text-gray-600">Plumbing & Drains, Seattle WA</p>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST SIGNALS -->
+<section class="section bg-gradient-to-b from-white to-primary-50/30">
+  <div class="container-max">
+    <div class="rounded-3xl bg-white p-8 md:p-12 shadow-soft border border-gray-100">
+      <div class="grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          <h3 class="text-2xl md:text-4xl font-extrabold">Trusted by 1,200+ service businesses</h3>
+          <p class="mt-4 text-gray-600">From solo crews to 50+ truck operations, FieldSprout's capacity-based bidding helps local pros maximize every marketing dollar.</p>
+        </div>
+        <div class="grid grid-cols-2 gap-6">
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">$14M+</div>
+            <p class="text-sm text-gray-600 mt-1">Ad spend optimized</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">150K+</div>
+            <p class="text-sm text-gray-600 mt-1">Jobs scheduled</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">4.9/5</div>
+            <p class="text-sm text-gray-600 mt-1">Customer rating</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">92%</div>
+            <p class="text-sm text-gray-600 mt-1">Annual retention</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 py-16">
+  <div class="container-max relative text-center text-white">
+    <h2 class="text-3xl md:text-5xl font-extrabold">Stop wasting money on ads when you're already booked</h2>
+    <p class="mt-4 text-lg text-primary-100 max-w-2xl mx-auto">Join 1,200+ pros who only pay for leads when they have capacity to serve them.</p>
+    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Start Free Trial</a>
+      {% elif has_endpoint('register') %}
+        <a href="{{ url_for(ep('register')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Start Free Trial</a>
+      {% else %}
+        <a href="/signup" class="btn bg-white text-primary-700 hover:bg-gray-100">Start Free Trial</a>
+      {% endif %}
+      <a href="/connect/calendar" class="btn btn-outline border-white text-white hover:bg-white/10">Sync Calendar Now</a>
+    </div>
+    <p class="mt-4 text-sm text-primary-200">No credit card required • 14-day free trial • Cancel anytime</p>
+  </div>
+</section>
+
+{% endblock %}

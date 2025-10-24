@@ -1,0 +1,26 @@
+{% extends "base_public.html" %}
+{% set SECTION = 'solutions' %}
+{% block content %}
+<section class="mx-auto max-w-5xl py-12 px-4">
+  <h1 class="text-3xl font-semibold">See What Works</h1>
+  <p class="mt-3 text-lg text-slate-700">One page shows which ads, zips, and hours bring real jobs.</p>
+
+  <div class="grid md:grid-cols-3 gap-6 mt-8">
+    <div class="p-6 rounded-xl border">
+      <h3 class="font-medium">Clear Numbers</h3>
+      <p class="text-slate-600 mt-2">Leads, booked jobs, and revenue by source. No fluff.</p>
+    </div>
+    <div class="p-6 rounded-xl border">
+      <h3 class="font-medium">What to Cut</h3>
+      <p class="text-slate-600 mt-2">Find the waste fast. Turn it off in a click.</p>
+    </div>
+    <div class="p-6 rounded-xl border">
+      <h3 class="font-medium">Owner-Ready PDF</h3>
+      <p class="text-slate-600 mt-2">Auto email a simple report each week or month.</p>
+    </div>
+  </div>
+
+  <a class="inline-flex mt-8 px-5 py-3 rounded-lg bg-emerald-600 text-white" href="/sample-report">Send me a sample report</a>
+  <p class="mt-4 text-sm text-slate-500">Works across Google, GLSA, Facebook, Angi, and Yelp.</p>
+</section>
+{% endblock %}

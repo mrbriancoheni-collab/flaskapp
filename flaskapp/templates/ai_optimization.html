@@ -1,0 +1,335 @@
+{% extends "base_public.html" %}
+{% set SECTION = 'solutions' %}
+{% block title %}AI Campaign Optimization — Maximize ROI 24/7{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 bg-gradient-to-b from-primary-50 via-white to-white"></div>
+  <div class="container-max relative py-20 lg:py-28 text-center">
+    <span class="badge">🤖 AI Optimization</span>
+    <h1 class="mt-6 text-4xl md:text-6xl font-extrabold tracking-tight">
+      Let AI <span class="text-primary-700">Maximize Your ROI</span> 24/7
+    </h1>
+    <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+      FieldSprout's AI agents monitor your campaigns around the clock—adjusting bids, pausing underperformers, and reallocating budget to what converts best. Stop leaving money on the table.
+    </p>
+    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary">Start Optimizing</a>
+      {% elif has_endpoint('register') %}
+        <a href="{{ url_for(ep('register')) }}" class="btn btn-primary">Start Optimizing</a>
+      {% else %}
+        <a href="/signup" class="btn btn-primary">Start Optimizing</a>
+      {% endif %}
+      <a href="#how-it-works" class="btn btn-outline">See It In Action</a>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-16">
+  <div class="container-max">
+    <div class="grid md:grid-cols-3 gap-8 text-center text-white">
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">38%</div>
+        <p class="mt-2 text-gray-300">average CPL reduction in 60 days</p>
+      </div>
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">24/7</div>
+        <p class="mt-2 text-gray-300">continuous monitoring & optimization</p>
+      </div>
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">2.8x</div>
+        <p class="mt-2 text-gray-300">more conversions from same budget</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works" class="section">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto">
+      <span class="badge">How It Works</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">AI that never sleeps</h2>
+      <p class="mt-4 text-gray-600">While you're running jobs, our AI is analyzing thousands of signals and making micro-adjustments to maximize every dollar.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-3 gap-6">
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-14 w-14 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center text-2xl font-bold">1</div>
+        <h3 class="mt-4 font-semibold text-xl">Connect Your Accounts</h3>
+        <p class="mt-3 text-gray-600">Link Google Ads, Meta, LSA, call tracking, and CRM. Our AI needs full visibility to optimize across all channels.</p>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-14 w-14 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center text-2xl font-bold">2</div>
+        <h3 class="mt-4 font-semibold text-xl">Set Your Goals</h3>
+        <p class="mt-3 text-gray-600">Define your target CPL, ROAS, or cost per booked job. The AI optimizes toward your specific business goals.</p>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-14 w-14 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center text-2xl font-bold">3</div>
+        <h3 class="mt-4 font-semibold text-xl">Let AI Optimize</h3>
+        <p class="mt-3 text-gray-600">AI runs 24/7, making thousands of bid adjustments, budget shifts, and pause/unpause decisions based on real-time performance.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT AI OPTIMIZES -->
+<section class="section bg-gradient-to-b from-white to-primary-50/50">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto">
+      <span class="badge">AI Capabilities</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">What our AI optimizes</h2>
+      <p class="mt-4 text-gray-600">From keywords to creative to budgets—our AI handles the tedious optimization work so you don't have to.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-2 gap-8">
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">💰</div>
+        <h3 class="mt-4 font-semibold text-xl">Smart Bidding</h3>
+        <p class="mt-3 text-gray-600">AI adjusts bids every hour based on conversion likelihood, time of day, device, location, and audience signals.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Dayparting & device bid adjustments</li>
+          <li>Geo-specific bid modifiers</li>
+          <li>Conversion probability modeling</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">🔍</div>
+        <h3 class="mt-4 font-semibold text-xl">Keyword Optimization</h3>
+        <p class="mt-3 text-gray-600">Automatically discover new high-intent keywords, pause low performers, and add negatives to block waste.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Search term mining & expansion</li>
+          <li>Negative keyword automation</li>
+          <li>Match type optimization</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">📊</div>
+        <h3 class="mt-4 font-semibold text-xl">Budget Reallocation</h3>
+        <p class="mt-3 text-gray-600">Shift budget from underperforming campaigns to winners in real-time. Maximize results from every dollar you spend.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Cross-channel budget balancing</li>
+          <li>Campaign-level performance triggers</li>
+          <li>ROI-driven allocation</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">✂️</div>
+        <h3 class="mt-4 font-semibold text-xl">Ad Copy Testing</h3>
+        <p class="mt-3 text-gray-600">AI generates and tests multiple ad variations, automatically pausing losers and scaling winners for maximum CTR and conversion.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Headline & description A/B testing</li>
+          <li>Auto-pause underperformers</li>
+          <li>Continuous creative refresh</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">🎯</div>
+        <h3 class="mt-4 font-semibold text-xl">Audience Targeting</h3>
+        <p class="mt-3 text-gray-600">Identify which audiences convert best and automatically bid higher for them while excluding low-value segments.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Demographic bid adjustments</li>
+          <li>In-market & affinity layering</li>
+          <li>Remarketing audience optimization</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">⚡</div>
+        <h3 class="mt-4 font-semibold text-xl">Landing Page Matching</h3>
+        <p class="mt-3 text-gray-600">AI auto-assigns the best landing page for each keyword and ad based on relevance, quality score, and conversion data.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Dynamic URL insertion</li>
+          <li>Quality Score optimization</li>
+          <li>Conversion rate tracking</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AI BENEFITS -->
+<section class="section">
+  <div class="container-max">
+    <div class="rounded-3xl bg-white p-8 md:p-12 shadow-soft border border-gray-100">
+      <div class="grid lg:grid-cols-2 gap-10 items-center">
+        <div>
+          <span class="badge">Why AI?</span>
+          <h2 class="mt-4 text-3xl md:text-4xl font-extrabold">Humans can't keep up—AI can</h2>
+          <p class="mt-4 text-gray-600">The average Google Ads account has 1,000+ optimization opportunities per week. No human can review them all. AI can—and does.</p>
+          <ul class="mt-6 space-y-4">
+            <li class="flex gap-3">
+              <span class="text-primary-700 text-xl">✓</span>
+              <div>
+                <strong class="block">Always Learning</strong>
+                <span class="text-gray-600">AI improves every week based on your account's unique performance patterns</span>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-700 text-xl">✓</span>
+              <div>
+                <strong class="block">No Emotions</strong>
+                <span class="text-gray-600">AI pauses underperformers without hesitation—even if you loved that keyword</span>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-700 text-xl">✓</span>
+              <div>
+                <strong class="block">Scale Without Headcount</strong>
+                <span class="text-gray-600">Manage 100 campaigns as easily as 10—AI scales with you</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="grid grid-cols-2 gap-6">
+          <div class="text-center p-6 rounded-2xl bg-primary-50">
+            <div class="text-4xl font-extrabold text-primary-700">10K+</div>
+            <p class="text-sm text-gray-600 mt-2">optimizations per week</p>
+          </div>
+          <div class="text-center p-6 rounded-2xl bg-primary-50">
+            <div class="text-4xl font-extrabold text-primary-700">87%</div>
+            <p class="text-sm text-gray-600 mt-2">accuracy in bid predictions</p>
+          </div>
+          <div class="text-center p-6 rounded-2xl bg-primary-50">
+            <div class="text-4xl font-extrabold text-primary-700">3sec</div>
+            <p class="text-sm text-gray-600 mt-2">response time to changes</p>
+          </div>
+          <div class="text-center p-6 rounded-2xl bg-primary-50">
+            <div class="text-4xl font-extrabold text-primary-700">24/7</div>
+            <p class="text-sm text-gray-600 mt-2">monitoring uptime</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="section bg-gradient-to-b from-white to-primary-50/30">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <span class="badge">Customer Success</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">AI optimization wins</h2>
+      <p class="mt-4 text-gray-600">Local businesses share how AI-driven optimization transformed their marketing ROI.</p>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"Our old agency was making maybe 10 changes per month. FieldSprout's AI makes 10,000+. CPL dropped 41% in the first 90 days."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">RH</div>
+          <div>
+            <p class="font-semibold">Rachel Harris</p>
+            <p class="text-sm text-gray-600">Tree Service, Nashville TN</p>
+          </div>
+        </footer>
+      </div>
+
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"I was manually checking my campaigns once a week. Now the AI is optimizing every single hour. Same budget, 2.3x more leads."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">VM</div>
+          <div>
+            <p class="font-semibold">Victor Morales</p>
+            <p class="text-sm text-gray-600">Painting Contractors, Houston TX</p>
+          </div>
+        </footer>
+      </div>
+
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"The AI caught a budget issue at 2am on a Saturday and fixed it before I even woke up. Saved me $600 in wasted spend. Worth it for that alone."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">EW</div>
+          <div>
+            <p class="font-semibold">Emily Wang</p>
+            <p class="text-sm text-gray-600">Pool Maintenance, Tampa FL</p>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST SIGNALS -->
+<section class="section">
+  <div class="container-max">
+    <div class="rounded-3xl bg-gradient-to-br from-primary-50 to-primary-100 p-8 md:p-12">
+      <div class="grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          <h3 class="text-2xl md:text-4xl font-extrabold">Managing $32M+ in ad spend with AI</h3>
+          <p class="mt-4 text-gray-700">FieldSprout's AI optimization engine has processed over 14 million campaign changes, driving better performance for local businesses every single day.</p>
+        </div>
+        <div class="grid grid-cols-2 gap-6">
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">14M+</div>
+            <p class="text-sm text-gray-600 mt-1">AI optimizations made</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">$32M+</div>
+            <p class="text-sm text-gray-600 mt-1">Ad spend optimized</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">38%</div>
+            <p class="text-sm text-gray-600 mt-1">Avg CPL reduction</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">99.9%</div>
+            <p class="text-sm text-gray-600 mt-1">AI uptime</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 py-16">
+  <div class="container-max relative text-center text-white">
+    <h2 class="text-3xl md:text-5xl font-extrabold">Let AI work while you sleep</h2>
+    <p class="mt-4 text-lg text-primary-100 max-w-2xl mx-auto">Stop manually optimizing campaigns. Turn on AI and watch your CPL drop while conversions climb.</p>
+    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Start AI Optimization</a>
+      {% elif has_endpoint('register') %}
+        <a href="{{ url_for(ep('register')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Start AI Optimization</a>
+      {% else %}
+        <a href="/signup" class="btn bg-white text-primary-700 hover:bg-gray-100">Start AI Optimization</a>
+      {% endif %}
+      <a href="#how-it-works" class="btn btn-outline border-white text-white hover:bg-white/10">See How It Works</a>
+    </div>
+    <p class="mt-4 text-sm text-primary-200">No setup fees • AI starts optimizing day 1 • Cancel anytime</p>
+  </div>
+</section>
+
+{% endblock %}

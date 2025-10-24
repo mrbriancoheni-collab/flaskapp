@@ -1,0 +1,85 @@
+{% extends 'base_public.html' %}
+{% block title %}Create Account – {{ app_name }}{% endblock %}
+{% block content %}
+<div class="w-full max-w-md mx-auto bg-white border rounded-xl p-6 md:p-8">
+  <h1 class="text-2xl font-bold mb-1">Create your account</h1>
+  <p class="text-gray-600 mt-1">You'll be done in under a minute.</p>
+
+  <form method="post" class="mt-6 space-y-4" novalidate id="register-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ next or request.args.get('next','') }}">
+    <!-- simple honeypot -->
+    <input type="text" name="company" tabindex="-1" autocomplete="off" class="hidden" aria-hidden="true">
+
+    <div>
+      <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+      <input
+        id="name"
+        name="name"
+        type="text"
+        inputmode="text"
+        autocomplete="name"
+        required
+        value="{{ request.values.get('name','') }}"
+        class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        placeholder="Jane Contractor"
+      >
+    </div>
+
+    <div>
+      <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+      <input
+        id="email"
+        name="email"
+        type="email"
+        inputmode="email"
+        autocomplete="email"
+        required
+        value="{{ request.values.get('email','') }}"
+        class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        placeholder="you@business.com"
+      >
+    </div>
+
+    <div>
+      <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+      <input
+        id="password"
+        name="password"
+        type="password"
+        autocomplete="new-password"
+        required
+        minlength="6"
+        class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        placeholder="••••••••"
+      >
+      <p class="text-xs text-gray-500 mt-1">At least 6 characters. You’ll get a verification email.</p>
+    </div>
+
+    <button
+      id="register-submit"
+      type="submit"
+      class="w-full px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500"
+    >
+      Create account
+    </button>
+  </form>
+
+  <p class="text-sm text-gray-600 mt-4">
+    Already have an account?
+    <a href="{{ url_for(ep('login'), next=request.args.get('next','')) }}" class="text-indigo-600 hover:underline">Sign in</a>
+  </p>
+</div>
+
+<script>
+  // Prevent double-submits
+  const rForm = document.getElementById('register-form');
+  const rBtn  = document.getElementById('register-submit');
+  rForm?.addEventListener('submit', () => {
+    if (rBtn) {
+      rBtn.disabled = true;
+      rBtn.textContent = 'Creating...';
+    }
+  });
+</script>
+{% endblock %}

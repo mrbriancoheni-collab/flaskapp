@@ -1,0 +1,314 @@
+{% extends "base_public.html" %}
+{% set SECTION = 'solutions' %}
+{% block title %}Multi-Location & Franchise — Scale Your Marketing{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 bg-gradient-to-b from-primary-50 via-white to-white"></div>
+  <div class="container-max relative py-20 lg:py-28 text-center">
+    <span class="badge">🏢 Multi-Location</span>
+    <h1 class="mt-6 text-4xl md:text-6xl font-extrabold tracking-tight">
+      <span class="text-primary-700">Governance</span> That Actually Sticks
+    </h1>
+    <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+      Shared playbooks, protected budgets, and roll-up reporting across all your markets. Scale your local service business without losing brand control or wasting ad spend.
+    </p>
+    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary">Get Started</a>
+      {% elif has_endpoint('register') %}
+        <a href="{{ url_for(ep('register')) }}" class="btn btn-primary">Get Started</a>
+      {% else %}
+        <a href="/signup" class="btn btn-primary">Get Started</a>
+      {% endif %}
+      <a href="/demo" class="btn btn-outline">See Multi-Location Demo</a>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-16">
+  <div class="container-max">
+    <div class="grid md:grid-cols-3 gap-8 text-center text-white">
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">47%</div>
+        <p class="mt-2 text-gray-300">reduction in wasted spend across locations</p>
+      </div>
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">3hrs</div>
+        <p class="mt-2 text-gray-300">average setup time per location</p>
+      </div>
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">100%</div>
+        <p class="mt-2 text-gray-300">brand compliance with guardrails</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto">
+      <span class="badge">How It Works</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Central control, local flexibility</h2>
+      <p class="mt-4 text-gray-600">Set guardrails at the corporate level, empower local managers to optimize within their markets.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-3 gap-6">
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-14 w-14 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center text-2xl font-bold">1</div>
+        <h3 class="mt-4 font-semibold text-xl">Build Your Playbook</h3>
+        <p class="mt-3 text-gray-600">Create shared brand assets, negative keywords, ad templates, and compliance rules once—deploy everywhere.</p>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-14 w-14 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center text-2xl font-bold">2</div>
+        <h3 class="mt-4 font-semibold text-xl">Set Guardrails</h3>
+        <p class="mt-3 text-gray-600">Define budget limits, bid caps, and permissions by location, market, or trade. Prevent overspending before it happens.</p>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-14 w-14 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center text-2xl font-bold">3</div>
+        <h3 class="mt-4 font-semibold text-xl">Roll-Up Reporting</h3>
+        <p class="mt-3 text-gray-600">See performance by location, region, or trade in one dashboard. Spot winners, shift budgets, scale what works.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GOVERNANCE FEATURES -->
+<section class="section bg-gradient-to-b from-white to-primary-50/50">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto">
+      <span class="badge">Governance & Guardrails</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Protect your brand at scale</h2>
+      <p class="mt-4 text-gray-600">Corporate controls that prevent rogue spending and brand damage across all your locations.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-2 gap-8">
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">🔒</div>
+        <h3 class="mt-4 font-semibold text-xl">Shared Brand Assets</h3>
+        <p class="mt-3 text-gray-600">One library of logos, ad copy templates, and landing pages. Every location stays on-brand without recreating the wheel.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Centralized asset management</li>
+          <li>Version control & approval workflows</li>
+          <li>Auto-updates across all campaigns</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">🚫</div>
+        <h3 class="mt-4 font-semibold text-xl">Global Negative Keywords</h3>
+        <p class="mt-3 text-gray-600">Block bad searches company-wide. Add "free" or "DIY" once and it applies to every location's campaigns instantly.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Corporate-level exclusions</li>
+          <li>Location-specific overrides</li>
+          <li>Prevents low-intent spend</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">💰</div>
+        <h3 class="mt-4 font-semibold text-xl">Budget & Bid Limits</h3>
+        <p class="mt-3 text-gray-600">Set spending caps by location, service line, or channel. No more surprise $10K Google bills from a single overeager franchisee.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Daily/monthly budget controls</li>
+          <li>Max CPC and CPL guardrails</li>
+          <li>Real-time overspend alerts</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">👥</div>
+        <h3 class="mt-4 font-semibold text-xl">Role-Based Permissions</h3>
+        <p class="mt-3 text-gray-600">Define what Owners, Regional Managers, and CSRs can see and edit. Corporate keeps control while locations stay empowered.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Tiered access controls (View/Edit/Admin)</li>
+          <li>Location-specific permissions</li>
+          <li>Audit logs for all changes</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCALING FEATURES -->
+<section class="section">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto">
+      <span class="badge">Visibility & Scaling</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">See what's working, scale what wins</h2>
+      <p class="mt-4 text-gray-600">Performance insights that help you allocate budget to high-performing locations and fix underperformers fast.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-2 gap-8">
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">📊</div>
+        <h3 class="mt-4 font-semibold text-xl">Performance Leaderboards</h3>
+        <p class="mt-3 text-gray-600">Rank locations by CPL, booked jobs, or revenue. Identify top performers and replicate their strategies across all markets.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Real-time location rankings</li>
+          <li>Channel performance by market</li>
+          <li>Gamify success across franchisees</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">🔔</div>
+        <h3 class="mt-4 font-semibold text-xl">Capacity Alerts</h3>
+        <p class="mt-3 text-gray-600">Get notified when a location is overbooked or has excess capacity. Shift ad spend to where it'll generate the most revenue.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Real-time booking monitoring</li>
+          <li>Automated budget reallocation</li>
+          <li>Maximize fleet utilization</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">🚀</div>
+        <h3 class="mt-4 font-semibold text-xl">Franchise-Ready Rollouts</h3>
+        <p class="mt-3 text-gray-600">Launch a new location in days, not months. Clone proven campaigns, import brand assets, and go live with one click.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Campaign template cloning</li>
+          <li>Geo-specific auto-setup</li>
+          <li>Onboard new franchisees instantly</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">📈</div>
+        <h3 class="mt-4 font-semibold text-xl">Consolidated Reporting</h3>
+        <p class="mt-3 text-gray-600">One dashboard for all locations. Filter by region, trade, channel, or time period. Export board-ready reports in seconds.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Customizable dashboards</li>
+          <li>Automated executive summaries</li>
+          <li>API access for BI tools</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="section bg-gradient-to-b from-white to-primary-50/30">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <span class="badge">Customer Success</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Scaling with confidence</h2>
+      <p class="mt-4 text-gray-600">Multi-location operators share how FieldSprout helped them grow without losing control.</p>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"Before FieldSprout, every franchisee was doing their own thing. Now we have one playbook, shared assets, and visibility across all 18 locations. CPL down 31% system-wide."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">JD</div>
+          <div>
+            <p class="font-semibold">Jessica Davis</p>
+            <p class="text-sm text-gray-600">VP Marketing, National HVAC Chain</p>
+          </div>
+        </footer>
+      </div>
+
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"We opened 5 new markets last year. With FieldSprout's location cloning, each one was live in under 4 hours. Used to take us 3 weeks per market."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">KT</div>
+          <div>
+            <p class="font-semibold">Kevin Thompson</p>
+            <p class="text-sm text-gray-600">COO, Regional Plumbing Group</p>
+          </div>
+        </footer>
+      </div>
+
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"The leaderboard feature created healthy competition among our locations. Everyone wants to be #1 in CPL now—and corporate has the data to reward top performers."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">AL</div>
+          <div>
+            <p class="font-semibold">Andrea Lopez</p>
+            <p class="text-sm text-gray-600">Director of Operations, Pest Control Franchise</p>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST SIGNALS -->
+<section class="section">
+  <div class="container-max">
+    <div class="rounded-3xl bg-white p-8 md:p-12 shadow-soft border border-gray-100">
+      <div class="grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          <h3 class="text-2xl md:text-4xl font-extrabold">Trusted by 140+ multi-location operators</h3>
+          <p class="mt-4 text-gray-600">From 3-location regionals to 200+ franchise systems, FieldSprout scales with your growth while keeping brand standards intact.</p>
+        </div>
+        <div class="grid grid-cols-2 gap-6">
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">850+</div>
+            <p class="text-sm text-gray-600 mt-1">Locations managed</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">$22M+</div>
+            <p class="text-sm text-gray-600 mt-1">Ad spend governed</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">3hrs</div>
+            <p class="text-sm text-gray-600 mt-1">Avg new location setup</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">98%</div>
+            <p class="text-sm text-gray-600 mt-1">Policy compliance rate</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 py-16">
+  <div class="container-max relative text-center text-white">
+    <h2 class="text-3xl md:text-5xl font-extrabold">Scale your local empire with confidence</h2>
+    <p class="mt-4 text-lg text-primary-100 max-w-2xl mx-auto">Central control. Local flexibility. One platform for all your locations.</p>
+    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Get Started</a>
+      {% elif has_endpoint('register') %}
+        <a href="{{ url_for(ep('register')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Get Started</a>
+      {% else %}
+        <a href="/signup" class="btn bg-white text-primary-700 hover:bg-gray-100">Get Started</a>
+      {% endif %}
+      <a href="/demo" class="btn btn-outline border-white text-white hover:bg-white/10">See Multi-Location Demo</a>
+    </div>
+    <p class="mt-4 text-sm text-primary-200">Book a demo • Free for your first 3 locations • Scale pricing available</p>
+  </div>
+</section>
+
+{% endblock %}

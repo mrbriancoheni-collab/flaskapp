@@ -475,3 +475,199 @@ def serp_scraper_add_selected():
 
     flash(f"Added {added_count} contacts to CRM.", "success")
     return redirect(url_for("admin_bp.crm_list"))
+
+
+# -------------------------
+# Email Functionality
+# -------------------------
+@admin_bp.get("/email/compose")
+@login_required
+@require_admin
+def email_compose():
+    """Show email composition form"""
+    # Get contact_id or account_id from query params
+    contact_id = request.args.get("contact_id", type=int)
+    account_id = request.args.get("account_id", type=int)
+    bulk = request.args.get("bulk", type=bool, default=False)
+
+    recipient = None
+    recipient_type = None
+
+    if contact_id:
+        recipient = CRMContact.query.get_or_404(contact_id)
+        recipient_type = "contact"
+    elif account_id:
+        recipient = Account.query.get_or_404(account_id)
+        recipient_type = "account"
+    elif bulk:
+        recipient_type = "bulk"
+
+    # Get all CRM contacts for bulk email
+    all_contacts = CRMContact.query.filter(CRMContact.email.isnot(None), CRMContact.email != "").order_by(CRMContact.business_name).all()
+
+    return render_template(
+        "admin/email_compose.html",
+        recipient=recipient,
+        recipient_type=recipient_type,
+        all_contacts=all_contacts,
+        bulk=bulk,
+        stages=CRM_STAGES
+    )
+
+
+@admin_bp.post("/email/send")
+@login_required
+@require_admin
+def email_send():
+    """Send email to individual or multiple recipients"""
+    from app.services.email_service import send_email
+
+    subject = request.form.get("subject", "").strip()
+    message_body = request.form.get("message", "").strip()
+    recipient_type = request.form.get("recipient_type", "")
+
+    # Validation
+    if not subject or not message_body:
+        flash("Subject and message are required.", "error")
+        return redirect(request.referrer or url_for("admin_bp.email_compose"))
+
+    recipients = []
+
+    try:
+        if recipient_type == "contact":
+            # Single CRM contact
+            contact_id = int(request.form.get("contact_id", 0))
+            contact = CRMContact.query.get_or_404(contact_id)
+
+            if not contact.email:
+                flash(f"Contact {contact.business_name} has no email address.", "error")
+                return redirect(url_for("admin_bp.crm_detail", contact_id=contact.id))
+
+            recipients.append({
+                "email": contact.email,
+                "name": contact.contact_name or contact.business_name
+            })
+
+        elif recipient_type == "account":
+            # All users in an account
+            account_id = int(request.form.get("account_id", 0))
+            account = Account.query.get_or_404(account_id)
+            users = User.query.filter_by(account_id=account.id).all()
+
+            for user in users:
+                if user.email:
+                    recipients.append({
+                        "email": user.email,
+                        "name": user.name
+                    })
+
+        elif recipient_type == "bulk":
+            # Multiple CRM contacts
+            selected_contacts = request.form.getlist("selected_contacts")
+
+            if not selected_contacts:
+                flash("No recipients selected for bulk email.", "error")
+                return redirect(url_for("admin_bp.email_compose", bulk=True))
+
+            for contact_id_str in selected_contacts:
+                contact = CRMContact.query.get(int(contact_id_str))
+                if contact and contact.email:
+                    recipients.append({
+                        "email": contact.email,
+                        "name": contact.contact_name or contact.business_name
+                    })
+
+        # Send emails
+        if not recipients:
+            flash("No valid email addresses found.", "error")
+            return redirect(request.referrer or url_for("admin_bp.email_compose"))
+
+        # Create HTML email body
+        html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <div style="white-space: pre-wrap; font-size: 16px; line-height: 24px; color: #111827;">
+{message_body}
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px 40px; text-align: center; background-color: #f9fafb; border-radius: 0 0 8px 8px;">
+                            <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                                © 2025 FieldSprout. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+        """
+
+        # Send to all recipients
+        success_count = 0
+        failed_count = 0
+
+        for recipient in recipients:
+            try:
+                result = send_email(
+                    to=recipient["email"],
+                    subject=subject,
+                    html_body=html_body,
+                    text_body=message_body
+                )
+
+                if result:
+                    success_count += 1
+                else:
+                    failed_count += 1
+                    logger.warning(f"Failed to send email to {recipient['email']}")
+
+            except Exception as e:
+                failed_count += 1
+                logger.exception(f"Error sending email to {recipient['email']}: {e}")
+
+        # Audit log
+        _audit(
+            "email_sent",
+            note=f"type={recipient_type} count={success_count} failed={failed_count} subject={subject[:100]}"
+        )
+
+        # Flash message
+        if success_count > 0 and failed_count == 0:
+            flash(f"Email sent successfully to {success_count} recipient(s).", "success")
+        elif success_count > 0:
+            flash(f"Email sent to {success_count} recipient(s). {failed_count} failed.", "warning")
+        else:
+            flash(f"Failed to send email to all {failed_count} recipient(s). Check SMTP configuration.", "error")
+
+        # Redirect based on type
+        if recipient_type == "contact":
+            contact_id = int(request.form.get("contact_id", 0))
+            return redirect(url_for("admin_bp.crm_detail", contact_id=contact_id))
+        elif recipient_type == "account":
+            account_id = int(request.form.get("account_id", 0))
+            return redirect(url_for("admin_bp.account_detail", account_id=account_id))
+        else:
+            return redirect(url_for("admin_bp.crm_list"))
+
+    except Exception as e:
+        logger.exception("Error sending email")
+        flash(f"Error sending email: {str(e)}", "error")
+        return redirect(request.referrer or url_for("admin_bp.email_compose"))

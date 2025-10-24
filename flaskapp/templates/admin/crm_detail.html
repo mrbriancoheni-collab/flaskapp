@@ -4,6 +4,11 @@
 <div class="flex items-center justify-between mb-4">
   <h1 class="text-xl font-semibold">{{ item.business_name }}</h1>
   <div class="flex gap-2">
+    {% if item.email %}
+      <a href="{{ url_for('admin_bp.email_compose', contact_id=item.id) }}" class="px-3 py-2 rounded border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100" title="Send email">
+        <i class="fa-solid fa-envelope mr-1"></i>Email
+      </a>
+    {% endif %}
     <a href="{{ url_for('admin_bp.crm_edit', contact_id=item.id) }}" class="px-3 py-2 rounded border">Edit</a>
     <form method="post" action="{{ url_for('admin_bp.crm_delete', contact_id=item.id) }}" onsubmit="return confirm('Delete this contact?')">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">

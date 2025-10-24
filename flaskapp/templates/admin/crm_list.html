@@ -3,7 +3,12 @@
 {% block content %}
 <div class="flex items-center justify-between mb-4">
   <h1 class="text-xl font-semibold">CRM</h1>
-  <a href="{{ url_for('admin_bp.crm_new') }}" class="px-3 py-2 rounded bg-indigo-600 text-white text-sm">New Contact</a>
+  <div class="flex gap-2">
+    <a href="{{ url_for('admin_bp.email_compose', bulk=True) }}" class="px-3 py-2 rounded border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-sm" title="Send bulk email">
+      <i class="fa-solid fa-envelope mr-1"></i>Bulk Email
+    </a>
+    <a href="{{ url_for('admin_bp.crm_new') }}" class="px-3 py-2 rounded bg-indigo-600 text-white text-sm">New Contact</a>
+  </div>
 </div>
 
 <form method="get" class="flex gap-2 mb-4">

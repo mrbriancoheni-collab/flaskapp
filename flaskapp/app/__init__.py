@@ -518,6 +518,13 @@ def create_app():
         app.logger.exception("Failed to register reports_bp")
 
     try:
+        from app.linkedin import linkedin_bp
+        app.register_blueprint(linkedin_bp)  # url_prefix defined in blueprint
+        app.logger.info("linkedin_bp registered at /account/linkedin")
+    except Exception:
+        app.logger.exception("Failed to register linkedin_bp")
+
+    try:
         from app.fbads.data_deletion import data_deletion_bp
         app.register_blueprint(data_deletion_bp, url_prefix="/account")
         from app.fbads.data_governance import data_bp

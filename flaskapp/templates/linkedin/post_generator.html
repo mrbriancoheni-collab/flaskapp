@@ -1,0 +1,398 @@
+{# templates/linkedin/post_generator.html #}
+{% extends "base_app.html" %}
+{% set SECTION = 'linkedin' %}
+{% block title %}LinkedIn Thought Leader Post Generator{% endblock %}
+
+{% block content %}
+{% set _ai_available = (ai_available if ai_available is defined else false) %}
+
+<div class="max-w-5xl mx-auto space-y-6">
+  <!-- Header -->
+  <div>
+    <h1 class="text-2xl font-semibold">LinkedIn Thought Leader Post Generator</h1>
+    <p class="text-gray-500 mt-1">
+      Create engaging LinkedIn posts that demonstrate your unique expertise and build your professional brand.
+    </p>
+  </div>
+
+  <!-- AI Status Banner -->
+  <div class="rounded-lg border {{ 'bg-green-50 border-green-200' if _ai_available else 'bg-amber-50 border-amber-200' }} p-4">
+    <div class="flex items-center gap-3">
+      <div class="{{ 'text-green-600' if _ai_available else 'text-amber-600' }} text-xl">
+        <i class="fa-solid fa-robot"></i>
+      </div>
+      <div class="text-sm {{ 'text-green-900' if _ai_available else 'text-amber-900' }}">
+        {% if _ai_available %}
+          <p class="font-semibold">AI-Powered Content Generation Active</p>
+          <p>Posts are generated using Claude AI to match your unique voice and expertise.</p>
+        {% else %}
+          <p class="font-semibold">AI Configuration Required</p>
+          <p>Add ANTHROPIC_API_KEY to your environment to enable AI post generation.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="grid lg:grid-cols-2 gap-6">
+    <!-- Input Form -->
+    <div class="rounded-lg border bg-white p-6">
+      <h2 class="font-semibold mb-4">
+        <i class="fa-solid fa-pen-to-square mr-2 text-blue-600"></i>Post Configuration
+      </h2>
+
+      <form id="postGeneratorForm" class="space-y-4">
+        <!-- Expertise Field -->
+        <div>
+          <label for="expertise" class="block text-sm font-medium text-gray-700 mb-1">
+            Your Unique Expertise *
+          </label>
+          <textarea
+            id="expertise"
+            name="expertise"
+            rows="3"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Example: 15+ years optimizing Google Ads for home services businesses, specialized in seasonal HVAC campaigns and emergency plumbing PPC"
+          ></textarea>
+          <p class="text-xs text-gray-500 mt-1">
+            What makes you different? What specific knowledge or experience do you bring?
+          </p>
+        </div>
+
+        <!-- Industry Field -->
+        <div>
+          <label for="industry" class="block text-sm font-medium text-gray-700 mb-1">
+            Industry
+          </label>
+          <select
+            id="industry"
+            name="industry"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="home services">Home Services</option>
+            <option value="digital marketing">Digital Marketing</option>
+            <option value="SaaS">SaaS</option>
+            <option value="construction">Construction</option>
+            <option value="HVAC">HVAC</option>
+            <option value="plumbing">Plumbing</option>
+            <option value="electrical">Electrical</option>
+            <option value="roofing">Roofing</option>
+            <option value="landscaping">Landscaping</option>
+            <option value="general">General Business</option>
+          </select>
+        </div>
+
+        <!-- Topic Field -->
+        <div>
+          <label for="topic" class="block text-sm font-medium text-gray-700 mb-1">
+            Topic / Theme *
+          </label>
+          <input
+            type="text"
+            id="topic"
+            name="topic"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Example: Why most HVAC companies waste 40% of their ad spend in summer"
+          />
+          <p class="text-xs text-gray-500 mt-1">
+            What specific insight, lesson, or opinion do you want to share?
+          </p>
+        </div>
+
+        <!-- Tone Field -->
+        <div>
+          <label for="tone" class="block text-sm font-medium text-gray-700 mb-1">
+            Tone / Style
+          </label>
+          <select
+            id="tone"
+            name="tone"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="professional">Professional & Authoritative</option>
+            <option value="conversational">Conversational & Friendly</option>
+            <option value="storytelling">Storytelling & Personal</option>
+            <option value="educational">Educational & Helpful</option>
+            <option value="provocative">Provocative & Debate-Starting</option>
+          </select>
+        </div>
+
+        <!-- Include Hashtags -->
+        <div class="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="include_hashtags"
+            name="include_hashtags"
+            checked
+            class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+          />
+          <label for="include_hashtags" class="text-sm font-medium text-gray-700">
+            Include relevant hashtags
+          </label>
+        </div>
+
+        <!-- Include CTA -->
+        <div class="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="include_cta"
+            name="include_cta"
+            checked
+            class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+          />
+          <label for="include_cta" class="text-sm font-medium text-gray-700">
+            Include call-to-action
+          </label>
+        </div>
+
+        <!-- Generate Button -->
+        <button
+          type="submit"
+          id="generateBtn"
+          class="w-full inline-flex items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-3 text-white font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          {{ 'disabled' if not _ai_available else '' }}
+        >
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          Generate Thought Leader Post
+        </button>
+      </form>
+
+      <!-- Quick Examples -->
+      <div class="mt-6 pt-6 border-t">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">Quick Examples</h3>
+        <div class="space-y-2">
+          <button
+            type="button"
+            class="w-full text-left p-3 text-sm border rounded-lg hover:bg-gray-50 quick-example"
+            data-expertise="10 years helping HVAC companies scale from $500K to $5M+ using Google Ads and Local Services Ads"
+            data-topic="The biggest mistake HVAC companies make with summer advertising"
+            data-tone="conversational"
+          >
+            <div class="font-medium text-blue-600">HVAC Summer Advertising Mistake</div>
+            <div class="text-xs text-gray-500 mt-1">Conversational tone, industry expertise</div>
+          </button>
+
+          <button
+            type="button"
+            class="w-full text-left p-3 text-sm border rounded-lg hover:bg-gray-50 quick-example"
+            data-expertise="Marketing strategist for 50+ home services companies, specialized in review generation and reputation management"
+            data-topic="How to respond to negative reviews without sounding defensive"
+            data-tone="educational"
+          >
+            <div class="font-medium text-blue-600">Responding to Negative Reviews</div>
+            <div class="text-xs text-gray-500 mt-1">Educational tone, reputation focus</div>
+          </button>
+
+          <button
+            type="button"
+            class="w-full text-left p-3 text-sm border rounded-lg hover:bg-gray-50 quick-example"
+            data-expertise="Built and sold 2 plumbing companies, now helping others grow through better marketing"
+            data-topic="Why I stopped competing on price and 3X'd my revenue"
+            data-tone="storytelling"
+          >
+            <div class="font-medium text-blue-600">Stop Competing on Price</div>
+            <div class="text-xs text-gray-500 mt-1">Personal story, provocative angle</div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Output Panel -->
+    <div class="rounded-lg border bg-white p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold">
+          <i class="fa-brands fa-linkedin mr-2 text-blue-600"></i>Generated Post
+        </h2>
+        <button
+          id="copyBtn"
+          class="hidden px-3 py-1 text-sm border rounded-md hover:bg-gray-50"
+          title="Copy to clipboard"
+        >
+          <i class="fa-solid fa-copy mr-1"></i>Copy
+        </button>
+      </div>
+
+      <div id="postOutput" class="hidden">
+        <div class="bg-gray-50 border rounded-lg p-4 mb-4 min-h-[300px]">
+          <div id="postText" class="text-sm whitespace-pre-wrap leading-relaxed"></div>
+        </div>
+
+        <div class="text-xs text-gray-500 mb-3">
+          <i class="fa-solid fa-info-circle mr-1"></i>
+          Preview may differ from actual LinkedIn formatting. Test before posting.
+        </div>
+
+        <!-- Post Metadata -->
+        <div id="postMetadata" class="pt-3 border-t space-y-2 text-xs text-gray-600">
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="mt-4 flex gap-2">
+          <button
+            id="regenerateBtn"
+            type="button"
+            class="flex-1 px-4 py-2 border rounded-md hover:bg-gray-50"
+          >
+            <i class="fa-solid fa-rotate mr-2"></i>Regenerate
+          </button>
+          <button
+            id="editBtn"
+            type="button"
+            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            <i class="fa-solid fa-pen mr-2"></i>Edit & Refine
+          </button>
+        </div>
+      </div>
+
+      <div id="emptyState" class="flex flex-col items-center justify-center py-12 text-center text-gray-400">
+        <i class="fa-solid fa-file-lines text-5xl mb-4"></i>
+        <p class="text-sm">Your generated post will appear here</p>
+        <p class="text-xs mt-1">Fill in your expertise and topic to get started</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Best Practices -->
+  <div class="rounded-lg border bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
+    <h3 class="font-semibold text-blue-900 mb-3">
+      <i class="fa-solid fa-lightbulb mr-2"></i>LinkedIn Thought Leadership Best Practices
+    </h3>
+    <div class="grid md:grid-cols-2 gap-4 text-sm text-blue-800">
+      <div>
+        <h4 class="font-semibold mb-2">Structure</h4>
+        <ul class="space-y-1">
+          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Hook readers in first 2 lines</li>
+          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Use short paragraphs (1-2 sentences)</li>
+          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Add line breaks for mobile readability</li>
+          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>End with clear call-to-action</li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-semibold mb-2">Content</h4>
+        <ul class="space-y-1">
+          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Share specific numbers and examples</li>
+          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Tell personal stories when relevant</li>
+          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Provide actionable value</li>
+          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Be authentic, not corporate</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Handle form submission
+document.getElementById('postGeneratorForm')?.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  await generatePost();
+});
+
+// Handle quick examples
+document.querySelectorAll('.quick-example').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.getElementById('expertise').value = this.dataset.expertise;
+    document.getElementById('topic').value = this.dataset.topic;
+    document.getElementById('tone').value = this.dataset.tone;
+  });
+});
+
+// Handle regenerate
+document.getElementById('regenerateBtn')?.addEventListener('click', async function() {
+  await generatePost();
+});
+
+// Handle copy
+document.getElementById('copyBtn')?.addEventListener('click', function() {
+  const postText = document.getElementById('postText').textContent;
+  navigator.clipboard.writeText(postText).then(() => {
+    const originalText = this.innerHTML;
+    this.innerHTML = '<i class="fa-solid fa-check mr-1"></i>Copied!';
+    setTimeout(() => {
+      this.innerHTML = originalText;
+    }, 2000);
+  });
+});
+
+// Handle edit
+document.getElementById('editBtn')?.addEventListener('click', function() {
+  const postText = document.getElementById('postText');
+  if (postText.contentEditable === 'true') {
+    postText.contentEditable = 'false';
+    postText.classList.remove('border', 'border-blue-300', 'p-2');
+    this.innerHTML = '<i class="fa-solid fa-pen mr-2"></i>Edit & Refine';
+  } else {
+    postText.contentEditable = 'true';
+    postText.classList.add('border', 'border-blue-300', 'p-2');
+    postText.focus();
+    this.innerHTML = '<i class="fa-solid fa-check mr-2"></i>Done Editing';
+  }
+});
+
+async function generatePost() {
+  const form = document.getElementById('postGeneratorForm');
+  const formData = new FormData(form);
+  const btn = document.getElementById('generateBtn');
+  const emptyState = document.getElementById('emptyState');
+  const output = document.getElementById('postOutput');
+  const postText = document.getElementById('postText');
+  const copyBtn = document.getElementById('copyBtn');
+  const metadata = document.getElementById('postMetadata');
+
+  // Validation
+  if (!formData.get('expertise') || !formData.get('topic')) {
+    alert('Please fill in your expertise and topic');
+    return;
+  }
+
+  // Show loading state
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Generating...';
+  emptyState.classList.remove('hidden');
+  output.classList.add('hidden');
+
+  try {
+    const response = await fetch('{{ url_for("linkedin_bp.generate_post") }}', {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      alert('Error: ' + data.error);
+      return;
+    }
+
+    // Display the generated post
+    postText.textContent = data.post;
+    postText.contentEditable = 'false';
+    postText.classList.remove('border', 'border-blue-300', 'p-2');
+
+    // Show metadata
+    metadata.innerHTML = `
+      <div><strong>Expertise:</strong> ${data.metadata.expertise}</div>
+      <div><strong>Topic:</strong> ${data.metadata.topic}</div>
+      <div><strong>Tone:</strong> ${data.metadata.tone}</div>
+      <div><strong>Generated:</strong> ${new Date(data.metadata.generated_at).toLocaleString()}</div>
+    `;
+
+    // Show output panel
+    emptyState.classList.add('hidden');
+    output.classList.remove('hidden');
+    copyBtn.classList.remove('hidden');
+
+    // Reset edit button
+    document.getElementById('editBtn').innerHTML = '<i class="fa-solid fa-pen mr-2"></i>Edit & Refine';
+
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Failed to generate post. Please try again.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>Generate Thought Leader Post';
+  }
+}
+</script>
+{% endblock %}

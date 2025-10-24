@@ -114,6 +114,8 @@
     {% set SECTION = 'wp' %}
   {% elif bp == 'google_bp' or path.startswith('/account/google') %}
     {% set SECTION = 'google' %}
+  {% elif bp == 'linkedin_bp' or path.startswith('/account/linkedin') %}
+    {% set SECTION = 'linkedin' %}
   {% elif 'account_bp.' in epn or path.startswith('/account') %}
     {% set SECTION = 'account' %}
   {% endif %}
@@ -203,6 +205,23 @@
         {% endif %}
       {% endif %}
 
+      {% if has_endpoint('linkedin_bp.index') %}
+        <div class="pt-2 text-xs font-semibold text-gray-500 uppercase">LinkedIn</div>
+        <a class="block px-2 py-2 nav-link" href="{{ url_for('linkedin_bp.index') }}">
+          <i class="fa-brands fa-linkedin"></i><span>Overview</span>
+        </a>
+        {% if has_endpoint('linkedin_bp.ads') %}
+          <a href="{{ url_for('linkedin_bp.ads') }}" class="block px-2 py-2 nav-link">
+            <i class="fa-solid fa-bullseye"></i><span>Ads Optimizer</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('linkedin_bp.post_generator') %}
+          <a href="{{ url_for('linkedin_bp.post_generator') }}" class="block px-2 py-2 nav-link">
+            <i class="fa-solid fa-pen-to-square"></i><span>Post Generator</span>
+          </a>
+        {% endif %}
+      {% endif %}
+
       <a href="{{ url_for(ep('pricing')) if has_endpoint('pricing') else '#' }}" class="block px-2 py-2 nav-link"><i class="fa-solid fa-tags"></i><span>Upgrade</span></a>
       {% if is_logged_in() and has_endpoint('account_profile') %}
         <a href="{{ url_for(ep('account_profile')) }}" class="block px-2 py-2 nav-link"><i class="fa-solid fa-user"></i><span>Account</span></a>
@@ -232,6 +251,9 @@
       <!-- <a href="{{ url_for('fbads_bp.index') }}" class="primary-btn {% if SECTION=='fbads' %}active{% endif %}" title="Facebook Ads"><i class="fa-brands fa-facebook-f"></i></a> -->
       <!-- <a href="{{ url_for('yelp_bp.index') }}" class="primary-btn {% if SECTION=='yelp' %}active{% endif %}" title="Yelp"><i class="fa-brands fa-yelp"></i></a> -->
       <a href="{{ url_for('gmb_bp.index') }}" class="primary-btn {% if SECTION=='gmb' %}active{% endif %}" title="Google Business"><i class="fa-brands fa-google"></i></a>
+      {% if has_endpoint('linkedin_bp.index') %}
+        <a href="{{ url_for('linkedin_bp.index') }}" class="primary-btn {% if SECTION=='linkedin' %}active{% endif %}" title="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+      {% endif %}
       <a href="{{ url_for('reports_bp.index') }}" class="primary-btn {% if SECTION=='reports' %}active{% endif %}" title="Reporting"><i class="fa-solid fa-gauge-high"></i></a>
 
       <div class="mt-auto flex flex-col items-center space-y-3">
@@ -309,6 +331,15 @@
         <a class="secondary-link {% if epn=='gmb_bp.reviews' %}active{% endif %}" href="{{ url_for('gmb_bp.reviews') }}"><i class="fa-regular fa-file-lines"></i><span>Profile Review</span></a>
         <a class="secondary-link {% if epn=='gmb_bp.ai_responses' %}active{% endif %}" href="{{ url_for('gmb_bp.ai_responses') }}"><i class="fa-solid fa-robot"></i><span>AI Review Responses</span></a>
         <a class="secondary-link {% if epn=='gmb_bp.requests_email' %}active{% endif %}" href="{{ url_for('gmb_bp.requests_email') }}"><i class="fa-regular fa-envelope"></i><span>Review Requests (Email)</span></a>
+      {% elif SECTION == 'linkedin' %}
+        <div class="sidebar-label"><i class="fa-brands fa-linkedin"></i>LinkedIn</div>
+        <a class="secondary-link {% if epn=='linkedin_bp.index' %}active{% endif %}" href="{{ url_for('linkedin_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview</span></a>
+        {% if has_endpoint('linkedin_bp.ads') %}
+          <a class="secondary-link {% if epn=='linkedin_bp.ads' %}active{% endif %}" href="{{ url_for('linkedin_bp.ads') }}"><i class="fa-solid fa-bullseye"></i><span>Ads Optimizer</span></a>
+        {% endif %}
+        {% if has_endpoint('linkedin_bp.post_generator') %}
+          <a class="secondary-link {% if epn=='linkedin_bp.post_generator' %}active{% endif %}" href="{{ url_for('linkedin_bp.post_generator') }}"><i class="fa-solid fa-pen-to-square"></i><span>Post Generator</span></a>
+        {% endif %}
       {% elif SECTION == 'reports' %}
         <div class="sidebar-label"><i class="fa-solid fa-gauge-high"></i>Reporting</div>
         <a class="secondary-link {% if epn=='reports_bp.index' %}active{% endif %}" href="{{ url_for('reports_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview</span></a>

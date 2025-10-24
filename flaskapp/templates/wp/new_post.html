@@ -1,0 +1,76 @@
+{# templates/wp/new_post.html #}
+{% extends "base_app.html" %}
+{% block title %}Compose New – {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-semibold mb-4">Compose New</h1>
+
+<div class="grid md:grid-cols-2 gap-6">
+  <!-- Manual compose -->
+  <div class="bg-white border rounded p-4">
+    <div class="font-semibold mb-3">Write it yourself</div>
+    <form method="post" action="{{ url_for('wp_bp.compose_submit') }}" class="space-y-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="mode" value="manual">
+      <input type="text" name="title" placeholder="Post title" class="w-full border rounded px-3 py-2" required>
+      <textarea name="content" rows="10" class="w-full border rounded px-3 py-2" placeholder="Write your post…"></textarea>
+      <button class="px-4 py-2 rounded text-white bg-[var(--brand)]">Queue Post</button>
+    </form>
+  </div>
+
+  <!-- AI compose -->
+  <div class="bg-white border rounded p-4">
+    <div class="font-semibold mb-3">Let AI draft it</div>
+    <form method="post" action="{{ url_for('wp_bp.compose') }}" class="space-y-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="mode" value="ai">
+
+      <label class="block text-sm font-medium">Primary keyword</label>
+      <input type="text" name="primary_keyword" class="w-full border rounded px-3 py-2" placeholder="e.g., lawn care tips spring">
+
+      <label class="block text-sm font-medium">Extra keywords (comma-separated)</label>
+      <input type="text" name="extra_keywords" class="w-full border rounded px-3 py-2" placeholder="mowing schedule, aeration">
+
+      <label class="block text-sm font-medium">Topic</label>
+      <input type="text" name="topic" class="w-full border rounded px-3 py-2" placeholder="e.g., Seasonal lawn care for small yards">
+
+      <label class="block text-sm font-medium">More topics (comma-separated)</label>
+      <input type="text" name="topics_extra" class="w-full border rounded px-3 py-2" placeholder="fertilizer timing, weed control">
+
+      <label class="block text-sm font-medium">POVs (hold Ctrl/Cmd to multi-select)</label>
+      <select multiple name="pov_ids[]" class="w-full border rounded px-3 py-2 h-28">
+        {% for pov in povs or [] %}
+          <option value="{{ pov.id }}">{{ pov.name }}</option>
+        {% endfor %}
+      </select>
+
+      <label class="block text-sm font-medium">Tone</label>
+      <select name="tone" class="w-full border rounded px-3 py-2">
+        <option value="">Auto</option>
+        <option>Friendly</option>
+        <option>Professional</option>
+        <option>Playful</option>
+        <option>Technical</option>
+      </select>
+
+      <label class="block text-sm font-medium">Approximate word count</label>
+      <input type="number" name="word_count" class="w-full border rounded px-3 py-2" placeholder="800">
+
+      <label class="block text-sm font-medium">Optional source URL (analyze & summarize)</label>
+      <input type="url" name="source_url" class="w-full border rounded px-3 py-2" placeholder="https://example.com/article">
+
+      <label class="block text-sm font-medium">Extra instructions for AI</label>
+      <textarea name="prompt" rows="4" class="w-full border rounded px-3 py-2" placeholder="E.g., include a bulleted checklist and a call to action"></textarea>
+
+      <div class="flex items-center gap-2">
+        <input type="checkbox" id="include_images" name="include_images" value="1">
+        <label for="include_images" class="text-sm">Suggest stock images</label>
+      </div>
+
+      <label class="block text-sm font-medium">Optional outline</label>
+      <textarea name="outline" rows="4" class="w-full border rounded px-3 py-2" placeholder="H1, H2s, bullets…"></textarea>
+
+      <button class="px-4 py-2 rounded text-white bg-[var(--brand)]">Queue AI Draft</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

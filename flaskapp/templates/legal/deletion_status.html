@@ -1,0 +1,20 @@
+{% extends "base_app.html" %}
+{% block title %}Deletion Request Status{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto space-y-4">
+  <h1 class="text-2xl font-semibold">Deletion Request Status</h1>
+  {% if not found %}
+    <div class="rounded-md border border-amber-200 bg-amber-50 p-4 text-amber-800">
+      We couldn’t find that deletion request. It may have expired or the code is incorrect.
+    </div>
+  {% else %}
+    <div class="rounded-md border bg-white p-4">
+      <div class="text-sm text-gray-500 mb-2">User ID</div>
+      <div class="font-mono text-sm">{{ rec.user_id }}</div>
+      <div class="text-sm text-gray-500 mt-4 mb-2">Status</div>
+      <div class="font-medium">{{ rec.status|capitalize }}</div>
+      <div class="text-sm text-gray-500 mt-4">Updated at: {{ rec.updated_at }}</div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

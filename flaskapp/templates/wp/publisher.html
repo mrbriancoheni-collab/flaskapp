@@ -1,0 +1,72 @@
+{% extends "base_app.html" %}
+{% block title %}Publisher · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="space-y-6">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-semibold">Publisher</h1>
+    <div class="flex gap-2">
+      <a href="{{ url_for('wp_bp.compose') }}" class="px-3 py-2 rounded bg-[var(--brand)] text-white">New Post</a>
+      <a href="{{ url_for('wp_bp.analyze') }}" class="px-3 py-2 rounded border">Analyze URL</a>
+      <a href="{{ url_for('wp_bp.edit_lookup') }}" class="px-3 py-2 rounded border">Edit Existing</a>
+      <form method="post" action="{{ url_for('wp_bp.run_now') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="px-3 py-2 rounded border">Run Queue Now</button>
+      </form>
+    </div>
+  </div>
+
+  {% if site %}
+    <div class="text-sm text-gray-600">Connected to: <span class="font-medium">{{ site.base_url }}</span></div>
+  {% else %}
+    <div class="p-3 bg-amber-50 border rounded text-amber-800">
+      WordPress isn’t connected yet. <a class="underline" href="{{ url_for('wp_bp.settings') }}">Add WP credentials</a>.
+    </div>
+  {% endif %}
+
+  <div class="rounded-xl border bg-white">
+    <div class="px-4 py-3 border-b font-medium">Queue</div>
+    <div class="divide-y">
+      {% for j in jobs %}
+      <div class="p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="min-w-0">
+            <div class="font-medium truncate">
+              {{ (j.payload.title if j.payload else '') or j.kind|capitalize }}
+              {% if j.payload and j.payload.needs_approval %}<span class="ml-2 text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800">Needs approval</span>{% endif %}
+            </div>
+            <div class="text-sm text-gray-600">
+              {{ j.kind }} · {{ j.status }} · {{ j.created_at.strftime('%Y-%m-%d %H:%M') }}
+              {% if j.payload and j.payload.analysis_url %}
+                · Source: <a class="underline" href="{{ j.payload.analysis_url }}" target="_blank" rel="noopener">page</a>
+              {% endif %}
+              {% if j.last_error %} · <span class="text-red-600">Error: {{ j.last_error }}</span>{% endif %}
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            {% if j.payload and j.payload.needs_approval %}
+            <form method="post" action="{{ url_for('wp_bp.approve') }}" class="inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="job_id" value="{{ j.id }}">
+              <input type="hidden" name="token" value="{{ config.get('APPROVAL_TOKEN','') if config else '' }}">
+              <button class="px-3 py-1.5 rounded bg-emerald-600 text-white">Authorize & Publish</button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if j.payload and j.payload.findings %}
+          <details class="mt-3">
+            <summary class="cursor-pointer text-sm text-gray-700">Findings</summary>
+            <ul class="list-disc ml-6 mt-2 text-sm">
+              {% for f in j.payload.findings[:8] %}<li>{{ f }}</li>{% endfor %}
+            </ul>
+          </details>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="p-4 text-gray-500">Nothing queued yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

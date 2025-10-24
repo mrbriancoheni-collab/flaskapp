@@ -1,0 +1,22 @@
+{% extends "base_app.html" %}
+{% block title %}Analyze Page · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="max-w-2xl space-y-6">
+  <h1 class="text-2xl font-semibold">Analyze an Existing Page</h1>
+  <p class="text-gray-600">We’ll generate findings and a draft “Improvement Plan” post you can approve or publish.</p>
+  <form method="post" action="{{ url_for('wp_bp.analyze') }}" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div>
+      <label class="block text-sm font-medium">URL</label>
+      <input name="url" class="w-full border rounded px-3 py-2" placeholder="https://example.com/page" required>
+    </div>
+    <div class="flex items-center gap-3">
+      <label class="inline-flex items-center gap-2">
+        <input type="checkbox" name="publish_now" value="1">
+        <span>Publish immediately (skip approval)</span>
+      </label>
+    </div>
+    <button class="px-4 py-2 rounded bg-[var(--brand)] text-white">Queue Analysis</button>
+  </form>
+</div>
+{% endblock %}

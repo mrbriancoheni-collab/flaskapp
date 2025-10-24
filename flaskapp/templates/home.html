@@ -1,0 +1,675 @@
+{# templates/public/home.html #}
+{% extends "base_public.html" %}
+{% block title %}FieldSprout — AI-Powered Marketing for Local Service Businesses{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 bg-gradient-to-b from-primary-50 via-white to-white"></div>
+  <div class="container-max relative py-16 lg:py-24">
+    <div class="grid lg:grid-cols-2 gap-12 items-center">
+
+      <!-- Left: Copy & CTA -->
+      <div class="text-center lg:text-left">
+        <span class="inline-flex items-center px-4 py-2 rounded-full bg-primary-100 text-primary-700 text-sm font-semibold">
+          🚀 AI-Powered Revenue Growth
+        </span>
+
+        <h1 class="mt-6 text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight">
+          Get Found. <span class="text-primary-700">Book More Jobs.</span> Grow Revenue.
+        </h1>
+
+        <p class="mt-4 text-lg md:text-xl text-gray-600 max-w-2xl mx-auto lg:mx-0">
+          AI agents that build, optimize, and scale your marketing across Google, Facebook, and your website—automatically.
+        </p>
+
+        <!-- Key Benefits (mini bullets) -->
+        <div class="mt-6 flex flex-wrap gap-4 justify-center lg:justify-start">
+          <span class="flex items-center gap-2 text-sm text-gray-700">
+            <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+            <span>50% Lower Cost Per Lead</span>
+          </span>
+          <span class="flex items-center gap-2 text-sm text-gray-700">
+            <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+            <span>2-3x More Qualified Leads</span>
+          </span>
+          <span class="flex items-center gap-2 text-sm text-gray-700">
+            <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+            <span>Setup in Under 10 Minutes</span>
+          </span>
+        </div>
+
+        <!-- Primary CTA -->
+        <div class="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+          {% if has_endpoint('signup') %}
+            <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary btn-lg">
+              Start Free Trial
+              <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+            </a>
+          {% else %}
+            <a href="/signup" class="btn btn-primary btn-lg">
+              Start Free Trial
+              <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+            </a>
+          {% endif %}
+          <a href="#demo" class="btn btn-outline btn-lg">
+            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/></svg>
+            Watch 2-Min Demo
+          </a>
+        </div>
+
+        <!-- Trust Signal -->
+        <p class="mt-6 text-sm text-gray-500">
+          ✓ No credit card required • ✓ Free 14-day trial • ✓ Cancel anytime
+        </p>
+      </div>
+
+      <!-- Right: Visual/Screenshot -->
+      <div class="relative lg:block">
+        <div class="relative rounded-2xl p-1 bg-gradient-to-br from-accent-600 to-primary-600 shadow-2xl">
+          <div class="rounded-xl overflow-hidden bg-white">
+            <!-- Dashboard mockup -->
+            <div class="aspect-[16/10] w-full bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+              <div class="h-full grid grid-rows-3 gap-3">
+                <div class="grid grid-cols-3 gap-3">
+                  <div class="bg-white rounded-lg shadow p-3 flex flex-col">
+                    <div class="text-xs text-gray-500">Leads</div>
+                    <div class="text-2xl font-bold text-primary-700 mt-auto">+142%</div>
+                  </div>
+                  <div class="bg-white rounded-lg shadow p-3 flex flex-col">
+                    <div class="text-xs text-gray-500">Cost/Lead</div>
+                    <div class="text-2xl font-bold text-green-600 mt-auto">-47%</div>
+                  </div>
+                  <div class="bg-white rounded-lg shadow p-3 flex flex-col">
+                    <div class="text-xs text-gray-500">Revenue</div>
+                    <div class="text-2xl font-bold text-primary-700 mt-auto">$48K</div>
+                  </div>
+                </div>
+                <div class="row-span-2 bg-white rounded-lg shadow p-4">
+                  <div class="text-sm font-semibold mb-2">AI Activity Feed</div>
+                  <div class="space-y-2 text-xs text-gray-600">
+                    <div class="flex items-start gap-2">
+                      <span class="text-green-600">✓</span>
+                      <span>Paused 3 low-intent keywords (saved $184/wk)</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                      <span class="text-green-600">✓</span>
+                      <span>Shifted $35/day to "water heater repair"</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                      <span class="text-green-600">✓</span>
+                      <span>Auto-texted 7 new leads within 60 seconds</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                      <span class="text-primary-600">⟳</span>
+                      <span>Generated 4 blog posts for local SEO</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating testimonial card -->
+        <div class="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-lg p-4 border border-gray-100 max-w-xs hidden lg:block">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold">M</div>
+            <div class="flex-1">
+              <p class="text-sm font-medium">"We doubled booked jobs in 60 days"</p>
+              <p class="text-xs text-gray-500 mt-1">Marina, HVAC Owner</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LOGO STRIP -->
+<section aria-label="Integrations" class="py-8 bg-gray-50 border-y border-gray-100">
+  <div class="container-max">
+    <p class="text-center text-sm text-gray-500 mb-6">Integrates with the platforms you already use</p>
+    <div class="flex items-center justify-center gap-6 md:gap-8 flex-wrap opacity-80">
+      <span class="logo-pill text-gray-700">
+        <span class="logo-dot" style="background:#ea4335"></span>
+        <span class="logo-dot" style="background:#fbbc05"></span>
+        <span class="logo-dot" style="background:#34a853"></span>
+        <span class="logo-dot" style="background:#4285f4"></span>
+        <span class="ml-1 font-semibold">Google</span>
+      </span>
+      <span class="logo-pill text-gray-700">
+        <svg width="16" height="12" viewBox="0 0 24 14" fill="none" aria-hidden="true"><path d="M3 11C5 6 7 3 9 3s4 3 6 8c1-3 2-5 4-5 3 0 4 8-1 8-3 0-5-7-8-7S6 11 3 11Z" stroke="#1e3a8a" stroke-width="1.6"/></svg>
+        <span class="ml-1 font-semibold">Meta</span>
+      </span>
+      <span class="logo-pill text-gray-700">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="#c81e1e" aria-hidden="true"><path d="M11 2a1 1 0 0 1 2 0l1 8a1 1 0 0 1-2 0l-1-8ZM5 8a1 1 0 0 1 1.4 0L12 13a1 1 0 1 1-1.4 1.4L5 9.4A1 1 0 0 1 5 8Zm14 0a1 1 0 0 1 0 1.4l-5.6 5.6A1 1 0 0 1 12 13l5.6-5.6A1 1 0 0 1 19 8ZM12 18l1 4a1 1 0 0 1-2 0l1-4Z"/></svg>
+        <span class="ml-1 font-semibold">Yelp</span>
+      </span>
+      <span class="logo-pill text-gray-700">
+        <span class="logo-dot" style="background:#00b246"></span><span class="ml-1 font-semibold">Nextdoor</span>
+      </span>
+      <span class="logo-pill text-gray-700">
+        <span class="logo-dot" style="background:#635bff"></span><span class="ml-1 font-semibold">Stripe</span>
+      </span>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" class="section">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <span class="badge">Simple 3-Step Process</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">From setup to booked jobs in minutes</h2>
+      <p class="mt-4 text-lg text-gray-600">No complex onboarding. No agency fees. Just results.</p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-8">
+      <div class="relative">
+        <div class="flex items-center justify-center w-12 h-12 rounded-full bg-primary-100 text-primary-700 font-bold text-xl mb-4">1</div>
+        <h3 class="text-xl font-bold mb-3">Connect Your Accounts</h3>
+        <p class="text-gray-600">One-click integration with Google Ads, Facebook, your website, and call tracking. Takes 5 minutes.</p>
+        <div class="mt-4 p-3 bg-primary-50 rounded-lg text-sm">
+          <span class="font-semibold text-primary-700">Auto-pulls:</span> 12 months of historical data for instant YoY comparison
+        </div>
+      </div>
+
+      <div class="relative">
+        <div class="flex items-center justify-center w-12 h-12 rounded-full bg-primary-100 text-primary-700 font-bold text-xl mb-4">2</div>
+        <h3 class="text-xl font-bold mb-3">AI Analyzes & Optimizes</h3>
+        <p class="text-gray-600">Our AI reviews local search trends, competition, and your past performance to find high-intent customers.</p>
+        <div class="mt-4 p-3 bg-primary-50 rounded-lg text-sm">
+          <span class="font-semibold text-primary-700">Real-time:</span> Bids, budgets, keywords adjusted 24/7
+        </div>
+      </div>
+
+      <div class="relative">
+        <div class="flex items-center justify-center w-12 h-12 rounded-full bg-primary-100 text-primary-700 font-bold text-xl mb-4">3</div>
+        <h3 class="text-xl font-bold mb-3">Book More Jobs</h3>
+        <p class="text-gray-600">Approve recommendations or let AI auto-optimize. Watch leads increase and costs decrease.</p>
+        <div class="mt-4 p-3 bg-primary-50 rounded-lg text-sm">
+          <span class="font-semibold text-primary-700">Average result:</span> 2-3x more qualified leads
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-12 text-center">
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary btn-lg">Start Your Free Trial</a>
+      {% else %}
+        <a href="/signup" class="btn btn-primary btn-lg">Start Your Free Trial</a>
+      {% endif %}
+      <p class="mt-3 text-sm text-gray-500">14-day free trial • No credit card required</p>
+    </div>
+  </div>
+</section>
+
+<!-- SOCIAL PROOF (moved up for better conversion) -->
+<section class="section bg-gradient-to-b from-gray-50 to-white">
+  <div class="container-max">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl md:text-4xl font-extrabold">Trusted by 500+ local service businesses</h2>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid md:grid-cols-4 gap-6 mb-12">
+      <div class="text-center">
+        <div class="text-4xl md:text-5xl font-extrabold text-primary-700">500+</div>
+        <p class="mt-2 text-gray-600">Active businesses</p>
+      </div>
+      <div class="text-center">
+        <div class="text-4xl md:text-5xl font-extrabold text-primary-700">142%</div>
+        <p class="mt-2 text-gray-600">Avg lead increase</p>
+      </div>
+      <div class="text-center">
+        <div class="text-4xl md:text-5xl font-extrabold text-primary-700">-47%</div>
+        <p class="mt-2 text-gray-600">Lower cost per lead</p>
+      </div>
+      <div class="text-center">
+        <div class="text-4xl md:text-5xl font-extrabold text-primary-700">4.8★</div>
+        <p class="mt-2 text-gray-600">Customer rating</p>
+      </div>
+    </div>
+
+    <!-- Testimonials -->
+    <div class="grid lg:grid-cols-3 gap-6">
+      <div class="rounded-2xl p-6 bg-white shadow-md border border-gray-100">
+        <div class="flex items-center gap-1 text-yellow-400 mb-3">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+        </div>
+        <p class="text-lg mb-4">"Calls went up 62% in the first month. The AI pages match exactly what people are searching for."</p>
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold">A</div>
+          <div>
+            <p class="font-semibold">Anthony Torres</p>
+            <p class="text-sm text-gray-500">Torres Plumbing, Houston TX</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-2xl p-6 bg-white shadow-md border border-gray-100">
+        <div class="flex items-center gap-1 text-yellow-400 mb-3">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+        </div>
+        <p class="text-lg mb-4">"Set it up once and it keeps booking jobs. We just show up and do the work. Game changer."</p>
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-bold">P</div>
+          <div>
+            <p class="font-semibold">Priya Sharma</p>
+            <p class="text-sm text-gray-500">EcoGuard Pest Control, Austin TX</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-2xl p-6 bg-white shadow-md border border-gray-100">
+        <div class="flex items-center gap-1 text-yellow-400 mb-3">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+        </div>
+        <p class="text-lg mb-4">"Lower cost per lead on Google AND more 5-star reviews. That combo crushed our slow season."</p>
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center text-white font-bold">M</div>
+          <div>
+            <p class="font-semibold">Marco Rodriguez</p>
+            <p class="text-sm text-gray-500">CoolBreeze HVAC, Phoenix AZ</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" class="section">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <span class="badge">AI-Powered Modules</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Everything you need to grow your local business</h2>
+      <p class="mt-4 text-lg text-gray-600">Pick what you need today. Scale as you grow.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="rounded-2xl bg-white p-6 shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
+        <div class="h-14 w-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center text-2xl font-bold mb-4">🎯</div>
+        <h3 class="font-bold text-xl mb-2">Campaign AI</h3>
+        <p class="text-gray-600 mb-4">Build high-converting Google & Meta campaigns from your services—automatically.</p>
+        <ul class="text-sm text-gray-600 space-y-2">
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Auto-generated landing pages</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Live keyword matching</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Google Maps coverage</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-6 shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
+        <div class="h-14 w-14 rounded-xl bg-gradient-to-br from-green-500 to-green-600 text-white flex items-center justify-center text-2xl font-bold mb-4">📈</div>
+        <h3 class="font-bold text-xl mb-2">SEO Agent</h3>
+        <p class="text-gray-600 mb-4">Rank for "near me" searches with AI-written content and automatic optimization.</p>
+        <ul class="text-sm text-gray-600 space-y-2">
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Local schema markup</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Blog & city pages</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Weekly site health checks</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-6 shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
+        <div class="h-14 w-14 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 text-white flex items-center justify-center text-2xl font-bold mb-4">💰</div>
+        <h3 class="font-bold text-xl mb-2">Ads Optimizer</h3>
+        <p class="text-gray-600 mb-4">24/7 optimization of bids, budgets, and keywords to lower your cost per lead.</p>
+        <ul class="text-sm text-gray-600 space-y-2">
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Google & Meta platforms</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Auto-pause low performers</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Budget guardrails</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-6 shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
+        <div class="h-14 w-14 rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 text-white flex items-center justify-center text-2xl font-bold mb-4">⭐</div>
+        <h3 class="font-bold text-xl mb-2">Review Boost</h3>
+        <p class="text-gray-600 mb-4">More 5-star reviews = higher rankings = more jobs. Fully automated and compliant.</p>
+        <ul class="text-sm text-gray-600 space-y-2">
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Smart timing & templates</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Google, Yelp, Facebook</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Negative feedback filter</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INDUSTRIES -->
+<section id="industries" class="section bg-gradient-to-b from-primary-50/50 to-white">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <span class="badge">Perfect For</span>
+      <h2 class="text-3xl md:text-5xl font-extrabold">Built for every local service business</h2>
+      <p class="mt-4 text-lg text-gray-600">Whether you're a solo operator or a multi-location business, FieldSprout scales with you.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% set industries = [
+        ('🔧','Plumbing','Emergency repairs, installations, maintenance'),
+        ('❄️','HVAC','AC/heating repairs, tune-ups, replacements'),
+        ('🏠','Roofing','Storm damage, replacements, inspections'),
+        ('🌳','Landscaping','Mowing, cleanups, hardscaping, design'),
+        ('🦟','Pest Control','Termites, rodents, general pest removal'),
+        ('⚡','Electrical','Panels, outlets, EV chargers, rewiring'),
+        ('🧹','Cleaning','House, carpet, window, move-out cleaning'),
+        ('🚪','Locksmith','Emergency lockouts, rekeying, installations'),
+        ('🪟','Windows','Replacements, repairs, custom installations')
+      ] %}
+      {% for icon,name,desc in industries %}
+      <div class="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+        <div class="flex items-center gap-3 mb-3">
+          <span class="text-3xl">{{ icon }}</span>
+          <div class="flex-1">
+            <h3 class="font-bold text-lg">{{ name }}</h3>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-green-100 text-green-700 font-medium">High ROI</span>
+          </div>
+        </div>
+        <p class="text-gray-600 text-sm">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="mt-12 text-center">
+      <p class="text-gray-600 mb-4">Don't see your industry? We work with all local services.</p>
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary">Start Your Free Trial</a>
+      {% else %}
+        <a href="/signup" class="btn btn-primary">Start Your Free Trial</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="section">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <span class="badge">Simple Pricing</span>
+      <h2 class="text-3xl md:text-5xl font-extrabold">Transparent pricing that scales with you</h2>
+      <p class="mt-4 text-lg text-gray-600">Start free. Upgrade when you're ready. Cancel anytime.</p>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+
+      <!-- Free Trial -->
+      <div class="rounded-2xl bg-white p-8 border-2 border-gray-200">
+        <h3 class="text-lg font-bold text-gray-900">Free Trial</h3>
+        <div class="mt-4">
+          <span class="text-5xl font-extrabold">$0</span>
+          <span class="text-gray-600">/14 days</span>
+        </div>
+        <p class="mt-3 text-gray-600">Try all features risk-free</p>
+
+        <ul class="mt-6 space-y-3 text-sm">
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>All features unlocked</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>No credit card required</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Email support</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Cancel anytime</span>
+          </li>
+        </ul>
+
+        {% if has_endpoint('signup') %}
+          <a href="{{ url_for(ep('signup')) }}" class="mt-8 w-full btn btn-outline text-center block">Start Free Trial</a>
+        {% else %}
+          <a href="/signup" class="mt-8 w-full btn btn-outline text-center block">Start Free Trial</a>
+        {% endif %}
+      </div>
+
+      <!-- Starter (Most Popular) -->
+      <div class="rounded-2xl bg-white p-8 border-2 border-primary-600 shadow-xl relative">
+        <div class="absolute -top-4 left-1/2 transform -translate-x-1/2">
+          <span class="inline-flex items-center px-4 py-1 rounded-full bg-primary-600 text-white text-sm font-semibold">Most Popular</span>
+        </div>
+
+        <h3 class="text-lg font-bold text-gray-900">Starter</h3>
+        <div class="mt-4">
+          <span class="text-5xl font-extrabold">$250</span>
+          <span class="text-gray-600">/month</span>
+        </div>
+        <p class="mt-3 text-gray-600">Perfect for solo pros & small teams</p>
+
+        <ul class="mt-6 space-y-3 text-sm">
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span><strong>1 location</strong></span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>All AI modules included</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Unlimited service pages</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Call & form tracking</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Review automation</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Priority support</span>
+          </li>
+        </ul>
+
+        {% if has_endpoint('signup') %}
+          <a href="{{ url_for(ep('signup')) }}" class="mt-8 w-full btn btn-primary text-center block">Start Free Trial</a>
+        {% else %}
+          <a href="/signup" class="mt-8 w-full btn btn-primary text-center block">Start Free Trial</a>
+        {% endif %}
+
+        <p class="mt-4 text-center text-sm text-gray-500">Save 20% with annual billing</p>
+      </div>
+
+      <!-- Pro -->
+      <div class="rounded-2xl bg-white p-8 border-2 border-gray-200">
+        <h3 class="text-lg font-bold text-gray-900">Pro</h3>
+        <div class="mt-4">
+          <span class="text-5xl font-extrabold">$450</span>
+          <span class="text-gray-600">/month</span>
+        </div>
+        <p class="mt-3 text-gray-600">For growing multi-location businesses</p>
+
+        <ul class="mt-6 space-y-3 text-sm">
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span><strong>Up to 5 locations</strong></span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Everything in Starter</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Advanced analytics & reports</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>White-label options</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Dedicated account manager</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            <span>Phone support</span>
+          </li>
+        </ul>
+
+        <a href="#contact" class="mt-8 w-full btn btn-outline text-center block">Contact Sales</a>
+      </div>
+    </div>
+
+    <div class="mt-12 text-center">
+      <p class="text-gray-600">Need more than 5 locations? <a href="#contact" class="text-primary-700 hover:underline font-semibold">Contact us for Enterprise pricing</a></p>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section bg-gray-50">
+  <div class="container-max max-w-4xl">
+    <div class="text-center mb-12">
+      <span class="badge">FAQs</span>
+      <h2 class="mt-4 text-3xl md:text-4xl font-extrabold">Frequently asked questions</h2>
+    </div>
+
+    <div class="space-y-6">
+      <details class="group bg-white rounded-lg p-6 shadow-sm border border-gray-100">
+        <summary class="font-semibold text-lg cursor-pointer list-none flex items-center justify-between">
+          How long does setup take?
+          <svg class="w-5 h-5 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+        <p class="mt-4 text-gray-600">Most businesses are up and running in under 10 minutes. Just connect your Google Ads, Facebook, and website—our AI handles the rest.</p>
+      </details>
+
+      <details class="group bg-white rounded-lg p-6 shadow-sm border border-gray-100">
+        <summary class="font-semibold text-lg cursor-pointer list-none flex items-center justify-between">
+          Do I need to manage campaigns myself?
+          <svg class="w-5 h-5 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+        <p class="mt-4 text-gray-600">Nope! Our AI optimizes everything 24/7. You can approve recommendations or let it run on auto-pilot within your budget.</p>
+      </details>
+
+      <details class="group bg-white rounded-lg p-6 shadow-sm border border-gray-100">
+        <summary class="font-semibold text-lg cursor-pointer list-none flex items-center justify-between">
+          What if I'm already working with an agency?
+          <svg class="w-5 h-5 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+        <p class="mt-4 text-gray-600">Many customers switch from agencies to save 50-70% in monthly fees while getting better results. You keep full ownership of your accounts.</p>
+      </details>
+
+      <details class="group bg-white rounded-lg p-6 shadow-sm border border-gray-100">
+        <summary class="font-semibold text-lg cursor-pointer list-none flex items-center justify-between">
+          Is there a contract or can I cancel anytime?
+          <svg class="w-5 h-5 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+        <p class="mt-4 text-gray-600">No contracts. Cancel anytime with one click. Your accounts remain yours—we never hold them hostage.</p>
+      </details>
+
+      <details class="group bg-white rounded-lg p-6 shadow-sm border border-gray-100">
+        <summary class="font-semibold text-lg cursor-pointer list-none flex items-center justify-between">
+          How do I know if this will work for my business?
+          <svg class="w-5 h-5 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+        <p class="mt-4 text-gray-600">Try it free for 14 days. See real results. If it's not working, cancel before the trial ends—no charge, no questions asked.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="relative overflow-hidden bg-gradient-to-br from-primary-600 to-primary-800 text-white">
+  <div class="absolute inset-0 opacity-10">
+    <div class="absolute inset-0" style="background-image: url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"1\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
+  </div>
+
+  <div class="container-max relative py-20 text-center">
+    <h2 class="text-3xl md:text-5xl font-extrabold">Ready to grow your local business?</h2>
+    <p class="mt-4 text-xl text-primary-100 max-w-2xl mx-auto">Join 500+ service businesses using AI to book more jobs and grow revenue.</p>
+
+    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}" class="btn bg-white text-primary-700 hover:bg-gray-50 btn-lg">
+          Start Your Free 14-Day Trial
+          <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        </a>
+      {% else %}
+        <a href="/signup" class="btn bg-white text-primary-700 hover:bg-gray-50 btn-lg">
+          Start Your Free 14-Day Trial
+          <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        </a>
+      {% endif %}
+      <a href="#demo" class="btn bg-primary-700 hover:bg-primary-600 border-2 border-white/20 btn-lg">
+        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/></svg>
+        Watch 2-Min Demo
+      </a>
+    </div>
+
+    <p class="mt-6 text-primary-100">✓ No credit card required • ✓ Setup in 10 minutes • ✓ Cancel anytime</p>
+
+    <!-- Mini stats -->
+    <div class="mt-12 grid grid-cols-3 gap-6 max-w-2xl mx-auto text-center">
+      <div>
+        <div class="text-3xl font-bold">500+</div>
+        <div class="text-sm text-primary-200">Active Users</div>
+      </div>
+      <div>
+        <div class="text-3xl font-bold">4.8★</div>
+        <div class="text-sm text-primary-200">Rating</div>
+      </div>
+      <div>
+        <div class="text-3xl font-bold">$2.4M</div>
+        <div class="text-sm text-primary-200">Revenue Generated</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

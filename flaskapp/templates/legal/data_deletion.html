@@ -1,0 +1,38 @@
+{% extends "base_app.html" %}
+{% block title %}Data Deletion – Facebook Login{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+  <h1 class="text-2xl font-semibold">Data Deletion for Facebook Login</h1>
+  <p class="text-gray-600">
+    If you signed in with Facebook and want to delete your data from our systems, you have two options:
+  </p>
+  <ol class="list-decimal pl-5 space-y-2">
+    <li>
+      <span class="font-medium">Use Facebook’s in-app “Delete Your Data” flow:</span>
+      Open your Facebook settings → <em>Apps and Websites</em> → locate our app → select
+      <em>Remove</em> / <em>Delete your data</em>. Facebook will send us an authorized request and we’ll process it automatically.
+    </li>
+    <li>
+      <span class="font-medium">Contact us directly:</span>
+      Email <a class="text-indigo-600 underline" href="mailto:support@yourdomain.com">support@yourdomain.com</a>
+      with the subject “Facebook Data Deletion Request.” Please include the email or user ID you used with Facebook Login.
+    </li>
+  </ol>
+
+  <h2 class="text-xl font-semibold mt-6">What happens next?</h2>
+  <p class="text-gray-600">
+    We will delete or anonymize account-linked data (e.g., access tokens, profile mappings, and activity records)
+    associated with your Facebook user ID. Deletions are processed promptly and typically complete within 30 days.
+  </p>
+
+  <p class="text-gray-600">
+    If you initiated the request through Facebook, you may be shown a confirmation link that points to our
+    deletion status page under <code>/account/facebook/data_deletion_status/&lt;code&gt;</code>.
+  </p>
+
+  <p class="text-gray-600">
+    For details on how we handle data generally, see our
+    <a class="text-indigo-600 underline" href="/legal/privacy">Privacy Policy</a>.
+  </p>
+</div>
+{% endblock %}

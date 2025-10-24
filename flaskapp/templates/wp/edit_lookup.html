@@ -1,0 +1,38 @@
+{% extends "base_app.html" %}
+{% block title %}Edit Existing ¨C {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+  <h1 class="text-2xl font-semibold">Edit Existing Page/Post</h1>
+  <p class="text-gray-600">Paste a public URL from your site. We¡¯ll analyze it and queue a draft with recommended improvements.</p>
+
+  <form method="post" action="{{ url_for('wp_bp.analyze_page') }}" class="grid gap-4 max-w-2xl">
+    <div>
+      <label for="url" class="block text-sm font-medium text-gray-700">URL to analyze</label>
+      <input id="url" name="url" type="url" required
+             class="mt-1 w-full rounded border px-3 py-2"
+             placeholder="https://your-site.com/blog/example-post">
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button type="submit"
+              class="inline-flex items-center px-4 py-2 rounded bg-[var(--brand)] text-white hover:bg-[var(--brand-dark)]">
+        <i class="fa-solid fa-magnifying-glass-chart mr-2"></i>
+        Analyze & Queue Draft
+      </button>
+
+      <!-- Quick links people often want next -->
+      <a href="{{ url_for('wp_bp.publisher') }}" class="text-indigo-600 hover:underline">
+        View Publisher
+      </a>
+      <a href="{{ url_for('wp_bp.insights') }}" class="text-indigo-600 hover:underline">
+        Insights
+      </a>
+    </div>
+
+    <p class="text-xs text-gray-500">
+      We¡¯ll email you for approval if required by your settings. Approved drafts get published by the runner.
+    </p>
+  </form>
+</div>
+{% endblock %}

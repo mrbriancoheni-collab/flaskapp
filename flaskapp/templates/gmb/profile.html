@@ -1,0 +1,169 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'gmb' %}
+{% block title %}Google Business Profile — Profile{% endblock %}
+
+{% block content %}
+{% set _connected = (acct is defined and acct) or (connected is defined and connected) %}
+
+<div class="max-w-7xl mx-auto space-y-6">
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Google Business Profile — Profile</h1>
+      <p class="text-gray-500 text-sm">View and edit your business info, hours, service areas, and attributes.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      {% if not _connected %}
+        <a href="{{ url_for('google_bp.connect', service='gmb') }}"
+           class="rounded-md bg-emerald-600 text-white px-4 py-2 text-sm hover:bg-emerald-700">Connect GBP</a>
+      {% endif %}
+      <a href="{{ url_for('gmb_bp.reviews') if 'gmb_bp.reviews' in [] else '/account/gmb/reviews' }}"
+         class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Reviews</a>
+    </div>
+  </div>
+
+  {% if not _connected %}
+    <div class="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 p-3 text-sm">
+      You are viewing <span class="font-medium">sample data</span>. Connect your Google Business Profile to load live data.
+    </div>
+  {% endif %}
+
+  {# ------- Sample data fallback ------- #}
+  {% set _biz = business if business is defined and business else {
+    'name': 'Acme Pest Control — Midtown',
+    'primaryCategory': 'Pest control service',
+    'website': 'https://www.acmepestco.example',
+    'phone': '(916) 555-0199',
+    'description': 'Fast, pet-safe pest control for homes and businesses. Same-day and weekend service available.',
+    'address': {'line1':'123 J St', 'city':'Sacramento', 'region':'CA', 'postal':'95814'},
+    'serviceAreas': ['95814','95825','95670','95758'],
+    'hours': {
+      'Mon':[{'start':'08:00','end':'18:00'}],
+      'Tue':[{'start':'08:00','end':'18:00'}],
+      'Wed':[{'start':'08:00','end':'18:00'}],
+      'Thu':[{'start':'08:00','end':'18:00'}],
+      'Fri':[{'start':'08:00','end':'18:00'}],
+      'Sat':[{'start':'09:00','end':'14:00'}],
+      'Sun':[]
+    },
+    'attributes': {
+      'Wheelchair accessible entrance': True,
+      'Veteran-owned': True,
+      'On-site services': True,
+      'Online estimates': True
+    },
+    'photos': [
+      {'url':'https://via.placeholder.com/640x360?text=Storefront'},
+      {'url':'https://via.placeholder.com/640x360?text=Team+Photo'},
+      {'url':'https://via.placeholder.com/640x360?text=Truck+Wrap'}
+    ]
+  } %}
+
+  <!-- Summary card -->
+  <div class="rounded-xl border bg-white p-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 space-y-4">
+        <div>
+          <div class="text-xl font-semibold">{{ _biz.name }}</div>
+          <div class="text-sm text-gray-600">{{ _biz.primaryCategory }}</div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div class="space-y-1">
+            <div class="text-gray-500">Website</div>
+            <a href="{{ _biz.website }}" class="text-indigo-600 hover:underline break-all">{{ _biz.website }}</a>
+          </div>
+          <div class="space-y-1">
+            <div class="text-gray-500">Phone</div>
+            <div>{{ _biz.phone }}</div>
+          </div>
+          <div class="space-y-1">
+            <div class="text-gray-500">Address</div>
+            <div>
+              {{ _biz.address.line1 }}<br/>
+              {{ _biz.address.city }}, {{ _biz.address.region }} {{ _biz.address.postal }}
+            </div>
+          </div>
+          <div class="space-y-1">
+            <div class="text-gray-500">Service Areas</div>
+            <div class="flex flex-wrap gap-2">
+              {% for z in _biz.serviceAreas %}
+                <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs">{{ z }}</span>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="text-gray-500 text-sm mb-1">Description</div>
+          <p class="text-sm text-gray-800">{{ _biz.description }}</p>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <div class="text-sm font-medium">Quick Actions</div>
+        <div class="grid grid-cols-1 gap-2">
+          <a href="#" class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50 text-left">Edit profile</a>
+          <a href="#" class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50 text-left">Add photo</a>
+          <a href="#" class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50 text-left">Update hours</a>
+          <a href="#" class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50 text-left">Manage service areas</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Photos -->
+  <div class="rounded-xl border bg-white p-6">
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg font-semibold">Photos</h2>
+      <a href="#" class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Upload</a>
+    </div>
+    <div class="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      {% for p in _biz.photos %}
+        <img class="w-full h-28 object-cover rounded-lg border" src="{{ p.url }}" alt="Photo {{ loop.index }}"/>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Hours -->
+  <div class="rounded-xl border bg-white p-6">
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg font-semibold">Business Hours</h2>
+      <a href="#" class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Edit hours</a>
+    </div>
+    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+      {% for day in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}
+        {% set blocks = _biz.hours.get(day, []) %}
+        <div class="rounded-lg border p-3">
+          <div class="font-medium mb-1">{{ day }}</div>
+          {% if blocks and blocks|length %}
+            <div class="space-y-1">
+              {% for b in blocks %}
+                <div>{{ b.start }} — {{ b.end }}</div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-gray-500">Closed</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Attributes -->
+  <div class="rounded-xl border bg-white p-6">
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg font-semibold">Attributes</h2>
+      <a href="#" class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Manage attributes</a>
+    </div>
+    <div class="mt-4 flex flex-wrap gap-2">
+      {% for label, enabled in _biz.attributes.items() %}
+        <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm {{ 'bg-emerald-50 border-emerald-200 text-emerald-800' if enabled else 'bg-gray-50 text-gray-600' }}">
+          {{ label }}{% if not enabled %} (off){% endif %}
+        </span>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

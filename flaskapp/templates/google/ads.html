@@ -1,0 +1,626 @@
+{# templates/google/ads.html #}
+{% extends "base_app.html" %}
+{% set SECTION = 'google' %}
+{% block title %}Google Ads{% endblock %}
+
+{% block content %}
+{% set _connected = (connected if connected is defined else (connected_ads if connected_ads is defined else false)) %}
+{% set _ai_connected = (ai_connected if ai_connected is defined else false) %}
+
+{% set _data = (ads_data if ads_data is defined and ads_data else {
+  "account_name": "Demo Plumbing Co.",
+  "campaigns": [
+    {"id": "C-1001", "name": "Emergency Plumbing - Search", "type": "SEARCH", "status": "Enabled", "daily_budget": 75, "bidding": "tCPA", "target": 65},
+    {"id": "C-1002", "name": "Water Heater Install - Search", "type": "SEARCH", "status": "Paused", "daily_budget": 40, "bidding": "Maximize Conversions", "target": null}
+  ],
+  "ad_groups": [
+    {"id": "AG-2001", "campaign_id": "C-1001", "name": "Near Me", "status": "Enabled"},
+    {"id": "AG-2002", "campaign_id": "C-1001", "name": "24 Hour", "status": "Enabled"},
+    {"id": "AG-2003", "campaign_id": "C-1002", "name": "Tankless", "status": "Paused"}
+  ],
+  "keywords": [
+    {"id": "KW-3001", "ad_group_id": "AG-2001", "match": "Exact", "text": "[emergency plumber near me]", "status": "Enabled", "cpc": 9.50, "conv": 7, "cpa": 58},
+    {"id": "KW-3002", "ad_group_id": "AG-2001", "match": "Phrase", "text": "\"emergency leak repair\"", "status": "Enabled", "cpc": 5.10, "conv": 2, "cpa": 92},
+    {"id": "KW-3003", "ad_group_id": "AG-2002", "match": "Broad", "text": "plumber 24 hours", "status": "Enabled", "cpc": 3.40, "conv": 0, "cpa": null}
+  ],
+  "negatives": [
+    {"id": "NEG-4001", "scope": "Campaign", "parent_id": "C-1001", "text": "free"},
+    {"id": "NEG-4002", "scope": "Campaign", "parent_id": "C-1001", "text": "DIY"},
+    {"id": "NEG-4003", "scope": "Account", "parent_id": null, "text": "jobs"}
+  ],
+  "ads": [
+    {"id": "AD-5001", "ad_group_id": "AG-2001", "h1": "Emergency Plumber Near You", "h2": "30–60 Min Arrival", "h3": "Licensed • Insured", "d1": "Fast, professional service. Upfront pricing & guarantees.", "path": "emergency"},
+    {"id": "AD-5002", "ad_group_id": "AG-2002", "h1": "24/7 Plumbing Help", "h2": "Call Now • Same-Day", "h3": "Local Techs", "d1": "Clogs, leaks, burst pipes—fixed today.", "path": "24-hr"}
+  ],
+  "extensions": [
+    {"id": "EXT-6001", "type": "Sitelink", "text": "Financing Options", "url": "https://example.com/finance"},
+    {"id": "EXT-6002", "type": "Callout", "text": "No Trip Fees", "url": ""}
+  ],
+  "landing_pages": [
+    {"id": "LP-7001", "url": "https://example.com/emergency", "load": "2.1s", "mobile_friendly": true, "notes": "Strong above-the-fold CTA, add trust badges lower."},
+    {"id": "LP-7002", "url": "https://example.com/water-heaters", "load": "3.9s", "mobile_friendly": false, "notes": "Hero text small on mobile; consider sticky CTA."}
+  ]
+}) %}
+{% set _sugs = (suggestions if suggestions is defined else {}) %}
+
+<div class="max-w-7xl mx-auto space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold">Google Ads</h1>
+      <p class="text-gray-500">
+        {% if _connected %}
+          Managing <span class="font-medium">{{ _data.account_name or 'Google Ads Account' }}</span>.
+        {% else %}
+          <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 text-[11px] mr-2">Demo Mode</span>
+          Edit the sample data below to demonstrate UI.
+        {% endif %}
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center rounded-full {{ 'bg-green-50 text-green-700 border border-green-200' if _ai_connected else 'bg-amber-50 text-amber-700 border border-amber-200' }} px-2 py-0.5 text-xs">
+        <i class="fa-solid fa-robot mr-1"></i> AI {{ 'enabled' if _ai_connected else 'disabled' }}
+      </span>
+      {% if _connected %}
+        <form method="post" action="{{ url_for('google_bp.disconnect', product='ads') }}">
+          {% if csrf_token is defined %} <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
+          <button class="rounded-md border px-3 py-2 hover:bg-gray-50" type="submit">
+            <i class="fa-solid fa-plug-circle-xmark mr-2"></i>Disconnect
+          </button>
+        </form>
+      {% else %}
+        <a href="{{ url_for('google_bp.connect_ads') }}"
+           class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
+          <i class="fa-solid fa-link"></i> Connect Google Ads
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="rounded-lg border bg-white p-4 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-2">
+      <button type="button"
+              class="inline-flex items-center gap-2 rounded-md border px-3 py-2 hover:bg-gray-50"
+              id="aiOptimizeBtn"
+              data-ai-action="fetch"
+              data-ai-url="{{ url_for('google_bp.ads_optimize_json') }}"
+              data-ai-method="POST"
+              data-ai-body='{"scope":"all","regenerate":true}'
+              data-ai-busy="Thinking…">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> AI Optimize
+      </button>
+
+      <button type="button"
+              class="inline-flex items-center gap-2 rounded-md border px-3 py-2 hover:bg-gray-50"
+              id="refreshAdsBtn"
+              data-ai-action="fetch"
+              data-ai-url="{{ url_for('google_bp.ads_refresh_json') }}"
+              data-ai-method="POST"
+              data-ai-busy="Refreshing…">
+        <i class="fa-solid fa-rotate"></i> Refresh
+      </button>
+
+      <button type="submit"
+              class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+              form="gads-form"
+              data-ai-action="submit"
+              data-ai-busy="Saving…">
+        <i class="fa-solid fa-floppy-disk"></i> Save All
+      </button>
+    </div>
+    <div class="text-xs text-gray-500">
+      {% if _connected %}Server-connected.{% else %}Demo mode (session only).{% endif %}
+    </div>
+  </div>
+
+  <div class="rounded-lg border bg-white p-4 space-y-3">
+    <div class="flex items-center justify-between gap-3">
+      <div class="text-sm font-medium">
+        FieldSprout AI – Google Ads Review
+        {% if _ai_connected %}
+          <span class="ml-2 inline-flex items-center rounded-full bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 text-[11px]">Connected</span>
+        {% else %}
+          <span class="ml-2 inline-flex items-center rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-[11px]">AI key missing</span>
+        {% endif %}
+      </div>
+      <div class="text-xs text-gray-500">
+        {% if _connected %}Uses your live account when wired.{% else %}Using demo data until connected.{% endif %}
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between">
+      <div class="text-xs text-gray-500">
+        <i class="fa-solid fa-lock mr-1"></i> Server-side prompt; nothing sensitive in the DOM.
+      </div>
+      <button id="runAdsAI"
+              type="button"
+              class="rounded-md bg-indigo-600 px-3 py-2 text-white hover:bg-indigo-700"
+              data-ai-busy="Analyzing…">
+        Run AI Review
+      </button>
+    </div>
+
+    <div id="adsAiOut" class="hidden border rounded-md p-3 bg-gray-50 mt-3">
+      <div class="space-y-3">
+        <div>
+          <div class="text-xs text-gray-500 mb-1">Summary</div>
+          <div id="adsAiSummary" class="text-sm"></div>
+        </div>
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <div class="text-xs text-gray-500 mb-1">Insights</div>
+            <ul id="adsAiInsights" class="list-disc pl-5 text-sm space-y-1"></ul>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500 mb-1">Optimization Checklist</div>
+            <ul id="adsAiChecklist" class="list-disc pl-5 text-sm space-y-1"></ul>
+          </div>
+        </div>
+        <div class="pt-1 text-[11px] text-gray-400">Source: FieldSprout AI</div>
+      </div>
+    </div>
+  </div>
+
+  <form id="gads-form" method="post" action="{{ url_for('google_bp.ads_update') }}" class="space-y-6">
+    {% if csrf_token is defined %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
+
+    <div class="rounded-lg border bg-white">
+      <div class="px-4 py-3 border-b flex items-center justify-between">
+        <div class="font-medium">Campaigns</div>
+      </div>
+      <div class="p-4 overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-left text-gray-500">
+            <tr>
+              <th class="py-2 pr-4">Name</th>
+              <th class="py-2 pr-4">Type</th>
+              <th class="py-2 pr-4">Status</th>
+              <th class="py-2 pr-4">Daily Budget</th>
+              <th class="py-2 pr-4">Bidding</th>
+              <th class="py-2 pr-4">Target</th>
+            </tr>
+          </thead>
+          <tbody class="align-top">
+            {% for c in _data.campaigns %}
+            <tr class="border-t">
+              <td class="py-2 pr-4">
+                <input type="hidden" name="campaigns[{{ loop.index0 }}][id]" value="{{ c.id }}">
+                <input class="w-full border rounded px-2 py-1" name="campaigns[{{ loop.index0 }}][name]" value="{{ c.name }}">
+              </td>
+              <td class="py-2 pr-4">
+                <input class="w-36 border rounded px-2 py-1" name="campaigns[{{ loop.index0 }}][type]" value="{{ c.type }}">
+              </td>
+              <td class="py-2 pr-4">
+                <select class="border rounded px-2 py-1" name="campaigns[{{ loop.index0 }}][status]">
+                  {% for s in ['Enabled','Paused'] %}
+                    <option value="{{ s }}" {% if (c.status or '')|lower == s|lower %}selected{% endif %}>{{ s }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td class="py-2 pr-4">
+                <input class="w-28 border rounded px-2 py-1" type="number" step="0.01" name="campaigns[{{ loop.index0 }}][daily_budget]" value="{{ c.daily_budget }}">
+              </td>
+              <td class="py-2 pr-4">
+                <input class="w-56 border rounded px-2 py-1" name="campaigns[{{ loop.index0 }}][bidding]" value="{{ c.bidding }}">
+              </td>
+              <td class="py-2 pr-4">
+                <input class="w-28 border rounded px-2 py-1" type="number" step="0.01" name="campaigns[{{ loop.index0 }}][target]" value="{{ c.target }}">
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="rounded-lg border bg-white">
+      <div class="px-4 py-3 border-b flex items-center justify-between">
+        <div class="font-medium">Ad Groups</div>
+      </div>
+      <div class="p-4 overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-left text-gray-500">
+            <tr>
+              <th class="py-2 pr-4">Campaign ID</th>
+              <th class="py-2 pr-4">Name</th>
+              <th class="py-2 pr-4">Status</th>
+            </tr>
+          </thead>
+          <tbody class="align-top">
+            {% for g in _data.ad_groups %}
+            <tr class="border-t">
+              <td class="py-2 pr-4">
+                <input type="hidden" name="ad_groups[{{ loop.index0 }}][id]" value="{{ g.id }}">
+                <input class="w-36 border rounded px-2 py-1" name="ad_groups[{{ loop.index0 }}][campaign_id]" value="{{ g.campaign_id }}">
+              </td>
+              <td class="py-2 pr-4">
+                <input class="w-56 border rounded px-2 py-1" name="ad_groups[{{ loop.index0 }}][name]" value="{{ g.name }}">
+              </td>
+              <td class="py-2 pr-4">
+                <select class="border rounded px-2 py-1" name="ad_groups[{{ loop.index0 }}][status]">
+                  {% for s in ['Enabled','Paused'] %}
+                    <option value="{{ s }}" {% if (g.status or '')|lower == s|lower %}selected{% endif %}>{{ s }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="rounded-lg border bg-white">
+      <div class="px-4 py-3 border-b flex items-center justify-between">
+        <div class="font-medium">Keywords</div>
+      </div>
+      <div class="p-4 overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-left text-gray-500">
+            <tr>
+              <th class="py-2 pr-4">Ad Group ID</th>
+              <th class="py-2 pr-4">Match</th>
+              <th class="py-2 pr-4">Text</th>
+              <th class="py-2 pr-4">Status</th>
+              <th class="py-2 pr-4">CPC</th>
+              <th class="py-2 pr-4">Conv</th>
+              <th class="py-2 pr-4">CPA</th>
+            </tr>
+          </thead>
+          <tbody class="align-top">
+            {% for k in _data.keywords %}
+            <tr class="border-t">
+              <td class="py-2 pr-4">
+                <input type="hidden" name="keywords[{{ loop.index0 }}][id]" value="{{ k.id }}">
+                <input class="w-36 border rounded px-2 py-1" name="keywords[{{ loop.index0 }}][ad_group_id]" value="{{ k.ad_group_id }}">
+              </td>
+              <td class="py-2 pr-4">
+                <input class="w-28 border rounded px-2 py-1" name="keywords[{{ loop.index0 }}][match]" value="{{ k.match }}">
+              </td>
+              <td class="py-2 pr-4">
+                <input class="w-[28rem] border rounded px-2 py-1" name="keywords[{{ loop.index0 }}][text]" value="{{ k.text }}">
+              </td>
+              <td class="py-2 pr-4">
+                <select class="border rounded px-2 py-1" name="keywords[{{ loop.index0 }}][status]">
+                  {% for s in ['Enabled','Paused'] %}
+                    <option value="{{ s }}" {% if (k.status or '')|lower == s|lower %}selected{% endif %}>{{ s }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td class="py-2 pr-4">
+                <input class="w-24 border rounded px-2 py-1" type="number" step="0.01" name="keywords[{{ loop.index0 }}][cpc]" value="{{ k.cpc }}">
+              </td>
+              <td class="py-2 pr-4">
+                <input class="w-20 border rounded px-2 py-1" type="number" step="1" name="keywords[{{ loop.index0 }}][conv]" value="{{ k.conv }}">
+              </td>
+              <td class="py-2 pr-4">
+                <input class="w-24 border rounded px-2 py-1" type="number" step="0.01" name="keywords[{{ loop.index0 }}][cpa]" value="{{ k.cpa }}">
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="rounded-lg border bg-white">
+      <div class="px-4 py-3 border-b"><div class="font-medium">Negatives</div></div>
+      <div class="p-4 overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-left text-gray-500">
+            <tr>
+              <th class="py-2 pr-4">Scope</th>
+              <th class="py-2 pr-4">Parent ID</th>
+              <th class="py-2 pr-4">Text</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for n in _data.negatives %}
+            <tr class="border-t">
+              <td class="py-2 pr-4">
+                <input type="hidden" name="negatives[{{ loop.index0 }}][id]" value="{{ n.id }}">
+                <input class="w-32 border rounded px-2 py-1" name="negatives[{{ loop.index0 }}][scope]" value="{{ n.scope }}">
+              </td>
+              <td class="py-2 pr-4">
+                <input class="w-36 border rounded px-2 py-1" name="negatives[{{ loop.index0 }}][parent_id]" value="{{ n.parent_id }}">
+              </td>
+              <td class="py-2 pr-4">
+                <input class="w-[28rem] border rounded px-2 py-1" name="negatives[{{ loop.index0 }}][text]" value="{{ n.text }}">
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="rounded-lg border bg-white">
+      <div class="px-4 py-3 border-b"><div class="font-medium">Ads (RSAs)</div></div>
+      <div class="p-4 overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-left text-gray-500">
+            <tr>
+              <th class="py-2 pr-4">Ad Group ID</th>
+              <th class="py-2 pr-4">H1</th>
+              <th class="py-2 pr-4">H2</th>
+              <th class="py-2 pr-4">H3</th>
+              <th class="py-2 pr-4">Desc</th>
+              <th class="py-2 pr-4">Path</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in _data.ads %}
+            <tr class="border-t">
+              <td class="py-2 pr-4">
+                <input type="hidden" name="ads[{{ loop.index0 }}][id]" value="{{ a.id }}">
+                <input class="w-36 border rounded px-2 py-1" name="ads[{{ loop.index0 }}][ad_group_id]" value="{{ a.ad_group_id }}">
+              </td>
+              <td class="py-2 pr-4"><input class="w-56 border rounded px-2 py-1" name="ads[{{ loop.index0 }}][h1]" value="{{ a.h1 }}"></td>
+              <td class="py-2 pr-4"><input class="w-56 border rounded px-2 py-1" name="ads[{{ loop.index0 }}][h2]" value="{{ a.h2 }}"></td>
+              <td class="py-2 pr-4"><input class="w-44 border rounded px-2 py-1" name="ads[{{ loop.index0 }}][h3]" value="{{ a.h3 }}"></td>
+              <td class="py-2 pr-4"><input class="w-[28rem] border rounded px-2 py-1" name="ads[{{ loop.index0 }}][d1]" value="{{ a.d1 }}"></td>
+              <td class="py-2 pr-4"><input class="w-32 border rounded px-2 py-1" name="ads[{{ loop.index0 }}][path]" value="{{ a.path }}"></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="rounded-lg border bg-white">
+      <div class="px-4 py-3 border-b"><div class="font-medium">Extensions</div></div>
+      <div class="p-4 overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-left text-gray-500">
+            <tr>
+              <th class="py-2 pr-4">Type</th>
+              <th class="py-2 pr-4">Text</th>
+              <th class="py-2 pr-4">URL</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in _data.extensions %}
+            <tr class="border-t">
+              <td class="py-2 pr-4">
+                <input type="hidden" name="extensions[{{ loop.index0 }}][id]" value="{{ e.id }}">
+                <input class="w-36 border rounded px-2 py-1" name="extensions[{{ loop.index0 }}][type]" value="{{ e.type }}">
+              </td>
+              <td class="py-2 pr-4"><input class="w-[28rem] border rounded px-2 py-1" name="extensions[{{ loop.index0 }}][text]" value="{{ e.text }}"></td>
+              <td class="py-2 pr-4"><input class="w-[28rem] border rounded px-2 py-1" name="extensions[{{ loop.index0 }}][url]" value="{{ e.url }}"></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="rounded-lg border bg-white">
+      <div class="px-4 py-3 border-b"><div class="font-medium">Landing Pages</div></div>
+      <div class="p-4 overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-left text-gray-500">
+            <tr>
+              <th class="py-2 pr-4">URL</th>
+              <th class="py-2 pr-4">Load</th>
+              <th class="py-2 pr-4">Mobile Friendly</th>
+              <th class="py-2 pr-4">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for lp in _data.landing_pages %}
+            <tr class="border-t">
+              <td class="py-2 pr-4">
+                <input type="hidden" name="landing_pages[{{ loop.index0 }}][id]" value="{{ lp.id }}">
+                <input class="w-[32rem] border rounded px-2 py-1" name="landing_pages[{{ loop.index0 }}][url]" value="{{ lp.url }}">
+              </td>
+              <td class="py-2 pr-4">
+                <input class="w-24 border rounded px-2 py-1" name="landing_pages[{{ loop.index0 }}][load]" value="{{ lp.load }}">
+              </td>
+              <td class="py-2 pr-4">
+                <input type="checkbox" name="landing_pages[{{ loop.index0 }}][mobile_friendly]" {% if lp.mobile_friendly %}checked{% endif %}>
+              </td>
+              <td class="py-2 pr-4">
+                <input class="w-[28rem] border rounded px-2 py-1" name="landing_pages[{{ loop.index0 }}][notes]" value="{{ lp.notes }}">
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </form>
+
+  <div class="rounded-lg border bg-white">
+    <div class="px-4 py-3 border-b flex items-center justify-between">
+      <div class="font-medium">Suggestions</div>
+      <div class="text-xs text-gray-500">Populated by <code>/ads/optimize.json</code></div>
+    </div>
+    <div class="p-4 grid md:grid-cols-2 gap-4 text-sm">
+      <div>
+        <div class="text-xs text-gray-500 mb-1">Campaigns</div>
+        <ul id="sugCampaigns" class="list-disc pl-5 space-y-1">
+          {% for s in _sugs.get('campaigns', []) %}<li>{{ s.change }}</li>{% endfor %}
+        </ul>
+      </div>
+      <div>
+        <div class="text-xs text-gray-500 mb-1">Ad Groups</div>
+        <ul id="sugAdgroups" class="list-disc pl-5 space-y-1">
+          {% for s in _sugs.get('adgroups', []) %}<li>{{ s.change }}</li>{% endfor %}
+        </ul>
+      </div>
+      <div>
+        <div class="text-xs text-gray-500 mb-1">Keywords</div>
+        <ul id="sugKeywords" class="list-disc pl-5 space-y-1">
+          {% for s in _sugs.get('keywords', []) %}<li>{{ s.change }}</li>{% endfor %}
+        </ul>
+      </div>
+      <div>
+        <div class="text-xs text-gray-500 mb-1">Negatives</div>
+        <ul id="sugNegatives" class="list-disc pl-5 space-y-1">
+          {% for s in _sugs.get('negatives', []) %}<li>{{ s.change }}</li>{% endfor %}
+        </ul>
+      </div>
+      <div>
+        <div class="text-xs text-gray-500 mb-1">Ads</div>
+        <ul id="sugAds" class="list-disc pl-5 space-y-1">
+          {% for s in _sugs.get('ads', []) %}<li>{{ s.change }}</li>{% endfor %}
+        </ul>
+      </div>
+      <div>
+        <div class="text-xs text-gray-500 mb-1">Extensions / Landing</div>
+        <ul id="sugExtensions" class="list-disc pl-5 space-y-1">
+          {% for s in _sugs.get('extensions', []) %}<li>{{ s.change }}</li>{% endfor %}
+          {% for s in _sugs.get('landing', []) %}<li>{{ s.change }}</li>{% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .ai-busy { opacity: .6; pointer-events: none; }
+  .ai-spinner {
+    display:inline-block; width:1em; height:1em; vertical-align:-.2em;
+    border:2px solid currentColor; border-right-color: transparent; border-radius:50%;
+    animation: ai-spin .6s linear infinite; margin-right:.5rem;
+  }
+  @keyframes ai-spin { to { transform: rotate(360deg); } }
+  .ai-overlay { position:fixed; inset:0; background:rgba(255,255,255,.6); display:none; align-items:center; justify-content:center; z-index: 60; }
+  .ai-overlay.show { display:flex; }
+</style>
+<div id="ai-overlay" class="ai-overlay"><div class="rounded bg-white/80 px-4 py-2 border text-gray-700 text-sm shadow"><span class="ai-spinner"></span>Working…</div></div>
+
+<script nonce="{{ g.csp_nonce }}">
+(function () {
+  const overlay = document.getElementById('ai-overlay');
+
+  function getCookie(name){
+    return document.cookie.split('; ').find(r => r.startsWith(name+'='))?.split('=')[1];
+  }
+  function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta && meta.content) return meta.content;
+    const inp = document.querySelector('input[name="csrf_token"]');
+    if (inp && inp.value) return inp.value;
+    return getCookie('csrf_token') || getCookie('XSRF-TOKEN') || getCookie('csrf');
+  }
+
+  function setBusy(btn, busyText) {
+    if (!btn) return;
+    if (!btn.dataset.aiOriginal) btn.dataset.aiOriginal = btn.innerHTML;
+    btn.classList.add('ai-busy');
+    btn.disabled = true;
+    btn.innerHTML = `<span class="ai-spinner" aria-hidden="true"></span>${busyText || 'Working…'}`;
+    overlay?.classList.add('show');
+  }
+  function clearBusy(btn) {
+    if (!btn) return;
+    btn.classList.remove('ai-busy');
+    btn.disabled = false;
+    if (btn.dataset.aiOriginal) btn.innerHTML = btn.dataset.aiOriginal;
+    overlay?.classList.remove('show');
+  }
+  function li(text){ const el=document.createElement('li'); el.textContent=String(text||''); return el; }
+  function show(el,on){ if(el) el.classList.toggle('hidden', !on); }
+
+  async function safeJson(res){
+    const text = await res.text();
+    try { return JSON.parse(text); } catch { return { ok:false, error: text || ('HTTP '+res.status) }; }
+  }
+
+  // Generic fetch-button handler (adds CSRF + cookies)
+  document.querySelectorAll('[data-ai-action="fetch"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const url    = btn.dataset.aiUrl;
+      const method = (btn.dataset.aiMethod || 'POST').toUpperCase();
+      const busy   = btn.dataset.aiBusy || 'Working…';
+      const body   = btn.dataset.aiBody;
+      const token  = getCsrfToken();
+
+      setBusy(btn, busy);
+
+      const init = { method, headers: {}, credentials: 'same-origin' };
+      if (method !== 'GET') {
+        init.headers['Content-Type'] = 'application/json';
+        if (body) init.body = body;
+      }
+      if (token) {
+        init.headers['X-CSRFToken'] = token;
+        init.headers['X-CSRF-Token'] = token;
+        init.headers['X-XSRF-TOKEN'] = token;
+      }
+
+      try {
+        const res = await fetch(url, init);
+        const json = await safeJson(res);
+
+        if (!res.ok || json.ok === false) {
+          console.error('Request failed:', json);
+          alert(json.error || ('Request failed (HTTP ' + res.status + ').'));
+        } else {
+          if (url.includes('/ads/optimize.json') && json.suggestions) {
+            const s = json.suggestions;
+            const map = {
+              'campaigns': document.getElementById('sugCampaigns'),
+              'adgroups': document.getElementById('sugAdgroups'),
+              'keywords': document.getElementById('sugKeywords'),
+              'negatives': document.getElementById('sugNegatives'),
+              'ads': document.getElementById('sugAds'),
+              'extensions': document.getElementById('sugExtensions')
+            };
+            Object.keys(map).forEach(k => {
+              const ul = map[k]; if (!ul) return;
+              ul.innerHTML = '';
+              (s[k] || []).forEach(item => ul.appendChild(li(item.change || item)));
+            });
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Network error.');
+      } finally {
+        clearBusy(btn);
+      }
+    });
+  });
+
+  // Form submit spinner until navigation
+  document.querySelectorAll('[data-ai-action="submit"]').forEach(btn => {
+    btn.closest('form')?.addEventListener('submit', () => {
+      setBusy(btn, btn.dataset.aiBusy || 'Submitting…');
+    });
+  });
+
+  // AI Review (GET json)
+  const runBtn = document.getElementById('runAdsAI');
+  const out = document.getElementById('adsAiOut');
+  const sum = document.getElementById('adsAiSummary');
+  const ins = document.getElementById('adsAiInsights');
+  const chk = document.getElementById('adsAiChecklist');
+
+  if (runBtn) {
+    runBtn.addEventListener('click', async () => {
+      setBusy(runBtn, runBtn.dataset.aiBusy || 'Analyzing…');
+      sum.textContent=''; ins.innerHTML=''; chk.innerHTML='';
+      try {
+        const url = new URL('{{ url_for("google_bp.ads_ai_summary_json") }}', window.location.origin);
+        url.searchParams.set('_', String(Date.now()));
+        const res = await fetch(url.toString(), { method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+        const j = await safeJson(res);
+        if (!res.ok) throw new Error(j.error || ('HTTP '+res.status));
+
+        sum.textContent = j.summary || 'No summary.';
+        (j.insights || []).forEach(t => ins.appendChild(li(t)));
+        (j.checklist || []).forEach(t => chk.appendChild(li(t)));
+        show(out, true);
+      } catch (e) {
+        console.error('AI Review error:', e);
+        sum.textContent = 'Could not load AI review.';
+        show(out, true);
+      } finally {
+        clearBusy(runBtn);
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}

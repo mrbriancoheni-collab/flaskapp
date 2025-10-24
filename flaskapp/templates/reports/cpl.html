@@ -1,0 +1,13 @@
+{% extends "base_app.html" %}
+{% block title %}Reporting – CPL/Customer{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-semibold mb-4">Cost per Lead / Customer</h1>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+  <div class="border rounded p-3"><div class="text-sm text-gray-500">Period</div><div class="text-xl font-semibold">{{ stats.period }}</div></div>
+  <div class="border rounded p-3"><div class="text-sm text-gray-500">Spend</div><div class="text-xl font-semibold">${{ '%.2f'|format(stats.spend) }}</div></div>
+  <div class="border rounded p-3"><div class="text-sm text-gray-500">Leads</div><div class="text-xl font-semibold">{{ stats.leads }}</div></div>
+  <div class="border rounded p-3"><div class="text-sm text-gray-500">Customers</div><div class="text-xl font-semibold">{{ stats.customers }}</div></div>
+  <div class="border rounded p-3"><div class="text-sm text-gray-500">CPL</div><div class="text-xl font-semibold">{% if stats.cpl is not none %}${{ '%.2f'|format(stats.cpl) }}{% else %}-{% endif %}</div></div>
+  <div class="border rounded p-3"><div class="text-sm text-gray-500">Cost / Customer</div><div class="text-xl font-semibold">{% if stats.cpcust is not none %}${{ '%.2f'|format(stats.cpcust) }}{% else %}-{% endif %}</div></div>
+</div>
+{% endblock %}

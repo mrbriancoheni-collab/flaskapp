@@ -1,0 +1,20 @@
+{% extends "base_app.html" %}
+{% block title %}Zipcode Coverage – {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="text-xl font-semibold mb-4">Zipcode Coverage</h1>
+
+<form method="post" class="mb-4 space-y-2">
+  <label class="block text-sm text-gray-700">Service ZIPs (comma, space, or newline separated)</label>
+  <textarea name="zips" rows="4" class="w-full border rounded p-2">{{ zips|join(', ') }}</textarea>
+  <div class="flex gap-2">
+    <button class="px-4 py-2 rounded bg-indigo-600 text-white">Save</button>
+    <button name="zips" value="" class="px-4 py-2 rounded border">Clear</button>
+  </div>
+</form>
+
+<div id="zipmap" class="h-[70vh] rounded border"></div>
+<script>
+  const zips = {{ zips|tojson }};
+  // TODO: draw zip coverage (centroids or polygons).
+</script>
+{% endblock %}

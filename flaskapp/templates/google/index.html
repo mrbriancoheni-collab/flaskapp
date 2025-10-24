@@ -1,0 +1,89 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'google' %}
+{% block title %}Google Connections{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold">Google Connections</h1>
+      <p class="text-gray-500">Connect Ads, Local Services Ads, Analytics, and Search Console.</p>
+    </div>
+    <a href="{{ url_for('account_bp.dashboard') }}" class="rounded-md border px-3 py-2 text-gray-700 hover:bg-gray-50">Back to Dashboard</a>
+  </div>
+
+  {# key, label, connect_ep, manage_ep (optional) #}
+  {% set items = [
+      ('ads', 'Google Ads',         'google_bp.connect_ads', 'google_bp.ads_ui'),
+      ('ga',  'Google Analytics',   'google_bp.connect_ga',  'google_bp.ga_ui'),
+      ('gsc', 'Search Console',     'google_bp.connect_gsc', 'google_bp.gsc_ui')
+  ] %}
+
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    {# --- LSA card (explicit start link with product=lsa) --- #}
+    <div class="rounded-lg border bg-white p-5 flex flex-col gap-3">
+      <div class="font-medium">Local Services Ads</div>
+      {% if connected['lsa'] %}
+        <div class="text-green-700 text-sm">Connected</div>
+        <div class="flex items-center gap-2">
+          {% if has_endpoint('glsa_bp.index') %}
+            <a class="inline-flex items-center rounded-md bg-indigo-600 text-white px-3 py-2 text-sm hover:bg-indigo-500"
+               href="{{ url_for('glsa_bp.index') }}">
+              Review / Manage
+            </a>
+          {% endif %}
+          <form method="post" action="{{ url_for('google_bp.disconnect', product='lsa') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50" type="submit">
+              Disconnect
+            </button>
+          </form>
+        </div>
+      {% else %}
+        <div class="text-gray-500 text-sm">Not connected</div>
+        <a class="inline-flex items-center rounded-md bg-indigo-600 text-white px-3 py-2 text-sm hover:bg-indigo-500"
+           href="{{ url_for('google_bp.start', product='lsa', next=url_for('glsa_bp.optimize')) }}">
+          Connect Local Services Ads
+        </a>
+      {% endif %}
+    </div>
+
+    {# --- The rest (Ads, GA, GSC) using your loop --- #}
+    {% for key, label, connect_ep, manage_ep in items %}
+      <div class="rounded-lg border bg-white p-5 flex flex-col gap-3">
+        <div class="font-medium">{{ label }}</div>
+
+        {% if connected[key] %}
+          <div class="text-green-700 text-sm">Connected</div>
+          <div class="flex items-center gap-2">
+            {% if manage_ep and has_endpoint(manage_ep) %}
+              <a class="inline-flex items-center rounded-md bg-indigo-600 text-white px-3 py-2 text-sm hover:bg-indigo-500"
+                 href="{{ url_for(manage_ep) }}">
+                Review / Manage
+              </a>
+            {% endif %}
+            <form method="post" action="{{ url_for('google_bp.disconnect', product=key) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50" type="submit">
+                Disconnect
+              </button>
+            </form>
+          </div>
+        {% else %}
+          <div class="text-gray-500 text-sm">Not connected</div>
+          {% if has_endpoint(connect_ep) %}
+            <a class="inline-flex items-center rounded-md bg-indigo-600 text-white px-3 py-2 text-sm hover:bg-indigo-500"
+               href="{{ url_for(connect_ep, next=request.args.get('next')) }}">
+              Connect {{ label }}
+            </a>
+          {% endif %}
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="rounded-lg border bg-gray-50 p-4 text-sm text-gray-600">
+    After connecting, data will populate on your Dashboard cards. You can always return here to disconnect a product.
+  </div>
+</div>
+{% endblock %}

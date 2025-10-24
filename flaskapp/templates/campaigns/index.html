@@ -1,0 +1,109 @@
+{% extends "base_app.html" %}
+{% block title %}Campaigns – {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+  <h1 class="text-2xl font-semibold mb-4">Seasonal Campaigns</h1>
+
+  {# Flash messages handled in base template already #}
+
+  {# Non-AI catalog and add-to-repo #}
+  <form method="post" class="rounded-xl border bg-white p-4 shadow-sm">
+    <div class="grid gap-3">
+      {% for c in catalog %}
+        <label class="flex items-start gap-3 border rounded-lg p-3 hover:bg-gray-50 cursor-pointer">
+          <input type="radio" name="slug" value="{{ c.slug }}" class="mt-1">
+          <div>
+            <div class="font-medium">{{ c.title }}</div>
+            <div class="text-sm text-gray-600">{{ c.desc }}</div>
+            <div class="mt-1 text-xs text-gray-400">Slug: {{ c.slug }}</div>
+          </div>
+        </label>
+      {% endfor %}
+    </div>
+
+    <div class="mt-4 flex items-center gap-2">
+      <button type="submit" class="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700">
+        Add to repository
+      </button>
+
+      {# Client-side: AI button disabled if not paid, but server still enforces via route decorator #}
+      <button
+        type="button"
+        class="px-4 py-2 rounded border hover:bg-gray-50 {% if not ai_enabled %}opacity-50 cursor-not-allowed{% endif %}"
+        {% if not ai_enabled %}disabled{% endif %}
+        onclick="openAISuggestModal()">
+        AI: Suggest copy/variants
+      </button>
+
+      {% if not ai_enabled %}
+        <span class="text-sm text-gray-600">
+          AI requires a paid plan.
+          <a class="text-indigo-600 underline" href="{{ url_for(ep('pricing')) }}">Upgrade</a>
+        </span>
+      {% endif %}
+    </div>
+  </form>
+
+  {# AI results (when returning from /ai/suggest) #}
+  {% if ai_ideas %}
+    <div class="mt-6 rounded-xl border bg-white p-4 shadow-sm">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold">AI Suggestions{% if chosen_slug %} for “{{ chosen_slug }}”{% endif %}</h2>
+        <form method="post" action="{{ url_for('campaigns_bp.index') }}">
+          <input type="hidden" name="slug" value="{{ chosen_slug }}">
+          <button class="px-3 py-1 rounded border hover:bg-gray-50">Add this campaign</button>
+        </form>
+      </div>
+      <ul class="mt-3 list-disc pl-6 space-y-1 text-gray-800">
+        {% for idea in ai_ideas %}
+          <li>{{ idea }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+</div>
+
+{# Simple modal that posts to the AI route #}
+<div id="aiSuggestModal" class="hidden fixed inset-0 z-50 items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" onclick="closeAISuggestModal()"></div>
+  <div class="relative bg-white w-full max-w-lg mx-4 rounded-2xl shadow-xl border overflow-hidden">
+    <div class="px-5 py-4 border-b flex items-center justify-between">
+      <div class="text-lg font-semibold">AI: Suggest copy/variants</div>
+      <button class="p-2 rounded-lg hover:bg-gray-100" onclick="closeAISuggestModal()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <form method="post" action="{{ url_for('campaigns_bp.ai_suggest') }}" class="p-5 space-y-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Campaign slug</label>
+        <input name="slug" required class="w-full rounded border px-3 py-2" placeholder="e.g., fall-furnace-tuneup">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Notes (optional)</label>
+        <textarea name="notes" class="w-full rounded border px-3 py-2" rows="3" placeholder="Target neighborhood, price point, timeframe…"></textarea>
+      </div>
+      <div class="flex items-center justify-end gap-2">
+        <button type="button" class="px-3 py-2 rounded border hover:bg-gray-50" onclick="closeAISuggestModal()">Cancel</button>
+        <button class="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700">Generate</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openAISuggestModal(){
+    {% if ai_enabled %}
+      document.getElementById('aiSuggestModal').classList.remove('hidden');
+      document.getElementById('aiSuggestModal').classList.add('flex');
+    {% else %}
+      // Soft nudge for non-paid (server still blocks)
+      window.location.href = "{{ url_for(ep('pricing')) }}";
+    {% endif %}
+  }
+  function closeAISuggestModal(){
+    const m = document.getElementById('aiSuggestModal');
+    m.classList.add('hidden'); m.classList.remove('flex');
+  }
+</script>
+{% endblock %}

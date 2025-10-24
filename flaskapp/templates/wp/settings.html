@@ -1,0 +1,225 @@
+{% extends "base_app.html" %}
+{% block title %}WordPress Settings – {{ app_name }}{% endblock %}
+{% block content %}
+<div class="w-full max-w-3xl">
+
+  <h1 class="text-2xl font-semibold mb-2">WordPress Settings</h1>
+  <p class="text-sm text-gray-600 mb-6">
+    Connect your WordPress site with an App Password. Then optionally enable Autopilot to queue content.
+  </p>
+
+  <!-- Connection form -->
+  <form method="post" class="space-y-5 bg-white border rounded-2xl p-6" id="wp-connection-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div>
+      <label class="block text-sm font-medium mb-1">Base URL</label>
+      <input
+        name="base_url"
+        type="url"
+        placeholder="https://your-site.com"
+        class="w-full border rounded px-3 py-2"
+        value="{{ site.base_url if site else '' }}"
+        {% if site and site.id == 0 %}readonly{% endif %}
+      >
+      <p class="text-xs text-gray-500 mt-1">
+        Your public WordPress URL (no trailing slash). Example: <code>https://example.com</code>
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Username</label>
+        <input
+          name="username"
+          class="w-full border rounded px-3 py-2"
+          value="{{ site.username if site else '' }}"
+          {% if site and site.id == 0 %}readonly{% endif %}
+        >
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Application Password</label>
+        <input
+          name="app_password"
+          type="password"
+          class="w-full border rounded px-3 py-2"
+          value="{{ '********' if site else '' }}"
+          {% if site and site.id == 0 %}readonly{% endif %}
+        >
+        <p class="text-xs text-gray-500 mt-1">
+          WordPress App Password (Users → Profile → Application Passwords). If already saved, leave as <code>********</code>.
+        </p>
+      </div>
+    </div>
+
+    {% if site and site.id == 0 %}
+      <div class="rounded-lg bg-amber-50 border border-amber-200 p-3 text-amber-800 text-sm">
+        These credentials are loaded from environment variables and are read-only here. To change them, update your server env.
+      </div>
+    {% endif %}
+
+    <div class="flex flex-wrap gap-3">
+      <button type="submit" id="wp-save-btn" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+        Save
+      </button>
+      <button
+        id="wp-test-btn"
+        formaction="{{ url_for('wp_bp.test') }}"
+        formmethod="post"
+        class="px-4 py-2 border rounded hover:bg-gray-50"
+      >
+        Test Connection
+      </button>
+    </div>
+  </form>
+
+  <!-- Autopilot settings -->
+  <form method="post" action="{{ url_for('wp_bp.settings') }}" class="mt-6 bg-white border rounded-2xl p-6 space-y-5" id="wp-autopilot-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <!-- We re-post full settings to the same endpoint; users can change autopilot in a second step -->
+    <input type="hidden" name="base_url" value="{{ site.base_url if site else '' }}">
+    <input type="hidden" name="username" value="{{ site.username if site else '' }}">
+    <input type="hidden" name="app_password" value="********">
+
+    <h2 class="text-lg font-semibold">Autopilot</h2>
+
+    <div class="flex items-center gap-3">
+      <input
+        id="autopilot_enabled"
+        name="autopilot_enabled"
+        type="checkbox"
+        class="h-4 w-4 border rounded"
+        {% if site and site.autopilot_enabled %}checked{% endif %}
+      >
+      <label for="autopilot_enabled" class="text-sm">Enable Autopilot (queue content automatically)</label>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">New Posts / day</label>
+        <input
+          name="autopilot_daily_new"
+          type="number" min="0" max="10"
+          class="w-full border rounded px-3 py-2"
+          value="{{ site.autopilot_daily_new if site else 1 }}"
+        >
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Refresh Updates / day</label>
+        <input
+          name="autopilot_daily_refresh"
+          type="number" min="0" max="10"
+          class="w-full border rounded px-3 py-2"
+          value="{{ site.autopilot_daily_refresh if site else 1 }}"
+        >
+      </div>
+      <div class="flex items-end">
+        <label class="inline-flex items-center gap-2 text-sm">
+          <input
+            name="autopilot_require_approval"
+            type="checkbox"
+            class="h-4 w-4 border rounded"
+            {% if site and site.autopilot_require_approval %}checked{% endif %}
+          >
+          Require manual approval before publishing
+        </label>
+      </div>
+    </div>
+
+    <div>
+      <button type="submit" id="wp-autopilot-btn" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+        Save Autopilot Settings
+      </button>
+    </div>
+  </form>
+
+  <!-- Quick actions -->
+  <div class="mt-6 bg-white border rounded-2xl p-6">
+    <h2 class="text-lg font-semibold mb-3">Quick Actions</h2>
+
+    <!-- Test connection again (POST) -->
+    <form method="post" action="{{ url_for('wp_bp.test') }}" class="inline-block mr-2" id="wp-test-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <button id="wp-test-quick-btn" class="px-4 py-2 border rounded hover:bg-gray-50">Test Connection</button>
+    </form>
+
+    <!-- Queue a sample post (POST) -->
+    <form method="post" action="{{ url_for('wp_bp.new_post') }}" class="mt-4 space-y-3" id="wp-sample-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">Sample Title</label>
+          <input name="title" class="w-full border rounded px-3 py-2" value="How We Keep Your Home Safer (Test)">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Publish When</label>
+          <select name="publish_when" class="w-full border rounded px-3 py-2">
+            <option value="">Now</option>
+            <option value="future+1">In 1 day</option>
+            <option value="future+2">In 2 days</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Content (HTML)</label>
+        <textarea name="html" rows="5" class="w-full border rounded px-3 py-2">&lt;p&gt;This is a test post created from {{ app_name }}.&lt;/p&gt;</textarea>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Excerpt (optional)</label>
+        <input name="excerpt" class="w-full border rounded px-3 py-2" placeholder="Short summary for meta/preview">
+      </div>
+      <button id="wp-sample-btn" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Queue Sample Post</button>
+    </form>
+  </div>
+
+</div>
+
+<script>
+  // WordPress settings loading states
+
+  // Connection form - Save button
+  const wpConnForm = document.getElementById('wp-connection-form');
+  const wpSaveBtn = document.getElementById('wp-save-btn');
+  const wpTestBtn = document.getElementById('wp-test-btn');
+
+  wpConnForm?.addEventListener('submit', (e) => {
+    const submitter = e.submitter;
+    if (submitter === wpSaveBtn) {
+      wpSaveBtn.disabled = true;
+      wpSaveBtn.textContent = 'Saving...';
+    } else if (submitter === wpTestBtn) {
+      wpTestBtn.disabled = true;
+      wpTestBtn.textContent = 'Testing...';
+    }
+  });
+
+  // Autopilot form
+  const wpAutopilotForm = document.getElementById('wp-autopilot-form');
+  const wpAutopilotBtn = document.getElementById('wp-autopilot-btn');
+  wpAutopilotForm?.addEventListener('submit', () => {
+    if (wpAutopilotBtn) {
+      wpAutopilotBtn.disabled = true;
+      wpAutopilotBtn.textContent = 'Saving...';
+    }
+  });
+
+  // Test connection quick action
+  const wpTestForm = document.getElementById('wp-test-form');
+  const wpTestQuickBtn = document.getElementById('wp-test-quick-btn');
+  wpTestForm?.addEventListener('submit', () => {
+    if (wpTestQuickBtn) {
+      wpTestQuickBtn.disabled = true;
+      wpTestQuickBtn.textContent = 'Testing...';
+    }
+  });
+
+  // Queue sample post
+  const wpSampleForm = document.getElementById('wp-sample-form');
+  const wpSampleBtn = document.getElementById('wp-sample-btn');
+  wpSampleForm?.addEventListener('submit', () => {
+    if (wpSampleBtn) {
+      wpSampleBtn.disabled = true;
+      wpSampleBtn.textContent = 'Queueing...';
+    }
+  });
+</script>
+{% endblock %}

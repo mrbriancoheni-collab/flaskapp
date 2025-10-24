@@ -1,0 +1,96 @@
+{% extends "base_app.html" %}
+{% block title %}Optimize Facebook Page{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-semibold mb-4">Optimize Facebook Page</h1>
+
+<div class="mb-3 space-x-2">
+  <a class="px-3 py-2 rounded border" href="{{ url_for('fbads_bp.index') }}">Back</a>
+  <form method="post" action="{{ url_for('fbads_bp.optimize') }}" class="inline">
+    <button class="px-3 py-2 rounded text-white bg-[var(--brand)]">Generate AI Suggestions</button>
+  </form>
+</div>
+
+<!-- AI Insights Panel -->
+<div class="rounded-lg border bg-gradient-to-r from-orange-50 to-red-50 border-orange-100 p-6 mb-6">
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 rounded-full bg-orange-600 text-white flex items-center justify-center">
+        <i class="fa-brands fa-facebook-f text-xl"></i>
+      </div>
+      <div>
+        <h3 class="font-semibold text-gray-900">AI-Powered Facebook Ads Insights</h3>
+        <p class="text-sm text-gray-600">Get personalized optimization recommendations for your page & campaigns powered by GPT-4</p>
+      </div>
+    </div>
+    <button id="genFBAdsInsightsBtn" type="button" onclick="generateFBAdsInsightsFromPage()"
+            class="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-6 py-3 text-white hover:bg-orange-700 transition-colors font-medium shadow-md">
+      <i class="fa-solid fa-sparkles"></i>
+      <span>Generate Insights</span>
+    </button>
+  </div>
+</div>
+
+<div class="grid md:grid-cols-2 gap-6">
+  <div class="border rounded p-4">
+    <h2 class="font-semibold mb-2">Current Profile</h2>
+    {% if profile %}
+      <p><strong>Page:</strong> {{ profile.name or '-' }}</p>
+      <p><strong>About:</strong> {{ profile.about or '-' }}</p>
+      <p><strong>Description:</strong> {{ profile.description or '-' }}</p>
+      <p><strong>Website:</strong> {{ profile.website or '-' }}</p>
+      <p><strong>Phone:</strong> {{ (profile.phone or profile.location.phone) if profile.location else (profile.phone or '-') }}</p>
+    {% else %}
+      <div class="text-sm text-gray-600">No live profile loaded.</div>
+    {% endif %}
+  </div>
+
+  <div class="border rounded p-4">
+    <h2 class="font-semibold mb-2">AI Suggestions</h2>
+    {% if suggestions %}
+      <form method="post" action="{{ url_for('fbads_bp.optimize_apply') }}" class="space-y-3">
+        <div>
+          <label class="block text-sm mb-1">About (1â€“2 sentences)</label>
+          <textarea name="about" rows="2" class="w-full border rounded px-3 py-2">{{ suggestions.about }}</textarea>
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Description</label>
+          <textarea name="description" rows="6" class="w-full border rounded px-3 py-2">{{ suggestions.description }}</textarea>
+        </div>
+        <button class="px-3 py-2 rounded text-white bg-[var(--brand)]">Apply Updates</button>
+      </form>
+    {% else %}
+      <div class="text-sm text-gray-600">Click â€œGenerate AI Suggestionsâ€ to see optimized content suggestions.</div>
+    {% endif %}
+  </div>
+</div>
+
+{# Include FB Ads AI Insights Modal #}
+{% include 'fbads/components/fbads_insights_modal.html' %}
+
+<script>
+/**
+ * Helper function to collect FB Ads profile and campaign data and trigger insights
+ */
+function generateFBAdsInsightsFromPage() {
+  // Collect profile data from page
+  const profileData = {
+    page_name: '{{ profile.name if profile else "" }}',
+    category: '{{ profile.category if profile else "" }}',
+    about: '{{ profile.about if profile else "" }}',
+    description: '{{ profile.description if profile else "" }}',
+    website: '{{ profile.website if profile else "" }}',
+    cta_button: 'Not set', // Could be extracted from API
+    cover_photo: 'Not set', // Could be extracted from API
+    profile_photo: 'Not set'  // Could be extracted from API
+  };
+
+  // Campaign data would be collected from campaigns API if available
+  const campaignData = null; // Can be extended later
+
+  // Call the insights generation function
+  generateFBAdsInsights(profileData, campaignData);
+}
+</script>
+
+<script src="{{ url_for('static', filename='js/fbads_insights.js', v=config.get('ASSET_VERSION', 1)) }}" defer></script>
+{% endblock %}

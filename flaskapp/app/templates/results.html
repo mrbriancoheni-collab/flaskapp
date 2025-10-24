@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>Results & Suggestions</h2>
+
+<div class="card">
+  <form method="post" action="/results/pull" style="display:inline">
+    <button type="submit">Pull Latest KPIs</button>
+  </form>
+  <form method="post" action="/results/suggest" style="display:inline">
+    <button type="submit">Generate Suggestions</button>
+  </form>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h3>Recent Snapshots</h3>
+    <table class="table">
+      <thead><tr><th>Date</th><th>Rows</th></tr></thead>
+      <tbody>
+        {% for s in snapshots %}
+        <tr><td>{{s.as_of_date}}</td><td>{{(s.metrics or [])|length}}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Suggestions</h3>
+    <table class="table">
+      <thead><tr><th>ID</th><th>Type</th><th>Summary</th><th></th></tr></thead>
+      <tbody>
+        {% for sg in suggestions %}
+        <tr>
+          <td>{{sg.id}}</td>
+          <td>{{sg.suggestion_json.get("type","")}}</td>
+          <td>{{sg.suggestion_json.get("summary","")}}</td>
+          <td>
+            {% if not sg.accepted %}
+            <form method="post" action="/results/suggestions/apply/{{sg.id}}">
+              <button type="submit">Apply</button>
+            </form>
+            {% else %}
+            <span class="muted">Applied</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

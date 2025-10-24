@@ -1,0 +1,20 @@
+{% extends "base_app.html" %}
+{% block title %}Select GA Property · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="space-y-4 max-w-2xl">
+  <h1 class="text-xl font-semibold">Select Google Analytics Property</h1>
+  <p class="text-gray-600">Choose the GA4 property to use for your Insights dashboard.</p>
+
+  <form method="post" class="space-y-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="block text-sm font-medium">Property</label>
+    <select name="ga_property_id" class="w-full border rounded px-3 py-2">
+      {% for p in properties %}
+        <option value="{{ p.name }}">{{ p.displayName }} ({{ p.propertyType }})</option>
+      {% endfor %}
+    </select>
+    <input name="ga_property_name" class="w-full border rounded px-3 py-2" placeholder="Optional label (shown in UI)">
+    <button class="px-4 py-2 rounded bg-[var(--brand)] text-white">Save</button>
+  </form>
+</div>
+{% endblock %}

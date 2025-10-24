@@ -1,0 +1,50 @@
+{% extends 'base_app.html' %}
+{% block title %}POV Library – {{ app_name }}{% endblock %}
+{% block content %}
+<div class="max-w-5xl">
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-semibold">POV Library</h1>
+    <a href="{{ url_for('pov_bp.new') }}" class="px-4 py-2 bg-indigo-600 text-white rounded">New POV</a>
+  </div>
+
+  {% if not items %}
+    <div class="text-gray-500">No POVs yet. Create one to reuse across workflows.</div>
+  {% else %}
+    <div class="space-y-3">
+      {% for it in items %}
+      <div class="bg-white border rounded-xl p-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-semibold">{{ it.name }}</div>
+            <div class="text-xs text-gray-500">
+              Scope: {{ it.scope }}{% if it.service_key %} • Service: {{ it.service_key }}{% endif %}
+              {% if it.is_default %} • <span class="text-emerald-700 font-semibold">Default</span>{% endif %}
+            </div>
+          </div>
+          <div class="space-x-2">
+            <a href="{{ url_for('pov_bp.edit', pov_id=it.id) }}" class="px-3 py-1 border rounded">Edit</a>
+            <form method="post" action="{{ url_for('pov_bp.set_default', pov_id=it.id) }}" class="inline">
+              {% if csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
+              <button class="px-3 py-1 border rounded" {% if it.is_default %}disabled{% endif %}>Make Default</button>
+            </form>
+            <form method="post" action="{{ url_for('pov_bp.archive', pov_id=it.id) }}" class="inline" onsubmit="return confirm('Archive this POV?');">
+              {% if csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
+              <button class="px-3 py-1 border rounded text-red-700">Archive</button>
+            </form>
+          </div>
+        </div>
+        <div class="mt-2 text-sm whitespace-pre-wrap">{{ it.pov_text }}</div>
+        {% if it.brand_voice or it.tone or it.customer_needs or it.expertise_bullets %}
+          <div class="grid md:grid-cols-2 gap-3 mt-3 text-sm">
+            {% if it.brand_voice %}<div><span class="font-medium">Voice:</span> {{ it.brand_voice }}</div>{% endif %}
+            {% if it.tone %}<div><span class="font-medium">Tone:</span> {{ it.tone }}</div>{% endif %}
+            {% if it.customer_needs %}<div class="md:col-span-2"><span class="font-medium">Customer needs:</span><br>{{ it.customer_needs|replace('\n','<br>')|safe }}</div>{% endif %}
+            {% if it.expertise_bullets %}<div class="md:col-span-2"><span class="font-medium">Expertise:</span><br>{{ it.expertise_bullets|replace('\n','<br>')|safe }}</div>{% endif %}
+          </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

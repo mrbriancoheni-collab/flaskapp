@@ -1,0 +1,46 @@
+{% extends "base_admin.html" %}
+{% block title %}Admin – Accounts{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+  <h1 class="text-2xl font-bold">Accounts</h1>
+  <form class="flex items-center gap-2" method="get">
+    <input class="border rounded px-3 py-2 text-sm" type="text" name="q" value="{{ q }}" placeholder="Search name/plan/status…">
+    <button class="px-3 py-2 rounded bg-indigo-600 text-white text-sm" type="submit">Search</button>
+  </form>
+</div>
+
+<div class="bg-white border rounded-xl overflow-hidden">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="text-left px-3 py-2">Name</th>
+        <th class="text-left px-3 py-2">Plan</th>
+        <th class="text-left px-3 py-2">Status</th>
+        <th class="text-left px-3 py-2">Created</th>
+        <th class="text-right px-3 py-2">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in rows.items %}
+      <tr class="border-t">
+        <td class="px-3 py-2">{{ a.name or ('Account #'+a.id|string) }}</td>
+        <td class="px-3 py-2">{{ a.plan }}</td>
+        <td class="px-3 py-2">{{ a.status }}</td>
+        <td class="px-3 py-2">{{ a.created_at }}</td>
+        <td class="px-3 py-2 text-right">
+          <a class="underline" href="{{ url_for('admin_bp.account_detail', account_id=a.id) }}">Open</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="px-3 py-4 text-gray-500">No accounts.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="mt-4 flex items-center justify-end gap-2 text-sm">
+  {% if rows.has_prev %}<a class="underline" href="{{ url_for('admin_bp.accounts', q=q, page=rows.prev_num, per=rows.per_page) }}">Prev</a>{% endif %}
+  <span>Page {{ rows.page }} / {{ rows.pages or 1 }}</span>
+  {% if rows.has_next %}<a class="underline" href="{{ url_for('admin_bp.accounts', q=q, page=rows.next_num, per=rows.per_page) }}">Next</a>{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'gmb' %}
+{% block title %}Google Business Profile — AI Responses{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold">AI Responses</h1>
+      <p class="text-gray-500">Draft and queue AI-assisted replies for your latest reviews and messages.</p>
+    </div>
+    <a href="{{ url_for('account_bp.dashboard') }}" class="rounded-md border px-3 py-2 text-gray-700 hover:bg-gray-50">Back to Dashboard</a>
+  </div>
+
+  {% if not connected %}
+    <div class="rounded-lg border bg-white p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-lg font-medium mb-1">You're not connected yet</div>
+          <div class="text-gray-600 text-sm">Connect Google Business Profile to enable AI replies.</div>
+        </div>
+        <a href="{{ url_for('google_bp.connect', product='gmb') }}"
+           class="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700">
+          <i class="fa-solid fa-link"></i> Connect GBP
+        </a>
+      </div>
+    </div>
+  {% else %}
+    <div class="rounded-lg border bg-white p-6">
+      <div class="text-gray-600">Your queue, suggestions, and send options will render here.</div>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

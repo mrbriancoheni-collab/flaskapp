@@ -1,0 +1,121 @@
+{% extends 'base_app.html' %}
+{% block title %}Guided Setup · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-semibold flex items-center">
+      <i class="fa-solid fa-compass mr-3 text-indigo-600"></i> Guided Setup
+    </h1>
+    {% if has_endpoint('settings_business') %}
+      <a href="{{ url_for(ep('settings_business')) }}" class="text-indigo-600 hover:underline">
+        Go to Business Profile →
+      </a>
+    {% endif %}
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Questions -->
+    <div class="bg-white rounded-xl shadow p-6 border">
+      <form method="post" class="space-y-4" novalidate>
+        {# CSRF (WTForms or fallback) #}
+        {% if form is defined and form.hidden_tag is defined %}
+          {{ form.hidden_tag() }}
+        {% elif csrf_token is defined %}
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% endif %}
+
+        {# Simple honeypot #}
+        <input type="text" name="company" tabindex="-1" autocomplete="off" class="hidden" aria-hidden="true">
+
+        <div>
+          <label for="industry" class="block text-sm font-medium mb-1">{{ form.industry.label.text if form.industry.label else 'Industry' }}</label>
+          {{ form.industry(id="industry", class="w-full border rounded-lg px-3 py-2") }}
+        </div>
+
+        <div>
+          <label for="services" class="block text-sm font-medium mb-1">{{ form.services.label.text if form.services.label else 'Services' }}</label>
+          {{ form.services(id="services", rows="3", class="w-full border rounded-lg px-3 py-2") }}
+          <p class="text-xs text-gray-500 mt-1">e.g., Water heater install, drain cleaning, emergency service</p>
+        </div>
+
+        <div>
+          <label for="locations" class="block text-sm font-medium mb-1">{{ form.locations.label.text if form.locations.label else 'Locations' }}</label>
+          {{ form.locations(id="locations", class="w-full border rounded-lg px-3 py-2") }}
+          <p class="text-xs text-gray-500 mt-1">City names or ZIPs</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="ideal_customers" class="block text-sm font-medium mb-1">{{ form.ideal_customers.label.text if form.ideal_customers.label else 'Ideal customers' }}</label>
+            {{ form.ideal_customers(id="ideal_customers", rows="3", class="w-full border rounded-lg px-3 py-2") }}
+          </div>
+          <div>
+            <label for="pain_points" class="block text-sm font-medium mb-1">{{ form.pain_points.label.text if form.pain_points.label else 'Pain points' }}</label>
+            {{ form.pain_points(id="pain_points", rows="3", class="w-full border rounded-lg px-3 py-2") }}
+          </div>
+          <div>
+            <label for="differentiators" class="block text-sm font-medium mb-1">{{ form.differentiators.label.text if form.differentiators.label else 'Differentiators' }}</label>
+            {{ form.differentiators(id="differentiators", rows="3", class="w-full border rounded-lg px-3 py-2") }}
+          </div>
+          <div>
+            <label for="competitors" class="block text-sm font-medium mb-1">{{ form.competitors.label.text if form.competitors.label else 'Competitors' }}</label>
+            {{ form.competitors(id="competitors", rows="3", class="w-full border rounded-lg px-3 py-2") }}
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="goals" class="block text-sm font-medium mb-1">{{ form.goals.label.text if form.goals.label else 'Goals' }}</label>
+            {{ form.goals(id="goals", rows="3", class="w-full border rounded-lg px-3 py-2") }}
+          </div>
+          <div>
+            <label for="tone" class="block text-sm font-medium mb-1">{{ form.tone.label.text if form.tone.label else 'Tone' }}</label>
+            {{ form.tone(id="tone", class="w-full border rounded-lg px-3 py-2") }}
+            <p class="text-xs text-gray-500 mt-1">e.g., Friendly, professional, no-nonsense</p>
+          </div>
+        </div>
+
+        <div>
+          <label for="budget" class="block text-sm font-medium mb-1">{{ form.budget.label.text if form.budget.label else 'Budget' }}</label>
+          {{ form.budget(id="budget", class="w-full border rounded-lg px-3 py-2") }}
+        </div>
+
+        <div class="flex items-center gap-3 pt-2">
+          {{ form.submit_ask(class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700") }}
+          {{ form.submit_save(class="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200") }}
+        </div>
+      </form>
+    </div>
+
+    <!-- AI Suggestions -->
+    <div class="bg-white rounded-xl shadow p-6 border">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold flex items-center">
+          <i class="fa-solid fa-wand-magic-sparkles mr-2 text-indigo-600"></i>
+          AI Suggestions
+        </h2>
+
+        {% if has_endpoint('settings_business') %}
+        <form method="post" action="{{ url_for(ep('settings_business')) }}">
+          {% if csrf_token is defined %}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% endif %}
+          <input type="hidden" name="action" value="apply_ai">
+          <button class="px-3 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                  {% if not ai %}disabled title="Generate suggestions first!"{% endif %}>
+            Apply to Profile
+          </button>
+        </form>
+        {% endif %}
+      </div>
+
+      {% if not ai %}
+        <p class="text-gray-500 text-sm">Fill a few fields and click <strong>Ask AI for Suggestions</strong>.</p>
+      {% else %}
+        <pre class="text-xs bg-gray-50 p-3 rounded border overflow-x-auto">{{ ai | tojson(indent=2) }}</pre>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

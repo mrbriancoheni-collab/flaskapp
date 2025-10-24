@@ -1,0 +1,704 @@
+{# templates/glsa/optimize.html #}
+{% extends "base_app.html" %}
+
+{% block content %}
+<div class="app-section" id="glsa-optimize" data-connected="{{ '1' if connected else '0' }}">
+  <div class="page-header">
+    <h1 class="page-title">Local Services Ads — Optimize</h1>
+    <p class="page-subtitle">
+      Tune your LSA profile, budget, and categories to boost qualified lead flow.
+    </p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs mb16" role="tablist" aria-label="Optimize Sections">
+    <button type="button" role="tab" aria-selected="true" aria-controls="tab-overview"
+            class="tab-link active" data-tab="overview" id="tabbtn-overview">
+      Overview
+    </button>
+    <button type="button" role="tab" aria-selected="false" aria-controls="tab-optimizer"
+            class="tab-link" data-tab="optimizer" id="tabbtn-optimizer">
+      Optimizer (Profile Audit)
+    </button>
+  </div>
+
+  {# ---------- Overview ---------- #}
+  <section class="tab-panel" id="tab-overview" role="tabpanel" aria-labelledby="tabbtn-overview">
+    <!-- AI Insights Panel -->
+    <div class="rounded-lg border bg-gradient-to-r from-purple-50 to-violet-50 border-purple-100 p-6 mb-6">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-full bg-purple-600 text-white flex items-center justify-center">
+            <i class="fa-solid fa-wrench text-xl"></i>
+          </div>
+          <div>
+            <h3 class="font-semibold text-gray-900">AI-Powered LSA Insights</h3>
+            <p class="text-sm text-gray-600">Get personalized Local Services Ads optimization recommendations powered by GPT-4</p>
+          </div>
+        </div>
+        <button id="genGLSAInsightsBtn" type="button" onclick="generateGLSAInsightsFromPage()"
+                class="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-6 py-3 text-white hover:bg-purple-700 transition-colors font-medium shadow-md">
+          <i class="fa-solid fa-sparkles"></i>
+          <span>Generate Insights</span>
+        </button>
+      </div>
+      {% if not connected %}
+        <div class="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+          <i class="fa-solid fa-info-circle text-amber-600 mt-0.5"></i>
+          <div class="text-sm text-amber-900">
+            <strong>Sample mode.</strong> Using sample profile data. Connect to Google LSA to analyze your live profile and get personalized recommendations.
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="card mb16">
+      <div class="card-body">
+        {% if not connected %}
+          <div class="alert alert-warning">
+            <strong>Not connected.</strong>
+            Connect Google LSA (uses Ads OAuth) to enable live data.
+            <a class="btn btn-sm btn-primary" href="{{ url_for('glsa_bp.connect', next=url_for('glsa_bp.optimize')) }}">
+              Connect LSA
+            </a>
+          </div>
+          <div class="alert" style="background:#eef2ff;border:1px solid #c7d2fe;color:#1e40af;margin-top:.5rem;">
+            <strong>Sample mode:</strong> Edit the sample profile below, then open the Optimizer to get recommendations.
+          </div>
+        {% else %}
+          <p class="muted">
+            The Optimizer can review your current profile and suggest changes to improve lead potential.
+            Switch to the “Optimizer (Profile Audit)” tab to begin.
+          </p>
+        {% endif %}
+
+        <hr>
+        <h3>Account context</h3>
+        <ul>
+          <li>Customer ID: <code>{{ ctx.customer_id or "—" }}</code></li>
+          <li>Manager (login-customer-id): <code>{{ ctx.login_customer_id or "—" }}</code></li>
+        </ul>
+
+        {% if not connected %}
+          <hr>
+          <div class="flex items-center justify-between mb8">
+            <h3 class="mt8">Sample profile</h3>
+            <div class="row gap">
+              <button type="button" class="btn" id="ov-toggle-edit" aria-pressed="false">
+                Edit sample profile
+              </button>
+              <button type="button" class="btn btn-primary" data-tab-jump="optimizer" id="btn-open-optimizer">
+                Open Optimizer
+              </button>
+            </div>
+          </div>
+
+          {% set SAMPLE_PROFILE = {
+            "name": "Ace Plumbing & Drain",
+            "primary_category": "Plumber",
+            "categories": ["Water heater install", "Drain clearing", "Gas line repair"],
+            "service_areas": ["30306","30308","Midtown","Old Fourth Ward"],
+            "hours": "Mon–Fri 7am–7pm; Sat 8am–3pm",
+            "phone": "(404) 555-0110",
+            "website": "https://www.ace-plumbing-example.com",
+            "rating": 4.6,
+            "reviews_count": 112,
+            "weekly_budget": 650
+          } %}
+
+          {# Read-only preview #}
+          <div class="snapshot" id="ov-snapshot-read">
+            <div class="row"><div class="k">Business</div><div class="v" id="ov_name">{{ SAMPLE_PROFILE.name }}</div></div>
+            <div class="row"><div class="k">Primary category</div><div class="v" id="ov_category"><span class="badge">{{ SAMPLE_PROFILE.primary_category }}</span></div></div>
+            <div class="row"><div class="k">Other categories</div>
+              <div class="v chips" id="ov_categories">
+                {% for c in SAMPLE_PROFILE.categories %}<span class="chip">{{ c }}</span>{% endfor %}
+              </div>
+            </div>
+            <div class="row"><div class="k">Service areas</div>
+              <div class="v chips" id="ov_service_areas">
+                {% for a in SAMPLE_PROFILE.service_areas %}<span class="chip">{{ a }}</span>{% endfor %}
+              </div>
+            </div>
+            <div class="row"><div class="k">Hours</div><div class="v" id="ov_hours">{{ SAMPLE_PROFILE.hours }}</div></div>
+            <div class="row"><div class="k">Phone</div><div class="v" id="ov_phone">{{ SAMPLE_PROFILE.phone }}</div></div>
+            <div class="row"><div class="k">Website</div>
+              <div class="v" id="ov_site"><a class="link" href="{{ SAMPLE_PROFILE.website }}" target="_blank" rel="noopener">{{ SAMPLE_PROFILE.website }}</a></div>
+            </div>
+            <div class="row"><div class="k">Reputation</div>
+              <div class="v">
+                <span class="meta" id="ov_rating">⭐ {{ SAMPLE_PROFILE.rating }}</span>
+                <span class="meta" id="ov_reviews">{{ SAMPLE_PROFILE.reviews_count }} reviews</span>
+              </div>
+            </div>
+            <div class="row"><div class="k">Weekly budget</div><div class="v" id="ov_budget">$ {{ SAMPLE_PROFILE.weekly_budget }}</div></div>
+          </div>
+
+          {# Editable form #}
+          <form id="ov-snapshot-edit" class="hidden mt8">
+            <div class="form-grid">
+              <label>Business name<input class="inp" name="name" value="{{ SAMPLE_PROFILE.name }}"></label>
+              <label>Primary category<input class="inp" name="primary_category" value="{{ SAMPLE_PROFILE.primary_category }}"></label>
+              <label>Other categories (comma-separated)<input class="inp" name="categories" value="{{ SAMPLE_PROFILE.categories|join(', ') }}"></label>
+              <label>Service areas (comma-separated)<input class="inp" name="service_areas" value="{{ SAMPLE_PROFILE.service_areas|join(', ') }}"></label>
+              <label>Hours<input class="inp" name="hours" value="{{ SAMPLE_PROFILE.hours }}"></label>
+              <label>Phone<input class="inp" name="phone" value="{{ SAMPLE_PROFILE.phone }}"></label>
+              <label>Website<input class="inp" name="website" value="{{ SAMPLE_PROFILE.website }}"></label>
+              <label>Average rating<input class="inp" name="rating" type="number" step="0.1" value="{{ SAMPLE_PROFILE.rating }}"></label>
+              <label>Review count<input class="inp" name="reviews_count" type="number" step="1" value="{{ SAMPLE_PROFILE.reviews_count }}"></label>
+              <label>Weekly budget ($)<input class="inp" name="weekly_budget" type="number" step="1" value="{{ SAMPLE_PROFILE.weekly_budget }}"></label>
+            </div>
+            <div class="row gap mt8">
+              <button type="button" class="btn" id="ov-cancel-edit">Cancel</button>
+              <button type="button" class="btn btn-primary" id="ov-save-edit">Save sample</button>
+            </div>
+          </form>
+
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  {# ---------- Context for Optimizer ---------- #}
+  {% set SAMPLE_PROFILE = {
+    "name": "Ace Plumbing & Drain",
+    "primary_category": "Plumber",
+    "categories": ["Water heater install", "Drain clearing", "Gas line repair"],
+    "service_areas": ["30306","30308","Midtown","Old Fourth Ward"],
+    "hours": "Mon–Fri 7am–7pm; Sat 8am–3pm",
+    "phone": "(404) 555-0110",
+    "website": "https://www.ace-plumbing-example.com",
+    "rating": 4.6,
+    "reviews_count": 112,
+    "weekly_budget": 650
+  } %}
+  {% set _ctx_profile = (ctx.profile if ctx and ctx.profile else {}) %}
+  {% set _has_real_profile = (_ctx_profile.get('name') or _ctx_profile.get('primary_category') or _ctx_profile.get('categories')) %}
+  {% set _p = (_ctx_profile if _has_real_profile else SAMPLE_PROFILE) %}
+  {% set _sample_mode = (not _has_real_profile) %}
+
+  {# ---------- Optimizer ---------- #}
+  <section class="tab-panel hidden" id="tab-optimizer" role="tabpanel" aria-labelledby="tabbtn-optimizer">
+    <div class="card">
+      <div class="card-header">
+        <div class="flex items-center justify-between">
+          <h3>Optimizer (Profile Audit) {% if _sample_mode %}<span class="muted">(sample)</span>{% endif %}</h3>
+          <div class="flex items-center gap-2">
+            <button type="button" class="btn" id="toggle-edit" aria-pressed="false">Edit snapshot</button>
+            {% if not connected %}
+              <a class="btn btn-primary" href="{{ url_for('glsa_bp.connect', next=url_for('glsa_bp.optimize')) }}">Connect LSA</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="card-body">
+        {% if not connected and _sample_mode %}
+          <div class="alert" style="background:#fff7ed;border:1px solid #fde68a;">
+            You’re viewing <strong>sample data</strong>. Edit it below or connect to analyze your live GLSA profile.
+          </div>
+        {% endif %}
+
+        <div class="grid-2">
+          <!-- Left -->
+          <div>
+            <h4 class="mb8">Profile snapshot</h4>
+
+            <!-- Read-only -->
+            <div class="snapshot" id="snapshot-read">
+              <div class="row"><div class="k">Business</div><div class="v" id="pf_name">{{ _p.get('name','') }}</div></div>
+              <div class="row"><div class="k">Primary category</div><div class="v" id="pf_category"><span class="badge">{{ _p.get('primary_category','') }}</span></div></div>
+              <div class="row"><div class="k">Other categories</div>
+                <div class="v chips" id="pf_categories">
+                  {% for c in _p.get('categories',[]) %}<span class="chip">{{ c }}</span>{% endfor %}
+                </div>
+              </div>
+              <div class="row"><div class="k">Service areas</div>
+                <div class="v chips" id="pf_service_areas">
+                  {% for a in _p.get('service_areas',[]) %}<span class="chip">{{ a }}</span>{% endfor %}
+                </div>
+              </div>
+              <div class="row"><div class="k">Hours</div><div class="v" id="pf_hours">{{ _p.get('hours','') }}</div></div>
+              <div class="row"><div class="k">Phone</div><div class="v" id="pf_phone">{{ _p.get('phone','') }}</div></div>
+              <div class="row"><div class="k">Website</div>
+                <div class="v" id="pf_site">{% if _p.get('website') %}<a class="link" href="{{ _p.get('website') }}" target="_blank" rel="noopener">{{ _p.get('website') }}</a>{% endif %}</div>
+              </div>
+              <div class="row"><div class="k">Reputation</div>
+                <div class="v">
+                  <span class="meta" id="pf_rating">⭐ {{ _p.get('rating','') }}</span>
+                  <span class="meta" id="pf_reviews">{{ _p.get('reviews_count','') }} reviews</span>
+                </div>
+              </div>
+              <div class="row"><div class="k">Weekly budget</div><div class="v" id="pf_budget">$ {{ _p.get('weekly_budget','') }}</div></div>
+            </div>
+
+            <!-- Editable -->
+            <form id="snapshot-edit" class="hidden">
+              <div class="form-grid">
+                <label>Business name<input class="inp" name="name" value="{{ _p.get('name','') }}"></label>
+                <label>Primary category<input class="inp" name="primary_category" value="{{ _p.get('primary_category','') }}"></label>
+                <label>Other categories (comma-separated)<input class="inp" name="categories" value="{{ _p.get('categories',[])|join(', ') }}"></label>
+                <label>Service areas (comma-separated)<input class="inp" name="service_areas" value="{{ _p.get('service_areas',[])|join(', ') }}"></label>
+                <label>Hours<input class="inp" name="hours" value="{{ _p.get('hours','') }}"></label>
+                <label>Phone<input class="inp" name="phone" value="{{ _p.get('phone','') }}"></label>
+                <label>Website<input class="inp" name="website" value="{{ _p.get('website','') }}"></label>
+                <label>Average rating<input class="inp" name="rating" type="number" step="0.1" value="{{ _p.get('rating','') }}"></label>
+                <label>Review count<input class="inp" name="reviews_count" type="number" step="1" value="{{ _p.get('reviews_count','') }}"></label>
+                <label>Weekly budget ($)<input class="inp" name="weekly_budget" type="number" step="1" value="{{ _p.get('weekly_budget','') }}"></label>
+              </div>
+
+              <div class="row gap mt8">
+                <button type="button" class="btn" id="cancel-edit">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-edit">Save snapshot</button>
+              </div>
+            </form>
+
+            <hr class="my8">
+            <h4>Quick questionnaire</h4>
+            <p class="muted">Answer a few questions so the Optimizer can tailor suggestions.</p>
+
+            <form id="qa-form" onsubmit="return false;">
+              <label class="lbl">Which services are your top priority for leads?</label>
+              <input class="inp" name="priorities" placeholder="e.g., Water heater installs, emergency drain clearing">
+
+              <label class="lbl">Which zip codes/cities bring the highest-value jobs?</label>
+              <input class="inp" name="priority_areas" placeholder="e.g., 30306, 30308, Midtown, Old Fourth Ward">
+
+              <label class="lbl">What’s your typical response time to new LSA leads?</label>
+              <select class="inp" name="response_time">
+                <option value="">Select…</option>
+                <option>&lt; 5 minutes</option>
+                <option>5–15 minutes</option>
+                <option>15–60 minutes</option>
+                <option>Same day</option>
+                <option>Next day</option>
+              </select>
+
+              <label class="lbl">Do you take calls after hours or on weekends?</label>
+              <select class="inp" name="after_hours">
+                <option value="">Select…</option>
+                <option>Yes — 24/7</option>
+                <option>Yes — limited</option>
+                <option>No</option>
+              </select>
+
+              <label class="lbl">Anything seasonal or promotions to feature?</label>
+              <input class="inp" name="promos" placeholder="e.g., Fall tune-up $89, Senior discount 10%">
+
+              <label class="lbl">Lead goal for the next 30 days?</label>
+              <input class="inp" name="lead_goal" type="number" min="0" placeholder="e.g., 35">
+
+              <div class="row gap mt8">
+                <button class="btn btn-secondary" id="btn-ask" type="button">Ask questions first</button>
+                <button class="btn btn-primary" id="btn-recommend" type="button">Get recommendations</button>
+                <button class="btn" id="copy-reco" type="button" title="Copy recommendations">Copy</button>
+              </div>
+              <div class="row gap mt8">
+                <button class="btn" id="seed-questions" type="button">Insert suggested questions</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Right -->
+          <div>
+            <h4 class="mb8">Optimizer Assistant {% if _sample_mode %}<span class="muted">(sample)</span>{% endif %}</h4>
+            <div id="chat-box" class="chat-box" aria-live="polite">
+              <div class="msg assistant">
+                I’ll review your profile and ask a few quick questions. Share any details that help me prioritize the right jobs and areas.
+              </div>
+            </div>
+            <div class="chat-input-row">
+              <input id="chat-input" class="inp" placeholder="Ask about categories, budget, reviews, hours…">
+              <button class="btn" id="chat-send" type="button">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- JSON (safe for client) -->
+<script id="profile-json" type="application/json">
+  {{ {
+    "name": _p.get('name') if _p else None,
+    "primary_category": _p.get('primary_category') if _p else None,
+    "categories": _p.get('categories') if _p and _p.get('categories') else [],
+    "service_areas": _p.get('service_areas') if _p and _p.get('service_areas') else [],
+    "hours": _p.get('hours') if _p else None,
+    "phone": _p.get('phone') if _p else None,
+    "website": _p.get('website') if _p else None,
+    "rating": _p.get('rating') if _p else None,
+    "reviews_count": _p.get('reviews_count') if _p else None,
+    "weekly_budget": _p.get('weekly_budget') if _p else None,
+    "customer_id": ctx.customer_id,
+    "manager_id": ctx.login_customer_id
+  } | tojson }}
+</script>
+
+<script>
+(function(){
+  // Helpers (ES5)
+  function $(sel, el){ return (el||document).querySelector(sel); }
+  function $all(sel, el){ return Array.prototype.slice.call((el||document).querySelectorAll(sel)); }
+  function safe(fn){ try{ fn(); }catch(e){ if(window.console){ console.warn(e); } } }
+  function toast(msg, type){
+    var t=document.createElement('div');
+    t.textContent=msg;
+    t.style.position='fixed'; t.style.right='16px'; t.style.bottom='16px';
+    t.style.background= type==='error' ? '#b91c1c' : '#111827';
+    t.style.color='#fff'; t.style.padding='8px 10px';
+    t.style.borderRadius='8px'; t.style.fontSize='12px';
+    t.style.opacity='0.96'; t.style.zIndex='9999';
+    document.body.appendChild(t); setTimeout(function(){ t.parentNode && t.parentNode.removeChild(t); }, 2200);
+  }
+  function readJSON(){
+    try{ var el=$('#profile-json'); return el ? JSON.parse(el.textContent||'{}') : {}; }catch(e){ return {}; }
+  }
+  function writeJSON(obj){ var el=$('#profile-json'); if(el){ el.textContent = JSON.stringify(obj||{}); } }
+  function parseCSV(s){ if(!s) return []; return s.split(',').map(function(x){return x.trim();}).filter(Boolean); }
+  function formToDict(form){ var fd=new FormData(form), o={}; fd.forEach(function(v,k){o[k]=v;}); return o; }
+
+  function renderSnapshot(prefix, p){
+    function set(id, v, link){
+      var el = $('#'+prefix+id); if(!el) return;
+      if(link && v){ el.innerHTML = '<a class="link" href="'+v+'" target="_blank" rel="noopener">'+v+'</a>'; }
+      else { el.textContent = v || ''; }
+    }
+    function chips(id, arr){
+      var wrap = $('#'+prefix+id); if(!wrap) return;
+      wrap.innerHTML = '';
+      (arr||[]).forEach(function(x){
+        var s=document.createElement('span'); s.className='chip'; s.textContent=x; wrap.appendChild(s);
+      });
+    }
+    set('name', p.name || '');
+    var cat = $('#'+prefix+'category'); if(cat){ cat.innerHTML = p.primary_category ? '<span class="badge">'+p.primary_category+'</span>' : ''; }
+    chips('categories', p.categories);
+    chips('service_areas', p.service_areas);
+    set('hours', p.hours || '');
+    set('phone', p.phone || '');
+    set('site', p.website || '', true);
+    set('rating', p.rating ? ('⭐ '+p.rating) : '');
+    set('reviews', p.reviews_count ? (p.reviews_count+' reviews') : '');
+    set('budget', p.weekly_budget ? ('$ '+p.weekly_budget) : '');
+  }
+
+  function switchTab(tab){
+    safe(function(){
+      $all('.tab-link').forEach(function(x){
+        var active = (x.getAttribute('data-tab') === tab);
+        if(active){ x.classList.add('active'); x.setAttribute('aria-selected','true'); }
+        else { x.classList.remove('active'); x.setAttribute('aria-selected','false'); }
+      });
+      $all('.tab-panel').forEach(function(p){
+        p.classList.add('hidden'); p.setAttribute('hidden','');
+      });
+      var tgt = $('#tab-'+tab);
+      if(tgt){ tgt.classList.remove('hidden'); tgt.removeAttribute('hidden'); }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    // Default: if not connected, open Optimizer so users see the working area immediately
+    var root = document.getElementById('glsa-optimize');
+    if(root && root.getAttribute('data-connected') !== '1'){ switchTab('optimizer'); }
+
+    // Tabs (buttons)
+    $all('.tab-link').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var tab = btn.getAttribute('data-tab'); if(tab){ switchTab(tab); }
+      });
+    });
+    var openOptBtn = document.getElementById('btn-open-optimizer');
+    if(openOptBtn){
+      openOptBtn.addEventListener('click', function(){ switchTab('optimizer'); });
+    }
+
+    // Initialize read views from JSON for Optimizer panel
+    safe(function(){ renderSnapshot('pf_', readJSON()); });
+
+    // --- Overview edit handlers (sample) ---
+    safe(function(){
+      var btnToggle = document.getElementById('ov-toggle-edit');
+      var formEdit  = document.getElementById('ov-snapshot-edit');
+      var viewRead  = document.getElementById('ov-snapshot-read');
+      var btnSave   = document.getElementById('ov-save-edit');
+      var btnCancel = document.getElementById('ov-cancel-edit');
+
+      function setEditing(on){
+        if(!formEdit || !viewRead || !btnToggle) return;
+        btnToggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+        if(on){ viewRead.classList.add('hidden'); formEdit.classList.remove('hidden'); btnToggle.classList.add('btn-secondary'); }
+        else { formEdit.classList.add('hidden'); viewRead.classList.remove('hidden'); btnToggle.classList.remove('btn-secondary'); }
+      }
+
+      if(btnToggle){
+        btnToggle.addEventListener('click', function(){
+          var on = !viewRead || viewRead.classList.contains('hidden') ? false : true;
+          setEditing(on);
+        });
+      }
+      if(btnCancel){ btnCancel.addEventListener('click', function(){ setEditing(false); }); }
+
+      if(btnSave){
+        btnSave.addEventListener('click', function(){
+          if(!formEdit) return;
+          var cur = readJSON();
+          var fd = formToDict(formEdit);
+          var prof = {
+            name: fd.name || '',
+            primary_category: fd.primary_category || '',
+            categories: parseCSV(fd.categories || ''),
+            service_areas: parseCSV(fd.service_areas || ''),
+            hours: fd.hours || '',
+            phone: fd.phone || '',
+            website: fd.website || '',
+            rating: fd.rating ? parseFloat(fd.rating) : null,
+            reviews_count: fd.reviews_count ? parseInt(fd.reviews_count,10) : null,
+            weekly_budget: fd.weekly_budget ? parseFloat(fd.weekly_budget) : null,
+            customer_id: cur.customer_id || null,
+            manager_id: cur.manager_id || null
+          };
+          writeJSON(prof);
+          renderSnapshot('ov_', prof);  // overview
+          renderSnapshot('pf_', prof);  // optimizer
+          toast('Sample saved');
+          setEditing(false);
+        });
+      }
+    });
+
+    // --- Optimizer edit/chat/reco handlers ---
+    safe(function(){
+      var formEdit  = document.getElementById('snapshot-edit');
+      var viewRead  = document.getElementById('snapshot-read');
+      var toggleBtn = document.getElementById('toggle-edit');
+      var saveBtn   = document.getElementById('save-edit');
+      var cancelBtn = document.getElementById('cancel-edit');
+
+      function setEditing(on){
+        if(!toggleBtn || !formEdit || !viewRead) return;
+        toggleBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        if(on){ viewRead.classList.add('hidden'); formEdit.classList.remove('hidden'); toggleBtn.classList.add('btn-secondary'); }
+        else  { formEdit.classList.add('hidden'); viewRead.classList.remove('hidden'); toggleBtn.classList.remove('btn-secondary'); }
+      }
+
+      if(toggleBtn){
+        toggleBtn.addEventListener('click', function(){
+          var on = !viewRead || viewRead.classList.contains('hidden') ? false : true;
+          setEditing(on);
+        });
+      }
+      if(cancelBtn){ cancelBtn.addEventListener('click', function(){ setEditing(false); }); }
+      if(saveBtn){
+        saveBtn.addEventListener('click', function(){
+          if(!formEdit) return;
+          var cur = readJSON();
+          var fd  = formToDict(formEdit);
+          var prof = {
+            name: fd.name || '',
+            primary_category: fd.primary_category || '',
+            categories: parseCSV(fd.categories || ''),
+            service_areas: parseCSV(fd.service_areas || ''),
+            hours: fd.hours || '',
+            phone: fd.phone || '',
+            website: fd.website || '',
+            rating: fd.rating ? parseFloat(fd.rating) : null,
+            reviews_count: fd.reviews_count ? parseInt(fd.reviews_count,10) : null,
+            weekly_budget: fd.weekly_budget ? parseFloat(fd.weekly_budget) : null,
+            customer_id: cur.customer_id || null,
+            manager_id: cur.manager_id || null
+          };
+          writeJSON(prof);
+          renderSnapshot('pf_', prof);
+          toast('Snapshot saved');
+          setEditing(false);
+        });
+      }
+
+      // Chat
+      var chatBox   = document.getElementById('chat-box');
+      var chatInput = document.getElementById('chat-input');
+      var chatSend  = document.getElementById('chat-send');
+      function appendMsg(role, text){
+        if(!chatBox) return;
+        var d=document.createElement('div');
+        d.className='msg ' + (role==='assistant'?'assistant':'user');
+        d.textContent=text;
+        chatBox.appendChild(d);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+      if(chatSend){
+        chatSend.addEventListener('click', function(){
+          var txt = (chatInput && chatInput.value ? chatInput.value : '').trim();
+          if(!txt) return;
+          appendMsg('user', txt);
+          if(chatInput) chatInput.value = '';
+          appendMsg('assistant', 'Got it. When you’re ready, click “Get recommendations” so I can analyze profile + answers.');
+        });
+      }
+
+      // Ask hint
+      var btnAsk = document.getElementById('btn-ask');
+      if(btnAsk){ btnAsk.addEventListener('click', function(){ appendMsg('assistant', 'Great — please fill the short questionnaire on the left. Then click “Get recommendations”.'); }); }
+
+      // Recommendations
+      var btnReco = document.getElementById('btn-recommend');
+      if(btnReco){
+        btnReco.addEventListener('click', function(){
+          var headers = { "Content-Type":"application/json" };
+          var m=document.querySelector('meta[name="csrf-token"]'); if(m && m.content){ headers["X-CSRFToken"]=m.content; }
+          var qaForm = document.getElementById('qa-form');
+          var answers = {};
+          if(qaForm){
+            var fd=new FormData(qaForm);
+            fd.forEach(function(v,k){ answers[k]=v; });
+          }
+          var payload = { profile: readJSON(), answers: answers };
+          appendMsg('assistant', 'Analyzing your profile and answers…');
+          fetch("{{ url_for('glsa_bp.optimize_assist') }}", {
+            method:'POST', headers:headers, body:JSON.stringify(payload), credentials:'same-origin'
+          }).then(function(r){ return r.json(); })
+            .then(function(data){
+              if(!data || data.ok!==true){
+                appendMsg('assistant', 'Sorry — ' + (data && (data.error||'unexpected error')) + '. ' + (data && data.hint ? data.hint : ''));
+                toast('Assistant error','error');
+                return;
+              }
+              var recos = (data.recommendations||[]).map(function(t,i){ return (i+1)+'. '+t; }).join('\n');
+              window.__lastRecos = recos;
+              appendMsg('assistant', recos || 'No glaring issues — you look dialed in! Consider testing budget pacing or adding a specialty.');
+              toast('Recommendations ready');
+            })
+            .catch(function(err){
+              if(window.console) console.error(err);
+              appendMsg('assistant', 'I couldn’t complete the analysis. Please try again.');
+              toast('Network error','error');
+            });
+        });
+      }
+
+      // Copy recos
+      var btnCopy = document.getElementById('copy-reco');
+      if(btnCopy){
+        btnCopy.addEventListener('click', function(){
+          if(!window.__lastRecos){ toast('No recommendations yet'); return; }
+          if(navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(window.__lastRecos).then(function(){ toast('Copied'); })
+            .catch(function(){ toast('Couldn’t copy','error'); });
+          }else{
+            toast('Clipboard not available','error');
+          }
+        });
+      }
+
+      // Suggested questions
+      var btnSeed = document.getElementById('seed-questions');
+      if(btnSeed){
+        btnSeed.addEventListener('click', function(){
+          var qs = [
+            'Which services are your highest-margin or most desired leads?',
+            'Any zip codes/cities you want to emphasize or exclude?',
+            'Do you answer calls within 5–15 minutes reliably?',
+            'Can you extend hours or enable weekend coverage for emergencies?',
+            'Do you have recent review requests or follow-up automation in place?',
+            'What’s your comfortable weekly budget ceiling during peak times?'
+          ];
+          appendMsg('assistant', 'Try these discovery questions:\n• ' + qs.join('\n• '));
+        });
+      }
+    });
+  });
+})();
+</script>
+
+<style>
+  .mb16 { margin-bottom: 1rem; }
+  .tabs { display:flex; gap:.75rem; }
+  .tab-link { padding:.5rem .75rem; border-radius:8px; border:1px solid #e5e7eb; background:#fff; cursor:pointer; font-weight:600; box-shadow:0 1px 0 rgba(0,0,0,.02); }
+  .tab-link:hover { background:#f8fafc; }
+  .tab-link.active { background:#f1f3f5; }
+
+  .card { background:#fff; border:1px solid #edf0f2; border-radius:10px; }
+  .card-header { padding:.8rem 1rem; border-bottom:1px solid #edf0f2; }
+  .card-body { padding:1rem; }
+  .alert { padding:.6rem .75rem; border-radius:8px; }
+  .alert-warning { background:#fff7ed; border:1px solid #fde68a; }
+  .page-header { margin-bottom:1rem; }
+  .page-title { margin:0; }
+  .page-subtitle { color:#6b7280; margin:.25rem 0 0; }
+
+  .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:1rem; }
+  .snapshot { display:grid; grid-template-columns: 220px 1fr; gap:.5rem .75rem; }
+  .snapshot .row { display:contents; }
+  .snapshot .k { color:#6b7280; align-self:center; }
+  .snapshot .v { align-self:center; }
+
+  .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:.75rem; }
+  .form-grid label { display:flex; flex-direction:column; gap:.25rem; font-size:.9rem; }
+  .form-grid input, .inp { width:100%; padding:.55rem .6rem; border:1px solid #dfe3e6; border-radius:8px; }
+
+  .badge { display:inline-flex; align-items:center; padding:.15rem .5rem; background:#eef2ff; border:1px solid #c7d2fe; border-radius:999px; font-size:.75rem; }
+  .chips { display:flex; gap:.4rem; flex-wrap:wrap; }
+  .chip { display:inline-flex; align-items:center; padding:.15rem .45rem; border-radius:999px; font-size:.75rem; background:#f3f4f6; border:1px solid #e5e7eb; }
+  .meta { display:inline-flex; align-items:center; gap:.35rem; padding:.15rem .5rem; border-radius:999px; font-size:.75rem; background:#f8fafc; border:1px solid #e5e7eb; }
+  .link { color:#4f46e5; text-decoration:underline; }
+
+  .row.gap { display:flex; gap:.5rem; }
+  .btn { padding:.5rem .75rem; border-radius:8px; border:1px solid #dfe3e6; background:#fff; cursor:pointer; }
+  .btn:hover { background:#f8fafc; }
+  .btn-primary { background:#2563eb; color:#fff; border-color:#2563eb; }
+  .btn-primary:hover { filter:brightness(0.98); }
+  .btn-secondary { background:#111827; color:#fff; border-color:#111827; }
+
+  .muted { color:#6b7280; }
+  .mt8 { margin-top:.5rem; }
+  .mb8 { margin-bottom:.5rem; }
+  .my8 { margin: .75rem 0; }
+
+  .chat-box { border:1px solid #dfe3e6; border-radius:10px; padding:.75rem; min-height:200px; background:#fbfdff; }
+  .msg { padding:.5rem .65rem; border-radius:8px; margin:.4rem 0; max-width:92%; white-space:pre-wrap; }
+  .msg.user { background:#e7f0ff; align-self:flex-end; }
+  .msg.assistant { background:#f2f4f7; }
+  .chat-input-row { display:flex; gap:.5rem; margin-top:.5rem; }
+</style>
+
+{# Include GLSA AI Insights Modal #}
+{% include 'glsa/components/glsa_insights_modal.html' %}
+
+<script>
+  /**
+   * Helper function to collect profile data from page and trigger insights generation
+   */
+  function generateGLSAInsightsFromPage() {
+    // Collect profile data from the hidden JSON or from form
+    const profileInput = document.getElementById('profile-json');
+    let profileData = {};
+
+    if (profileInput && profileInput.value) {
+      try {
+        profileData = JSON.parse(profileInput.value);
+      } catch (e) {
+        console.error('Error parsing profile JSON:', e);
+      }
+    }
+
+    // Also collect answers from questionnaire if filled
+    const answersForm = document.querySelector('form[name="answers"]');
+    if (answersForm) {
+      const formData = new FormData(answersForm);
+      const answers = {};
+      for (let [key, value] of formData.entries()) {
+        answers[key] = value;
+      }
+      profileData.answers = answers;
+    }
+
+    // Call the insights generation function
+    generateGLSAInsights(profileData);
+  }
+</script>
+
+<script src="{{ url_for('static', filename='js/glsa_insights.js', v=config.get('ASSET_VERSION', 1)) }}" defer></script>
+{% endblock %}

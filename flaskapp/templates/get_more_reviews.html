@@ -1,0 +1,40 @@
+{% extends "base_public.html" %}
+{% block title %}Get More Reviews{% endblock %}
+
+{% block content %}
+<section class="py-12">
+  <div class="max-w-4xl mx-auto px-4">
+    <h1 class="text-3xl font-semibold tracking-tight">Get More Reviews</h1>
+    <p class="mt-3 text-gray-600">
+      Turn happy customers into public proof. FieldSprout automates timing, links, and reminders so you
+      steadily grow high-quality Google reviews.
+    </p>
+
+    <div class="mt-8 grid gap-6 sm:grid-cols-2">
+      <div class="p-6 rounded-xl border bg-white">
+        <h2 class="font-medium text-lg">Smart Timing</h2>
+        <p class="mt-2 text-gray-600">Send requests right after service when satisfaction peaks.</p>
+      </div>
+      <div class="p-6 rounded-xl border bg-white">
+        <h2 class="font-medium text-lg">SMS & Email</h2>
+        <p class="mt-2 text-gray-600">Clean links and branded templates—no friction.</p>
+      </div>
+      <div class="p-6 rounded-xl border bg-white">
+        <h2 class="font-medium text-lg">Auto-Respond</h2>
+        <p class="mt-2 text-gray-600">AI replies that are on-brand and timely.</p>
+      </div>
+      <div class="p-6 rounded-xl border bg-white">
+        <h2 class="font-medium text-lg">Compliance</h2>
+        <p class="mt-2 text-gray-600">Respect messaging rules and opt-outs by default.</p>
+      </div>
+    </div>
+
+    <div class="mt-10">
+      <a href="{{ url_for('auth_bp.signup') if 'auth_bp.signup' in current_app.view_functions else '/signup' }}"
+         class="inline-flex items-center px-5 py-3 rounded-md bg-rose-600 text-white hover:bg-rose-700">
+        Increase reviews
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}

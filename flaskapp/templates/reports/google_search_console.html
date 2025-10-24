@@ -1,0 +1,14 @@
+{% extends "base_app.html" %}
+{% block title %}Google Search Console - Reports{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+  <h1 class="text-2xl font-semibold mb-4">Google Search Console</h1>
+  {% if connected %}
+    <div class="text-gray-700">Connected as <b>{{ token.email }}</b></div>
+    <div class="mt-4 text-gray-600">Metrics coming soon.</div>
+  {% else %}
+    <div class="text-gray-600 mb-2">Not connected.</div>
+    <a href="{{ url_for('google_bp.connect_gsc') }}" class="text-indigo-600 hover:underline">Connect Search Console</a>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{% block title %}FieldSprout — Get Found. Book Jobs. Grow Leads.{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}FieldSprout helps local service pros get found, book more jobs, and grow revenue with AI-powered campaigns and review automation.{% endblock %}">
+  <link rel="icon" href="{{ url_for('static', filename='brand/favicon.ico') }}">
+  <meta name="facebook-domain-verification" content="pu3qyk43a95ad4bgi13g8wd0xn81ot" />
+  <meta name="google-site-verification" content="google-site-verification=E3EM4jKlHkXc2U1-JsfrabLSb6jyGb48tGLCKy1ACVk" />
+  {% if csrf_token %}<meta name="csrf-token" content="{{ csrf_token() }}">{% endif %}
+  <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-HZBKX56R65"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-HZBKX56R65');
+</script>
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50:'rgb(var(--fs-primary-50)/<alpha-value>)',
+              100:'rgb(var(--fs-primary-100)/<alpha-value>)',
+              200:'rgb(var(--fs-primary-200)/<alpha-value>)',
+              300:'rgb(var(--fs-primary-300)/<alpha-value>)',
+              400:'rgb(var(--fs-primary-400)/<alpha-value>)',
+              500:'rgb(var(--fs-primary-500)/<alpha-value>)',
+              600:'rgb(var(--fs-primary-600)/<alpha-value>)',
+              700:'rgb(var(--fs-primary-700)/<alpha-value>)',
+              800:'rgb(var(--fs-primary-800)/<alpha-value>)',
+              900:'rgb(var(--fs-primary-900)/<alpha-value>)'
+            },
+            accent: { 500:'#7c3aed',600:'#6d28d9',700:'#5b21b6' },
+            highlight: { 400:'#facc15', 500:'#f59e0b' }
+          },
+          boxShadow: { soft:'0 10px 30px rgba(0,0,0,0.07)' }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root{
+      --fs-primary-50:  245 243 255;
+      --fs-primary-100: 237 233 254;
+      --fs-primary-200: 221 214 254;
+      --fs-primary-300: 196 181 253;
+      --fs-primary-400: 167 139 250;
+      --fs-primary-500: 139 92 246;
+      --fs-primary-600: 124 58 237;
+      --fs-primary-700: 109 40 217;
+      --fs-primary-800: 91 33 182;
+      --fs-primary-900: 76 29 149;
+    }
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:.75rem 1.25rem;border-radius:.75rem;font-weight:600;text-decoration:none;transition:all .2s}
+    .btn-primary{background:rgb(var(--fs-primary-600));color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.07)}
+    .btn-primary:hover{background:rgb(var(--fs-primary-700))}
+    .btn-outline{border:1px solid rgba(var(--fs-primary-300),1);color:rgb(var(--fs-primary-700));background:transparent}
+    .btn-outline:hover{background:rgba(var(--fs-primary-50),1)}
+    .btn-ghost{border:1px solid rgba(255,255,255,.3);color:#fff;background:transparent}
+    .btn-ghost:hover{background:rgba(255,255,255,.1)}
+    .container-max{max-width:80rem;margin:0 auto;padding:0 1.5rem}
+    .badge{display:inline-flex;align-items:center;gap:.5rem;padding:.25rem .75rem;border-radius:999px;font-size:.75rem;font-weight:700;background:rgb(var(--fs-primary-50));color:rgb(var(--fs-primary-700))}
+    .section{padding:5rem 0}
+    .footer-wrap{background:#0b0720;position:relative}
+    .footer-overlay{position:absolute;inset:0;background:radial-gradient(1200px 400px at 20% -10%, rgba(124,58,237,.3), transparent), radial-gradient(900px 400px at 100% 120%, rgba(91,33,182,.35), transparent)}
+  </style>
+  {% block head_extra %}{% endblock %}
+</head>
+
+<body class="antialiased text-gray-900 min-h-screen flex flex-col">
+  <!-- Header -->
+  <header class="sticky top-0 z-50 bg-white/85 backdrop-blur supports-[backdrop-filter]:bg-white/65 border-b border-gray-100">
+    <nav class="container-max flex items-center justify-between h-16">
+      <a href="{{ url_for(ep('home')) }}" class="flex items-center gap-2 font-extrabold text-primary-700" aria-label="FieldSprout home">
+        <img
+          src="{{ url_for('static', filename='brand/logos/fieldsprout-wordmark.svg') }}"
+          alt="FieldSprout"
+          class="h-7"
+          onerror="this.outerHTML=document.getElementById('fs-logo-fallback').innerHTML">
+      </a>
+
+      <button class="lg:hidden p-2" id="openMenu" aria-label="Open menu">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+
+      <!-- Desktop nav -->
+      <ul class="hidden lg:flex items-center gap-8 text-sm">
+
+        <!-- Products (desktop dropdown) -->
+        <li class="relative group">
+          <button class="hover:text-primary-700 inline-flex items-center gap-1">
+            Products
+            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
+          </button>
+          <div class="absolute left-0 mt-2 w-56 rounded-xl border bg-white shadow-soft invisible opacity-0 group-hover:visible group-hover:opacity-100 transition">
+            <div class="py-2">
+              <a class="block px-4 py-2 hover:bg-primary-50" href="/products/ads">Ads Tool</a>
+              <a class="block px-4 py-2 hover:bg-primary-50" href="/products/reviews">Review Booster</a>
+              <a class="block px-4 py-2 hover:bg-primary-50" href="/products/listings">Local Listings</a>
+              <a class="block px-4 py-2 hover:bg-primary-50" href="/products/forms-chat">Forms &amp; Chat</a>
+            </div>
+          </div>
+        </li>
+
+        <!-- Solutions (desktop dropdown) -->
+        <li class="relative group">
+          <button class="hover:text-primary-700 inline-flex items-center gap-1">
+            Solutions
+            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
+          </button>
+          <div class="absolute left-0 mt-2 w-64 rounded-xl border bg-white shadow-soft invisible opacity-0 group-hover:visible group-hover:opacity-100 transition">
+            <div class="py-2">
+              <a class="block px-4 py-2 hover:bg-primary-50" href="/solutions/lower-ad-cost">Lower Ad Cost</a>
+              <a class="block px-4 py-2 hover:bg-primary-50" href="/solutions/get-more-reviews">Get More Reviews</a>
+              <a class="block px-4 py-2 hover:bg-primary-50" href="/solutions/spend-when-open">Spend When You Have Openings</a>
+              <a class="block px-4 py-2 hover:bg-primary-50" href="/solutions/see-what-works">See What Works</a>
+            </div>
+          </div>
+        </li>
+
+        <li><a class="hover:text-primary-700" href="#how">How it works</a></li>
+        <li><a class="hover:text-primary-700" href="#features">Features</a></li>
+        <li><a class="hover:text-primary-700" href="#proof">Proof</a></li>
+        <li><a class="hover:text-primary-700" href="#pricing">Pricing</a></li>
+
+        <li>
+          {% if has_endpoint('login') %}
+            <a class="btn btn-outline" href="{{ url_for(ep('login')) }}">Sign in</a>
+          {% else %}
+            <a class="btn btn-outline" href="/login">Sign in</a>
+          {% endif %}
+        </li>
+        <li>
+          {% if has_endpoint('signup') %}
+            <a class="btn btn-primary" href="{{ url_for(ep('signup')) }}">Start free</a>
+          {% elif has_endpoint('register') %}
+            <a class="btn btn-primary" href="{{ url_for(ep('register')) }}">Start free</a>
+          {% else %}
+            <a class="btn btn-primary" href="/signup">Start free</a>
+          {% endif %}
+        </li>
+      </ul>
+    </nav>
+
+    <!-- Mobile menu -->
+    <div id="mobileMenu" class="lg:hidden hidden border-t border-gray-100 bg-white">
+      <div class="container-max py-4">
+
+        <!-- Products (mobile) -->
+        <details class="group">
+          <summary class="cursor-pointer py-2 hover:text-primary-700 flex items-center justify-between">
+            <span>Products</span>
+            <svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
+          </summary>
+          <div class="pl-3 pt-1 pb-2 space-y-1">
+            <a class="block py-2 hover:text-primary-700" href="/products/ads">Ads Tool</a>
+            <a class="block py-2 hover:text-primary-700" href="/products/reviews">Review Booster</a>
+            <a class="block py-2 hover:text-primary-700" href="/products/listings">Local Listings</a>
+            <a class="block py-2 hover:text-primary-700" href="/products/forms-chat">Forms &amp; Chat</a>
+          </div>
+        </details>
+
+        <!-- Solutions (mobile) -->
+        <details class="group mt-1">
+          <summary class="cursor-pointer py-2 hover:text-primary-700 flex items-center justify-between">
+            <span>Solutions</span>
+            <svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
+          </summary>
+          <div class="pl-3 pt-1 pb-2 space-y-1">
+            <a class="block py-2 hover:text-primary-700" href="/solutions/lower-ad-cost">Lower Ad Cost</a>
+            <a class="block py-2 hover:text-primary-700" href="/solutions/get-more-reviews">Get More Reviews</a>
+            <a class="block py-2 hover:text-primary-700" href="/solutions/spend-when-open">Spend When You Have Openings</a>
+            <a class="block py-2 hover:text-primary-700" href="/solutions/see-what-works">See What Works</a>
+          </div>
+        </details>
+
+        <a class="block py-2 hover:text-primary-700" href="#how">How it works</a>
+        <a class="block py-2 hover:text-primary-700" href="#features">Features</a>
+        <a class="block py-2 hover:text-primary-700" href="#proof">Proof</a>
+        <a class="block py-2 hover:text-primary-700" href="#pricing">Pricing</a>
+
+        <div class="flex gap-3 pt-3">
+          {% if has_endpoint('login') %}
+            <a class="btn btn-outline flex-1 text-center" href="{{ url_for(ep('login')) }}">Sign in</a>
+          {% else %}
+            <a class="btn btn-outline flex-1 text-center" href="/login">Sign in</a>
+          {% endif %}
+          {% if has_endpoint('signup') %}
+            <a class="btn btn-primary flex-1 text-center" href="{{ url_for(ep('signup')) }}">Start free</a>
+          {% elif has_endpoint('register') %}
+            <a class="btn btn-primary flex-1 text-center" href="{{ url_for(ep('register')) }}">Start free</a>
+          {% else %}
+            <a class="btn btn-primary flex-1 text-center" href="/signup">Start free</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Page -->
+  <main class="flex-1">{% block content %}{% endblock %}</main>
+
+  <!-- Footer -->
+  <footer class="footer-wrap text-white mt-24">
+    <div class="footer-overlay" aria-hidden="true"></div>
+    <div class="container-max relative py-16">
+      <div class="grid md:grid-cols-4 gap-10">
+        <div>
+          <div class="flex items-center gap-2 font-extrabold">
+            <img
+              src="{{ url_for('static', filename='brand/logos/FieldSprout-White-logo.svg') }}"
+              alt="FieldSprout"
+              class="h-7"
+              onerror="this.outerHTML=document.getElementById('fs-logo-fallback-white').innerHTML">
+          </div>
+          <p class="mt-4 text-white/70">Get found. Book jobs. Grow leads — with AI that works for local service pros.</p>
+          <div class="mt-6 flex gap-3">
+            <a href="/signup" class="btn btn-ghost">Start free</a>
+          </div>
+        </div>
+        <div>
+          <h4 class="font-semibold mb-3">Product</h4>
+          <ul class="space-y-2 text-white/80">
+            <li><a href="#features" class="hover:text-white">Features</a></li>
+            <li><a href="#integrations" class="hover:text-white">Integrations</a></li>
+            <li><a href="#pricing" class="hover:text-white">Pricing</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-semibold mb-3">Company</h4>
+          <ul class="space-y-2 text-white/80">
+            <li><a href="https://fieldsprout.io/about" class="hover:text-white">About</a></li>
+            <li><a href="https://fieldsprout.io/contact" class="hover:text-white">Contact</a></li>
+            <li><a href="https://fieldsprout.io/blog" class="hover:text-white">Blog</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-semibold mb-3">Legal</h4>
+          <ul class="space-y-2 text-white/80">
+            <li><a href="https://fieldsprout.io/terms-of-service" class="hover:text-white">Terms</a></li>
+            <li><a href="https://fieldsprout.io/privacy-policy" class="hover:text-white">Privacy</a></li>
+            <li><a href="#" class="hover:text-white">Security</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="mt-12 border-t border-white/10 pt-6 text-sm text-white/70 flex items-center justify-between">
+        <span>© {{ current_year }} FieldSprout. A Localized Growth, Inc. Company | All rights reserved.</span>
+        <span>Made for local service teams.</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Inline SVG fallbacks -->
+  <script type="text/template" id="fs-logo-fallback">
+    <svg class="h-7 w-7" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 28c7-5.4 10.5-9.4 10.5-14.1C26.5 9 24 6.5 20.9 6.5c-2.1 0-3.8 1.1-4.9 2.8-1.1-1.7-2.8-2.8-4.9-2.8C8 6.5 5.5 9 5.5 13.9 5.5 18.6 9 22.6 16 28Z" fill="rgb(var(--fs-primary-600))"/>
+    </svg>
+  </script>
+  <script type="text/template" id="fs-logo-fallback-white">
+    <svg class="h-7 w-7" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 28c7-5.4 10.5-9.4 10.5-14.1C26.5 9 24 6.5 20.9 6.5c-2.1 0-3.8 1.1-4.9 2.8-1.1-1.7-2.8-2.8-4.9-2.8C8 6.5 5.5 9 5.5 13.9 5.5 18.6 9 22.6 16 28Z" fill="#fff"/>
+    </svg>
+  </script>
+  <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-17616998273"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-17616998273');
+</script>
+
+  {% block body_extra %}{% endblock %}
+</body>
+</html>
+

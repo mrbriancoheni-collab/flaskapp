@@ -1,0 +1,283 @@
+{% extends "base_app.html" %}
+{% block title %}Google Ads · Optimize{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Google Search Ads — Optimize</h1>
+      <p class="text-gray-500">Manage campaigns, ad groups, ads, keywords, negatives, budgets, schedule, locations, devices, audiences, assets, and bidding in one place.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="{{ url_for('google_bp.ads_ui') if url_for else '#' }}" class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"><i class="fa-solid fa-arrow-left"></i> Back</a>
+      <a href="{{ url_for('gads_bp.optimize') if url_for else '#' }}" class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"><i class="fa-solid fa-rotate-right"></i> Refresh</a>
+      <a href="{{ url_for('gads_bp.apply_suggestions') if url_for else '#' }}" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500"><i class="fa-solid fa-wand-magic-sparkles"></i> Apply Suggestions</a>
+    </div>
+  </div>
+
+  {% set USING_SAMPLE = (not connected) if connected is defined else true %}
+  {% if USING_SAMPLE %}
+  <div class="mb-4 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 p-3 text-sm">
+    You’re viewing <span class="font-medium">sample data</span>. Connect Google Ads to load and edit your live data.
+  </div>
+  {% endif %}
+
+  <!-- KPI cards (SSR fallback) -->
+  {% set default_stats = {'period':'Last 30 days','spend': 3240,'impr': 128900,'clicks': 6120,'conv': 214,'cpa': 28.4} %}
+  {% set stats = (gads_stats if (connected and gads_stats) else default_stats) %}
+  <section id="kpi" class="mb-6">
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="text-sm font-medium">Account KPIs (<span id="kpi-days">30</span>d)</h3>
+      <div class="flex items-center gap-2 text-xs">
+        <button id="kpi-7"  class="px-2 py-1 rounded border hover:bg-gray-50">7d</button>
+        <button id="kpi-30" class="px-2 py-1 rounded border bg-gray-100">30d</button>
+        <button id="kpi-90" class="px-2 py-1 rounded border hover:bg-gray-50">90d</button>
+      </div>
+    </div>
+
+    <!-- Dynamic cards get injected into #kpi-cards; below is SSR fallback -->
+    <div id="kpi-cards" class="grid grid-cols-2 md:grid-cols-5 gap-3">
+      {% set cards = [
+          ('Spend', '$' ~ stats.spend),
+          ('Impressions', stats.impr),
+          ('Clicks', stats.clicks),
+          ('Conversions', stats.conv),
+          ('Avg CPA', '$' ~ stats.cpa)
+      ] %}
+      {% for label, value in cards %}
+      <div class="rounded-xl border bg-white p-4">
+        <div class="text-xs text-gray-500">{{ label }}</div>
+        <div class="text-xl font-semibold">{{ value }}</div>
+        <div class="text-xs text-gray-400">{{ stats.period }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- Tabs -->
+  {% set tab = request.args.get('tab','campaigns') if request else 'campaigns' %}
+  <div class="border-b mb-4 flex items-center gap-4 text-sm overflow-x-auto">
+    {% for t,label in [
+      ('campaigns','Campaigns'),
+      ('adgroups','Ad Groups'),
+      ('ads','Ads'),
+      ('keywords','Keywords'),
+      ('negatives','Negatives'),
+      ('optimizer','Optimizer'),
+      ('publish','Create/Publish')
+    ] %}
+      <a href="{{ url_for('gads_bp.optimize') }}?tab={{t}}"
+         class="whitespace-nowrap border-b-2 px-2 py-2 {{ 'border-indigo-600 text-indigo-700' if tab==t else 'border-transparent text-gray-500 hover:text-gray-700' }}">
+        {{ label }}
+      </a>
+    {% endfor %}
+  </div>
+
+  <!-- Tab content -->
+  <div class="space-y-8">
+
+    <!-- Optimizer Tab -->
+    {% if tab == 'optimizer' %}
+    <section id="optimizer">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-medium">Optimizer Recommendations</h3>
+        <button id="btn-reload-optimizer" class="px-3 py-1.5 text-sm rounded border hover:bg-gray-50">Reload</button>
+      </div>
+      <div class="overflow-auto rounded-xl border bg-white">
+        <table id="optimizer-table" class="min-w-full text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="text-left px-3 py-2">Severity</th>
+              <th class="text-left px-3 py-2">Category</th>
+              <th class="text-left px-3 py-2">Title</th>
+              <th class="text-left px-3 py-2">Scope</th>
+              <th class="text-left px-3 py-2">Impact</th>
+              <th class="text-left px-3 py-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y"></tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- Publish Tab -->
+    {% if tab == 'publish' %}
+    <section id="publish">
+      <h3 class="text-sm font-medium mb-2">Create & Publish</h3>
+      <p class="text-xs text-gray-500 mb-2">Paste a draft payload to validate/publish. This calls <code>/account/google/ads/drafts</code> and <code>/account/google/ads/publish</code>.</p>
+      <textarea id="draft-json" rows="10" class="w-full rounded-lg border p-3 font-mono text-xs" placeholder='{
+  "campaign": {"name":"Spring Promo","status":"enabled","daily_budget_cents":5000,"language":"en"},
+  "ad_groups": [
+    {"name":"Core","cpc_bid_cents":125,
+     "ads":[{"final_url":"https://example.com","headlines":["Free Quote","Fast Service"],"descriptions":["Book today","Limited slots"]}],
+     "keywords":[{"text":"plumber near me","match_type":"PHRASE"}],
+     "negatives":[{"text":"jobs","match_type":"PHRASE"}]
+    }
+  ],
+  "shared_negative_list_ids":[]
+}'></textarea>
+      <div class="mt-2 flex items-center gap-2">
+        <button id="btn-draft" class="px-3 py-1.5 text-sm rounded border hover:bg-gray-50">Validate Draft</button>
+        <button id="btn-publish" class="px-3 py-1.5 text-sm rounded bg-indigo-600 text-white hover:bg-indigo-500">Publish</button>
+        <span id="draft-status" class="text-xs text-gray-500"></span>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- Placeholder content for other tabs (you can replace with your existing partials) -->
+    {% if tab in ['campaigns','adgroups','ads','keywords','negatives'] %}
+    <section class="rounded-xl border bg-white p-4">
+      <p class="text-sm text-gray-500">Use the Optimizer and Create/Publish tabs for the new workflow. Your existing management UIs for <strong>{{ tab }}</strong> can remain here.</p>
+    </section>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- Lightweight styles for KPI grid if JS updates it -->
+<style>
+  .kpi-grid{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:12px}
+  .kpi{padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff}
+  .kpi-label{font-size:12px;color:#6b7280}
+  .kpi-value{font-size:18px;font-weight:600}
+</style>
+
+<!-- Page script: calls /account/google/ads/overview, /optimizer/data, /drafts, /publish -->
+<script>
+(function(){
+  const base = "{{ url_for('gads_bp.overview')|replace('/overview','') }}";
+
+  // --- KPI ---
+  async function loadKPI(days) {
+    document.getElementById("kpi-days").textContent = String(days);
+    const res = await fetch(`${base}/overview?days=${days}`);
+    const kpi = await res.json();
+    const fmt = n => (n == null ? 0 : Number(n));
+    const currency = v => `$${Number(v).toFixed(2)}`;
+
+    const spend = (fmt(kpi.cost_micros) / 1_000_000);
+    const html = `
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="kpi-label">Spend</div>
+          <div class="kpi-value">${currency(spend)}</div>
+          <div class="kpi-label">Last ${days} days</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Impressions</div>
+          <div class="kpi-value">${fmt(kpi.impressions).toLocaleString()}</div>
+          <div class="kpi-label">Last ${days} days</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Clicks</div>
+          <div class="kpi-value">${fmt(kpi.clicks).toLocaleString()}</div>
+          <div class="kpi-label">Last ${days} days</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Conversions</div>
+          <div class="kpi-value">${fmt(kpi.conversions).toLocaleString()}</div>
+          <div class="kpi-label">Last ${days} days</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Avg CPC</div>
+          <div class="kpi-value">${currency(kpi.avg_cpc || 0)}</div>
+          <div class="kpi-label">Last ${days} days</div>
+        </div>
+      </div>`;
+    const el = document.getElementById("kpi-cards");
+    if (el) el.innerHTML = html;
+  }
+
+  // KPI controls
+  const btn7  = document.getElementById("kpi-7");
+  const btn30 = document.getElementById("kpi-30");
+  const btn90 = document.getElementById("kpi-90");
+  if (btn7)  btn7.addEventListener("click", () => (loadKPI(7),  btn7.classList.add('bg-gray-100'), btn30.classList.remove('bg-gray-100'), btn90.classList.remove('bg-gray-100')));
+  if (btn30) btn30.addEventListener("click", () => (loadKPI(30), btn30.classList.add('bg-gray-100'), btn7.classList.remove('bg-gray-100'), btn90.classList.remove('bg-gray-100')));
+  if (btn90) btn90.addEventListener("click", () => (loadKPI(90), btn90.classList.add('bg-gray-100'), btn7.classList.remove('bg-gray-100'), btn30.classList.remove('bg-gray-100')));
+
+  // --- Optimizer ---
+  async function loadOptimizer() {
+    const res = await fetch(`${base}/optimizer/data`);
+    const rows = await res.json();
+    const tbody = document.querySelector("#optimizer-table tbody");
+    if (!tbody) return;
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td class="px-3 py-2">${r.severity ?? ""}</td>
+        <td class="px-3 py-2">${r.category ?? ""}</td>
+        <td class="px-3 py-2">${r.title ?? ""}</td>
+        <td class="px-3 py-2">${(r.scope_type ?? "")} #${r.scope_id ?? ""}</td>
+        <td class="px-3 py-2">${r.expected_impact ?? ""}</td>
+        <td class="px-3 py-2">
+          <button data-id="${r.id}" class="apply-opt px-2 py-1 text-xs rounded border hover:bg-gray-50">Apply</button>
+        </td>
+      </tr>
+    `).join("");
+
+    tbody.querySelectorAll(".apply-opt").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const recommendation_id = Number(btn.getAttribute("data-id"));
+        const payload = { recommendation_id, changes: [] }; // TODO: fill with actual change set
+        const res = await fetch(`${base}/optimizer/apply`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const out = await res.json();
+        alert(`Queued action #${out.action_id || "?"}`);
+      });
+    });
+  }
+  const reloadOpt = document.getElementById("btn-reload-optimizer");
+  if (reloadOpt) reloadOpt.addEventListener("click", loadOptimizer);
+
+  // --- Draft / Publish ---
+  const draftBox = document.getElementById("draft-json");
+  const status = document.getElementById("draft-status");
+  const btnDraft = document.getElementById("btn-draft");
+  const btnPublish = document.getElementById("btn-publish");
+
+  if (btnDraft) btnDraft.addEventListener("click", async () => {
+    try {
+      const draft = JSON.parse(draftBox.value || "{}");
+      const res = await fetch(`${base}/drafts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(draft)
+      });
+      const out = await res.json();
+      status.textContent = out.status === "ok" ? "Draft OK" : "Draft error";
+    } catch (e) {
+      status.textContent = "Invalid JSON";
+    }
+  });
+
+  if (btnPublish) btnPublish.addEventListener("click", async () => {
+    try {
+      const draft = JSON.parse(draftBox.value || "{}");
+      const res = await fetch(`${base}/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(draft)
+      });
+      const out = await res.json();
+      status.textContent = out.status === "created" ? `Published (ID ${out.campaign_id})` : "Publish error";
+    } catch (e) {
+      status.textContent = "Invalid JSON";
+    }
+  });
+
+  // Initial loads (only run the ones visible on the current tab)
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab") || "campaigns";
+    // Always load KPIs so header is fresh
+    loadKPI(30);
+    if (tab === "optimizer") loadOptimizer();
+  } catch(_) {}
+})();
+</script>
+{% endblock %}

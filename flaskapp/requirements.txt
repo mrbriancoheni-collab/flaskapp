@@ -1,0 +1,49 @@
+Flask
+anthropic
+gunicorn
+openai
+pydantic-core
+Flask-Login
+Flask-WTF
+Flask-Bcrypt
+Flask-SQLAlchemy
+PyMySQL
+Flask-Migrate
+stripe
+email-validator
+itsdangerous>=2.1
+Werkzeug>=2.3
+Jinja2>=3.1
+
+Flask-Cors
+pandas
+numpy
+
+cryptography>=42.0
+flask-limiter>=3.7
+redis>=5.0
+
+# Background jobs (no Redis required)
+APScheduler>=3.10
+
+# Email (optional - choose one)
+sendgrid>=6.11  # For SendGrid provider
+# OR use built-in smtplib for SMTP (no extra package needed)
+
+# Error tracking and monitoring
+sentry-sdk[flask]>=1.40  # Includes Flask, SQLAlchemy, and logging integrations
+
+google-ads>=25.0
+google-api-python-client==2.136.0
+google-auth==2.34.0
+google-auth-oauthlib==1.2.1
+
+
+
+google-auth>=2.29,<3
+google-auth-oauthlib>=1.2,<2
+google-api-python-client>=2.133,<3
+google-analytics-data==0.18.19
+google-auth==2.34.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.1

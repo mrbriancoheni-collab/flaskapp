@@ -1,0 +1,189 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'glsa' %}
+{% block title %}GLSA — Leads{% endblock %}
+
+{% block content %}
+{% set _connected = (acct is defined and acct) or (connected is defined and connected) %}
+
+<div class="max-w-7xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Local Services Ads — Leads</h1>
+      <p class="text-gray-500 text-sm">Review, filter, and take action on your GLSA leads.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      {% if not _connected %}
+        <a href="{{ url_for('glsa_bp.connect') }}"
+           class="rounded-md bg-emerald-600 text-white px-4 py-2 text-sm hover:bg-emerald-700">Connect GLSA</a>
+      {% endif %}
+      <a href="{{ url_for('glsa_bp.optimize') }}" class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Optimize</a>
+    </div>
+  </div>
+
+  {% if error %}
+    <div class="rounded-lg border border-red-300 bg-red-50 text-red-900 p-3 text-sm">
+      {{ error }}{% if hint %} — <span class="text-red-800">{{ hint }}</span>{% endif %}
+    </div>
+  {% endif %}
+
+  {% if _connected and ads_customer_id %}
+    <div class="rounded-lg border bg-white p-3 text-sm text-gray-700">
+      Using Google Ads account: <span class="font-medium">{{ ads_customer_id }}</span>
+    </div>
+  {% endif %}
+
+  {% if not _connected %}
+    <div class="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 p-3 text-sm">
+      You are viewing <span class="font-medium">sample data</span>. Connect your account to load live leads.
+    </div>
+  {% endif %}
+
+  {% set _sample_leads = [
+    {"id": 1201, "created_at": "2025-09-10 09:18", "name": "Jane Alvarez",  "email":"jane@example.com",  "phone":"(916) 555-1020", "service":"Pest Control",        "zip":"95814", "status":"New",       "source":"GLSA", "est_value": 289.00},
+    {"id": 1202, "created_at": "2025-09-11 12:43", "name": "Marcus Lee",    "email":"marcus@example.com","phone":"(916) 555-2040", "service":"Termite Inspection", "zip":"95610", "status":"Contacted", "source":"GLSA", "est_value": 350.00},
+    {"id": 1203, "created_at": "2025-09-12 16:01", "name": "Priya Patel",   "email":"priya@example.com", "phone":"(916) 555-7788", "service":"Rodent Control",     "zip":"95758", "status":"Qualified", "source":"GLSA", "est_value": 420.00},
+    {"id": 1204, "created_at": "2025-09-13 10:27", "name": "Carlos Gomez",  "email":"carlos@example.com","phone":"(916) 555-9911", "service":"Pest Control",        "zip":"95670", "status":"Won",       "source":"GLSA", "est_value": 199.00},
+    {"id": 1205, "created_at": "2025-09-13 14:55", "name": "Hannah Smith",  "email":"hannah@example.com","phone":"(916) 555-2033", "service":"Termite Treatment",  "zip":"95825", "status":"Lost",      "source":"GLSA", "est_value": 0.00}
+  ] %}
+  {% set _leads = (leads if (leads is defined and leads) else _sample_leads) %}
+
+  {% set _count = _leads|length %}
+  {% set _won = _leads|selectattr('status','equalto','Won')|list|length %}
+  {% set _contacted = _leads|selectattr('status','equalto','Contacted')|list|length %}
+  {% set _qualified = _leads|selectattr('status','equalto','Qualified')|list|length %}
+  {% set _pipeline = (_contacted + _qualified) %}
+  {% set _revenue = (_leads|selectattr('status','equalto','Won')|map(attribute='est_value')|sum) %}
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="rounded-xl border bg-white p-4">
+      <div class="text-xs uppercase text-gray-500">Leads</div>
+      <div class="text-2xl font-semibold mt-1">{{ _count }}</div>
+    </div>
+    <div class="rounded-xl border bg-white p-4">
+      <div class="text-xs uppercase text-gray-500">Pipeline</div>
+      <div class="text-2xl font-semibold mt-1">{{ _pipeline }}</div>
+      <div class="text-xs text-gray-500">Contacted + Qualified</div>
+    </div>
+    <div class="rounded-xl border bg-white p-4">
+      <div class="text-xs uppercase text-gray-500">Won</div>
+      <div class="text-2xl font-semibold mt-1">{{ _won }}</div>
+    </div>
+    <div class="rounded-xl border bg-white p-4">
+      <div class="text-xs uppercase text-gray-500">Est. Revenue</div>
+      <div class="text-2xl font-semibold mt-1">${{ '%.0f'|format(_revenue) }}</div>
+    </div>
+  </div>
+
+  <form method="get" action="" class="rounded-xl border bg-white p-4">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">Search</label>
+        <input name="q" value="{{ request.args.get('q','') if request else '' }}" class="w-full rounded-md border-gray-300" placeholder="Name, email, phone..."/>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">Service</label>
+        {% set services = ['All','Pest Control','Rodent Control','Termite Inspection','Termite Treatment'] %}
+        <select name="service" class="w-full rounded-md border-gray-300 text-sm">
+          {% for s in services %}
+            {% set sel = (request.args.get('service')==s) if request else false %}
+            <option value="{{ s }}" {% if sel %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">Status</label>
+        {% set statuses = ['All','New','Contacted','Qualified','Won','Lost'] %}
+        <select name="status" class="w-full rounded-md border-gray-300 text-sm">
+          {% for s in statuses %}
+            {% set sel = (request.args.get('status')==s) if request else false %}
+            <option value="{{ s }}" {% if sel %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">ZIP</label>
+        <input name="zip" value="{{ request.args.get('zip','') if request else '' }}" class="w-full rounded-md border-gray-300" placeholder="e.g. 95814"/>
+      </div>
+      <div class="flex items-end">
+        <button class="rounded-md bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500">Apply</button>
+      </div>
+    </div>
+  </form>
+
+  <form method="post" action="#" class="rounded-xl border bg-white">
+    <div class="p-3 border-b flex flex-wrap items-center gap-3">
+      <div class="text-sm text-gray-700">Bulk actions:</div>
+      <select name="bulk_action" class="rounded-md border-gray-300 text-sm">
+        <option value="">Select...</option>
+        <option value="mark_contacted">Mark Contacted</option>
+        <option value="mark_qualified">Mark Qualified</option>
+        <option value="mark_won">Mark Won</option>
+        <option value="mark_lost">Mark Lost</option>
+        <option value="export_csv">Export CSV</option>
+      </select>
+      <button class="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50">Run</button>
+      {% if not _connected %}
+        <span class="ml-auto text-xs text-gray-500">Sample mode</span>
+      {% endif %}
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+          <tr>
+            <th class="px-4 py-3 w-10"><input type="checkbox" onclick="document.querySelectorAll('.rowchk').forEach(cb=>cb.checked=this.checked)"/></th>
+            <th class="px-4 py-3 text-left">Lead</th>
+            <th class="px-4 py-3 text-left">Contact</th>
+            <th class="px-4 py-3 text-left">Service / ZIP</th>
+            <th class="px-4 py-3 text-left">Status</th>
+            <th class="px-4 py-3 text-right">Est. Value</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          {% for l in _leads %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3"><input class="rowchk" type="checkbox" name="ids" value="{{ l.id }}"/></td>
+            <td class="px-4 py-3">
+              <div class="font-medium">{{ l.name }}</div>
+              <div class="text-xs text-gray-500">#{{ l.id }} · {{ l.created_at }}</div>
+            </td>
+            <td class="px-4 py-3">
+              <div>{{ l.email }}</div>
+              <div class="text-xs text-gray-600">{{ l.phone }}</div>
+            </td>
+            <td class="px-4 py-3">
+              <div>{{ l.service }}</div>
+              <div class="text-xs text-gray-500">{{ l.zip }}</div>
+            </td>
+            <td class="px-4 py-3">
+              <form method="post" action="#">
+                <input type="hidden" name="lead_id" value="{{ l.id }}"/>
+                <select name="status" class="rounded-md border-gray-300 text-xs" onchange="this.form.submit()">
+                  {% for s in ['New','Contacted','Qualified','Won','Lost'] %}
+                  <option value="{{ s }}" {% if l.status==s %}selected{% endif %}>{{ s }}</option>
+                  {% endfor %}
+                </select>
+              </form>
+            </td>
+            <td class="px-4 py-3 text-right">${{ '%.2f'|format(l.est_value) }}</td>
+            <td class="px-4 py-3 text-right">
+              <a href="#" class="rounded-md border px-2.5 py-1.5 text-xs hover:bg-gray-50">Details</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="p-3 border-t flex items-center justify-between text-sm text-gray-600">
+      <div>Showing {{ _leads|length }} of {{ _leads|length }}</div>
+      <div class="flex items-center gap-1">
+        <a class="rounded-md border px-2 py-1 hover:bg-gray-50" href="#">Prev</a>
+        <a class="rounded-md border px-2 py-1 hover:bg-gray-50" href="#">Next</a>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

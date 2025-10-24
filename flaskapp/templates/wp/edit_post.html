@@ -1,0 +1,33 @@
+{% extends "base_app.html" %}
+{% block title %}Edit Post #{{ post_id }} · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="max-w-3xl space-y-6">
+  <h1 class="text-2xl font-semibold">Edit Post #{{ post_id }}</h1>
+  <form method="post" action="{{ url_for('wp_bp.edit_post_submit', post_id=post_id) }}" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div>
+      <label class="block text-sm font-medium">New Title</label>
+      <input name="title" class="w-full border rounded px-3 py-2" value="{{ title }}">
+    </div>
+    <div>
+      <label class="block text-sm font-medium">Yoast Meta Description (optional)</label>
+      <textarea name="yoast_desc" class="w-full border rounded px-3 py-2" rows="2"></textarea>
+    </div>
+    <p class="text-xs text-gray-500">Note: This form queues an update job (refresh). To change the body HTML itself, use the WordPress editor or paste a new HTML outline into a “Compose” draft.</p>
+    <div class="flex items-center gap-3">
+      <label class="inline-flex items-center gap-2">
+        <input type="checkbox" name="publish_now" value="1">
+        <span>Publish immediately</span>
+      </label>
+      <label class="inline-flex items-center gap-2">
+        <input type="checkbox" name="needs_approval" value="1">
+        <span>Require approval</span>
+      </label>
+    </div>
+    <div class="flex gap-2">
+      <button class="px-4 py-2 rounded bg-[var(--brand)] text-white">Submit Edit</button>
+      <a class="px-4 py-2 rounded border" href="{{ url_for('wp_bp.publisher') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

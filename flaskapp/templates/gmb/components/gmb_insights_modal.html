@@ -1,0 +1,186 @@
+{# templates/gmb/components/gmb_insights_modal.html #}
+{# AI Insights Modal for Google My Business #}
+
+<!-- Modal Container -->
+<div id="gmbInsightsModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+
+    <!-- Header - Green/Teal theme for GMB -->
+    <div class="bg-gradient-to-r from-green-600 to-teal-600 text-white p-6 flex items-center justify-between">
+      <div>
+        <h2 class="text-2xl font-bold mb-1">Google My Business AI Insights</h2>
+        <p class="text-green-100 text-sm">Powered by OpenAI GPT-4 • Profile optimization recommendations</p>
+      </div>
+      <button onclick="closeGMBInsightsModal()" class="text-white hover:bg-white/20 rounded-full p-2 transition-colors">
+        <i class="fa-solid fa-times text-xl"></i>
+      </button>
+    </div>
+
+    <!-- Content Area -->
+    <div class="flex-1 overflow-y-auto">
+
+      <!-- Loading State -->
+      <div id="gmbInsightsLoading" class="p-12">
+        <div class="max-w-2xl mx-auto">
+          <!-- Progress Icon -->
+          <div class="flex justify-center mb-6">
+            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center shadow-lg">
+              <i class="fa-solid fa-store text-white text-3xl"></i>
+            </div>
+          </div>
+
+          <!-- Main Loading Message -->
+          <h3 class="text-xl font-semibold text-center text-gray-900 mb-2">Analyzing Your Business Profile</h3>
+          <p id="gmbLoadingMessage" class="text-center text-gray-600 mb-8">Reviewing profile data...</p>
+
+          <!-- Progressive Steps -->
+          <div class="space-y-4">
+            <div id="gmbStep1" class="flex items-center gap-3 text-sm text-gray-400 transition-all duration-300">
+              <i class="fa-regular fa-circle"></i>
+              <span>Reviewing profile completeness...</span>
+            </div>
+            <div id="gmbStep2" class="flex items-center gap-3 text-sm text-gray-400 transition-all duration-300">
+              <i class="fa-regular fa-circle"></i>
+              <span>Analyzing photos and posts...</span>
+            </div>
+            <div id="gmbStep3" class="flex items-center gap-3 text-sm text-gray-400 transition-all duration-300">
+              <i class="fa-regular fa-circle"></i>
+              <span>Checking reviews and engagement...</span>
+            </div>
+            <div id="gmbStep4" class="flex items-center gap-3 text-sm text-gray-400 transition-all duration-300">
+              <i class="fa-regular fa-circle"></i>
+              <span>Generating recommendations...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results State -->
+      <div id="gmbInsightsResults" class="hidden p-6">
+        <!-- Summary -->
+        <div class="bg-gradient-to-r from-green-50 to-teal-50 border border-green-100 rounded-lg p-4 mb-6">
+          <div class="flex items-start gap-3">
+            <i class="fa-solid fa-lightbulb text-green-600 text-xl mt-0.5"></i>
+            <div>
+              <h3 class="font-semibold text-gray-900 mb-1">Analysis Summary</h3>
+              <p id="gmbInsightsSummary" class="text-gray-700 text-sm">Analysis complete.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- No Recommendations Message -->
+        <div id="gmbNoRecommendations" class="hidden text-center py-12">
+          <i class="fa-solid fa-check-circle text-5xl text-green-600 mb-4"></i>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Profile Looking Great!</h3>
+          <p class="text-gray-600">No optimization recommendations at this time. Keep monitoring your performance.</p>
+        </div>
+
+        <!-- Critical Issues Section -->
+        <div id="gmbCriticalSection" class="hidden mb-6">
+          <div class="flex items-center justify-between mb-3 cursor-pointer" onclick="toggleGMBSection('gmbCritical')">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-exclamation-triangle text-red-600 text-lg"></i>
+              <h3 class="font-semibold text-gray-900">Critical Issues <span id="gmbCriticalCount" class="text-gray-500 text-sm">(0)</span></h3>
+            </div>
+            <i id="gmbCriticalChevron" class="fa-solid fa-chevron-down text-gray-400 transition-transform"></i>
+          </div>
+          <div id="gmbCriticalCards" class="space-y-3"></div>
+        </div>
+
+        <!-- High-Impact Opportunities Section -->
+        <div id="gmbHighImpactSection" class="hidden mb-6">
+          <div class="flex items-center justify-between mb-3 cursor-pointer" onclick="toggleGMBSection('gmbHighImpact')">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-rocket text-orange-600 text-lg"></i>
+              <h3 class="font-semibold text-gray-900">High-Impact Opportunities <span id="gmbHighImpactCount" class="text-gray-500 text-sm">(0)</span></h3>
+            </div>
+            <i id="gmbHighImpactChevron" class="fa-solid fa-chevron-down text-gray-400 transition-transform"></i>
+          </div>
+          <div id="gmbHighImpactCards" class="space-y-3"></div>
+        </div>
+
+        <!-- Quick Wins Section -->
+        <div id="gmbQuickWinsSection" class="hidden mb-6">
+          <div class="flex items-center justify-between mb-3 cursor-pointer" onclick="toggleGMBSection('gmbQuickWins')">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-bolt text-green-600 text-lg"></i>
+              <h3 class="font-semibold text-gray-900">Quick Wins <span id="gmbQuickWinsCount" class="text-gray-500 text-sm">(0)</span></h3>
+            </div>
+            <i id="gmbQuickWinsChevron" class="fa-solid fa-chevron-down text-gray-400 transition-transform"></i>
+          </div>
+          <div id="gmbQuickWinsCards" class="hidden space-y-3"></div>
+        </div>
+
+        <!-- Long-Term Optimizations Section -->
+        <div id="gmbLongTermSection" class="hidden mb-6">
+          <div class="flex items-center justify-between mb-3 cursor-pointer" onclick="toggleGMBSection('gmbLongTerm')">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-chess text-blue-600 text-lg"></i>
+              <h3 class="font-semibold text-gray-900">Long-Term Strategy <span id="gmbLongTermCount" class="text-gray-500 text-sm">(0)</span></h3>
+            </div>
+            <i id="gmbLongTermChevron" class="fa-solid fa-chevron-down text-gray-400 transition-transform"></i>
+          </div>
+          <div id="gmbLongTermCards" class="hidden space-y-3"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Actions -->
+    <div class="border-t bg-gray-50 p-4 flex items-center justify-between">
+      <button onclick="exportGMBInsights()" class="text-gray-600 hover:text-gray-900 text-sm font-medium">
+        <i class="fa-solid fa-download mr-1"></i> Export Report
+      </button>
+      <button onclick="closeGMBInsightsModal()" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">
+        Close
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Card Template -->
+<template id="gmbInsightCardTemplate">
+  <div class="border border-gray-200 rounded-lg p-4 bg-white hover:shadow-md transition-shadow">
+    <div class="flex items-start gap-3">
+      <!-- Icon -->
+      <div class="flex-shrink-0">
+        <i class="gmb-insight-icon text-xl"></i>
+      </div>
+
+      <!-- Content -->
+      <div class="flex-1 min-w-0">
+        <h4 class="gmb-insight-title font-semibold text-gray-900 mb-1"></h4>
+        <p class="gmb-insight-description text-sm text-gray-600 mb-3"></p>
+
+        <!-- Expected Impact -->
+        <div class="bg-green-50 border border-green-100 rounded-md p-2 mb-3">
+          <div class="text-xs text-green-700 font-medium mb-0.5">Expected Impact</div>
+          <div class="gmb-insight-impact text-sm text-green-900"></div>
+        </div>
+
+        <!-- Confidence -->
+        <div class="mb-3">
+          <div class="flex items-center justify-between text-xs text-gray-600 mb-1">
+            <span>Confidence</span>
+            <span class="gmb-insight-confidence font-semibold"></span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-1.5">
+            <div class="gmb-insight-confidence-bar bg-gradient-to-r from-green-500 to-teal-500 h-1.5 rounded-full transition-all duration-300"></div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-2">
+          <button class="apply-btn flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors text-sm font-medium">
+            <i class="fa-solid fa-check mr-1"></i> Apply
+          </button>
+          <button class="details-btn px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm">
+            <i class="fa-solid fa-info-circle"></i>
+          </button>
+          <button class="dismiss-btn px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm text-gray-600">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

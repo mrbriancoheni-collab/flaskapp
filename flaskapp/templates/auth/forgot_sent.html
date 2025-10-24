@@ -1,0 +1,47 @@
+{% extends 'base_public.html' %}
+{% block title %}Reset Link Sent · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto">
+  <div class="bg-white border-2 border-gray-200 rounded-2xl p-8 shadow-xl">
+    <div class="text-center">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary-100 mb-4">
+        <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+      </div>
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Check your email</h1>
+      <p class="text-gray-600 mb-8">If an account exists for that address, we've sent a password reset link.</p>
+
+      <div class="bg-primary-50 border border-primary-200 rounded-lg p-4 mb-8 text-left">
+        <div class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-primary-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <div class="text-sm text-gray-700">
+            <p class="font-semibold mb-1">What to do next:</p>
+            <ul class="space-y-1">
+              <li>• Check your inbox for an email from us</li>
+              <li>• Click the reset link (expires in 1 hour)</li>
+              <li>• Choose a new secure password</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <a href="{{ url_for(ep('login')) }}" class="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-primary-600 to-accent-600 text-white font-semibold rounded-lg hover:from-primary-700 hover:to-accent-700 shadow-lg transition-all">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Back to Login
+      </a>
+    </div>
+  </div>
+
+  <div class="mt-6 text-center">
+    <p class="text-sm text-gray-600">
+      Didn't receive an email? Check your spam folder or
+      <a href="{{ url_for('auth_bp.forgot_password') }}" class="text-primary-600 hover:text-primary-700 font-semibold hover:underline">try again</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

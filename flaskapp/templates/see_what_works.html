@@ -1,0 +1,285 @@
+{% extends "base_public.html" %}
+{% set SECTION = 'solutions' %}
+{% block title %}See What Works — FieldSprout Solutions{% endblock %}
+{% block content %}
+
+<!-- Hero Section -->
+<section class="max-w-6xl mx-auto px-6 py-16 text-center">
+  <div class="inline-flex items-center gap-2 px-4 py-2 bg-primary-100 text-primary-700 rounded-full font-semibold text-sm mb-6">
+    📊 ANALYTICS & REPORTING
+  </div>
+
+  <h1 class="text-5xl md:text-6xl font-extrabold text-gray-900 mb-6 leading-tight">
+    See what works
+  </h1>
+
+  <p class="text-xl text-gray-600 mb-10 max-w-3xl mx-auto">
+    One page shows which ads, zips, and hours bring real jobs. No fluff — just clear numbers that drive decisions.
+  </p>
+
+  <div class="flex flex-col sm:flex-row gap-4 justify-center">
+    <a href="/sample-report" class="inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-primary-600 to-accent-600 text-white font-bold text-lg rounded-lg hover:from-primary-700 hover:to-accent-700 focus:ring-4 focus:ring-primary-300 shadow-lg transition-all transform hover:scale-105">
+      Send Me a Sample Report
+      <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+      </svg>
+    </a>
+    <a href="/demo" class="inline-flex items-center justify-center px-8 py-4 bg-white text-primary-600 font-bold text-lg rounded-lg border-2 border-primary-600 hover:bg-primary-50 focus:ring-4 focus:ring-primary-300 shadow-lg transition-all">
+      Get a Demo
+    </a>
+  </div>
+</section>
+
+<!-- Stats Section -->
+<section class="bg-gradient-to-br from-gray-900 to-gray-800 text-white py-16">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="grid md:grid-cols-3 gap-8 text-center">
+      <div class="bg-white bg-opacity-10 rounded-2xl p-6 backdrop-blur-sm">
+        <div class="text-5xl font-extrabold text-accent-400 mb-2">1</div>
+        <div class="text-lg font-semibold">Dashboard</div>
+        <div class="text-sm text-gray-300 mt-1">All channels in one view</div>
+      </div>
+
+      <div class="bg-white bg-opacity-10 rounded-2xl p-6 backdrop-blur-sm">
+        <div class="text-5xl font-extrabold text-accent-400 mb-2">5 min</div>
+        <div class="text-lg font-semibold">Weekly Review</div>
+        <div class="text-sm text-gray-300 mt-1">Owner-ready insights</div>
+      </div>
+
+      <div class="bg-white bg-opacity-10 rounded-2xl p-6 backdrop-blur-sm">
+        <div class="text-5xl font-extrabold text-accent-400 mb-2">6+</div>
+        <div class="text-lg font-semibold">Channels Tracked</div>
+        <div class="text-sm text-gray-300 mt-1">Google, Facebook, LSA, Angi, Yelp & more</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="max-w-6xl mx-auto px-6 py-16">
+  <div class="text-center mb-12">
+    <h2 class="text-4xl font-bold text-gray-900 mb-4">Everything you need to know</h2>
+    <p class="text-xl text-gray-600">All in one place, updated in real-time</p>
+  </div>
+
+  <div class="grid md:grid-cols-3 gap-8">
+    <!-- Clear Numbers -->
+    <div class="bg-white rounded-2xl border-2 border-gray-200 p-8 shadow-lg hover:shadow-xl transition-shadow">
+      <div class="w-14 h-14 rounded-full bg-gradient-to-br from-primary-600 to-accent-600 flex items-center justify-center mb-4">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+      </div>
+      <h3 class="text-2xl font-bold text-gray-900 mb-3">Clear numbers</h3>
+      <p class="text-gray-700 mb-4">Leads, booked jobs, and revenue by source. No fluff.</p>
+      <ul class="space-y-2 text-sm text-gray-600">
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 font-bold mt-0.5">•</span>
+          <span>Cost per lead, cost per booked job</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 font-bold mt-0.5">•</span>
+          <span>Booking rate, show rate, close rate</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 font-bold mt-0.5">•</span>
+          <span>Revenue attribution by channel</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- What to Cut -->
+    <div class="bg-white rounded-2xl border-2 border-gray-200 p-8 shadow-lg hover:shadow-xl transition-shadow">
+      <div class="w-14 h-14 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mb-4">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+      </div>
+      <h3 class="text-2xl font-bold text-gray-900 mb-3">What to cut</h3>
+      <p class="text-gray-700 mb-4">Find the waste fast. Turn it off in a click.</p>
+      <ul class="space-y-2 text-sm text-gray-600">
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 font-bold mt-0.5">•</span>
+          <span>Underperforming keywords highlighted</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 font-bold mt-0.5">•</span>
+          <span>Low-conversion campaigns flagged</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 font-bold mt-0.5">•</span>
+          <span>One-click pause for losers</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Owner-Ready PDF -->
+    <div class="bg-white rounded-2xl border-2 border-gray-200 p-8 shadow-lg hover:shadow-xl transition-shadow">
+      <div class="w-14 h-14 rounded-full bg-gradient-to-br from-primary-600 to-accent-600 flex items-center justify-center mb-4">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+      </div>
+      <h3 class="text-2xl font-bold text-gray-900 mb-3">Owner-ready PDF</h3>
+      <p class="text-gray-700 mb-4">Auto email a simple report each week or month.</p>
+      <ul class="space-y-2 text-sm text-gray-600">
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 font-bold mt-0.5">•</span>
+          <span>Automated weekly/monthly delivery</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 font-bold mt-0.5">•</span>
+          <span>Executive summary for owners</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-green-600 font-bold mt-0.5">•</span>
+          <span>Share with partners or investors</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Cross-Channel Reporting -->
+<section class="bg-gray-50 py-16">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-12">
+      <h2 class="text-4xl font-bold text-gray-900 mb-4">Works across all your channels</h2>
+      <p class="text-xl text-gray-600">Finally, one dashboard for everything</p>
+    </div>
+
+    <div class="bg-white rounded-2xl border-2 border-gray-200 p-10 shadow-xl">
+      <div class="grid md:grid-cols-2 gap-8">
+        <div>
+          <h3 class="text-2xl font-bold text-gray-900 mb-6">Channels tracked</h3>
+          <div class="space-y-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+                <svg class="w-5 h-5 text-primary-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z"/></svg>
+              </div>
+              <span class="font-semibold text-gray-900">Google Ads (Search & Display)</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+                <svg class="w-5 h-5 text-primary-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z"/></svg>
+              </div>
+              <span class="font-semibold text-gray-900">Google Local Services Ads (LSA)</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+                <svg class="w-5 h-5 text-primary-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z"/></svg>
+              </div>
+              <span class="font-semibold text-gray-900">Facebook & Instagram Ads</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+                <svg class="w-5 h-5 text-primary-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z"/></svg>
+              </div>
+              <span class="font-semibold text-gray-900">Angi Leads (HomeAdvisor)</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+                <svg class="w-5 h-5 text-primary-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z"/></svg>
+              </div>
+              <span class="font-semibold text-gray-900">Yelp Ads</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+                <svg class="w-5 h-5 text-primary-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z"/></svg>
+              </div>
+              <span class="font-semibold text-gray-900">Organic (SEO, GMB)</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-2xl font-bold text-gray-900 mb-6">Key metrics</h3>
+          <ul class="space-y-3">
+            <li class="flex items-start gap-2">
+              <svg class="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              <span class="text-gray-700">Spend, impressions, clicks by channel</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <svg class="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              <span class="text-gray-700">Leads, calls, form submissions</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <svg class="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              <span class="text-gray-700">Booked jobs and revenue attribution</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <svg class="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              <span class="text-gray-700">Performance by location and trade</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <svg class="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              <span class="text-gray-700">Year-over-year comparisons</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <svg class="w-5 h-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+              <span class="text-gray-700">Cost per lead, cost per booked job</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Testimonial -->
+<section class="max-w-4xl mx-auto px-6 py-16">
+  <div class="bg-white border-2 border-gray-200 rounded-2xl p-8 shadow-xl">
+    <div class="flex items-center gap-1 mb-4">
+      <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+      <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+      <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+      <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+      <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+    </div>
+    <blockquote class="text-xl text-gray-700 italic mb-6">
+      "I used to log into five different dashboards every Monday. FieldSprout put everything in one place — I can see what's working and what's not in under 5 minutes. Game changer."
+    </blockquote>
+    <div class="flex items-center gap-4">
+      <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary-600 to-accent-600 flex items-center justify-center text-white font-bold text-lg">
+        A
+      </div>
+      <div>
+        <div class="font-bold text-gray-900">Amanda Lee</div>
+        <div class="text-gray-600 text-sm">Owner, Lee's Landscaping (Seattle)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Final CTA -->
+<section class="bg-gradient-to-br from-primary-600 to-accent-600 py-16">
+  <div class="max-w-4xl mx-auto px-6 text-center">
+    <h2 class="text-4xl font-bold text-white mb-6">Ready for clarity?</h2>
+    <p class="text-xl text-primary-100 mb-8">One dashboard. All channels. Clear decisions.</p>
+
+    <a href="/sample-report" class="inline-flex items-center justify-center px-8 py-4 bg-white text-primary-600 font-bold text-lg rounded-lg hover:bg-gray-100 shadow-xl transition-all transform hover:scale-105">
+      Send Me a Sample Report
+      <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+      </svg>
+    </a>
+
+    <p class="text-primary-100 mt-6 text-sm">
+      14-day free trial • No credit card required • Cancel anytime
+    </p>
+  </div>
+</section>
+
+{% endblock %}

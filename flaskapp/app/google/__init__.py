@@ -1785,89 +1785,19 @@ def ads_debug_config():
 @google_bp.route("/ads", methods=["GET"], endpoint="ads_ui")
 @login_required
 def ads_ui():
-    # Redirect to new hierarchical campaigns view
-    return redirect(url_for("google_bp.ads_campaigns"))
-
-# ---- New Hierarchical Ads Views ----
-
-@google_bp.route("/ads/campaigns", methods=["GET"], endpoint="ads_campaigns")
-@login_required
-def ads_campaigns():
-    """Level 1: Campaigns list view"""
     aid = current_account_id()
     connected = _is_connected(aid, "ads")
     ai = _ai_enabled()
     ads_data = _get_ads_state(aid)
+    sugg_key = f"ads_suggestions_{aid}"
+    suggestions = session.get(sugg_key) or {}
+    _ = _get_ads_custom_prompt(aid)
     return render_template(
-        "google/ads_campaigns.html",
+        "google/ads.html",
         connected=connected,
         ai_connected=ai,
         ads_data=ads_data,
-        epn=request.endpoint,
-    )
-
-@google_bp.route("/ads/campaign/<campaign_id>", methods=["GET"], endpoint="ads_campaign_detail")
-@login_required
-def ads_campaign_detail(campaign_id: str):
-    """Level 2: Campaign detail with ad groups"""
-    aid = current_account_id()
-    ads_data = _get_ads_state(aid)
-
-    # Find the campaign
-    campaign = next((c for c in ads_data.get("campaigns", []) if c["id"] == campaign_id), None)
-    if not campaign:
-        flash("Campaign not found.", "error")
-        return redirect(url_for("google_bp.ads_campaigns"))
-
-    # Get ad groups for this campaign
-    ad_groups = [g for g in ads_data.get("ad_groups", []) if g.get("campaign_id") == campaign_id]
-
-    # Get all ad group IDs for counting keywords
-    ad_group_ids = [g["id"] for g in ad_groups]
-    keywords = [k for k in ads_data.get("keywords", []) if k.get("ad_group_id") in ad_group_ids]
-    ads = [a for a in ads_data.get("ads", []) if a.get("ad_group_id") in ad_group_ids]
-
-    return render_template(
-        "google/ads_campaign_detail.html",
-        campaign=campaign,
-        ad_groups=ad_groups,
-        keywords=keywords,
-        ads=ads,
-        total_keywords=len(keywords),
-        epn=request.endpoint,
-    )
-
-@google_bp.route("/ads/campaign/<campaign_id>/adgroup/<adgroup_id>", methods=["GET"], endpoint="ads_adgroup_detail")
-@login_required
-def ads_adgroup_detail(campaign_id: str, adgroup_id: str):
-    """Level 3: Ad group detail with tabs (keywords, ads, negatives)"""
-    aid = current_account_id()
-    ads_data = _get_ads_state(aid)
-
-    # Find the campaign and ad group
-    campaign = next((c for c in ads_data.get("campaigns", []) if c["id"] == campaign_id), None)
-    ad_group = next((g for g in ads_data.get("ad_groups", []) if g["id"] == adgroup_id), None)
-
-    if not campaign or not ad_group:
-        flash("Campaign or ad group not found.", "error")
-        return redirect(url_for("google_bp.ads_campaigns"))
-
-    # Get keywords, ads, and negatives for this ad group
-    keywords = [k for k in ads_data.get("keywords", []) if k.get("ad_group_id") == adgroup_id]
-    ads = [a for a in ads_data.get("ads", []) if a.get("ad_group_id") == adgroup_id]
-
-    # Negatives can be at campaign or ad group level
-    negatives = [n for n in ads_data.get("negatives", [])
-                 if (n.get("scope") == "Ad Group" and n.get("parent_id") == adgroup_id) or
-                    (n.get("scope") == "Campaign" and n.get("parent_id") == campaign_id)]
-
-    return render_template(
-        "google/ads_adgroup_detail.html",
-        campaign=campaign,
-        ad_group=ad_group,
-        keywords=keywords,
-        ads=ads,
-        negatives=negatives,
+        suggestions=suggestions,
         epn=request.endpoint,
     )
 
@@ -2016,42 +1946,33 @@ def ads_prompt_save():
     return redirect(url_for("google_bp.ads_ui"))
 
 def _generate_ads_suggestions(aid: int, scope: str = "all", regenerate: bool = False) -> dict:
-    """
-    Generate AI-powered optimization suggestions for Google Ads account.
-
-    Args:
-        aid: Account ID
-        scope: Analysis scope (all, campaigns, keywords, etc.)
-        regenerate: Force regeneration even if recent insights exist
-
-    Returns:
-        Dictionary with summary and categorized recommendations
-    """
-    from app.services.google_ads_insights import generate_ai_insights, categorize_recommendations
-
-    try:
-        # Generate insights using AI service
-        insights = generate_ai_insights(aid, scope=scope, regenerate=regenerate)
-
-        # Categorize for easier consumption
-        categorized = categorize_recommendations(insights.get("recommendations", []))
-
-        # Store in session for backwards compatibility
-        session[f"ads_suggestions_{aid}"] = insights
-
-        return insights
-
-    except Exception as e:
-        current_app.logger.error(f"Failed to generate AI suggestions: {e}", exc_info=True)
-
-        # Fallback to basic suggestions
-        fallback = {
-            "summary": "AI insights are temporarily unavailable. Please try again later.",
-            "recommendations": [],
-            "error": str(e)
-        }
-        session[f"ads_suggestions_{aid}"] = fallback
-        return fallback
+    _ = _get_ads_state(aid)
+    sugs: dict[str, list[dict]] = {}
+    if scope in ("all", "campaigns"):
+        sugs["campaigns"] = [
+            {"id": "S-C-1", "change": "Raise budget +10% for 'Emergency Plumbing - Search' (hitting target tCPA)."},
+            {"id": "S-C-2", "change": "Switch paused 'Water Heater Install' to Max Conv with target CPA of $70."},
+        ]
+    if scope in ("all", "adgroups"):
+        sugs["adgroups"] = [{"id": "S-G-1", "change": "Split 'Near Me' into Mobile/Desktop for device bid mods."}]
+    if scope in ("all", "keywords"):
+        sugs["keywords"] = [
+            {"id": "S-K-1", "change": "Promote [emergency plumber near me] to exact and raise CPC to $10.50."},
+            {"id": "S-K-2", "change": "Pause low-perf 'plumber 24 hours' broad; add phrase variant."},
+        ]
+    if scope in ("all", "negatives"):
+        sugs["negatives"] = [{"id": "S-N-1", "change": "Add account-level negatives: 'free', 'DIY'."}]
+    if scope in ("all", "ads"):
+        sugs["ads"] = [
+            {"id": "S-A-1", "change": "New headline: 'Local Plumber in 30–60 Minutes'"},
+            {"id": "S-A-2", "change": "Add benefit callout: 'No Trip Fees • Upfront Pricing'"},
+        ]
+    if scope in ("all", "extensions"):
+        sugs["extensions"] = [{"id": "S-E-1", "change": "Add sitelinks to Finance, Coupons, Same-Day Service."}]
+    if scope in ("all", "landing"):
+        sugs["landing"] = [{"id": "S-L-1", "change": "Add sticky mobile CTA on /water-heaters, compress hero image to <200 KB."}]
+    session[f"ads_suggestions_{aid}"] = sugs
+    return sugs
 
 @google_bp.route("/ads/optimize.json", methods=["POST", "GET"], endpoint="ads_optimize_json")
 @login_required
@@ -2150,62 +2071,9 @@ def ads_update():
     flash("Google Ads changes saved.", "success")
     return redirect(url_for("google_bp.ads_ui"))
 
-@google_bp.route("/ads/apply-recommendation", methods=["POST"], endpoint="ads_apply_recommendation")
-@login_required
-def ads_apply_recommendation():
-    """Apply a single AI recommendation."""
-    from app.services.google_ads_insights import apply_recommendation
-    from flask_login import current_user
-
-    data = request.get_json() if request.is_json else request.form
-    recommendation_id = data.get("recommendation_id")
-
-    if not recommendation_id:
-        return jsonify({"ok": False, "error": "Missing recommendation_id"}), 400
-
-    try:
-        recommendation_id = int(recommendation_id)
-    except:
-        return jsonify({"ok": False, "error": "Invalid recommendation_id"}), 400
-
-    success, message = apply_recommendation(recommendation_id, current_user.id)
-
-    if success:
-        return jsonify({"ok": True, "message": message})
-    else:
-        return jsonify({"ok": False, "error": message}), 400
-
-
-@google_bp.route("/ads/dismiss-recommendation", methods=["POST"], endpoint="ads_dismiss_recommendation")
-@login_required
-def ads_dismiss_recommendation():
-    """Dismiss a recommendation."""
-    from app.services.google_ads_insights import dismiss_recommendation
-
-    data = request.get_json() if request.is_json else request.form
-    recommendation_id = data.get("recommendation_id")
-    reason = data.get("reason", "")
-
-    if not recommendation_id:
-        return jsonify({"ok": False, "error": "Missing recommendation_id"}), 400
-
-    try:
-        recommendation_id = int(recommendation_id)
-    except:
-        return jsonify({"ok": False, "error": "Invalid recommendation_id"}), 400
-
-    success, message = dismiss_recommendation(recommendation_id, reason)
-
-    if success:
-        return jsonify({"ok": True, "message": message})
-    else:
-        return jsonify({"ok": False, "error": message}), 400
-
-
 @google_bp.route("/ads/apply-suggestions", methods=["POST", "GET"], endpoint="ads_apply_suggestions")
 @login_required
 def ads_apply_suggestions():
-    """Legacy route for applying multiple suggestions."""
     if request.method == "GET":
         flash("No suggestions selected.", "info")
         return redirect(url_for("google_bp.ads_ui"))
@@ -2487,26 +2355,6 @@ def gsc_callback():
             flash("Connected to Google. Please sign in again to finalize linking.", "warning")
 
         flash("Google Search Console connected.", "success")
-
-        # Auto-trigger historical data pull
-        try:
-            from app.services.auto_historical_pull import trigger_pull_for_newly_connected_channel
-            from app.auth.utils import current_account_id
-
-            aid = current_account_id()
-            if aid:
-                result = trigger_pull_for_newly_connected_channel(aid, 'search_console', months=12)
-                if result.get('triggered'):
-                    flash(
-                        "Historical search data (last 12 months) is being pulled in the background.",
-                        "info"
-                    )
-                    current_app.logger.info(
-                        f"Auto-triggered GSC historical pull for account {aid}"
-                    )
-        except Exception as e:
-            current_app.logger.exception(f"Auto GSC historical pull trigger failed: {e}")
-
         return redirect(url_for("google_bp.gsc_ui"))
 
     except Exception as e:
@@ -2594,171 +2442,35 @@ def ads_pick_account():
             return redirect(url_for("google_bp.ads_ui"))
     return render_template("google/ads_account_pick.html", ids=ids)
 
-@google_bp.route("/ads/campaign/create", methods=["POST"], endpoint="ads_campaign_create")
+@google_bp.route("/ads/campaign/new", methods=["POST"], endpoint="ads_campaign_new")
 @login_required
-def ads_campaign_create():
-    """Create a new campaign"""
-    aid = current_account_id()
-    ads_data = _get_ads_state(aid)
+def ads_campaign_new():
+    return _ads_not_implemented()
 
-    # Generate new campaign ID
-    existing_ids = [int(c["id"].split("-")[1]) for c in ads_data.get("campaigns", []) if "-" in c["id"]]
-    new_id = f"C-{max(existing_ids) + 1 if existing_ids else 1001}"
-
-    new_campaign = {
-        "id": new_id,
-        "name": request.form.get("name", "New Campaign"),
-        "type": request.form.get("type", "SEARCH"),
-        "status": request.form.get("status", "Paused"),
-        "daily_budget": float(request.form.get("daily_budget", 50)),
-        "bidding": request.form.get("bidding", "Manual CPC"),
-        "target": float(request.form.get("target")) if request.form.get("target") else None
-    }
-
-    ads_data.setdefault("campaigns", []).append(new_campaign)
-    _save_ads_state(aid, ads_data)
-    flash(f"Campaign '{new_campaign['name']}' created successfully.", "success")
-    return redirect(url_for("google_bp.ads_campaigns"))
-
-@google_bp.route("/ads/campaign/update", methods=["POST"], endpoint="ads_campaign_update")
+@google_bp.route("/ads/campaign/<int:cid>/edit", methods=["POST"], endpoint="ads_campaign_edit")
 @login_required
-def ads_campaign_update():
-    """Update an existing campaign"""
-    aid = current_account_id()
-    ads_data = _get_ads_state(aid)
-    campaign_id = request.form.get("id")
+def ads_campaign_edit(cid: int):
+    return _ads_not_implemented()
 
-    campaign = next((c for c in ads_data.get("campaigns", []) if c["id"] == campaign_id), None)
-    if not campaign:
-        flash("Campaign not found.", "error")
-        return redirect(url_for("google_bp.ads_campaigns"))
-
-    campaign["name"] = request.form.get("name", campaign["name"])
-    campaign["type"] = request.form.get("type", campaign["type"])
-    campaign["status"] = request.form.get("status", campaign["status"])
-    campaign["daily_budget"] = float(request.form.get("daily_budget", campaign.get("daily_budget", 50)))
-    campaign["bidding"] = request.form.get("bidding", campaign["bidding"])
-    campaign["target"] = float(request.form.get("target")) if request.form.get("target") else None
-
-    _save_ads_state(aid, ads_data)
-    flash(f"Campaign '{campaign['name']}' updated successfully.", "success")
-    return redirect(url_for("google_bp.ads_campaign_detail", campaign_id=campaign_id))
-
-@google_bp.route("/ads/campaign/delete", methods=["POST"], endpoint="ads_campaign_delete")
+@google_bp.route("/ads/campaign/<int:cid>/delete", methods=["POST"], endpoint="ads_campaign_delete")
 @login_required
-def ads_campaign_delete():
-    """Delete a campaign and all its ad groups, keywords, and ads"""
-    aid = current_account_id()
-    ads_data = _get_ads_state(aid)
-    campaign_id = request.form.get("id")
+def ads_campaign_delete(cid: int):
+    return _ads_not_implemented()
 
-    # Find and remove campaign
-    campaigns = ads_data.get("campaigns", [])
-    campaign = next((c for c in campaigns if c["id"] == campaign_id), None)
-
-    if not campaign:
-        flash("Campaign not found.", "error")
-        return redirect(url_for("google_bp.ads_campaigns"))
-
-    # Remove campaign
-    ads_data["campaigns"] = [c for c in campaigns if c["id"] != campaign_id]
-
-    # Remove all ad groups in this campaign
-    ad_group_ids = [g["id"] for g in ads_data.get("ad_groups", []) if g.get("campaign_id") == campaign_id]
-    ads_data["ad_groups"] = [g for g in ads_data.get("ad_groups", []) if g.get("campaign_id") != campaign_id]
-
-    # Remove all keywords in those ad groups
-    ads_data["keywords"] = [k for k in ads_data.get("keywords", []) if k.get("ad_group_id") not in ad_group_ids]
-
-    # Remove all ads in those ad groups
-    ads_data["ads"] = [a for a in ads_data.get("ads", []) if a.get("ad_group_id") not in ad_group_ids]
-
-    # Remove campaign-level negatives
-    ads_data["negatives"] = [n for n in ads_data.get("negatives", [])
-                              if not (n.get("scope") == "Campaign" and n.get("parent_id") == campaign_id)]
-
-    _save_ads_state(aid, ads_data)
-    flash(f"Campaign '{campaign['name']}' and all its ad groups deleted.", "success")
-    return redirect(url_for("google_bp.ads_campaigns"))
-
-@google_bp.route("/ads/adgroup/create", methods=["POST"], endpoint="ads_adgroup_create")
+@google_bp.route("/ads/adgroup/new/<int:cid>", methods=["POST"], endpoint="ads_adgroup_new")
 @login_required
-def ads_adgroup_create():
-    """Create a new ad group"""
-    aid = current_account_id()
-    ads_data = _get_ads_state(aid)
-    campaign_id = request.form.get("campaign_id")
+def ads_adgroup_new(cid: int):
+    return _ads_not_implemented()
 
-    # Generate new ad group ID
-    existing_ids = [int(g["id"].split("-")[1]) for g in ads_data.get("ad_groups", []) if "-" in g["id"]]
-    new_id = f"AG-{max(existing_ids) + 1 if existing_ids else 2001}"
-
-    new_ad_group = {
-        "id": new_id,
-        "campaign_id": campaign_id,
-        "name": request.form.get("name", "New Ad Group"),
-        "status": request.form.get("status", "Enabled")
-    }
-
-    ads_data.setdefault("ad_groups", []).append(new_ad_group)
-    _save_ads_state(aid, ads_data)
-    flash(f"Ad group '{new_ad_group['name']}' created successfully.", "success")
-    return redirect(url_for("google_bp.ads_campaign_detail", campaign_id=campaign_id))
-
-@google_bp.route("/ads/adgroup/update", methods=["POST"], endpoint="ads_adgroup_update")
+@google_bp.route("/ads/adgroup/<int:gid>/edit", methods=["POST"], endpoint="ads_adgroup_edit")
 @login_required
-def ads_adgroup_update():
-    """Update an existing ad group"""
-    aid = current_account_id()
-    ads_data = _get_ads_state(aid)
-    adgroup_id = request.form.get("id")
-    campaign_id = request.form.get("campaign_id")
+def ads_adgroup_edit(gid: int):
+    return _ads_not_implemented()
 
-    ad_group = next((g for g in ads_data.get("ad_groups", []) if g["id"] == adgroup_id), None)
-    if not ad_group:
-        flash("Ad group not found.", "error")
-        return redirect(url_for("google_bp.ads_campaign_detail", campaign_id=campaign_id))
-
-    ad_group["name"] = request.form.get("name", ad_group["name"])
-    ad_group["status"] = request.form.get("status", ad_group["status"])
-
-    _save_ads_state(aid, ads_data)
-    flash(f"Ad group '{ad_group['name']}' updated successfully.", "success")
-    return redirect(url_for("google_bp.ads_campaign_detail", campaign_id=campaign_id))
-
-@google_bp.route("/ads/adgroup/delete", methods=["POST"], endpoint="ads_adgroup_delete")
+@google_bp.route("/ads/adgroup/<int:gid>/delete", methods=["POST"], endpoint="ads_adgroup_delete")
 @login_required
-def ads_adgroup_delete():
-    """Delete an ad group and all its keywords and ads"""
-    aid = current_account_id()
-    ads_data = _get_ads_state(aid)
-    adgroup_id = request.form.get("id")
-    campaign_id = request.form.get("campaign_id")
-
-    # Find and remove ad group
-    ad_groups = ads_data.get("ad_groups", [])
-    ad_group = next((g for g in ad_groups if g["id"] == adgroup_id), None)
-
-    if not ad_group:
-        flash("Ad group not found.", "error")
-        return redirect(url_for("google_bp.ads_campaign_detail", campaign_id=campaign_id))
-
-    # Remove ad group
-    ads_data["ad_groups"] = [g for g in ad_groups if g["id"] != adgroup_id]
-
-    # Remove all keywords in this ad group
-    ads_data["keywords"] = [k for k in ads_data.get("keywords", []) if k.get("ad_group_id") != adgroup_id]
-
-    # Remove all ads in this ad group
-    ads_data["ads"] = [a for a in ads_data.get("ads", []) if a.get("ad_group_id") != adgroup_id]
-
-    # Remove ad group-level negatives
-    ads_data["negatives"] = [n for n in ads_data.get("negatives", [])
-                              if not (n.get("scope") == "Ad Group" and n.get("parent_id") == adgroup_id)]
-
-    _save_ads_state(aid, ads_data)
-    flash(f"Ad group '{ad_group['name']}' and all its keywords/ads deleted.", "success")
-    return redirect(url_for("google_bp.ads_campaign_detail", campaign_id=campaign_id))
+def ads_adgroup_delete(gid: int):
+    return _ads_not_implemented()
 
 @google_bp.route("/ads/ad/new/<int:gid>", methods=["POST"], endpoint="ads_ad_new")
 @login_required
@@ -2998,35 +2710,6 @@ def oauth_callback():
 
     flash(f"Connected Google {product.upper()} successfully.", "success")
 
-    # Auto-trigger historical data pull for newly connected channel
-    try:
-        from app.services.auto_historical_pull import trigger_pull_for_newly_connected_channel
-
-        # Map product to source_type
-        source_type_map = {
-            'ads': 'google_ads',
-            'ga': 'google_analytics',
-            'gsc': 'search_console',
-            'lsa': 'glsa',
-            'gmb': 'gmb'
-        }
-
-        source_type = source_type_map.get(product)
-        if source_type:
-            result = trigger_pull_for_newly_connected_channel(aid, source_type, months=12)
-            if result.get('triggered'):
-                flash(
-                    "Historical data (last 12 months) is being pulled in the background. "
-                    "This may take a few minutes.",
-                    "info"
-                )
-                current_app.logger.info(
-                    f"Auto-triggered historical pull for account {aid}, product {product}"
-                )
-    except Exception as e:
-        # Don't block OAuth flow if auto-pull fails
-        current_app.logger.exception(f"Auto historical pull trigger failed: {e}")
-
     nxt = session.pop("google_oauth_next", None)
     if nxt:
         return redirect(nxt)
@@ -3042,158 +2725,6 @@ def oauth_callback():
     if product == "gsc":
         return redirect(url_for("google_bp.gsc_ui"))
     return redirect(url_for("google_bp.index"))
-
-# ========================== GA Insights Routes ==========================
-
-@google_bp.route("/ga/insights.json", methods=["POST"], endpoint="ga_insights_json")
-@login_required
-def ga_insights_json():
-    """Generate AI insights for Google Analytics property."""
-    from app.services.ga_insights import generate_ga_insights
-
-    aid = current_account_id()
-    data = request.get_json() if request.is_json else {}
-    property_id = data.get("property_id", "")
-    regenerate = bool(data.get("regenerate", False))
-
-    if not property_id:
-        return jsonify({"ok": False, "error": "Missing property_id"}), 400
-
-    try:
-        insights = generate_ga_insights(aid, property_id, regenerate=regenerate)
-        return jsonify({"ok": True, **insights})
-    except Exception as e:
-        current_app.logger.error(f"Error generating GA insights: {e}", exc_info=True)
-        return jsonify({"ok": False, "error": str(e)}), 500
-
-
-@google_bp.route("/ga/apply-recommendation", methods=["POST"], endpoint="ga_apply_recommendation")
-@login_required
-def ga_apply_recommendation():
-    """Apply a GA recommendation."""
-    from app.services.ga_insights import apply_ga_recommendation
-
-    data = request.get_json() if request.is_json else request.form
-    recommendation_id = data.get("recommendation_id")
-
-    if not recommendation_id:
-        return jsonify({"ok": False, "error": "Missing recommendation_id"}), 400
-
-    try:
-        recommendation_id = int(recommendation_id)
-    except:
-        return jsonify({"ok": False, "error": "Invalid recommendation_id"}), 400
-
-    success, message = apply_ga_recommendation(recommendation_id, current_user.id)
-
-    if success:
-        return jsonify({"ok": True, "message": message})
-    else:
-        return jsonify({"ok": False, "error": message}), 400
-
-
-@google_bp.route("/ga/dismiss-recommendation", methods=["POST"], endpoint="ga_dismiss_recommendation")
-@login_required
-def ga_dismiss_recommendation():
-    """Dismiss a GA recommendation."""
-    from app.services.ga_insights import dismiss_ga_recommendation
-
-    data = request.get_json() if request.is_json else request.form
-    recommendation_id = data.get("recommendation_id")
-    reason = data.get("reason", "")
-
-    if not recommendation_id:
-        return jsonify({"ok": False, "error": "Missing recommendation_id"}), 400
-
-    try:
-        recommendation_id = int(recommendation_id)
-    except:
-        return jsonify({"ok": False, "error": "Invalid recommendation_id"}), 400
-
-    success, message = dismiss_ga_recommendation(recommendation_id, current_user.id, reason)
-
-    if success:
-        return jsonify({"ok": True, "message": message})
-    else:
-        return jsonify({"ok": False, "error": message}), 400
-
-
-# ========================== GSC Insights Routes ==========================
-
-@google_bp.route("/gsc/insights.json", methods=["POST"], endpoint="gsc_insights_json")
-@login_required
-def gsc_insights_json():
-    """Generate AI SEO insights for Google Search Console property."""
-    from app.services.gsc_insights import generate_gsc_insights
-
-    aid = current_account_id()
-    data = request.get_json() if request.is_json else {}
-    site_url = data.get("site_url", "")
-    regenerate = bool(data.get("regenerate", False))
-
-    if not site_url:
-        return jsonify({"ok": False, "error": "Missing site_url"}), 400
-
-    try:
-        insights = generate_gsc_insights(aid, site_url, regenerate=regenerate)
-        return jsonify({"ok": True, **insights})
-    except Exception as e:
-        current_app.logger.error(f"Error generating GSC insights: {e}", exc_info=True)
-        return jsonify({"ok": False, "error": str(e)}), 500
-
-
-@google_bp.route("/gsc/apply-recommendation", methods=["POST"], endpoint="gsc_apply_recommendation")
-@login_required
-def gsc_apply_recommendation():
-    """Apply a GSC recommendation."""
-    from app.services.gsc_insights import apply_gsc_recommendation
-
-    data = request.get_json() if request.is_json else request.form
-    recommendation_id = data.get("recommendation_id")
-
-    if not recommendation_id:
-        return jsonify({"ok": False, "error": "Missing recommendation_id"}), 400
-
-    try:
-        recommendation_id = int(recommendation_id)
-    except:
-        return jsonify({"ok": False, "error": "Invalid recommendation_id"}), 400
-
-    success, message = apply_gsc_recommendation(recommendation_id, current_user.id)
-
-    if success:
-        return jsonify({"ok": True, "message": message})
-    else:
-        return jsonify({"ok": False, "error": message}), 400
-
-
-@google_bp.route("/gsc/dismiss-recommendation", methods=["POST"], endpoint="gsc_dismiss_recommendation")
-@login_required
-def gsc_dismiss_recommendation():
-    """Dismiss a GSC recommendation."""
-    from app.services.gsc_insights import dismiss_gsc_recommendation
-
-    data = request.get_json() if request.is_json else request.form
-    recommendation_id = data.get("recommendation_id")
-    reason = data.get("reason", "")
-
-    if not recommendation_id:
-        return jsonify({"ok": False, "error": "Missing recommendation_id"}), 400
-
-    try:
-        recommendation_id = int(recommendation_id)
-    except:
-        return jsonify({"ok": False, "error": "Invalid recommendation_id"}), 400
-
-    success, message = dismiss_gsc_recommendation(recommendation_id, current_user.id, reason)
-
-    if success:
-        return jsonify({"ok": True, "message": message})
-    else:
-        return jsonify({"ok": False, "error": message}), 400
-
-
-# ========================== Disconnect Route ==========================
 
 @google_bp.route("/disconnect/<product>", methods=["POST", "GET"], endpoint="disconnect")
 @login_required

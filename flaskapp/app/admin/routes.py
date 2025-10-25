@@ -2,6 +2,7 @@
 from __future__ import annotations
 from datetime import datetime
 from typing import Optional
+import logging
 
 from flask import (
     Blueprint, request, render_template, redirect, url_for, flash,
@@ -10,9 +11,11 @@ from flask import (
 from sqlalchemy import or_, desc
 
 from app.extensions import db
-from app.auth.session_utils import login_required
+from app.auth.session import login_required
 from app.auth.decorators import require_admin_cloaked as require_admin
 from app.models import Account, User, CRMContact, CRM_STAGES
+
+logger = logging.getLogger(__name__)
 
 # Try to import Subscription if your project has it
 try:
@@ -330,394 +333,341 @@ def crm_update(contact_id: int):
     return redirect(url_for("admin_bp.crm_detail", contact_id=item.id))
 
 
-# ============================================================================
-# Google Ads AI Optimization - Admin Pages
-# ============================================================================
-
-@admin_bp.get("/google-ads/recommendations")
+# -------------------------
+# SERP Scraper for Lead Generation
+# -------------------------
+@admin_bp.get("/serp-scraper")
 @login_required
 @require_admin
-def google_ads_recommendations():
-    """View all AI recommendations (Google Ads, Analytics, Search Console) and their change log."""
-    from app.models_ads import OptimizerRecommendation, OptimizerAction
-
-    # Get filter parameters
-    status_filter = request.args.get('status', 'all')
-    source_type_filter = request.args.get('source_type', 'all')  # NEW: Filter by source
-    account_id = request.args.get('account_id', type=int)
-    category = request.args.get('category', 'all')
-    page = request.args.get('page', 1, type=int)
-    per_page = 50
-
-    # Build query
-    query = OptimizerRecommendation.query
-
-    if status_filter != 'all':
-        query = query.filter(OptimizerRecommendation.status == status_filter)
-
-    # NEW: Filter by source type
-    if source_type_filter != 'all':
-        query = query.filter(OptimizerRecommendation.source_type == source_type_filter)
-
-    if account_id:
-        query = query.filter(OptimizerRecommendation.account_id == account_id)
-
-    if category != 'all':
-        query = query.filter(OptimizerRecommendation.category == category)
-
-    # Order by most recent first
-    query = query.order_by(desc(OptimizerRecommendation.created_at))
-
-    # Paginate
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    recommendations = pagination.items
-
-    # Get accounts for filter dropdown
-    accounts_with_recs = db.session.query(
-        OptimizerRecommendation.account_id,
-        Account.name
-    ).join(
-        Account, OptimizerRecommendation.account_id == Account.id
-    ).distinct().all()
-
-    # Get actions for each recommendation
-    rec_ids = [r.id for r in recommendations]
-    actions = {}
-    if rec_ids:
-        all_actions = OptimizerAction.query.filter(
-            OptimizerAction.recommendation_id.in_(rec_ids)
-        ).all()
-        for action in all_actions:
-            if action.recommendation_id not in actions:
-                actions[action.recommendation_id] = []
-            actions[action.recommendation_id].append(action)
-
-    # Get user names for actions
-    user_ids = set()
-    for action_list in actions.values():
-        for action in action_list:
-            if action.applied_by:
-                user_ids.add(action.applied_by)
-
-    users = {}
-    if user_ids:
-        user_records = User.query.filter(User.id.in_(user_ids)).all()
-        users = {u.id: u for u in user_records}
-
-    # Get account names
-    account_ids = set(r.account_id for r in recommendations if r.account_id)
-    account_names = {}
-    if account_ids:
-        account_records = Account.query.filter(Account.id.in_(account_ids)).all()
-        account_names = {a.id: a.name or f"Account #{a.id}" for a in account_records}
-
-    # Get category stats
-    category_stats = db.session.query(
-        OptimizerRecommendation.category,
-        db.func.count(OptimizerRecommendation.id).label('count')
-    ).filter(
-        OptimizerRecommendation.status == 'open'
-    ).group_by(OptimizerRecommendation.category).all()
-
-    # Get status stats
-    status_stats = db.session.query(
-        OptimizerRecommendation.status,
-        db.func.count(OptimizerRecommendation.id).label('count')
-    ).group_by(OptimizerRecommendation.status).all()
-
-    # NEW: Get source type stats
-    source_type_stats = db.session.query(
-        OptimizerRecommendation.source_type,
-        db.func.count(OptimizerRecommendation.id).label('count')
-    ).filter(
-        OptimizerRecommendation.status == 'open'
-    ).group_by(OptimizerRecommendation.source_type).all()
-
-    return render_template(
-        "admin/google_ads_recommendations.html",
-        recommendations=recommendations,
-        pagination=pagination,
-        actions=actions,
-        users=users,
-        account_names=account_names,
-        accounts_with_recs=accounts_with_recs,
-        category_stats=dict(category_stats),
-        status_stats=dict(status_stats),
-        source_type_stats=dict(source_type_stats),  # NEW
-        status_filter=status_filter,
-        source_type_filter=source_type_filter,  # NEW
-        account_id_filter=account_id,
-        category_filter=category
-    )
+def serp_scraper():
+    """Show the SERP scraper form"""
+    return render_template("admin/serp_scraper.html")
 
 
-@admin_bp.get("/google-ads/settings")
+@admin_bp.post("/serp-scraper")
 @login_required
 @require_admin
-def google_ads_settings():
-    """View and edit Google Ads AI optimization settings."""
-    import os
+def serp_scraper_run():
+    """Run the SERP scraper and add results to CRM"""
+    from app.services.serp_scraper import scrape_home_services
 
-    # Get current settings from environment/config
-    settings = {
-        'HIGH_SPEND_DAILY_THRESHOLD': os.getenv('HIGH_SPEND_DAILY_THRESHOLD', '1000'),
-        'MEDIUM_SPEND_DAILY_THRESHOLD': os.getenv('MEDIUM_SPEND_DAILY_THRESHOLD', '500'),
-        'OPENAI_MODEL': os.getenv('OPENAI_MODEL', 'gpt-4o-mini'),
-        'OPENAI_API_KEY_SET': bool(os.getenv('OPENAI_API_KEY')),
-    }
+    service_type = request.form.get("service_type", "").strip()
+    location = request.form.get("location", "").strip()
+    max_results = min(int(request.form.get("max_results", 20)), 50)
+    auto_add = request.form.get("auto_add") == "on"
 
-    # Get scheduler job status
+    if not service_type or not location:
+        flash("Service type and location are required.", "warning")
+        return redirect(url_for("admin_bp.serp_scraper"))
+
     try:
-        scheduler = current_app.scheduler
-        jobs_info = []
-        for job_id in ['generate_google_ads_insights_weekly', 'generate_google_ads_insights_daily']:
-            job = scheduler.get_job(job_id)
-            if job:
-                jobs_info.append({
-                    'id': job.id,
-                    'name': job.name or job.id.replace('_', ' ').title(),
-                    'next_run': job.next_run_time.isoformat() if job.next_run_time else None,
-                    'trigger': str(job.trigger)
-                })
-    except:
-        jobs_info = []
+        # Run the scraper
+        leads = scrape_home_services(service_type, location, max_results)
 
-    # Get recent insights stats
-    from app.models_ads import OptimizerRecommendation
+        if not leads:
+            flash("No leads found for this search.", "warning")
+            return redirect(url_for("admin_bp.serp_scraper"))
 
-    stats = {
-        'total_recommendations': OptimizerRecommendation.query.count(),
-        'open_recommendations': OptimizerRecommendation.query.filter_by(status='open').count(),
-        'applied_recommendations': OptimizerRecommendation.query.filter_by(status='applied').count(),
-        'dismissed_recommendations': OptimizerRecommendation.query.filter_by(status='dismissed').count(),
-    }
+        # Store results in session for review
+        session["scraper_results"] = [
+            {
+                "business_name": lead.business_name,
+                "domain": lead.domain,
+                "phone": lead.phone,
+                "city": lead.city,
+                "region": lead.region,
+                "source": lead.source,
+                "ad_type": lead.ad_type,
+                "snippet": lead.snippet,
+            }
+            for lead in leads
+        ]
+        session.modified = True
 
-    # Get accounts with Google Ads connected
-    accounts_with_ads = Account.query.filter(
-        Account.google_ads_connected == True
-    ).count()
+        # Auto-add to CRM if requested
+        added_count = 0
+        if auto_add:
+            for lead in leads:
+                # Check if already exists (by domain or business name)
+                existing = None
+                if lead.domain:
+                    existing = CRMContact.query.filter_by(domain=lead.domain).first()
+                if not existing and lead.business_name:
+                    existing = CRMContact.query.filter_by(business_name=lead.business_name).first()
 
-    return render_template(
-        "admin/google_ads_settings.html",
-        settings=settings,
-        jobs_info=jobs_info,
-        stats=stats,
-        accounts_with_ads=accounts_with_ads
-    )
+                if not existing:
+                    contact = CRMContact(
+                        business_name=lead.business_name or "Unknown",
+                        domain=lead.domain,
+                        phone=lead.phone,
+                        city=lead.city,
+                        region=lead.region,
+                        source=f"{lead.source} ({service_type})",
+                        stage="stranger",
+                        notes=f"Ad Type: {lead.ad_type}\n{lead.snippet or ''}"
+                    )
+                    db.session.add(contact)
+                    added_count += 1
 
-
-@admin_bp.post("/google-ads/settings")
-@login_required
-@require_admin
-def google_ads_settings_update():
-    """Update Google Ads AI optimization settings."""
-    import os
-
-    # Note: These settings need to be updated in the actual code file
-    # or via environment variables and app restart
-    # This is a placeholder for the UI - actual implementation would need
-    # to write to a config file or environment variable management system
-
-    high_spend = request.form.get('high_spend_threshold', '1000')
-    medium_spend = request.form.get('medium_spend_threshold', '500')
-
-    # For now, just flash a message explaining what needs to be done
-    flash(
-        f"To apply these settings, update your environment variables:\n"
-        f"HIGH_SPEND_DAILY_THRESHOLD={high_spend}\n"
-        f"MEDIUM_SPEND_DAILY_THRESHOLD={medium_spend}\n"
-        f"Then restart the application.",
-        "info"
-    )
-
-    _audit("google_ads_settings_update", note=f"high={high_spend}, medium={medium_spend}")
-
-    return redirect(url_for("admin_bp.google_ads_settings"))
-
-
-@admin_bp.post("/google-ads/trigger-job/<job_id>")
-@login_required
-@require_admin
-def google_ads_trigger_job(job_id: str):
-    """Manually trigger a Google Ads insights job."""
-    try:
-        scheduler = current_app.scheduler
-        job = scheduler.get_job(job_id)
-
-        if job:
-            # Trigger job to run immediately
-            job.modify(next_run_time=datetime.now())
-            flash(f"Job '{job_id}' triggered successfully. It will run shortly.", "success")
-            _audit("google_ads_trigger_job", note=f"job_id={job_id}")
+            db.session.commit()
+            _audit("serp_scrape", note=f"service={service_type} location={location} added={added_count}")
+            flash(f"Found {len(leads)} leads, added {added_count} new contacts to CRM.", "success")
         else:
-            flash(f"Job '{job_id}' not found.", "error")
+            flash(f"Found {len(leads)} leads. Review below before adding to CRM.", "success")
+
+        return render_template("admin/serp_results.html", leads=leads, auto_added=auto_add, added_count=added_count)
+
     except Exception as e:
-        flash(f"Failed to trigger job: {str(e)}", "error")
+        logger.exception("Error running SERP scraper")
+        flash(f"Error scraping: {str(e)}", "error")
+        return redirect(url_for("admin_bp.serp_scraper"))
 
-    return redirect(url_for("admin_bp.google_ads_settings"))
 
-
-# ============================================================================
-# AI Prompts Management
-# ============================================================================
-
-@admin_bp.get("/ai-prompts")
+@admin_bp.post("/serp-scraper/add-selected")
 @login_required
 @require_admin
-def ai_prompts_list():
-    """View and manage AI prompts for all services."""
-    from app.models_ads import AIPrompt
-    from app.services.ai_prompts_init import initialize_ai_prompts
+def serp_scraper_add_selected():
+    """Add selected leads from scraper results to CRM"""
+    selected_indices = request.form.getlist("selected")
+    results = session.get("scraper_results", [])
 
-    # Check if prompts exist, if not initialize
-    prompt_count = AIPrompt.query.count()
-    if prompt_count == 0:
-        initialized = initialize_ai_prompts()
-        flash(f"Initialized {initialized} default AI prompts.", "success")
+    if not selected_indices or not results:
+        flash("No leads selected.", "warning")
+        return redirect(url_for("admin_bp.serp_scraper"))
 
-    prompts = AIPrompt.query.order_by(AIPrompt.prompt_key).all()
+    added_count = 0
+    for idx_str in selected_indices:
+        try:
+            idx = int(idx_str)
+            if 0 <= idx < len(results):
+                lead = results[idx]
 
-    return render_template(
-        "admin/ai_prompts.html",
-        prompts=prompts
-    )
+                # Check if already exists
+                existing = None
+                if lead.get("domain"):
+                    existing = CRMContact.query.filter_by(domain=lead["domain"]).first()
+                if not existing and lead.get("business_name"):
+                    existing = CRMContact.query.filter_by(business_name=lead["business_name"]).first()
 
+                if not existing:
+                    contact = CRMContact(
+                        business_name=lead.get("business_name") or "Unknown",
+                        domain=lead.get("domain"),
+                        phone=lead.get("phone"),
+                        city=lead.get("city"),
+                        region=lead.get("region"),
+                        source=lead.get("source", "google_serp"),
+                        stage="stranger",
+                        notes=f"Ad Type: {lead.get('ad_type')}\n{lead.get('snippet', '')}"
+                    )
+                    db.session.add(contact)
+                    added_count += 1
 
-@admin_bp.get("/ai-prompts/<int:prompt_id>")
-@login_required
-@require_admin
-def ai_prompt_edit(prompt_id: int):
-    """Edit a specific AI prompt."""
-    from app.models_ads import AIPrompt
-
-    prompt = AIPrompt.query.get_or_404(prompt_id)
-
-    return render_template(
-        "admin/ai_prompt_edit.html",
-        prompt=prompt
-    )
-
-
-@admin_bp.post("/ai-prompts/<int:prompt_id>")
-@login_required
-@require_admin
-def ai_prompt_update(prompt_id: int):
-    """Update a specific AI prompt."""
-    from app.models_ads import AIPrompt
-
-    prompt = AIPrompt.query.get_or_404(prompt_id)
-
-    # Update fields
-    prompt.name = request.form.get('name', '').strip()
-    prompt.description = request.form.get('description', '').strip()
-    prompt.system_message = request.form.get('system_message', '').strip()
-    prompt.prompt_template = request.form.get('prompt_template', '').strip()
-    prompt.model = request.form.get('model', 'gpt-4o-mini').strip()
-
-    try:
-        prompt.temperature = float(request.form.get('temperature', 0.7))
-    except ValueError:
-        prompt.temperature = 0.7
-
-    try:
-        prompt.max_tokens = int(request.form.get('max_tokens', 2000))
-    except ValueError:
-        prompt.max_tokens = 2000
-
-    prompt.is_active = request.form.get('is_active') == 'on'
-    prompt.updated_by = current_user.id
+        except (ValueError, IndexError):
+            continue
 
     db.session.commit()
+    _audit("serp_add_selected", note=f"added={added_count}")
 
-    flash(f"Updated prompt '{prompt.name}' successfully.", "success")
-    _audit("ai_prompt_update", note=f"prompt_id={prompt_id}, key={prompt.prompt_key}")
+    # Clear session results
+    session.pop("scraper_results", None)
+    session.modified = True
 
-    return redirect(url_for("admin_bp.ai_prompts_list"))
+    flash(f"Added {added_count} contacts to CRM.", "success")
+    return redirect(url_for("admin_bp.crm_list"))
 
 
-@admin_bp.post("/ai-prompts/init")
+# -------------------------
+# Email Functionality
+# -------------------------
+@admin_bp.get("/email/compose")
 @login_required
 @require_admin
-def ai_prompts_initialize():
-    """Initialize or reset AI prompts to defaults."""
-    from app.services.ai_prompts_init import initialize_ai_prompts
+def email_compose():
+    """Show email composition form"""
+    # Get contact_id or account_id from query params
+    contact_id = request.args.get("contact_id", type=int)
+    account_id = request.args.get("account_id", type=int)
+    bulk = request.args.get("bulk", type=bool, default=False)
 
-    force = request.form.get('force') == 'on'
-    count = initialize_ai_prompts(force=force)
+    recipient = None
+    recipient_type = None
 
-    if force:
-        flash(f"Reset {count} AI prompts to default values.", "success")
-    else:
-        flash(f"Initialized {count} missing AI prompts.", "success")
+    if contact_id:
+        recipient = CRMContact.query.get_or_404(contact_id)
+        recipient_type = "contact"
+    elif account_id:
+        recipient = Account.query.get_or_404(account_id)
+        recipient_type = "account"
+    elif bulk:
+        recipient_type = "bulk"
 
-    _audit("ai_prompts_init", note=f"force={force}, count={count}")
-
-    return redirect(url_for("admin_bp.ai_prompts_list"))
-
-
-# ============================================================================
-# Historical Performance Data Management
-# ============================================================================
-
-@admin_bp.route("/performance-metrics")
-@login_required
-@require_admin
-def performance_metrics():
-    """Performance metrics management page."""
-    from app.services.historical_data_pull import check_existing_data
-
-    # Get list of accounts
-    accounts = Account.query.order_by(Account.id).all()
-
-    # Check data status for first account (or selected account)
-    selected_account_id = request.args.get('account_id', type=int)
-    if not selected_account_id and accounts:
-        selected_account_id = accounts[0].id
-
-    data_status = {}
-    if selected_account_id:
-        channels = ['google_ads', 'google_analytics', 'search_console', 'glsa', 'gmb', 'fbads']
-        for channel in channels:
-            data_status[channel] = check_existing_data(selected_account_id, channel)
+    # Get all CRM contacts for bulk email
+    all_contacts = CRMContact.query.filter(CRMContact.email.isnot(None), CRMContact.email != "").order_by(CRMContact.business_name).all()
 
     return render_template(
-        "admin/performance_metrics.html",
-        accounts=accounts,
-        selected_account_id=selected_account_id,
-        data_status=data_status
+        "admin/email_compose.html",
+        recipient=recipient,
+        recipient_type=recipient_type,
+        all_contacts=all_contacts,
+        bulk=bulk,
+        stages=CRM_STAGES
     )
 
 
-@admin_bp.route("/performance-metrics/pull", methods=["POST"])
+@admin_bp.post("/email/send")
 @login_required
 @require_admin
-def performance_metrics_pull():
-    """Trigger historical data pull for an account."""
-    from app.services.historical_data_pull import pull_all_historical_data
+def email_send():
+    """Send email to individual or multiple recipients"""
+    from app.services.email_service import send_email
 
-    account_id = request.form.get('account_id', type=int)
-    months = request.form.get('months', type=int, default=12)
-    force = request.form.get('force') == 'on'
+    subject = request.form.get("subject", "").strip()
+    message_body = request.form.get("message", "").strip()
+    recipient_type = request.form.get("recipient_type", "")
 
-    if not account_id:
-        flash("Account ID is required", "error")
-        return redirect(url_for("admin_bp.performance_metrics"))
+    # Validation
+    if not subject or not message_body:
+        flash("Subject and message are required.", "error")
+        return redirect(request.referrer or url_for("admin_bp.email_compose"))
 
-    # Run the pull
+    recipients = []
+
     try:
-        current_app.logger.info(f"Starting historical data pull for account {account_id}, {months} months")
-        results = pull_all_historical_data(account_id, months=months, force=force)
+        if recipient_type == "contact":
+            # Single CRM contact
+            contact_id = int(request.form.get("contact_id", 0))
+            contact = CRMContact.query.get_or_404(contact_id)
 
-        total = results.get('total_imported', 0)
-        if total > 0:
-            flash(f"Successfully imported {total} records from {months} months of data", "success")
+            if not contact.email:
+                flash(f"Contact {contact.business_name} has no email address.", "error")
+                return redirect(url_for("admin_bp.crm_detail", contact_id=contact.id))
+
+            recipients.append({
+                "email": contact.email,
+                "name": contact.contact_name or contact.business_name
+            })
+
+        elif recipient_type == "account":
+            # All users in an account
+            account_id = int(request.form.get("account_id", 0))
+            account = Account.query.get_or_404(account_id)
+            users = User.query.filter_by(account_id=account.id).all()
+
+            for user in users:
+                if user.email:
+                    recipients.append({
+                        "email": user.email,
+                        "name": user.name
+                    })
+
+        elif recipient_type == "bulk":
+            # Multiple CRM contacts
+            selected_contacts = request.form.getlist("selected_contacts")
+
+            if not selected_contacts:
+                flash("No recipients selected for bulk email.", "error")
+                return redirect(url_for("admin_bp.email_compose", bulk=True))
+
+            for contact_id_str in selected_contacts:
+                contact = CRMContact.query.get(int(contact_id_str))
+                if contact and contact.email:
+                    recipients.append({
+                        "email": contact.email,
+                        "name": contact.contact_name or contact.business_name
+                    })
+
+        # Send emails
+        if not recipients:
+            flash("No valid email addresses found.", "error")
+            return redirect(request.referrer or url_for("admin_bp.email_compose"))
+
+        # Create HTML email body
+        html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <div style="white-space: pre-wrap; font-size: 16px; line-height: 24px; color: #111827;">
+{message_body}
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px 40px; text-align: center; background-color: #f9fafb; border-radius: 0 0 8px 8px;">
+                            <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                                © 2025 FieldSprout. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+        """
+
+        # Send to all recipients
+        success_count = 0
+        failed_count = 0
+
+        for recipient in recipients:
+            try:
+                result = send_email(
+                    to=recipient["email"],
+                    subject=subject,
+                    html_body=html_body,
+                    text_body=message_body
+                )
+
+                if result:
+                    success_count += 1
+                else:
+                    failed_count += 1
+                    logger.warning(f"Failed to send email to {recipient['email']}")
+
+            except Exception as e:
+                failed_count += 1
+                logger.exception(f"Error sending email to {recipient['email']}: {e}")
+
+        # Audit log
+        _audit(
+            "email_sent",
+            note=f"type={recipient_type} count={success_count} failed={failed_count} subject={subject[:100]}"
+        )
+
+        # Flash message
+        if success_count > 0 and failed_count == 0:
+            flash(f"Email sent successfully to {success_count} recipient(s).", "success")
+        elif success_count > 0:
+            flash(f"Email sent to {success_count} recipient(s). {failed_count} failed.", "warning")
         else:
-            flash("No new data imported. Check channel connections or try force=true.", "warning")
+            flash(f"Failed to send email to all {failed_count} recipient(s). Check SMTP configuration.", "error")
 
-        _audit("historical_data_pull", target_account_id=account_id, note=f"months={months}, imported={total}")
+        # Redirect based on type
+        if recipient_type == "contact":
+            contact_id = int(request.form.get("contact_id", 0))
+            return redirect(url_for("admin_bp.crm_detail", contact_id=contact_id))
+        elif recipient_type == "account":
+            account_id = int(request.form.get("account_id", 0))
+            return redirect(url_for("admin_bp.account_detail", account_id=account_id))
+        else:
+            return redirect(url_for("admin_bp.crm_list"))
 
     except Exception as e:
-        current_app.logger.exception(f"Error pulling historical data: {e}")
-        flash(f"Error pulling historical data: {str(e)}", "error")
-
-    return redirect(url_for("admin_bp.performance_metrics", account_id=account_id))
+        logger.exception("Error sending email")
+        flash(f"Error sending email: {str(e)}", "error")
+        return redirect(request.referrer or url_for("admin_bp.email_compose"))

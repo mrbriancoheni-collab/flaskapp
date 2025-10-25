@@ -1,0 +1,253 @@
+{% extends "base_app.html" %}
+{% block title %}Google Ads Performance Report – {{ report.google_ads_account_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <a href="{{ url_for('ads_grader_bp.index') }}" class="text-sm text-indigo-600 hover:text-indigo-800 mb-2 inline-block">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Back to Grader
+      </a>
+      <h1 class="text-3xl font-bold">Google Ads Performance Report</h1>
+      <p class="text-gray-600 mt-1">{{ report.google_ads_account_name }} • {{ report.created_at.strftime('%B %d, %Y') }}</p>
+    </div>
+    <div>
+      <a href="{{ url_for('ads_grader_bp.report_pdf', report_id=report.id) }}"
+         class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+        <i class="fa-solid fa-download mr-2"></i>Download PDF
+      </a>
+    </div>
+  </div>
+
+  <!-- Overall Score Card -->
+  <div class="bg-white rounded-xl shadow-lg p-8 mb-6">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-8">
+      <!-- Score Circle -->
+      <div class="text-center">
+        <div class="inline-block relative">
+          {% set score_pct = (report.overall_score / 100) * 502.4 %}
+          {% set offset = 502.4 - score_pct %}
+          <svg class="w-48 h-48 transform -rotate-90">
+            <circle cx="96" cy="96" r="80" stroke="#e5e7eb" stroke-width="12" fill="none"/>
+            <circle cx="96" cy="96" r="80"
+                    {% if report.overall_score >= 80 %}stroke="#10b981"
+                    {% elif report.overall_score >= 60 %}stroke="#f59e0b"
+                    {% else %}stroke="#ef4444"{% endif %}
+                    stroke-width="12" fill="none"
+                    stroke-dasharray="502.4" stroke-dashoffset="{{ offset }}" stroke-linecap="round"/>
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <div class="text-5xl font-bold
+                        {% if report.overall_score >= 80 %}text-green-600
+                        {% elif report.overall_score >= 60 %}text-yellow-600
+                        {% else %}text-red-600{% endif %}">
+              {{ report.overall_score|round|int }}
+            </div>
+            <div class="text-sm text-gray-500">Overall Score</div>
+          </div>
+        </div>
+        <div class="mt-4 text-3xl font-bold text-gray-700">Grade: {{ report.overall_grade }}</div>
+      </div>
+
+      <!-- Key Metrics -->
+      <div class="flex-1 grid md:grid-cols-3 gap-4">
+        <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-4">
+          <div class="text-sm text-gray-600 mb-1">Quality Score Average</div>
+          <div class="text-3xl font-bold text-yellow-700">{{ "%.1f"|format(report.quality_score_avg or 0) }}</div>
+          <div class="text-xs text-gray-500 mt-1">Target: 7.0+</div>
+        </div>
+
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
+          <div class="text-sm text-gray-600 mb-1">Click-Through Rate</div>
+          <div class="text-3xl font-bold text-blue-700">{{ "%.2f"|format(report.ctr_avg or 0) }}%</div>
+          <div class="text-xs text-gray-500 mt-1">Industry avg: 3.2%</div>
+        </div>
+
+        <div class="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-lg p-4">
+          <div class="text-sm text-gray-600 mb-1">Projected 12-Month Waste</div>
+          <div class="text-3xl font-bold text-red-700">${{ "{:,.0f}".format(report.projected_waste_12m or 0) }}</div>
+          <div class="text-xs text-gray-500 mt-1">Last 90 days: ${{ "{:,.0f}".format(report.wasted_spend_90d or 0) }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Account Diagnostics -->
+  <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+    <h2 class="text-2xl font-bold mb-4">
+      <i class="fa-solid fa-chart-pie text-indigo-600 mr-2"></i>
+      Account Diagnostics
+    </h2>
+    <div class="grid md:grid-cols-4 gap-4">
+      <div class="text-center p-4 bg-gray-50 rounded-lg">
+        <div class="text-3xl font-bold text-indigo-600">{{ report.active_campaigns or 0 }}</div>
+        <div class="text-sm text-gray-600 mt-1">Active Campaigns</div>
+      </div>
+      <div class="text-center p-4 bg-gray-50 rounded-lg">
+        <div class="text-3xl font-bold text-indigo-600">{{ report.active_ad_groups or 0 }}</div>
+        <div class="text-sm text-gray-600 mt-1">Ad Groups</div>
+      </div>
+      <div class="text-center p-4 bg-gray-50 rounded-lg">
+        <div class="text-3xl font-bold text-indigo-600">{{ report.active_text_ads or 0 }}</div>
+        <div class="text-sm text-gray-600 mt-1">Text Ads</div>
+      </div>
+      <div class="text-center p-4 bg-gray-50 rounded-lg">
+        <div class="text-3xl font-bold text-indigo-600">{{ "{:,}".format(report.active_keywords or 0) }}</div>
+        <div class="text-sm text-gray-600 mt-1">Keywords</div>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-4 gap-4 mt-4">
+      <div class="text-center p-4 bg-gray-50 rounded-lg">
+        <div class="text-3xl font-bold text-green-600">{{ "{:,}".format(report.clicks_90d or 0) }}</div>
+        <div class="text-sm text-gray-600 mt-1">Clicks (90d)</div>
+      </div>
+      <div class="text-center p-4 bg-gray-50 rounded-lg">
+        <div class="text-3xl font-bold text-green-600">{{ "{:,}".format(report.conversions_90d or 0) }}</div>
+        <div class="text-sm text-gray-600 mt-1">Conversions (90d)</div>
+      </div>
+      <div class="text-center p-4 bg-gray-50 rounded-lg">
+        <div class="text-3xl font-bold text-blue-600">${{ "%.2f"|format(report.avg_cpa_90d or 0) }}</div>
+        <div class="text-sm text-gray-600 mt-1">Avg CPA</div>
+      </div>
+      <div class="text-center p-4 bg-gray-50 rounded-lg">
+        <div class="text-3xl font-bold text-blue-600">${{ "{:,.0f}".format(report.avg_monthly_spend or 0) }}</div>
+        <div class="text-sm text-gray-600 mt-1">Monthly Spend</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Performance Sections -->
+  <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+    <h2 class="text-2xl font-bold mb-6">
+      <i class="fa-solid fa-sliders text-indigo-600 mr-2"></i>
+      Performance Analysis
+    </h2>
+
+    {% macro score_bar(label, score, icon="fa-circle") %}
+      {% set color = "bg-red-500" if score < 40 else "bg-yellow-500" if score < 70 else "bg-green-500" %}
+      {% set text_color = "text-red-600" if score < 40 else "text-yellow-600" if score < 70 else "text-green-600" %}
+      <div class="mb-4">
+        <div class="flex justify-between items-center text-sm mb-2">
+          <span class="font-medium"><i class="{{ icon }} mr-2 text-gray-400"></i>{{ label }}</span>
+          <span class="font-bold {{ text_color }}">{{ score|round|int }}%</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-3">
+          <div class="{{ color }} h-3 rounded-full transition-all duration-500" style="width: {{ score|round|int }}%"></div>
+        </div>
+      </div>
+    {% endmacro %}
+
+    <div class="grid md:grid-cols-2 gap-6">
+      <div>
+        {{ score_bar("Wasted Spend", report.wasted_spend_score or 0, "fa-solid fa-dollar-sign") }}
+        {{ score_bar("Text Ad Optimization", report.text_ad_optimization_score or 0, "fa-solid fa-rectangle-ad") }}
+        {{ score_bar("Quality Score Optimization", report.quality_score_optimization_score or 0, "fa-solid fa-star") }}
+        {{ score_bar("CTR Optimization", report.ctr_optimization_score or 0, "fa-solid fa-mouse-pointer") }}
+        {{ score_bar("Account Activity", report.account_activity_score or 0, "fa-solid fa-clock") }}
+      </div>
+      <div>
+        {{ score_bar("Expanded Text Ads", report.expanded_text_ads_score or 0, "fa-solid fa-file-lines") }}
+        {{ score_bar("Long-Tail Keywords", report.long_tail_keywords_score or 0, "fa-solid fa-key") }}
+        {{ score_bar("Impression Share", report.impression_share_score or 0, "fa-solid fa-eye") }}
+        {{ score_bar("Landing Page Optimization", report.landing_page_score or 0, "fa-solid fa-link") }}
+        {{ score_bar("Mobile Advertising", report.mobile_advertising_score or 0, "fa-solid fa-mobile-screen") }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Best Practices Checklist -->
+  {% if report.best_practices %}
+  <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+    <h2 class="text-2xl font-bold mb-4">
+      <i class="fa-solid fa-check-circle text-indigo-600 mr-2"></i>
+      Best Practices Checklist
+    </h2>
+    <div class="grid md:grid-cols-2 gap-4">
+      {% for key, value in report.best_practices.items() %}
+        <div class="flex items-center p-3 rounded-lg border {% if value %}bg-green-50 border-green-200{% else %}bg-red-50 border-red-200{% endif %}">
+          <i class="fa-solid {% if value %}fa-check-circle text-green-600{% else %}fa-times-circle text-red-600{% endif %} text-2xl mr-3"></i>
+          <span class="{% if value %}text-green-800{% else %}text-red-800{% endif %}">
+            {{ key.replace('_', ' ')|title }}
+          </span>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Recommendations -->
+  {% if report.recommendations %}
+  <div class="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6 mb-6">
+    <h2 class="text-2xl font-bold mb-4">
+      <i class="fa-solid fa-lightbulb text-indigo-600 mr-2"></i>
+      Recommendations
+    </h2>
+    <div class="space-y-3">
+      {% for recommendation in report.recommendations %}
+        <div class="flex items-start bg-white rounded-lg p-4 border border-indigo-100">
+          <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3 mt-0.5">
+            <span class="text-indigo-600 font-bold text-sm">{{ loop.index }}</span>
+          </div>
+          <p class="text-gray-700">{{ recommendation }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Charts Section (Placeholder for future implementation) -->
+  <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+    <h2 class="text-2xl font-bold mb-4">
+      <i class="fa-solid fa-chart-bar text-indigo-600 mr-2"></i>
+      Performance Charts
+    </h2>
+    <div class="text-center py-12 text-gray-500">
+      <i class="fa-solid fa-chart-pie text-6xl mb-4 text-gray-300"></i>
+      <p class="text-lg">Charts and visualizations coming soon</p>
+      <p class="text-sm mt-2">Quality Score distribution, CTR by position, device breakdown, and more</p>
+    </div>
+  </div>
+
+  <!-- Report Details -->
+  <div class="bg-gray-50 rounded-lg p-4 text-sm text-gray-600 mb-8">
+    <div class="flex flex-wrap gap-6">
+      <div>
+        <span class="font-medium">Report ID:</span> {{ report.id }}
+      </div>
+      <div>
+        <span class="font-medium">Customer ID:</span> {{ report.google_ads_customer_id }}
+      </div>
+      <div>
+        <span class="font-medium">Date Range:</span>
+        {{ report.date_range_start.strftime('%b %d, %Y') }} - {{ report.date_range_end.strftime('%b %d, %Y') }}
+      </div>
+      <div>
+        <span class="font-medium">Views:</span> {{ report.view_count }}
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl p-8 text-center mb-8">
+    <h2 class="text-3xl font-bold mb-3">Ready to Improve Your Google Ads?</h2>
+    <p class="text-xl text-indigo-100 mb-6 max-w-2xl mx-auto">
+      FieldSprout can help you implement these recommendations and boost your ROI.
+    </p>
+    {% if current_user.is_authenticated %}
+      <a href="{{ url_for('account_bp.dashboard') }}"
+         class="inline-flex items-center px-8 py-4 bg-white text-indigo-700 font-bold text-lg rounded-xl hover:bg-blue-50 transition shadow-lg">
+        Go to Dashboard
+        <i class="fa-solid fa-arrow-right ml-2"></i>
+      </a>
+    {% else %}
+      <a href="{{ url_for('auth_bp.register') }}"
+         class="inline-flex items-center px-8 py-4 bg-white text-indigo-700 font-bold text-lg rounded-xl hover:bg-blue-50 transition shadow-lg">
+        Start Free Trial
+        <i class="fa-solid fa-arrow-right ml-2"></i>
+      </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

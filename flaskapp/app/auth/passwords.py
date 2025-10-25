@@ -60,7 +60,7 @@ def check_password_strength(
     pwd: str,
     email: str = "",
     *,
-    min_length: int = 12,
+    min_length: int = 14,
     require_upper: bool = True,
     require_lower: bool = True,
     require_digit: bool = True,

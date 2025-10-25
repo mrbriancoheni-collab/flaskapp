@@ -1,11 +1,8 @@
 # app/services/crypto.py
-# Legacy compatibility wrapper - now uses crypto_utils for all encryption
-# This ensures all encryption uses the same system with better error handling
-
 import os
 from cryptography.fernet import Fernet
 
-# Check for key at module load (backward compatibility with strict behavior)
+# Load key from environment
 _key = os.getenv("APP_FERNET_KEY")
 
 if not _key:
@@ -23,14 +20,10 @@ except Exception as e:
 
 def encrypt(s: str) -> str:
     """Encrypt a string into a Fernet token."""
-    # Use the unified encryption system
-    from app.crypto_utils import encrypt_string
-    return encrypt_string(s)
+    return fernet.encrypt(s.encode()).decode()
 
 
 def decrypt(s: str) -> str:
     """Decrypt a Fernet token back to a string."""
-    # Use the unified encryption system
-    from app.crypto_utils import decrypt_string
-    return decrypt_string(s)
+    return fernet.decrypt(s.encode()).decode()
 

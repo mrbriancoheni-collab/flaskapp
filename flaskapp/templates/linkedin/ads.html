@@ -1,0 +1,291 @@
+{# templates/linkedin/ads.html #}
+{% extends "base_app.html" %}
+{% set SECTION = 'linkedin' %}
+{% block title %}LinkedIn Ads Optimizer{% endblock %}
+
+{% block content %}
+{% set _connected = (connected if connected is defined else false) %}
+{% set _ai_connected = (ai_connected if ai_connected is defined else false) %}
+{% set _data = (ads_data if ads_data is defined and ads_data else {}) %}
+
+<div class="max-w-7xl mx-auto space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold">LinkedIn Ads Optimizer</h1>
+      <p class="text-gray-500">
+        {% if _connected %}
+          Managing <span class="font-medium">{{ _data.account_name or 'LinkedIn Ads Account' }}</span>.
+        {% else %}
+          <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 text-[11px] mr-2">Demo Mode</span>
+          Connect your LinkedIn account to manage live campaigns.
+        {% endif %}
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center rounded-full {{ 'bg-green-50 text-green-700 border border-green-200' if _ai_connected else 'bg-amber-50 text-amber-700 border border-amber-200' }} px-2 py-0.5 text-xs">
+        <i class="fa-solid fa-robot mr-1"></i> AI {{ 'enabled' if _ai_connected else 'disabled' }}
+      </span>
+      {% if _connected %}
+        <button class="rounded-md border px-3 py-2 hover:bg-gray-50" type="button">
+          <i class="fa-solid fa-plug-circle-xmark mr-2"></i>Disconnect
+        </button>
+      {% else %}
+        <button class="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700" type="button" disabled>
+          <i class="fa-brands fa-linkedin"></i> Connect LinkedIn (Coming Soon)
+        </button>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- AI Optimization Panel -->
+  <div class="rounded-lg border bg-white p-4 space-y-3">
+    <div class="flex items-center justify-between gap-3">
+      <div class="text-sm font-medium">
+        FieldSprout AI – LinkedIn Ads Review
+        {% if _ai_connected %}
+          <span class="ml-2 inline-flex items-center rounded-full bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 text-[11px]">Connected</span>
+        {% else %}
+          <span class="ml-2 inline-flex items-center rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-[11px]">AI key missing</span>
+        {% endif %}
+      </div>
+      <div class="text-xs text-gray-500">
+        {% if _connected %}Uses your live account when wired.{% else %}Using demo data until connected.{% endif %}
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between">
+      <div class="text-xs text-gray-500">
+        <i class="fa-solid fa-lock mr-1"></i> Server-side prompt; nothing sensitive in the DOM.
+      </div>
+      <button id="runLinkedInAdsAI"
+              type="button"
+              class="rounded-md bg-blue-600 px-3 py-2 text-white hover:bg-blue-700">
+        <i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Run AI Review
+      </button>
+    </div>
+
+    <div id="linkedinAdsAiOut" class="hidden border rounded-md p-3 bg-gray-50 mt-3">
+      <div class="space-y-3">
+        <div>
+          <div class="text-xs text-gray-500 mb-1">Summary</div>
+          <div id="linkedinAdsAiSummary" class="text-sm"></div>
+        </div>
+        <div>
+          <div class="text-xs text-gray-500 mb-1">Recommendations</div>
+          <div id="linkedinAdsAiRecommendations" class="space-y-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Campaigns Overview -->
+  {% if _data.campaigns %}
+  <div class="rounded-lg border bg-white overflow-hidden">
+    <div class="p-4 border-b bg-gray-50">
+      <h2 class="font-semibold">Active Campaigns</h2>
+      <p class="text-xs text-gray-500 mt-1">{{ _data.campaigns|length }} campaign(s)</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b">
+          <tr>
+            <th class="px-4 py-3 text-left font-medium text-gray-700">Campaign Name</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-700">Type</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-700">Status</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-700">Daily Budget</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-700">Objective</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-700">Targeting</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for campaign in _data.campaigns %}
+          <tr class="border-b hover:bg-gray-50">
+            <td class="px-4 py-3 font-medium">{{ campaign.name }}</td>
+            <td class="px-4 py-3">
+              <span class="inline-flex items-center rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 text-[11px]">
+                {{ campaign.type }}
+              </span>
+            </td>
+            <td class="px-4 py-3">
+              {% if campaign.status == 'Active' %}
+                <span class="inline-flex items-center rounded-full bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 text-[11px]">
+                  <i class="fa-solid fa-circle-check mr-1"></i>Active
+                </span>
+              {% else %}
+                <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 text-[11px]">
+                  <i class="fa-solid fa-circle-pause mr-1"></i>Paused
+                </span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3">${{ campaign.daily_budget }}</td>
+            <td class="px-4 py-3">{{ campaign.objective }}</td>
+            <td class="px-4 py-3 text-gray-600">{{ campaign.targeting }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Ad Creatives Performance -->
+  {% if _data.creatives %}
+  <div class="rounded-lg border bg-white overflow-hidden">
+    <div class="p-4 border-b bg-gray-50">
+      <h2 class="font-semibold">Ad Creatives Performance</h2>
+      <p class="text-xs text-gray-500 mt-1">{{ _data.creatives|length }} active creative(s)</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b">
+          <tr>
+            <th class="px-4 py-3 text-left font-medium text-gray-700">Headline</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-700">Format</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-700">Intro Text</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-700">Impressions</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-700">Clicks</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-700">CTR</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-700">Leads</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for creative in _data.creatives %}
+          <tr class="border-b hover:bg-gray-50">
+            <td class="px-4 py-3 font-medium">{{ creative.headline }}</td>
+            <td class="px-4 py-3">
+              <span class="inline-flex items-center rounded-full bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 text-[11px]">
+                {{ creative.format }}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-gray-600 max-w-xs truncate">{{ creative.intro_text }}</td>
+            <td class="px-4 py-3 text-right">{{ creative.impressions|default(0)|string|replace(',', '') }}</td>
+            <td class="px-4 py-3 text-right">{{ creative.clicks|default(0) }}</td>
+            <td class="px-4 py-3 text-right">
+              <span class="{% if creative.ctr|replace('%','')|float >= 1.5 %}text-green-600 font-medium{% endif %}">
+                {{ creative.ctr }}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-right">
+              <span class="font-medium text-blue-600">{{ creative.leads }}</span>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Lead Forms -->
+  {% if _data.lead_forms %}
+  <div class="rounded-lg border bg-white overflow-hidden">
+    <div class="p-4 border-b bg-gray-50">
+      <h2 class="font-semibold">Lead Gen Forms</h2>
+      <p class="text-xs text-gray-500 mt-1">{{ _data.lead_forms|length }} form(s)</p>
+    </div>
+    <div class="p-4 space-y-3">
+      {% for form in _data.lead_forms %}
+        <div class="border rounded-lg p-4 hover:bg-gray-50">
+          <div class="flex items-center justify-between mb-2">
+            <div class="font-medium">{{ form.name }}</div>
+            <div class="text-sm">
+              <span class="text-gray-500">Submissions:</span>
+              <span class="font-semibold text-blue-600">{{ form.submissions }}</span>
+            </div>
+          </div>
+          <div class="text-xs text-gray-600 mb-2">
+            Fields: {{ form.fields|join(', ') }}
+          </div>
+          <div class="text-xs">
+            <span class="text-gray-500">Completion Rate:</span>
+            <span class="font-medium {% if form.completion_rate|replace('%','')|float >= 60 %}text-green-600{% else %}text-amber-600{% endif %}">
+              {{ form.completion_rate }}
+            </span>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Quick Tips -->
+  <div class="rounded-lg border bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+    <h3 class="font-semibold text-blue-900 mb-3">
+      <i class="fa-solid fa-lightbulb mr-2"></i>LinkedIn Ads Best Practices
+    </h3>
+    <ul class="space-y-2 text-sm text-blue-800">
+      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Target decision-makers based on job title and seniority</li>
+      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Use LinkedIn Lead Gen Forms to reduce friction and increase conversions</li>
+      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Test both Sponsored Content and Sponsored InMail for different objectives</li>
+      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Include social proof (certifications, customer logos) in your creatives</li>
+      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>A/B test different value propositions and calls-to-action</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+// AI Optimization for LinkedIn Ads
+document.getElementById('runLinkedInAdsAI')?.addEventListener('click', async function() {
+  const btn = this;
+  const output = document.getElementById('linkedinAdsAiOut');
+  const summary = document.getElementById('linkedinAdsAiSummary');
+  const recommendations = document.getElementById('linkedinAdsAiRecommendations');
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Analyzing...';
+
+  try {
+    const response = await fetch('{{ url_for("linkedin_bp.ads_optimize") }}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      alert('Error: ' + data.error);
+      return;
+    }
+
+    // Display results
+    output.classList.remove('hidden');
+    summary.textContent = data.summary || 'No summary available';
+
+    recommendations.innerHTML = '';
+    if (data.recommendations && data.recommendations.length > 0) {
+      data.recommendations.forEach(rec => {
+        const div = document.createElement('div');
+        div.className = 'p-3 rounded border bg-white';
+
+        const priorityColors = {
+          high: 'bg-red-50 text-red-700 border-red-200',
+          medium: 'bg-amber-50 text-amber-700 border-amber-200',
+          low: 'bg-blue-50 text-blue-700 border-blue-200'
+        };
+
+        div.innerHTML = `
+          <div class="flex items-start justify-between gap-2 mb-1">
+            <div class="font-medium text-sm">${rec.title}</div>
+            <span class="inline-flex items-center rounded-full ${priorityColors[rec.priority] || 'bg-gray-100 text-gray-700 border-gray-200'} px-2 py-0.5 text-[11px] shrink-0">
+              ${rec.priority}
+            </span>
+          </div>
+          <div class="text-xs text-gray-600">${rec.description}</div>
+        `;
+
+        recommendations.appendChild(div);
+      });
+    }
+
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Failed to generate AI recommendations');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Run AI Review';
+  }
+});
+</script>
+{% endblock %}

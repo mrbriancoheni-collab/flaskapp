@@ -317,6 +317,7 @@ def create_app():
                 f"wp_bp.{name}",
                 f"google_bp.{name}",
                 f"gmb_bp.{name}",
+                f"ads_grader_bp.{name}",
                 # optional legacy prefixes:
                 f"auth.{name}",
                 f"account.{name}",
@@ -408,20 +409,6 @@ def create_app():
             app.logger.warning(f"Could not exempt Stripe webhook from CSRF: {e}")
     except Exception:
         app.logger.exception("Failed to import account_bp")
-
-    try:
-        from app.billing.routes import billing_bp
-        app.register_blueprint(billing_bp)
-        app.logger.info("billing_bp registered at /billing")
-    except Exception:
-        app.logger.exception("Failed to register billing_bp")
-
-    try:
-        from app.team import team_bp
-        app.register_blueprint(team_bp)
-        app.logger.info("team_bp registered at /team")
-    except Exception:
-        app.logger.exception("Failed to register team_bp")
 
     try:
         from app.onboarding_bp import onboarding_bp
@@ -532,6 +519,13 @@ def create_app():
         app.logger.exception("Failed to register reports_bp")
 
     try:
+        from app.linkedin import linkedin_bp
+        app.register_blueprint(linkedin_bp)  # url_prefix defined in blueprint
+        app.logger.info("linkedin_bp registered at /account/linkedin")
+    except Exception:
+        app.logger.exception("Failed to register linkedin_bp")
+
+    try:
         from app.fbads.data_deletion import data_deletion_bp
         app.register_blueprint(data_deletion_bp, url_prefix="/account")
         from app.fbads.data_governance import data_bp
@@ -573,6 +567,14 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register admin_bp")
 
+    # --- Google Ads Grader (free for all users) -----------------------------
+    try:
+        from app.ads_grader import ads_grader_bp
+        app.register_blueprint(ads_grader_bp)  # url_prefix set in blueprint (/ads-grader)
+        app.logger.info("ads_grader_bp registered at /ads-grader")
+    except Exception:
+        app.logger.exception("Failed to register ads_grader_bp")
+
     # ---- Apply CSRF exemptions AFTER blueprints are registered -------------
     try:
         for ep in (
@@ -590,10 +592,10 @@ def create_app():
 
     # ---- Request hooks (auth + impersonation) ------------------------------
     try:
-        from app.auth.session_utils import before_request_hook
+        from app.auth.session import before_request_hook
         app.before_request(before_request_hook)
     except Exception:
-        app.logger.exception("Failed to register before_request_hook (auth/session_utils)")
+        app.logger.exception("Failed to register before_request_hook (auth/session)")
 
     # ---- Post-registration safety stubs ------------------------------------
     if "reports_bp.index" not in app.view_functions:
@@ -744,68 +746,6 @@ def create_app():
         from app.cron_tasks import run_daily
         run_daily(app, db)
 
-    # ---- Performance metrics commands --------------------------------------
-    @app.cli.command("pull-historical-data")
-    def pull_historical_data_command():
-        """
-        Pull historical performance data from all connected APIs.
-        Usage: flask pull-historical-data --account-id 1 --months 12
-        """
-        import click
-        account_id = click.prompt('Account ID', type=int)
-        months = click.prompt('Number of months to pull', type=int, default=12)
-        force = click.confirm('Force re-import existing data?', default=False)
-
-        from app.services.historical_data_pull import pull_all_historical_data
-
-        click.echo(f"\n🔄 Pulling {months} months of historical data for account {account_id}...")
-        click.echo("This may take a few minutes...\n")
-
-        with app.app_context():
-            results = pull_all_historical_data(account_id, months=months, force=force)
-
-        click.echo("\n" + "="*60)
-        click.echo(f"✅ Historical Data Pull Complete!")
-        click.echo("="*60)
-        click.echo(f"Period: {results.get('period')}")
-        click.echo(f"Total records imported: {results.get('total_imported', 0)}")
-        click.echo("\nResults by channel:")
-
-        for channel, result in results.get('channels', {}).items():
-            status = "✅" if result.get('success') else "❌"
-            imported = result.get('imported', 0)
-            error = result.get('error', '')
-
-            click.echo(f"  {status} {channel:20s}: {imported:4d} records" +
-                      (f" (Error: {error})" if error else ""))
-
-        click.echo("\n")
-
-    @app.cli.command("check-historical-data")
-    def check_historical_data_command():
-        """Check what historical data exists for an account."""
-        import click
-        account_id = click.prompt('Account ID', type=int)
-
-        from app.services.historical_data_pull import check_existing_data
-
-        channels = ['google_ads', 'google_analytics', 'search_console', 'glsa', 'gmb', 'fbads']
-
-        click.echo(f"\n📊 Historical Data Status for Account {account_id}")
-        click.echo("="*60)
-
-        with app.app_context():
-            for channel in channels:
-                data = check_existing_data(account_id, channel)
-
-                if data['has_data']:
-                    click.echo(f"✅ {channel:20s}: {data['count']:5d} records " +
-                              f"({data['earliest_date']} to {data['latest_date']})")
-                else:
-                    click.echo(f"❌ {channel:20s}: No data")
-
-        click.echo("\n")
-
     # ---- CSRF error handler (friendly UX) ----------------------------------
     if CSRFError is not None:
         @app.errorhandler(CSRFError)
@@ -828,52 +768,6 @@ def create_app():
     def inject_app_and_config():
         from flask import current_app
         return {"app": current_app, "config": current_app.config}
-
-    # ---- Email configuration validation ------------------------------------
-    def _check_email_config():
-        """Check if email is properly configured and warn if not."""
-        mail_server = app.config.get("MAIL_SERVER")
-        mail_sender = app.config.get("MAIL_DEFAULT_SENDER")
-
-        if not mail_server or not mail_sender:
-            app.logger.warning(
-                "⚠️  Email not configured! Set MAIL_SERVER and MAIL_DEFAULT_SENDER. "
-                "Email verification and password reset will not work."
-            )
-            return False
-
-        # Check for port/protocol mismatch
-        mail_port = app.config.get("MAIL_PORT", 587)
-        use_ssl = app.config.get("MAIL_USE_SSL", False)
-        use_tls = app.config.get("MAIL_USE_TLS", True)
-
-        if mail_port == 465 and not use_ssl:
-            app.logger.warning(
-                "⚠️  Email config issue: Port 465 requires MAIL_USE_SSL=1"
-            )
-        elif mail_port == 587 and not use_tls:
-            app.logger.warning(
-                "⚠️  Email config issue: Port 587 typically requires MAIL_USE_TLS=1"
-            )
-
-        app.logger.info(f"✓ Email configured: {mail_sender} via {mail_server}:{mail_port}")
-        return True
-
-    _check_email_config()
-
-    # Initialize error tracking and monitoring
-    try:
-        from app.monitoring import init_sentry
-        init_sentry(app)
-    except Exception:
-        app.logger.exception("Failed to initialize Sentry monitoring")
-
-    # Initialize background job scheduler
-    try:
-        from app.background_jobs import init_scheduler
-        init_scheduler(app)
-    except Exception:
-        app.logger.exception("Failed to initialize background job scheduler")
 
     return app
 

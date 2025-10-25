@@ -1,0 +1,135 @@
+{% extends "base_admin.html" %}
+{% block title %}SERP Scraper — Lead Generation{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold">Google SERP Scraper</h1>
+    <p class="text-gray-600 mt-1">Find home services businesses from Google search results and add them to your CRM as potential leads.</p>
+  </div>
+
+  <!-- Info Card -->
+  <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+    <div class="flex gap-3">
+      <div class="text-blue-600 text-xl">ℹ️</div>
+      <div class="text-sm text-blue-900">
+        <p class="font-semibold mb-1">How it works:</p>
+        <ul class="list-disc pl-5 space-y-1">
+          <li>Searches Google for businesses in your target service category and location</li>
+          <li>Extracts business names, domains, phone numbers from Local Service Ads, PPC ads, and organic results</li>
+          <li>Automatically de-duplicates against existing CRM contacts</li>
+          <li>Adds new leads to your CRM with "stranger" stage</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scraper Form -->
+  <div class="bg-white border rounded-xl p-6">
+    <form method="post" action="{{ url_for('admin_bp.serp_scraper_run') }}" class="space-y-4">
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label for="service_type" class="block text-sm font-medium text-gray-700 mb-1">Service Type *</label>
+          <input
+            type="text"
+            id="service_type"
+            name="service_type"
+            required
+            placeholder="e.g., plumber, hvac, electrician"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <p class="text-xs text-gray-500 mt-1">What type of service business to search for</p>
+        </div>
+
+        <div>
+          <label for="location" class="block text-sm font-medium text-gray-700 mb-1">Location *</label>
+          <input
+            type="text"
+            id="location"
+            name="location"
+            required
+            placeholder="e.g., Denver, CO"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <p class="text-xs text-gray-500 mt-1">City and state to search in</p>
+        </div>
+      </div>
+
+      <div>
+        <label for="max_results" class="block text-sm font-medium text-gray-700 mb-1">Maximum Results</label>
+        <input
+          type="number"
+          id="max_results"
+          name="max_results"
+          value="20"
+          min="1"
+          max="50"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+        <p class="text-xs text-gray-500 mt-1">Max 50 results per search (default: 20)</p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <input type="checkbox" id="auto_add" name="auto_add" class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+        <label for="auto_add" class="text-sm font-medium text-gray-700">
+          Automatically add all new leads to CRM
+        </label>
+      </div>
+      <p class="text-xs text-gray-500 ml-6">If unchecked, you'll review results before adding to CRM</p>
+
+      <div class="flex gap-3 pt-4">
+        <button
+          type="submit"
+          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          Start Scraping
+        </button>
+        <a
+          href="{{ url_for('admin_bp.crm_list') }}"
+          class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+        >
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Common Searches -->
+  <div class="mt-6 bg-white border rounded-xl p-6">
+    <h3 class="font-semibold mb-3">Quick Searches</h3>
+    <div class="grid md:grid-cols-2 gap-2">
+      <a href="javascript:void(0)" onclick="fillForm('plumber', 'Denver, CO')" class="p-2 text-sm border rounded hover:bg-gray-50">
+        🔧 Plumbers in Denver
+      </a>
+      <a href="javascript:void(0)" onclick="fillForm('hvac', 'Phoenix, AZ')" class="p-2 text-sm border rounded hover:bg-gray-50">
+        ❄️ HVAC in Phoenix
+      </a>
+      <a href="javascript:void(0)" onclick="fillForm('electrician', 'Austin, TX')" class="p-2 text-sm border rounded hover:bg-gray-50">
+        ⚡ Electricians in Austin
+      </a>
+      <a href="javascript:void(0)" onclick="fillForm('roofing', 'Seattle, WA')" class="p-2 text-sm border rounded hover:bg-gray-50">
+        🏠 Roofing in Seattle
+      </a>
+      <a href="javascript:void(0)" onclick="fillForm('landscaping', 'Portland, OR')" class="p-2 text-sm border rounded hover:bg-gray-50">
+        🌳 Landscaping in Portland
+      </a>
+      <a href="javascript:void(0)" onclick="fillForm('pest control', 'Miami, FL')" class="p-2 text-sm border rounded hover:bg-gray-50">
+        🐛 Pest Control in Miami
+      </a>
+    </div>
+  </div>
+
+  <!-- Disclaimer -->
+  <div class="mt-6 p-4 bg-gray-50 border rounded-lg text-xs text-gray-600">
+    <p class="font-semibold mb-1">Legal Disclaimer:</p>
+    <p>This tool scrapes publicly available Google search results for research and lead generation purposes. It respects robots.txt, uses delays between requests, and does not attempt to bypass any protections. Use responsibly and in compliance with Google's Terms of Service and applicable laws.</p>
+  </div>
+</div>
+
+<script>
+function fillForm(service, location) {
+  document.getElementById('service_type').value = service;
+  document.getElementById('location').value = location;
+}
+</script>
+{% endblock %}

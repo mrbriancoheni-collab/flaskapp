@@ -1,0 +1,335 @@
+{% extends "base_public.html" %}
+{% set SECTION = 'solutions' %}
+{% block title %}Google Business Profile Management — Dominate Local Search{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 bg-gradient-to-b from-primary-50 via-white to-white"></div>
+  <div class="container-max relative py-20 lg:py-28 text-center">
+    <span class="badge">📍 Google Business Profile</span>
+    <h1 class="mt-6 text-4xl md:text-6xl font-extrabold tracking-tight">
+      Dominate the <span class="text-primary-700">Local Map Pack</span>
+    </h1>
+    <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+      Your Google Business Profile is your most valuable marketing asset. FieldSprout optimizes everything—posts, photos, Q&A, attributes, and more—to keep you in the top 3 map results.
+    </p>
+    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary">Optimize My GBP</a>
+      {% elif has_endpoint('register') %}
+        <a href="{{ url_for(ep('register')) }}" class="btn btn-primary">Optimize My GBP</a>
+      {% else %}
+        <a href="/signup" class="btn btn-primary">Optimize My GBP</a>
+      {% endif %}
+      <a href="#how-it-works" class="btn btn-outline">See How It Works</a>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-16">
+  <div class="container-max">
+    <div class="grid md:grid-cols-3 gap-8 text-center text-white">
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">46%</div>
+        <p class="mt-2 text-gray-300">of all Google searches are local</p>
+      </div>
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">76%</div>
+        <p class="mt-2 text-gray-300">visit business within 24hrs of mobile search</p>
+      </div>
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">3x</div>
+        <p class="mt-2 text-gray-300">more views with optimized GBP</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works" class="section">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto">
+      <span class="badge">How It Works</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Full-service GBP optimization</h2>
+      <p class="mt-4 text-gray-600">We handle every aspect of your Google Business Profile so you can focus on running your business.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-3 gap-6">
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-14 w-14 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center text-2xl font-bold">1</div>
+        <h3 class="mt-4 font-semibold text-xl">Audit & Claim</h3>
+        <p class="mt-3 text-gray-600">We audit your existing profile, claim it if needed, and fix critical errors holding back your visibility.</p>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-14 w-14 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center text-2xl font-bold">2</div>
+        <h3 class="mt-4 font-semibold text-xl">Optimize Everything</h3>
+        <p class="mt-3 text-gray-600">Categories, attributes, services, photos, hours, description—all optimized to match high-intent local searches.</p>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-14 w-14 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center text-2xl font-bold">3</div>
+        <h3 class="mt-4 font-semibold text-xl">Ongoing Management</h3>
+        <p class="mt-3 text-gray-600">Weekly posts, monthly photos, Q&A monitoring, and review responses to keep your profile fresh and engaging.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY GBP MATTERS -->
+<section class="section bg-gradient-to-b from-white to-primary-50/50">
+  <div class="container-max">
+    <div class="rounded-3xl bg-white p-8 md:p-12 shadow-soft border border-gray-100">
+      <div class="grid lg:grid-cols-2 gap-10 items-center">
+        <div>
+          <span class="badge">Why GBP Matters</span>
+          <h2 class="mt-4 text-3xl md:text-4xl font-extrabold">Your free billboard on Google</h2>
+          <p class="mt-4 text-gray-600">A fully optimized Google Business Profile can generate hundreds of calls and directions every month—at zero ad cost. It's the #1 ROI driver for local businesses.</p>
+          <ul class="mt-6 space-y-4">
+            <li class="flex gap-3">
+              <span class="text-primary-700 text-xl">✓</span>
+              <div>
+                <strong class="block">Map Pack Placement</strong>
+                <span class="text-gray-600">Show up in the top 3 results when customers search "[your service] near me"</span>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-700 text-xl">✓</span>
+              <div>
+                <strong class="block">Direct Actions</strong>
+                <span class="text-gray-600">Click-to-call, directions, booking, and messaging right from search results</span>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-700 text-xl">✓</span>
+              <div>
+                <strong class="block">Trust & Social Proof</strong>
+                <span class="text-gray-600">Reviews, photos, and posts build credibility before customers even contact you</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="grid grid-cols-2 gap-6">
+          <div class="text-center p-6 rounded-2xl bg-primary-50">
+            <div class="text-4xl font-extrabold text-primary-700">88%</div>
+            <p class="text-sm text-gray-600 mt-2">of consumers trust online reviews as much as personal recommendations</p>
+          </div>
+          <div class="text-center p-6 rounded-2xl bg-primary-50">
+            <div class="text-4xl font-extrabold text-primary-700">5x</div>
+            <p class="text-sm text-gray-600 mt-2">more likely to be considered with complete GBP</p>
+          </div>
+          <div class="text-center p-6 rounded-2xl bg-primary-50">
+            <div class="text-4xl font-extrabold text-primary-700">70%</div>
+            <p class="text-sm text-gray-600 mt-2">more likely to visit with photos</p>
+          </div>
+          <div class="text-center p-6 rounded-2xl bg-primary-50">
+            <div class="text-4xl font-extrabold text-primary-700">Free</div>
+            <p class="text-sm text-gray-600 mt-2">Zero cost to claim and optimize</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto">
+      <span class="badge">What We Optimize</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Every ranking signal, handled</h2>
+      <p class="mt-4 text-gray-600">Google uses 50+ signals to rank local businesses. We optimize all of them so you dominate your market.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-2 gap-8">
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">🏷️</div>
+        <h3 class="mt-4 font-semibold text-xl">Category & Service Optimization</h3>
+        <p class="mt-3 text-gray-600">Choose the perfect primary category and secondary categories. Add all relevant services to capture every search variation.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Primary category selection (highest impact)</li>
+          <li>Up to 9 secondary categories</li>
+          <li>Service menu with keyword-rich descriptions</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">📸</div>
+        <h3 class="mt-4 font-semibold text-xl">Photo & Video Management</h3>
+        <p class="mt-3 text-gray-600">High-quality photos of your team, vehicles, work, and office. Fresh photos every month signal an active, trusted business.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Logo, cover photo, and exterior shots</li>
+          <li>Team photos and work-in-progress images</li>
+          <li>Monthly fresh content uploads</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">✍️</div>
+        <h3 class="mt-4 font-semibold text-xl">Weekly Google Posts</h3>
+        <p class="mt-3 text-gray-600">Stay top-of-mind with offers, updates, and event posts. Google rewards active profiles with higher visibility.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Promotional posts (offers & discounts)</li>
+          <li>What's New posts (updates & news)</li>
+          <li>Event posts (seasonal campaigns)</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">❓</div>
+        <h3 class="mt-4 font-semibold text-xl">Q&A Management</h3>
+        <p class="mt-3 text-gray-600">Monitor and answer customer questions. Seed your own Q&A with common questions to control the narrative.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>24-hour response monitoring</li>
+          <li>Preemptive Q&A seeding</li>
+          <li>Keyword-optimized answers</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">🔧</div>
+        <h3 class="mt-4 font-semibold text-xl">Attributes & Details</h3>
+        <p class="mt-3 text-gray-600">Set all relevant attributes—veteran-owned, LGBTQ+ friendly, women-led, appointment-only, wheelchair accessible, etc.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Identity & ownership attributes</li>
+          <li>Accessibility & amenities</li>
+          <li>Service options (online, in-person, etc.)</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">⭐</div>
+        <h3 class="mt-4 font-semibold text-xl">Review Management</h3>
+        <p class="mt-3 text-gray-600">Respond to every review—positive and negative—within 24 hours. Build trust and show future customers you care.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>AI-powered response templates</li>
+          <li>Sentiment analysis & escalation</li>
+          <li>Review generation automation</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="section bg-gradient-to-b from-white to-primary-50/30">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <span class="badge">Customer Success</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">GBP optimization wins</h2>
+      <p class="mt-4 text-gray-600">Local businesses share how optimizing their Google Business Profile transformed their lead flow.</p>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"Went from page 2 to #1 in the map pack in 45 days. FieldSprout's weekly posts and photo updates made the difference. Calls up 3x."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">CT</div>
+          <div>
+            <p class="font-semibold">Carlos Torres</p>
+            <p class="text-sm text-gray-600">Landscaping Services, San Diego CA</p>
+          </div>
+        </footer>
+      </div>
+
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"I had no idea GBP was so powerful. FieldSprout fixed 12 errors I didn't know existed. Now I get 200+ profile views per week and 40+ calls/month from Maps."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">NK</div>
+          <div>
+            <p class="font-semibold">Nina Kapoor</p>
+            <p class="text-sm text-gray-600">House Cleaning, Charlotte NC</p>
+          </div>
+        </footer>
+      </div>
+
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"The Q&A seeding was genius. FieldSprout added the 10 questions customers always ask, with perfect answers. Now I rank for 'best HVAC near me.'"</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">JB</div>
+          <div>
+            <p class="font-semibold">James Baker</p>
+            <p class="text-sm text-gray-600">HVAC Specialists, Phoenix AZ</p>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST SIGNALS -->
+<section class="section">
+  <div class="container-max">
+    <div class="rounded-3xl bg-gradient-to-br from-primary-50 to-primary-100 p-8 md:p-12">
+      <div class="grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          <h3 class="text-2xl md:text-4xl font-extrabold">1,800+ Google Business Profiles optimized</h3>
+          <p class="mt-4 text-gray-700">We've helped local businesses generate over 200K organic profile views and 45K+ map clicks per month—completely free.</p>
+        </div>
+        <div class="grid grid-cols-2 gap-6">
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">200K+</div>
+            <p class="text-sm text-gray-600 mt-1">Monthly profile views</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">45K+</div>
+            <p class="text-sm text-gray-600 mt-1">Monthly direction clicks</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">3.2x</div>
+            <p class="text-sm text-gray-600 mt-1">Avg increase in calls</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">100%</div>
+            <p class="text-sm text-gray-600 mt-1">Google-compliant tactics</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 py-16">
+  <div class="container-max relative text-center text-white">
+    <h2 class="text-3xl md:text-5xl font-extrabold">Own the map pack in your market</h2>
+    <p class="mt-4 text-lg text-primary-100 max-w-2xl mx-auto">A fully optimized Google Business Profile is the fastest way to generate free leads. Let's make it happen.</p>
+    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Get My Free GBP Audit</a>
+      {% elif has_endpoint('register') %}
+        <a href="{{ url_for(ep('register')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Get My Free GBP Audit</a>
+      {% else %}
+        <a href="/signup" class="btn bg-white text-primary-700 hover:bg-gray-100">Get My Free GBP Audit</a>
+      {% endif %}
+      <a href="#how-it-works" class="btn btn-outline border-white text-white hover:bg-white/10">Learn More</a>
+    </div>
+    <p class="mt-4 text-sm text-primary-200">Free audit • No credit card required • See results in 30 days</p>
+  </div>
+</section>
+
+{% endblock %}

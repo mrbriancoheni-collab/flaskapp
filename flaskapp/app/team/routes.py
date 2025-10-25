@@ -19,7 +19,7 @@ from app import db
 from app.models import User, Account
 from app.models_team import TeamInvite, TeamMember, can_add_team_member, get_account_seat_usage, get_account_seat_limit
 from app.models_audit import AuditAction, log_team_action, log_subscription_action
-from app.auth.session_utils import login_required
+from app.auth.session_utils_backup import login_required
 from app.auth.permissions import require_permission, require_admin, check_seat_limit, can_manage_user
 
 

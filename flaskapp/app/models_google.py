@@ -16,7 +16,7 @@ class GoogleOAuthToken(db.Model):
     # product: 'ga' (Analytics) or 'gsc' (Search Console)
     product = db.Column(db.String(10), nullable=False)
 
-    # ENCRYPTED serialized credentials json (access_token, refresh_token, etc.)
+    # raw serialized credentials json (access_token, refresh_token, etc.)
     credentials_json = db.Column(LONGTEXT, nullable=False)
 
     # optional selections
@@ -35,35 +35,14 @@ class GoogleOAuthToken(db.Model):
         return q.order_by(GoogleOAuthToken.updated_at.desc()).first()
 
     def set_credentials(self, creds_json: Dict[str, Any]):
-        """Store credentials in encrypted format."""
-        from app.crypto_utils import encrypt_json_credentials
         import json
-        try:
-            self.credentials_json = encrypt_json_credentials(creds_json)
-        except Exception as e:
-            # Fallback to plaintext if encryption not configured (dev mode)
-            current_app.logger.warning(f"Failed to encrypt Google OAuth credentials: {e}")
-            self.credentials_json = json.dumps(creds_json)
+        self.credentials_json = json.dumps(creds_json)
 
     def get_credentials(self) -> Optional[dict]:
-        """Retrieve and decrypt credentials, with backward compatibility for plaintext."""
-        from app.crypto_utils import decrypt_json_credentials, is_encrypted
         import json
-
-        if not self.credentials_json:
-            return None
-
         try:
-            if is_encrypted(self.credentials_json):
-                return decrypt_json_credentials(self.credentials_json)
-            else:
-                # Legacy plaintext credentials - log warning for migration tracking
-                current_app.logger.warning(
-                    f"GoogleOAuthToken {self.id} has unencrypted credentials (product={self.product})"
-                )
-                return json.loads(self.credentials_json)
-        except Exception as e:
-            current_app.logger.error(f"Failed to decrypt GoogleOAuthToken {self.id}: {e}")
+            return json.loads(self.credentials_json or "{}")
+        except Exception:
             return None
 
 

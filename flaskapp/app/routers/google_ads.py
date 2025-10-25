@@ -48,17 +48,12 @@ def connect_save(
     db: Session = Depends(get_db),
 ):
     # store once per user (multi-user: scope by user_id)
-    # Note: refresh comes encrypted from the form (encrypted in OAuth callback for URL security)
-    # Decrypt it first, then use set_refresh_token() which will re-encrypt for storage
-    plaintext_token = decrypt(refresh)
-
     auth = db.query(GoogleAdsAuth).first()
     if not auth:
-        auth = GoogleAdsAuth(user_id=1, account_id=1, customer_id=customer_id, manager_customer_id=login or None)
-        auth.set_refresh_token(plaintext_token)
+        auth = GoogleAdsAuth(user_id=1, customer_id=customer_id, refresh_token=refresh, manager_customer_id=login or None)
     else:
         auth.customer_id = customer_id
-        auth.set_refresh_token(plaintext_token)
+        auth.refresh_token = refresh
         auth.manager_customer_id = login or None
     db.add(auth); db.commit()
     return RedirectResponse("/connect", status_code=303)
@@ -74,7 +69,7 @@ def upload_draft(draft_id: int, db: Session = Depends(get_db)):
         raise HTTPException(400, "Connect Google Ads first")
 
     client = client_from_refresh(
-        refresh_token=auth.get_refresh_token(),
+        refresh_token=decrypt(auth.refresh_token),
         login_cid=auth.manager_customer_id
     )
 

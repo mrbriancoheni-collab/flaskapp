@@ -289,35 +289,20 @@ class OptimizerRecommendation(db.Model):
     id = db.Column(db.BigInteger, primary_key=True)
     account_id = db.Column(db.BigInteger, index=True, nullable=True)
 
-    # Legacy fields (for Google Ads)
-    scope_type = db.Column(db.String(32), nullable=True)  # 'campaign'|'ad_group'|'keyword'|'ad'|'account'
-    scope_id = db.Column(db.BigInteger, nullable=True, index=True)
+    scope_type = db.Column(db.String(32), nullable=False)  # 'campaign'|'ad_group'|'keyword'|'ad'|'account'
+    scope_id = db.Column(db.BigInteger, nullable=False, index=True)
 
-    # New unified fields (for all Google products)
-    source_type = db.Column(db.String(32), nullable=True, index=True)  # 'google_ads'|'google_analytics'|'search_console'
-    source_id = db.Column(db.String(255), nullable=True, index=True)  # Property ID, Site URL, Customer ID, etc.
-
-    category = db.Column(db.String(64), nullable=False)  # 'wasted_spend'|'budget'|'bidding'|'content'|'keywords'|...
+    category = db.Column(db.String(64), nullable=False)  # 'wasted_spend'|'budget'|'bidding'|'rsa'|'qs'|...
     title = db.Column(db.String(255), nullable=False)
     details = db.Column(db.Text, nullable=False)
     expected_impact = db.Column(db.String(255), nullable=True)
-    severity = db.Column(db.Integer, nullable=False, default=3)  # 1=critical ... 5=long-term
-
-    # Legacy field
-    suggested_action_json = db.Column(db.Text, nullable=True)  # JSON payload describing mutations
-
-    # New unified fields
-    action_data = db.Column(db.Text, nullable=True)  # JSON action data
-    data_points = db.Column(db.Text, nullable=True)  # JSON array of supporting metrics
-    confidence = db.Column(db.Float, nullable=True)  # 0.0-1.0 confidence score
+    severity = db.Column(db.Integer, nullable=False, default=3)  # 1=high ... 5=low
+    suggested_action_json = db.Column(db.Text, nullable=False)  # JSON payload describing mutations
 
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
-    status = db.Column(db.String(16), nullable=False, default="open")  # open|applied|dismissed|superseded
+    status = db.Column(db.String(16), nullable=False, default="open")  # open|applied|ignored
 
-    __table_args__ = (
-        db.Index("ix_opt_scope", "scope_type", "scope_id"),
-        db.Index("ix_opt_source", "source_type", "source_id"),
-    )
+    __table_args__ = (db.Index("ix_opt_scope", "scope_type", "scope_id"),)
 
 
 class OptimizerAction(db.Model):
@@ -332,127 +317,6 @@ class OptimizerAction(db.Model):
     )
     applied_by = db.Column(db.BigInteger, nullable=True)
     applied_at = db.Column(db.DateTime, nullable=True)
-
-    # Legacy fields (for Google Ads API mutations)
-    change_set_json = db.Column(db.Text, nullable=True)  # JSON list of mutations sent to Ads API
+    change_set_json = db.Column(db.Text, nullable=False)  # JSON list of mutations sent to Ads API
     result_json = db.Column(db.Text, nullable=True)       # API response or error payload
-    status = db.Column(db.String(16), nullable=True, default="pending")  # pending|success|failed
-
-    # New unified fields
-    action_type = db.Column(db.String(16), nullable=True)  # 'applied'|'dismissed'
-    notes = db.Column(db.Text, nullable=True)  # Optional notes (e.g., dismissal reason)
-
-
-class AIPrompt(db.Model):
-    """
-    Stores AI prompts for different Google product optimization features.
-    Allows admins to edit prompts without code changes, and keeps them secure (server-side only).
-    """
-    __tablename__ = "ai_prompts"
-
-    id = db.Column(db.BigInteger, primary_key=True)
-
-    # Identifier for the prompt (e.g., 'google_ads_main', 'google_analytics_main', 'search_console_main')
-    prompt_key = db.Column(db.String(64), unique=True, nullable=False, index=True)
-
-    # Human-readable name
-    name = db.Column(db.String(255), nullable=False)
-
-    # Description of what this prompt does
-    description = db.Column(db.Text, nullable=True)
-
-    # The actual prompt template
-    # Can include placeholders like {data}, {timeframe}, {metrics}, etc.
-    prompt_template = db.Column(db.Text, nullable=False)
-
-    # System message (optional, for chat-based models)
-    system_message = db.Column(db.Text, nullable=True)
-
-    # Model to use (e.g., 'gpt-4o-mini', 'gpt-4')
-    model = db.Column(db.String(64), nullable=False, default='gpt-4o-mini')
-
-    # Temperature setting (0.0 - 2.0)
-    temperature = db.Column(db.Float, nullable=False, default=0.7)
-
-    # Max tokens for response
-    max_tokens = db.Column(db.Integer, nullable=False, default=2000)
-
-    # Active status
-    is_active = db.Column(db.Boolean, nullable=False, default=True)
-
-    # Audit fields
-    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
-    updated_by = db.Column(db.BigInteger, nullable=True)  # User ID who last updated
-
-    def __repr__(self):
-        return f"<AIPrompt {self.prompt_key}: {self.name}>"
-
-
-class PerformanceMetrics(db.Model):
-    """
-    Unified storage for historical performance metrics across all platforms.
-    Stores daily snapshots for trend analysis, reporting, and AI insights.
-    """
-    __tablename__ = "performance_metrics"
-
-    id = db.Column(db.BigInteger, primary_key=True)
-    account_id = db.Column(db.BigInteger, index=True, nullable=False)
-
-    # Source identification
-    source_type = db.Column(db.String(32), nullable=False, index=True)
-    # Values: 'google_ads', 'google_analytics', 'search_console', 'glsa', 'gmb', 'fbads'
-
-    source_id = db.Column(db.String(255), nullable=True, index=True)
-    # Property ID, Site URL, Customer ID, Page ID, etc.
-
-    # Time dimension
-    date = db.Column(db.Date, nullable=False, index=True)
-    timeframe = db.Column(db.String(16), nullable=False, default='daily')
-    # Values: 'daily', 'weekly', 'monthly'
-
-    # Entity hierarchy (optional, for drilldown)
-    entity_type = db.Column(db.String(32), nullable=True, index=True)
-    # For Google Ads: 'account', 'campaign', 'ad_group', 'ad', 'keyword'
-    # For Analytics: 'property', 'page', 'source', 'campaign'
-    # For GSC: 'site', 'page', 'query'
-    # For GLSA: 'account', 'lead'
-    # For GMB: 'location', 'post'
-    # For FB Ads: 'page', 'campaign', 'ad_set', 'ad'
-
-    entity_id = db.Column(db.String(255), nullable=True, index=True)
-    entity_name = db.Column(db.String(255), nullable=True)
-
-    # Core metrics (flexible JSON blob for source-specific metrics)
-    metrics_json = db.Column(db.Text, nullable=False)
-    # Examples:
-    # Google Ads: {"impressions": 1000, "clicks": 50, "cost": 25.50, "conversions": 5}
-    # Analytics: {"sessions": 500, "pageviews": 1200, "bounce_rate": 45.2, "avg_session_duration": 120}
-    # GSC: {"impressions": 5000, "clicks": 200, "ctr": 4.0, "position": 12.5}
-    # GLSA: {"leads": 10, "phone_calls": 5, "messages": 3, "bookings": 2}
-    # GMB: {"views": 500, "searches": 300, "actions": 50, "calls": 10}
-    # FB Ads: {"reach": 10000, "impressions": 15000, "clicks": 200, "spend": 50.00}
-
-    # Computed aggregates (for quick queries without parsing JSON)
-    impressions = db.Column(db.BigInteger, nullable=True)
-    clicks = db.Column(db.BigInteger, nullable=True)
-    spend = db.Column(db.Float, nullable=True)  # In dollars
-    conversions = db.Column(db.Float, nullable=True)
-
-    # Audit fields
-    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
-
-    __table_args__ = (
-        # Unique constraint: one record per account/source/entity/date
-        db.UniqueConstraint(
-            "account_id", "source_type", "source_id", "entity_type", "entity_id", "date", "timeframe",
-            name="uq_perf_metrics"
-        ),
-        # Composite indexes for common queries
-        db.Index("ix_perf_account_source_date", "account_id", "source_type", "date"),
-        db.Index("ix_perf_source_entity_date", "source_type", "entity_type", "date"),
-    )
-
-    def __repr__(self):
-        return f"<PerformanceMetrics {self.source_type} {self.date} entity={self.entity_type}:{self.entity_id}>"
+    status = db.Column(db.String(16), nullable=False, default="pending")  # pending|success|failed

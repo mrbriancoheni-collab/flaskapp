@@ -1,0 +1,111 @@
+{% extends "base_app.html" %}
+{% block title %}Analyze Google Ads Account{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="text-center mb-8">
+    <h1 class="text-3xl font-bold mb-3">Connect Your Google Ads Account</h1>
+    <p class="text-gray-600">We'll analyze your account and generate a comprehensive performance report in 60 seconds.</p>
+  </div>
+
+  <!-- Connection Status -->
+  <div class="bg-white rounded-xl shadow-lg p-8 mb-6">
+    <div class="text-center">
+      <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i class="fa-brands fa-google text-4xl text-blue-600"></i>
+      </div>
+      <h2 class="text-xl font-bold mb-2">Ready to Connect</h2>
+      <p class="text-gray-600 mb-6">Click the button below to connect your Google Ads account via OAuth 2.0.</p>
+
+      <a href="{{ url_for('ads_grader_bp.connect') }}"
+         class="inline-flex items-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition">
+        <i class="fa-brands fa-google mr-2 text-xl"></i>
+        Connect Google Ads
+      </a>
+
+      <p class="text-sm text-gray-500 mt-4">
+        <i class="fa-solid fa-lock mr-1"></i>
+        Read-only access • We never make changes to your account
+      </p>
+    </div>
+  </div>
+
+  <!-- Demo Option -->
+  <div class="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-6">
+    <h3 class="font-bold mb-2">
+      <i class="fa-solid fa-flask mr-2 text-purple-600"></i>
+      Try a Demo Report
+    </h3>
+    <p class="text-sm text-gray-600 mb-4">
+      Not ready to connect? See what the report looks like with sample data.
+    </p>
+    <form method="post" action="{{ url_for('ads_grader_bp.analyze') }}">
+      <input type="hidden" name="customer_id" value="demo-123-456-7890">
+      <button type="submit"
+              class="px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition">
+        Generate Demo Report
+      </button>
+    </form>
+  </div>
+
+  <!-- What We Analyze -->
+  <div class="mt-8">
+    <h3 class="font-bold text-lg mb-4 text-center">What We'll Analyze</h3>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="flex items-start p-3 bg-white rounded-lg border">
+        <i class="fa-solid fa-dollar-sign text-red-500 text-xl mr-3 mt-1"></i>
+        <div>
+          <div class="font-medium">Wasted Spend</div>
+          <div class="text-sm text-gray-600">Identify budget waste from poor targeting</div>
+        </div>
+      </div>
+
+      <div class="flex items-start p-3 bg-white rounded-lg border">
+        <i class="fa-solid fa-star text-yellow-500 text-xl mr-3 mt-1"></i>
+        <div>
+          <div class="font-medium">Quality Scores</div>
+          <div class="text-sm text-gray-600">Distribution and improvement opportunities</div>
+        </div>
+      </div>
+
+      <div class="flex items-start p-3 bg-white rounded-lg border">
+        <i class="fa-solid fa-mouse-pointer text-blue-500 text-xl mr-3 mt-1"></i>
+        <div>
+          <div class="font-medium">Click-Through Rates</div>
+          <div class="text-sm text-gray-600">Device and position analysis</div>
+        </div>
+      </div>
+
+      <div class="flex items-start p-3 bg-white rounded-lg border">
+        <i class="fa-solid fa-rectangle-ad text-purple-500 text-xl mr-3 mt-1"></i>
+        <div>
+          <div class="font-medium">Ad Performance</div>
+          <div class="text-sm text-gray-600">Best vs worst ad comparison</div>
+        </div>
+      </div>
+
+      <div class="flex items-start p-3 bg-white rounded-lg border">
+        <i class="fa-solid fa-mobile-screen text-green-500 text-xl mr-3 mt-1"></i>
+        <div>
+          <div class="font-medium">Mobile Optimization</div>
+          <div class="text-sm text-gray-600">Bid adjustments and performance</div>
+        </div>
+      </div>
+
+      <div class="flex items-start p-3 bg-white rounded-lg border">
+        <i class="fa-solid fa-key text-indigo-500 text-xl mr-3 mt-1"></i>
+        <div>
+          <div class="font-medium">Keyword Strategy</div>
+          <div class="text-sm text-gray-600">Long-tail keyword opportunities</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Privacy Notice -->
+  <div class="mt-8 text-center text-sm text-gray-500">
+    <p>By connecting your Google Ads account, you agree to our <a href="#" class="text-indigo-600 hover:text-indigo-800">Terms of Service</a> and <a href="#" class="text-indigo-600 hover:text-indigo-800">Privacy Policy</a>.</p>
+    <p class="mt-2">You can revoke access at any time from your Google account settings.</p>
+  </div>
+</div>
+{% endblock %}

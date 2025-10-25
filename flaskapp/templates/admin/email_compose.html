@@ -1,0 +1,257 @@
+{% extends "base_admin.html" %}
+{% block title %}Send Email – Admin{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold">Send Email</h1>
+    <a href="{{ request.referrer or url_for('admin_bp.crm_list') }}" class="text-sm text-gray-600 hover:text-gray-800">
+      <i class="fa-solid fa-arrow-left mr-1"></i>Back
+    </a>
+  </div>
+
+  <!-- Recipient Info -->
+  <div class="bg-white border rounded-xl p-4 mb-6">
+    <div class="font-semibold mb-2">
+      <i class="fa-solid fa-envelope mr-2 text-indigo-600"></i>Recipients
+    </div>
+
+    {% if recipient_type == 'contact' %}
+      <div class="text-sm">
+        <div class="font-medium">{{ recipient.business_name }}</div>
+        {% if recipient.contact_name %}
+          <div class="text-gray-600">{{ recipient.contact_name }}</div>
+        {% endif %}
+        <div class="text-gray-600">
+          <i class="fa-solid fa-envelope mr-1"></i>{{ recipient.email }}
+        </div>
+      </div>
+
+    {% elif recipient_type == 'account' %}
+      <div class="text-sm">
+        <div class="font-medium">{{ recipient.name }}</div>
+        <div class="text-gray-600 mt-1">All users in this account will receive the email</div>
+      </div>
+
+    {% elif recipient_type == 'bulk' %}
+      <div class="text-sm">
+        <div class="font-medium text-gray-700">Bulk Email to Selected Contacts</div>
+        <div class="text-gray-600 mt-1">Select recipients from the list below</div>
+      </div>
+
+    {% endif %}
+  </div>
+
+  <!-- Email Form -->
+  <form method="post" action="{{ url_for('admin_bp.email_send') }}" class="space-y-6">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+    <input type="hidden" name="recipient_type" value="{{ recipient_type }}">
+
+    {% if recipient_type == 'contact' %}
+      <input type="hidden" name="contact_id" value="{{ recipient.id }}">
+    {% elif recipient_type == 'account' %}
+      <input type="hidden" name="account_id" value="{{ recipient.id }}">
+    {% endif %}
+
+    <!-- Bulk Recipient Selection -->
+    {% if recipient_type == 'bulk' %}
+      <div class="bg-white border rounded-xl p-4">
+        <div class="font-semibold mb-3">
+          Select Recipients
+          <span class="ml-2 text-xs text-gray-500">(<span id="selectedCount">0</span> selected)</span>
+        </div>
+
+        <!-- Filter by Stage -->
+        <div class="mb-4">
+          <label class="text-sm font-medium text-gray-700 mb-2 block">Filter by Stage:</label>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="stage-filter px-3 py-1 text-xs border rounded-md hover:bg-gray-50" data-stage="all">
+              All (<span class="filter-count">{{ all_contacts|length }}</span>)
+            </button>
+            {% for stage in stages %}
+              <button type="button" class="stage-filter px-3 py-1 text-xs border rounded-md hover:bg-gray-50" data-stage="{{ stage }}">
+                {{ stage|capitalize }} (<span class="filter-count" data-stage="{{ stage }}">{{ all_contacts|selectattr('stage', 'equalto', stage)|list|length }}</span>)
+              </button>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Select All -->
+        <div class="mb-3 pb-3 border-b flex items-center gap-3">
+          <label class="flex items-center cursor-pointer">
+            <input type="checkbox" id="selectAll" class="mr-2 h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+            <span class="text-sm font-medium">Select All</span>
+          </label>
+        </div>
+
+        <!-- Contacts List -->
+        <div class="max-h-96 overflow-y-auto space-y-2" id="contactsList">
+          {% for contact in all_contacts %}
+            <label class="contact-item flex items-center p-3 rounded border hover:bg-gray-50 cursor-pointer" data-stage="{{ contact.stage }}">
+              <input type="checkbox" name="selected_contacts" value="{{ contact.id }}" class="contact-checkbox mr-3 h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+              <div class="flex-1">
+                <div class="font-medium text-sm">{{ contact.business_name }}</div>
+                <div class="text-xs text-gray-600">
+                  <i class="fa-solid fa-envelope mr-1"></i>{{ contact.email }}
+                  {% if contact.stage %}
+                    <span class="ml-2 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px]">{{ contact.stage }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Subject -->
+    <div class="bg-white border rounded-xl p-4">
+      <label for="subject" class="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
+      <input
+        type="text"
+        id="subject"
+        name="subject"
+        required
+        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+        placeholder="Email subject line"
+      >
+    </div>
+
+    <!-- Message -->
+    <div class="bg-white border rounded-xl p-4">
+      <label for="message" class="block text-sm font-medium text-gray-700 mb-2">Message *</label>
+      <textarea
+        id="message"
+        name="message"
+        rows="12"
+        required
+        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
+        placeholder="Type your message here...&#10;&#10;Line breaks will be preserved in the email."
+      ></textarea>
+      <div class="mt-2 text-xs text-gray-500">
+        <i class="fa-solid fa-info-circle mr-1"></i>
+        Line breaks will be preserved. The message will be formatted in a professional email template.
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex gap-3">
+      <button
+        type="submit"
+        class="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-indigo-600 px-6 py-3 text-white font-medium hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+      >
+        <i class="fa-solid fa-paper-plane"></i>
+        Send Email
+      </button>
+      <a
+        href="{{ request.referrer or url_for('admin_bp.crm_list') }}"
+        class="px-6 py-3 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+      >
+        Cancel
+      </a>
+    </div>
+  </form>
+
+  <!-- Quick Templates -->
+  <div class="mt-8 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
+    <h3 class="font-semibold text-blue-900 mb-3">
+      <i class="fa-solid fa-lightbulb mr-2"></i>Quick Email Templates
+    </h3>
+    <div class="space-y-2">
+      <button type="button" class="email-template w-full text-left p-3 text-sm bg-white border rounded-lg hover:shadow-md transition"
+              data-subject="Follow-up: Your FieldSprout Account"
+              data-message="Hi there,&#10;&#10;I wanted to follow up on your FieldSprout account and see how things are going.&#10;&#10;Are you finding the platform helpful? Do you have any questions or need assistance with anything?&#10;&#10;I'm here to help!&#10;&#10;Best regards">
+        <div class="font-medium text-blue-600">Account Follow-up</div>
+        <div class="text-xs text-gray-600 mt-1">Check in with customer about their account</div>
+      </button>
+
+      <button type="button" class="email-template w-full text-left p-3 text-sm bg-white border rounded-lg hover:shadow-md transition"
+              data-subject="New Feature Announcement: LinkedIn Tools"
+              data-message="Hi there,&#10;&#10;We're excited to announce new LinkedIn marketing tools in FieldSprout!&#10;&#10;You can now:&#10;• Optimize your LinkedIn ads with AI&#10;• Generate thought leader posts&#10;• Schedule posts up to 1 week in advance&#10;&#10;Check out these new features in your dashboard.&#10;&#10;Best regards">
+        <div class="font-medium text-blue-600">New Feature Announcement</div>
+        <div class="text-xs text-gray-600 mt-1">Announce new LinkedIn tools</div>
+      </button>
+
+      <button type="button" class="email-template w-full text-left p-3 text-sm bg-white border rounded-lg hover:shadow-md transition"
+              data-subject="Quick Check-in"
+              data-message="Hi there,&#10;&#10;Just wanted to reach out and see how everything is going with your FieldSprout account.&#10;&#10;If you have any questions or need help with anything, please don't hesitate to reach out.&#10;&#10;Best regards">
+        <div class="font-medium text-blue-600">Quick Check-in</div>
+        <div class="text-xs text-gray-600 mt-1">Simple customer check-in</div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Bulk email recipient selection
+const selectAll = document.getElementById('selectAll');
+const contactCheckboxes = document.querySelectorAll('.contact-checkbox');
+const selectedCountEl = document.getElementById('selectedCount');
+
+function updateSelectedCount() {
+  const count = document.querySelectorAll('.contact-checkbox:checked').length;
+  if (selectedCountEl) {
+    selectedCountEl.textContent = count;
+  }
+}
+
+if (selectAll) {
+  selectAll.addEventListener('change', function() {
+    const visibleCheckboxes = document.querySelectorAll('.contact-item:not([style*="display: none"]) .contact-checkbox');
+    visibleCheckboxes.forEach(cb => {
+      cb.checked = this.checked;
+    });
+    updateSelectedCount();
+  });
+}
+
+contactCheckboxes.forEach(cb => {
+  cb.addEventListener('change', updateSelectedCount);
+});
+
+// Stage filtering
+const stageFilters = document.querySelectorAll('.stage-filter');
+const contactItems = document.querySelectorAll('.contact-item');
+
+stageFilters.forEach(filter => {
+  filter.addEventListener('click', function() {
+    const stage = this.dataset.stage;
+
+    // Update active state
+    stageFilters.forEach(f => f.classList.remove('bg-indigo-100', 'border-indigo-300', 'text-indigo-700'));
+    this.classList.add('bg-indigo-100', 'border-indigo-300', 'text-indigo-700');
+
+    // Filter contacts
+    contactItems.forEach(item => {
+      if (stage === 'all' || item.dataset.stage === stage) {
+        item.style.display = '';
+      } else {
+        item.style.display = 'none';
+      }
+    });
+
+    // Uncheck select all
+    if (selectAll) {
+      selectAll.checked = false;
+    }
+  });
+});
+
+// Email templates
+const emailTemplates = document.querySelectorAll('.email-template');
+const subjectInput = document.getElementById('subject');
+const messageInput = document.getElementById('message');
+
+emailTemplates.forEach(template => {
+  template.addEventListener('click', function() {
+    subjectInput.value = this.dataset.subject;
+    messageInput.value = this.dataset.message.replace(/&#10;/g, '\n');
+
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+});
+
+// Initialize count
+updateSelectedCount();
+</script>
+{% endblock %}

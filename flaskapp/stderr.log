@@ -1,0 +1,1020 @@
+2025-10-19 21:26:08,270 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-19 21:26:08,270 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-19 21:26:08,271 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-19 21:26:08,272 [INFO] app: Rate limit storage: memory://
+2025-10-19 21:26:08,272 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-19 21:26:08,283 [INFO] app: auth_bp registered
+2025-10-19 21:26:09,379 [INFO] app: main_bp registered
+2025-10-19 21:26:09,438 [INFO] app: account_bp registered
+2025-10-19 21:26:09,440 [INFO] app: onboarding_bp registered
+2025-10-19 21:26:09,641 [INFO] app: wp_bp registered at /account/wp
+2025-10-19 21:26:09,644 [INFO] app: wp legacy redirects enabled
+2025-10-19 21:26:09,652 [INFO] app: pov_bp registered
+2025-10-19 21:26:09,955 [INFO] app: google_bp registered at /account/google
+2025-10-19 21:26:10,165 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-19 21:26:10,177 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-19 21:26:10,185 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-19 21:26:10,196 [INFO] app: public_bp registered
+2025-10-19 21:26:10,210 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-19 21:26:10,213 [INFO] app: seo_bp registered at /account/seo
+2025-10-19 21:26:10,220 [INFO] app: reports_bp registered at /account/reports
+2025-10-19 21:26:10,229 [INFO] app: maps_bp registered at /account/maps
+2025-10-19 21:26:10,230 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-19 21:26:10,286 [INFO] app: admin_bp registered
+2025-10-19 21:26:10,287 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-19 21:26:10,287 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 7, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 8, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 7, please increase LSAPI_CHILDREN.
+[UID:2266][2940622] Reached max children process limit: 6, extra: 2, current: 8, busy: 7, please increase LSAPI_CHILDREN.
+2025-10-19 22:42:58,857 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-19 22:42:58,858 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-19 22:42:58,859 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-19 22:42:58,860 [INFO] app: Rate limit storage: memory://
+2025-10-19 22:42:58,860 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-19 22:42:58,871 [INFO] app: auth_bp registered
+2025-10-19 22:43:00,025 [INFO] app: main_bp registered
+2025-10-19 22:43:00,088 [INFO] app: account_bp registered
+2025-10-19 22:43:00,090 [INFO] app: onboarding_bp registered
+2025-10-19 22:43:00,228 [INFO] app: wp_bp registered at /account/wp
+2025-10-19 22:43:00,230 [INFO] app: wp legacy redirects enabled
+2025-10-19 22:43:00,234 [INFO] app: pov_bp registered
+2025-10-19 22:43:00,531 [INFO] app: google_bp registered at /account/google
+2025-10-19 22:43:00,742 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-19 22:43:00,754 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-19 22:43:00,762 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-19 22:43:00,769 [INFO] app: public_bp registered
+2025-10-19 22:43:00,779 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-19 22:43:00,781 [INFO] app: seo_bp registered at /account/seo
+2025-10-19 22:43:00,785 [INFO] app: reports_bp registered at /account/reports
+2025-10-19 22:43:00,795 [INFO] app: maps_bp registered at /account/maps
+2025-10-19 22:43:00,797 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-19 22:43:00,857 [INFO] app: admin_bp registered
+2025-10-19 22:43:00,858 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-19 22:43:00,858 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-19 23:29:26,009 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-19 23:29:26,010 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-19 23:29:26,010 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-19 23:29:26,011 [INFO] app: Rate limit storage: memory://
+2025-10-19 23:29:26,011 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-19 23:29:26,021 [INFO] app: auth_bp registered
+2025-10-19 23:29:26,926 [INFO] app: main_bp registered
+2025-10-19 23:29:26,972 [INFO] app: account_bp registered
+2025-10-19 23:29:26,974 [INFO] app: onboarding_bp registered
+2025-10-19 23:29:27,096 [INFO] app: wp_bp registered at /account/wp
+2025-10-19 23:29:27,098 [INFO] app: wp legacy redirects enabled
+2025-10-19 23:29:27,102 [INFO] app: pov_bp registered
+2025-10-19 23:29:27,350 [INFO] app: google_bp registered at /account/google
+2025-10-19 23:29:27,576 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-19 23:29:27,589 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-19 23:29:27,597 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-19 23:29:27,604 [INFO] app: public_bp registered
+2025-10-19 23:29:27,614 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-19 23:29:27,616 [INFO] app: seo_bp registered at /account/seo
+2025-10-19 23:29:27,620 [INFO] app: reports_bp registered at /account/reports
+2025-10-19 23:29:27,628 [INFO] app: maps_bp registered at /account/maps
+2025-10-19 23:29:27,630 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-19 23:29:27,686 [INFO] app: admin_bp registered
+2025-10-19 23:29:27,687 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-19 23:29:27,687 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-19 23:49:05,527 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-19 23:49:05,527 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-19 23:49:05,528 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-19 23:49:05,529 [INFO] app: Rate limit storage: memory://
+2025-10-19 23:49:05,529 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-19 23:49:05,538 [INFO] app: auth_bp registered
+2025-10-19 23:49:06,414 [INFO] app: main_bp registered
+2025-10-19 23:49:06,462 [INFO] app: account_bp registered
+2025-10-19 23:49:06,464 [INFO] app: onboarding_bp registered
+2025-10-19 23:49:06,590 [INFO] app: wp_bp registered at /account/wp
+2025-10-19 23:49:06,591 [INFO] app: wp legacy redirects enabled
+2025-10-19 23:49:06,596 [INFO] app: pov_bp registered
+2025-10-19 23:49:06,814 [INFO] app: google_bp registered at /account/google
+2025-10-19 23:49:06,986 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-19 23:49:06,998 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-19 23:49:07,004 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-19 23:49:07,010 [INFO] app: public_bp registered
+2025-10-19 23:49:07,019 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-19 23:49:07,021 [INFO] app: seo_bp registered at /account/seo
+2025-10-19 23:49:07,025 [INFO] app: reports_bp registered at /account/reports
+2025-10-19 23:49:07,032 [INFO] app: maps_bp registered at /account/maps
+2025-10-19 23:49:07,033 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-19 23:49:07,085 [INFO] app: admin_bp registered
+2025-10-19 23:49:07,086 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-19 23:49:07,086 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 01:33:28,491 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 01:33:28,492 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 01:33:28,492 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 01:33:28,493 [INFO] app: Rate limit storage: memory://
+2025-10-20 01:33:28,493 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 01:33:28,504 [INFO] app: auth_bp registered
+2025-10-20 01:33:29,671 [INFO] app: main_bp registered
+2025-10-20 01:33:29,748 [INFO] app: account_bp registered
+2025-10-20 01:33:29,750 [INFO] app: onboarding_bp registered
+2025-10-20 01:33:29,926 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 01:33:29,928 [INFO] app: wp legacy redirects enabled
+2025-10-20 01:33:29,934 [INFO] app: pov_bp registered
+2025-10-20 01:33:30,288 [INFO] app: google_bp registered at /account/google
+2025-10-20 01:33:30,530 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 01:33:30,543 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 01:33:30,550 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 01:33:30,557 [INFO] app: public_bp registered
+2025-10-20 01:33:30,565 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 01:33:30,567 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 01:33:30,572 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 01:33:30,580 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 01:33:30,582 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 01:33:30,639 [INFO] app: admin_bp registered
+2025-10-20 01:33:30,639 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 01:33:30,640 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 02:35:16,440 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 02:35:16,440 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 02:35:16,441 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 02:35:16,441 [INFO] app: Rate limit storage: memory://
+2025-10-20 02:35:16,442 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 02:35:16,452 [INFO] app: auth_bp registered
+2025-10-20 02:35:17,446 [INFO] app: main_bp registered
+2025-10-20 02:35:17,495 [INFO] app: account_bp registered
+2025-10-20 02:35:17,497 [INFO] app: onboarding_bp registered
+2025-10-20 02:35:17,619 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 02:35:17,621 [INFO] app: wp legacy redirects enabled
+2025-10-20 02:35:17,626 [INFO] app: pov_bp registered
+2025-10-20 02:35:17,848 [INFO] app: google_bp registered at /account/google
+2025-10-20 02:35:18,032 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 02:35:18,044 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 02:35:18,050 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 02:35:18,057 [INFO] app: public_bp registered
+2025-10-20 02:35:18,065 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 02:35:18,067 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 02:35:18,071 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 02:35:18,078 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 02:35:18,079 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 02:35:18,132 [INFO] app: admin_bp registered
+2025-10-20 02:35:18,132 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 02:35:18,132 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 02:46:39,922 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 02:46:39,923 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 02:46:39,923 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 02:46:39,924 [INFO] app: Rate limit storage: memory://
+2025-10-20 02:46:39,924 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 02:46:39,935 [INFO] app: auth_bp registered
+2025-10-20 02:46:40,847 [INFO] app: main_bp registered
+2025-10-20 02:46:40,893 [INFO] app: account_bp registered
+2025-10-20 02:46:40,895 [INFO] app: onboarding_bp registered
+2025-10-20 02:46:41,015 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 02:46:41,017 [INFO] app: wp legacy redirects enabled
+2025-10-20 02:46:41,021 [INFO] app: pov_bp registered
+2025-10-20 02:46:41,234 [INFO] app: google_bp registered at /account/google
+2025-10-20 02:46:41,412 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 02:46:41,424 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 02:46:41,431 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 02:46:41,437 [INFO] app: public_bp registered
+2025-10-20 02:46:41,445 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 02:46:41,447 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 02:46:41,451 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 02:46:41,458 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 02:46:41,459 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 02:46:41,510 [INFO] app: admin_bp registered
+2025-10-20 02:46:41,510 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 02:46:41,511 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 03:23:19,317 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 03:23:19,318 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 03:23:19,319 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 03:23:19,319 [INFO] app: Rate limit storage: memory://
+2025-10-20 03:23:19,320 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 03:23:19,329 [INFO] app: auth_bp registered
+2025-10-20 03:23:20,416 [INFO] app: main_bp registered
+2025-10-20 03:23:20,476 [INFO] app: account_bp registered
+2025-10-20 03:23:20,478 [INFO] app: onboarding_bp registered
+2025-10-20 03:23:20,630 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 03:23:20,633 [INFO] app: wp legacy redirects enabled
+2025-10-20 03:23:20,637 [INFO] app: pov_bp registered
+2025-10-20 03:23:20,933 [INFO] app: google_bp registered at /account/google
+2025-10-20 03:23:21,179 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 03:23:21,192 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 03:23:21,199 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 03:23:21,206 [INFO] app: public_bp registered
+2025-10-20 03:23:21,215 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 03:23:21,217 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 03:23:21,221 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 03:23:21,229 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 03:23:21,231 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 03:23:21,285 [INFO] app: admin_bp registered
+2025-10-20 03:23:21,286 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 03:23:21,286 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 04:15:13,653 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 04:15:13,654 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 04:15:13,655 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 04:15:13,655 [INFO] app: Rate limit storage: memory://
+2025-10-20 04:15:13,656 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 04:15:13,665 [INFO] app: auth_bp registered
+2025-10-20 04:15:14,645 [INFO] app: main_bp registered
+2025-10-20 04:15:14,700 [INFO] app: account_bp registered
+2025-10-20 04:15:14,702 [INFO] app: onboarding_bp registered
+2025-10-20 04:15:14,828 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 04:15:14,829 [INFO] app: wp legacy redirects enabled
+2025-10-20 04:15:14,834 [INFO] app: pov_bp registered
+2025-10-20 04:15:15,100 [INFO] app: google_bp registered at /account/google
+2025-10-20 04:15:15,303 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 04:15:15,318 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 04:15:15,326 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 04:15:15,332 [INFO] app: public_bp registered
+2025-10-20 04:15:15,341 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 04:15:15,343 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 04:15:15,347 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 04:15:15,355 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 04:15:15,357 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 04:15:15,421 [INFO] app: admin_bp registered
+2025-10-20 04:15:15,421 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 04:15:15,422 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 04:27:16,886 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 04:27:16,887 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 04:27:16,887 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 04:27:16,888 [INFO] app: Rate limit storage: memory://
+2025-10-20 04:27:16,888 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 04:27:16,898 [INFO] app: auth_bp registered
+2025-10-20 04:27:17,802 [INFO] app: main_bp registered
+2025-10-20 04:27:17,849 [INFO] app: account_bp registered
+2025-10-20 04:27:17,851 [INFO] app: onboarding_bp registered
+2025-10-20 04:27:17,973 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 04:27:17,975 [INFO] app: wp legacy redirects enabled
+2025-10-20 04:27:17,979 [INFO] app: pov_bp registered
+2025-10-20 04:27:18,238 [INFO] app: google_bp registered at /account/google
+2025-10-20 04:27:18,464 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 04:27:18,477 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 04:27:18,484 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 04:27:18,491 [INFO] app: public_bp registered
+2025-10-20 04:27:18,500 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 04:27:18,502 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 04:27:18,506 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 04:27:18,514 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 04:27:18,515 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 04:27:18,577 [INFO] app: admin_bp registered
+2025-10-20 04:27:18,577 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 04:27:18,578 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 06:09:35,020 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 06:09:35,021 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 06:09:35,022 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 06:09:35,023 [INFO] app: Rate limit storage: memory://
+2025-10-20 06:09:35,023 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 06:09:35,036 [INFO] app: auth_bp registered
+2025-10-20 06:09:36,255 [INFO] app: main_bp registered
+2025-10-20 06:09:36,318 [INFO] app: account_bp registered
+2025-10-20 06:09:36,321 [INFO] app: onboarding_bp registered
+2025-10-20 06:09:36,499 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 06:09:36,501 [INFO] app: wp legacy redirects enabled
+2025-10-20 06:09:36,505 [INFO] app: pov_bp registered
+2025-10-20 06:09:36,792 [INFO] app: google_bp registered at /account/google
+2025-10-20 06:09:37,041 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 06:09:37,055 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 06:09:37,064 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 06:09:37,071 [INFO] app: public_bp registered
+2025-10-20 06:09:37,084 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 06:09:37,087 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 06:09:37,096 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 06:09:37,110 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 06:09:37,112 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 06:09:37,202 [INFO] app: admin_bp registered
+2025-10-20 06:09:37,202 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 06:09:37,204 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 06:30:41,266 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 06:30:41,266 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 06:30:41,267 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 06:30:41,268 [INFO] app: Rate limit storage: memory://
+2025-10-20 06:30:41,269 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 06:30:41,284 [INFO] app: auth_bp registered
+2025-10-20 06:30:42,344 [INFO] app: main_bp registered
+2025-10-20 06:30:42,397 [INFO] app: account_bp registered
+2025-10-20 06:30:42,399 [INFO] app: onboarding_bp registered
+2025-10-20 06:30:42,531 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 06:30:42,532 [INFO] app: wp legacy redirects enabled
+2025-10-20 06:30:42,537 [INFO] app: pov_bp registered
+2025-10-20 06:30:42,766 [INFO] app: google_bp registered at /account/google
+2025-10-20 06:30:42,965 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 06:30:42,977 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 06:30:42,985 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 06:30:42,991 [INFO] app: public_bp registered
+2025-10-20 06:30:43,000 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 06:30:43,002 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 06:30:43,006 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 06:30:43,013 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 06:30:43,015 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 06:30:43,069 [INFO] app: admin_bp registered
+2025-10-20 06:30:43,070 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 06:30:43,070 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 06:43:51,389 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 06:43:51,392 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 06:43:51,392 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 06:43:51,393 [INFO] app: Rate limit storage: memory://
+2025-10-20 06:43:51,393 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 06:43:51,411 [INFO] app: auth_bp registered
+2025-10-20 06:43:52,579 [INFO] app: main_bp registered
+2025-10-20 06:43:52,624 [INFO] app: account_bp registered
+2025-10-20 06:43:52,626 [INFO] app: onboarding_bp registered
+2025-10-20 06:43:52,744 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 06:43:52,746 [INFO] app: wp legacy redirects enabled
+2025-10-20 06:43:52,750 [INFO] app: pov_bp registered
+2025-10-20 06:43:52,960 [INFO] app: google_bp registered at /account/google
+2025-10-20 06:43:53,161 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 06:43:53,176 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 06:43:53,186 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 06:43:53,193 [INFO] app: public_bp registered
+2025-10-20 06:43:53,203 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 06:43:53,205 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 06:43:53,209 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 06:43:53,217 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 06:43:53,219 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 06:43:53,274 [INFO] app: admin_bp registered
+2025-10-20 06:43:53,274 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 06:43:53,274 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 07:55:22,797 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 07:55:22,797 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 07:55:22,798 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 07:55:22,799 [INFO] app: Rate limit storage: memory://
+2025-10-20 07:55:22,799 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 07:55:22,811 [INFO] app: auth_bp registered
+2025-10-20 07:55:23,915 [INFO] app: main_bp registered
+2025-10-20 07:55:23,966 [INFO] app: account_bp registered
+2025-10-20 07:55:23,968 [INFO] app: onboarding_bp registered
+2025-10-20 07:55:24,104 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 07:55:24,106 [INFO] app: wp legacy redirects enabled
+2025-10-20 07:55:24,111 [INFO] app: pov_bp registered
+2025-10-20 07:55:24,344 [INFO] app: google_bp registered at /account/google
+2025-10-20 07:55:24,543 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 07:55:24,556 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 07:55:24,564 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 07:55:24,572 [INFO] app: public_bp registered
+2025-10-20 07:55:24,581 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 07:55:24,583 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 07:55:24,588 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 07:55:24,596 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 07:55:24,597 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 07:55:24,652 [INFO] app: admin_bp registered
+2025-10-20 07:55:24,652 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 07:55:24,653 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 08:14:09,711 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 08:14:09,711 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 08:14:09,712 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 08:14:09,713 [INFO] app: Rate limit storage: memory://
+2025-10-20 08:14:09,713 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 08:14:09,724 [INFO] app: auth_bp registered
+2025-10-20 08:14:10,621 [INFO] app: main_bp registered
+2025-10-20 08:14:10,665 [INFO] app: account_bp registered
+2025-10-20 08:14:10,666 [INFO] app: onboarding_bp registered
+2025-10-20 08:14:10,786 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 08:14:10,788 [INFO] app: wp legacy redirects enabled
+2025-10-20 08:14:10,792 [INFO] app: pov_bp registered
+2025-10-20 08:14:11,013 [INFO] app: google_bp registered at /account/google
+2025-10-20 08:14:11,240 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 08:14:11,253 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 08:14:11,265 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 08:14:11,275 [INFO] app: public_bp registered
+2025-10-20 08:14:11,287 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 08:14:11,290 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 08:14:11,296 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 08:14:11,304 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 08:14:11,306 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 08:14:11,358 [INFO] app: admin_bp registered
+2025-10-20 08:14:11,358 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 08:14:11,359 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 09:10:23,508 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 09:10:23,508 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 09:10:23,509 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 09:10:23,510 [INFO] app: Rate limit storage: memory://
+2025-10-20 09:10:23,510 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 09:10:23,523 [INFO] app: auth_bp registered
+2025-10-20 09:10:24,502 [INFO] app: main_bp registered
+2025-10-20 09:10:24,548 [INFO] app: account_bp registered
+2025-10-20 09:10:24,549 [INFO] app: onboarding_bp registered
+2025-10-20 09:10:24,674 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 09:10:24,676 [INFO] app: wp legacy redirects enabled
+2025-10-20 09:10:24,680 [INFO] app: pov_bp registered
+2025-10-20 09:10:24,911 [INFO] app: google_bp registered at /account/google
+2025-10-20 09:10:25,095 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 09:10:25,107 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 09:10:25,114 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 09:10:25,120 [INFO] app: public_bp registered
+2025-10-20 09:10:25,128 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 09:10:25,130 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 09:10:25,134 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 09:10:25,142 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 09:10:25,143 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 09:10:25,195 [INFO] app: admin_bp registered
+2025-10-20 09:10:25,196 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 09:10:25,196 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 10:06:26,927 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 10:06:26,928 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 10:06:26,929 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 10:06:26,930 [INFO] app: Rate limit storage: memory://
+2025-10-20 10:06:26,930 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 10:06:26,940 [INFO] app: auth_bp registered
+2025-10-20 10:06:27,802 [INFO] app: main_bp registered
+2025-10-20 10:06:27,847 [INFO] app: account_bp registered
+2025-10-20 10:06:27,849 [INFO] app: onboarding_bp registered
+2025-10-20 10:06:27,988 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 10:06:27,990 [INFO] app: wp legacy redirects enabled
+2025-10-20 10:06:27,994 [INFO] app: pov_bp registered
+2025-10-20 10:06:28,219 [INFO] app: google_bp registered at /account/google
+2025-10-20 10:06:28,467 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 10:06:28,479 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 10:06:28,486 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 10:06:28,492 [INFO] app: public_bp registered
+2025-10-20 10:06:28,500 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 10:06:28,502 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 10:06:28,506 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 10:06:28,513 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 10:06:28,515 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 10:06:28,567 [INFO] app: admin_bp registered
+2025-10-20 10:06:28,568 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 10:06:28,568 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 10:16:41,322 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 10:16:41,323 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 10:16:41,323 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 10:16:41,324 [INFO] app: Rate limit storage: memory://
+2025-10-20 10:16:41,324 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 10:16:41,335 [INFO] app: auth_bp registered
+2025-10-20 10:16:42,246 [INFO] app: main_bp registered
+2025-10-20 10:16:42,291 [INFO] app: account_bp registered
+2025-10-20 10:16:42,293 [INFO] app: onboarding_bp registered
+2025-10-20 10:16:42,421 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 10:16:42,423 [INFO] app: wp legacy redirects enabled
+2025-10-20 10:16:42,427 [INFO] app: pov_bp registered
+2025-10-20 10:16:42,643 [INFO] app: google_bp registered at /account/google
+2025-10-20 10:16:42,846 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 10:16:42,858 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 10:16:42,865 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 10:16:42,871 [INFO] app: public_bp registered
+2025-10-20 10:16:42,879 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 10:16:42,881 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 10:16:42,885 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 10:16:42,892 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 10:16:42,894 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 10:16:42,945 [INFO] app: admin_bp registered
+2025-10-20 10:16:42,946 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 10:16:42,946 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 10:42:08,202 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 10:42:08,202 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 10:42:08,203 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 10:42:08,203 [INFO] app: Rate limit storage: memory://
+2025-10-20 10:42:08,204 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 10:42:08,214 [INFO] app: auth_bp registered
+2025-10-20 10:42:09,189 [INFO] app: main_bp registered
+2025-10-20 10:42:09,253 [INFO] app: account_bp registered
+2025-10-20 10:42:09,256 [INFO] app: onboarding_bp registered
+2025-10-20 10:42:09,390 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 10:42:09,392 [INFO] app: wp legacy redirects enabled
+2025-10-20 10:42:09,396 [INFO] app: pov_bp registered
+2025-10-20 10:42:09,670 [INFO] app: google_bp registered at /account/google
+2025-10-20 10:42:09,882 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 10:42:09,894 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 10:42:09,901 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 10:42:09,907 [INFO] app: public_bp registered
+2025-10-20 10:42:09,916 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 10:42:09,918 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 10:42:09,922 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 10:42:09,929 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 10:42:09,931 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 10:42:09,982 [INFO] app: admin_bp registered
+2025-10-20 10:42:09,983 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 10:42:09,983 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 10:52:46,879 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 10:52:46,879 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 10:52:46,879 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 10:52:46,880 [INFO] app: Rate limit storage: memory://
+2025-10-20 10:52:46,880 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 10:52:46,892 [INFO] app: auth_bp registered
+2025-10-20 10:52:47,781 [INFO] app: main_bp registered
+2025-10-20 10:52:47,825 [INFO] app: account_bp registered
+2025-10-20 10:52:47,827 [INFO] app: onboarding_bp registered
+2025-10-20 10:52:47,946 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 10:52:47,947 [INFO] app: wp legacy redirects enabled
+2025-10-20 10:52:47,951 [INFO] app: pov_bp registered
+2025-10-20 10:52:48,169 [INFO] app: google_bp registered at /account/google
+2025-10-20 10:52:48,386 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 10:52:48,399 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 10:52:48,405 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 10:52:48,411 [INFO] app: public_bp registered
+2025-10-20 10:52:48,420 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 10:52:48,421 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 10:52:48,425 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 10:52:48,432 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 10:52:48,434 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 10:52:48,485 [INFO] app: admin_bp registered
+2025-10-20 10:52:48,485 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 10:52:48,486 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 11:04:01,102 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 11:04:01,103 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 11:04:01,104 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 11:04:01,105 [INFO] app: Rate limit storage: memory://
+2025-10-20 11:04:01,105 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 11:04:01,120 [INFO] app: auth_bp registered
+2025-10-20 11:04:02,084 [INFO] app: main_bp registered
+2025-10-20 11:04:02,131 [INFO] app: account_bp registered
+2025-10-20 11:04:02,133 [INFO] app: onboarding_bp registered
+2025-10-20 11:04:02,268 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 11:04:02,271 [INFO] app: wp legacy redirects enabled
+2025-10-20 11:04:02,284 [INFO] app: pov_bp registered
+2025-10-20 11:04:02,522 [INFO] app: google_bp registered at /account/google
+2025-10-20 11:04:02,745 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 11:04:02,758 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 11:04:02,765 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 11:04:02,771 [INFO] app: public_bp registered
+2025-10-20 11:04:02,780 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 11:04:02,782 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 11:04:02,786 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 11:04:02,793 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 11:04:02,794 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 11:04:02,846 [INFO] app: admin_bp registered
+2025-10-20 11:04:02,846 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 11:04:02,847 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 11:17:11,480 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 11:17:11,480 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 11:17:11,481 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 11:17:11,482 [INFO] app: Rate limit storage: memory://
+2025-10-20 11:17:11,482 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 11:17:11,492 [INFO] app: auth_bp registered
+2025-10-20 11:17:12,477 [INFO] app: main_bp registered
+2025-10-20 11:17:12,524 [INFO] app: account_bp registered
+2025-10-20 11:17:12,526 [INFO] app: onboarding_bp registered
+2025-10-20 11:17:12,713 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 11:17:12,714 [INFO] app: wp legacy redirects enabled
+2025-10-20 11:17:12,719 [INFO] app: pov_bp registered
+2025-10-20 11:17:13,008 [INFO] app: google_bp registered at /account/google
+2025-10-20 11:17:13,256 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 11:17:13,271 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 11:17:13,280 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 11:17:13,288 [INFO] app: public_bp registered
+2025-10-20 11:17:13,299 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 11:17:13,302 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 11:17:13,307 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 11:17:13,316 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 11:17:13,318 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 11:17:13,383 [INFO] app: admin_bp registered
+2025-10-20 11:17:13,383 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 11:17:13,384 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 12:04:00,870 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 12:04:00,870 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 12:04:00,871 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 12:04:00,872 [INFO] app: Rate limit storage: memory://
+2025-10-20 12:04:00,872 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 12:04:00,883 [INFO] app: auth_bp registered
+2025-10-20 12:04:01,942 [INFO] app: main_bp registered
+2025-10-20 12:04:02,009 [INFO] app: account_bp registered
+2025-10-20 12:04:02,012 [INFO] app: onboarding_bp registered
+2025-10-20 12:04:02,176 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 12:04:02,179 [INFO] app: wp legacy redirects enabled
+2025-10-20 12:04:02,186 [INFO] app: pov_bp registered
+2025-10-20 12:04:02,534 [INFO] app: google_bp registered at /account/google
+2025-10-20 12:04:02,763 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 12:04:02,777 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 12:04:02,785 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 12:04:02,791 [INFO] app: public_bp registered
+2025-10-20 12:04:02,800 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 12:04:02,802 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 12:04:02,807 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 12:04:02,814 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 12:04:02,816 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 12:04:02,869 [INFO] app: admin_bp registered
+2025-10-20 12:04:02,869 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 12:04:02,870 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 12:48:10,433 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 12:48:10,436 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 12:48:10,437 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 12:48:10,438 [INFO] app: Rate limit storage: memory://
+2025-10-20 12:48:10,438 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 12:48:10,447 [INFO] app: auth_bp registered
+2025-10-20 12:48:11,320 [INFO] app: main_bp registered
+2025-10-20 12:48:11,369 [INFO] app: account_bp registered
+2025-10-20 12:48:11,371 [INFO] app: onboarding_bp registered
+2025-10-20 12:48:11,504 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 12:48:11,507 [INFO] app: wp legacy redirects enabled
+2025-10-20 12:48:11,514 [INFO] app: pov_bp registered
+2025-10-20 12:48:11,782 [INFO] app: google_bp registered at /account/google
+2025-10-20 12:48:11,961 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 12:48:11,973 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 12:48:11,980 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 12:48:11,986 [INFO] app: public_bp registered
+2025-10-20 12:48:11,994 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 12:48:11,996 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 12:48:12,000 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 12:48:12,008 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 12:48:12,009 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 12:48:12,062 [INFO] app: admin_bp registered
+2025-10-20 12:48:12,062 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 12:48:12,063 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 13:02:39,541 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 13:02:39,541 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 13:02:39,542 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 13:02:39,543 [INFO] app: Rate limit storage: memory://
+2025-10-20 13:02:39,543 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 13:02:39,553 [INFO] app: auth_bp registered
+2025-10-20 13:02:40,499 [INFO] app: main_bp registered
+2025-10-20 13:02:40,566 [INFO] app: account_bp registered
+2025-10-20 13:02:40,569 [INFO] app: onboarding_bp registered
+2025-10-20 13:02:40,705 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 13:02:40,707 [INFO] app: wp legacy redirects enabled
+2025-10-20 13:02:40,711 [INFO] app: pov_bp registered
+2025-10-20 13:02:40,931 [INFO] app: google_bp registered at /account/google
+2025-10-20 13:02:41,136 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 13:02:41,148 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 13:02:41,155 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 13:02:41,161 [INFO] app: public_bp registered
+2025-10-20 13:02:41,170 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 13:02:41,171 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 13:02:41,175 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 13:02:41,182 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 13:02:41,184 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 13:02:41,242 [INFO] app: admin_bp registered
+2025-10-20 13:02:41,242 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 13:02:41,243 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 13:33:09,334 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 13:33:09,334 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 13:33:09,335 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 13:33:09,335 [INFO] app: Rate limit storage: memory://
+2025-10-20 13:33:09,336 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 13:33:09,347 [INFO] app: auth_bp registered
+2025-10-20 13:33:10,261 [INFO] app: main_bp registered
+2025-10-20 13:33:10,309 [INFO] app: account_bp registered
+2025-10-20 13:33:10,310 [INFO] app: onboarding_bp registered
+2025-10-20 13:33:10,450 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 13:33:10,451 [INFO] app: wp legacy redirects enabled
+2025-10-20 13:33:10,455 [INFO] app: pov_bp registered
+2025-10-20 13:33:10,675 [INFO] app: google_bp registered at /account/google
+2025-10-20 13:33:10,864 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 13:33:10,876 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 13:33:10,883 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 13:33:10,889 [INFO] app: public_bp registered
+2025-10-20 13:33:10,897 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 13:33:10,899 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 13:33:10,903 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 13:33:10,910 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 13:33:10,912 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 13:33:10,988 [INFO] app: admin_bp registered
+2025-10-20 13:33:10,988 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 13:33:10,988 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 13:47:36,874 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 13:47:36,874 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 13:47:36,875 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 13:47:36,876 [INFO] app: Rate limit storage: memory://
+2025-10-20 13:47:36,876 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 13:47:36,886 [INFO] app: auth_bp registered
+2025-10-20 13:47:37,772 [INFO] app: main_bp registered
+2025-10-20 13:47:37,813 [INFO] app: account_bp registered
+2025-10-20 13:47:37,815 [INFO] app: onboarding_bp registered
+2025-10-20 13:47:37,929 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 13:47:37,931 [INFO] app: wp legacy redirects enabled
+2025-10-20 13:47:37,935 [INFO] app: pov_bp registered
+2025-10-20 13:47:38,138 [INFO] app: google_bp registered at /account/google
+2025-10-20 13:47:38,307 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 13:47:38,319 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 13:47:38,325 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 13:47:38,331 [INFO] app: public_bp registered
+2025-10-20 13:47:38,339 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 13:47:38,341 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 13:47:38,345 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 13:47:38,352 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 13:47:38,353 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 13:47:38,405 [INFO] app: admin_bp registered
+2025-10-20 13:47:38,405 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 13:47:38,406 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 14:04:40,441 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 14:04:40,441 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 14:04:40,441 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 14:04:40,442 [INFO] app: Rate limit storage: memory://
+2025-10-20 14:04:40,442 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 14:04:40,454 [INFO] app: auth_bp registered
+2025-10-20 14:04:41,449 [INFO] app: main_bp registered
+2025-10-20 14:04:41,497 [INFO] app: account_bp registered
+2025-10-20 14:04:41,499 [INFO] app: onboarding_bp registered
+2025-10-20 14:04:41,630 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 14:04:41,631 [INFO] app: wp legacy redirects enabled
+2025-10-20 14:04:41,635 [INFO] app: pov_bp registered
+2025-10-20 14:04:41,867 [INFO] app: google_bp registered at /account/google
+2025-10-20 14:04:42,023 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 14:04:42,035 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 14:04:42,042 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 14:04:42,048 [INFO] app: public_bp registered
+2025-10-20 14:04:42,059 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 14:04:42,062 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 14:04:42,069 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 14:04:42,080 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 14:04:42,082 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 14:04:42,151 [INFO] app: admin_bp registered
+2025-10-20 14:04:42,151 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 14:04:42,152 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 14:39:11,983 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 14:39:11,983 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 14:39:11,984 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 14:39:11,985 [INFO] app: Rate limit storage: memory://
+2025-10-20 14:39:11,985 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 14:39:11,994 [INFO] app: auth_bp registered
+2025-10-20 14:39:13,010 [INFO] app: main_bp registered
+2025-10-20 14:39:13,057 [INFO] app: account_bp registered
+2025-10-20 14:39:13,059 [INFO] app: onboarding_bp registered
+2025-10-20 14:39:13,185 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 14:39:13,187 [INFO] app: wp legacy redirects enabled
+2025-10-20 14:39:13,191 [INFO] app: pov_bp registered
+2025-10-20 14:39:13,411 [INFO] app: google_bp registered at /account/google
+2025-10-20 14:39:13,587 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 14:39:13,605 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 14:39:13,612 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 14:39:13,620 [INFO] app: public_bp registered
+2025-10-20 14:39:13,629 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 14:39:13,631 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 14:39:13,637 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 14:39:13,645 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 14:39:13,646 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 14:39:13,703 [INFO] app: admin_bp registered
+2025-10-20 14:39:13,703 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 14:39:13,704 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 14:52:59,496 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 14:52:59,496 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 14:52:59,497 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 14:52:59,498 [INFO] app: Rate limit storage: memory://
+2025-10-20 14:52:59,498 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 14:52:59,509 [INFO] app: auth_bp registered
+2025-10-20 14:53:00,410 [INFO] app: main_bp registered
+2025-10-20 14:53:00,454 [INFO] app: account_bp registered
+2025-10-20 14:53:00,456 [INFO] app: onboarding_bp registered
+2025-10-20 14:53:00,586 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 14:53:00,588 [INFO] app: wp legacy redirects enabled
+2025-10-20 14:53:00,592 [INFO] app: pov_bp registered
+2025-10-20 14:53:00,810 [INFO] app: google_bp registered at /account/google
+2025-10-20 14:53:00,988 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 14:53:01,000 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 14:53:01,007 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 14:53:01,013 [INFO] app: public_bp registered
+2025-10-20 14:53:01,022 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 14:53:01,024 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 14:53:01,028 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 14:53:01,035 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 14:53:01,036 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 14:53:01,090 [INFO] app: admin_bp registered
+2025-10-20 14:53:01,090 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 14:53:01,090 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 15:07:12,126 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 15:07:12,126 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 15:07:12,127 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 15:07:12,128 [INFO] app: Rate limit storage: memory://
+2025-10-20 15:07:12,128 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 15:07:12,138 [INFO] app: auth_bp registered
+2025-10-20 15:07:13,141 [INFO] app: main_bp registered
+2025-10-20 15:07:13,195 [INFO] app: account_bp registered
+2025-10-20 15:07:13,197 [INFO] app: onboarding_bp registered
+2025-10-20 15:07:13,326 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 15:07:13,328 [INFO] app: wp legacy redirects enabled
+2025-10-20 15:07:13,332 [INFO] app: pov_bp registered
+2025-10-20 15:07:13,589 [INFO] app: google_bp registered at /account/google
+2025-10-20 15:07:13,803 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 15:07:13,815 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 15:07:13,822 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 15:07:13,829 [INFO] app: public_bp registered
+2025-10-20 15:07:13,838 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 15:07:13,840 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 15:07:13,844 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 15:07:13,852 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 15:07:13,853 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 15:07:13,924 [INFO] app: admin_bp registered
+2025-10-20 15:07:13,924 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 15:07:13,925 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 16:08:45,719 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 16:08:45,722 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 16:08:45,722 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 16:08:45,723 [INFO] app: Rate limit storage: memory://
+2025-10-20 16:08:45,723 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 16:08:45,735 [INFO] app: auth_bp registered
+2025-10-20 16:08:46,817 [INFO] app: main_bp registered
+2025-10-20 16:08:47,030 [INFO] app: account_bp registered
+2025-10-20 16:08:47,032 [INFO] app: onboarding_bp registered
+2025-10-20 16:08:47,189 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 16:08:47,191 [INFO] app: wp legacy redirects enabled
+2025-10-20 16:08:47,195 [INFO] app: pov_bp registered
+2025-10-20 16:08:47,495 [INFO] app: google_bp registered at /account/google
+2025-10-20 16:08:47,702 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 16:08:47,713 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 16:08:47,720 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 16:08:47,727 [INFO] app: public_bp registered
+2025-10-20 16:08:47,736 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 16:08:47,738 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 16:08:47,747 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 16:08:47,757 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 16:08:47,759 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 16:08:47,823 [INFO] app: admin_bp registered
+2025-10-20 16:08:47,823 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 16:08:47,824 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 16:22:41,876 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 16:22:41,877 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 16:22:41,878 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 16:22:41,879 [INFO] app: Rate limit storage: memory://
+2025-10-20 16:22:41,879 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 16:22:41,892 [INFO] app: auth_bp registered
+2025-10-20 16:22:42,871 [INFO] app: main_bp registered
+2025-10-20 16:22:42,918 [INFO] app: account_bp registered
+2025-10-20 16:22:42,920 [INFO] app: onboarding_bp registered
+2025-10-20 16:22:43,074 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 16:22:43,075 [INFO] app: wp legacy redirects enabled
+2025-10-20 16:22:43,080 [INFO] app: pov_bp registered
+2025-10-20 16:22:43,328 [INFO] app: google_bp registered at /account/google
+2025-10-20 16:22:43,584 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 16:22:43,597 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 16:22:43,604 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 16:22:43,610 [INFO] app: public_bp registered
+2025-10-20 16:22:43,618 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 16:22:43,620 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 16:22:43,624 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 16:22:43,631 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 16:22:43,633 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 16:22:43,687 [INFO] app: admin_bp registered
+2025-10-20 16:22:43,687 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 16:22:43,687 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 17:32:53,520 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 17:32:53,521 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 17:32:53,522 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 17:32:53,523 [INFO] app: Rate limit storage: memory://
+2025-10-20 17:32:53,523 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 17:32:53,539 [INFO] app: auth_bp registered
+2025-10-20 17:32:54,798 [INFO] app: main_bp registered
+2025-10-20 17:32:54,877 [INFO] app: account_bp registered
+2025-10-20 17:32:54,880 [INFO] app: onboarding_bp registered
+2025-10-20 17:32:55,020 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 17:32:55,022 [INFO] app: wp legacy redirects enabled
+2025-10-20 17:32:55,027 [INFO] app: pov_bp registered
+2025-10-20 17:32:55,330 [INFO] app: google_bp registered at /account/google
+2025-10-20 17:32:55,602 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 17:32:55,617 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 17:32:55,625 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 17:32:55,632 [INFO] app: public_bp registered
+2025-10-20 17:32:55,642 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 17:32:55,644 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 17:32:55,649 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 17:32:55,660 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 17:32:55,662 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 17:32:55,723 [INFO] app: admin_bp registered
+2025-10-20 17:32:55,724 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 17:32:55,725 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 18:21:05,245 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 18:21:05,246 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 18:21:05,246 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 18:21:05,247 [INFO] app: Rate limit storage: memory://
+2025-10-20 18:21:05,247 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 18:21:05,260 [INFO] app: auth_bp registered
+2025-10-20 18:21:06,175 [INFO] app: main_bp registered
+2025-10-20 18:21:06,219 [INFO] app: account_bp registered
+2025-10-20 18:21:06,221 [INFO] app: onboarding_bp registered
+2025-10-20 18:21:06,345 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 18:21:06,347 [INFO] app: wp legacy redirects enabled
+2025-10-20 18:21:06,351 [INFO] app: pov_bp registered
+2025-10-20 18:21:06,582 [INFO] app: google_bp registered at /account/google
+2025-10-20 18:21:06,766 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 18:21:06,786 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 18:21:06,796 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 18:21:06,802 [INFO] app: public_bp registered
+2025-10-20 18:21:06,811 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 18:21:06,813 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 18:21:06,816 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 18:21:06,824 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 18:21:06,825 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 18:21:06,880 [INFO] app: admin_bp registered
+2025-10-20 18:21:06,880 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 18:21:06,881 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 18:47:08,352 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 18:47:08,353 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 18:47:08,354 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 18:47:08,356 [INFO] app: Rate limit storage: memory://
+2025-10-20 18:47:08,356 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 18:47:08,372 [INFO] app: auth_bp registered
+2025-10-20 18:47:09,431 [INFO] app: main_bp registered
+2025-10-20 18:47:09,486 [INFO] app: account_bp registered
+2025-10-20 18:47:09,487 [INFO] app: onboarding_bp registered
+2025-10-20 18:47:09,621 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 18:47:09,623 [INFO] app: wp legacy redirects enabled
+2025-10-20 18:47:09,627 [INFO] app: pov_bp registered
+2025-10-20 18:47:09,911 [INFO] app: google_bp registered at /account/google
+2025-10-20 18:47:10,102 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 18:47:10,114 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 18:47:10,121 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 18:47:10,127 [INFO] app: public_bp registered
+2025-10-20 18:47:10,136 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 18:47:10,137 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 18:47:10,141 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 18:47:10,148 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 18:47:10,150 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 18:47:10,229 [INFO] app: admin_bp registered
+2025-10-20 18:47:10,229 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 18:47:10,230 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 19:47:41,911 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 19:47:41,911 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 19:47:41,912 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 19:47:41,912 [INFO] app: Rate limit storage: memory://
+2025-10-20 19:47:41,913 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 19:47:41,923 [INFO] app: auth_bp registered
+2025-10-20 19:47:42,862 [INFO] app: main_bp registered
+2025-10-20 19:47:42,919 [INFO] app: account_bp registered
+2025-10-20 19:47:42,921 [INFO] app: onboarding_bp registered
+2025-10-20 19:47:43,071 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 19:47:43,073 [INFO] app: wp legacy redirects enabled
+2025-10-20 19:47:43,079 [INFO] app: pov_bp registered
+2025-10-20 19:47:43,317 [INFO] app: google_bp registered at /account/google
+2025-10-20 19:47:43,529 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 19:47:43,549 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 19:47:43,560 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 19:47:43,568 [INFO] app: public_bp registered
+2025-10-20 19:47:43,578 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 19:47:43,580 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 19:47:43,584 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 19:47:43,592 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 19:47:43,593 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 19:47:43,680 [INFO] app: admin_bp registered
+2025-10-20 19:47:43,680 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 19:47:43,681 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 21:58:18,962 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 21:58:18,963 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 21:58:18,963 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 21:58:18,964 [INFO] app: Rate limit storage: memory://
+2025-10-20 21:58:18,964 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 21:58:18,976 [INFO] app: auth_bp registered
+2025-10-20 21:58:20,216 [INFO] app: main_bp registered
+2025-10-20 21:58:20,285 [INFO] app: account_bp registered
+2025-10-20 21:58:20,287 [INFO] app: onboarding_bp registered
+2025-10-20 21:58:20,443 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 21:58:20,446 [INFO] app: wp legacy redirects enabled
+2025-10-20 21:58:20,452 [INFO] app: pov_bp registered
+2025-10-20 21:58:20,779 [INFO] app: google_bp registered at /account/google
+2025-10-20 21:58:21,008 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 21:58:21,021 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 21:58:21,029 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 21:58:21,036 [INFO] app: public_bp registered
+2025-10-20 21:58:21,046 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 21:58:21,048 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 21:58:21,052 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 21:58:21,065 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 21:58:21,067 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 21:58:21,123 [INFO] app: admin_bp registered
+2025-10-20 21:58:21,123 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 21:58:21,123 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize
+2025-10-20 23:33:00,880 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 23:33:00,881 [WARNING] app: Redis not available; continuing without app Redis client
+2025-10-20 23:33:00,881 [WARNING] app: Redis probe failed: Error -2 connecting to redis-14047.c52.us-east-1-4.ec2.redns.redis-cloud.com:14047. Name or service not known.
+2025-10-20 23:33:00,882 [INFO] app: Rate limit storage: memory://
+2025-10-20 23:33:00,882 [INFO] app: Logger initialized. DB: mysql+pymysql://fieljtgr_team:***@localhost/fieljtgr_xyz?charset=utf8mb4
+2025-10-20 23:33:00,894 [INFO] app: auth_bp registered
+2025-10-20 23:33:02,026 [INFO] app: main_bp registered
+2025-10-20 23:33:02,073 [INFO] app: account_bp registered
+2025-10-20 23:33:02,075 [INFO] app: onboarding_bp registered
+2025-10-20 23:33:02,200 [INFO] app: wp_bp registered at /account/wp
+2025-10-20 23:33:02,201 [INFO] app: wp legacy redirects enabled
+2025-10-20 23:33:02,206 [INFO] app: pov_bp registered
+2025-10-20 23:33:02,498 [INFO] app: google_bp registered at /account/google
+2025-10-20 23:33:02,709 [INFO] app: glsa_bp registered at /account/glsa
+2025-10-20 23:33:02,722 [INFO] app: yelp_bp registered at /account/yelp
+2025-10-20 23:33:02,729 [INFO] app: fbads_bp registered at /account/fbads
+2025-10-20 23:33:02,739 [INFO] app: public_bp registered
+2025-10-20 23:33:02,755 [INFO] app: gmb_bp registered at /account/gmb
+2025-10-20 23:33:02,758 [INFO] app: seo_bp registered at /account/seo
+2025-10-20 23:33:02,766 [INFO] app: reports_bp registered at /account/reports
+2025-10-20 23:33:02,779 [INFO] app: maps_bp registered at /account/maps
+2025-10-20 23:33:02,781 [INFO] app: campaigns_bp registered at /account/campaigns
+2025-10-20 23:33:02,835 [INFO] app: admin_bp registered
+2025-10-20 23:33:02,835 [INFO] app: CSRF exemptions applied for GMB POST endpoints
+2025-10-20 23:33:02,835 [INFO] app: Stub endpoint registered for fbads_bp.optimize -> /account/fbads/optimize

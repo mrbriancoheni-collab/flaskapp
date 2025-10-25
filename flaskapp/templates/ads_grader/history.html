@@ -1,0 +1,153 @@
+{% extends "base_app.html" %}
+{% block title %}Google Ads Grader – Report History{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <a href="{{ url_for('ads_grader_bp.index') }}" class="text-sm text-indigo-600 hover:text-indigo-800 mb-2 inline-block">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Back to Grader
+      </a>
+      <h1 class="text-3xl font-bold">Report History</h1>
+      <p class="text-gray-600 mt-1">View and compare your past Google Ads performance reports</p>
+    </div>
+    <a href="{{ url_for('ads_grader_bp.analyze') }}"
+       class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+      <i class="fa-solid fa-plus mr-2"></i>New Analysis
+    </a>
+  </div>
+
+  {% if reports %}
+    <!-- Reports List -->
+    <div class="space-y-4">
+      {% for report in reports %}
+        <div class="bg-white rounded-xl shadow border hover:shadow-lg transition">
+          <a href="{{ url_for('ads_grader_bp.report', report_id=report.id) }}" class="block p-6">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <!-- Score and Info -->
+              <div class="flex items-center gap-6">
+                <!-- Score Circle (smaller) -->
+                <div class="relative">
+                  {% set score_pct = (report.overall_score / 100) * 251.2 %}
+                  {% set offset = 251.2 - score_pct %}
+                  <svg class="w-24 h-24 transform -rotate-90">
+                    <circle cx="48" cy="48" r="40" stroke="#e5e7eb" stroke-width="6" fill="none"/>
+                    <circle cx="48" cy="48" r="40"
+                            {% if report.overall_score >= 80 %}stroke="#10b981"
+                            {% elif report.overall_score >= 60 %}stroke="#f59e0b"
+                            {% else %}stroke="#ef4444"{% endif %}
+                            stroke-width="6" fill="none"
+                            stroke-dasharray="251.2" stroke-dashoffset="{{ offset }}" stroke-linecap="round"/>
+                  </svg>
+                  <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <div class="text-2xl font-bold
+                                {% if report.overall_score >= 80 %}text-green-600
+                                {% elif report.overall_score >= 60 %}text-yellow-600
+                                {% else %}text-red-600{% endif %}">
+                      {{ report.overall_score|round|int }}
+                    </div>
+                    <div class="text-xs text-gray-500">{{ report.overall_grade }}</div>
+                  </div>
+                </div>
+
+                <!-- Report Details -->
+                <div>
+                  <h3 class="text-xl font-bold text-gray-900 mb-1">{{ report.google_ads_account_name }}</h3>
+                  <div class="text-sm text-gray-500 space-y-1">
+                    <div>
+                      <i class="fa-solid fa-calendar mr-1"></i>
+                      {{ report.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                    </div>
+                    <div>
+                      <i class="fa-solid fa-chart-line mr-1"></i>
+                      {{ report.date_range_start.strftime('%b %d') }} - {{ report.date_range_end.strftime('%b %d, %Y') }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Key Metrics Preview -->
+              <div class="flex flex-wrap gap-4">
+                <div class="text-center px-3 py-2 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <div class="text-xs text-gray-600">Quality Score</div>
+                  <div class="text-lg font-bold text-yellow-700">{{ "%.1f"|format(report.quality_score_avg or 0) }}</div>
+                </div>
+
+                <div class="text-center px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
+                  <div class="text-xs text-gray-600">CTR</div>
+                  <div class="text-lg font-bold text-blue-700">{{ "%.2f"|format(report.ctr_avg or 0) }}%</div>
+                </div>
+
+                <div class="text-center px-3 py-2 bg-red-50 rounded-lg border border-red-200">
+                  <div class="text-xs text-gray-600">Wasted</div>
+                  <div class="text-lg font-bold text-red-700">${{ "{:,.0f}".format(report.wasted_spend_90d or 0) }}</div>
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex items-center gap-2">
+                <a href="{{ url_for('ads_grader_bp.report_pdf', report_id=report.id) }}"
+                   class="p-2 hover:bg-gray-100 rounded-lg text-gray-600 hover:text-indigo-600"
+                   title="Download PDF"
+                   onclick="event.stopPropagation();">
+                  <i class="fa-solid fa-download"></i>
+                </a>
+                <i class="fa-solid fa-chevron-right text-gray-400"></i>
+              </div>
+            </div>
+          </a>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Pagination Note -->
+    {% if reports|length >= 50 %}
+      <div class="mt-6 text-center text-sm text-gray-500">
+        Showing your 50 most recent reports
+      </div>
+    {% endif %}
+
+  {% else %}
+    <!-- Empty State -->
+    <div class="bg-white rounded-xl shadow-lg p-12 text-center">
+      <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i class="fa-solid fa-chart-line text-4xl text-gray-400"></i>
+      </div>
+      <h2 class="text-2xl font-bold mb-2">No Reports Yet</h2>
+      <p class="text-gray-600 mb-6">Get started by running your first Google Ads analysis</p>
+      <a href="{{ url_for('ads_grader_bp.analyze') }}"
+         class="inline-flex items-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700">
+        <i class="fa-brands fa-google mr-2"></i>
+        Analyze My Google Ads
+      </a>
+    </div>
+  {% endif %}
+
+  <!-- Tips Section -->
+  <div class="mt-8 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+    <h3 class="font-bold mb-3">
+      <i class="fa-solid fa-lightbulb text-indigo-600 mr-2"></i>
+      Tips for Better Results
+    </h3>
+    <div class="grid md:grid-cols-2 gap-4 text-sm">
+      <div class="flex items-start">
+        <i class="fa-solid fa-check text-green-600 mr-2 mt-1"></i>
+        <span>Run monthly analyses to track improvements over time</span>
+      </div>
+      <div class="flex items-start">
+        <i class="fa-solid fa-check text-green-600 mr-2 mt-1"></i>
+        <span>Share PDF reports with your team or stakeholders</span>
+      </div>
+      <div class="flex items-start">
+        <i class="fa-solid fa-check text-green-600 mr-2 mt-1"></i>
+        <span>Compare scores before and after implementing recommendations</span>
+      </div>
+      <div class="flex items-start">
+        <i class="fa-solid fa-check text-green-600 mr-2 mt-1"></i>
+        <span>Focus on sections with scores below 60% first</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,153 @@
+{% extends "base_admin.html" %}
+{% block title %}SERP Scraper Results{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold">Scraper Results</h1>
+    <p class="text-gray-600 mt-1">Found {{ leads|length }} potential leads</p>
+  </div>
+
+  {% if auto_added %}
+  <!-- Auto-Added Success -->
+  <div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+    <div class="flex gap-3">
+      <div class="text-green-600 text-xl">✓</div>
+      <div class="text-sm text-green-900">
+        <p class="font-semibold">Automatically added {{ added_count }} new contacts to CRM</p>
+        <p class="mt-1">Duplicates were skipped. <a href="{{ url_for('admin_bp.crm_list') }}" class="underline">View CRM →</a></p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Results Table -->
+  <div class="bg-white border rounded-xl overflow-hidden">
+    <form method="post" action="{{ url_for('admin_bp.serp_scraper_add_selected') }}">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b">
+            <tr>
+              {% if not auto_added %}
+              <th class="px-3 py-2 text-left">
+                <input type="checkbox" id="select-all" class="h-4 w-4 text-blue-600 rounded border-gray-300" />
+              </th>
+              {% endif %}
+              <th class="px-3 py-2 text-left font-medium text-gray-700">Business Name</th>
+              <th class="px-3 py-2 text-left font-medium text-gray-700">Domain</th>
+              <th class="px-3 py-2 text-left font-medium text-gray-700">Phone</th>
+              <th class="px-3 py-2 text-left font-medium text-gray-700">Location</th>
+              <th class="px-3 py-2 text-left font-medium text-gray-700">Ad Type</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for lead in leads %}
+            <tr class="border-b hover:bg-gray-50">
+              {% if not auto_added %}
+              <td class="px-3 py-2">
+                <input
+                  type="checkbox"
+                  name="selected"
+                  value="{{ loop.index0 }}"
+                  class="lead-checkbox h-4 w-4 text-blue-600 rounded border-gray-300"
+                />
+              </td>
+              {% endif %}
+              <td class="px-3 py-2">
+                <div class="font-medium">{{ lead.business_name }}</div>
+                {% if lead.snippet %}
+                <div class="text-xs text-gray-500 mt-1 max-w-md truncate">{{ lead.snippet }}</div>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2">
+                {% if lead.domain %}
+                  <a href="https://{{ lead.domain }}" target="_blank" class="text-blue-600 hover:underline">
+                    {{ lead.domain }}
+                  </a>
+                {% else %}
+                  <span class="text-gray-400">—</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2">
+                {{ lead.phone or '—' }}
+              </td>
+              <td class="px-3 py-2">
+                {% if lead.city %}
+                  {{ lead.city }}{% if lead.region %}, {{ lead.region }}{% endif %}
+                {% else %}
+                  <span class="text-gray-400">—</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2">
+                {% if lead.ad_type == 'lsa' %}
+                  <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">LSA</span>
+                {% elif lead.ad_type == 'ppc' %}
+                  <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">PPC</span>
+                {% elif lead.ad_type == 'organic' %}
+                  <span class="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded">Organic</span>
+                {% else %}
+                  <span class="text-gray-400">—</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if not auto_added %}
+      <div class="p-4 bg-gray-50 border-t flex items-center justify-between">
+        <div class="text-sm text-gray-600">
+          <span id="selected-count">0</span> leads selected
+        </div>
+        <div class="flex gap-3">
+          <a href="{{ url_for('admin_bp.serp_scraper') }}" class="px-4 py-2 border border-gray-300 rounded-md hover:bg-white">
+            New Search
+          </a>
+          <button
+            type="submit"
+            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            id="add-selected-btn"
+            disabled
+          >
+            Add Selected to CRM
+          </button>
+        </div>
+      </div>
+      {% else %}
+      <div class="p-4 bg-gray-50 border-t flex justify-between">
+        <a href="{{ url_for('admin_bp.serp_scraper') }}" class="px-4 py-2 border border-gray-300 rounded-md hover:bg-white">
+          New Search
+        </a>
+        <a href="{{ url_for('admin_bp.crm_list') }}" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+          View CRM
+        </a>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+{% if not auto_added %}
+<script>
+// Select all functionality
+document.getElementById('select-all').addEventListener('change', function() {
+  const checkboxes = document.querySelectorAll('.lead-checkbox');
+  checkboxes.forEach(cb => cb.checked = this.checked);
+  updateSelectedCount();
+});
+
+// Update selected count
+const checkboxes = document.querySelectorAll('.lead-checkbox');
+checkboxes.forEach(cb => {
+  cb.addEventListener('change', updateSelectedCount);
+});
+
+function updateSelectedCount() {
+  const selected = document.querySelectorAll('.lead-checkbox:checked').length;
+  document.getElementById('selected-count').textContent = selected;
+  document.getElementById('add-selected-btn').disabled = selected === 0;
+}
+</script>
+{% endif %}
+{% endblock %}

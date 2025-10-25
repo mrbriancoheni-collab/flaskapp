@@ -1,0 +1,335 @@
+{% extends "base_public.html" %}
+{% set SECTION = 'solutions' %}
+{% block title %}Google Local Services Ads — Get Google Guaranteed{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 bg-gradient-to-b from-primary-50 via-white to-white"></div>
+  <div class="container-max relative py-20 lg:py-28 text-center">
+    <span class="badge">🔵 Google LSA</span>
+    <h1 class="mt-6 text-4xl md:text-6xl font-extrabold tracking-tight">
+      Get the <span class="text-primary-700">Google Guaranteed</span> Badge
+    </h1>
+    <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+      Show up at the very top of Google with the green checkmark. FieldSprout manages your Local Services Ads profile, bookings, and reviews to maximize your Google Guaranteed visibility.
+    </p>
+    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary">Get Started</a>
+      {% elif has_endpoint('register') %}
+        <a href="{{ url_for(ep('register')) }}" class="btn btn-primary">Get Started</a>
+      {% else %}
+        <a href="/signup" class="btn btn-primary">Get Started</a>
+      {% endif %}
+      <a href="#how-it-works" class="btn btn-outline">Learn More</a>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-16">
+  <div class="container-max">
+    <div class="grid md:grid-cols-3 gap-8 text-center text-white">
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">3x</div>
+        <p class="mt-2 text-gray-300">higher conversion than Google Ads</p>
+      </div>
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">$18-45</div>
+        <p class="mt-2 text-gray-300">average cost per lead (vs $80+ PPC)</p>
+      </div>
+      <div>
+        <div class="text-5xl font-extrabold text-primary-400">100%</div>
+        <p class="mt-2 text-gray-300">pay-per-lead pricing (no wasted clicks)</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works" class="section">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto">
+      <span class="badge">How It Works</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Own the top of Google search</h2>
+      <p class="mt-4 text-gray-600">Local Services Ads appear above everything else—even paid search. FieldSprout handles setup, optimization, and lead management.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-3 gap-6">
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-14 w-14 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center text-2xl font-bold">1</div>
+        <h3 class="mt-4 font-semibold text-xl">Get Google Guaranteed</h3>
+        <p class="mt-3 text-gray-600">We handle the background check, license verification, and insurance documentation. Get approved in 3-5 business days.</p>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-14 w-14 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center text-2xl font-bold">2</div>
+        <h3 class="mt-4 font-semibold text-xl">Optimize Your Profile</h3>
+        <p class="mt-3 text-gray-600">Service areas, business hours, service categories, photos, and reviews—all optimized to maximize your placement.</p>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-14 w-14 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center text-2xl font-bold">3</div>
+        <h3 class="mt-4 font-semibold text-xl">Manage Leads & Budget</h3>
+        <p class="mt-3 text-gray-600">Set weekly budgets, dispute spam leads, track call recordings, and optimize based on what converts best.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY LSA -->
+<section class="section bg-gradient-to-b from-white to-primary-50/50">
+  <div class="container-max">
+    <div class="rounded-3xl bg-white p-8 md:p-12 shadow-soft border border-gray-100">
+      <div class="grid lg:grid-cols-2 gap-10 items-center">
+        <div>
+          <span class="badge">Why LSA?</span>
+          <h2 class="mt-4 text-3xl md:text-4xl font-extrabold">The most valuable real estate on Google</h2>
+          <p class="mt-4 text-gray-600">Local Services Ads appear above paid search, above the map pack, above everything. They're the first thing customers see—and they trust the Google Guaranteed badge.</p>
+          <ul class="mt-6 space-y-4">
+            <li class="flex gap-3">
+              <span class="text-primary-700 text-xl">✓</span>
+              <div>
+                <strong class="block">Prime Position</strong>
+                <span class="text-gray-600">Show up at the very top of search results for your service + city</span>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-700 text-xl">✓</span>
+              <div>
+                <strong class="block">Pay Per Lead</strong>
+                <span class="text-gray-600">Only pay for actual phone calls and messages—no wasted clicks</span>
+              </div>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-primary-700 text-xl">✓</span>
+              <div>
+                <strong class="block">Trust Signal</strong>
+                <span class="text-gray-600">Green checkmark = Google backs your business with up to $2K job guarantee</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="grid grid-cols-2 gap-6">
+          <div class="text-center p-6 rounded-2xl bg-primary-50">
+            <div class="text-4xl font-extrabold text-primary-700">78%</div>
+            <p class="text-sm text-gray-600 mt-2">of users click LSA over paid ads</p>
+          </div>
+          <div class="text-center p-6 rounded-2xl bg-primary-50">
+            <div class="text-4xl font-extrabold text-primary-700">2-3x</div>
+            <p class="text-sm text-gray-600 mt-2">higher close rate than PPC</p>
+          </div>
+          <div class="text-center p-6 rounded-2xl bg-primary-50">
+            <div class="text-4xl font-extrabold text-primary-700">60%</div>
+            <p class="text-sm text-gray-600 mt-2">lower cost per booked job</p>
+          </div>
+          <div class="text-center p-6 rounded-2xl bg-primary-50">
+            <div class="text-4xl font-extrabold text-primary-700">100%</div>
+            <p class="text-sm text-gray-600 mt-2">mobile-optimized</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto">
+      <span class="badge">What We Do</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Full LSA management & optimization</h2>
+      <p class="mt-4 text-gray-600">From setup to ongoing optimization, FieldSprout handles every aspect of your Local Services Ads program.</p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-2 gap-8">
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">📋</div>
+        <h3 class="mt-4 font-semibold text-xl">Background Check & Verification</h3>
+        <p class="mt-3 text-gray-600">We handle all the paperwork: background checks, license uploads, insurance verification, and Google Guarantee application.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Streamlined application process</li>
+          <li>Document collection & submission</li>
+          <li>Fast-track approval in 3-5 days</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">🎯</div>
+        <h3 class="mt-4 font-semibold text-xl">Service Area Optimization</h3>
+        <p class="mt-3 text-gray-600">Define exactly where you want to show up. City-level, zip code-level, or radius-based targeting for maximum ROI.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Multi-city coverage setup</li>
+          <li>Service radius configuration</li>
+          <li>Competitive analysis by area</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">💼</div>
+        <h3 class="mt-4 font-semibold text-xl">Category & Service Selection</h3>
+        <p class="mt-3 text-gray-600">Choose the right service categories to show up for high-intent searches. We optimize based on volume, competition, and cost.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Service category audits</li>
+          <li>High-intent keyword mapping</li>
+          <li>Competitive positioning strategy</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">📞</div>
+        <h3 class="mt-4 font-semibold text-xl">Lead Dispute & Quality Control</h3>
+        <p class="mt-3 text-gray-600">Automatically flag and dispute spam leads, wrong numbers, and out-of-area requests. Only pay for real opportunities.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Call recording analysis</li>
+          <li>Automatic dispute filing</li>
+          <li>Reclaim 15-25% of lead costs</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">📊</div>
+        <h3 class="mt-4 font-semibold text-xl">Budget Management</h3>
+        <p class="mt-3 text-gray-600">Set weekly budgets and max lead costs. We optimize spend across service categories to get you the most qualified leads.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Weekly budget pacing</li>
+          <li>Category-level bid optimization</li>
+          <li>Cost-per-lead tracking</li>
+        </ul>
+      </div>
+
+      <div class="rounded-2xl bg-white p-8 shadow-soft border border-gray-100">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center font-bold text-xl">⭐</div>
+        <h3 class="mt-4 font-semibold text-xl">Review Optimization</h3>
+        <p class="mt-3 text-gray-600">More reviews = higher ranking in LSA results. We automate review requests and response management to boost your profile.</p>
+        <ul class="mt-4 text-sm text-gray-600 list-disc pl-5 space-y-2">
+          <li>Automated review requests</li>
+          <li>LSA-specific review boosting</li>
+          <li>Response management</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="section bg-gradient-to-b from-white to-primary-50/30">
+  <div class="container-max">
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <span class="badge">Customer Success</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">LSA success stories</h2>
+      <p class="mt-4 text-gray-600">Local pros share how Google Local Services Ads transformed their lead generation.</p>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"LSA leads close at 2.5x the rate of our Google Ads. FieldSprout got us approved in 4 days and now we're the #1 result in our city."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">BR</div>
+          <div>
+            <p class="font-semibold">Brandon Rodriguez</p>
+            <p class="text-sm text-gray-600">Locksmith Pro, Miami FL</p>
+          </div>
+        </footer>
+      </div>
+
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"The Google Guaranteed badge is a game-changer. People trust us immediately. FieldSprout's dispute process saved us $3,200 in the first 60 days."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">LK</div>
+          <div>
+            <p class="font-semibold">Lisa Kim</p>
+            <p class="text-sm text-gray-600">Garage Door Repair, Portland OR</p>
+          </div>
+        </footer>
+      </div>
+
+      <div class="rounded-2xl p-8 bg-white shadow-soft border border-gray-100">
+        <div class="flex gap-1 mb-4">
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+          <span class="text-yellow-400">★</span>
+        </div>
+        <p class="text-lg">"Cut our cost per booked job by 58% switching from PPC to LSA. FieldSprout handles everything—I just answer the phone and do the work."</p>
+        <footer class="mt-6 flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center font-semibold text-primary-700">DM</div>
+          <div>
+            <p class="font-semibold">Derek Miller</p>
+            <p class="text-sm text-gray-600">Appliance Repair, Chicago IL</p>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST SIGNALS -->
+<section class="section">
+  <div class="container-max">
+    <div class="rounded-3xl bg-gradient-to-br from-primary-50 to-primary-100 p-8 md:p-12">
+      <div class="grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          <h3 class="text-2xl md:text-4xl font-extrabold">570+ businesses Google Guaranteed through FieldSprout</h3>
+          <p class="mt-4 text-gray-700">We've managed LSA programs generating over $18M in booked jobs for local service businesses across 40+ trades.</p>
+        </div>
+        <div class="grid grid-cols-2 gap-6">
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">94%</div>
+            <p class="text-sm text-gray-600 mt-1">Approval success rate</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">$18M+</div>
+            <p class="text-sm text-gray-600 mt-1">Jobs booked via LSA</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">3.8x</div>
+            <p class="text-sm text-gray-600 mt-1">Avg ROI on LSA spend</p>
+          </div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-primary-700">22%</div>
+            <p class="text-sm text-gray-600 mt-1">Disputed leads recovered</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 py-16">
+  <div class="container-max relative text-center text-white">
+    <h2 class="text-3xl md:text-5xl font-extrabold">Get Google Guaranteed and dominate local search</h2>
+    <p class="mt-4 text-lg text-primary-100 max-w-2xl mx-auto">Show up first. Build trust. Book more jobs. FieldSprout handles the entire LSA program for you.</p>
+    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Start Your LSA Application</a>
+      {% elif has_endpoint('register') %}
+        <a href="{{ url_for(ep('register')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Start Your LSA Application</a>
+      {% else %}
+        <a href="/signup" class="btn bg-white text-primary-700 hover:bg-gray-100">Start Your LSA Application</a>
+      {% endif %}
+      <a href="#how-it-works" class="btn btn-outline border-white text-white hover:bg-white/10">Learn More</a>
+    </div>
+    <p class="mt-4 text-sm text-primary-200">Free consultation • 3-5 day approval • No setup fees</p>
+  </div>
+</section>
+
+{% endblock %}

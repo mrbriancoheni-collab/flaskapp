@@ -33,7 +33,6 @@
       <div class="flex items-center gap-2">
         {% if connected %}
           <form method="post" action="{{ url_for('gmb_bp.disconnect') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="rounded-md border px-3 py-2 hover:bg-gray-50" type="submit">
               <i class="fa-solid fa-plug-circle-xmark mr-2"></i>Disconnect
             </button>
@@ -59,34 +58,6 @@
         <i class="fa-regular fa-envelope mr-2"></i>Review Requests (Email)
       </a>
     </div>
-  </div>
-
-  {# AI Insights Panel #}
-  <div class="rounded-lg border bg-gradient-to-r from-green-50 to-teal-50 border-green-100 p-6">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-12 h-12 rounded-full bg-green-600 text-white flex items-center justify-center">
-          <i class="fa-solid fa-store text-xl"></i>
-        </div>
-        <div>
-          <h3 class="font-semibold text-gray-900">AI-Powered GMB Insights</h3>
-          <p class="text-sm text-gray-600">Get personalized Google My Business optimization recommendations powered by GPT-4</p>
-        </div>
-      </div>
-      <button id="genGMBInsightsBtn" type="button" onclick="generateGMBInsightsFromPage()"
-              class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-6 py-3 text-white hover:bg-green-700 transition-colors font-medium shadow-md">
-        <i class="fa-solid fa-sparkles"></i>
-        <span>Generate Insights</span>
-      </button>
-    </div>
-    {% if not connected %}
-      <div class="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-        <i class="fa-solid fa-info-circle text-amber-600 mt-0.5"></i>
-        <div class="text-sm text-amber-900">
-          <strong>Demo mode.</strong> Using sample profile data. Connect to Google Business to analyze your live profile and get personalized recommendations.
-        </div>
-      </div>
-    {% endif %}
   </div>
 
   {# DEMO MODE banner when not connected #}
@@ -147,7 +118,6 @@
           method="post"
           action="{{ url_for('gmb_bp.update_profile', demo=0 if connected else 1) }}"
           class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       {# Name #}
       <div class="col-span-1">
         <label class="block text-sm font-medium text-gray-700">Business Name</label>
@@ -168,13 +138,8 @@
       {# Description #}
       <div class="col-span-1 md:col-span-2">
         <label class="block text-sm font-medium text-gray-700">Description</label>
-        <textarea name="description" id="gmb-description" rows="5" class="mt-1 w-full rounded-md border px-3 py-2">{{ (profile.description if profile and profile.description else (sample_profile.description if sample_profile else 'Eco-friendly, high-quality residential and commercial cleaning serving Greater Sacramento. Transparent pricing, vetted pros, and a 100% happiness guarantee.')) | trim }}</textarea>
-        <div class="mt-1 flex items-center justify-between">
-          <p class="text-xs text-gray-500">Tip: Keep it clear, concise, and keyword-rich. The AI Optimizer can suggest improvements.</p>
-          <p class="text-xs" id="gmb-description-counter">
-            <span id="gmb-description-count">0</span><span class="text-gray-500"> / 750</span>
-          </p>
-        </div>
+        <textarea name="description" rows="5" class="mt-1 w-full rounded-md border px-3 py-2">{{ (profile.description if profile and profile.description else (sample_profile.description if sample_profile else 'Eco-friendly, high-quality residential and commercial cleaning serving Greater Sacramento. Transparent pricing, vetted pros, and a 100% happiness guarantee.')) | trim }}</textarea>
+        <p class="mt-1 text-xs text-gray-500">Tip: Keep it clear, concise, and keyword-rich. The AI Optimizer can suggest improvements.</p>
       </div>
 
       {# Phone & Website #}
@@ -367,13 +332,7 @@
 </script>
         
 <script>
-// AI Optimizer button loading state
-const aiBtn = document.getElementById('gmb-ai-btn');
-aiBtn?.addEventListener('click', async () => {
-  const originalText = aiBtn.innerHTML;
-  aiBtn.disabled = true;
-  aiBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Running AI Optimizer...';
-
+document.getElementById('gmb-ai-btn')?.addEventListener('click', async () => {
   try {
     const res = await fetch("{{ url_for('gmb_bp.optimize_profile_json') }}", {
       method: "POST",
@@ -386,57 +345,11 @@ aiBtn?.addEventListener('click', async () => {
       location.href = "{{ url_for('gmb_bp.index') }}?show=suggestions";
     } else {
       alert("AI Optimizer failed: " + (data.error || "unknown error"));
-      aiBtn.disabled = false;
-      aiBtn.innerHTML = originalText;
     }
   } catch (e) {
     alert("Network error running AI Optimizer");
-    aiBtn.disabled = false;
-    aiBtn.innerHTML = originalText;
   }
 });
-
-// Save Changes button loading state
-const saveBtn = document.querySelector('button[form="gmb-profile-form"]');
-const profileForm = document.getElementById('gmb-profile-form');
-profileForm?.addEventListener('submit', () => {
-  if (saveBtn) {
-    saveBtn.disabled = true;
-    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
-  }
-});
-
-// Character counter for description
-const descTextarea = document.getElementById('gmb-description');
-const descCount = document.getElementById('gmb-description-count');
-const descCounter = document.getElementById('gmb-description-counter');
-
-function updateDescriptionCounter() {
-  if (!descTextarea || !descCount || !descCounter) return;
-
-  const length = descTextarea.value.length;
-  const maxLength = 750;
-
-  descCount.textContent = length;
-
-  // Color coding based on length
-  if (length > maxLength) {
-    descCount.classList.add('text-red-600', 'font-semibold');
-    descCount.classList.remove('text-amber-600', 'text-gray-700');
-  } else if (length > maxLength * 0.9) {
-    descCount.classList.add('text-amber-600', 'font-semibold');
-    descCount.classList.remove('text-red-600', 'text-gray-700');
-  } else {
-    descCount.classList.add('text-gray-700');
-    descCount.classList.remove('text-red-600', 'text-amber-600', 'font-semibold');
-  }
-}
-
-if (descTextarea) {
-  descTextarea.addEventListener('input', updateDescriptionCounter);
-  // Initialize counter on page load
-  updateDescriptionCounter();
-}
 </script>
 <script>
 async function runGmbOptimizer() {
@@ -457,35 +370,5 @@ async function runGmbOptimizer() {
     btn?.removeAttribute('disabled');
   }
 }
-
-/**
- * Helper function to collect GMB profile data and trigger insights generation
- */
-function generateGMBInsightsFromPage() {
-  // Collect profile data from hidden inputs or visible fields
-  const profileData = {
-    name: document.getElementById('gmb-name')?.textContent || document.getElementById('edit-name')?.value || '',
-    primary_category: document.getElementById('gmb-primary-cat')?.textContent || document.getElementById('edit-primary-cat')?.value || '',
-    categories: [], // Extract from page if available
-    description: document.getElementById('gmb-desc')?.textContent || document.getElementById('edit-desc')?.value || '',
-    address: document.getElementById('gmb-address')?.textContent || '',
-    phone: document.getElementById('gmb-phone')?.textContent || '',
-    website: document.getElementById('gmb-website')?.textContent || '',
-    hours: document.getElementById('gmb-hours')?.textContent || '',
-    photos_count: 0,  // Could be extracted from page
-    reviews_count: 0, // Could be extracted from page
-    rating: 0,        // Could be extracted from page
-    posts_count: 0,   // Could be extracted from page
-    attributes: []    // Could be extracted from page
-  };
-
-  // Call the insights generation function
-  generateGMBInsights(profileData);
-}
 </script>
-
-{# Include GMB AI Insights Modal #}
-{% include 'gmb/components/gmb_insights_modal.html' %}
-
-<script src="{{ url_for('static', filename='js/gmb_insights.js', v=config.get('ASSET_VERSION', 1)) }}" defer></script>
 {% endblock %}

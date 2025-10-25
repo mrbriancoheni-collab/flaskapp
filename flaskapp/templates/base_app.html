@@ -116,6 +116,8 @@
     {% set SECTION = 'google' %}
   {% elif bp == 'linkedin_bp' or path.startswith('/account/linkedin') %}
     {% set SECTION = 'linkedin' %}
+  {% elif bp == 'ads_grader_bp' or path.startswith('/ads-grader') %}
+    {% set SECTION = 'ads_grader' %}
   {% elif 'account_bp.' in epn or path.startswith('/account') %}
     {% set SECTION = 'account' %}
   {% endif %}
@@ -220,6 +222,14 @@
             <i class="fa-solid fa-pen-to-square"></i><span>Post Generator</span>
           </a>
         {% endif %}
+      {% endif %}
+
+      {% if has_endpoint('ads_grader_bp.index') %}
+        <div class="pt-2 text-xs font-semibold text-gray-500 uppercase">Free Tools</div>
+        <a class="block px-2 py-2 nav-link bg-gradient-to-r from-blue-50 to-indigo-50 border border-indigo-200" href="{{ url_for('ads_grader_bp.index') }}">
+          <i class="fa-brands fa-google text-indigo-600"></i><span class="font-medium text-indigo-700">Google Ads Grader</span>
+          <span class="ml-auto text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full">FREE</span>
+        </a>
       {% endif %}
 
       <a href="{{ url_for(ep('pricing')) if has_endpoint('pricing') else '#' }}" class="block px-2 py-2 nav-link"><i class="fa-solid fa-tags"></i><span>Upgrade</span></a>
@@ -358,6 +368,19 @@
         {% if has_endpoint('logout') %}
           <a class="secondary-link" href="{{ url_for(ep('logout')) }}"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
         {% endif %}
+      {% endif %}
+
+      <!-- Free Tools Section -->
+      {% if has_endpoint('ads_grader_bp.index') %}
+        <div class="mt-4 pt-4 border-t">
+          <div class="sidebar-label"><i class="fa-solid fa-gift"></i>Free Tools</div>
+          <a class="secondary-link bg-gradient-to-r from-blue-50 to-indigo-50 border border-indigo-200 hover:from-blue-100 hover:to-indigo-100"
+             href="{{ url_for('ads_grader_bp.index') }}">
+            <i class="fa-brands fa-google text-indigo-600"></i>
+            <span class="font-medium text-indigo-700">Google Ads Grader</span>
+            <span class="ml-auto text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full">FREE</span>
+          </a>
+        </div>
       {% endif %}
 
       <!-- Secondary desktop nav sticky bottom support -->

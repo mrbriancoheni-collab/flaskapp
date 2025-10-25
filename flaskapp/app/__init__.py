@@ -317,6 +317,7 @@ def create_app():
                 f"wp_bp.{name}",
                 f"google_bp.{name}",
                 f"gmb_bp.{name}",
+                f"ads_grader_bp.{name}",
                 # optional legacy prefixes:
                 f"auth.{name}",
                 f"account.{name}",
@@ -565,6 +566,14 @@ def create_app():
         app.logger.info("admin_bp registered")
     except Exception:
         app.logger.exception("Failed to register admin_bp")
+
+    # --- Google Ads Grader (free for all users) -----------------------------
+    try:
+        from app.ads_grader import ads_grader_bp
+        app.register_blueprint(ads_grader_bp)  # url_prefix set in blueprint (/ads-grader)
+        app.logger.info("ads_grader_bp registered at /ads-grader")
+    except Exception:
+        app.logger.exception("Failed to register ads_grader_bp")
 
     # ---- Apply CSRF exemptions AFTER blueprints are registered -------------
     try:

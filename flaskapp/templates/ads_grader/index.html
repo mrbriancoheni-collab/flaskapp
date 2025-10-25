@@ -1,0 +1,360 @@
+{% extends "base_app.html" %}
+{% block title %}Google Ads Quality Checker – Free Google Ads Performance Grader{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white rounded-2xl p-8 md:p-12 mb-8 shadow-xl">
+  <div class="max-w-4xl mx-auto text-center">
+    <div class="inline-block mb-4 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">
+      <i class="fa-solid fa-sparkles mr-2"></i>Free for All Users
+    </div>
+
+    <h1 class="text-4xl md:text-5xl font-bold mb-4">
+      Grade Your Google Ads Performance
+    </h1>
+
+    <p class="text-xl md:text-2xl text-blue-100 mb-8 max-w-2xl mx-auto">
+      Get a comprehensive analysis of your Google Ads account in 60 seconds.
+      Discover wasted spend, optimization opportunities, and actionable recommendations.
+    </p>
+
+    <div class="flex flex-col sm:flex-row gap-4 justify-center mb-6">
+      <a href="{{ url_for('ads_grader_bp.analyze') }}"
+         class="inline-flex items-center justify-center px-8 py-4 bg-white text-indigo-700 font-bold text-lg rounded-xl hover:bg-blue-50 transition shadow-lg hover:shadow-xl">
+        <i class="fa-brands fa-google mr-3 text-2xl"></i>
+        Analyze My Google Ads Account
+      </a>
+
+      {% if not current_user.is_authenticated %}
+      <a href="{{ url_for('auth_bp.register') }}"
+         class="inline-flex items-center justify-center px-8 py-4 bg-indigo-800/50 text-white font-medium text-lg rounded-xl hover:bg-indigo-800 transition border-2 border-white/30">
+        Create Free Account
+        <i class="fa-solid fa-arrow-right ml-3"></i>
+      </a>
+      {% endif %}
+    </div>
+
+    <p class="text-sm text-blue-200">
+      <i class="fa-solid fa-lock mr-1"></i>
+      No credit card required • Read-only access • 100% free
+    </p>
+  </div>
+</div>
+
+<!-- Recent Reports (logged in users) -->
+{% if current_user.is_authenticated and recent_reports %}
+<div class="bg-white border rounded-xl p-6 mb-8">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-xl font-bold">
+      <i class="fa-solid fa-history mr-2 text-indigo-600"></i>
+      Your Recent Reports
+    </h2>
+    <a href="{{ url_for('ads_grader_bp.history') }}" class="text-sm text-indigo-600 hover:text-indigo-800">
+      View All <i class="fa-solid fa-arrow-right ml-1"></i>
+    </a>
+  </div>
+
+  <div class="grid md:grid-cols-3 gap-4">
+    {% for report in recent_reports %}
+    <a href="{{ url_for('ads_grader_bp.report', report_id=report.id) }}"
+       class="block p-4 border rounded-lg hover:shadow-md transition">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-3xl font-bold text-indigo-600">{{ report.overall_score|round|int }}</div>
+        <div class="text-2xl font-bold text-gray-400">{{ report.overall_grade }}</div>
+      </div>
+      <div class="text-sm text-gray-600">{{ report.google_ads_account_name }}</div>
+      <div class="text-xs text-gray-400 mt-1">
+        {{ report.created_at.strftime('%b %d, %Y') }}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- What You'll Get -->
+<div class="bg-white border rounded-xl p-6 md:p-8 mb-8">
+  <h2 class="text-2xl font-bold text-center mb-8">
+    What You'll Discover in Your Free Report
+  </h2>
+
+  <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="text-center p-4">
+      <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+        <i class="fa-solid fa-dollar-sign"></i>
+      </div>
+      <h3 class="font-bold mb-2">Wasted Spend Analysis</h3>
+      <p class="text-sm text-gray-600">
+        Discover how much you're wasting on irrelevant clicks and get recommendations for negative keywords.
+      </p>
+    </div>
+
+    <div class="text-center p-4">
+      <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+        <i class="fa-solid fa-star"></i>
+      </div>
+      <h3 class="font-bold mb-2">Quality Score Optimization</h3>
+      <p class="text-sm text-gray-600">
+        See your Quality Score distribution and learn how improving it can reduce your cost-per-click by 30%+.
+      </p>
+    </div>
+
+    <div class="text-center p-4">
+      <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+        <i class="fa-solid fa-mouse-pointer"></i>
+      </div>
+      <h3 class="font-bold mb-2">CTR Analysis</h3>
+      <p class="text-sm text-gray-600">
+        Get device-specific CTR breakdowns and position analysis to maximize your click-through rates.
+      </p>
+    </div>
+
+    <div class="text-center p-4">
+      <div class="w-16 h-16 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+        <i class="fa-solid fa-rectangle-ad"></i>
+      </div>
+      <h3 class="font-bold mb-2">Ad Performance</h3>
+      <p class="text-sm text-gray-600">
+        Compare your best and worst ads, and get AI-powered suggestions for improvements.
+      </p>
+    </div>
+
+    <div class="text-center p-4">
+      <div class="w-16 h-16 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+        <i class="fa-solid fa-mobile-screen"></i>
+      </div>
+      <h3 class="font-bold mb-2">Mobile Optimization</h3>
+      <p class="text-sm text-gray-600">
+        Analyze mobile vs desktop performance and get bid adjustment recommendations.
+      </p>
+    </div>
+
+    <div class="text-center p-4">
+      <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+        <i class="fa-solid fa-chart-line"></i>
+      </div>
+      <h3 class="font-bold mb-2">10+ Performance Metrics</h3>
+      <p class="text-sm text-gray-600">
+        Get comprehensive scoring across account activity, keywords, landing pages, impression share, and more.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Example Score Visual -->
+<div class="bg-gradient-to-br from-gray-50 to-blue-50 border rounded-xl p-6 md:p-8 mb-8">
+  <h2 class="text-2xl font-bold text-center mb-8">
+    Example Google Ads Performance Report
+  </h2>
+
+  <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-8">
+    <div class="grid md:grid-cols-2 gap-8">
+      <!-- Overall Score Circle -->
+      <div class="text-center">
+        <div class="inline-block relative">
+          <svg class="w-48 h-48 transform -rotate-90">
+            <circle cx="96" cy="96" r="80" stroke="#e5e7eb" stroke-width="12" fill="none"/>
+            <circle cx="96" cy="96" r="80" stroke="#4f46e5" stroke-width="12" fill="none"
+                    stroke-dasharray="502.4" stroke-dashoffset="251.2" stroke-linecap="round"/>
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <div class="text-5xl font-bold text-indigo-600">68</div>
+            <div class="text-sm text-gray-500">Overall Score</div>
+          </div>
+        </div>
+        <div class="mt-4 text-2xl font-bold text-gray-700">Grade: B-</div>
+      </div>
+
+      <!-- Key Metrics -->
+      <div class="space-y-4">
+        <div class="border rounded-lg p-4">
+          <div class="text-sm text-gray-600 mb-1">Quality Score Average</div>
+          <div class="text-3xl font-bold text-yellow-600">5.8</div>
+          <div class="text-xs text-gray-500 mt-1">Target: 7.0+</div>
+        </div>
+
+        <div class="border rounded-lg p-4">
+          <div class="text-sm text-gray-600 mb-1">Click-Through Rate</div>
+          <div class="text-3xl font-bold text-blue-600">2.4%</div>
+          <div class="text-xs text-gray-500 mt-1">Industry avg: 3.2%</div>
+        </div>
+
+        <div class="border rounded-lg p-4">
+          <div class="text-sm text-gray-600 mb-1">Projected 12-Month Waste</div>
+          <div class="text-3xl font-bold text-red-600">$4,872</div>
+          <div class="text-xs text-gray-500 mt-1">Due to lack of negative keywords</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section Scores Preview -->
+    <div class="mt-8 pt-8 border-t">
+      <h3 class="font-bold mb-4">Section Scores</h3>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span>Wasted Spend</span>
+            <span class="font-medium text-red-600">32%</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-red-500 h-2 rounded-full" style="width: 32%"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span>Text Ad Optimization</span>
+            <span class="font-medium text-yellow-600">68%</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-yellow-500 h-2 rounded-full" style="width: 68%"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span>Landing Pages</span>
+            <span class="font-medium text-green-600">89%</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-green-500 h-2 rounded-full" style="width: 89%"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span>Account Activity</span>
+            <span class="font-medium text-green-600">91%</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-green-500 h-2 rounded-full" style="width: 91%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="text-center mt-6">
+    <a href="{{ url_for('ads_grader_bp.analyze') }}"
+       class="inline-flex items-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition">
+      Get Your Free Report Now
+      <i class="fa-solid fa-arrow-right ml-2"></i>
+    </a>
+  </div>
+</div>
+
+<!-- Benefits -->
+<div class="bg-white border rounded-xl p-6 md:p-8 mb-8">
+  <h2 class="text-2xl font-bold text-center mb-8">
+    Why Use FieldSprout's Google Ads Grader?
+  </h2>
+
+  <div class="grid md:grid-cols-3 gap-8">
+    <div class="text-center">
+      <div class="text-4xl mb-4"><i class="fa-solid fa-bolt text-yellow-500"></i></div>
+      <h3 class="font-bold mb-2">Lightning Fast</h3>
+      <p class="text-sm text-gray-600">
+        Get your comprehensive report in 60 seconds or less. No waiting, no hassle.
+      </p>
+    </div>
+
+    <div class="text-center">
+      <div class="text-4xl mb-4"><i class="fa-solid fa-brain text-purple-500"></i></div>
+      <h3 class="font-bold mb-2">AI-Powered Insights</h3>
+      <p class="text-sm text-gray-600">
+        Our advanced AI analyzes your account and provides personalized, actionable recommendations.
+      </p>
+    </div>
+
+    <div class="text-center">
+      <div class="text-4xl mb-4"><i class="fa-solid fa-download text-indigo-500"></i></div>
+      <h3 class="font-bold mb-2">Branded PDF Export</h3>
+      <p class="text-sm text-gray-600">
+        Download a professional, branded PDF report to share with your team or clients.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- FAQ Section -->
+<div class="bg-white border rounded-xl p-6 md:p-8 mb-8">
+  <h2 class="text-2xl font-bold text-center mb-8">
+    Frequently Asked Questions
+  </h2>
+
+  <div class="max-w-3xl mx-auto space-y-6">
+    <div class="border-b pb-6">
+      <h3 class="font-bold mb-2 flex items-center">
+        <i class="fa-solid fa-circle-question text-indigo-600 mr-2"></i>
+        Is this really free?
+      </h3>
+      <p class="text-gray-600 text-sm ml-7">
+        Yes! The Google Ads Quality Checker is completely free for all users. No credit card required, no hidden fees.
+        We provide this tool to help businesses improve their Google Ads performance.
+      </p>
+    </div>
+
+    <div class="border-b pb-6">
+      <h3 class="font-bold mb-2 flex items-center">
+        <i class="fa-solid fa-circle-question text-indigo-600 mr-2"></i>
+        Do I need to create an account?
+      </h3>
+      <p class="text-gray-600 text-sm ml-7">
+        You can run a one-time analysis without an account. However, creating a free account allows you to save your reports,
+        track performance over time, and access additional features.
+      </p>
+    </div>
+
+    <div class="border-b pb-6">
+      <h3 class="font-bold mb-2 flex items-center">
+        <i class="fa-solid fa-circle-question text-indigo-600 mr-2"></i>
+        What data do you access?
+      </h3>
+      <p class="text-gray-600 text-sm ml-7">
+        We only request read-only access to your Google Ads account. We never make changes to your campaigns, and we don't
+        share your data with third parties. You can revoke access at any time from your Google account settings.
+      </p>
+    </div>
+
+    <div class="border-b pb-6">
+      <h3 class="font-bold mb-2 flex items-center">
+        <i class="fa-solid fa-circle-question text-indigo-600 mr-2"></i>
+        How is the score calculated?
+      </h3>
+      <p class="text-gray-600 text-sm ml-7">
+        Your overall score is a weighted average of 10+ performance dimensions including Quality Score, CTR, wasted spend,
+        ad optimization, mobile performance, and more. Each section is scored against industry benchmarks and best practices.
+      </p>
+    </div>
+
+    <div class="pb-6">
+      <h3 class="font-bold mb-2 flex items-center">
+        <i class="fa-solid fa-circle-question text-indigo-600 mr-2"></i>
+        Can I run multiple reports?
+      </h3>
+      <p class="text-gray-600 text-sm ml-7">
+        Absolutely! You can run reports as often as you like. We recommend running a new analysis monthly to track your
+        improvements over time.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Final CTA -->
+<div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl p-8 md:p-12 text-center">
+  <h2 class="text-3xl md:text-4xl font-bold mb-4">
+    Ready to Optimize Your Google Ads?
+  </h2>
+  <p class="text-xl text-indigo-100 mb-8 max-w-2xl mx-auto">
+    Discover hidden opportunities, eliminate wasted spend, and boost your ROI in just 60 seconds.
+  </p>
+  <a href="{{ url_for('ads_grader_bp.analyze') }}"
+     class="inline-flex items-center px-8 py-4 bg-white text-indigo-700 font-bold text-lg rounded-xl hover:bg-blue-50 transition shadow-lg">
+    <i class="fa-brands fa-google mr-3 text-2xl"></i>
+    Start Free Analysis
+  </a>
+  <p class="mt-4 text-sm text-indigo-200">
+    Join thousands of businesses optimizing their Google Ads with FieldSprout
+  </p>
+</div>
+{% endblock %}

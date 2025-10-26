@@ -11,7 +11,7 @@ from flask import (
 from sqlalchemy import or_, desc
 
 from app.extensions import db
-from app.auth.session import login_required
+from app.auth.session_helpers import login_required
 from app.auth.decorators import require_admin_cloaked as require_admin
 from app.models import Account, User, CRMContact, CRM_STAGES
 

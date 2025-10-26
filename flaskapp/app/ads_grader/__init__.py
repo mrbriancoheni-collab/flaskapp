@@ -16,6 +16,7 @@ from flask import (
     jsonify,
     session,
     current_app,
+    send_file,
 )
 from flask_login import current_user, login_required
 from datetime import datetime, timedelta
@@ -27,6 +28,7 @@ from app.models_ads_grader import GoogleAdsGraderReport
 from app.ads_grader.oauth_helper import GoogleAdsOAuthHelper
 from app.ads_grader.google_ads_client import GoogleAdsGraderClient
 from app.ads_grader.analyzer import GoogleAdsAnalyzer
+from app.ads_grader.pdf_generator import generate_report_pdf, generate_report_filename
 
 logger = logging.getLogger(__name__)
 
@@ -226,13 +228,6 @@ def report(report_id):
 def report_pdf(report_id):
     """
     Generate and download PDF version of report.
-
-    TODO: Implement PDF generation using WeasyPrint or ReportLab:
-    1. Render report template with FieldSprout branding
-    2. Include all charts as images
-    3. Add recommendations section
-    4. Set proper PDF metadata
-    5. Return as downloadable file
     """
     report = GoogleAdsGraderReport.query.get_or_404(report_id)
 
@@ -248,13 +243,29 @@ def report_pdf(report_id):
             flash("Report not found or access denied.", "error")
             return redirect(url_for("ads_grader_bp.index"))
 
-    # Track download
-    report.pdf_download_count += 1
-    db.session.commit()
+    try:
+        # Generate PDF
+        pdf_file = generate_report_pdf(report)
 
-    # TODO: Implement actual PDF generation
-    flash("PDF export coming soon. For now, print the report page.", "info")
-    return redirect(url_for("ads_grader_bp.report", report_id=report_id))
+        # Track download
+        report.pdf_download_count += 1
+        db.session.commit()
+
+        # Generate filename
+        filename = generate_report_filename(report)
+
+        # Return PDF file
+        return send_file(
+            pdf_file,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=filename
+        )
+
+    except Exception as e:
+        logger.exception(f"Error generating PDF for report {report_id}: {e}")
+        flash(f"Error generating PDF: {str(e)}", "error")
+        return redirect(url_for("ads_grader_bp.report", report_id=report_id))
 
 
 # ============================================================================

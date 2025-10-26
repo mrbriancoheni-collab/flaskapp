@@ -30,6 +30,7 @@ from app import db
 from app.models_fbads import FBAccount, FBLead, FBProfile  # noqa: F401
 from app.models_linkedin import LinkedInScheduledPost  # noqa: F401
 from app.models_ads_grader import GoogleAdsGraderReport  # noqa: F401
+from app.models_fb_ads_grader import FacebookAdsGraderReport  # noqa: F401
 
 
 # -------------------------

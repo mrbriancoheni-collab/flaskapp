@@ -342,6 +342,6 @@ def send_team_invite_email(invite: TeamInvite, inviter: User):
 def get_invite_url(invite: TeamInvite) -> str:
     """Generate the full invitation URL."""
     from flask import url_for
-    base_url = current_app.config.get("BASE_URL", "http://localhost:5000")
+    base_url = current_app.config.get("BASE_URL", "https://fieldsprout.io")
     path = url_for("team.accept_invite", token=invite.token)
     return f"{base_url}{path}"

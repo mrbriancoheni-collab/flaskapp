@@ -27,7 +27,7 @@ class Config:
 
     # Default redirect URI - override in production
     # For Ads Grader: should be https://yourdomain.com/ads-grader/connect/callback
-    GOOGLE_ADS_REDIRECT_URI = os.getenv("GOOGLE_ADS_REDIRECT_URI","http://localhost:5000/ads-grader/connect/callback")
+    GOOGLE_ADS_REDIRECT_URI = os.getenv("GOOGLE_ADS_REDIRECT_URI","https://fieldsprout.io/ads-grader/connect/callback")
     APP_FERNET_KEY = os.getenv("APP_FERNET_KEY","")  # set in prod
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY","")
     

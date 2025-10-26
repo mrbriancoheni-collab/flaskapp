@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import re
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -190,6 +190,48 @@ def _create_account_and_user(name: str, email: str, password: str):
             {"aid": account_id, "n": name or email_n, "e": email_n, "ph": pwd_hash},
         )
         return user_res.lastrowid
+
+
+def _create_user_and_account(name: str, email: str, password: Optional[str] = None, email_verified: bool = False):
+    """
+    Creates an account + owner user (supports OAuth users with no password).
+    Returns (account_id, user_id) or (None, None) if email exists.
+    """
+    email_n = _normalize_email(email)
+
+    # For OAuth users without password, generate a random secure password they'll never use
+    if password:
+        pwd_hash = generate_password_hash(password)
+    else:
+        import secrets
+        pwd_hash = generate_password_hash(secrets.token_urlsafe(32))
+
+    with db.engine.begin() as conn:
+        exist = conn.execute(
+            text("SELECT id FROM users WHERE email=:e LIMIT 1"),
+            {"e": email_n},
+        ).fetchone()
+        if exist:
+            return None, None
+
+        acc_res = conn.execute(
+            text("INSERT INTO accounts (name, created_at) VALUES (:n, NOW())"),
+            {"n": name or email_n},
+        )
+        account_id = acc_res.lastrowid
+
+        user_res = conn.execute(
+            text(
+                """
+                INSERT INTO users
+                  (account_id, name, email, password_hash, role, email_verified, created_at)
+                VALUES
+                  (:aid, :n, :e, :ph, 'owner', :ev, NOW())
+                """
+            ),
+            {"aid": account_id, "n": name or email_n, "e": email_n, "ph": pwd_hash, "ev": 1 if email_verified else 0},
+        )
+        return account_id, user_res.lastrowid
 
 
 # ---- itsdangerous (email verification & password reset tokens) -------------
@@ -486,3 +528,184 @@ def reset_password(token: str):
 def logout():
     session.clear()
     return redirect(url_for("main_bp.home"))
+
+
+# ---------------------------------------------------------------------
+# Google OAuth Routes (Sign in with Google)
+# ---------------------------------------------------------------------
+@auth_bp.route("/auth/google", methods=["GET"], endpoint="google_login")
+def google_login():
+    """
+    Initiate Google OAuth flow for user authentication.
+    """
+    try:
+        from app.auth.google_oauth import GoogleAuthHelper
+
+        # Store next URL in session for post-login redirect
+        next_url = request.args.get("next", "")
+        if next_url:
+            session['google_auth_next'] = next_url
+
+        # Get authorization URL
+        auth_url = GoogleAuthHelper.get_authorization_url()
+
+        return redirect(auth_url)
+
+    except Exception as e:
+        current_app.logger.exception(f"Error initiating Google OAuth: {e}")
+        flash("Unable to connect to Google. Please try again or use email/password login.", "error")
+        return redirect(url_for("auth_bp.login"))
+
+
+@auth_bp.route("/auth/google/callback", methods=["GET"], endpoint="google_callback")
+def google_callback():
+    """
+    Handle Google OAuth callback and create/login user.
+    """
+    try:
+        from app.auth.google_oauth import GoogleAuthHelper
+        from app.models_oauth import UserOAuthProvider
+
+        # Get authorization code and state
+        code = request.args.get("code")
+        state = request.args.get("state")
+        error = request.args.get("error")
+
+        if error:
+            current_app.logger.warning(f"Google OAuth error: {error}")
+            flash("Google sign-in was cancelled or failed.", "warning")
+            return redirect(url_for("auth_bp.login"))
+
+        if not code:
+            flash("Invalid Google sign-in response.", "error")
+            return redirect(url_for("auth_bp.login"))
+
+        # Exchange code for user info
+        userinfo = GoogleAuthHelper.handle_callback(code, state)
+
+        if not userinfo or not userinfo.get('google_id') or not userinfo.get('email'):
+            flash("Unable to verify Google account. Please try again.", "error")
+            return redirect(url_for("auth_bp.login"))
+
+        google_id = userinfo['google_id']
+        email = _normalize_email(userinfo['email'])
+        name = userinfo.get('name', 'User')
+        picture = userinfo.get('picture')
+
+        # Check if this Google account is already linked
+        oauth_record = UserOAuthProvider.get_by_provider('google', google_id)
+
+        if oauth_record:
+            # Existing Google account - log them in
+            user_row = _find_user_by_id(oauth_record.user_id)
+
+            if user_row:
+                _set_login_session(user_row["id"], user_row["email"])
+
+                # Update OAuth record
+                oauth_record.email = email
+                oauth_record.name = name
+                oauth_record.picture = picture
+                oauth_record.last_login_at = datetime.utcnow()
+                db.session.commit()
+
+                flash(f"Welcome back, {user_row['name']}!", "success")
+
+                # Redirect to next URL or dashboard
+                next_url = session.pop('google_auth_next', '')
+                if next_url and _is_safe_redirect(next_url):
+                    return redirect(next_url)
+                return redirect(_post_auth_target())
+            else:
+                # OAuth record exists but user doesn't - cleanup and treat as new
+                db.session.delete(oauth_record)
+                db.session.commit()
+
+        # Check if email already exists (user might want to link accounts)
+        existing_user = _find_user_by_email(email)
+
+        if existing_user:
+            # Email exists - link Google account to existing user
+            user_id = existing_user["id"]
+
+            # Create OAuth provider record
+            oauth_provider = UserOAuthProvider(
+                user_id=user_id,
+                provider='google',
+                provider_user_id=google_id,
+                email=email,
+                name=name,
+                picture=picture,
+                last_login_at=datetime.utcnow()
+            )
+            db.session.add(oauth_provider)
+            db.session.commit()
+
+            _set_login_session(user_id, email)
+
+            flash(f"Your Google account has been linked! Welcome back, {existing_user['name']}!", "success")
+
+            next_url = session.pop('google_auth_next', '')
+            if next_url and _is_safe_redirect(next_url):
+                return redirect(next_url)
+            return redirect(_post_auth_target())
+
+        # New user - create account
+        # Note: Google-authenticated users have verified emails
+        account_id, user_id = _create_user_and_account(
+            name=name,
+            email=email,
+            password=None,  # No password for OAuth users
+            email_verified=True  # Google verified the email
+        )
+
+        # Create OAuth provider record
+        oauth_provider = UserOAuthProvider(
+            user_id=user_id,
+            provider='google',
+            provider_user_id=google_id,
+            email=email,
+            name=name,
+            picture=picture,
+            last_login_at=datetime.utcnow()
+        )
+        db.session.add(oauth_provider)
+        db.session.commit()
+
+        _set_login_session(user_id, email)
+
+        flash(f"Welcome to {current_app.config.get('APP_NAME', 'FieldSprout')}, {name}! Your account has been created.", "success")
+
+        next_url = session.pop('google_auth_next', '')
+        if next_url and _is_safe_redirect(next_url):
+            return redirect(next_url)
+        return redirect(_post_auth_target())
+
+    except Exception as e:
+        current_app.logger.exception(f"Error in Google OAuth callback: {e}")
+        flash("An error occurred during Google sign-in. Please try again.", "error")
+        return redirect(url_for("auth_bp.login"))
+
+
+# Helper function to find user by ID
+def _find_user_by_id(user_id: int):
+    """Find user by ID."""
+    with db.engine.begin() as conn:
+        return (
+            conn.execute(
+                text("SELECT id, name, email, email_verified FROM users WHERE id=:id LIMIT 1"),
+                {"id": user_id},
+            )
+            .mappings()
+            .first()
+        )
+
+
+def _is_safe_redirect(target: str) -> bool:
+    """Check if redirect target is safe (same domain)."""
+    try:
+        ref_url = urlparse(request.host_url)
+        test_url = urlparse(urljoin(request.host_url, target))
+        return test_url.scheme in ("http", "https") and ref_url.netloc == test_url.netloc
+    except Exception:
+        return False

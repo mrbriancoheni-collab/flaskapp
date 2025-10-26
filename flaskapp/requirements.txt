@@ -41,3 +41,7 @@ google-auth-oauthlib==1.2.1
 # Web scraping for SERP scraper
 requests>=2.31
 beautifulsoup4>=4.12
+
+# PDF generation for Ads Grader reports
+weasyprint>=60.0
+Pillow>=10.0

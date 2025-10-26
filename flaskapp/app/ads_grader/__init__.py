@@ -24,6 +24,9 @@ import logging
 from app import db
 from app.models import Account, User
 from app.models_ads_grader import GoogleAdsGraderReport
+from app.ads_grader.oauth_helper import GoogleAdsOAuthHelper
+from app.ads_grader.google_ads_client import GoogleAdsGraderClient
+from app.ads_grader.analyzer import GoogleAdsAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -64,35 +67,71 @@ def index():
 def connect():
     """
     Initiate OAuth flow to connect Google Ads account.
-
-    TODO: Implement Google Ads OAuth 2.0 flow:
-    1. Generate authorization URL with proper scopes
-    2. Store state parameter for CSRF protection
-    3. Redirect user to Google OAuth consent screen
-    4. Handle callback in /connect/callback route
     """
-    flash("Google Ads OAuth integration coming soon. For now, use the demo.", "info")
-    return redirect(url_for("ads_grader_bp.index"))
+    try:
+        # Check if OAuth credentials are configured
+        if not current_app.config.get("GOOGLE_ADS_CLIENT_ID"):
+            logger.warning("Google Ads OAuth not configured - using demo mode")
+            flash("Google Ads connection not configured. Using demo mode.", "info")
+            return redirect(url_for("ads_grader_bp.analyze"))
+
+        # Generate authorization URL
+        authorization_url = GoogleAdsOAuthHelper.get_authorization_url()
+
+        # Redirect user to Google OAuth consent screen
+        return redirect(authorization_url)
+
+    except Exception as e:
+        logger.exception(f"Error initiating OAuth flow: {e}")
+        flash("Error connecting to Google Ads. Please try again or use demo mode.", "error")
+        return redirect(url_for("ads_grader_bp.index"))
 
 
 @ads_grader_bp.route("/connect/callback")
 def connect_callback():
     """
     Handle OAuth callback from Google.
-
-    TODO:
-    1. Verify state parameter
-    2. Exchange authorization code for access/refresh tokens
-    3. Store tokens securely
-    4. Fetch customer ID
-    5. Redirect to analysis page
     """
-    code = request.args.get("code")
-    state = request.args.get("state")
+    try:
+        # Get authorization response (full URL)
+        authorization_response = request.url
+        state = request.args.get("state")
 
-    # TODO: Implement token exchange and storage
-    flash("OAuth callback handler coming soon.", "info")
-    return redirect(url_for("ads_grader_bp.index"))
+        # Exchange code for tokens
+        tokens = GoogleAdsOAuthHelper.handle_callback(authorization_response, state)
+
+        if not tokens:
+            flash("Failed to authorize Google Ads access. Please try again.", "error")
+            return redirect(url_for("ads_grader_bp.index"))
+
+        # Store tokens in session (for single-use grading)
+        # In production, you might want to store these in the database for recurring analysis
+        session['google_ads_tokens'] = tokens
+
+        # Get available customer IDs
+        customer_ids = GoogleAdsOAuthHelper.get_customer_ids(tokens['refresh_token'])
+
+        if not customer_ids:
+            flash("No Google Ads accounts found. Please ensure you have access to at least one account.", "warning")
+            return redirect(url_for("ads_grader_bp.index"))
+
+        # Store customer IDs in session for selection
+        session['google_ads_customers'] = customer_ids
+
+        # If only one account, auto-select it and go to analysis
+        if len(customer_ids) == 1:
+            session['selected_customer_id'] = customer_ids[0]['customer_id']
+            flash(f"Connected to Google Ads account: {customer_ids[0]['name']}", "success")
+            return redirect(url_for("ads_grader_bp.analyze"))
+
+        # Multiple accounts - show selection page
+        flash(f"Connected successfully! Select which account to analyze.", "success")
+        return redirect(url_for("ads_grader_bp.select_account"))
+
+    except Exception as e:
+        logger.exception(f"Error in OAuth callback: {e}")
+        flash("Error connecting to Google Ads. Please try again.", "error")
+        return redirect(url_for("ads_grader_bp.index"))
 
 
 # ============================================================================
@@ -102,25 +141,44 @@ def connect_callback():
 def analyze():
     """
     Run Google Ads analysis and generate report.
-
-    TODO: Implement full analysis pipeline:
-    1. Fetch account data via Google Ads API (90 days)
-    2. Run scoring algorithms for all 10+ sections
-    3. Generate recommendations
-    4. Save report to database
-    5. Redirect to report view
     """
     if request.method == "GET":
-        # Show analysis form/loading page
-        return render_template("ads_grader/analyze.html")
+        # Check if we have customer selection
+        customers = session.get('google_ads_customers', [])
+        selected_customer = session.get('selected_customer_id')
+
+        return render_template(
+            "ads_grader/analyze.html",
+            customers=customers,
+            selected_customer=selected_customer
+        )
 
     # POST: Run analysis
     try:
-        # TODO: Replace with actual Google Ads API calls
-        customer_id = request.form.get("customer_id", "123-456-7890")
+        # Get customer ID from form or session
+        customer_id = request.form.get("customer_id") or session.get('selected_customer_id')
 
-        # For now, create a demo report with mock data
-        report = _create_demo_report(customer_id)
+        if not customer_id:
+            flash("Please connect a Google Ads account first.", "error")
+            return redirect(url_for("ads_grader_bp.connect"))
+
+        # Get tokens from session
+        tokens = session.get('google_ads_tokens')
+
+        # If no tokens, check if demo mode is requested
+        use_demo = request.form.get("use_demo", "false") == "true"
+
+        if not tokens and not use_demo:
+            flash("Session expired. Please reconnect your Google Ads account.", "warning")
+            return redirect(url_for("ads_grader_bp.connect"))
+
+        # Create report
+        if use_demo or not tokens:
+            # Demo mode - use mock data
+            report = _create_demo_report(customer_id)
+        else:
+            # Real mode - fetch data from Google Ads API
+            report = _create_real_report(customer_id, tokens['refresh_token'])
 
         flash(f"Analysis complete! Your Google Ads Performance Score: {report.overall_score:.0f}/100", "success")
         return redirect(url_for("ads_grader_bp.report", report_id=report.id))
@@ -220,8 +278,129 @@ def history():
 
 
 # ============================================================================
+# Account Selection
+# ============================================================================
+@ads_grader_bp.route("/select-account", methods=["GET", "POST"])
+def select_account():
+    """
+    Select which Google Ads account to analyze (for users with multiple accounts).
+    """
+    customers = session.get('google_ads_customers', [])
+
+    if not customers:
+        flash("No Google Ads accounts found. Please connect your account.", "error")
+        return redirect(url_for("ads_grader_bp.connect"))
+
+    if request.method == "POST":
+        selected_id = request.form.get("customer_id")
+        if selected_id:
+            session['selected_customer_id'] = selected_id
+            flash("Account selected. Ready to analyze!", "success")
+            return redirect(url_for("ads_grader_bp.analyze"))
+
+    return render_template(
+        "ads_grader/select_account.html",
+        customers=customers
+    )
+
+
+# ============================================================================
 # Helper Functions
 # ============================================================================
+def _create_real_report(customer_id: str, refresh_token: str) -> GoogleAdsGraderReport:
+    """
+    Create a report using real Google Ads API data.
+    """
+    try:
+        # Initialize API client
+        logger.info(f"Fetching Google Ads data for customer {customer_id}")
+        api_client = GoogleAdsGraderClient(refresh_token, customer_id)
+
+        # Fetch account metrics (90 days)
+        metrics = api_client.get_account_metrics(days=90)
+
+        # Run analysis
+        logger.info("Running analysis on fetched data")
+        analyzer = GoogleAdsAnalyzer(metrics)
+        analysis_results = analyzer.analyze()
+
+        # Get account info
+        account_info = metrics.get("account_info", {})
+        account_name = account_info.get("account_name", f"Account {customer_id}")
+
+        # Create report from analysis results
+        report = GoogleAdsGraderReport(
+            account_id=current_user.account_id if current_user.is_authenticated else None,
+            user_id=current_user.id if current_user.is_authenticated else None,
+            google_ads_customer_id=customer_id,
+            google_ads_account_name=account_name,
+
+            # Overall score
+            overall_score=analysis_results["overall_score"],
+            overall_grade=analysis_results["overall_grade"],
+
+            # Key metrics
+            quality_score_avg=analysis_results["key_metrics"]["quality_score_avg"],
+            ctr_avg=analysis_results["key_metrics"]["ctr_avg"],
+            wasted_spend_90d=analysis_results["key_metrics"]["wasted_spend_90d"],
+            projected_waste_12m=analysis_results["key_metrics"]["projected_waste_12m"],
+
+            # Account diagnostics
+            active_campaigns=analysis_results["account_diagnostics"]["active_campaigns"],
+            active_ad_groups=analysis_results["account_diagnostics"]["active_ad_groups"],
+            active_text_ads=analysis_results["account_diagnostics"]["active_text_ads"],
+            active_keywords=analysis_results["account_diagnostics"]["active_keywords"],
+            clicks_90d=analysis_results["account_diagnostics"]["clicks_90d"],
+            conversions_90d=analysis_results["account_diagnostics"]["conversions_90d"],
+            avg_cpa_90d=analysis_results["account_diagnostics"]["avg_cpa_90d"],
+            avg_monthly_spend=analysis_results["account_diagnostics"]["avg_monthly_spend"],
+
+            # Section scores
+            wasted_spend_score=analysis_results["section_scores"]["wasted_spend"],
+            expanded_text_ads_score=analysis_results["section_scores"]["expanded_text_ads"],
+            text_ad_optimization_score=analysis_results["section_scores"]["text_ad_optimization"],
+            quality_score_optimization_score=analysis_results["section_scores"]["quality_score"],
+            ctr_optimization_score=analysis_results["section_scores"]["ctr_optimization"],
+            account_activity_score=analysis_results["section_scores"]["account_activity"],
+            long_tail_keywords_score=analysis_results["section_scores"]["long_tail_keywords"],
+            impression_share_score=analysis_results["section_scores"]["impression_share"],
+            landing_page_score=analysis_results["section_scores"]["landing_pages"],
+            mobile_advertising_score=analysis_results["section_scores"]["mobile_advertising"],
+
+            # Detailed data
+            detailed_metrics=metrics,
+
+            # Best practices
+            best_practices=analysis_results["best_practices"],
+
+            # Recommendations
+            recommendations=analysis_results["recommendations"],
+
+            # Metadata
+            report_date=datetime.utcnow(),
+            date_range_start=datetime.utcnow() - timedelta(days=90),
+            date_range_end=datetime.utcnow(),
+        )
+
+        db.session.add(report)
+        db.session.commit()
+
+        logger.info(f"Report created successfully: ID {report.id}, Score {report.overall_score}")
+
+        # Store in session for anonymous users
+        if not current_user.is_authenticated:
+            session["last_grader_report_id"] = report.id
+
+        return report
+
+    except Exception as e:
+        logger.exception(f"Error creating real report: {e}")
+        # Fallback to demo report if API fails
+        flash("Unable to fetch live data. Showing demo report instead.", "warning")
+        return _create_demo_report(customer_id)
+
+
+
 def _create_demo_report(customer_id: str) -> GoogleAdsGraderReport:
     """
     Create a demo report with mock data for testing.

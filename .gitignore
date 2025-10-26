@@ -52,3 +52,5 @@ instance/
 # OS
 .DS_Store
 Thumbs.db
+.env.ads_grader
+.env

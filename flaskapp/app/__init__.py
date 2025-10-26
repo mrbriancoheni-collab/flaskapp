@@ -575,6 +575,14 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register ads_grader_bp")
 
+    # --- Facebook Ads Grader (free for all users) -----------------------------
+    try:
+        from app.fb_ads_grader import fb_ads_grader_bp
+        app.register_blueprint(fb_ads_grader_bp)  # url_prefix set in blueprint (/fb-ads-grader)
+        app.logger.info("fb_ads_grader_bp registered at /fb-ads-grader")
+    except Exception:
+        app.logger.exception("Failed to register fb_ads_grader_bp")
+
     # ---- Apply CSRF exemptions AFTER blueprints are registered -------------
     try:
         for ep in (

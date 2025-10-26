@@ -69,6 +69,8 @@
     .section{padding:5rem 0}
     .footer-wrap{background:#0b0720;position:relative}
     .footer-overlay{position:absolute;inset:0;background:radial-gradient(1200px 400px at 20% -10%, rgba(124,58,237,.3), transparent), radial-gradient(900px 400px at 100% 120%, rgba(91,33,182,.35), transparent)}
+    .logo-pill{display:inline-flex;align-items:center;padding:.5rem 1rem;border-radius:999px;font-size:.875rem;font-weight:600;background:#fff;border:1px solid rgba(0,0,0,.08);box-shadow:0 2px 8px rgba(0,0,0,.04)}
+    .logo-dot{display:inline-block;width:8px;height:8px;border-radius:50%}
   </style>
   {% block head_extra %}{% endblock %}
 </head>
@@ -129,6 +131,24 @@
         <li><a class="hover:text-primary-700" href="#proof">Proof</a></li>
         <li><a class="hover:text-primary-700" href="#pricing">Pricing</a></li>
 
+        {% if has_endpoint('ads_grader_bp.index') %}
+        <li>
+          <a class="hover:text-primary-700 inline-flex items-center gap-1.5" href="{{ url_for('ads_grader_bp.index') }}">
+            Google Ads Grader
+            <span class="text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-semibold">FREE</span>
+          </a>
+        </li>
+        {% endif %}
+
+        {% if has_endpoint('fb_ads_grader_bp.index') %}
+        <li>
+          <a class="hover:text-primary-700 inline-flex items-center gap-1.5" href="{{ url_for('fb_ads_grader_bp.index') }}">
+            Facebook Ads Grader
+            <span class="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-semibold">FREE</span>
+          </a>
+        </li>
+        {% endif %}
+
         <li>
           {% if has_endpoint('login') %}
             <a class="btn btn-outline" href="{{ url_for(ep('login')) }}">Sign in</a>
@@ -184,6 +204,20 @@
         <a class="block py-2 hover:text-primary-700" href="#features">Features</a>
         <a class="block py-2 hover:text-primary-700" href="#proof">Proof</a>
         <a class="block py-2 hover:text-primary-700" href="#pricing">Pricing</a>
+
+        {% if has_endpoint('ads_grader_bp.index') %}
+        <a class="block py-2 hover:text-primary-700 flex items-center gap-2" href="{{ url_for('ads_grader_bp.index') }}">
+          Google Ads Grader
+          <span class="text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-semibold">FREE</span>
+        </a>
+        {% endif %}
+
+        {% if has_endpoint('fb_ads_grader_bp.index') %}
+        <a class="block py-2 hover:text-primary-700 flex items-center gap-2" href="{{ url_for('fb_ads_grader_bp.index') }}">
+          Facebook Ads Grader
+          <span class="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-semibold">FREE</span>
+        </a>
+        {% endif %}
 
         <div class="flex gap-3 pt-3">
           {% if has_endpoint('login') %}

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Facebook Ads Performance Report - {{ report.fb_ad_account_name }}</title>
+</head>
+<body>
+  <!-- Header -->
+  <div style="text-align: center; margin-bottom: 30pt;">
+    <h1 style="color: #1877f2; margin-bottom: 10pt;">Facebook Ads Performance Report</h1>
+    <div style="font-size: 12pt; color: #6b7280;">
+      {{ report.fb_ad_account_name }}<br>
+      Report Date: {{ generated_date }}<br>
+      Date Range: {{ report.date_range_start.strftime('%b %d, %Y') }} - {{ report.date_range_end.strftime('%b %d, %Y') }}
+    </div>
+  </div>
+
+  <!-- Overall Score -->
+  <div class="score-circle">
+    <div class="score-value" style="{% if report.overall_score >= 80 %}color: #10b981;
+                                     {% elif report.overall_score >= 60 %}color: #f59e0b;
+                                     {% else %}color: #ef4444;{% endif %}">
+      {{ report.overall_score|round|int }}
+    </div>
+    <div style="font-size: 14pt; color: #6b7280;">Overall Score</div>
+    <div style="font-size: 18pt; font-weight: bold; margin-top: 8pt;">Grade: {{ report.overall_grade }}</div>
+  </div>
+
+  <!-- Key Metrics -->
+  <h2>Key Metrics</h2>
+  <table>
+    <tr>
+      <th>Metric</th>
+      <th>Value</th>
+      <th>Benchmark</th>
+    </tr>
+    <tr>
+      <td>Relevance Score Average</td>
+      <td style="font-weight: bold; color: #f59e0b;">{{ "%.1f"|format(report.relevance_score_avg or 0) }}</td>
+      <td>Target: 7.0+</td>
+    </tr>
+    <tr>
+      <td>Click-Through Rate</td>
+      <td style="font-weight: bold; color: #3b82f6;">{{ "%.2f"|format(report.ctr_avg or 0) }}%</td>
+      <td>Industry avg: 1.9%</td>
+    </tr>
+    <tr>
+      <td>Cost Per Click</td>
+      <td style="font-weight: bold; color: #3b82f6;">${{ "%.2f"|format(report.cpc_avg or 0) }}</td>
+      <td>Industry avg: $1.72</td>
+    </tr>
+    <tr>
+      <td>ROAS (Return on Ad Spend)</td>
+      <td style="font-weight: bold; color: #10b981;">{{ "%.2f"|format(report.roas_avg or 0) }}x</td>
+      <td>Target: 2.0x+</td>
+    </tr>
+    <tr>
+      <td>Projected 12-Month Waste</td>
+      <td style="font-weight: bold; color: #ef4444;">${{ "{:,.0f}".format(report.projected_waste_12m or 0) }}</td>
+      <td>Last year: ${{ "{:,.0f}".format(report.wasted_spend_365d or 0) }}</td>
+    </tr>
+  </table>
+
+  <!-- Account Diagnostics -->
+  <h2>Account Diagnostics</h2>
+  <table>
+    <tr>
+      <td><strong>Active Campaigns:</strong></td>
+      <td>{{ report.active_campaigns or 0 }}</td>
+      <td><strong>Active Ad Sets:</strong></td>
+      <td>{{ report.active_ad_sets or 0 }}</td>
+    </tr>
+    <tr>
+      <td><strong>Active Ads:</strong></td>
+      <td>{{ report.active_ads or 0 }}</td>
+      <td><strong>Total Audiences:</strong></td>
+      <td>{{ "{:,}".format(report.total_audiences or 0) }}</td>
+    </tr>
+    <tr>
+      <td><strong>Clicks (last year):</strong></td>
+      <td>{{ "{:,}".format(report.clicks_365d or 0) }}</td>
+      <td><strong>Impressions (last year):</strong></td>
+      <td>{{ "{:,}".format(report.impressions_365d or 0) }}</td>
+    </tr>
+    <tr>
+      <td><strong>Conversions (last year):</strong></td>
+      <td>{{ "{:,}".format(report.conversions_365d or 0) }}</td>
+      <td><strong>Spend (last year):</strong></td>
+      <td>${{ "{:,.0f}".format(report.spend_365d or 0) }}</td>
+    </tr>
+    <tr>
+      <td><strong>Revenue (last year):</strong></td>
+      <td>${{ "{:,.0f}".format(report.revenue_365d or 0) }}</td>
+      <td><strong>Monthly Spend:</strong></td>
+      <td>${{ "{:,.0f}".format(report.avg_monthly_spend or 0) }}</td>
+    </tr>
+  </table>
+
+  <!-- Performance Sections -->
+  <h2>Performance Analysis</h2>
+
+  {% macro score_row(label, score) %}
+  <div style="margin-bottom: 16pt;">
+    <div style="display: flex; justify-content: space-between; font-size: 11pt; margin-bottom: 6pt;">
+      <span><strong>{{ label }}</strong></span>
+      <span style="{% if score < 40 %}color: #ef4444;
+                    {% elif score < 70 %}color: #f59e0b;
+                    {% else %}color: #10b981;{% endif %}">
+        <strong>{{ score|round|int }}%</strong>
+      </span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" style="width: {{ score|round|int }}%;
+                                          {% if score < 40 %}background: #ef4444;
+                                          {% elif score < 70 %}background: #f59e0b;
+                                          {% else %}background: #10b981;{% endif %}"></div>
+    </div>
+  </div>
+  {% endmacro %}
+
+  {{ score_row("Wasted Spend", report.wasted_spend_score or 0) }}
+  {{ score_row("Creative Optimization", report.creative_optimization_score or 0) }}
+  {{ score_row("Audience Targeting", report.audience_targeting_score or 0) }}
+  {{ score_row("Relevance Score Optimization", report.relevance_score_optimization_score or 0) }}
+  {{ score_row("CTR Optimization", report.ctr_optimization_score or 0) }}
+  {{ score_row("Account Activity", report.account_activity_score or 0) }}
+  {{ score_row("Ad Format Diversity", report.ad_format_diversity_score or 0) }}
+  {{ score_row("Campaign Structure", report.campaign_structure_score or 0) }}
+  {{ score_row("Landing Page Experience", report.landing_page_score or 0) }}
+  {{ score_row("Mobile Optimization", report.mobile_optimization_score or 0) }}
+  {{ score_row("Conversion Tracking", report.conversion_tracking_score or 0) }}
+  {{ score_row("ROAS Performance", report.roas_score or 0) }}
+
+  <!-- Best Practices -->
+  {% if report.best_practices %}
+  <h2>Best Practices Checklist</h2>
+  <div style="margin-bottom: 20pt;">
+    {% for key, value in report.best_practices.items() %}
+      <div class="checklist-item {% if value %}checklist-pass{% else %}checklist-fail{% endif %}">
+        {% if value %}✓{% else %}✗{% endif %} {{ key.replace('_', ' ')|title }}
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Recommendations -->
+  {% if report.recommendations %}
+  <h2>Recommendations</h2>
+  <div style="margin-bottom: 20pt;">
+    {% for recommendation in report.recommendations %}
+      <div class="recommendation">
+        <strong>{{ loop.index }}.</strong> {{ recommendation }}
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Relevance Score Distribution -->
+  {% if report.detailed_metrics and report.detailed_metrics.get('relevance_score_distribution') %}
+  <h2>Relevance Score Distribution</h2>
+  <table>
+    <tr>
+      <th>Score Range</th>
+      <th>Number of Ads</th>
+    </tr>
+    {% for range, count in report.detailed_metrics.get('relevance_score_distribution').items() %}
+    <tr>
+      <td>{{ range }}</td>
+      <td>{{ count }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  <!-- CTR by Device -->
+  {% if report.detailed_metrics and report.detailed_metrics.get('ctr_by_device') %}
+  <h2>CTR by Device</h2>
+  <table>
+    <tr>
+      <th>Device</th>
+      <th>CTR (%)</th>
+    </tr>
+    {% for device, ctr in report.detailed_metrics.get('ctr_by_device').items() %}
+    <tr>
+      <td>{{ device|title }}</td>
+      <td>{{ "%.2f"|format(ctr) }}%</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  <!-- Performance by Placement -->
+  {% if report.detailed_metrics and report.detailed_metrics.get('performance_by_placement') %}
+  <h2>Performance by Placement</h2>
+  <table>
+    <tr>
+      <th>Placement</th>
+      <th>CTR (%)</th>
+    </tr>
+    {% for placement, ctr in report.detailed_metrics.get('performance_by_placement').items() %}
+    <tr>
+      <td>{{ placement }}</td>
+      <td>{{ "%.2f"|format(ctr) }}%</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  <!-- Footer -->
+  <div class="footer-note">
+    <div style="text-align: center; margin-top: 30pt;">
+      <strong>Ready to improve your Facebook Ads performance?</strong><br>
+      Visit <strong>FieldSprout.com</strong> to implement these recommendations and boost your ROI.
+    </div>
+    <div style="margin-top: 20pt; text-align: center; font-size: 8pt;">
+      Report ID: {{ report.id }} | Ad Account ID: {{ report.fb_ad_account_id }}<br>
+      Generated by FieldSprout Facebook Ads Grader | © {{ generated_date.split(',')[-1].strip() }} FieldSprout
+    </div>
+  </div>
+</body>
+</html>

@@ -19,11 +19,15 @@ class Config:
     if not STRIPE_YEARLY_PRICE_ID:
         STRIPE_YEARLY_PRICE_ID = os.environ.get("STRIPE_PRICE_PRO", "")
 
+    # Google Ads API configuration (for existing integrations)
     GOOGLE_ADS_DEVELOPER_TOKEN = os.getenv("GOOGLE_ADS_DEVELOPER_TOKEN") or None
     GOOGLE_ADS_LOGIN_CUSTOMER_ID = (os.getenv("GOOGLE_ADS_LOGIN_CUSTOMER_ID") or "").replace("-", "") or None
     GOOGLE_ADS_CLIENT_ID = os.getenv("GOOGLE_ADS_CLIENT_ID","")
     GOOGLE_ADS_CLIENT_SECRET = os.getenv("GOOGLE_ADS_CLIENT_SECRET","")
-    GOOGLE_ADS_REDIRECT_URI = os.getenv("GOOGLE_ADS_REDIRECT_URI","http://localhost:8000/oauth/google-ads/callback")
+
+    # Default redirect URI - override in production
+    # For Ads Grader: should be https://yourdomain.com/ads-grader/connect/callback
+    GOOGLE_ADS_REDIRECT_URI = os.getenv("GOOGLE_ADS_REDIRECT_URI","http://localhost:5000/ads-grader/connect/callback")
     APP_FERNET_KEY = os.getenv("APP_FERNET_KEY","")  # set in prod
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY","")
     

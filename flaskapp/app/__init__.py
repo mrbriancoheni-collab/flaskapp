@@ -578,8 +578,8 @@ def create_app():
     # --- Facebook Ads Grader (free for all users) -----------------------------
     try:
         from app.fb_ads_grader import fb_ads_grader_bp
-        app.register_blueprint(fb_ads_grader_bp)  # url_prefix set in blueprint (/fb-ads-grader)
-        app.logger.info("fb_ads_grader_bp registered at /fb-ads-grader")
+        app.register_blueprint(fb_ads_grader_bp)  # url_prefix set in blueprint (/account/fbads)
+        app.logger.info("fb_ads_grader_bp registered at /account/fbads")
     except Exception:
         app.logger.exception("Failed to register fb_ads_grader_bp")
 

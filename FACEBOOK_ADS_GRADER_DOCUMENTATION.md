@@ -71,7 +71,7 @@ The Facebook Ads Grader is a comprehensive analysis tool that evaluates Facebook
 1. In Facebook App Dashboard → Settings → Basic
 2. Add **App Domains**: `fieldsprout.io`
 3. In Marketing API → Tools → Settings
-4. Add **OAuth Redirect URI**: `https://fieldsprout.io/fb-ads-grader/connect/callback`
+4. Add **OAuth Redirect URI**: `https://fieldsprout.io/account/fbads/callback`
 
 #### Request Permissions
 The app requires these Marketing API permissions:
@@ -91,10 +91,10 @@ FB_APP_ID=your_facebook_app_id
 FB_APP_SECRET=your_facebook_app_secret
 
 # Facebook Ads Grader OAuth Redirect
-FB_ADS_GRADER_REDIRECT_URI=https://fieldsprout.io/fb-ads-grader/connect/callback
+FB_ADS_GRADER_REDIRECT_URI=https://fieldsprout.io/account/fbads/callback
 
 # Optional: For local development
-# FB_ADS_GRADER_REDIRECT_URI=http://localhost:5000/fb-ads-grader/connect/callback
+# FB_ADS_GRADER_REDIRECT_URI=http://localhost:5000/account/fbads/callback
 ```
 
 ### 3. Database Migration
@@ -120,19 +120,19 @@ from app.fb_ads_grader import fb_ads_grader_bp
 app.register_blueprint(fb_ads_grader_bp)
 ```
 
-**Blueprint URL Prefix**: `/fb-ads-grader`
+**Blueprint URL Prefix**: `/account/fbads`
 
 ### 5. Verify Installation
 
 Check that these routes are available:
-- `GET /fb-ads-grader` - Landing page
-- `GET /fb-ads-grader/connect` - OAuth flow start
-- `GET /fb-ads-grader/connect/callback` - OAuth callback
-- `GET /fb-ads-grader/select-account` - Multi-account selection
-- `POST /fb-ads-grader/analyze` - Generate report
-- `GET /fb-ads-grader/report/<report_id>` - View report
-- `GET /fb-ads-grader/report/<report_id>/pdf` - Download PDF
-- `GET /fb-ads-grader/history` - View past reports
+- `GET /account/fbads` - Landing page
+- `GET /account/fbads/connect` - OAuth flow start
+- `GET /account/fbads/callback` - OAuth callback
+- `GET /account/fbads/select-account` - Multi-account selection
+- `POST /account/fbads/analyze` - Generate report
+- `GET /account/fbads/report/<report_id>` - View report
+- `GET /account/fbads/report/<report_id>/pdf` - Download PDF
+- `GET /account/fbads/history` - View past reports
 
 ---
 
@@ -144,7 +144,7 @@ Check that these routes are available:
 |----------|-------------|---------|
 | `FB_APP_ID` | Facebook App ID | `1234567890123456` |
 | `FB_APP_SECRET` | Facebook App Secret | `abc123def456...` |
-| `FB_ADS_GRADER_REDIRECT_URI` | OAuth redirect URI | `https://fieldsprout.io/fb-ads-grader/connect/callback` |
+| `FB_ADS_GRADER_REDIRECT_URI` | OAuth redirect URI | `https://fieldsprout.io/account/fbads/callback` |
 
 ### Optional Variables
 
@@ -157,12 +157,12 @@ Check that these routes are available:
 
 **Production** (`fieldsprout.io`):
 ```bash
-FB_ADS_GRADER_REDIRECT_URI=https://fieldsprout.io/fb-ads-grader/connect/callback
+FB_ADS_GRADER_REDIRECT_URI=https://fieldsprout.io/account/fbads/callback
 ```
 
 **Local Development**:
 ```bash
-FB_ADS_GRADER_REDIRECT_URI=http://localhost:5000/fb-ads-grader/connect/callback
+FB_ADS_GRADER_REDIRECT_URI=http://localhost:5000/account/fbads/callback
 ```
 
 **Important**: Update Facebook App OAuth settings to match your environment.
@@ -354,7 +354,7 @@ FB_ADS_GRADER_REDIRECT_URI=http://localhost:5000/fb-ads-grader/connect/callback
 ### For End Users
 
 #### 1. Access the Tool
-Navigate to: `https://fieldsprout.io/fb-ads-grader`
+Navigate to: `https://fieldsprout.io/account/fbads`
 
 #### 2. Connect Facebook Account
 Click "Connect Facebook Account" → Authorize app → Select ad account(s)

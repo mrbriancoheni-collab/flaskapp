@@ -47,7 +47,7 @@ class FacebookAdsOAuthHelper:
         app_id = current_app.config.get('FB_APP_ID') or os.getenv('FB_APP_ID')
         redirect_uri = current_app.config.get('FB_ADS_GRADER_REDIRECT_URI') or \
                       os.getenv('FB_ADS_GRADER_REDIRECT_URI') or \
-                      'http://localhost:5000/fb-ads-grader/connect/callback'
+                      'https://fieldsprout.io/account/fbads/callback'
 
         if not app_id:
             raise ValueError("FB_APP_ID not configured")
@@ -96,7 +96,7 @@ class FacebookAdsOAuthHelper:
         app_secret = current_app.config.get('FB_APP_SECRET') or os.getenv('FB_APP_SECRET')
         redirect_uri = current_app.config.get('FB_ADS_GRADER_REDIRECT_URI') or \
                       os.getenv('FB_ADS_GRADER_REDIRECT_URI') or \
-                      'http://localhost:5000/fb-ads-grader/connect/callback'
+                      'https://fieldsprout.io/account/fbads/callback'
 
         if not app_id or not app_secret:
             logger.error("FB_APP_ID or FB_APP_SECRET not configured")

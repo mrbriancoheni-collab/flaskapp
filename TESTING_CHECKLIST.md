@@ -353,7 +353,7 @@ WHERE id IN (
 ### Test 1: Landing Page Access
 
 **Manual Test**:
-1. Navigate to `/fb-ads-grader`
+1. Navigate to `/account/fbads`
 2. Verify page loads
 3. Check "Connect Facebook Account" button
 4. Verify responsive design (mobile/desktop)
@@ -390,7 +390,7 @@ WHERE id IN (
 
 **Manual Test** (requires real Facebook account):
 1. Set `FB_APP_ID`, `FB_APP_SECRET`, `FB_ADS_GRADER_REDIRECT_URI`
-2. Navigate to `/fb-ads-grader`
+2. Navigate to `/account/fbads`
 3. Click "Connect Facebook Account"
 4. Authorize app with Facebook
 5. Verify callback handling
@@ -398,7 +398,7 @@ WHERE id IN (
 **Expected**:
 - ✅ Redirects to Facebook OAuth consent screen
 - ✅ Permissions requested: `ads_read`, `ads_management`, `read_insights`
-- ✅ Returns to `/fb-ads-grader/connect/callback`
+- ✅ Returns to `/account/fbads/callback`
 - ✅ Access token stored in session
 - ✅ Redirected to account selection (if multiple accounts)
 
@@ -420,7 +420,7 @@ WHERE id IN (
 2. Verify account selection page appears
 
 **Expected**:
-- ✅ `/fb-ads-grader/select-account` page loads
+- ✅ `/account/fbads/select-account` page loads
 - ✅ All ad accounts listed with names and IDs
 - ✅ Radio buttons or cards for selection
 - ✅ "Analyze Account" button enabled on selection
@@ -436,7 +436,7 @@ WHERE id IN (
 - ✅ Loading indicator (30-60 seconds)
 - ✅ API fetches data without errors
 - ✅ Report generated and saved to database
-- ✅ Redirected to `/fb-ads-grader/report/<report_id>`
+- ✅ Redirected to `/account/fbads/report/<report_id>`
 
 **Performance**:
 - ⏱️ Should complete in <2 minutes
@@ -532,7 +532,7 @@ SELECT pdf_download_count FROM facebook_ads_grader_reports WHERE id = <report_id
 **Manual Test**:
 1. Login as user
 2. Generate 2+ Facebook Ads reports
-3. Navigate to `/fb-ads-grader/history`
+3. Navigate to `/account/fbads/history`
 
 **Expected**:
 - ✅ All user's reports listed
@@ -615,7 +615,7 @@ with app.app_context():
 ### Test 1: Google SSO + Facebook Ads Grader
 
 **User Journey Test**:
-1. New user clicks "Sign in with Google" from `/fb-ads-grader`
+1. New user clicks "Sign in with Google" from `/account/fbads`
 2. Complete Google OAuth
 3. Immediately start Facebook Ads analysis
 4. Generate report
@@ -631,7 +631,7 @@ with app.app_context():
 
 **Manual Test**:
 1. Navigate to `/ads-grader` (Google Ads Grader)
-2. Use navigation menu to access `/fb-ads-grader`
+2. Use navigation menu to access `/account/fbads`
 3. Verify both tools accessible from nav
 
 **Expected**:
@@ -650,7 +650,7 @@ with app.app_context():
 3. Check report saved to history
 
 **Scenario B: Anonymous User**
-1. Access `/fb-ads-grader` without login
+1. Access `/account/fbads` without login
 2. Generate report
 3. Verify report accessible but not in persistent history
 
@@ -892,14 +892,14 @@ class TestFacebookAdsGraderFlow(unittest.TestCase):
 
     def test_landing_page(self):
         """Test landing page loads"""
-        response = self.client.get('/fb-ads-grader')
+        response = self.client.get('/account/fbads')
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'Facebook Ads Grader', response.data)
 
     def test_demo_mode(self):
         """Test demo mode when API not configured"""
         # Unset FB_APP_ID in test config
-        response = self.client.get('/fb-ads-grader/demo')
+        response = self.client.get('/account/fbads/demo')
         self.assertEqual(response.status_code, 200)
 
         # Check demo report created
@@ -1001,7 +1001,7 @@ After deploying to production:
 echo "=== Post-Deployment Verification ==="
 
 # 1. Health check
-curl -I https://fieldsprout.io/fb-ads-grader
+curl -I https://fieldsprout.io/account/fbads
 # Expected: 200 OK
 
 # 2. Check Google SSO redirect
@@ -1009,7 +1009,7 @@ curl -I "https://fieldsprout.io/auth/google"
 # Expected: 302 Redirect to accounts.google.com
 
 # 3. Check Facebook OAuth redirect
-curl -I "https://fieldsprout.io/fb-ads-grader/connect"
+curl -I "https://fieldsprout.io/account/fbads/connect"
 # Expected: 302 Redirect to facebook.com
 
 # 4. Database connection

@@ -147,7 +147,7 @@ If you only have one account:
 
 1. Click **"Run Analysis"** or **"Analyze Account"**
 2. Wait 30-60 seconds while we:
-   - Fetch 90 days of performance data
+   - Fetch 365 days (1 year) of performance data
    - Calculate Quality Scores
    - Analyze keywords and ads
    - Generate recommendations
@@ -252,7 +252,7 @@ Click **"Download PDF"** button:
 
 When you connect, we fetch:
 
-### Account Metrics (90 days)
+### Account Metrics (365 days - full year)
 - Total clicks, impressions, cost
 - Conversions and conversion value
 - CTR, CPC, CPA

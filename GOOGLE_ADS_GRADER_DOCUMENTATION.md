@@ -83,7 +83,7 @@ The **Google Ads Grader** is a free diagnostic tool that analyzes Google Ads acc
 ### Core Functionality
 
 #### 1. **Comprehensive Account Analysis**
-- Analyzes 90 days of historical data
+- Analyzes 365 days (1 full year) of historical data
 - 10+ distinct performance categories
 - Industry benchmark comparisons
 - Weighted scoring algorithm
@@ -153,7 +153,7 @@ The **Google Ads Grader** is a free diagnostic tool that analyzes Google Ads acc
 - Ad groups count
 - Keywords count
 - Text ads count
-- 90-day clicks & conversions
+- Full-year clicks & conversions (365 days)
 - Average CPA
 - Monthly spend estimate
 
@@ -175,7 +175,7 @@ The **Google Ads Grader** is a free diagnostic tool that analyzes Google Ads acc
 5. [If multiple accounts] Select account to analyze
    ↓
 6. Analysis runs (30-60 seconds)
-   - Fetch 90 days of data from Google Ads API
+   - Fetch 365 days (1 year) of data from Google Ads API
    - Run 10+ scoring algorithms
    - Generate recommendations
    ↓
@@ -267,7 +267,7 @@ The grader collects the following data from Google Ads API:
 - Currency
 - Timezone
 
-**Performance Metrics (90 days):**
+**Performance Metrics (365 days - full year):**
 - Clicks
 - Impressions
 - Cost
@@ -547,7 +547,7 @@ If you manage multiple Google Ads accounts:
 **Step 4: Run Analysis**
 1. Click "Run Analysis" or "Analyze Account"
 2. Wait 30-60 seconds while we:
-   - Fetch 90 days of performance data
+   - Fetch 365 days (1 year) of performance data
    - Analyze 10+ quality dimensions
    - Generate personalized recommendations
 3. You'll see a progress indicator
@@ -991,7 +991,7 @@ WHERE campaign.status = 'ENABLED'
 **Response:** Redirect to `/ads-grader/report/<id>`
 
 **Processing:**
-1. Fetch 90 days of data from Google Ads API
+1. Fetch 365 days (1 full year) of data from Google Ads API
 2. Run scoring algorithms
 3. Generate recommendations
 4. Save report to database
@@ -1697,8 +1697,8 @@ Account Diagnostics:
 - Active Ad Groups: 23
 - Active Keywords: 387
 - Active Text Ads: 42
-- Clicks (90 days): 2,134
-- Conversions (90 days): 47
+- Clicks (last year): 2,134
+- Conversions (last year): 47
 - Avg CPA: $65.32
 - Monthly Spend: $3,150
 

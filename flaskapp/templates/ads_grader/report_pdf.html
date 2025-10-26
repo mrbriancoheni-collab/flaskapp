@@ -47,7 +47,7 @@
     <tr>
       <td>Projected 12-Month Waste</td>
       <td style="font-weight: bold; color: #ef4444;">${{ "{:,.0f}".format(report.projected_waste_12m or 0) }}</td>
-      <td>Last 90 days: ${{ "{:,.0f}".format(report.wasted_spend_90d or 0) }}</td>
+      <td>Last year: ${{ "{:,.0f}".format(report.wasted_spend_90d or 0) }}</td>
     </tr>
   </table>
 
@@ -67,9 +67,9 @@
       <td>{{ report.active_text_ads or 0 }}</td>
     </tr>
     <tr>
-      <td><strong>Clicks (90 days):</strong></td>
+      <td><strong>Clicks (last year):</strong></td>
       <td>{{ "{:,}".format(report.clicks_90d or 0) }}</td>
-      <td><strong>Conversions (90 days):</strong></td>
+      <td><strong>Conversions (last year):</strong></td>
       <td>{{ "{:,}".format(report.conversions_90d or 0) }}</td>
     </tr>
     <tr>

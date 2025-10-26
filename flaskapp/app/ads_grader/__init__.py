@@ -327,8 +327,8 @@ def _create_real_report(customer_id: str, refresh_token: str) -> GoogleAdsGrader
         logger.info(f"Fetching Google Ads data for customer {customer_id}")
         api_client = GoogleAdsGraderClient(refresh_token, customer_id)
 
-        # Fetch account metrics (90 days)
-        metrics = api_client.get_account_metrics(days=90)
+        # Fetch account metrics (365 days - full year of historical data)
+        metrics = api_client.get_account_metrics(days=365)
 
         # Run analysis
         logger.info("Running analysis on fetched data")
@@ -389,7 +389,7 @@ def _create_real_report(customer_id: str, refresh_token: str) -> GoogleAdsGrader
 
             # Metadata
             report_date=datetime.utcnow(),
-            date_range_start=datetime.utcnow() - timedelta(days=90),
+            date_range_start=datetime.utcnow() - timedelta(days=365),
             date_range_end=datetime.utcnow(),
         )
 

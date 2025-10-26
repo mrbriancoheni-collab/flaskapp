@@ -44,12 +44,12 @@ class GoogleAdsGraderClient:
             logger.exception(f"Failed to initialize Google Ads client: {e}")
             raise
 
-    def get_account_metrics(self, days: int = 90) -> Dict[str, Any]:
+    def get_account_metrics(self, days: int = 365) -> Dict[str, Any]:
         """
         Fetch comprehensive account metrics for grading.
 
         Args:
-            days: Number of days of historical data to fetch (default 90)
+            days: Number of days of historical data to fetch (default 365)
 
         Returns:
             Dictionary containing all metrics needed for grading

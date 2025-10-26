@@ -412,7 +412,7 @@ class GoogleAdsAnalyzer:
             "clicks_90d": performance.get("clicks", 0),
             "conversions_90d": int(performance.get("conversions", 0)),
             "avg_cpa_90d": round(performance.get("avg_cpa", 0), 2),
-            "avg_monthly_spend": round(performance.get("cost", 0) / 3, 2),  # 90 days / 3
+            "avg_monthly_spend": round(performance.get("cost", 0) / 12, 2),  # 365 days / 12 months
         }
 
     def _check_best_practices(self) -> Dict[str, bool]:

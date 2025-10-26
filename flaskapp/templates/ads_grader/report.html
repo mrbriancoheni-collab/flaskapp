@@ -67,7 +67,7 @@
         <div class="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-lg p-4">
           <div class="text-sm text-gray-600 mb-1">Projected 12-Month Waste</div>
           <div class="text-3xl font-bold text-red-700">${{ "{:,.0f}".format(report.projected_waste_12m or 0) }}</div>
-          <div class="text-xs text-gray-500 mt-1">Last 90 days: ${{ "{:,.0f}".format(report.wasted_spend_90d or 0) }}</div>
+          <div class="text-xs text-gray-500 mt-1">Last year: ${{ "{:,.0f}".format(report.wasted_spend_90d or 0) }}</div>
         </div>
       </div>
     </div>

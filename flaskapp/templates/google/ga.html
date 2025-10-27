@@ -234,7 +234,7 @@
         <div class="text-xs text-gray-500">Avg Engagement Time</div>
         <div class="text-xl font-semibold" data-field="avg_engagement_time">{{ g.avg_engagement_time if g else '—' }}</div>
       </div>
-      <div class="rounded-md border p-3">
+      <div class="rounded-md border p-3" id="conversionsKPI">
         <div class="text-xs text-gray-500">Conversions</div>
         <div class="text-xl font-semibold" data-field="conversions">{{ g.conversions if g else '—' }}</div>
       </div>
@@ -245,6 +245,31 @@
         </div>
       </div>
     </div>
+
+    <!-- Conversion Tracking Setup Guidance -->
+    {% if connected_ga and g and (not g.conversions or g.conversions == 0) %}
+    <div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+      <div class="flex gap-3">
+        <div class="text-amber-600 text-xl">⚠️</div>
+        <div class="text-sm">
+          <p class="font-semibold text-amber-900 mb-1">No Conversions Detected</p>
+          <p class="text-amber-800 mb-2">This doesn't mean conversions haven't happened - it means conversion tracking isn't set up in Google Analytics yet.</p>
+          <p class="text-amber-800 mb-2"><strong>To track conversions:</strong></p>
+          <ol class="list-decimal pl-5 space-y-1 text-amber-800 mb-3">
+            <li>Go to your <a href="https://analytics.google.com" target="_blank" class="underline hover:text-amber-900">Google Analytics dashboard</a></li>
+            <li>Navigate to <strong>Admin → Events → Create event</strong> (or mark existing events as conversions)</li>
+            <li>Set up conversion events for key actions (form submits, purchases, phone clicks, etc.)</li>
+            <li>Return here and click "Pull GA Data" to see your conversion data</li>
+          </ol>
+          <a href="https://support.google.com/analytics/answer/12844695" target="_blank"
+             class="inline-flex items-center gap-1 text-sm font-medium text-amber-700 hover:text-amber-900 underline">
+            <i class="fa-solid fa-external-link-alt"></i>
+            Learn how to set up conversions in GA4
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
   </div>
 
   <!-- Tables -->

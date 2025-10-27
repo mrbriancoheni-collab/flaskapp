@@ -89,40 +89,88 @@ class GoogleSerpScraper:
 
         try:
             logger.info(f"Searching Google for: {search_query}")
+            logger.info(f"Full URL: {url}")
+
             response = self.session.get(url, timeout=10)
             response.raise_for_status()
 
-            # Save HTML for debugging (first 5000 chars)
-            html_preview = response.text[:5000]
-            logger.debug(f"Google HTML preview: {html_preview}")
+            logger.info(f"Got response: status={response.status_code}, content-length={len(response.text)}")
+
+            # Save HTML for debugging
+            html_preview = response.text[:1000]
+            logger.debug(f"Google HTML preview (first 1000 chars): {html_preview}")
 
             # Check if we got a CAPTCHA or error page
-            if 'captcha' in response.text.lower() or response.status_code != 200:
-                logger.warning("Google returned CAPTCHA or error page")
+            if 'captcha' in response.text.lower():
+                logger.error("Google returned CAPTCHA page - scraping blocked")
                 return []
+
+            if response.status_code != 200:
+                logger.error(f"Google returned non-200 status: {response.status_code}")
+                return []
+
+            # Check for unusual responses
+            if len(response.text) < 5000:
+                logger.warning(f"Response unusually short ({len(response.text)} chars) - may be error page")
 
             # Parse the HTML
             soup = BeautifulSoup(response.text, 'html.parser')
+
+            # Count total divs to verify we got real content
+            all_divs = soup.find_all('div', limit=50)
+            logger.info(f"Found {len(all_divs)} div elements in response")
 
             # Try multiple extraction methods
             # Extract organic results (most reliable)
             organic_leads = self._extract_organic_modern(soup, location)
             leads.extend(organic_leads)
+            logger.info(f"Extracted {len(organic_leads)} organic leads")
 
             # Extract PPC ads
             ppc_leads = self._extract_ppc_ads_modern(soup, location)
             leads.extend(ppc_leads)
+            logger.info(f"Extracted {len(ppc_leads)} PPC leads")
 
             # Extract Local Service Ads (LSA)
             lsa_leads = self._extract_lsa(soup, location)
             leads.extend(lsa_leads)
+            logger.info(f"Extracted {len(lsa_leads)} LSA leads")
 
-            logger.info(f"Found {len(leads)} potential leads (organic: {len(organic_leads)}, ppc: {len(ppc_leads)}, lsa: {len(lsa_leads)})")
+            logger.info(f"Total found: {len(leads)} potential leads (organic: {len(organic_leads)}, ppc: {len(ppc_leads)}, lsa: {len(lsa_leads)})")
 
             if len(leads) == 0:
-                # Log a sample of the HTML structure to help debug
-                all_divs = soup.find_all('div', limit=10)
-                logger.warning(f"No leads found. Sample div classes: {[d.get('class') for d in all_divs if d.get('class')]}")
+                # Enhanced debugging when no leads found
+                logger.error("=" * 80)
+                logger.error("NO LEADS FOUND - DEBUGGING INFO:")
+                logger.error(f"Search query: {search_query}")
+                logger.error(f"Response length: {len(response.text)} chars")
+
+                # Sample div classes
+                sample_divs = soup.find_all('div', limit=20)
+                div_classes = []
+                for d in sample_divs:
+                    classes = d.get('class')
+                    if classes:
+                        div_classes.append(classes)
+                logger.error(f"Sample div classes found: {div_classes[:10]}")
+
+                # Check for specific elements
+                h3_tags = soup.find_all('h3', limit=5)
+                logger.error(f"Found {len(h3_tags)} h3 tags: {[h.get_text()[:50] for h in h3_tags]}")
+
+                cite_tags = soup.find_all('cite', limit=5)
+                logger.error(f"Found {len(cite_tags)} cite tags: {[c.get_text() for c in cite_tags]}")
+
+                # Save full HTML to temp file for manual inspection
+                try:
+                    import tempfile
+                    with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, prefix='serp_debug_') as f:
+                        f.write(response.text)
+                        logger.error(f"Full HTML saved to: {f.name}")
+                except Exception as e:
+                    logger.error(f"Could not save debug HTML: {e}")
+
+                logger.error("=" * 80)
 
             # Be respectful - add delay
             time.sleep(self.delay_seconds)

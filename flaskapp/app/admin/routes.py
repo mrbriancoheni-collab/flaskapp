@@ -350,6 +350,7 @@ def serp_scraper():
 def serp_scraper_run():
     """Run the SERP scraper and add results to CRM"""
     from app.services.serp_scraper import scrape_home_services
+    import logging
 
     service_type = request.form.get("service_type", "").strip()
     location = request.form.get("location", "").strip()
@@ -361,11 +362,26 @@ def serp_scraper_run():
         return redirect(url_for("admin_bp.serp_scraper"))
 
     try:
+        # Set up detailed logging
+        scraper_logger = logging.getLogger('app.services.serp_scraper')
+        scraper_logger.setLevel(logging.DEBUG)
+
+        current_app.logger.info(f"Starting SERP scrape: service={service_type}, location={location}, max={max_results}")
+
         # Run the scraper
         leads = scrape_home_services(service_type, location, max_results)
 
+        current_app.logger.info(f"SERP scrape completed: found {len(leads)} leads")
+
         if not leads:
-            flash("No leads found for this search.", "warning")
+            # More helpful error message
+            error_msg = f"No leads found for '{service_type}' in '{location}'. This could be due to:\n"
+            error_msg += "• Google blocking the request (CAPTCHA)\n"
+            error_msg += "• Google's HTML structure changed\n"
+            error_msg += "• No results for this search term\n\n"
+            error_msg += "Check application logs for details."
+            flash(error_msg, "warning")
+            current_app.logger.warning(f"SERP scraper returned 0 leads for: {service_type} {location}")
             return redirect(url_for("admin_bp.serp_scraper"))
 
         # Store results in session for review

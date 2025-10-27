@@ -54,7 +54,41 @@
     </select>
     <button id="gaPropSave" class="btn btn-primary">Save</button>
     <span id="gaPropMsg" class="text-sm text-gray-500"></span>
+
+    <!-- Help tooltip -->
+    <div class="relative group">
+      <button type="button" class="inline-flex items-center justify-center w-5 h-5 text-xs text-gray-400 hover:text-gray-600 border border-gray-300 rounded-full">
+        ?
+      </button>
+      <div class="absolute left-0 top-6 z-10 hidden group-hover:block w-80 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
+        <div class="font-semibold mb-1">Need to switch properties?</div>
+        <p class="mb-2">If Google Analytics selected the wrong property, use this dropdown to choose the correct one and click Save.</p>
+        <p class="text-gray-300">The data will automatically refresh with your selected property.</p>
+        <div class="absolute -top-1 left-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+      </div>
+    </div>
   </div>
+
+  <!-- First-time connection notice (dismissible) -->
+  {% if connected_ga and not request.cookies.get('ga_property_notice_seen') %}
+  <div id="ga-property-notice" class="p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
+    <div class="text-blue-600 text-xl">ℹ️</div>
+    <div class="flex-1 text-sm">
+      <p class="font-semibold text-blue-900 mb-1">Property Automatically Selected</p>
+      <p class="text-blue-800">
+        We've automatically selected your first GA4 property. If this isn't the right one,
+        use the <strong>Property dropdown above</strong> to switch to a different property and click Save.
+      </p>
+    </div>
+    <button onclick="dismissGAPropertyNotice()" class="text-blue-600 hover:text-blue-800 text-xl leading-none" title="Dismiss">×</button>
+  </div>
+  <script>
+    function dismissGAPropertyNotice() {
+      document.getElementById('ga-property-notice')?.remove();
+      document.cookie = 'ga_property_notice_seen=1; path=/; max-age=31536000'; // 1 year
+    }
+  </script>
+  {% endif %}
 
   <!-- Controls -->
   <div class="rounded-lg border bg-white p-4">

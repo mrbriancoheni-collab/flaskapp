@@ -671,3 +671,136 @@ def email_send():
         logger.exception("Error sending email")
         flash(f"Error sending email: {str(e)}", "error")
         return redirect(request.referrer or url_for("admin_bp.email_compose"))
+
+# =============================================================================
+# ROI Settings & Pricing Management
+# =============================================================================
+
+@admin_bp.route("/roi-settings")
+@login_required
+@require_admin
+def roi_settings():
+    """View and edit ROI calculation parameters."""
+    from app.models_roi_settings import ROISettings
+
+    # Get settings by category
+    improvement_rates = ROISettings.get_all_by_category('improvement_rates')
+    pricing_settings = ROISettings.get_all_by_category('pricing')
+    display_settings = ROISettings.get_all_by_category('display')
+
+    return render_template(
+        "admin/roi_settings.html",
+        improvement_rates=improvement_rates,
+        pricing_settings=pricing_settings,
+        display_settings=display_settings
+    )
+
+
+@admin_bp.route("/roi-settings/update", methods=["POST"])
+@login_required
+@require_admin
+def roi_settings_update():
+    """Update ROI settings."""
+    from app.models_roi_settings import ROISettings
+
+    try:
+        # Get all form fields that start with 'setting_'
+        for key, value in request.form.items():
+            if key.startswith('setting_'):
+                setting_key = key.replace('setting_', '')
+                ROISettings.set_value(setting_key, value, user_id=g.user.id)
+
+        _audit("roi_settings_updated", note="Updated ROI calculation parameters")
+
+        flash("ROI settings updated successfully!", "success")
+    except Exception as e:
+        logger.exception("Error updating ROI settings")
+        flash(f"Error updating settings: {str(e)}", "error")
+
+    return redirect(url_for("admin_bp.roi_settings"))
+
+
+@admin_bp.route("/pricing-tiers")
+@login_required
+@require_admin
+def pricing_tiers():
+    """View and edit service pricing tiers."""
+    from app.models_roi_settings import ServicePricing
+
+    tiers = ServicePricing.query.order_by(ServicePricing.min_monthly_spend).all()
+
+    return render_template(
+        "admin/pricing_tiers.html",
+        tiers=tiers
+    )
+
+
+@admin_bp.route("/pricing-tiers/<int:tier_id>/edit", methods=["GET", "POST"])
+@login_required
+@require_admin
+def pricing_tier_edit(tier_id):
+    """Edit a pricing tier."""
+    from app.models_roi_settings import ServicePricing
+
+    tier = ServicePricing.query.get_or_404(tier_id)
+
+    if request.method == "POST":
+        try:
+            tier.tier_name = request.form.get("tier_name")
+            tier.min_monthly_spend = int(request.form.get("min_monthly_spend", 0))
+            max_spend = request.form.get("max_monthly_spend")
+            tier.max_monthly_spend = int(max_spend) if max_spend else None
+            tier.base_price = int(float(request.form.get("base_price", 0)) * 100)  # Convert to cents
+            tier.percentage_of_savings = float(request.form.get("percentage_of_savings", 0)) / 100  # Convert to decimal
+            tier.description = request.form.get("description")
+            tier.is_active = request.form.get("is_active") == "on"
+
+            db.session.commit()
+
+            _audit("pricing_tier_updated", note=f"Updated tier: {tier.tier_name}")
+
+            flash(f"Pricing tier '{tier.tier_name}' updated successfully!", "success")
+            return redirect(url_for("admin_bp.pricing_tiers"))
+
+        except Exception as e:
+            logger.exception("Error updating pricing tier")
+            flash(f"Error updating tier: {str(e)}", "error")
+
+    return render_template(
+        "admin/pricing_tier_edit.html",
+        tier=tier
+    )
+
+
+@admin_bp.route("/pricing-tiers/new", methods=["GET", "POST"])
+@login_required
+@require_admin
+def pricing_tier_new():
+    """Create a new pricing tier."""
+    from app.models_roi_settings import ServicePricing
+
+    if request.method == "POST":
+        try:
+            tier = ServicePricing(
+                tier_name=request.form.get("tier_name"),
+                min_monthly_spend=int(request.form.get("min_monthly_spend", 0)),
+                max_monthly_spend=int(request.form.get("max_monthly_spend")) if request.form.get("max_monthly_spend") else None,
+                base_price=int(float(request.form.get("base_price", 0)) * 100),
+                percentage_of_savings=float(request.form.get("percentage_of_savings", 0)) / 100,
+                description=request.form.get("description"),
+                is_active=request.form.get("is_active") == "on"
+            )
+
+            db.session.add(tier)
+            db.session.commit()
+
+            _audit("pricing_tier_created", note=f"Created tier: {tier.tier_name}")
+
+            flash(f"Pricing tier '{tier.tier_name}' created successfully!", "success")
+            return redirect(url_for("admin_bp.pricing_tiers"))
+
+        except Exception as e:
+            logger.exception("Error creating pricing tier")
+            flash(f"Error creating tier: {str(e)}", "error")
+
+    return render_template("admin/pricing_tier_edit.html", tier=None)

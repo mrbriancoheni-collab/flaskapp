@@ -73,6 +73,147 @@
     </div>
   </div>
 
+  <!-- Total Potential Savings Summary -->
+  {% if report.recommendations %}
+  {% set ns = namespace(total_monthly_savings=0, total_monthly_leads=0, total_annual_savings=0, has_roi_data=false) %}
+  {% for rec in report.recommendations %}
+    {% if rec is not string %}
+      {% if rec.roi %}
+        {% set ns.has_roi_data = true %}
+        {% if rec.roi.monthly_savings %}
+          {% set ns.total_monthly_savings = ns.total_monthly_savings + rec.roi.monthly_savings %}
+          {% set ns.total_annual_savings = ns.total_annual_savings + (rec.roi.annual_savings or rec.roi.monthly_savings * 12) %}
+        {% endif %}
+        {% if rec.roi.monthly_leads %}
+          {% set ns.total_monthly_leads = ns.total_monthly_leads + rec.roi.monthly_leads %}
+        {% endif %}
+      {% endif %}
+    {% endif %}
+  {% endfor %}
+
+  {% if ns.has_roi_data and (ns.total_monthly_savings > 0 or ns.total_monthly_leads > 0) %}
+  <div class="bg-gradient-to-br from-emerald-50 to-green-100 border-2 border-emerald-300 rounded-xl shadow-xl p-8 mb-6">
+    <div class="text-center mb-6">
+      <h2 class="text-3xl font-extrabold text-gray-900 mb-2">
+        💰 Your Total Potential Value
+      </h2>
+      <p class="text-gray-700 font-medium">
+        If you implement all recommendations below, here's what you could gain:
+      </p>
+    </div>
+
+    <div class="grid md:grid-cols-{% if ns.total_monthly_savings > 0 and ns.total_monthly_leads > 0 %}3{% else %}2{% endif %} gap-6 mb-6">
+      {% if ns.total_monthly_savings > 0 %}
+      <div class="bg-white rounded-xl p-6 shadow-md border-2 border-green-300">
+        <div class="flex items-center justify-center mb-3">
+          <span class="text-5xl">💵</span>
+        </div>
+        <div class="text-center">
+          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Monthly Savings</div>
+          <div class="text-4xl font-black text-green-600 mb-1">
+            ${{ "%.0f"|format(ns.total_monthly_savings) }}
+          </div>
+          <div class="text-xs text-gray-500">
+            ${{ "%.0f"|format(ns.total_annual_savings) }}/year
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if ns.total_monthly_leads > 0 %}
+      <div class="bg-white rounded-xl p-6 shadow-md border-2 border-blue-300">
+        <div class="flex items-center justify-center mb-3">
+          <span class="text-5xl">📈</span>
+        </div>
+        <div class="text-center">
+          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">More Leads</div>
+          <div class="text-4xl font-black text-blue-600 mb-1">
+            +{{ "%.0f"|format(ns.total_monthly_leads) }}
+          </div>
+          <div class="text-xs text-gray-500">
+            +{{ "%.0f"|format(ns.total_monthly_leads * 12) }} leads/year
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="bg-white rounded-xl p-6 shadow-md border-2 border-purple-300">
+        <div class="flex items-center justify-center mb-3">
+          <span class="text-5xl">🚀</span>
+        </div>
+        <div class="text-center">
+          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Total Value</div>
+          <div class="text-4xl font-black text-purple-600 mb-1">
+            ${{ "%.0f"|format(ns.total_monthly_savings + (ns.total_monthly_leads * (report.avg_cpa_90d or 50))) }}/mo
+          </div>
+          <div class="text-xs text-gray-500">
+            Combined savings + lead value
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Value Proposition -->
+    <div class="bg-white rounded-lg p-6 border-2 border-indigo-300">
+      <h3 class="font-bold text-lg text-gray-900 mb-3 text-center">
+        💡 How FieldSprout Can Help
+      </h3>
+      <p class="text-gray-700 text-center mb-4">
+        We can implement these optimizations for you and manage your Google Ads ongoing.
+        {% if ns.total_monthly_savings > 0 %}
+        Our typical fee is <strong>20% of your savings</strong>, which means:
+        {% endif %}
+      </p>
+
+      {% if ns.total_monthly_savings > 0 %}
+      {% set recommended_price = (ns.total_monthly_savings * 0.20)|round(0)|int %}
+      {% set client_keeps = ns.total_monthly_savings - recommended_price %}
+      {% set roi_multiple = (client_keeps / recommended_price)|round(1) if recommended_price > 0 else 0 %}
+
+      <div class="grid md:grid-cols-3 gap-4 text-center">
+        <div class="p-4 bg-green-50 rounded-lg border border-green-200">
+          <div class="text-xs text-gray-600 uppercase font-semibold mb-1">You Save</div>
+          <div class="text-2xl font-bold text-green-700">${{ "%.0f"|format(client_keeps) }}/mo</div>
+          <div class="text-xs text-gray-500 mt-1">You keep 80% of savings</div>
+        </div>
+        <div class="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+          <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Service Cost</div>
+          <div class="text-2xl font-bold text-indigo-700">${{ "%.0f"|format(recommended_price) }}/mo</div>
+          <div class="text-xs text-gray-500 mt-1">20% of savings</div>
+        </div>
+        <div class="p-4 bg-purple-50 rounded-lg border border-purple-200">
+          <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Your ROI</div>
+          <div class="text-2xl font-bold text-purple-700">{{ "%.1f"|format(roi_multiple) }}x</div>
+          <div class="text-xs text-gray-500 mt-1">Save ${{ "%.0f"|format(roi_multiple) }} for every $1 spent</div>
+        </div>
+      </div>
+
+      <div class="mt-4 text-center">
+        <p class="text-sm text-gray-600 mb-3">
+          <strong>Bottom line:</strong> You save ${{ "%.0f"|format(client_keeps) }}/month while we handle everything.
+        </p>
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('account_bp.dashboard') }}" class="inline-block px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-lg">
+          Start Saving Money Now →
+        </a>
+        {% else %}
+        <a href="{{ url_for('auth_bp.register') }}" class="inline-block px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-lg">
+          Get Started - Free Account →
+        </a>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="text-center">
+        <a href="{{ url_for('auth_bp.register') if not current_user.is_authenticated else url_for('account_bp.dashboard') }}" class="inline-block px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-lg">
+          {{ 'Get Started' if not current_user.is_authenticated else 'Go to Dashboard' }} →
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}
+
   <!-- Account Diagnostics -->
   <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
     <h2 class="text-2xl font-bold mb-4">

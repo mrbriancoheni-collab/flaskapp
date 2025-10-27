@@ -108,20 +108,34 @@ async function fetchGaData(firstLoad = false) {
   const show = el => el && el.classList.remove('hidden');
   const hide = el => el && el.classList.add('hidden');
 
+  // Set a timeout to hide overlay after 30 seconds if it's still loading
+  let timeoutId;
+  if (overlay && firstLoad) {
+    show(overlay);
+    timeoutId = setTimeout(() => {
+      hide(overlay);
+      setStatus('Data load timeout. Click "Pull GA Data" to retry.', false);
+      console.warn('[GA] Auto-load timed out after 30 seconds');
+    }, 30000);
+  }
+
   try {
-    setStatus('Loading…');
-    // If connected, ensure overlay visible on first load to hide any placeholders
-    if (firstLoad) show(overlay);
+    setStatus('Loading Google Analytics data…');
 
     const url = new URL(DATA_URL, window.location.origin);
     const tf = document.getElementById('timeframe')?.value || '28d';
     url.searchParams.set('timeframe', tf);
 
     const res = await fetch(url.toString(), { credentials: 'same-origin' });
+
+    // Clear timeout on response
+    if (timeoutId) clearTimeout(timeoutId);
+
     if (!res.ok) {
       const body = await res.text();
       console.error('[GA] data error', res.status, body.slice(0, 200));
-      setStatus(`Failed (HTTP ${res.status})`, false);
+      setStatus(`Failed to load data (HTTP ${res.status}). Click "Pull GA Data" to retry.`, false);
+      hide(overlay);
       return;
     }
 
@@ -194,7 +208,8 @@ async function fetchGaData(firstLoad = false) {
     setStatus('Done');
   } catch (e) {
     console.error('[GA] fetch error', e);
-    setStatus('Failed to load data', false);
+    setStatus('Failed to load data. Click "Pull GA Data" to retry.', false);
+    if (timeoutId) clearTimeout(timeoutId);
   } finally {
     hide(overlay);
   }

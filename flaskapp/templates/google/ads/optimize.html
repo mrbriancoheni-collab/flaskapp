@@ -88,16 +88,27 @@
         <table id="optimizer-table" class="min-w-full text-sm">
           <thead class="bg-gray-50">
             <tr>
-              <th class="text-left px-3 py-2">Severity</th>
-              <th class="text-left px-3 py-2">Category</th>
-              <th class="text-left px-3 py-2">Title</th>
-              <th class="text-left px-3 py-2">Scope</th>
-              <th class="text-left px-3 py-2">Impact</th>
-              <th class="text-left px-3 py-2">Actions</th>
+              <th class="text-left px-3 py-2 w-16">
+                <input type="checkbox" id="select-all-optimizations" class="h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500" title="Select all">
+              </th>
+              <th class="text-left px-3 py-2 w-32">Priority</th>
+              <th class="text-left px-3 py-2 w-28">Type</th>
+              <th class="text-left px-3 py-2">Recommendation</th>
+              <th class="text-left px-3 py-2 w-56">💰 Estimated ROI</th>
             </tr>
           </thead>
           <tbody class="divide-y"></tbody>
         </table>
+      </div>
+      <div class="mt-4 flex items-center justify-between px-4 py-3 bg-gray-50 rounded-lg border">
+        <div class="text-sm text-gray-600">
+          <span id="selected-count">0</span> optimization(s) selected
+        </div>
+        <button id="apply-selected-btn"
+                class="px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                disabled>
+          <i class="fa-solid fa-check mr-2"></i>Apply Selected Optimizations
+        </button>
       </div>
     </section>
     {% endif %}
@@ -199,36 +210,160 @@
   if (btn90) btn90.addEventListener("click", () => (loadKPI(90), btn90.classList.add('bg-gray-100'), btn7.classList.remove('bg-gray-100'), btn30.classList.remove('bg-gray-100')));
 
   // --- Optimizer ---
+  function formatROI(impactData) {
+    // Try to parse as JSON (new format with ROI data)
+    try {
+      const roi = JSON.parse(impactData);
+      if (roi && roi.summary) {
+        const parts = [];
+
+        // Add savings if available
+        if (roi.monthly_savings && roi.monthly_savings > 0) {
+          parts.push(`<div class="flex items-center gap-1">
+            <span class="text-lg">💰</span>
+            <span class="font-semibold text-green-700">Save $${Math.round(roi.monthly_savings)}/mo</span>
+          </div>`);
+        }
+
+        // Add leads if available
+        if (roi.monthly_leads && roi.monthly_leads > 0) {
+          parts.push(`<div class="flex items-center gap-1">
+            <span class="text-lg">📈</span>
+            <span class="font-semibold text-blue-700">+${Math.round(roi.monthly_leads)} leads/mo</span>
+          </div>`);
+        }
+
+        // Add effort if available
+        if (roi.effort && roi.effort.time_estimate) {
+          const difficultyColor = roi.effort.difficulty === 'Easy' ? 'text-green-600' :
+                                   roi.effort.difficulty === 'Hard' ? 'text-purple-600' : 'text-blue-600';
+          parts.push(`<div class="text-xs ${difficultyColor}">
+            ⏱️ ${roi.effort.time_estimate} • ${roi.effort.difficulty}
+          </div>`);
+        }
+
+        return parts.join('<div class="h-1"></div>');
+      }
+    } catch (e) {
+      // Fall back to plain text if not JSON
+    }
+
+    // Legacy format: plain text
+    return `<span class="text-gray-700">${impactData || ""}</span>`;
+  }
+
+  function getSeverityBadge(severity) {
+    const badges = {
+      1: '<span class="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full">🚨 Critical</span>',
+      2: '<span class="px-2 py-1 bg-orange-500 text-white text-xs font-bold rounded-full">⚠️ High</span>',
+      3: '<span class="px-2 py-1 bg-yellow-500 text-white text-xs font-bold rounded-full">💡 Medium</span>',
+      4: '<span class="px-2 py-1 bg-blue-500 text-white text-xs font-bold rounded-full">📋 Low</span>',
+      5: '<span class="px-2 py-1 bg-gray-500 text-white text-xs font-bold rounded-full">📝 Optional</span>'
+    };
+    return badges[severity] || `<span class="text-gray-600">${severity}</span>`;
+  }
+
   async function loadOptimizer() {
     const res = await fetch(`${base}/optimizer/data`);
     const rows = await res.json();
     const tbody = document.querySelector("#optimizer-table tbody");
     if (!tbody) return;
     tbody.innerHTML = rows.map(r => `
-      <tr>
-        <td class="px-3 py-2">${r.severity ?? ""}</td>
-        <td class="px-3 py-2">${r.category ?? ""}</td>
-        <td class="px-3 py-2">${r.title ?? ""}</td>
-        <td class="px-3 py-2">${(r.scope_type ?? "")} #${r.scope_id ?? ""}</td>
-        <td class="px-3 py-2">${r.expected_impact ?? ""}</td>
+      <tr class="hover:bg-gray-50">
         <td class="px-3 py-2">
-          <button data-id="${r.id}" class="apply-opt px-2 py-1 text-xs rounded border hover:bg-gray-50">Apply</button>
+          <input type="checkbox" class="optimization-checkbox h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                 data-id="${r.id}"
+                 data-title="${(r.title ?? '').replace(/"/g, '&quot;')}"
+                 data-category="${r.category ?? ''}"
+                 data-severity="${r.severity ?? ''}">
         </td>
+        <td class="px-3 py-2">${getSeverityBadge(r.severity)}</td>
+        <td class="px-3 py-2">
+          <span class="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-semibold rounded capitalize">
+            ${r.category ?? ""}
+          </span>
+        </td>
+        <td class="px-3 py-2">
+          <div class="font-medium text-gray-900">${r.title ?? ""}</div>
+          <div class="text-xs text-gray-500 mt-0.5">${r.scope_type ?? ""} ${r.scope_id ? '#' + r.scope_id : ''}</div>
+        </td>
+        <td class="px-3 py-2">${formatROI(r.expected_impact)}</td>
       </tr>
     `).join("");
 
-    tbody.querySelectorAll(".apply-opt").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const recommendation_id = Number(btn.getAttribute("data-id"));
-        const payload = { recommendation_id, changes: [] }; // TODO: fill with actual change set
+    // Wire up checkboxes
+    updateSelectedCount();
+    tbody.querySelectorAll(".optimization-checkbox").forEach(cb => {
+      cb.addEventListener("change", updateSelectedCount);
+    });
+  }
+
+  function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll(".optimization-checkbox");
+    const checked = Array.from(checkboxes).filter(cb => cb.checked);
+    const countSpan = document.getElementById("selected-count");
+    const applyBtn = document.getElementById("apply-selected-btn");
+
+    if (countSpan) countSpan.textContent = checked.length;
+    if (applyBtn) applyBtn.disabled = checked.length === 0;
+  }
+
+  // Select all functionality
+  const selectAllCheckbox = document.getElementById("select-all-optimizations");
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener("change", function() {
+      const checkboxes = document.querySelectorAll(".optimization-checkbox");
+      checkboxes.forEach(cb => cb.checked = this.checked);
+      updateSelectedCount();
+    });
+  }
+
+  // Apply selected optimizations
+  const applySelectedBtn = document.getElementById("apply-selected-btn");
+  if (applySelectedBtn) {
+    applySelectedBtn.addEventListener("click", async () => {
+      const checkboxes = document.querySelectorAll(".optimization-checkbox:checked");
+      if (checkboxes.length === 0) {
+        alert("Please select at least one optimization to apply.");
+        return;
+      }
+
+      const recommendation_ids = Array.from(checkboxes).map(cb => Number(cb.getAttribute("data-id")));
+      const applyBtn = applySelectedBtn;
+      const originalText = applyBtn.innerHTML;
+
+      applyBtn.disabled = true;
+      applyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Applying...';
+
+      try {
+        const payload = { recommendation_ids, bulk: true };
         const res = await fetch(`${base}/optimizer/apply`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
         const out = await res.json();
-        alert(`Queued action #${out.action_id || "?"}`);
-      });
+        alert(`✓ Successfully queued ${recommendation_ids.length} optimization(s)!\n\nAction IDs: ${(out.action_ids || []).join(', ')}`);
+
+        // Uncheck all and reload
+        document.querySelectorAll(".optimization-checkbox:checked").forEach(cb => cb.checked = false);
+        if (selectAllCheckbox) selectAllCheckbox.checked = false;
+        updateSelectedCount();
+
+        // Optionally reload the table
+        await loadOptimizer();
+      } catch (error) {
+        console.error("Error applying optimizations:", error);
+        alert(`Failed to apply optimizations: ${error.message}\n\nPlease try again or contact support.`);
+      } finally {
+        applyBtn.disabled = false;
+        applyBtn.innerHTML = originalText;
+      }
     });
   }
   const reloadOpt = document.getElementById("btn-reload-optimizer");

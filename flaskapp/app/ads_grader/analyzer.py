@@ -6,6 +6,7 @@ Scoring algorithms and recommendations engine for the Google Ads Quality Checker
 import logging
 from typing import Dict, List, Any, Tuple
 from datetime import datetime
+from app.services.roi_calculator import ROICalculator
 
 logger = logging.getLogger(__name__)
 
@@ -442,39 +443,158 @@ class GoogleAdsAnalyzer:
 
     def _generate_recommendations(self) -> None:
         """
-        Generate actionable recommendations based on analysis.
+        Generate actionable recommendations with ROI estimates based on analysis.
         """
         recommendations = []
+
+        # Get performance data for ROI calculations
+        performance = self.metrics.get("performance", {})
+        current_spend = performance.get("cost", 0)  # 90 days
+        current_conversions = performance.get("conversions", 0)
+
+        # Determine severity based on score (lower score = higher severity)
+        def get_severity(score: float) -> int:
+            if score < 40:
+                return 1  # Critical
+            elif score < 60:
+                return 2  # High impact
+            elif score < 75:
+                return 3  # Medium
+            else:
+                return 4  # Low
 
         # Wasted spend recommendations
         if self.scores["wasted_spend"] < 70:
             negative_keywords = self.metrics.get("negative_keywords", 0)
             benchmark = BENCHMARKS["negative_keywords_avg"]
-            gap = benchmark - negative_keywords
-            _, projected_waste = self._calculate_wasted_spend()
-            recommendations.append(
-                f"Add {gap} negative keywords to reduce wasted spend by ${projected_waste:.0f}/year"
+            gap = max(0, benchmark - negative_keywords)
+
+            severity = get_severity(self.scores["wasted_spend"])
+            roi = ROICalculator.calculate_spend_savings(
+                current_spend,
+                'negative_keywords',
+                timeframe_days=90,
+                severity=severity
             )
+            effort = ROICalculator.estimate_implementation_effort('negative_keywords', severity)
+
+            recommendations.append({
+                'title': f"Add {gap} Negative Keywords to Stop Wasting Money",
+                'description': f"You're spending money on wrong searches. Adding negative keywords will block irrelevant clicks and save you money every month.",
+                'category': 'wasted_spend',
+                'severity': severity,
+                'roi': {
+                    'monthly_savings': roi['monthly_savings'],
+                    'annual_savings': roi['annual_savings'],
+                    'percentage': roi['percentage_reduction']
+                },
+                'effort': effort,
+                'action_steps': [
+                    "1. Open your Google Ads Search Terms report",
+                    "2. Find searches that aren't relevant to your business",
+                    f"3. Add {min(gap, 50)} negative keywords this week",
+                    "4. Check back next week to add more"
+                ],
+                'summary': f"💰 Save ${roi['monthly_savings']:,.0f}/month • {effort['time_estimate']} • {effort['difficulty']}"
+            })
 
         # Quality Score recommendations
         if self.scores["quality_score"] < 70:
             qs_avg = self.metrics.get("quality_scores", {}).get("average", 0)
             target = BENCHMARKS["quality_score_target"]
-            recommendations.append(
-                f"Improve Quality Score from {qs_avg:.1f} to {target}+ to reduce CPC by up to 30%"
+
+            severity = get_severity(self.scores["quality_score"])
+            qs_roi = ROICalculator.calculate_quality_score_impact(
+                qs_avg, target, current_spend, timeframe_days=90
             )
+            effort = ROICalculator.estimate_implementation_effort('quality_score', severity)
+
+            recommendations.append({
+                'title': f"Improve Ad Quality from {qs_avg:.1f} to {target}+ Stars",
+                'description': f"Your ads score {qs_avg:.1f} out of 10. Better ads cost less money! Google charges you less when your ads are high quality.",
+                'category': 'quality_score',
+                'severity': severity,
+                'roi': {
+                    'monthly_savings': qs_roi['monthly_savings'],
+                    'annual_savings': qs_roi['annual_savings'],
+                    'percentage': qs_roi['cpc_reduction_percent']
+                },
+                'effort': effort,
+                'action_steps': [
+                    "1. Find your low-quality ads (score below 6)",
+                    "2. Rewrite them to match what people are searching for",
+                    "3. Use the exact keywords from your ad group in your ad text",
+                    "4. Add a clear call-to-action like 'Call Now' or 'Get Quote'"
+                ],
+                'summary': f"💰 Save ${qs_roi['monthly_savings']:,.0f}/month • {effort['time_estimate']} • {effort['difficulty']}"
+            })
 
         # CTR recommendations
         if self.scores["ctr_optimization"] < 60:
-            recommendations.append(
-                "Test 3-5 new ad variations in your top-performing ad groups to improve CTR"
+            severity = get_severity(self.scores["ctr_optimization"])
+            roi = ROICalculator.calculate_combined_roi(
+                current_spend,
+                current_conversions,
+                None,  # No customer value yet
+                'ctr',
+                timeframe_days=90,
+                severity=severity
             )
+            effort = ROICalculator.estimate_implementation_effort('ctr', severity)
+
+            leads_info = roi['leads']
+            recommendations.append({
+                'title': "Get More Clicks by Testing New Ad Variations",
+                'description': f"Not enough people are clicking your ads. Test new ad copy to get {leads_info['monthly_new_leads']:.0f} more leads per month.",
+                'category': 'ctr',
+                'severity': severity,
+                'roi': {
+                    'monthly_leads': leads_info['monthly_new_leads'],
+                    'annual_leads': leads_info['annual_new_leads'],
+                    'percentage': leads_info['percentage_increase']
+                },
+                'effort': effort,
+                'action_steps': [
+                    "1. Pick your 3 top-performing ad groups",
+                    "2. Write 2-3 new ads for each group",
+                    "3. Try different headlines: use questions, numbers, or urgency",
+                    "4. Let them run for 2 weeks, then keep the winners"
+                ],
+                'summary': f"📈 +{leads_info['monthly_new_leads']:.0f} leads/month • {effort['time_estimate']} • {effort['difficulty']}"
+            })
 
         # Long-tail keyword recommendations
         if self.scores["long_tail_keywords"] < 50:
-            recommendations.append(
-                "Add more long-tail (3+ word) keywords to capture high-intent, low-cost traffic"
+            severity = get_severity(self.scores["long_tail_keywords"])
+            roi = ROICalculator.calculate_combined_roi(
+                current_spend,
+                current_conversions,
+                None,
+                'long_tail',
+                timeframe_days=90,
+                severity=severity
             )
+            effort = ROICalculator.estimate_implementation_effort('keywords', severity)
+
+            recommendations.append({
+                'title': "Add More Specific Keyword Phrases (3+ Words)",
+                'description': "Long phrases like 'emergency plumber dallas 75201' cost less and convert better than short keywords like 'plumber'.",
+                'category': 'long_tail_keywords',
+                'severity': severity,
+                'roi': {
+                    'monthly_savings': roi['savings']['monthly_savings'],
+                    'monthly_leads': roi['leads']['monthly_new_leads'],
+                    'total_value': roi['total_monthly_value']
+                },
+                'effort': effort,
+                'action_steps': [
+                    "1. Think about specific services you offer",
+                    "2. Add your city/neighborhood to each keyword",
+                    "3. Include urgency words like 'emergency' or 'same day'",
+                    "4. Add 20-30 new long-tail keywords this week"
+                ],
+                'summary': f"💰 ${roi['total_monthly_value']:,.0f}/month value • {effort['time_estimate']} • {effort['difficulty']}"
+            })
 
         # Mobile recommendations
         if self.scores["mobile_advertising"] < 60:
@@ -482,20 +602,83 @@ class GoogleAdsAnalyzer:
             mobile = device_performance.get("mobile", {})
             desktop = device_performance.get("desktop", {})
 
+            severity = get_severity(self.scores["mobile_advertising"])
+            roi = ROICalculator.calculate_combined_roi(
+                current_spend,
+                current_conversions,
+                None,
+                'mobile',
+                timeframe_days=90,
+                severity=severity
+            )
+            effort = ROICalculator.estimate_implementation_effort('mobile', severity)
+
             if mobile.get("ctr", 0) > desktop.get("ctr", 0):
-                recommendations.append(
-                    "Increase mobile bids by 15-20% based on strong mobile performance"
-                )
+                title = "Increase Mobile Bids to Get More Phone Calls"
+                description = "Your mobile ads are performing well! Increase bids by 15-20% to get more mobile traffic."
+                steps = [
+                    "1. Go to your campaign settings",
+                    "2. Click 'Devices'",
+                    "3. Increase mobile bid adjustment to +20%",
+                    "4. Watch for more calls and form fills"
+                ]
             else:
-                recommendations.append(
-                    "Optimize mobile ads and landing pages to improve mobile CTR"
-                )
+                title = "Fix Your Mobile Ads to Get More Phone Calls"
+                description = "People on phones aren't clicking your ads as much. Make your mobile ads shorter and add click-to-call buttons."
+                steps = [
+                    "1. Shorten your mobile ad headlines (under 30 characters)",
+                    "2. Add 'Call Now' in your description",
+                    "3. Enable call extensions (click-to-call)",
+                    "4. Make sure your mobile landing page loads fast"
+                ]
+
+            recommendations.append({
+                'title': title,
+                'description': description,
+                'category': 'mobile',
+                'severity': severity,
+                'roi': {
+                    'monthly_leads': roi['leads']['monthly_new_leads'],
+                    'annual_leads': roi['leads']['annual_new_leads'],
+                    'percentage': roi['leads']['percentage_increase']
+                },
+                'effort': effort,
+                'action_steps': steps,
+                'summary': f"📱 +{roi['leads']['monthly_new_leads']:.0f} leads/month • {effort['time_estimate']} • {effort['difficulty']}"
+            })
 
         # Landing page recommendations
         if self.scores["landing_pages"] < 70:
-            recommendations.append(
-                "Create more targeted landing pages to improve Quality Scores and conversion rates"
+            severity = get_severity(self.scores["landing_pages"])
+            roi = ROICalculator.calculate_combined_roi(
+                current_spend,
+                current_conversions,
+                None,
+                'landing_pages',
+                timeframe_days=90,
+                severity=severity
             )
+            effort = ROICalculator.estimate_implementation_effort('landing_pages', severity)
+
+            recommendations.append({
+                'title': "Create Better Landing Pages to Convert More Visitors",
+                'description': f"Your landing pages aren't converting well. Better pages could get you {roi['leads']['monthly_new_leads']:.0f} more customers per month.",
+                'category': 'landing_pages',
+                'severity': severity,
+                'roi': {
+                    'monthly_leads': roi['leads']['monthly_new_leads'],
+                    'annual_leads': roi['leads']['annual_new_leads'],
+                    'percentage': roi['leads']['percentage_increase']
+                },
+                'effort': effort,
+                'action_steps': [
+                    "1. Create one landing page per main service",
+                    "2. Match your page headline to your ad headline",
+                    "3. Add a big phone number and contact form at the top",
+                    "4. Include customer reviews and photos of your work"
+                ],
+                'summary': f"📈 +{roi['leads']['monthly_new_leads']:.0f} leads/month • {effort['time_estimate']} • {effort['difficulty']}"
+            })
 
         # Impression share recommendations
         if self.scores["impression_share"] < 60:
@@ -503,26 +686,102 @@ class GoogleAdsAnalyzer:
             budget_lost = imp_share_data.get("budget_lost_share", 0)
             rank_lost = imp_share_data.get("rank_lost_share", 0)
 
+            severity = get_severity(self.scores["impression_share"])
+            roi = ROICalculator.calculate_combined_roi(
+                current_spend,
+                current_conversions,
+                None,
+                'impression_share',
+                timeframe_days=90,
+                severity=severity
+            )
+            effort = ROICalculator.estimate_implementation_effort('impression_share', severity)
+
             if budget_lost > rank_lost:
-                recommendations.append(
-                    "Increase daily budgets to capture more impression share and potential clicks"
-                )
+                title = "Increase Your Daily Budget to Show Ads More Often"
+                description = "Your ads stop showing because you run out of money each day. Increase budget to capture more customers."
+                steps = [
+                    "1. Check what time your budget runs out each day",
+                    "2. Increase daily budget by $20-50",
+                    "3. Monitor performance for 1 week",
+                    "4. Adjust based on results"
+                ]
             else:
-                recommendations.append(
-                    "Improve ad rank through better Quality Scores and competitive bids"
-                )
+                title = "Improve Your Ad Quality to Show Up More Often"
+                description = "Your competitors' ads show up instead of yours. Improve quality and bids to win more auctions."
+                steps = [
+                    "1. Improve Quality Score (see recommendation above)",
+                    "2. Review your bids vs. competitors",
+                    "3. Increase bids by 10-15% on top keywords",
+                    "4. Watch your impression share improve"
+                ]
+
+            recommendations.append({
+                'title': title,
+                'description': description,
+                'category': 'impression_share',
+                'severity': severity,
+                'roi': {
+                    'monthly_leads': roi['leads']['monthly_new_leads'],
+                    'annual_leads': roi['leads']['annual_new_leads'],
+                    'percentage': roi['leads']['percentage_increase']
+                },
+                'effort': effort,
+                'action_steps': steps,
+                'summary': f"📈 +{roi['leads']['monthly_new_leads']:.0f} leads/month • {effort['time_estimate']} • {effort['difficulty']}"
+            })
 
         # Ad extension recommendations
         extensions = self.metrics.get("extensions", {})
         if not any(extensions.values()):
-            recommendations.append(
-                "Add sitelink and callout extensions to improve CTR and ad visibility"
-            )
+            recommendations.append({
+                'title': "Add Ad Extensions to Make Your Ads Bigger",
+                'description': "Ad extensions make your ads take up more space and give people more ways to contact you. They're free and boost clicks by 10-15%.",
+                'category': 'extensions',
+                'severity': 3,  # Medium priority
+                'roi': {
+                    'monthly_leads': current_conversions / 3 * 0.12,  # 12% boost estimate
+                    'percentage': 12
+                },
+                'effort': {
+                    'time_estimate': '20-30 min',
+                    'difficulty': 'Easy',
+                    'priority': 'Medium'
+                },
+                'action_steps': [
+                    "1. Add Sitelink Extensions (links to your services)",
+                    "2. Add Call Extension (your phone number)",
+                    "3. Add Callout Extensions ('24/7 Service', 'Licensed & Insured')",
+                    "4. Add Location Extension (your address)"
+                ],
+                'summary': "📞 More clicks & calls • 20-30 min • Easy"
+            })
 
         # Account structure recommendations
         if self.scores["account_activity"] < 60:
-            recommendations.append(
-                "Reorganize account structure for better campaign and ad group segmentation"
-            )
+            recommendations.append({
+                'title': "Reorganize Your Account Structure",
+                'description': "Your campaigns and ad groups are messy. Better organization makes it easier to optimize and track performance.",
+                'category': 'account_structure',
+                'severity': 4,  # Lower priority
+                'roi': {
+                    'efficiency_gain': 15,
+                    'description': "15% easier to manage"
+                },
+                'effort': {
+                    'time_estimate': '2-3 hours',
+                    'difficulty': 'Medium',
+                    'priority': 'Low'
+                },
+                'action_steps': [
+                    "1. Group similar services into separate campaigns",
+                    "2. Create tight ad groups with 5-15 related keywords",
+                    "3. Write specific ads for each ad group",
+                    "4. Use clear naming conventions"
+                ],
+                'summary': "🗂️ Better organization • 2-3 hours • Medium difficulty"
+            })
 
-        self.recommendations = recommendations[:10]  # Limit to top 10 recommendations
+        # Sort by severity and limit to top 10
+        recommendations.sort(key=lambda x: x.get('severity', 5))
+        self.recommendations = recommendations[:10]

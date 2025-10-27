@@ -73,6 +73,147 @@
     </div>
   </div>
 
+  <!-- Total Potential Savings Summary -->
+  {% if report.recommendations %}
+  {% set ns = namespace(total_monthly_savings=0, total_monthly_leads=0, total_annual_savings=0, has_roi_data=false) %}
+  {% for rec in report.recommendations %}
+    {% if rec is not string %}
+      {% if rec.roi %}
+        {% set ns.has_roi_data = true %}
+        {% if rec.roi.monthly_savings %}
+          {% set ns.total_monthly_savings = ns.total_monthly_savings + rec.roi.monthly_savings %}
+          {% set ns.total_annual_savings = ns.total_annual_savings + (rec.roi.annual_savings or rec.roi.monthly_savings * 12) %}
+        {% endif %}
+        {% if rec.roi.monthly_leads %}
+          {% set ns.total_monthly_leads = ns.total_monthly_leads + rec.roi.monthly_leads %}
+        {% endif %}
+      {% endif %}
+    {% endif %}
+  {% endfor %}
+
+  {% if ns.has_roi_data and (ns.total_monthly_savings > 0 or ns.total_monthly_leads > 0) %}
+  <div class="bg-gradient-to-br from-emerald-50 to-green-100 border-2 border-emerald-300 rounded-xl shadow-xl p-8 mb-6">
+    <div class="text-center mb-6">
+      <h2 class="text-3xl font-extrabold text-gray-900 mb-2">
+        💰 Your Total Potential Value
+      </h2>
+      <p class="text-gray-700 font-medium">
+        If you implement all recommendations below, here's what you could gain:
+      </p>
+    </div>
+
+    <div class="grid md:grid-cols-{% if ns.total_monthly_savings > 0 and ns.total_monthly_leads > 0 %}3{% else %}2{% endif %} gap-6 mb-6">
+      {% if ns.total_monthly_savings > 0 %}
+      <div class="bg-white rounded-xl p-6 shadow-md border-2 border-green-300">
+        <div class="flex items-center justify-center mb-3">
+          <span class="text-5xl">💵</span>
+        </div>
+        <div class="text-center">
+          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Monthly Savings</div>
+          <div class="text-4xl font-black text-green-600 mb-1">
+            ${{ "%.0f"|format(ns.total_monthly_savings) }}
+          </div>
+          <div class="text-xs text-gray-500">
+            ${{ "%.0f"|format(ns.total_annual_savings) }}/year
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if ns.total_monthly_leads > 0 %}
+      <div class="bg-white rounded-xl p-6 shadow-md border-2 border-blue-300">
+        <div class="flex items-center justify-center mb-3">
+          <span class="text-5xl">📈</span>
+        </div>
+        <div class="text-center">
+          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">More Leads</div>
+          <div class="text-4xl font-black text-blue-600 mb-1">
+            +{{ "%.0f"|format(ns.total_monthly_leads) }}
+          </div>
+          <div class="text-xs text-gray-500">
+            +{{ "%.0f"|format(ns.total_monthly_leads * 12) }} leads/year
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="bg-white rounded-xl p-6 shadow-md border-2 border-purple-300">
+        <div class="flex items-center justify-center mb-3">
+          <span class="text-5xl">🚀</span>
+        </div>
+        <div class="text-center">
+          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Total Value</div>
+          <div class="text-4xl font-black text-purple-600 mb-1">
+            ${{ "%.0f"|format(ns.total_monthly_savings + (ns.total_monthly_leads * (report.avg_cpa_90d or 50))) }}/mo
+          </div>
+          <div class="text-xs text-gray-500">
+            Combined savings + lead value
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Value Proposition -->
+    <div class="bg-white rounded-lg p-6 border-2 border-indigo-300">
+      <h3 class="font-bold text-lg text-gray-900 mb-3 text-center">
+        💡 How FieldSprout Can Help
+      </h3>
+      <p class="text-gray-700 text-center mb-4">
+        We can implement these optimizations for you and manage your Google Ads ongoing.
+        {% if ns.total_monthly_savings > 0 %}
+        Our typical fee is <strong>20% of your savings</strong>, which means:
+        {% endif %}
+      </p>
+
+      {% if ns.total_monthly_savings > 0 %}
+      {% set recommended_price = (ns.total_monthly_savings * 0.20)|round(0)|int %}
+      {% set client_keeps = ns.total_monthly_savings - recommended_price %}
+      {% set roi_multiple = (client_keeps / recommended_price)|round(1) if recommended_price > 0 else 0 %}
+
+      <div class="grid md:grid-cols-3 gap-4 text-center">
+        <div class="p-4 bg-green-50 rounded-lg border border-green-200">
+          <div class="text-xs text-gray-600 uppercase font-semibold mb-1">You Save</div>
+          <div class="text-2xl font-bold text-green-700">${{ "%.0f"|format(client_keeps) }}/mo</div>
+          <div class="text-xs text-gray-500 mt-1">You keep 80% of savings</div>
+        </div>
+        <div class="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+          <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Service Cost</div>
+          <div class="text-2xl font-bold text-indigo-700">${{ "%.0f"|format(recommended_price) }}/mo</div>
+          <div class="text-xs text-gray-500 mt-1">20% of savings</div>
+        </div>
+        <div class="p-4 bg-purple-50 rounded-lg border border-purple-200">
+          <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Your ROI</div>
+          <div class="text-2xl font-bold text-purple-700">{{ "%.1f"|format(roi_multiple) }}x</div>
+          <div class="text-xs text-gray-500 mt-1">Save ${{ "%.0f"|format(roi_multiple) }} for every $1 spent</div>
+        </div>
+      </div>
+
+      <div class="mt-4 text-center">
+        <p class="text-sm text-gray-600 mb-3">
+          <strong>Bottom line:</strong> You save ${{ "%.0f"|format(client_keeps) }}/month while we handle everything.
+        </p>
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('account_bp.dashboard') }}" class="inline-block px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-lg">
+          Start Saving Money Now →
+        </a>
+        {% else %}
+        <a href="{{ url_for('auth_bp.register') }}" class="inline-block px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-lg">
+          Get Started - Free Account →
+        </a>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="text-center">
+        <a href="{{ url_for('auth_bp.register') if not current_user.is_authenticated else url_for('account_bp.dashboard') }}" class="inline-block px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-lg">
+          {{ 'Get Started' if not current_user.is_authenticated else 'Go to Dashboard' }} →
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}
+
   <!-- Account Diagnostics -->
   <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
     <h2 class="text-2xl font-bold mb-4">
@@ -182,17 +323,144 @@
   <div class="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6 mb-6">
     <h2 class="text-2xl font-bold mb-4">
       <i class="fa-solid fa-lightbulb text-indigo-600 mr-2"></i>
-      Recommendations
+      🎯 What to Fix First (Biggest Impact)
     </h2>
-    <div class="space-y-3">
+
+    <div class="space-y-4">
       {% for recommendation in report.recommendations %}
-        <div class="flex items-start bg-white rounded-lg p-4 border border-indigo-100">
-          <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3 mt-0.5">
-            <span class="text-indigo-600 font-bold text-sm">{{ loop.index }}</span>
+        {% if recommendation is string %}
+          <!-- Legacy format: simple string -->
+          <div class="flex items-start bg-white rounded-lg p-4 border border-indigo-100">
+            <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3 mt-0.5">
+              <span class="text-indigo-600 font-bold text-sm">{{ loop.index }}</span>
+            </div>
+            <p class="text-gray-700">{{ recommendation }}</p>
           </div>
-          <p class="text-gray-700">{{ recommendation }}</p>
-        </div>
+        {% else %}
+          <!-- New format: rich object with ROI data -->
+          <div class="bg-white rounded-xl border-2 {% if recommendation.severity == 1 %}border-red-300{% elif recommendation.severity == 2 %}border-orange-300{% elif recommendation.severity == 3 %}border-yellow-300{% else %}border-gray-300{% endif %} overflow-hidden">
+            <!-- Header -->
+            <div class="p-4 {% if recommendation.severity == 1 %}bg-red-50{% elif recommendation.severity == 2 %}bg-orange-50{% elif recommendation.severity == 3 %}bg-yellow-50{% else %}bg-gray-50{% endif %}">
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <!-- Priority Badge -->
+                    {% if recommendation.severity == 1 %}
+                      <span class="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full uppercase">🚨 Fix Now</span>
+                    {% elif recommendation.severity == 2 %}
+                      <span class="px-2 py-1 bg-orange-500 text-white text-xs font-bold rounded-full uppercase">⚠️ High Impact</span>
+                    {% elif recommendation.severity == 3 %}
+                      <span class="px-2 py-1 bg-yellow-500 text-white text-xs font-bold rounded-full uppercase">💡 Quick Win</span>
+                    {% else %}
+                      <span class="px-2 py-1 bg-gray-500 text-white text-xs font-bold rounded-full uppercase">📋 Nice to Have</span>
+                    {% endif %}
+
+                    <!-- Difficulty Badge -->
+                    {% set difficulty = recommendation.effort.difficulty if recommendation.effort else 'Medium' %}
+                    {% if difficulty == 'Easy' %}
+                      <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">Easy</span>
+                    {% elif difficulty == 'Hard' %}
+                      <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded">Takes Time</span>
+                    {% else %}
+                      <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">Medium</span>
+                    {% endif %}
+
+                    <!-- Time Estimate -->
+                    {% if recommendation.effort and recommendation.effort.time_estimate %}
+                      <span class="text-gray-600 text-xs">⏱️ {{ recommendation.effort.time_estimate }}</span>
+                    {% endif %}
+                  </div>
+
+                  <h3 class="text-lg font-bold text-gray-900 mb-1">
+                    {{ recommendation.title }}
+                  </h3>
+                  <p class="text-gray-700 text-sm">
+                    {{ recommendation.description }}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- ROI Impact -->
+            {% if recommendation.roi %}
+            <div class="px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border-y border-green-200">
+              <div class="flex flex-wrap items-center gap-4">
+                <div class="flex items-center gap-2">
+                  <span class="text-2xl">💰</span>
+                  <div>
+                    <div class="text-xs text-gray-600 uppercase font-semibold">Estimated Value</div>
+                    <div class="font-bold text-gray-900">
+                      {% if recommendation.roi.monthly_savings %}
+                        Save ${{ "%.0f"|format(recommendation.roi.monthly_savings) }}/month
+                      {% elif recommendation.roi.monthly_leads %}
+                        +{{ "%.0f"|format(recommendation.roi.monthly_leads) }} leads/month
+                      {% elif recommendation.roi.total_value %}
+                        ${{ "%.0f"|format(recommendation.roi.total_value) }}/month
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+
+                {% if recommendation.roi.annual_savings %}
+                <div class="flex items-center gap-2">
+                  <span class="text-2xl">📅</span>
+                  <div>
+                    <div class="text-xs text-gray-600 uppercase font-semibold">12 Month Projection</div>
+                    <div class="font-bold text-gray-900">
+                      ${{ "%.0f"|format(recommendation.roi.annual_savings) }}/year
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+
+                {% if recommendation.roi.annual_leads %}
+                <div class="flex items-center gap-2">
+                  <span class="text-2xl">📈</span>
+                  <div>
+                    <div class="text-xs text-gray-600 uppercase font-semibold">12 Month Projection</div>
+                    <div class="font-bold text-gray-900">
+                      +{{ "%.0f"|format(recommendation.roi.annual_leads) }} leads/year
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+
+                {% if recommendation.roi.percentage %}
+                <div class="ml-auto px-3 py-1 bg-white rounded-full border-2 border-green-300">
+                  <span class="text-green-700 font-bold">{{ "%.0f"|format(recommendation.roi.percentage) }}% improvement</span>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- Action Steps -->
+            {% if recommendation.action_steps %}
+            <div class="p-4">
+              <h4 class="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                <span class="text-lg">✅</span>
+                How to Do It:
+              </h4>
+              <div class="space-y-1 text-sm text-gray-700">
+                {% for step in recommendation.action_steps %}
+                  <div class="flex items-start">
+                    <span class="mr-2">{{ step }}</span>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        {% endif %}
       {% endfor %}
+    </div>
+
+    <!-- Summary Note -->
+    <div class="mt-6 p-4 bg-white rounded-lg border-2 border-indigo-300">
+      <p class="text-sm text-gray-700">
+        <strong>💡 Pro Tip:</strong> Start with the <span class="px-2 py-0.5 bg-red-100 text-red-700 rounded font-semibold">🚨 Fix Now</span> items first.
+        They have the biggest impact on your bottom line and will save you the most money!
+      </p>
     </div>
   </div>
   {% endif %}

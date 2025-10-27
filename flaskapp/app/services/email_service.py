@@ -188,7 +188,7 @@ def send_team_invite_email(invite, inviter) -> bool:
     account = Account.query.get(invite.account_id)
     account_name = account.name if account else "a team"
 
-    base_url = current_app.config.get("BASE_URL", "http://localhost:5000")
+    base_url = current_app.config.get("BASE_URL", "https://fieldsprout.io")
     invite_url = f"{base_url}/team/invite/{invite.token}"
 
     html_body = render_template_string("""
@@ -370,7 +370,7 @@ def send_welcome_email(user) -> bool:
     </table>
 </body>
 </html>
-    """, user=user, dashboard_url=f"{current_app.config.get('BASE_URL', 'http://localhost:5000')}/account/dashboard", year=2025)
+    """, user=user, dashboard_url=f"{current_app.config.get('BASE_URL', 'https://fieldsprout.io')}/account/dashboard", year=2025)
 
     text_body = f"""
 Welcome to FieldSprout!
@@ -384,7 +384,7 @@ Get Started in 3 Steps:
 2. Review your first automated insights report
 3. Invite your team to collaborate
 
-Go to your dashboard: {current_app.config.get('BASE_URL', 'http://localhost:5000')}/account/dashboard
+Go to your dashboard: {current_app.config.get('BASE_URL', 'https://fieldsprout.io')}/account/dashboard
 
 Need help? Check out our documentation or contact support.
 
@@ -437,7 +437,7 @@ def send_subscription_confirmation_email(user, subscription) -> bool:
 </body>
 </html>
     """, user=user, plan_name=plan_name, subscription=subscription,
-    billing_url=f"{current_app.config.get('BASE_URL', 'http://localhost:5000')}/billing/portal")
+    billing_url=f"{current_app.config.get('BASE_URL', 'https://fieldsprout.io')}/billing/portal")
 
     return send_email(
         to=user.email,
@@ -478,7 +478,7 @@ def send_payment_failed_email(user, subscription) -> bool:
     </div>
 </body>
 </html>
-    """, user=user, billing_url=f"{current_app.config.get('BASE_URL', 'http://localhost:5000')}/billing/portal")
+    """, user=user, billing_url=f"{current_app.config.get('BASE_URL', 'https://fieldsprout.io')}/billing/portal")
 
     return send_email(
         to=user.email,

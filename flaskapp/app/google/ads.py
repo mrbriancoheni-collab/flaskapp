@@ -107,10 +107,36 @@ def optimizer_data():
 @gads_bp.post("/optimizer/apply")
 def optimizer_apply():
     """
-    Stores a change-set to apply (to be executed by a worker or immediate mutator).
-    Expect: {"recommendation_id": <id>, "changes": [...]}
+    Stores change-sets to apply (to be executed by a worker or immediate mutator).
+    Supports both single and bulk operations:
+    - Single: {"recommendation_id": <id>, "changes": [...]}
+    - Bulk: {"recommendation_ids": [<id1>, <id2>, ...], "bulk": true}
     """
     payload = request.get_json(force=True)
+
+    # Handle bulk operations
+    if payload.get("bulk") and "recommendation_ids" in payload:
+        rec_ids = payload.get("recommendation_ids", [])
+        action_ids = []
+
+        for rec_id in rec_ids:
+            try:
+                action = OptimizerAction(
+                    recommendation_id=int(rec_id),
+                    change_set_json=str({"recommendation_id": rec_id, "bulk": True}),
+                    status="pending",
+                )
+                db.session.add(action)
+                db.session.flush()  # Get ID before commit
+                action_ids.append(action.id)
+            except Exception as e:
+                current_app.logger.error(f"Failed to queue recommendation {rec_id}: {e}")
+                continue
+
+        db.session.commit()
+        return jsonify({"status": "queued", "action_ids": action_ids, "count": len(action_ids)})
+
+    # Handle single operation (backward compatibility)
     rec_id = int(payload.get("recommendation_id", 0))
     action = OptimizerAction(
         recommendation_id=rec_id,

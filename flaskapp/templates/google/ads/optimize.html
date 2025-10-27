@@ -88,12 +88,11 @@
         <table id="optimizer-table" class="min-w-full text-sm">
           <thead class="bg-gray-50">
             <tr>
-              <th class="text-left px-3 py-2">Severity</th>
-              <th class="text-left px-3 py-2">Category</th>
-              <th class="text-left px-3 py-2">Title</th>
-              <th class="text-left px-3 py-2">Scope</th>
-              <th class="text-left px-3 py-2">Impact</th>
-              <th class="text-left px-3 py-2">Actions</th>
+              <th class="text-left px-3 py-2 w-32">Priority</th>
+              <th class="text-left px-3 py-2 w-28">Type</th>
+              <th class="text-left px-3 py-2">Recommendation</th>
+              <th class="text-left px-3 py-2 w-56">💰 Estimated ROI</th>
+              <th class="text-left px-3 py-2 w-32">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y"></tbody>
@@ -199,20 +198,81 @@
   if (btn90) btn90.addEventListener("click", () => (loadKPI(90), btn90.classList.add('bg-gray-100'), btn7.classList.remove('bg-gray-100'), btn30.classList.remove('bg-gray-100')));
 
   // --- Optimizer ---
+  function formatROI(impactData) {
+    // Try to parse as JSON (new format with ROI data)
+    try {
+      const roi = JSON.parse(impactData);
+      if (roi && roi.summary) {
+        const parts = [];
+
+        // Add savings if available
+        if (roi.monthly_savings && roi.monthly_savings > 0) {
+          parts.push(`<div class="flex items-center gap-1">
+            <span class="text-lg">💰</span>
+            <span class="font-semibold text-green-700">Save $${Math.round(roi.monthly_savings)}/mo</span>
+          </div>`);
+        }
+
+        // Add leads if available
+        if (roi.monthly_leads && roi.monthly_leads > 0) {
+          parts.push(`<div class="flex items-center gap-1">
+            <span class="text-lg">📈</span>
+            <span class="font-semibold text-blue-700">+${Math.round(roi.monthly_leads)} leads/mo</span>
+          </div>`);
+        }
+
+        // Add effort if available
+        if (roi.effort && roi.effort.time_estimate) {
+          const difficultyColor = roi.effort.difficulty === 'Easy' ? 'text-green-600' :
+                                   roi.effort.difficulty === 'Hard' ? 'text-purple-600' : 'text-blue-600';
+          parts.push(`<div class="text-xs ${difficultyColor}">
+            ⏱️ ${roi.effort.time_estimate} • ${roi.effort.difficulty}
+          </div>`);
+        }
+
+        return parts.join('<div class="h-1"></div>');
+      }
+    } catch (e) {
+      // Fall back to plain text if not JSON
+    }
+
+    // Legacy format: plain text
+    return `<span class="text-gray-700">${impactData || ""}</span>`;
+  }
+
+  function getSeverityBadge(severity) {
+    const badges = {
+      1: '<span class="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full">🚨 Critical</span>',
+      2: '<span class="px-2 py-1 bg-orange-500 text-white text-xs font-bold rounded-full">⚠️ High</span>',
+      3: '<span class="px-2 py-1 bg-yellow-500 text-white text-xs font-bold rounded-full">💡 Medium</span>',
+      4: '<span class="px-2 py-1 bg-blue-500 text-white text-xs font-bold rounded-full">📋 Low</span>',
+      5: '<span class="px-2 py-1 bg-gray-500 text-white text-xs font-bold rounded-full">📝 Optional</span>'
+    };
+    return badges[severity] || `<span class="text-gray-600">${severity}</span>`;
+  }
+
   async function loadOptimizer() {
     const res = await fetch(`${base}/optimizer/data`);
     const rows = await res.json();
     const tbody = document.querySelector("#optimizer-table tbody");
     if (!tbody) return;
     tbody.innerHTML = rows.map(r => `
-      <tr>
-        <td class="px-3 py-2">${r.severity ?? ""}</td>
-        <td class="px-3 py-2">${r.category ?? ""}</td>
-        <td class="px-3 py-2">${r.title ?? ""}</td>
-        <td class="px-3 py-2">${(r.scope_type ?? "")} #${r.scope_id ?? ""}</td>
-        <td class="px-3 py-2">${r.expected_impact ?? ""}</td>
+      <tr class="hover:bg-gray-50">
+        <td class="px-3 py-2">${getSeverityBadge(r.severity)}</td>
         <td class="px-3 py-2">
-          <button data-id="${r.id}" class="apply-opt px-2 py-1 text-xs rounded border hover:bg-gray-50">Apply</button>
+          <span class="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-semibold rounded capitalize">
+            ${r.category ?? ""}
+          </span>
+        </td>
+        <td class="px-3 py-2">
+          <div class="font-medium text-gray-900">${r.title ?? ""}</div>
+          <div class="text-xs text-gray-500 mt-0.5">${r.scope_type ?? ""} ${r.scope_id ? '#' + r.scope_id : ''}</div>
+        </td>
+        <td class="px-3 py-2">${formatROI(r.expected_impact)}</td>
+        <td class="px-3 py-2">
+          <button data-id="${r.id}" class="apply-opt px-3 py-1.5 text-xs font-medium rounded bg-indigo-600 text-white hover:bg-indigo-700">
+            Apply Now
+          </button>
         </td>
       </tr>
     `).join("");

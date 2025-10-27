@@ -689,176 +689,177 @@ def google_callback():
 
 # ---------------------------------------------------------------------
 # Facebook OAuth Routes (Sign in with Facebook)
+# DISABLED: Pending Facebook app approval for business_management permission
 # ---------------------------------------------------------------------
-@auth_bp.route("/auth/facebook", methods=["GET"], endpoint="facebook_login")
-def facebook_login():
-    """
-    Initiate Facebook OAuth flow for user authentication.
-    """
-    try:
-        from app.auth.facebook_oauth import FacebookAuthHelper
-
-        # Check if Facebook OAuth is configured
-        if not FacebookAuthHelper.is_configured():
-            flash("Facebook sign-in is not currently available. Please use email/password login.", "warning")
-            return redirect(url_for("auth_bp.login"))
-
-        # Store next URL in session for post-login redirect
-        next_url = request.args.get("next", "")
-        if next_url:
-            session['facebook_auth_next'] = next_url
-
-        # Get authorization URL
-        auth_url = FacebookAuthHelper.get_authorization_url()
-
-        return redirect(auth_url)
-
-    except Exception as e:
-        current_app.logger.exception(f"Error initiating Facebook OAuth: {e}")
-        flash("Unable to connect to Facebook. Please try again or use email/password login.", "error")
-        return redirect(url_for("auth_bp.login"))
-
-
-@auth_bp.route("/auth/facebook/callback", methods=["GET"], endpoint="facebook_callback")
-def facebook_callback():
-    """
-    Handle Facebook OAuth callback and create/login user.
-    """
-    try:
-        from app.auth.facebook_oauth import FacebookAuthHelper
-        from app.models_oauth import UserOAuthProvider
-        from datetime import datetime
-
-        # Get authorization code and state
-        code = request.args.get("code")
-        state = request.args.get("state")
-        error = request.args.get("error")
-        error_reason = request.args.get("error_reason")
-
-        if error:
-            current_app.logger.warning(f"Facebook OAuth error: {error} ({error_reason})")
-            if error_reason == "user_denied":
-                flash("Facebook sign-in was cancelled.", "info")
-            else:
-                flash("Facebook sign-in failed. Please try again.", "warning")
-            return redirect(url_for("auth_bp.login"))
-
-        if not code:
-            flash("Invalid Facebook sign-in response.", "error")
-            return redirect(url_for("auth_bp.login"))
-
-        # Exchange code for user info
-        userinfo = FacebookAuthHelper.handle_callback(code, state)
-
-        if not userinfo or not userinfo.get('facebook_id'):
-            flash("Unable to verify Facebook account. Please try again.", "error")
-            return redirect(url_for("auth_bp.login"))
-
-        facebook_id = userinfo['facebook_id']
-        email = userinfo.get('email')  # May be None if user denied permission
-        name = userinfo.get('name', 'Facebook User')
-        picture = userinfo.get('picture')
-
-        # If no email, we cannot create an account
-        if not email:
-            flash("We need your email address to create an account. Please grant email permission or use email/password sign-up.", "warning")
-            return redirect(url_for("auth_bp.register"))
-
-        email = _normalize_email(email)
-
-        # Check if this Facebook account is already linked
-        oauth_record = UserOAuthProvider.get_by_provider('facebook', facebook_id)
-
-        if oauth_record:
-            # Existing Facebook account - log them in
-            user_row = _find_user_by_id(oauth_record.user_id)
-
-            if user_row:
-                _set_login_session(user_row["id"], user_row["email"])
-
-                # Update OAuth record
-                oauth_record.email = email
-                oauth_record.name = name
-                oauth_record.picture = picture
-                oauth_record.last_login_at = datetime.utcnow()
-                db.session.commit()
-
-                flash(f"Welcome back, {user_row['name']}!", "success")
-
-                # Redirect to next URL or dashboard
-                next_url = session.pop('facebook_auth_next', '')
-                if next_url and _is_safe_redirect(next_url):
-                    return redirect(next_url)
-                return redirect(_post_auth_target())
-            else:
-                # OAuth record exists but user doesn't - cleanup and treat as new
-                db.session.delete(oauth_record)
-                db.session.commit()
-
-        # Check if email already exists (user might want to link accounts)
-        existing_user = _find_user_by_email(email)
-
-        if existing_user:
-            # Email exists - link Facebook account to existing user
-            user_id = existing_user["id"]
-
-            # Create OAuth provider record
-            oauth_provider = UserOAuthProvider(
-                user_id=user_id,
-                provider='facebook',
-                provider_user_id=facebook_id,
-                email=email,
-                name=name,
-                picture=picture,
-                last_login_at=datetime.utcnow()
-            )
-            db.session.add(oauth_provider)
-            db.session.commit()
-
-            _set_login_session(user_id, email)
-
-            flash(f"Your Facebook account has been linked! Welcome back, {existing_user['name']}!", "success")
-
-            next_url = session.pop('facebook_auth_next', '')
-            if next_url and _is_safe_redirect(next_url):
-                return redirect(next_url)
-            return redirect(_post_auth_target())
-
-        # New user - create account
-        # Note: Facebook-authenticated users have verified emails (Facebook verifies them)
-        account_id, user_id = _create_user_and_account(
-            name=name,
-            email=email,
-            password=None,  # No password for OAuth users
-            email_verified=True  # Facebook verified the email
-        )
-
-        # Create OAuth provider record
-        oauth_provider = UserOAuthProvider(
-            user_id=user_id,
-            provider='facebook',
-            provider_user_id=facebook_id,
-            email=email,
-            name=name,
-            picture=picture,
-            last_login_at=datetime.utcnow()
-        )
-        db.session.add(oauth_provider)
-        db.session.commit()
-
-        _set_login_session(user_id, email)
-
-        flash(f"Welcome to {current_app.config.get('APP_NAME', 'FieldSprout')}, {name}! Your account has been created.", "success")
-
-        next_url = session.pop('facebook_auth_next', '')
-        if next_url and _is_safe_redirect(next_url):
-            return redirect(next_url)
-        return redirect(_post_auth_target())
-
-    except Exception as e:
-        current_app.logger.exception(f"Error in Facebook OAuth callback: {e}")
-        flash("An error occurred during Facebook sign-in. Please try again.", "error")
-        return redirect(url_for("auth_bp.login"))
+# @auth_bp.route("/auth/facebook", methods=["GET"], endpoint="facebook_login")
+# def facebook_login():
+#     """
+#     Initiate Facebook OAuth flow for user authentication.
+#     """
+#     try:
+#         from app.auth.facebook_oauth import FacebookAuthHelper
+#
+#         # Check if Facebook OAuth is configured
+#         if not FacebookAuthHelper.is_configured():
+#             flash("Facebook sign-in is not currently available. Please use email/password login.", "warning")
+#             return redirect(url_for("auth_bp.login"))
+#
+#         # Store next URL in session for post-login redirect
+#         next_url = request.args.get("next", "")
+#         if next_url:
+#             session['facebook_auth_next'] = next_url
+#
+#         # Get authorization URL
+#         auth_url = FacebookAuthHelper.get_authorization_url()
+#
+#         return redirect(auth_url)
+#
+#     except Exception as e:
+#         current_app.logger.exception(f"Error initiating Facebook OAuth: {e}")
+#         flash("Unable to connect to Facebook. Please try again or use email/password login.", "error")
+#         return redirect(url_for("auth_bp.login"))
+#
+#
+# @auth_bp.route("/auth/facebook/callback", methods=["GET"], endpoint="facebook_callback")
+# def facebook_callback():
+#     """
+#     Handle Facebook OAuth callback and create/login user.
+#     """
+#     try:
+#         from app.auth.facebook_oauth import FacebookAuthHelper
+#         from app.models_oauth import UserOAuthProvider
+#         from datetime import datetime
+#
+#         # Get authorization code and state
+#         code = request.args.get("code")
+#         state = request.args.get("state")
+#         error = request.args.get("error")
+#         error_reason = request.args.get("error_reason")
+#
+#         if error:
+#             current_app.logger.warning(f"Facebook OAuth error: {error} ({error_reason})")
+#             if error_reason == "user_denied":
+#                 flash("Facebook sign-in was cancelled.", "info")
+#             else:
+#                 flash("Facebook sign-in failed. Please try again.", "warning")
+#             return redirect(url_for("auth_bp.login"))
+#
+#         if not code:
+#             flash("Invalid Facebook sign-in response.", "error")
+#             return redirect(url_for("auth_bp.login"))
+#
+#         # Exchange code for user info
+#         userinfo = FacebookAuthHelper.handle_callback(code, state)
+#
+#         if not userinfo or not userinfo.get('facebook_id'):
+#             flash("Unable to verify Facebook account. Please try again.", "error")
+#             return redirect(url_for("auth_bp.login"))
+#
+#         facebook_id = userinfo['facebook_id']
+#         email = userinfo.get('email')  # May be None if user denied permission
+#         name = userinfo.get('name', 'Facebook User')
+#         picture = userinfo.get('picture')
+#
+#         # If no email, we cannot create an account
+#         if not email:
+#             flash("We need your email address to create an account. Please grant email permission or use email/password sign-up.", "warning")
+#             return redirect(url_for("auth_bp.register"))
+#
+#         email = _normalize_email(email)
+#
+#         # Check if this Facebook account is already linked
+#         oauth_record = UserOAuthProvider.get_by_provider('facebook', facebook_id)
+#
+#         if oauth_record:
+#             # Existing Facebook account - log them in
+#             user_row = _find_user_by_id(oauth_record.user_id)
+#
+#             if user_row:
+#                 _set_login_session(user_row["id"], user_row["email"])
+#
+#                 # Update OAuth record
+#                 oauth_record.email = email
+#                 oauth_record.name = name
+#                 oauth_record.picture = picture
+#                 oauth_record.last_login_at = datetime.utcnow()
+#                 db.session.commit()
+#
+#                 flash(f"Welcome back, {user_row['name']}!", "success")
+#
+#                 # Redirect to next URL or dashboard
+#                 next_url = session.pop('facebook_auth_next', '')
+#                 if next_url and _is_safe_redirect(next_url):
+#                     return redirect(next_url)
+#                 return redirect(_post_auth_target())
+#             else:
+#                 # OAuth record exists but user doesn't - cleanup and treat as new
+#                 db.session.delete(oauth_record)
+#                 db.session.commit()
+#
+#         # Check if email already exists (user might want to link accounts)
+#         existing_user = _find_user_by_email(email)
+#
+#         if existing_user:
+#             # Email exists - link Facebook account to existing user
+#             user_id = existing_user["id"]
+#
+#             # Create OAuth provider record
+#             oauth_provider = UserOAuthProvider(
+#                 user_id=user_id,
+#                 provider='facebook',
+#                 provider_user_id=facebook_id,
+#                 email=email,
+#                 name=name,
+#                 picture=picture,
+#                 last_login_at=datetime.utcnow()
+#             )
+#             db.session.add(oauth_provider)
+#             db.session.commit()
+#
+#             _set_login_session(user_id, email)
+#
+#             flash(f"Your Facebook account has been linked! Welcome back, {existing_user['name']}!", "success")
+#
+#             next_url = session.pop('facebook_auth_next', '')
+#             if next_url and _is_safe_redirect(next_url):
+#                 return redirect(next_url)
+#             return redirect(_post_auth_target())
+#
+#         # New user - create account
+#         # Note: Facebook-authenticated users have verified emails (Facebook verifies them)
+#         account_id, user_id = _create_user_and_account(
+#             name=name,
+#             email=email,
+#             password=None,  # No password for OAuth users
+#             email_verified=True  # Facebook verified the email
+#         )
+#
+#         # Create OAuth provider record
+#         oauth_provider = UserOAuthProvider(
+#             user_id=user_id,
+#             provider='facebook',
+#             provider_user_id=facebook_id,
+#             email=email,
+#             name=name,
+#             picture=picture,
+#             last_login_at=datetime.utcnow()
+#         )
+#         db.session.add(oauth_provider)
+#         db.session.commit()
+#
+#         _set_login_session(user_id, email)
+#
+#         flash(f"Welcome to {current_app.config.get('APP_NAME', 'FieldSprout')}, {name}! Your account has been created.", "success")
+#
+#         next_url = session.pop('facebook_auth_next', '')
+#         if next_url and _is_safe_redirect(next_url):
+#             return redirect(next_url)
+#         return redirect(_post_auth_target())
+#
+#     except Exception as e:
+#         current_app.logger.exception(f"Error in Facebook OAuth callback: {e}")
+#         flash("An error occurred during Facebook sign-in. Please try again.", "error")
+#         return redirect(url_for("auth_bp.login"))
 
 
 # Helper function to find user by ID

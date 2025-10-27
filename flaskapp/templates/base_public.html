@@ -145,15 +145,6 @@
         </li>
         {% endif %}
 
-        {% if has_endpoint('fb_ads_grader_bp.index') %}
-        <li>
-          <a class="hover:text-primary-700 inline-flex items-center gap-1.5" href="{{ url_for('fb_ads_grader_bp.index') }}">
-            Facebook Ads Inspector
-            <span class="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-semibold">FREE</span>
-          </a>
-        </li>
-        {% endif %}
-
         <li>
           {% if has_endpoint('auth_bp.login') %}
             <a class="btn btn-outline" href="{{ url_for('auth_bp.login') }}">Sign in</a>
@@ -221,13 +212,6 @@
         <a class="block py-2 hover:text-primary-700 flex items-center gap-2" href="{{ url_for('ads_grader_bp.index') }}">
           Google Ads Inspector
           <span class="text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-semibold">FREE</span>
-        </a>
-        {% endif %}
-
-        {% if has_endpoint('fb_ads_grader_bp.index') %}
-        <a class="block py-2 hover:text-primary-700 flex items-center gap-2" href="{{ url_for('fb_ads_grader_bp.index') }}">
-          Facebook Ads Inspector
-          <span class="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-semibold">FREE</span>
         </a>
         {% endif %}
 

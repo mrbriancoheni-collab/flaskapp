@@ -407,10 +407,14 @@ class CRMContact(db.Model):
     source = db.Column(db.String(128))   # where did we get it (optional)
     notes = db.Column(db.Text)
 
+    # Domain crawling tracking
+    last_crawled_at = db.Column(db.DateTime, nullable=True)  # when we last crawled their website
+    crawl_attempts = db.Column(db.Integer, nullable=False, default=0)  # number of crawl attempts
+
     owner_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=True)  # if/when they convert
 
-    # indexes you’ll actually use
+    # indexes you'll actually use
     __table_args__ = (
         db.Index("idx_crm_contacts_stage", "stage"),
         db.Index("idx_crm_contacts_email", "email"),

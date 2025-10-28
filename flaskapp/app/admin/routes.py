@@ -494,6 +494,133 @@ def serp_scraper_add_selected():
 
 
 # -------------------------
+# Domain Crawler for Lead Enrichment
+# -------------------------
+@admin_bp.route("/domain-crawler")
+@login_required
+@require_admin
+def domain_crawler():
+    """Domain crawler management page"""
+    from app.models import CRMContact
+
+    # Get stats
+    total_contacts = CRMContact.query.filter(CRMContact.domain.isnot(None)).count()
+    never_crawled = CRMContact.query.filter(
+        CRMContact.domain.isnot(None),
+        CRMContact.last_crawled_at.is_(None)
+    ).count()
+
+    # Get contacts missing contact info
+    missing_email = CRMContact.query.filter(
+        CRMContact.domain.isnot(None),
+        CRMContact.email.is_(None)
+    ).count()
+    missing_phone = CRMContact.query.filter(
+        CRMContact.domain.isnot(None),
+        CRMContact.phone.is_(None)
+    ).count()
+
+    stats = {
+        'total_contacts': total_contacts,
+        'never_crawled': never_crawled,
+        'missing_email': missing_email,
+        'missing_phone': missing_phone
+    }
+
+    return render_template("admin/domain_crawler.html", stats=stats)
+
+
+@admin_bp.post("/domain-crawler/crawl")
+@login_required
+@require_admin
+def domain_crawler_run():
+    """Run domain crawler on CRM contacts"""
+    from app.models import CRMContact
+    from app.services.domain_crawler import DomainCrawler
+    from datetime import datetime, timedelta
+
+    max_crawls = request.form.get("max_crawls", type=int, default=10)
+    force_recrawl = request.form.get("force_recrawl", type=bool, default=False)
+
+    try:
+        # Get contacts to crawl
+        query = CRMContact.query.filter(CRMContact.domain.isnot(None))
+
+        if not force_recrawl:
+            # Only crawl if:
+            # 1. Never crawled before, OR
+            # 2. Last crawled more than 30 days ago, OR
+            # 3. Missing email or phone
+            thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+            query = query.filter(
+                db.or_(
+                    CRMContact.last_crawled_at.is_(None),
+                    CRMContact.last_crawled_at < thirty_days_ago,
+                    CRMContact.email.is_(None),
+                    CRMContact.phone.is_(None)
+                )
+            )
+
+        contacts = query.limit(max_crawls).all()
+
+        if not contacts:
+            flash("No contacts need crawling at this time.", "info")
+            return redirect(url_for("admin_bp.domain_crawler"))
+
+        crawler = DomainCrawler()
+        updated_count = 0
+        enriched_fields = {'email': 0, 'phone': 0, 'name': 0}
+
+        for contact in contacts:
+            try:
+                current_app.logger.info(f"Crawling domain: {contact.domain}")
+                result = crawler.crawl_domain(contact.domain)
+
+                # Update contact with found information
+                updated = False
+                if result['email'] and not contact.email:
+                    contact.email = result['email']
+                    enriched_fields['email'] += 1
+                    updated = True
+
+                if result['phone'] and not contact.phone:
+                    contact.phone = result['phone']
+                    enriched_fields['phone'] += 1
+                    updated = True
+
+                if result['name'] and not contact.contact_name:
+                    contact.contact_name = result['name']
+                    enriched_fields['name'] += 1
+                    updated = True
+
+                # Update crawl tracking
+                contact.last_crawled_at = datetime.utcnow()
+                contact.crawl_attempts += 1
+
+                if updated:
+                    updated_count += 1
+
+            except Exception as e:
+                current_app.logger.error(f"Error crawling {contact.domain}: {e}")
+                contact.crawl_attempts += 1
+                continue
+
+        db.session.commit()
+        _audit("domain_crawl", note=f"crawled={len(contacts)} enriched={updated_count}")
+
+        msg = f"Crawled {len(contacts)} domains. "
+        msg += f"Enriched {updated_count} contacts: "
+        msg += f"{enriched_fields['email']} emails, {enriched_fields['phone']} phones, {enriched_fields['name']} names."
+        flash(msg, "success")
+
+    except Exception as e:
+        current_app.logger.error(f"Domain crawler error: {e}", exc_info=True)
+        flash(f"Error running crawler: {str(e)}", "danger")
+
+    return redirect(url_for("admin_bp.domain_crawler"))
+
+
+# -------------------------
 # Email Functionality
 # -------------------------
 @admin_bp.get("/email/compose")

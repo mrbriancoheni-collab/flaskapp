@@ -321,13 +321,91 @@
   <!-- Recommendations -->
   {% if report.recommendations %}
   <div class="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6 mb-6">
-    <h2 class="text-2xl font-bold mb-4">
+    <h2 class="text-2xl font-bold mb-6">
       <i class="fa-solid fa-lightbulb text-indigo-600 mr-2"></i>
-      🎯 What to Fix First (Biggest Impact)
+      🎯 Optimization Recommendations by Category
     </h2>
 
-    <div class="space-y-4">
-      {% for recommendation in report.recommendations %}
+    <!-- Define category groupings -->
+    {% set category_labels = {
+      'wasted_spend': {'title': '💸 Negative Keywords & Wasted Spend', 'icon': 'fa-ban', 'desc': 'Stop spending money on irrelevant searches', 'color': 'red'},
+      'keywords': {'title': '🔑 Keyword Strategy & Targeting', 'icon': 'fa-key', 'desc': 'Improve your keyword targeting and CPL', 'color': 'blue'},
+      'long_tail_keywords': {'title': '🔑 Keyword Strategy & Targeting', 'icon': 'fa-key', 'desc': 'Improve your keyword targeting and CPL', 'color': 'blue'},
+      'quality_score': {'title': '⭐ Ad Copy & Quality Score', 'icon': 'fa-star', 'desc': 'Better ad copy reduces cost per click', 'color': 'yellow'},
+      'ctr': {'title': '⭐ Ad Copy & Quality Score', 'icon': 'fa-star', 'desc': 'Better ad copy reduces cost per click', 'color': 'yellow'},
+      'text_ad_optimization': {'title': '⭐ Ad Copy & Quality Score', 'icon': 'fa-star', 'desc': 'Better ad copy reduces cost per click', 'color': 'yellow'},
+      'landing_pages': {'title': '🎯 Landing Pages & Conversion Rate', 'icon': 'fa-bullseye', 'desc': 'Improve CPL by converting more visitors', 'color': 'green'},
+      'impression_share': {'title': '📊 Budget & Spend Optimization', 'icon': 'fa-chart-line', 'desc': 'Optimize your budget and ad visibility', 'color': 'purple'},
+      'mobile': {'title': '📱 Mobile Optimization', 'icon': 'fa-mobile-screen', 'desc': 'Increase phone calls and mobile conversions', 'color': 'indigo'},
+      'extensions': {'title': '➕ Ad Extensions & Visibility', 'icon': 'fa-puzzle-piece', 'desc': 'Make your ads stand out', 'color': 'teal'},
+      'account_structure': {'title': '🗂️ Account Organization', 'icon': 'fa-folder-tree', 'desc': 'Better structure for easier management', 'color': 'gray'}
+    } %}
+
+    <!-- Group recommendations by category -->
+    {% set grouped_recommendations = {} %}
+    {% for rec in report.recommendations %}
+      {% if rec is not string %}
+        {% set cat = rec.get('category', 'other') %}
+        {# Group similar categories together #}
+        {% set group_key = 'keywords' if cat in ['keywords', 'long_tail_keywords'] else cat %}
+        {% set group_key = 'quality_score' if cat in ['quality_score', 'ctr', 'text_ad_optimization'] else group_key %}
+        {% if group_key not in grouped_recommendations %}
+          {% set _ = grouped_recommendations.update({group_key: []}) %}
+        {% endif %}
+        {% set _ = grouped_recommendations[group_key].append(rec) %}
+      {% endif %}
+    {% endfor %}
+
+    <!-- Render each category section -->
+    {% for category_key, recs in grouped_recommendations.items() %}
+      {% set cat_info = category_labels.get(category_key, {'title': 'Other Optimizations', 'icon': 'fa-wrench', 'desc': 'Additional improvements', 'color': 'gray'}) %}
+
+      <div class="mb-8 last:mb-0">
+        <!-- Section Header with Value Summary -->
+        <div class="bg-white rounded-lg shadow-md border-l-4 border-{{ cat_info.color }}-500 p-4 mb-4">
+          <div class="flex items-center justify-between">
+            <div class="flex-1">
+              <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <i class="fa-solid {{ cat_info.icon }} text-{{ cat_info.color }}-600"></i>
+                {{ cat_info.title }}
+              </h3>
+              <p class="text-sm text-gray-600 mt-1">{{ cat_info.desc }}</p>
+            </div>
+            <div class="text-right">
+              <div class="text-xs font-semibold text-gray-500 uppercase mb-1">
+                {{ recs|length }} action{{ 's' if recs|length > 1 else '' }}
+              </div>
+              {% set section_value = namespace(savings=0, leads=0) %}
+              {% for rec in recs %}
+                {% if rec.roi %}
+                  {% if rec.roi.monthly_savings %}
+                    {% set section_value.savings = section_value.savings + rec.roi.monthly_savings %}
+                  {% endif %}
+                  {% if rec.roi.monthly_leads %}
+                    {% set section_value.leads = section_value.leads + rec.roi.monthly_leads %}
+                  {% endif %}
+                  {% if rec.roi.total_value %}
+                    {% set section_value.savings = section_value.savings + rec.roi.total_value %}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+              {% if section_value.savings > 0 or section_value.leads > 0 %}
+                {% if section_value.savings > 0 %}
+                <div class="text-xl font-bold text-green-600">${{ "%.0f"|format(section_value.savings) }}/mo</div>
+                <div class="text-xs text-gray-500">potential savings</div>
+                {% endif %}
+                {% if section_value.leads > 0 %}
+                <div class="text-xl font-bold text-blue-600">+{{ "%.0f"|format(section_value.leads) }} leads</div>
+                <div class="text-xs text-gray-500">per month</div>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Recommendations in this category -->
+        <div class="space-y-4 pl-0 md:pl-4">
+      {% for recommendation in recs %}
         {% if recommendation is string %}
           <!-- Legacy format: simple string -->
           <div class="flex items-start bg-white rounded-lg p-4 border border-indigo-100">
@@ -453,7 +531,9 @@
           </div>
         {% endif %}
       {% endfor %}
-    </div>
+        </div> <!-- End recommendations in this category -->
+      </div> <!-- End category section -->
+    {% endfor %}
 
     <!-- Summary Note -->
     <div class="mt-6 p-4 bg-white rounded-lg border-2 border-indigo-300">

@@ -481,6 +481,7 @@ class GoogleAdsAnalyzer:
             recommendations.append({
                 'title': f"Add {gap} Negative Keywords to Stop Wasting Money",
                 'description': f"You're spending money on wrong searches. Adding negative keywords will block irrelevant clicks and save you money every month.",
+                'layman_summary': f"Think of negative keywords as a 'block list' for your ads. When someone searches for something you DON'T do, negative keywords prevent your ad from showing up. This stops you from paying for clicks that never turn into customers.",
                 'category': 'wasted_spend',
                 'severity': severity,
                 'roi': {
@@ -512,6 +513,7 @@ class GoogleAdsAnalyzer:
             recommendations.append({
                 'title': f"Improve Ad Quality from {qs_avg:.1f} to {target}+ Stars",
                 'description': f"Your ads score {qs_avg:.1f} out of 10. Better ads cost less money! Google charges you less when your ads are high quality.",
+                'layman_summary': f"Google grades your ads like a report card (1-10 stars). Higher grades = you pay LESS per click. It's like getting a discount for writing better ads. Right now you're at {qs_avg:.1f}/10, so there's money being left on the table.",
                 'category': 'quality_score',
                 'severity': severity,
                 'roi': {
@@ -546,6 +548,7 @@ class GoogleAdsAnalyzer:
             recommendations.append({
                 'title': "Get More Clicks by Testing New Ad Variations",
                 'description': f"Not enough people are clicking your ads. Test new ad copy to get {leads_info['monthly_new_leads']:.0f} more leads per month.",
+                'layman_summary': "CTR (Click-Through Rate) is how often people click your ad when they see it. Low CTR means your ads aren't interesting enough. Better headlines and descriptions = more clicks = more customers calling you.",
                 'category': 'ctr',
                 'severity': severity,
                 'roi': {
@@ -579,6 +582,7 @@ class GoogleAdsAnalyzer:
             recommendations.append({
                 'title': "Add More Specific Keyword Phrases (3+ Words)",
                 'description': "Long phrases like 'emergency plumber dallas 75201' cost less and convert better than short keywords like 'plumber'.",
+                'layman_summary': "Longer, more specific keyword phrases (called 'long-tail keywords') attract customers who know exactly what they want. They cost less per click AND convert better because these people are ready to buy. It's like fishing with a spear instead of a net.",
                 'category': 'long_tail_keywords',
                 'severity': severity,
                 'roi': {
@@ -632,9 +636,16 @@ class GoogleAdsAnalyzer:
                     "4. Make sure your mobile landing page loads fast"
                 ]
 
+            # Add layman summary based on scenario
+            if mobile.get("ctr", 0) > desktop.get("ctr", 0):
+                layman_summary = "Most people search on their phones now. Your mobile ads are working well, so increasing your mobile bids means you'll show up more often when people are ready to call. More visibility = more phone calls."
+            else:
+                layman_summary = "Mobile users are different - they want to call NOW, not fill out forms. Your mobile ads need to be optimized for quick calls with click-to-call buttons and fast-loading pages. Think 'tap to call' not 'browse and think about it'."
+
             recommendations.append({
                 'title': title,
                 'description': description,
+                'layman_summary': layman_summary,
                 'category': 'mobile',
                 'severity': severity,
                 'roi': {
@@ -663,6 +674,7 @@ class GoogleAdsAnalyzer:
             recommendations.append({
                 'title': "Create Better Landing Pages to Convert More Visitors",
                 'description': f"Your landing pages aren't converting well. Better pages could get you {roi['leads']['monthly_new_leads']:.0f} more customers per month.",
+                'layman_summary': "A landing page is where people go after clicking your ad. Think of it as your digital storefront. If it's confusing or slow, people leave without calling. A good landing page makes it dead simple to contact you - big phone number, clear offer, trust signals (reviews), and fast loading.",
                 'category': 'landing_pages',
                 'severity': severity,
                 'roi': {
@@ -716,9 +728,16 @@ class GoogleAdsAnalyzer:
                     "4. Watch your impression share improve"
                 ]
 
+            # Add layman summary based on scenario
+            if budget_lost > rank_lost:
+                layman_summary = "Impression share is how often your ads show up when people search. Low impression share means you're missing out on potential customers. If you're running out of budget, you're literally turning away customers because your ads stop showing mid-day."
+            else:
+                layman_summary = "Your ads aren't showing up enough because competitors are outbidding you or have better Quality Scores. Think of it like a crowded marketplace - you need to speak louder (higher bids) or be more interesting (better quality) to get attention."
+
             recommendations.append({
                 'title': title,
                 'description': description,
+                'layman_summary': layman_summary,
                 'category': 'impression_share',
                 'severity': severity,
                 'roi': {
@@ -737,6 +756,7 @@ class GoogleAdsAnalyzer:
             recommendations.append({
                 'title': "Add Ad Extensions to Make Your Ads Bigger",
                 'description': "Ad extensions make your ads take up more space and give people more ways to contact you. They're free and boost clicks by 10-15%.",
+                'layman_summary': "Extensions are FREE add-ons that make your ad physically bigger on the page and add extra info like your phone number, address, or links to specific services. Bigger ads = more clicks. It's like upgrading from a business card to a brochure at no extra cost.",
                 'category': 'extensions',
                 'severity': 3,  # Medium priority
                 'roi': {
@@ -762,6 +782,7 @@ class GoogleAdsAnalyzer:
             recommendations.append({
                 'title': "Reorganize Your Account Structure",
                 'description': "Your campaigns and ad groups are messy. Better organization makes it easier to optimize and track performance.",
+                'layman_summary': "Think of your Google Ads account like a filing cabinet. Right now everything's jumbled together. Organizing by service type (plumbing, HVAC, electrical) makes it WAY easier to see what's working, what's not, and make changes quickly. Better organization = better results over time.",
                 'category': 'account_structure',
                 'severity': 4,  # Lower priority
                 'roi': {

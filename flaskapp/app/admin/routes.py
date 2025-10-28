@@ -570,6 +570,7 @@ def domain_crawler_run():
         crawler = DomainCrawler()
         updated_count = 0
         enriched_fields = {'email': 0, 'phone': 0, 'name': 0}
+        team_contacts_found = 0
 
         for contact in contacts:
             try:
@@ -593,6 +594,30 @@ def domain_crawler_run():
                     enriched_fields['name'] += 1
                     updated = True
 
+                # Find team contacts (CEO, owner, marketing, etc.)
+                team_contacts = crawler.find_team_contacts(contact.domain)
+                if team_contacts:
+                    from app.models import CompanyContact
+                    for tc in team_contacts:
+                        # Check if this contact already exists
+                        existing = CompanyContact.query.filter_by(
+                            crm_contact_id=contact.id,
+                            full_name=tc['name']
+                        ).first()
+
+                        if not existing:
+                            company_contact = CompanyContact(
+                                crm_contact_id=contact.id,
+                                full_name=tc['name'],
+                                title=tc.get('title'),
+                                email=tc.get('email'),
+                                phone=tc.get('phone'),
+                                role_category=tc.get('role_category'),
+                                source=tc.get('source')
+                            )
+                            db.session.add(company_contact)
+                            team_contacts_found += 1
+
                 # Update crawl tracking
                 contact.last_crawled_at = datetime.utcnow()
                 contact.crawl_attempts += 1
@@ -606,11 +631,12 @@ def domain_crawler_run():
                 continue
 
         db.session.commit()
-        _audit("domain_crawl", note=f"crawled={len(contacts)} enriched={updated_count}")
+        _audit("domain_crawl", note=f"crawled={len(contacts)} enriched={updated_count} team_contacts={team_contacts_found}")
 
         msg = f"Crawled {len(contacts)} domains. "
         msg += f"Enriched {updated_count} contacts: "
-        msg += f"{enriched_fields['email']} emails, {enriched_fields['phone']} phones, {enriched_fields['name']} names."
+        msg += f"{enriched_fields['email']} emails, {enriched_fields['phone']} phones, {enriched_fields['name']} names. "
+        msg += f"Found {team_contacts_found} team contacts (CEO, owner, marketing, etc.)."
         flash(msg, "success")
 
     except Exception as e:

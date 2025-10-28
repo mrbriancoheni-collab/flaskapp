@@ -39,6 +39,25 @@ class DomainCrawler:
         '/reach-us'
     ]
 
+    # Common page paths where team/leadership info is found
+    TEAM_PATHS = [
+        '/team',
+        '/our-team',
+        '/meet-the-team',
+        '/leadership',
+        '/about/team',
+        '/about-us/team',
+        '/about/leadership',
+        '/management',
+        '/staff',
+        '/people'
+    ]
+
+    # Role keywords to look for (categorized)
+    EXECUTIVE_ROLES = ['ceo', 'chief executive', 'president', 'founder', 'co-founder', 'owner', 'principal']
+    MARKETING_ROLES = ['marketing', 'cmo', 'chief marketing', 'head of marketing', 'marketing director', 'marketing manager']
+    OPERATIONS_ROLES = ['coo', 'chief operating', 'operations', 'general manager', 'managing director']
+
     def __init__(self, timeout: int = 10):
         """
         Args:
@@ -220,6 +239,186 @@ class DomainCrawler:
                 return name
 
         return None
+
+    def find_team_contacts(self, domain: str) -> List[Dict[str, Optional[str]]]:
+        """
+        Find individual contacts (CEO, owner, marketing, etc.) on a company website.
+
+        Args:
+            domain: Domain to crawl
+
+        Returns:
+            List of dictionaries with contact info: {name, title, email, phone, role_category, source}
+        """
+        contacts = []
+
+        # Normalize domain
+        if not domain:
+            return contacts
+
+        domain = domain.strip().lower()
+        if not domain.startswith('http'):
+            domain = f'https://{domain}'
+
+        try:
+            # Try each team page path
+            for path in self.TEAM_PATHS:
+                url = urljoin(domain, path)
+                logger.debug(f"Searching for team contacts at: {url}")
+
+                try:
+                    response = self.session.get(url, timeout=self.timeout, allow_redirects=True)
+                    if response.status_code != 200:
+                        continue
+
+                    soup = BeautifulSoup(response.text, 'html.parser')
+
+                    # Find team member sections
+                    team_members = self._extract_team_members(soup, path)
+                    contacts.extend(team_members)
+
+                    # If we found team members, we can stop
+                    if team_members:
+                        logger.info(f"Found {len(team_members)} team contacts on {path}")
+                        break
+
+                except requests.RequestException as e:
+                    logger.debug(f"Error fetching {url}: {e}")
+                    continue
+
+            # Also check About page for inline team info
+            if not contacts:
+                about_url = urljoin(domain, '/about')
+                try:
+                    response = self.session.get(about_url, timeout=self.timeout)
+                    if response.status_code == 200:
+                        soup = BeautifulSoup(response.text, 'html.parser')
+                        contacts.extend(self._extract_team_members(soup, '/about'))
+                except:
+                    pass
+
+            logger.info(f"Team contact search complete for {domain}: found {len(contacts)} contacts")
+
+        except Exception as e:
+            logger.error(f"Error finding team contacts for {domain}: {e}")
+
+        return contacts
+
+    def _extract_team_members(self, soup: BeautifulSoup, page_source: str) -> List[Dict[str, Optional[str]]]:
+        """Extract individual team members from a page."""
+        members = []
+
+        # Strategy 1: Find structured team member cards/sections
+        # Look for common patterns: div/article with name + title
+        potential_members = []
+
+        # Look for elements with class patterns like 'team-member', 'staff-member', 'person', etc.
+        team_elements = soup.find_all(['div', 'article', 'li'], class_=re.compile(r'team|staff|person|member|bio|profile', re.I))
+        potential_members.extend(team_elements)
+
+        # Also look for elements with role="listitem" that might be team members
+        potential_members.extend(soup.find_all(['div', 'article'], attrs={'role': 'listitem'}))
+
+        seen_names = set()
+
+        for elem in potential_members:
+            try:
+                # Extract name
+                name = None
+                name_elem = elem.find(['h2', 'h3', 'h4', 'strong', 'b'], class_=re.compile(r'name|title', re.I))
+                if name_elem:
+                    name = name_elem.get_text().strip()
+                else:
+                    # Try finding any heading
+                    name_elem = elem.find(['h2', 'h3', 'h4'])
+                    if name_elem:
+                        name = name_elem.get_text().strip()
+
+                if not name or len(name) < 3 or len(name) > 100:
+                    continue
+
+                # Skip if we've already found this person
+                if name.lower() in seen_names:
+                    continue
+
+                # Extract title/role
+                title = None
+                title_elem = elem.find(['p', 'span', 'div'], class_=re.compile(r'title|role|position|job', re.I))
+                if title_elem:
+                    title = title_elem.get_text().strip()
+                else:
+                    # Try finding text after name
+                    elem_text = elem.get_text()
+                    # Look for patterns like "Name\nCEO" or "Name - CEO"
+                    lines = [l.strip() for l in elem_text.split('\n') if l.strip()]
+                    if len(lines) >= 2:
+                        # Second line might be title
+                        potential_title = lines[1]
+                        if len(potential_title) < 100 and any(keyword in potential_title.lower() for keyword in
+                                                              self.EXECUTIVE_ROLES + self.MARKETING_ROLES + self.OPERATIONS_ROLES):
+                            title = potential_title
+
+                # Categorize role
+                role_category = self._categorize_role(title) if title else None
+
+                # Only include if we found a relevant role
+                if role_category in ['executive', 'owner', 'marketing', 'operations']:
+                    # Try to extract email
+                    email = None
+                    mailto_links = elem.find_all('a', href=re.compile(r'mailto:'))
+                    if mailto_links:
+                        email = mailto_links[0].get('href', '').replace('mailto:', '').split('?')[0].strip()
+
+                    # Try to extract phone
+                    phone = None
+                    tel_links = elem.find_all('a', href=re.compile(r'tel:'))
+                    if tel_links:
+                        phone_text = tel_links[0].get('href', '').replace('tel:', '')
+                        phone = re.sub(r'[^\d]', '', phone_text)
+                        if len(phone) >= 10:
+                            phone = phone[-10:]  # Get last 10 digits
+                            phone = f"({phone[:3]}) {phone[3:6]}-{phone[6:]}"
+
+                    members.append({
+                        'name': name,
+                        'title': title,
+                        'email': email,
+                        'phone': phone,
+                        'role_category': role_category,
+                        'source': page_source
+                    })
+                    seen_names.add(name.lower())
+                    logger.debug(f"Found team member: {name} - {title} ({role_category})")
+
+            except Exception as e:
+                logger.debug(f"Error parsing team member: {e}")
+                continue
+
+        return members
+
+    def _categorize_role(self, title: str) -> Optional[str]:
+        """Categorize a job title into role categories."""
+        if not title:
+            return 'other'
+
+        title_lower = title.lower()
+
+        # Check for executive roles
+        for keyword in self.EXECUTIVE_ROLES:
+            if keyword in title_lower:
+                return 'executive' if keyword not in ['owner', 'principal'] else 'owner'
+
+        # Check for marketing roles
+        for keyword in self.MARKETING_ROLES:
+            if keyword in title_lower:
+                return 'marketing'
+
+        # Check for operations roles
+        for keyword in self.OPERATIONS_ROLES:
+            if keyword in title_lower:
+                return 'operations'
+
+        return 'other'
 
     def _is_valid_email(self, email: str) -> bool:
         """Validate email address format."""

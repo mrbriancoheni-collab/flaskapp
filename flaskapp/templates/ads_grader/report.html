@@ -459,6 +459,21 @@
               </div>
             </div>
 
+            <!-- Layman Summary (Simple Explanation) -->
+            {% if recommendation.layman_summary %}
+            <div class="px-4 py-3 bg-blue-50 border-y border-blue-200">
+              <div class="flex items-start gap-2">
+                <span class="text-blue-600 text-lg mt-0.5">💡</span>
+                <div>
+                  <div class="text-xs font-bold text-blue-900 uppercase mb-1">In Plain English:</div>
+                  <p class="text-sm text-blue-900 leading-relaxed">
+                    {{ recommendation.layman_summary }}
+                  </p>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
             <!-- ROI Impact -->
             {% if recommendation.roi %}
             <div class="px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border-y border-green-200">

@@ -424,3 +424,41 @@ class CRMContact(db.Model):
 
     def __repr__(self) -> str:
         return f"<CRMContact id={self.id} stage={self.stage!r} business={self.business_name!r}>"
+
+
+class CompanyContact(db.Model):
+    """
+    Individual contacts discovered for a company (CEO, owner, marketing director, etc.)
+    Multiple contacts can exist for a single CRMContact (company).
+    """
+    __tablename__ = "company_contacts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    crm_contact_id = db.Column(db.Integer, db.ForeignKey("crm_contacts.id"), nullable=False, index=True)
+
+    # Contact info
+    full_name = db.Column(db.String(255), nullable=False)
+    title = db.Column(db.String(255))  # CEO, President, Marketing Director, etc.
+    email = db.Column(db.String(255))
+    phone = db.Column(db.String(64))
+    linkedin_url = db.Column(db.String(512))
+
+    # Role categorization
+    role_category = db.Column(db.String(50))  # executive, owner, marketing, operations, other
+
+    # Tracking
+    source = db.Column(db.String(128))  # where we found them (team page, about page, etc.)
+    discovered_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relationship back to company
+    crm_contact = db.relationship("CRMContact", backref="contacts")
+
+    # Indexes
+    __table_args__ = (
+        db.Index("idx_company_contacts_crm", "crm_contact_id"),
+        db.Index("idx_company_contacts_role", "role_category"),
+        db.Index("idx_company_contacts_email", "email"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<CompanyContact id={self.id} name={self.full_name!r} title={self.title!r}>"

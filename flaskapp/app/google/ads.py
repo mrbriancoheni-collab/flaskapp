@@ -10,6 +10,8 @@ from flask import (
     redirect,
     url_for,
     jsonify,
+    flash,
+    current_app,
 )
 from sqlalchemy import text
 
@@ -24,6 +26,7 @@ from app.models_ads import (
     NegativeKeyword,
     SharedNegativeMap,
 )
+from app.auth.utils import login_required, is_paid_account
 
 # Keep this exactly once (don't also pass url_prefix again at register time)
 gads_bp = Blueprint("gads_bp", __name__, url_prefix="/account/google/ads")
@@ -42,11 +45,17 @@ def _back_to(tab: Optional[str] = None):
 # UI: Optimize page
 # ---------------------------
 @gads_bp.get("/")
+@login_required
 def optimize():
     """
     Renders the Google Ads Optimize UI (tabs driven by ?tab=).
     Template: templates/google/ads/optimize.html
     """
+    # Check if user has paid plan
+    if not is_paid_account():
+        flash("Google Ads Optimizer is available on paid plans. Upgrade to access optimization tools.", "warning")
+        return redirect(url_for("account_bp.pricing"))
+
     tab = request.args.get("tab", "campaigns")
     return render_template("google/ads/optimize.html", tab=tab)
 
@@ -86,10 +95,15 @@ def overview():
 # JSON: Optimizer
 # ---------------------------
 @gads_bp.get("/optimizer/data")
+@login_required
 def optimizer_data():
     """
     Returns optimizer recommendations (ranked).
     """
+    # Check if user has paid plan
+    if not is_paid_account():
+        return jsonify({"error": "Paid plan required"}), 403
+
     rows = db.session.execute(
         text(
             """
@@ -105,12 +119,43 @@ def optimizer_data():
 
 
 @gads_bp.post("/optimizer/apply")
+@login_required
 def optimizer_apply():
     """
-    Stores a change-set to apply (to be executed by a worker or immediate mutator).
-    Expect: {"recommendation_id": <id>, "changes": [...]}
+    Stores change-sets to apply (to be executed by a worker or immediate mutator).
+    Supports both single and bulk operations:
+    - Single: {"recommendation_id": <id>, "changes": [...]}
+    - Bulk: {"recommendation_ids": [<id1>, <id2>, ...], "bulk": true}
     """
+    # Check if user has paid plan
+    if not is_paid_account():
+        return jsonify({"error": "Paid plan required"}), 403
+
     payload = request.get_json(force=True)
+
+    # Handle bulk operations
+    if payload.get("bulk") and "recommendation_ids" in payload:
+        rec_ids = payload.get("recommendation_ids", [])
+        action_ids = []
+
+        for rec_id in rec_ids:
+            try:
+                action = OptimizerAction(
+                    recommendation_id=int(rec_id),
+                    change_set_json=str({"recommendation_id": rec_id, "bulk": True}),
+                    status="pending",
+                )
+                db.session.add(action)
+                db.session.flush()  # Get ID before commit
+                action_ids.append(action.id)
+            except Exception as e:
+                current_app.logger.error(f"Failed to queue recommendation {rec_id}: {e}")
+                continue
+
+        db.session.commit()
+        return jsonify({"status": "queued", "action_ids": action_ids, "count": len(action_ids)})
+
+    # Handle single operation (backward compatibility)
     rec_id = int(payload.get("recommendation_id", 0))
     action = OptimizerAction(
         recommendation_id=rec_id,

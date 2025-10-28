@@ -180,7 +180,10 @@
             </a>
         {% endif %}
         {% if has_endpoint('glsa_bp.optimize') %}
-          <a href="{{ url_for('glsa_bp.optimize') }}" class="block pl-7 pr-2 py-1 text-sm nav-link">Optimize Profiles</a>
+          <a href="{{ url_for('glsa_bp.optimize') if is_paid else '#' }}" class="block pl-7 pr-2 py-1 text-sm nav-link {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" {% if not is_paid %}onclick="alert('This feature requires a paid plan. Please upgrade.'); return false;"{% endif %}>
+            <i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimize Profiles</span>
+            {% if not is_paid %}<i class="fa-solid fa-lock ml-auto text-xs"></i>{% endif %}
+          </a>
         {% endif %}
       {% endif %}
 
@@ -213,8 +216,9 @@
           <i class="fa-brands fa-linkedin"></i><span>Overview</span>
         </a>
         {% if has_endpoint('linkedin_bp.ads') %}
-          <a href="{{ url_for('linkedin_bp.ads') }}" class="block px-2 py-2 nav-link">
+          <a href="{{ url_for('linkedin_bp.ads') if is_paid else '#' }}" class="block px-2 py-2 nav-link {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" {% if not is_paid %}onclick="alert('This feature requires a paid plan. Please upgrade.'); return false;"{% endif %}>
             <i class="fa-solid fa-bullseye"></i><span>Ads Optimizer</span>
+            {% if not is_paid %}<i class="fa-solid fa-lock ml-auto text-xs"></i>{% endif %}
           </a>
         {% endif %}
         {% if has_endpoint('linkedin_bp.post_generator') %}
@@ -225,13 +229,14 @@
       {% endif %}
 
       {% if has_endpoint('ads_grader_bp.index') %}
-        <div class="pt-2 text-xs font-semibold text-gray-500 uppercase">Free Tools</div>
-        <a class="block px-2 py-2 nav-link bg-gradient-to-r from-blue-50 to-indigo-50 border border-indigo-200" href="{{ url_for('ads_grader_bp.index') }}">
-          <i class="fa-brands fa-google text-indigo-600"></i><span class="font-medium text-indigo-700">Google Ads Grader</span>
-          <span class="ml-auto text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full">FREE</span>
+        <div class="pt-3 mt-3 border-t text-xs font-semibold text-green-600 uppercase">Free Tools</div>
+        <a class="block px-2 py-2 nav-link bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 hover:from-green-100 hover:to-emerald-100" href="{{ url_for('ads_grader_bp.index') }}">
+          <i class="fa-brands fa-google text-green-600"></i><span class="font-semibold text-green-700">Google Ads Inspector</span>
+          <span class="ml-auto text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-bold">FREE</span>
         </a>
       {% endif %}
 
+      <div class="pt-3 mt-3 border-t"></div>
       <a href="{{ url_for(ep('pricing')) if has_endpoint('pricing') else '#' }}" class="block px-2 py-2 nav-link"><i class="fa-solid fa-tags"></i><span>Upgrade</span></a>
       {% if is_logged_in() and has_endpoint('account_profile') %}
         <a href="{{ url_for(ep('account_profile')) }}" class="block px-2 py-2 nav-link"><i class="fa-solid fa-user"></i><span>Account</span></a>
@@ -304,6 +309,21 @@
           <i class="fa-solid fa-house"></i>Dashboard
         </a></div>
 
+      <!-- Free Tools Section - Prominent -->
+      {% if has_endpoint('ads_grader_bp.index') %}
+        <div class="mt-3 pt-3 border-t">
+          <div class="sidebar-label text-green-600"><i class="fa-solid fa-gift"></i>Free Tools</div>
+          <a class="secondary-link bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 hover:from-green-100 hover:to-emerald-100 transition-all"
+             href="{{ url_for('ads_grader_bp.index') }}">
+            <i class="fa-brands fa-google text-green-600"></i>
+            <span class="font-semibold text-green-700">Google Ads Inspector</span>
+            <span class="ml-auto text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-bold">FREE</span>
+          </a>
+        </div>
+      {% endif %}
+
+      <!-- Contextual Navigation -->
+      <div class="mt-4 pt-4 border-t">
       {% if SECTION == 'strategy' %}
         <!-- strategy links placeholder -->
       {% elif SECTION == 'google' %}
@@ -329,7 +349,7 @@
         <div class="sidebar-label"><i class="fa-solid fa-bullhorn"></i>Local Services Ads</div>
         <a class="secondary-link {% if epn=='glsa_bp.index' %}active{% endif %}" href="{{ url_for('glsa_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview</span></a>
         <a class="secondary-link {% if epn=='glsa_bp.leads_page' %}active{% endif %}" href="{{ url_for('glsa_bp.leads_page') }}"><i class="fa-solid fa-inbox"></i><span>Review Leads</span></a>
-        <a class="secondary-link {% if epn=='glsa_bp.optimize' %}active{% endif %}" href="{{ url_for('glsa_bp.optimize') }}"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimize Profiles</span></a>
+        <a class="secondary-link {% if epn=='glsa_bp.optimize' %}active{% endif %} {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" href="{{ url_for('glsa_bp.optimize') if is_paid else '#' }}" {% if not is_paid %}onclick="alert('This feature requires a paid plan. Please upgrade.'); return false;"{% endif %}><i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimize Profiles</span>{% if not is_paid %}<i class="fa-solid fa-lock ml-1 text-xs"></i>{% endif %}</a>
       {% elif SECTION == 'fbads' %}
         <!-- <div class="sidebar-label"><i class="fa-brands fa-facebook"></i>Facebook Ads</div>
         <a class="secondary-link {% if epn=='fbads_bp.index' %}active{% endif %}" href="{{ url_for('fbads_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview</span></a>
@@ -345,7 +365,7 @@
         <div class="sidebar-label"><i class="fa-brands fa-linkedin"></i>LinkedIn</div>
         <a class="secondary-link {% if epn=='linkedin_bp.index' %}active{% endif %}" href="{{ url_for('linkedin_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview</span></a>
         {% if has_endpoint('linkedin_bp.ads') %}
-          <a class="secondary-link {% if epn=='linkedin_bp.ads' %}active{% endif %}" href="{{ url_for('linkedin_bp.ads') }}"><i class="fa-solid fa-bullseye"></i><span>Ads Optimizer</span></a>
+          <a class="secondary-link {% if epn=='linkedin_bp.ads' %}active{% endif %} {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" href="{{ url_for('linkedin_bp.ads') if is_paid else '#' }}" {% if not is_paid %}onclick="alert('This feature requires a paid plan. Please upgrade.'); return false;"{% endif %}><i class="fa-solid fa-bullseye"></i><span>Ads Optimizer</span>{% if not is_paid %}<i class="fa-solid fa-lock ml-1 text-xs"></i>{% endif %}</a>
         {% endif %}
         {% if has_endpoint('linkedin_bp.post_generator') %}
           <a class="secondary-link {% if epn=='linkedin_bp.post_generator' %}active{% endif %}" href="{{ url_for('linkedin_bp.post_generator') }}"><i class="fa-solid fa-pen-to-square"></i><span>Post Generator</span></a>
@@ -369,19 +389,7 @@
           <a class="secondary-link" href="{{ url_for(ep('logout')) }}"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
         {% endif %}
       {% endif %}
-
-      <!-- Free Tools Section -->
-      {% if has_endpoint('ads_grader_bp.index') %}
-        <div class="mt-4 pt-4 border-t">
-          <div class="sidebar-label"><i class="fa-solid fa-gift"></i>Free Tools</div>
-          <a class="secondary-link bg-gradient-to-r from-blue-50 to-indigo-50 border border-indigo-200 hover:from-blue-100 hover:to-indigo-100"
-             href="{{ url_for('ads_grader_bp.index') }}">
-            <i class="fa-brands fa-google text-indigo-600"></i>
-            <span class="font-medium text-indigo-700">Google Ads Grader</span>
-            <span class="ml-auto text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full">FREE</span>
-          </a>
-        </div>
-      {% endif %}
+      </div>
 
       <!-- Secondary desktop nav sticky bottom support -->
       <div class="mt-auto sticky bottom-0 bg-white pt-3">

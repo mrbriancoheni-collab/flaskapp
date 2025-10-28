@@ -11,7 +11,7 @@
 
 ### 1. Google Ads API Integration (`app/ads_grader/google_ads_client.py`)
 - Connect to Google Ads API
-- Fetch account metrics for last 90 days
+- Fetch account metrics for last 365 days (1 full year)
 - Pull data for:
   - Quality Scores
   - Click-through rates
@@ -37,7 +37,7 @@ Implement scoring algorithms for each section:
 1. **Wasted Spend** (20% in example)
    - Count negative keywords
    - Compare to industry benchmark (135 avg)
-   - Project 12-month waste based on 90-day data
+   - Project 12-month waste based on full-year data
 
 2. **Expanded Text Ads** (100% in example)
    - Check % of ETAs vs old format

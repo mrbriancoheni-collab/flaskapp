@@ -20,6 +20,7 @@ from openai import OpenAI
 from app import db
 from app.models_ads import OptimizerRecommendation, OptimizerAction
 from app.monitoring import start_span, add_breadcrumb, capture_exception
+from app.services.roi_calculator import ROICalculator
 
 
 # Constants for spend thresholds
@@ -374,7 +375,7 @@ Return JSON with: {{"summary": "...", "recommendations": [...]}}"""
 
 
 def _store_recommendations(account_id: int, recommendations: List[Dict], perf_data: Dict):
-    """Store recommendations in database with confidence scoring."""
+    """Store recommendations in database with confidence scoring and ROI calculations."""
 
     # Clear old open recommendations for this account
     OptimizerRecommendation.query.filter(
@@ -382,20 +383,71 @@ def _store_recommendations(account_id: int, recommendations: List[Dict], perf_da
         OptimizerRecommendation.status == 'open'
     ).update({"status": "superseded"})
 
+    # Get performance data for ROI calculations
+    summary = perf_data.get("account_summary", {})
+    total_spend = summary.get("total_spend", 0)
+    total_conversions = summary.get("total_conversions", 0)
+    days_of_data = summary.get("days_of_data", 30)
+
     for rec in recommendations:
         # Calculate confidence score
         confidence = _calculate_confidence(rec, perf_data)
+
+        # Calculate ROI based on category and severity
+        category = rec.get("category", "general")
+        severity = rec.get("severity", 3)
+
+        # Calculate ROI impact
+        roi_data = ROICalculator.calculate_combined_roi(
+            current_spend=total_spend,
+            current_conversions=total_conversions,
+            avg_customer_value=None,  # Don't have this data yet
+            category=category,
+            timeframe_days=days_of_data,
+            severity=severity
+        )
+
+        # Get effort estimate
+        effort = ROICalculator.estimate_implementation_effort(category, severity)
+
+        # Enhance expected_impact with ROI data
+        impact_summary = roi_data['roi_summary']
+        if not impact_summary or impact_summary == "Efficiency improvement":
+            # Fall back to original AI-generated impact
+            impact_summary = rec.get("expected_impact", "Performance improvement expected")
+
+        # Store ROI data as JSON in a new field (or append to details)
+        roi_json = {
+            'monthly_savings': roi_data['savings']['monthly_savings'],
+            'annual_savings': roi_data['savings']['annual_savings'],
+            'monthly_leads': roi_data['leads']['monthly_new_leads'],
+            'annual_leads': roi_data['leads']['annual_new_leads'],
+            'total_monthly_value': roi_data['total_monthly_value'],
+            'savings_percentage': roi_data['savings']['percentage_reduction'],
+            'leads_percentage': roi_data['leads']['percentage_increase'],
+            'effort': effort,
+            'summary': impact_summary
+        }
+
+        # Enhance description with ROI context
+        enhanced_description = rec["description"]
+        if roi_data['savings']['monthly_savings'] > 0:
+            enhanced_description += f"\n\n💰 Estimated savings: ${roi_data['savings']['monthly_savings']:,.0f}/month"
+        if roi_data['leads']['monthly_new_leads'] > 0:
+            enhanced_description += f"\n📈 Estimated lead increase: +{roi_data['leads']['monthly_new_leads']:.0f} leads/month"
+        if effort['time_estimate']:
+            enhanced_description += f"\n⏱️ Implementation time: {effort['time_estimate']} ({effort['difficulty']})"
 
         # Create database record
         db_rec = OptimizerRecommendation(
             account_id=account_id,
             scope_type=rec.get("action", {}).get("type", "account"),
             scope_id=int(rec.get("action", {}).get("target_id") or 0),
-            category=rec["category"],
+            category=category,
             title=rec["title"],
-            details=rec["description"],
-            expected_impact=rec["expected_impact"],
-            severity=rec["severity"],
+            details=enhanced_description,
+            expected_impact=json.dumps(roi_json),  # Store ROI data as JSON
+            severity=severity,
             suggested_action_json=json.dumps(rec.get("action", {})),
             status="open"
         )
@@ -403,7 +455,7 @@ def _store_recommendations(account_id: int, recommendations: List[Dict], perf_da
         db.session.add(db_rec)
 
     db.session.commit()
-    current_app.logger.info(f"Stored {len(recommendations)} recommendations for account {account_id}")
+    current_app.logger.info(f"Stored {len(recommendations)} recommendations with ROI data for account {account_id}")
 
 
 def _calculate_confidence(recommendation: Dict, perf_data: Dict) -> float:

@@ -575,6 +575,15 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register ads_grader_bp")
 
+    # --- Facebook Ads Grader (free for all users) -----------------------------
+    # DISABLED: Pending Facebook app approval for business_management permission
+    # try:
+    #     from app.fb_ads_grader import fb_ads_grader_bp
+    #     app.register_blueprint(fb_ads_grader_bp)  # url_prefix set in blueprint (/account/fbads)
+    #     app.logger.info("fb_ads_grader_bp registered at /account/fbads")
+    # except Exception:
+    #     app.logger.exception("Failed to register fb_ads_grader_bp")
+
     # ---- Apply CSRF exemptions AFTER blueprints are registered -------------
     try:
         for ep in (
@@ -592,10 +601,10 @@ def create_app():
 
     # ---- Request hooks (auth + impersonation) ------------------------------
     try:
-        from app.auth.session import before_request_hook
+        from app.auth.session_helpers import before_request_hook
         app.before_request(before_request_hook)
     except Exception:
-        app.logger.exception("Failed to register before_request_hook (auth/session)")
+        app.logger.exception("Failed to register before_request_hook (auth/session_helpers)")
 
     # ---- Post-registration safety stubs ------------------------------------
     if "reports_bp.index" not in app.view_functions:

@@ -42,7 +42,7 @@ def login_required(view: Callable) -> Callable:
             wants_json = (request.accept_mimetypes.best == "application/json") or request.is_json
             if wants_json:
                 return jsonify({"ok": False, "error": "auth_required"}), 401
-            return redirect(url_for("auth.login", next=_next_param()))
+            return redirect(url_for("auth_bp.login", next=_next_param()))
         return view(*args, **kwargs)
     return wrapped
 

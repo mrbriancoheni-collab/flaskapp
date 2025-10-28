@@ -27,6 +27,7 @@
   <!-- Scraper Form -->
   <div class="bg-white border rounded-xl p-6">
     <form method="post" action="{{ url_for('admin_bp.serp_scraper_run') }}" class="space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
       <div class="grid md:grid-cols-2 gap-4">
         <div>
           <label for="service_type" class="block text-sm font-medium text-gray-700 mb-1">Service Type *</label>

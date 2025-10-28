@@ -180,7 +180,10 @@
             </a>
         {% endif %}
         {% if has_endpoint('glsa_bp.optimize') %}
-          <a href="{{ url_for('glsa_bp.optimize') }}" class="block pl-7 pr-2 py-1 text-sm nav-link">Optimize Profiles</a>
+          <a href="{{ url_for('glsa_bp.optimize') if is_paid else '#' }}" class="block pl-7 pr-2 py-1 text-sm nav-link {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" {% if not is_paid %}onclick="alert('This feature requires a paid plan. Please upgrade.'); return false;"{% endif %}>
+            <i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimize Profiles</span>
+            {% if not is_paid %}<i class="fa-solid fa-lock ml-auto text-xs"></i>{% endif %}
+          </a>
         {% endif %}
       {% endif %}
 
@@ -213,8 +216,9 @@
           <i class="fa-brands fa-linkedin"></i><span>Overview</span>
         </a>
         {% if has_endpoint('linkedin_bp.ads') %}
-          <a href="{{ url_for('linkedin_bp.ads') }}" class="block px-2 py-2 nav-link">
+          <a href="{{ url_for('linkedin_bp.ads') if is_paid else '#' }}" class="block px-2 py-2 nav-link {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" {% if not is_paid %}onclick="alert('This feature requires a paid plan. Please upgrade.'); return false;"{% endif %}>
             <i class="fa-solid fa-bullseye"></i><span>Ads Optimizer</span>
+            {% if not is_paid %}<i class="fa-solid fa-lock ml-auto text-xs"></i>{% endif %}
           </a>
         {% endif %}
         {% if has_endpoint('linkedin_bp.post_generator') %}
@@ -345,7 +349,7 @@
         <div class="sidebar-label"><i class="fa-solid fa-bullhorn"></i>Local Services Ads</div>
         <a class="secondary-link {% if epn=='glsa_bp.index' %}active{% endif %}" href="{{ url_for('glsa_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview</span></a>
         <a class="secondary-link {% if epn=='glsa_bp.leads_page' %}active{% endif %}" href="{{ url_for('glsa_bp.leads_page') }}"><i class="fa-solid fa-inbox"></i><span>Review Leads</span></a>
-        <a class="secondary-link {% if epn=='glsa_bp.optimize' %}active{% endif %}" href="{{ url_for('glsa_bp.optimize') }}"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimize Profiles</span></a>
+        <a class="secondary-link {% if epn=='glsa_bp.optimize' %}active{% endif %} {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" href="{{ url_for('glsa_bp.optimize') if is_paid else '#' }}" {% if not is_paid %}onclick="alert('This feature requires a paid plan. Please upgrade.'); return false;"{% endif %}><i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimize Profiles</span>{% if not is_paid %}<i class="fa-solid fa-lock ml-1 text-xs"></i>{% endif %}</a>
       {% elif SECTION == 'fbads' %}
         <!-- <div class="sidebar-label"><i class="fa-brands fa-facebook"></i>Facebook Ads</div>
         <a class="secondary-link {% if epn=='fbads_bp.index' %}active{% endif %}" href="{{ url_for('fbads_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview</span></a>
@@ -361,7 +365,7 @@
         <div class="sidebar-label"><i class="fa-brands fa-linkedin"></i>LinkedIn</div>
         <a class="secondary-link {% if epn=='linkedin_bp.index' %}active{% endif %}" href="{{ url_for('linkedin_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview</span></a>
         {% if has_endpoint('linkedin_bp.ads') %}
-          <a class="secondary-link {% if epn=='linkedin_bp.ads' %}active{% endif %}" href="{{ url_for('linkedin_bp.ads') }}"><i class="fa-solid fa-bullseye"></i><span>Ads Optimizer</span></a>
+          <a class="secondary-link {% if epn=='linkedin_bp.ads' %}active{% endif %} {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" href="{{ url_for('linkedin_bp.ads') if is_paid else '#' }}" {% if not is_paid %}onclick="alert('This feature requires a paid plan. Please upgrade.'); return false;"{% endif %}><i class="fa-solid fa-bullseye"></i><span>Ads Optimizer</span>{% if not is_paid %}<i class="fa-solid fa-lock ml-1 text-xs"></i>{% endif %}</a>
         {% endif %}
         {% if has_endpoint('linkedin_bp.post_generator') %}
           <a class="secondary-link {% if epn=='linkedin_bp.post_generator' %}active{% endif %}" href="{{ url_for('linkedin_bp.post_generator') }}"><i class="fa-solid fa-pen-to-square"></i><span>Post Generator</span></a>

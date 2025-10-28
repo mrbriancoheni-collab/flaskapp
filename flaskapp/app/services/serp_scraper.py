@@ -102,22 +102,22 @@ class GoogleSerpScraper:
             all_divs = soup.find_all('div')
             logger.info(f"Found {len(all_divs)} div elements in response")
 
-            # Extract Local Service Ads (LSA)
+            # Extract Local Service Ads (LSA) - PRIORITY #1
             lsa_leads = self._extract_lsa(soup, location)
             logger.info(f"Extracted {len(lsa_leads)} LSA leads")
             leads.extend(lsa_leads)
 
-            # Extract PPC ads
+            # Extract PPC ads (Google Ads) - PRIORITY #2
             ppc_leads = self._extract_ppc_ads(soup, location)
             logger.info(f"Extracted {len(ppc_leads)} PPC leads")
             leads.extend(ppc_leads)
 
-            # Extract organic results
-            organic_leads = self._extract_organic(soup, location)
-            logger.info(f"Extracted {len(organic_leads)} organic leads")
-            leads.extend(organic_leads)
+            # SKIP organic results - we only want advertisers
+            # organic_leads = self._extract_organic(soup, location)
+            # logger.info(f"Extracted {len(organic_leads)} organic leads")
+            # leads.extend(organic_leads)
 
-            logger.info(f"Total found: {len(leads)} potential leads (organic: {len(organic_leads)}, ppc: {len(ppc_leads)}, lsa: {len(lsa_leads)})")
+            logger.info(f"Total found: {len(leads)} advertiser leads (ppc: {len(ppc_leads)}, lsa: {len(lsa_leads)})")
 
             # Debug logging if no leads found
             if len(leads) == 0:
@@ -156,76 +156,82 @@ class GoogleSerpScraper:
         return leads[:max_results]
 
     def _extract_lsa(self, soup: BeautifulSoup, location: str) -> List[BusinessLead]:
-        """Extract Local Service Ads"""
+        """Extract Local Service Ads (Google Guaranteed/Screened businesses)"""
         leads = []
 
-        # LSAs typically have specific class names/patterns
-        # This is a simplified extraction - real LSA parsing is more complex
-        lsa_containers = soup.find_all('div', class_=re.compile(r'.*local.*service.*', re.I))
+        # LSAs appear at the top with badges like "Google Guaranteed" or "Google Screened"
+        # Try multiple selectors for LSA containers
+
+        # Method 1: Look for Google Guaranteed/Screened badges
+        lsa_containers = []
+        guaranteed_badges = soup.find_all(string=re.compile(r'Google\s+(Guaranteed|Screened)', re.I))
+        for badge in guaranteed_badges:
+            parent = badge.find_parent(['div', 'article'])
+            if parent and parent not in lsa_containers:
+                lsa_containers.append(parent)
+
+        # Method 2: Look for LSA-specific class patterns
+        lsa_containers.extend(soup.find_all('div', class_=re.compile(r'.*local.*service.*|.*LSGDialog.*', re.I)))
+
+        # Method 3: Look for carousel/grid with business cards at top
+        # LSAs often appear in a horizontal scrolling section
+        carousel = soup.find(['div', 'ul'], class_=re.compile(r'.*carousel.*|.*scroll.*', re.I))
+        if carousel:
+            business_cards = carousel.find_all(['div', 'li'], class_=re.compile(r'.*card.*|.*item.*', re.I))
+            lsa_containers.extend(business_cards)
+
+        logger.info(f"Found {len(lsa_containers)} potential LSA containers")
 
         for container in lsa_containers:
             try:
-                name_elem = container.find(['h3', 'div'], class_=re.compile(r'.*business.*name.*', re.I))
+                container_text = container.get_text()
+
+                # Skip if doesn't look like an LSA
+                if not re.search(r'Google\s+(Guaranteed|Screened)|⭐|★|\d+\.\d+\s+stars?', container_text, re.I):
+                    continue
+
+                # Extract business name - try multiple selectors
+                name_elem = None
+                name_elem = container.find('h3')
+                if not name_elem:
+                    name_elem = container.find(['div', 'span'], class_=re.compile(r'.*business.*name.*|.*title.*', re.I))
+                if not name_elem:
+                    # Try finding bold text or emphasized text
+                    name_elem = container.find(['strong', 'b'])
+
                 if not name_elem:
                     continue
 
                 business_name = name_elem.get_text(strip=True)
 
-                # Try to extract phone
-                phone = self._extract_phone(container.get_text())
-
-                # Try to extract domain from any links
-                domain = None
-                link = container.find('a', href=True)
-                if link:
-                    domain = self._extract_domain(link['href'])
-
-                lead = BusinessLead(
-                    business_name=business_name,
-                    domain=domain,
-                    phone=phone,
-                    city=location.split(',')[0].strip() if ',' in location else location,
-                    region=location.split(',')[1].strip() if ',' in location else None,
-                    source="google_serp_lsa",
-                    ad_type="lsa"
-                )
-                leads.append(lead)
-
-            except Exception as e:
-                logger.debug(f"Error parsing LSA: {e}")
-                continue
-
-        return leads
-
-    def _extract_ppc_ads(self, soup: BeautifulSoup, location: str) -> List[BusinessLead]:
-        """Extract PPC ads (marked with 'Ad' or 'Sponsored')"""
-        leads = []
-
-        # Find ad containers (usually marked with 'Ad' badge)
-        ad_containers = soup.find_all(['div'], attrs={'data-text-ad': True})
-        ad_containers += soup.find_all('div', class_=re.compile(r'.*ad.*container.*', re.I))
-
-        for container in ad_containers:
-            try:
-                # Extract business name (usually in h3)
-                name_elem = container.find(['h3', 'span'], class_=re.compile(r'.*headline.*|.*title.*', re.I))
-                if not name_elem:
+                # Skip if name too short
+                if len(business_name) < 3:
                     continue
 
-                business_name = name_elem.get_text(strip=True)
+                # Extract phone number
+                phone = self._extract_phone(container_text)
 
-                # Extract domain from ad URL
+                # Extract domain from links
                 domain = None
-                link = container.find('a', href=True)
-                if link:
-                    domain = self._extract_domain(link['href'])
+                links = container.find_all('a', href=True)
+                for link in links:
+                    href = link.get('href', '')
+                    if href and not href.startswith('#'):
+                        extracted = self._extract_domain(href)
+                        if extracted and 'google.com' not in extracted:
+                            domain = extracted
+                            break
 
-                # Extract snippet/description
-                snippet_elem = container.find(['div', 'span'], class_=re.compile(r'.*description.*|.*snippet.*', re.I))
-                snippet = snippet_elem.get_text(strip=True) if snippet_elem else None
+                # Extract rating/reviews if present
+                rating_match = re.search(r'(\d+\.\d+)\s+stars?|⭐\s*(\d+\.\d+)|★\s*(\d+\.\d+)', container_text)
+                reviews_match = re.search(r'(\d+)\s+reviews?', container_text, re.I)
 
-                # Extract phone if present
-                phone = self._extract_phone(container.get_text())
+                snippet = None
+                if rating_match:
+                    rating = rating_match.group(1) or rating_match.group(2) or rating_match.group(3)
+                    snippet = f"Rating: {rating}"
+                    if reviews_match:
+                        snippet += f" ({reviews_match.group(1)} reviews)"
 
                 lead = BusinessLead(
                     business_name=business_name,
@@ -234,10 +240,142 @@ class GoogleSerpScraper:
                     snippet=snippet,
                     city=location.split(',')[0].strip() if ',' in location else location,
                     region=location.split(',')[1].strip() if ',' in location else None,
-                    source="google_serp_ppc",
-                    ad_type="ppc"
+                    source="google_serp_lsa",
+                    ad_type="lsa"
                 )
                 leads.append(lead)
+                logger.debug(f"Found LSA lead: {business_name} (rating: {snippet})")
+
+            except Exception as e:
+                logger.debug(f"Error parsing LSA: {e}")
+                continue
+
+        return leads
+
+    def _extract_ppc_ads(self, soup: BeautifulSoup, location: str) -> List[BusinessLead]:
+        """Extract PPC ads (Google Ads marked with 'Ad' or 'Sponsored')"""
+        leads = []
+
+        # Method 1: Find elements with "Ad" or "Sponsored" text
+        ad_containers = []
+        ad_badges = soup.find_all(string=re.compile(r'^(Ad|Sponsored)$', re.I))
+        for badge in ad_badges:
+            # Find the parent container (usually a few levels up)
+            parent = badge.find_parent(['div', 'li'])
+            if parent:
+                # Try to find a larger container that has the full ad
+                grandparent = parent.find_parent(['div', 'li'])
+                if grandparent and grandparent not in ad_containers:
+                    ad_containers.append(grandparent)
+                elif parent not in ad_containers:
+                    ad_containers.append(parent)
+
+        # Method 2: Look for data-text-ad attribute (Google's ad marker)
+        ad_containers.extend(soup.find_all(['div', 'li'], attrs={'data-text-ad': True}))
+
+        # Method 3: Look for specific ad-related classes
+        ad_containers.extend(soup.find_all('div', class_=re.compile(r'.*uEierd.*|.*ads.*container.*', re.I)))
+
+        # Method 4: Find divs that contain "Ad" badge and an h3
+        for div in soup.find_all('div'):
+            if div.find(string=re.compile(r'^(Ad|Sponsored)$', re.I)) and div.find('h3'):
+                if div not in ad_containers:
+                    ad_containers.append(div)
+
+        logger.info(f"Found {len(ad_containers)} potential PPC ad containers")
+
+        seen_names = set()  # Avoid duplicates
+
+        for container in ad_containers:
+            try:
+                container_text = container.get_text()
+
+                # Verify it has "Ad" or "Sponsored" marker
+                if not re.search(r'\b(Ad|Sponsored)\b', container_text, re.I):
+                    continue
+
+                # Extract business name - try multiple methods
+                name_elem = None
+
+                # Method 1: Look for h3 (most common)
+                name_elem = container.find('h3')
+
+                # Method 2: Look for role="heading"
+                if not name_elem:
+                    name_elem = container.find(['div', 'span'], attrs={'role': 'heading'})
+
+                # Method 3: Look for specific Google Ads classes
+                if not name_elem:
+                    name_elem = container.find(['div', 'span'], class_=re.compile(r'.*CCgQ5.*|.*sVXRqc.*', re.I))
+
+                if not name_elem:
+                    # Method 4: Find the first link text that's substantial
+                    links = container.find_all('a', href=True)
+                    for link in links:
+                        text = link.get_text(strip=True)
+                        if len(text) > 5 and not text.lower() in ['ad', 'sponsored', 'learn more']:
+                            name_elem = link
+                            break
+
+                if not name_elem:
+                    continue
+
+                business_name = name_elem.get_text(strip=True)
+
+                # Clean up business name
+                business_name = re.sub(r'\s*\|\s*.*$', '', business_name)  # Remove " | Whatever" suffix
+                business_name = business_name.split('\n')[0].strip()  # Take first line
+
+                # Skip if name too short or is just the badge
+                if len(business_name) < 3 or business_name.lower() in ['ad', 'sponsored']:
+                    continue
+
+                # Skip duplicates
+                if business_name in seen_names:
+                    continue
+                seen_names.add(business_name)
+
+                # Extract domain from ad links
+                domain = None
+                links = container.find_all('a', href=True)
+                for link in links:
+                    href = link.get('href', '')
+                    if href and not href.startswith('#'):
+                        extracted = self._extract_domain(href)
+                        if extracted and 'google.com' not in extracted:
+                            domain = extracted
+                            break
+
+                # Extract visible URL (often shown as cite or in specific div)
+                if not domain:
+                    cite = container.find('cite')
+                    if cite:
+                        domain = cite.get_text(strip=True).split('/')[0]
+
+                # Extract snippet/description
+                snippet = None
+                # Look for description divs (usually below the title)
+                desc_elem = container.find(['div', 'span'], class_=re.compile(r'.*VwiC3b.*|.*lyLwlc.*', re.I))
+                if desc_elem:
+                    snippet = desc_elem.get_text(strip=True)[:200]
+
+                # Extract phone number
+                phone = self._extract_phone(container_text)
+
+                # Only add if we have a business name
+                if business_name:
+                    lead = BusinessLead(
+                        business_name=business_name,
+                        domain=domain,
+                        phone=phone,
+                        snippet=snippet,
+                        city=location.split(',')[0].strip() if ',' in location else location,
+                        region=location.split(',')[1].strip() if ',' in location else None,
+                        source="google_serp_ppc",
+                        ad_type="ppc"
+                    )
+                    leads.append(lead)
+                    logger.debug(f"Found PPC lead: {business_name} ({domain or 'no domain'})")
 
             except Exception as e:
                 logger.debug(f"Error parsing PPC ad: {e}")

@@ -13,12 +13,18 @@ from app.auth.utils import login_required  # keep your decorator
 test_mail_bp = Blueprint("test_mail_bp", __name__, url_prefix="/admin")
 
 def _default_sender() -> str:
-    # Use David email as sender for bulk emails
-    david_email = current_app.config.get("MAIL_USERNAME_DAVID") or os.getenv("MAIL_USERNAME_DAVID")
-    if david_email:
-        return david_email
+    """
+    Get the default sender email for test emails.
+    For individual test emails, use the logged-in user's email.
+    """
+    # Try to get logged-in user's email (for individual test emails)
+    try:
+        if current_user and current_user.is_authenticated:
+            return current_user.email
+    except Exception:
+        pass
 
-    # Fallback to regular configured sender
+    # Fallback to configured sender
     sender = current_app.config.get("MAIL_DEFAULT_SENDER") or os.getenv("MAIL_DEFAULT_SENDER")
     if sender:
         return sender
@@ -41,12 +47,19 @@ def _send_with_flask_mail(subject: str, recipients: Iterable[str], body: str, ht
         current_app.logger.exception("Flask-Mail send failed")
         return False
 
-def _send_with_smtp(subject: str, recipients: Iterable[str], body: str, html: Optional[str] = None) -> None:
-    # Use David credentials for bulk emails
+def _send_with_smtp(subject: str, recipients: Iterable[str], body: str, html: Optional[str] = None, from_email: Optional[str] = None) -> None:
+    """
+    Send email via SMTP.
+
+    Args:
+        from_email: Optional sender email address. If not provided, uses _default_sender().
+                   Note: SMTP credentials are still used for authentication, but the From header uses this email.
+    """
     host = current_app.config.get("MAIL_SERVER") or os.getenv("MAIL_SERVER")
     port = int(current_app.config.get("MAIL_PORT") or os.getenv("MAIL_PORT") or 587)
 
-    # Prefer David credentials, fallback to regular credentials
+    # Use configured SMTP credentials for authentication (David's or system's)
+    # This is for SMTP auth, not the From header
     user = (current_app.config.get("MAIL_USERNAME_DAVID") or os.getenv("MAIL_USERNAME_DAVID") or
             current_app.config.get("MAIL_USERNAME") or os.getenv("MAIL_USERNAME"))
     pwd  = (current_app.config.get("MAIL_PASSWORD_DAVID") or os.getenv("MAIL_PASSWORD_DAVID") or
@@ -58,8 +71,11 @@ def _send_with_smtp(subject: str, recipients: Iterable[str], body: str, html: Op
     if not host:
         raise RuntimeError("MAIL_SERVER not configured")
 
-    sender = _default_sender()
+    # Use provided from_email or default sender
+    sender = from_email or _default_sender()
     to_list = list(recipients)
+
+    current_app.logger.info(f"Sending email from {sender} to {to_list} via {host}:{port}")
     # very simple text vs html: prefer html if provided
     if html:
         msg = MIMEText(html, "html", "utf-8")
@@ -88,10 +104,20 @@ def _send_with_smtp(subject: str, recipients: Iterable[str], body: str, html: Op
         except Exception:
             pass
 
-def send_test_email(to_addr: str, subject: str, body: str, html: Optional[str] = None) -> None:
+def send_test_email(to_addr: str, subject: str, body: str, html: Optional[str] = None, from_email: Optional[str] = None) -> None:
+    """
+    Send a test email.
+
+    Args:
+        to_addr: Recipient email
+        subject: Email subject
+        body: Email body (text)
+        html: HTML version (optional)
+        from_email: Sender email (defaults to logged-in user's email)
+    """
     # Try Flask-Mail first; fallback to SMTP with env vars
     if not _send_with_flask_mail(subject, [to_addr], body, html=html):
-        _send_with_smtp(subject, [to_addr], body, html=html)
+        _send_with_smtp(subject, [to_addr], body, html=html, from_email=from_email)
 
 _FORM_HTML = """
 {% extends "base_admin.html" %}
@@ -216,7 +242,13 @@ def test_email():
                 flash("MAIL_USERNAME_DAVID or MAIL_USERNAME not configured. Please set environment variables.", "error")
                 return redirect(url_for("test_mail_bp.test_email", to=to_addr))
 
-            send_test_email(to_addr, subject, body)
+            # Get logged-in user's email for the From header
+            from_email = None
+            if current_user and current_user.is_authenticated:
+                from_email = current_user.email
+                current_app.logger.info(f"Sending test email from logged-in user: {from_email}")
+
+            send_test_email(to_addr, subject, body, from_email=from_email)
 
             current_app.logger.info(f"Test email sent successfully to {to_addr}")
             flash(f"✓ Test email sent successfully to {to_addr}! Check your inbox.", "success")

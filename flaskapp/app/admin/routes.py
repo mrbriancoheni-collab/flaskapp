@@ -818,11 +818,15 @@ def email_compose():
 @require_admin
 def email_send():
     """Send email to individual or multiple recipients"""
-    from app.services.email_service import send_email
+    from app.services.email_service import send_email, send_tracked_email_to_crm_contact, send_bulk_tracked_emails
 
     subject = request.form.get("subject", "").strip()
     message_body = request.form.get("message", "").strip()
     recipient_type = request.form.get("recipient_type", "")
+    campaign_name = request.form.get("campaign_name", "").strip() or None  # Optional campaign name for bulk
+
+    # Get logged-in user for sender info
+    sent_by_user_id = g.user.id if hasattr(g, 'user') else None
 
     # Validation
     if not subject or not message_body:
@@ -833,7 +837,7 @@ def email_send():
 
     try:
         if recipient_type == "contact":
-            # Single CRM contact
+            # Single CRM contact - use tracked email with user's email as sender
             contact_id = int(request.form.get("contact_id", 0))
             contact = CRMContact.query.get_or_404(contact_id)
 
@@ -841,10 +845,61 @@ def email_send():
                 flash(f"Contact {contact.business_name} has no email address.", "error")
                 return redirect(url_for("admin_bp.crm_detail", contact_id=contact.id))
 
-            recipients.append({
-                "email": contact.email,
-                "name": contact.contact_name or contact.business_name
-            })
+            # Create HTML email body
+            html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <div style="white-space: pre-wrap; font-size: 16px; line-height: 24px; color: #111827;">
+{message_body}
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px 40px; text-align: center; background-color: #f9fafb; border-radius: 0 0 8px 8px;">
+                            <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                                © 2025 FieldSprout. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+            """
+
+            # Send tracked email (will use logged-in user's email as sender)
+            email_sent = send_tracked_email_to_crm_contact(
+                crm_contact_id=contact_id,
+                subject=subject,
+                html_body=html_body,
+                text_body=message_body,
+                sent_by_user_id=sent_by_user_id,
+                track_clicks=True
+            )
+
+            if email_sent and email_sent.delivered:
+                flash(f"Email sent successfully to {contact.business_name}.", "success")
+                _audit("email_sent", note=f"to={contact.email} subject={subject[:100]}")
+                return redirect(url_for("admin_bp.crm_detail", contact_id=contact_id))
+            else:
+                flash(f"Failed to send email to {contact.business_name}. Check SMTP configuration.", "error")
+                return redirect(url_for("admin_bp.crm_detail", contact_id=contact_id))
 
         elif recipient_type == "account":
             # All users in an account
@@ -860,22 +915,81 @@ def email_send():
                     })
 
         elif recipient_type == "bulk":
-            # Multiple CRM contacts
+            # Multiple CRM contacts - use bulk tracked emails with David credentials
             selected_contacts = request.form.getlist("selected_contacts")
 
             if not selected_contacts:
                 flash("No recipients selected for bulk email.", "error")
                 return redirect(url_for("admin_bp.email_compose", bulk=True))
 
-            for contact_id_str in selected_contacts:
-                contact = CRMContact.query.get(int(contact_id_str))
-                if contact and contact.email:
-                    recipients.append({
-                        "email": contact.email,
-                        "name": contact.contact_name or contact.business_name
-                    })
+            contact_ids = [int(cid) for cid in selected_contacts]
 
-        # Send emails
+            # Create HTML email body
+            html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <div style="white-space: pre-wrap; font-size: 16px; line-height: 24px; color: #111827;">
+{message_body}
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px 40px; text-align: center; background-color: #f9fafb; border-radius: 0 0 8px 8px;">
+                            <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                                © 2025 FieldSprout. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+            """
+
+            # Default campaign name if not provided
+            if not campaign_name:
+                from datetime import datetime
+                campaign_name = f"Bulk Email {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+
+            # Send bulk tracked emails (will use David credentials)
+            results = send_bulk_tracked_emails(
+                crm_contact_ids=contact_ids,
+                subject=subject,
+                html_body=html_body,
+                text_body=message_body,
+                campaign_name=campaign_name,
+                sent_by_user_id=sent_by_user_id
+            )
+
+            # Flash message
+            if results['sent'] > 0 and results['failed'] == 0:
+                flash(f"Bulk email sent successfully to {results['sent']} recipient(s).", "success")
+            elif results['sent'] > 0:
+                flash(f"Email sent to {results['sent']} recipient(s). {results['failed']} failed.", "warning")
+            else:
+                flash(f"Failed to send email to all {results['failed']} recipient(s). Check SMTP configuration.", "error")
+
+            _audit("bulk_email_sent", note=f"campaign={campaign_name} sent={results['sent']} failed={results['failed']}")
+            return redirect(url_for("admin_bp.crm_list"))
+
+        # For "account" recipient type (emails to internal users), send without tracking
+        # These use the logged-in admin's email as sender
         if not recipients:
             flash("No valid email addresses found.", "error")
             return redirect(request.referrer or url_for("admin_bp.email_compose"))
@@ -918,7 +1032,14 @@ def email_send():
 </html>
         """
 
-        # Send to all recipients
+        # Get sender email and name from logged-in user
+        from_email = None
+        from_name = None
+        if hasattr(g, 'user') and g.user:
+            from_email = g.user.email
+            from_name = g.user.name
+
+        # Send to all recipients (for account emails)
         success_count = 0
         failed_count = 0
 
@@ -928,7 +1049,9 @@ def email_send():
                     to=recipient["email"],
                     subject=subject,
                     html_body=html_body,
-                    text_body=message_body
+                    text_body=message_body,
+                    from_email=from_email,
+                    from_name=from_name
                 )
 
                 if result:
@@ -944,7 +1067,7 @@ def email_send():
         # Audit log
         _audit(
             "email_sent",
-            note=f"type={recipient_type} count={success_count} failed={failed_count} subject={subject[:100]}"
+            note=f"type={recipient_type} from={from_email} count={success_count} failed={failed_count} subject={subject[:100]}"
         )
 
         # Flash message

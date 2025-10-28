@@ -64,7 +64,10 @@ def send_email(
     subject: str,
     html_body: str,
     text_body: Optional[str] = None,
-    reply_to: Optional[str] = None
+    reply_to: Optional[str] = None,
+    from_email: Optional[str] = None,
+    from_name: Optional[str] = None,
+    use_bulk_credentials: bool = False
 ) -> bool:
     """
     Send an email using configured provider.
@@ -75,12 +78,26 @@ def send_email(
         html_body: HTML email body
         text_body: Plain text fallback (optional, generated from HTML if not provided)
         reply_to: Reply-to address (optional)
+        from_email: Override sender email (optional, for individual emails from admin users)
+        from_name: Override sender name (optional)
+        use_bulk_credentials: If True, use David credentials for bulk emails (default: False)
 
     Returns:
         True if email sent successfully, False otherwise
     """
     config = get_email_config()
     provider = config['provider']
+
+    # Override from_email if provided (for individual emails from logged-in user)
+    if from_email:
+        config['from_email'] = from_email
+        if from_name:
+            config['from_name'] = from_name
+    elif not use_bulk_credentials:
+        # For individual emails without explicit sender, log a warning
+        current_app.logger.warning(
+            f"Sending individual email without explicit from_email. Using default: {config['from_email']}"
+        )
 
     try:
         if provider == 'sendgrid':
@@ -525,19 +542,23 @@ def send_tracked_email_to_crm_contact(
     4. Sends the email
     5. Returns the EmailSent record
 
+    SENDER LOGIC:
+    - Individual emails (no campaign_name): Use the logged-in admin user's email
+    - Bulk campaigns (with campaign_name): Use David credentials (MAIL_USERNAME_DAVID)
+
     Args:
         crm_contact_id: ID of the CRMContact to send to
         subject: Email subject line
         html_body: HTML email body (will be modified to add tracking)
         text_body: Plain text version (optional)
-        campaign_name: Optional campaign identifier for grouping
+        campaign_name: Optional campaign identifier for grouping (triggers bulk mode)
         sent_by_user_id: ID of user sending the email (optional)
         track_clicks: Whether to track link clicks (default: True)
 
     Returns:
         EmailSent record if successful, None if failed
     """
-    from app.models import CRMContact, EmailSent
+    from app.models import CRMContact, EmailSent, User
     from app.extensions import db
     from app.services.email_tracking import (
         generate_tracking_token,
@@ -553,6 +574,27 @@ def send_tracked_email_to_crm_contact(
     if not contact.email:
         current_app.logger.error(f"CRM contact {crm_contact_id} has no email address")
         return None
+
+    # Determine sender email and name
+    from_email = None
+    from_name = None
+    use_bulk_credentials = False
+
+    if campaign_name:
+        # Bulk campaign - use David credentials
+        use_bulk_credentials = True
+        current_app.logger.info(f"Bulk campaign '{campaign_name}' - using David credentials")
+    elif sent_by_user_id:
+        # Individual email - use the sender's email
+        sender_user = User.query.get(sent_by_user_id)
+        if sender_user:
+            from_email = sender_user.email
+            from_name = sender_user.name
+            current_app.logger.info(f"Individual email from {from_name} <{from_email}>")
+        else:
+            current_app.logger.warning(f"Sender user {sent_by_user_id} not found, using default")
+    else:
+        current_app.logger.warning("No campaign_name or sent_by_user_id - using default sender")
 
     # Generate tracking token
     tracking_token = generate_tracking_token()
@@ -584,12 +626,15 @@ def send_tracked_email_to_crm_contact(
         db.session.add(email_sent)
         db.session.commit()
 
-        # Send the email
+        # Send the email with appropriate sender
         success = send_email(
             to=contact.email,
             subject=subject,
             html_body=tracked_html,
-            text_body=text_body
+            text_body=text_body,
+            from_email=from_email,
+            from_name=from_name,
+            use_bulk_credentials=use_bulk_credentials
         )
 
         if success:

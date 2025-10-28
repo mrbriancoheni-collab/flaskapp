@@ -462,3 +462,139 @@ class CompanyContact(db.Model):
 
     def __repr__(self) -> str:
         return f"<CompanyContact id={self.id} name={self.full_name!r} title={self.title!r}>"
+
+
+# -------------------------
+# Email Tracking
+# -------------------------
+class EmailSent(db.Model):
+    """
+    Tracks each email sent to CRM contacts.
+    Used for email campaign performance tracking (opens, clicks, etc.)
+    """
+    __tablename__ = "emails_sent"
+
+    id = db.Column(db.Integer, primary_key=True)
+    crm_contact_id = db.Column(db.Integer, db.ForeignKey("crm_contacts.id"), nullable=False, index=True)
+    sent_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
+
+    # Email content
+    subject = db.Column(db.String(500), nullable=False)
+    body_html = db.Column(LONGTEXT, nullable=True)  # HTML version
+    body_text = db.Column(db.Text, nullable=True)   # Plain text version
+
+    # Tracking
+    tracking_token = db.Column(db.String(64), unique=True, nullable=False, index=True)  # unique token for tracking
+    campaign_name = db.Column(db.String(255), nullable=True, index=True)  # optional campaign identifier
+
+    # Status
+    sent_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    delivered = db.Column(db.Boolean, nullable=False, default=True)  # assume delivered unless bounced
+    bounced = db.Column(db.Boolean, nullable=False, default=False)
+    bounced_at = db.Column(db.DateTime, nullable=True)
+
+    # Relationships
+    crm_contact = db.relationship("CRMContact", backref="emails_sent")
+    sent_by = db.relationship("User", backref="emails_sent")
+    opens = db.relationship("EmailOpen", backref="email", cascade="all, delete-orphan", lazy="dynamic")
+    clicks = db.relationship("EmailClick", backref="email", cascade="all, delete-orphan", lazy="dynamic")
+
+    # Computed properties for quick stats
+    @property
+    def open_count(self) -> int:
+        """Total number of opens (can be > 1 per email)"""
+        return self.opens.count()
+
+    @property
+    def unique_opens(self) -> int:
+        """Number of unique opens (first open only)"""
+        # Count distinct by grouping on the first open timestamp
+        return len(set(o.opened_at.date() for o in self.opens.all())) if self.opens.count() > 0 else 0
+
+    @property
+    def was_opened(self) -> bool:
+        """Whether email was opened at least once"""
+        return self.opens.count() > 0
+
+    @property
+    def click_count(self) -> int:
+        """Total number of clicks"""
+        return self.clicks.count()
+
+    @property
+    def was_clicked(self) -> bool:
+        """Whether any link was clicked"""
+        return self.clicks.count() > 0
+
+    @property
+    def first_opened_at(self):
+        """Timestamp of first open"""
+        first_open = self.opens.order_by(EmailOpen.opened_at.asc()).first()
+        return first_open.opened_at if first_open else None
+
+    @property
+    def first_clicked_at(self):
+        """Timestamp of first click"""
+        first_click = self.clicks.order_by(EmailClick.clicked_at.asc()).first()
+        return first_click.clicked_at if first_click else None
+
+    # Indexes
+    __table_args__ = (
+        db.Index("idx_emails_sent_contact", "crm_contact_id"),
+        db.Index("idx_emails_sent_user", "sent_by_user_id"),
+        db.Index("idx_emails_sent_token", "tracking_token"),
+        db.Index("idx_emails_sent_campaign", "campaign_name"),
+        db.Index("idx_emails_sent_date", "sent_at"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<EmailSent id={self.id} to={self.crm_contact_id} subject={self.subject[:30]!r}>"
+
+
+class EmailOpen(db.Model):
+    """
+    Tracks when an email is opened (via tracking pixel).
+    An email can be opened multiple times.
+    """
+    __tablename__ = "email_opens"
+
+    id = db.Column(db.Integer, primary_key=True)
+    email_sent_id = db.Column(db.Integer, db.ForeignKey("emails_sent.id"), nullable=False, index=True)
+
+    opened_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    ip_address = db.Column(db.String(45), nullable=True)  # IPv4 or IPv6
+    user_agent = db.Column(db.String(512), nullable=True)
+
+    # Indexes
+    __table_args__ = (
+        db.Index("idx_email_opens_email", "email_sent_id"),
+        db.Index("idx_email_opens_date", "opened_at"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<EmailOpen id={self.id} email_id={self.email_sent_id} at={self.opened_at}>"
+
+
+class EmailClick(db.Model):
+    """
+    Tracks when a link in an email is clicked.
+    Multiple clicks per email are possible (different links or same link multiple times).
+    """
+    __tablename__ = "email_clicks"
+
+    id = db.Column(db.Integer, primary_key=True)
+    email_sent_id = db.Column(db.Integer, db.ForeignKey("emails_sent.id"), nullable=False, index=True)
+
+    clicked_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    url = db.Column(db.String(2048), nullable=False)  # the original destination URL
+    ip_address = db.Column(db.String(45), nullable=True)
+    user_agent = db.Column(db.String(512), nullable=True)
+
+    # Indexes
+    __table_args__ = (
+        db.Index("idx_email_clicks_email", "email_sent_id"),
+        db.Index("idx_email_clicks_date", "clicked_at"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<EmailClick id={self.id} email_id={self.email_sent_id} url={self.url[:50]!r}>"

@@ -567,6 +567,14 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register admin_bp")
 
+    # --- Email Tracking (public endpoints for pixel and click tracking) ----
+    try:
+        from app.email_tracking_routes import email_tracking_bp
+        app.register_blueprint(email_tracking_bp)  # url_prefix is /track
+        app.logger.info("email_tracking_bp registered at /track")
+    except Exception:
+        app.logger.exception("Failed to register email_tracking_bp")
+
     # --- Google Ads Grader (free for all users) -----------------------------
     try:
         from app.ads_grader import ads_grader_bp

@@ -291,8 +291,34 @@ def crm_create():
 @login_required
 @require_admin
 def crm_detail(contact_id: int):
+    from app.models import EmailSent, CompanyContact
+
     item = CRMContact.query.get_or_404(contact_id)
-    return render_template("admin/crm_detail.html", item=item, stages=CRM_STAGES)
+
+    # Get email history with tracking stats
+    emails = (
+        EmailSent.query
+        .filter_by(crm_contact_id=contact_id)
+        .order_by(desc(EmailSent.sent_at))
+        .limit(50)
+        .all()
+    )
+
+    # Get company contacts (team members)
+    company_contacts = (
+        CompanyContact.query
+        .filter_by(crm_contact_id=contact_id)
+        .order_by(CompanyContact.discovered_at.desc())
+        .all()
+    )
+
+    return render_template(
+        "admin/crm_detail.html",
+        item=item,
+        stages=CRM_STAGES,
+        emails=emails,
+        company_contacts=company_contacts
+    )
 
 
 @admin_bp.get("/crm/<int:contact_id>/edit")
@@ -943,6 +969,152 @@ def email_send():
         logger.exception("Error sending email")
         flash(f"Error sending email: {str(e)}", "error")
         return redirect(request.referrer or url_for("admin_bp.email_compose"))
+
+
+@admin_bp.get("/email/<int:email_id>")
+@login_required
+@require_admin
+def email_detail(email_id: int):
+    """View detailed email performance metrics"""
+    from app.models import EmailSent, EmailOpen, EmailClick
+
+    email = EmailSent.query.get_or_404(email_id)
+
+    # Get all opens with details
+    opens = (
+        EmailOpen.query
+        .filter_by(email_sent_id=email_id)
+        .order_by(EmailOpen.opened_at.desc())
+        .all()
+    )
+
+    # Get all clicks with details
+    clicks = (
+        EmailClick.query
+        .filter_by(email_sent_id=email_id)
+        .order_by(EmailClick.clicked_at.desc())
+        .all()
+    )
+
+    # Calculate engagement metrics
+    open_rate = 100.0 if email.was_opened else 0.0
+    click_rate = (email.click_count / max(email.open_count, 1) * 100) if email.was_opened else 0.0
+
+    return render_template(
+        "admin/email_detail.html",
+        email=email,
+        opens=opens,
+        clicks=clicks,
+        open_rate=open_rate,
+        click_rate=click_rate
+    )
+
+@admin_bp.get("/email-analytics")
+@login_required
+@require_admin
+def email_analytics():
+    """Email campaign analytics dashboard"""
+    from app.models import EmailSent, EmailOpen, EmailClick
+    from sqlalchemy import func
+
+    # Overall stats
+    total_emails = EmailSent.query.count()
+    delivered_emails = EmailSent.query.filter_by(delivered=True).count()
+    bounced_emails = EmailSent.query.filter_by(bounced=True).count()
+
+    # Get emails with tracking stats
+    emails_opened = EmailSent.query.filter(
+        EmailSent.id.in_(
+            db.session.query(EmailOpen.email_sent_id).distinct()
+        )
+    ).count()
+
+    emails_clicked = EmailSent.query.filter(
+        EmailSent.id.in_(
+            db.session.query(EmailClick.email_sent_id).distinct()
+        )
+    ).count()
+
+    total_opens = EmailOpen.query.count()
+    total_clicks = EmailClick.query.count()
+
+    # Calculate rates
+    delivery_rate = (delivered_emails / total_emails * 100) if total_emails > 0 else 0
+    open_rate = (emails_opened / delivered_emails * 100) if delivered_emails > 0 else 0
+    click_rate = (emails_clicked / emails_opened * 100) if emails_opened > 0 else 0
+
+    # Get campaign performance
+    campaign_stats = (
+        db.session.query(
+            EmailSent.campaign_name,
+            func.count(EmailSent.id).label('total'),
+            func.sum(func.cast(EmailSent.delivered, db.Integer)).label('delivered'),
+            func.sum(func.cast(EmailSent.bounced, db.Integer)).label('bounced')
+        )
+        .filter(EmailSent.campaign_name.isnot(None))
+        .group_by(EmailSent.campaign_name)
+        .order_by(desc('total'))
+        .limit(20)
+        .all()
+    )
+
+    # Get subject line performance (top 20)
+    subject_performance = (
+        db.session.query(
+            EmailSent.subject,
+            func.count(EmailSent.id).label('sent_count'),
+            func.count(EmailOpen.id).label('open_count'),
+            func.count(EmailClick.id).label('click_count')
+        )
+        .outerjoin(EmailOpen, EmailSent.id == EmailOpen.email_sent_id)
+        .outerjoin(EmailClick, EmailSent.id == EmailClick.email_sent_id)
+        .group_by(EmailSent.subject)
+        .order_by(desc('open_count'))
+        .limit(20)
+        .all()
+    )
+
+    # Get recent emails
+    recent_emails = (
+        EmailSent.query
+        .order_by(desc(EmailSent.sent_at))
+        .limit(20)
+        .all()
+    )
+
+    # Get best performing emails (by open rate)
+    best_emails = []
+    for email in EmailSent.query.filter_by(delivered=True).limit(100).all():
+        if email.was_opened:
+            best_emails.append({
+                'email': email,
+                'open_rate': 100.0,  # Single recipient, so 100% if opened
+                'click_rate': (email.click_count / max(email.open_count, 1) * 100) if email.was_opened else 0
+            })
+
+    # Sort by click rate
+    best_emails.sort(key=lambda x: x['click_rate'], reverse=True)
+    best_emails = best_emails[:10]
+
+    return render_template(
+        "admin/email_analytics.html",
+        total_emails=total_emails,
+        delivered_emails=delivered_emails,
+        bounced_emails=bounced_emails,
+        emails_opened=emails_opened,
+        emails_clicked=emails_clicked,
+        total_opens=total_opens,
+        total_clicks=total_clicks,
+        delivery_rate=delivery_rate,
+        open_rate=open_rate,
+        click_rate=click_rate,
+        campaign_stats=campaign_stats,
+        subject_performance=subject_performance,
+        recent_emails=recent_emails,
+        best_emails=best_emails
+    )
+
+
 
 # =============================================================================
 # ROI Settings & Pricing Management

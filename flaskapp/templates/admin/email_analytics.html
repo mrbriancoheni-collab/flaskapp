@@ -1,0 +1,299 @@
+{% extends "base_admin.html" %}
+{% block title %}Email Analytics – {{ super() }}{% endblock %}
+{% block content %}
+
+<!-- Header -->
+<div class="mb-6">
+  <h1 class="text-3xl font-bold mb-2">
+    <i class="fa-solid fa-chart-line mr-2"></i>
+    Email Campaign Analytics
+  </h1>
+  <p class="text-gray-600">Track email performance, engagement rates, and campaign success</p>
+</div>
+
+<!-- Key Metrics Overview -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+  <!-- Total Emails Sent -->
+  <div class="bg-white border rounded-lg p-4 shadow-sm">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-sm text-gray-600 font-medium">Total Sent</span>
+      <i class="fa-solid fa-paper-plane text-blue-500 text-xl"></i>
+    </div>
+    <div class="text-3xl font-bold">{{ total_emails }}</div>
+    <div class="text-xs text-gray-500 mt-1">All time</div>
+  </div>
+
+  <!-- Delivery Rate -->
+  <div class="bg-white border rounded-lg p-4 shadow-sm">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-sm text-gray-600 font-medium">Delivery Rate</span>
+      <i class="fa-solid fa-check-circle text-green-500 text-xl"></i>
+    </div>
+    <div class="text-3xl font-bold">{{ "%.1f" | format(delivery_rate) }}%</div>
+    <div class="text-xs text-gray-500 mt-1">{{ delivered_emails }} delivered, {{ bounced_emails }} bounced</div>
+  </div>
+
+  <!-- Open Rate -->
+  <div class="bg-white border rounded-lg p-4 shadow-sm">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-sm text-gray-600 font-medium">Open Rate</span>
+      <i class="fa-solid fa-envelope-open text-purple-500 text-xl"></i>
+    </div>
+    <div class="text-3xl font-bold">{{ "%.1f" | format(open_rate) }}%</div>
+    <div class="text-xs text-gray-500 mt-1">{{ emails_opened }} / {{ delivered_emails }} emails opened</div>
+  </div>
+
+  <!-- Click Rate -->
+  <div class="bg-white border rounded-lg p-4 shadow-sm">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-sm text-gray-600 font-medium">Click Rate</span>
+      <i class="fa-solid fa-mouse-pointer text-orange-500 text-xl"></i>
+    </div>
+    <div class="text-3xl font-bold">{{ "%.1f" | format(click_rate) }}%</div>
+    <div class="text-xs text-gray-500 mt-1">{{ emails_clicked }} / {{ emails_opened }} clicked</div>
+  </div>
+</div>
+
+<!-- Secondary Metrics -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+  <!-- Total Opens -->
+  <div class="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-sm text-purple-900 font-medium">Total Opens</div>
+        <div class="text-2xl font-bold text-purple-900">{{ total_opens }}</div>
+        <div class="text-xs text-purple-700 mt-1">Including multiple opens per email</div>
+      </div>
+      <i class="fa-solid fa-eye text-purple-400 text-3xl"></i>
+    </div>
+  </div>
+
+  <!-- Total Clicks -->
+  <div class="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-lg p-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-sm text-orange-900 font-medium">Total Clicks</div>
+        <div class="text-2xl font-bold text-orange-900">{{ total_clicks }}</div>
+        <div class="text-xs text-orange-700 mt-1">All link clicks across all emails</div>
+      </div>
+      <i class="fa-solid fa-hand-pointer text-orange-400 text-3xl"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Campaign Performance -->
+{% if campaign_stats %}
+<div class="bg-white border rounded-lg p-6 mb-6">
+  <h2 class="text-xl font-bold mb-4">
+    <i class="fa-solid fa-bullhorn mr-2"></i>
+    Campaign Performance
+  </h2>
+
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50 border-b">
+        <tr>
+          <th class="px-4 py-3 text-left font-semibold">Campaign Name</th>
+          <th class="px-4 py-3 text-right font-semibold">Total Sent</th>
+          <th class="px-4 py-3 text-right font-semibold">Delivered</th>
+          <th class="px-4 py-3 text-right font-semibold">Bounced</th>
+          <th class="px-4 py-3 text-right font-semibold">Delivery Rate</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        {% for campaign in campaign_stats %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 font-medium">
+            <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+              {{ campaign.campaign_name }}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-right">{{ campaign.total }}</td>
+          <td class="px-4 py-3 text-right text-green-600">{{ campaign.delivered or 0 }}</td>
+          <td class="px-4 py-3 text-right text-red-600">{{ campaign.bounced or 0 }}</td>
+          <td class="px-4 py-3 text-right font-semibold">
+            {{ "%.1f" | format((campaign.delivered or 0) / campaign.total * 100 if campaign.total > 0 else 0) }}%
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Best Performing Emails -->
+{% if best_emails %}
+<div class="bg-white border rounded-lg p-6 mb-6">
+  <h2 class="text-xl font-bold mb-4">
+    <i class="fa-solid fa-trophy mr-2"></i>
+    Best Performing Emails (by Click Rate)
+  </h2>
+
+  <div class="space-y-3">
+    {% for item in best_emails %}
+    <div class="border rounded p-4 hover:bg-gray-50">
+      <div class="flex items-start justify-between">
+        <div class="flex-1">
+          <h4 class="font-medium mb-1">{{ item.email.subject }}</h4>
+          <div class="text-sm text-gray-600 mb-2">
+            To: {{ item.email.crm_contact.business_name }}
+            {% if item.email.campaign_name %}
+              <span class="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                {{ item.email.campaign_name }}
+              </span>
+            {% endif %}
+          </div>
+          <div class="flex items-center gap-4 text-sm">
+            <div class="text-green-600">
+              <i class="fa-solid fa-envelope-open mr-1"></i>
+              Open: {{ "%.0f" | format(item.open_rate) }}%
+            </div>
+            <div class="text-blue-600">
+              <i class="fa-solid fa-mouse-pointer mr-1"></i>
+              Click: {{ "%.0f" | format(item.click_rate) }}%
+            </div>
+            <div class="text-gray-500">
+              <i class="fa-regular fa-clock mr-1"></i>
+              {{ item.email.sent_at.strftime('%Y-%m-%d') }}
+            </div>
+          </div>
+        </div>
+        <div>
+          <a href="{{ url_for('admin_bp.email_detail', email_id=item.email.id) }}" class="text-indigo-600 hover:underline text-sm">
+            View →
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Subject Line Performance -->
+{% if subject_performance %}
+<div class="bg-white border rounded-lg p-6 mb-6">
+  <h2 class="text-xl font-bold mb-4">
+    <i class="fa-solid fa-lightbulb mr-2"></i>
+    Top Subject Lines (by Opens)
+  </h2>
+
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50 border-b">
+        <tr>
+          <th class="px-4 py-3 text-left font-semibold">Subject Line</th>
+          <th class="px-4 py-3 text-right font-semibold">Sent</th>
+          <th class="px-4 py-3 text-right font-semibold">Opens</th>
+          <th class="px-4 py-3 text-right font-semibold">Clicks</th>
+          <th class="px-4 py-3 text-right font-semibold">Performance</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        {% for subject in subject_performance[:10] %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 max-w-md truncate" title="{{ subject.subject }}">
+            {{ subject.subject }}
+          </td>
+          <td class="px-4 py-3 text-right">{{ subject.sent_count }}</td>
+          <td class="px-4 py-3 text-right text-green-600">{{ subject.open_count }}</td>
+          <td class="px-4 py-3 text-right text-blue-600">{{ subject.click_count }}</td>
+          <td class="px-4 py-3 text-right">
+            <div class="flex items-center justify-end gap-2">
+              {% set perf_score = (subject.open_count + subject.click_count * 2) / subject.sent_count if subject.sent_count > 0 else 0 %}
+              <div class="w-24 bg-gray-200 rounded-full h-2">
+                <div class="bg-indigo-600 h-2 rounded-full" style="width: {{ min(perf_score * 50, 100) }}%"></div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Recent Emails -->
+<div class="bg-white border rounded-lg p-6">
+  <h2 class="text-xl font-bold mb-4">
+    <i class="fa-regular fa-clock mr-2"></i>
+    Recent Emails
+  </h2>
+
+  {% if recent_emails %}
+  <div class="space-y-2">
+    {% for email in recent_emails %}
+    <div class="border rounded p-3 hover:bg-gray-50 flex items-center justify-between">
+      <div class="flex-1">
+        <div class="font-medium">{{ email.subject }}</div>
+        <div class="text-sm text-gray-600 mt-1">
+          <span>To: {{ email.crm_contact.business_name }}</span>
+          <span class="mx-2">•</span>
+          <span>{{ email.sent_at.strftime('%Y-%m-%d %H:%M') }}</span>
+
+          <!-- Status badges -->
+          <span class="mx-2">•</span>
+          {% if email.was_opened %}
+            <span class="text-green-600"><i class="fa-solid fa-envelope-open"></i> Opened ({{ email.open_count }}x)</span>
+          {% else %}
+            <span class="text-gray-400"><i class="fa-regular fa-envelope"></i> Not opened</span>
+          {% endif %}
+
+          {% if email.was_clicked %}
+            <span class="mx-2">•</span>
+            <span class="text-blue-600"><i class="fa-solid fa-mouse-pointer"></i> Clicked ({{ email.click_count }}x)</span>
+          {% endif %}
+        </div>
+      </div>
+      <div>
+        <a href="{{ url_for('admin_bp.email_detail', email_id=email.id) }}" class="text-indigo-600 hover:underline text-sm">
+          View →
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center py-12 text-gray-500">
+    <i class="fa-regular fa-envelope text-4xl mb-3 block"></i>
+    <p class="text-lg">No emails sent yet</p>
+    <a href="{{ url_for('admin_bp.email_compose') }}" class="mt-4 inline-block px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+      <i class="fa-solid fa-paper-plane mr-2"></i>Send Your First Email
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Tips Section -->
+<div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+  <h3 class="text-lg font-bold text-blue-900 mb-3">
+    <i class="fa-solid fa-lightbulb mr-2"></i>
+    Tips for Better Email Performance
+  </h3>
+  <div class="grid md:grid-cols-2 gap-4 text-sm text-blue-900">
+    <div>
+      <h4 class="font-semibold mb-2">Improve Open Rates:</h4>
+      <ul class="list-disc list-inside space-y-1 text-blue-800">
+        <li>Personalize subject lines with recipient names</li>
+        <li>Keep subject lines under 50 characters</li>
+        <li>Avoid spam trigger words ("FREE", "ACT NOW")</li>
+        <li>Test different send times (Tue-Thu, 10am-2pm works best)</li>
+        <li>Use numbers and questions in subject lines</li>
+      </ul>
+    </div>
+    <div>
+      <h4 class="font-semibold mb-2">Improve Click Rates:</h4>
+      <ul class="list-disc list-inside space-y-1 text-blue-800">
+        <li>Include clear, prominent call-to-action buttons</li>
+        <li>Keep email content focused on one main goal</li>
+        <li>Use compelling button text ("Get Started" vs "Click Here")</li>
+        <li>Add urgency or scarcity when appropriate</li>
+        <li>Mobile-optimize all links and buttons</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

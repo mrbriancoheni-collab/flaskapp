@@ -485,3 +485,171 @@ def send_payment_failed_email(user, subscription) -> bool:
         subject="Action Required: Payment Failed",
         html_body=html_body
     )
+
+
+# ===== Tracked Email Sending (for CRM contacts) =====
+
+def send_tracked_email_to_crm_contact(
+    crm_contact_id: int,
+    subject: str,
+    html_body: str,
+    text_body: Optional[str] = None,
+    campaign_name: Optional[str] = None,
+    sent_by_user_id: Optional[int] = None,
+    track_clicks: bool = True
+):
+    """
+    Send an email to a CRM contact with tracking enabled.
+
+    This function:
+    1. Generates a tracking token
+    2. Saves the email to the database (EmailSent)
+    3. Injects tracking pixel and wraps links
+    4. Sends the email
+    5. Returns the EmailSent record
+
+    Args:
+        crm_contact_id: ID of the CRMContact to send to
+        subject: Email subject line
+        html_body: HTML email body (will be modified to add tracking)
+        text_body: Plain text version (optional)
+        campaign_name: Optional campaign identifier for grouping
+        sent_by_user_id: ID of user sending the email (optional)
+        track_clicks: Whether to track link clicks (default: True)
+
+    Returns:
+        EmailSent record if successful, None if failed
+    """
+    from app.models import CRMContact, EmailSent
+    from app.extensions import db
+    from app.services.email_tracking import (
+        generate_tracking_token,
+        prepare_tracked_email
+    )
+
+    # Get the CRM contact
+    contact = CRMContact.query.get(crm_contact_id)
+    if not contact:
+        current_app.logger.error(f"CRM contact {crm_contact_id} not found")
+        return None
+
+    if not contact.email:
+        current_app.logger.error(f"CRM contact {crm_contact_id} has no email address")
+        return None
+
+    # Generate tracking token
+    tracking_token = generate_tracking_token()
+
+    # Get base URL for tracking links
+    base_url = current_app.config.get("BASE_URL", "https://fieldsprout.io")
+
+    # Prepare HTML with tracking pixel and link tracking
+    tracked_html = prepare_tracked_email(
+        html_body=html_body,
+        tracking_token=tracking_token,
+        base_url=base_url,
+        track_clicks=track_clicks
+    )
+
+    # Create EmailSent record
+    email_sent = EmailSent(
+        crm_contact_id=crm_contact_id,
+        sent_by_user_id=sent_by_user_id,
+        subject=subject,
+        body_html=tracked_html,
+        body_text=text_body,
+        tracking_token=tracking_token,
+        campaign_name=campaign_name
+    )
+
+    try:
+        # Save to database first
+        db.session.add(email_sent)
+        db.session.commit()
+
+        # Send the email
+        success = send_email(
+            to=contact.email,
+            subject=subject,
+            html_body=tracked_html,
+            text_body=text_body
+        )
+
+        if success:
+            email_sent.delivered = True
+            current_app.logger.info(
+                f"Tracked email sent to CRM contact {crm_contact_id} ({contact.email}): {subject}"
+            )
+        else:
+            email_sent.delivered = False
+            email_sent.bounced = True
+            current_app.logger.error(
+                f"Failed to send tracked email to CRM contact {crm_contact_id} ({contact.email})"
+            )
+
+        db.session.commit()
+        return email_sent
+
+    except Exception as e:
+        current_app.logger.error(f"Error sending tracked email: {e}", exc_info=True)
+        db.session.rollback()
+        return None
+
+
+def send_bulk_tracked_emails(
+    crm_contact_ids: List[int],
+    subject: str,
+    html_body: str,
+    text_body: Optional[str] = None,
+    campaign_name: Optional[str] = None,
+    sent_by_user_id: Optional[int] = None
+) -> Dict[str, Any]:
+    """
+    Send tracked emails to multiple CRM contacts.
+
+    Args:
+        crm_contact_ids: List of CRMContact IDs
+        subject: Email subject (same for all)
+        html_body: HTML body (same for all, tracking will be unique per contact)
+        text_body: Plain text version (optional)
+        campaign_name: Campaign identifier for grouping
+        sent_by_user_id: ID of user sending emails
+
+    Returns:
+        Dictionary with results:
+        {
+            'total': int,
+            'sent': int,
+            'failed': int,
+            'email_ids': List[int]  # IDs of EmailSent records created
+        }
+    """
+    results = {
+        'total': len(crm_contact_ids),
+        'sent': 0,
+        'failed': 0,
+        'email_ids': []
+    }
+
+    for contact_id in crm_contact_ids:
+        email_sent = send_tracked_email_to_crm_contact(
+            crm_contact_id=contact_id,
+            subject=subject,
+            html_body=html_body,  # Function will add unique tracking for each email
+            text_body=text_body,
+            campaign_name=campaign_name,
+            sent_by_user_id=sent_by_user_id
+        )
+
+        if email_sent and email_sent.delivered:
+            results['sent'] += 1
+            results['email_ids'].append(email_sent.id)
+        else:
+            results['failed'] += 1
+
+    current_app.logger.info(
+        f"Bulk email campaign '{campaign_name}': "
+        f"{results['sent']}/{results['total']} sent successfully"
+    )
+
+    return results

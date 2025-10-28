@@ -25,17 +25,34 @@ from flask import current_app, render_template_string
 
 def get_email_config() -> Dict[str, Any]:
     """Get email configuration from app config or environment."""
+    # Prefer David credentials for bulk/CRM emails, fallback to regular credentials
+    smtp_user = (current_app.config.get('MAIL_USERNAME_DAVID') or os.getenv('MAIL_USERNAME_DAVID') or
+                current_app.config.get('SMTP_USER') or os.getenv('SMTP_USER') or
+                current_app.config.get('MAIL_USERNAME') or os.getenv('MAIL_USERNAME') or '')
+
+    smtp_password = (current_app.config.get('MAIL_PASSWORD_DAVID') or os.getenv('MAIL_PASSWORD_DAVID') or
+                    current_app.config.get('SMTP_PASSWORD') or os.getenv('SMTP_PASSWORD') or
+                    current_app.config.get('MAIL_PASSWORD') or os.getenv('MAIL_PASSWORD') or '')
+
+    # Use David email as from address if available
+    from_email = (current_app.config.get('MAIL_USERNAME_DAVID') or os.getenv('MAIL_USERNAME_DAVID') or
+                 current_app.config.get('EMAIL_FROM') or os.getenv('EMAIL_FROM') or
+                 'noreply@fieldsprout.com')
+
     return {
         'provider': current_app.config.get('EMAIL_PROVIDER', os.getenv('EMAIL_PROVIDER', 'smtp')),
-        'from_email': current_app.config.get('EMAIL_FROM', os.getenv('EMAIL_FROM', 'noreply@fieldsprout.com')),
+        'from_email': from_email,
         'from_name': current_app.config.get('EMAIL_FROM_NAME', os.getenv('EMAIL_FROM_NAME', 'FieldSprout')),
 
-        # SMTP settings
-        'smtp_host': current_app.config.get('SMTP_HOST', os.getenv('SMTP_HOST', 'localhost')),
-        'smtp_port': int(current_app.config.get('SMTP_PORT', os.getenv('SMTP_PORT', '587'))),
-        'smtp_user': current_app.config.get('SMTP_USER', os.getenv('SMTP_USER', '')),
-        'smtp_password': current_app.config.get('SMTP_PASSWORD', os.getenv('SMTP_PASSWORD', '')),
-        'smtp_use_tls': current_app.config.get('SMTP_USE_TLS', os.getenv('SMTP_USE_TLS', 'true').lower() == 'true'),
+        # SMTP settings - prefer MAIL_* env vars (used by test_email.py)
+        'smtp_host': (current_app.config.get('MAIL_SERVER') or os.getenv('MAIL_SERVER') or
+                     current_app.config.get('SMTP_HOST') or os.getenv('SMTP_HOST') or 'localhost'),
+        'smtp_port': int(current_app.config.get('MAIL_PORT') or os.getenv('MAIL_PORT') or
+                        current_app.config.get('SMTP_PORT') or os.getenv('SMTP_PORT') or '587'),
+        'smtp_user': smtp_user,
+        'smtp_password': smtp_password,
+        'smtp_use_tls': (current_app.config.get('MAIL_USE_TLS') or os.getenv('MAIL_USE_TLS') or
+                        current_app.config.get('SMTP_USE_TLS') or os.getenv('SMTP_USE_TLS') or 'true').lower() == 'true',
 
         # SendGrid settings
         'sendgrid_api_key': current_app.config.get('SENDGRID_API_KEY', os.getenv('SENDGRID_API_KEY', '')),

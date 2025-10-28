@@ -40,7 +40,7 @@ class GoogleSerpScraper:
     """
 
     BASE_URL = "https://www.google.com/search"
-    USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
     def __init__(self, delay_seconds: float = 2.0):
         """
@@ -51,12 +51,16 @@ class GoogleSerpScraper:
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": self.USER_AGENT,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.5",
-            "Accept-Encoding": "gzip, deflate",
+            "Accept-Encoding": "gzip, deflate, br",
             "DNT": "1",
             "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1"
+            "Upgrade-Insecure-Requests": "1",
+            "Referer": "https://www.google.com/",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "same-origin"
         })
 
     def search(
@@ -98,9 +102,21 @@ class GoogleSerpScraper:
             # Parse the HTML
             soup = BeautifulSoup(response.text, 'html.parser')
 
+            # Check for CAPTCHA or blocking
+            page_text_lower = response.text.lower()
+            if 'captcha' in page_text_lower or 'unusual traffic' in page_text_lower:
+                logger.error("CAPTCHA or traffic blocking detected!")
+                logger.error("Google has detected automated access. Try again later or from a different IP.")
+                return leads
+
             # Debug: log what we're finding
             all_divs = soup.find_all('div')
             logger.info(f"Found {len(all_divs)} div elements in response")
+
+            # If we find very few divs, something is wrong (likely blocking or JS-only page)
+            if len(all_divs) < 50:
+                logger.error(f"ABNORMALLY LOW div count ({len(all_divs)})! Google may be blocking or returning minimal HTML.")
+                logger.error("This usually means: incomplete User-Agent, IP blocking, or JS-required page.")
 
             # Extract Local Service Ads (LSA) - PRIORITY #1
             lsa_leads = self._extract_lsa(soup, location)

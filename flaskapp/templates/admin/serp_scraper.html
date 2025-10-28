@@ -8,6 +8,27 @@
     <p class="text-gray-600 mt-1">Find home services businesses from Google search results and add them to your CRM as potential leads.</p>
   </div>
 
+  <!-- Manual Import Option (Recommended) -->
+  <div class="mb-6 p-5 bg-green-50 border-2 border-green-300 rounded-lg">
+    <div class="flex items-start gap-3">
+      <div class="text-green-600 text-2xl">✅</div>
+      <div class="flex-1">
+        <p class="font-bold text-green-900 text-lg mb-2">Recommended: Use Manual Import</p>
+        <p class="text-sm text-green-800 mb-3">
+          Automated scraping is currently blocked by Google. Use the <strong>Manual Import</strong> method instead -
+          paste HTML from your browser to extract leads.
+        </p>
+        <a
+          href="{{ url_for('admin_bp.serp_scraper_manual') }}"
+          class="inline-flex items-center px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700"
+        >
+          <i class="fa-solid fa-file-import mr-2"></i>
+          Go to Manual Import
+        </a>
+      </div>
+    </div>
+  </div>
+
   <!-- Info Card -->
   <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
     <div class="flex gap-3">

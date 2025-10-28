@@ -344,6 +344,109 @@ def serp_scraper():
     return render_template("admin/serp_scraper.html")
 
 
+@admin_bp.route("/serp-scraper/manual")
+@login_required
+@require_admin
+def serp_scraper_manual():
+    """Show the manual SERP import form"""
+    return render_template("admin/serp_scraper_manual.html")
+
+
+@admin_bp.post("/serp-scraper/manual/parse")
+@login_required
+@require_admin
+def serp_scraper_manual_parse():
+    """Parse manually pasted Google SERP HTML"""
+    from app.services.serp_scraper import GoogleSerpScraper
+    from bs4 import BeautifulSoup
+
+    html_content = request.form.get("html_content", "").strip()
+    service_type = request.form.get("service_type", "").strip()
+    location = request.form.get("location", "").strip()
+    auto_add = request.form.get("auto_add") == "on"
+
+    if not html_content:
+        flash("Please paste the Google search HTML.", "warning")
+        return redirect(url_for("admin_bp.serp_scraper_manual"))
+
+    if not service_type or not location:
+        flash("Service type and location are required.", "warning")
+        return redirect(url_for("admin_bp.serp_scraper_manual"))
+
+    try:
+        # Parse the HTML
+        soup = BeautifulSoup(html_content, 'html.parser')
+
+        # Use the scraper's extraction methods
+        scraper = GoogleSerpScraper()
+
+        # Extract LSA and PPC leads
+        lsa_leads = scraper._extract_lsa(soup, location)
+        ppc_leads = scraper._extract_ppc_ads(soup, location)
+
+        leads = lsa_leads + ppc_leads
+
+        current_app.logger.info(f"Manual SERP parse: found {len(leads)} leads (LSA: {len(lsa_leads)}, PPC: {len(ppc_leads)})")
+
+        if not leads:
+            flash("No advertiser leads found in the HTML. Make sure you copied the full page source including ads.", "warning")
+            return redirect(url_for("admin_bp.serp_scraper_manual"))
+
+        # Store results in session for review
+        session["scraper_results"] = [
+            {
+                "business_name": lead.business_name,
+                "domain": lead.domain,
+                "phone": lead.phone,
+                "city": lead.city,
+                "region": lead.region,
+                "source": lead.source,
+                "ad_type": lead.ad_type,
+                "snippet": lead.snippet,
+            }
+            for lead in leads
+        ]
+        session.modified = True
+
+        # Auto-add to CRM if requested
+        added_count = 0
+        if auto_add:
+            for lead in leads:
+                # Check if already exists
+                existing = None
+                if lead.domain:
+                    existing = CRMContact.query.filter_by(domain=lead.domain).first()
+                if not existing and lead.business_name:
+                    existing = CRMContact.query.filter_by(business_name=lead.business_name).first()
+
+                if not existing:
+                    contact = CRMContact(
+                        business_name=lead.business_name or "Unknown",
+                        domain=lead.domain,
+                        phone=lead.phone,
+                        city=lead.city,
+                        region=lead.region,
+                        source=f"{lead.source} ({service_type})",
+                        stage="stranger",
+                        notes=f"Ad Type: {lead.ad_type}\n{lead.snippet or ''}"
+                    )
+                    db.session.add(contact)
+                    added_count += 1
+
+            db.session.commit()
+            _audit("serp_manual_import", note=f"service={service_type} location={location} added={added_count}")
+            flash(f"Successfully imported {added_count} new leads to CRM.", "success")
+        else:
+            flash(f"Found {len(leads)} leads. Review below before adding to CRM.", "success")
+
+        return render_template("admin/serp_results.html", leads=leads, auto_added=auto_add, added_count=added_count)
+
+    except Exception as e:
+        current_app.logger.error(f"Error parsing manual SERP HTML: {e}", exc_info=True)
+        flash(f"Error parsing HTML: {str(e)}", "danger")
+        return redirect(url_for("admin_bp.serp_scraper_manual"))
+
+
 @admin_bp.post("/serp-scraper")
 @login_required
 @require_admin

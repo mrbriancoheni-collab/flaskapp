@@ -5,7 +5,7 @@ Handles the OAuth flow for connecting Google Ads accounts.
 """
 import logging
 import secrets
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from flask import session, url_for, current_app
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials

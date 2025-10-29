@@ -1254,16 +1254,57 @@ def user_flow_analytics():
         get_conversion_funnel_stats,
         get_device_breakdown,
         get_traffic_sources,
+        get_pageviews_over_time,
+        get_device_trend_over_time,
+        get_hourly_traffic_pattern,
+        get_top_landing_pages,
+        get_average_session_duration,
     )
     from app.models import PageView
     from sqlalchemy import func
     from datetime import datetime, timedelta
+    import json
 
     # Get time range from query params (default: last 7 days)
-    days = int(request.args.get("days", 7))
+    range_param = request.args.get("range", "7d")
+
+    # Parse range parameter (1d, 7d, 30d, 90d, 1y, all)
+    if range_param == "1d":
+        days = 1
+        range_label = "Today"
+        group_by = "hour"
+    elif range_param == "7d":
+        days = 7
+        range_label = "Last 7 Days"
+        group_by = "day"
+    elif range_param == "30d":
+        days = 30
+        range_label = "Last 30 Days"
+        group_by = "day"
+    elif range_param == "90d":
+        days = 90
+        range_label = "Last 90 Days"
+        group_by = "day"
+    elif range_param == "1y":
+        days = 365
+        range_label = "Last Year"
+        group_by = "month"
+    elif range_param == "all":
+        # Get days since first page view
+        first_view = PageView.query.order_by(PageView.viewed_at.asc()).first()
+        if first_view:
+            days = (datetime.utcnow() - first_view.viewed_at).days + 1
+        else:
+            days = 7
+        range_label = "All Time"
+        group_by = "month" if days > 90 else "day"
+    else:
+        days = 7
+        range_label = "Last 7 Days"
+        group_by = "day"
 
     # Overall stats
-    since = datetime.utcnow() - timedelta(days=days)
+    since = datetime.utcnow() - timedelta(days=days) if range_param != "all" else datetime(2020, 1, 1)
     total_pageviews = PageView.query.filter(PageView.viewed_at >= since).count()
     unique_sessions = db.session.query(func.count(func.distinct(PageView.session_id))).filter(
         PageView.viewed_at >= since
@@ -1272,8 +1313,19 @@ def user_flow_analytics():
     # Calculate average pages per session
     avg_pages_per_session = round(total_pageviews / unique_sessions, 2) if unique_sessions > 0 else 0
 
+    # Average session duration
+    avg_session_duration = get_average_session_duration(days=days)
+
+    # Time series data for graphs
+    pageviews_over_time = get_pageviews_over_time(days=days, group_by=group_by)
+    device_trends = get_device_trend_over_time(days=days)
+    hourly_pattern = get_hourly_traffic_pattern(days=days)
+
     # Popular paths
     popular_paths = get_popular_paths(days=days, limit=10)
+
+    # Landing pages
+    landing_pages = get_top_landing_pages(days=days, limit=10)
 
     # Common user flows (page to page transitions)
     user_flows = get_common_user_flows(days=days, limit=15)
@@ -1296,17 +1348,25 @@ def user_flow_analytics():
 
     return render_template(
         "admin/user_flow_analytics.html",
+        range_param=range_param,
+        range_label=range_label,
         days=days,
         total_pageviews=total_pageviews,
         unique_sessions=unique_sessions,
         avg_pages_per_session=avg_pages_per_session,
+        avg_session_duration=avg_session_duration,
         popular_paths=popular_paths,
+        landing_pages=landing_pages,
         user_flows=user_flows,
         exit_pages=exit_pages,
         funnel_stats=funnel_stats,
         device_breakdown=device_breakdown,
         traffic_sources=traffic_sources,
         recent_views=recent_views,
+        # Graph data (JSON encoded for JavaScript)
+        pageviews_over_time_json=json.dumps(pageviews_over_time),
+        device_trends_json=json.dumps(device_trends),
+        hourly_pattern_json=json.dumps(hourly_pattern),
     )
 
 

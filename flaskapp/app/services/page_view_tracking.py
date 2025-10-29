@@ -400,3 +400,238 @@ def get_traffic_sources(days: int = 7) -> Dict[str, int]:
     )
 
     return {(r.utm_source or "direct"): r.count for r in results}
+
+
+def get_pageviews_over_time(days: int = 7, group_by: str = "day") -> List[Dict[str, any]]:
+    """
+    Get page view counts over time for graphing.
+
+    Args:
+        days: Number of days to look back
+        group_by: How to group data - "hour", "day", or "month"
+
+    Returns:
+        List of dicts with 'date' and 'pageviews', 'sessions' counts
+    """
+    since = datetime.utcnow() - timedelta(days=days)
+
+    if group_by == "hour":
+        # Group by hour
+        date_format = func.date_format(PageView.viewed_at, '%Y-%m-%d %H:00:00')
+    elif group_by == "month":
+        # Group by month
+        date_format = func.date_format(PageView.viewed_at, '%Y-%m-01')
+    else:  # day
+        # Group by day
+        date_format = func.date_format(PageView.viewed_at, '%Y-%m-%d')
+
+    results = (
+        db.session.query(
+            date_format.label("date"),
+            func.count(PageView.id).label("pageviews"),
+            func.count(func.distinct(PageView.session_id)).label("sessions")
+        )
+        .filter(PageView.viewed_at >= since)
+        .group_by("date")
+        .order_by("date")
+        .all()
+    )
+
+    return [
+        {
+            "date": r.date,
+            "pageviews": r.pageviews,
+            "sessions": r.sessions,
+        }
+        for r in results
+    ]
+
+
+def get_device_trend_over_time(days: int = 7) -> Dict[str, List[Dict[str, any]]]:
+    """
+    Get device breakdown over time for trend graphing.
+
+    Args:
+        days: Number of days to look back
+
+    Returns:
+        Dict mapping device_type to list of {date, count} dicts
+    """
+    since = datetime.utcnow() - timedelta(days=days)
+    date_format = func.date_format(PageView.viewed_at, '%Y-%m-%d')
+
+    results = (
+        db.session.query(
+            date_format.label("date"),
+            PageView.device_type,
+            func.count(PageView.id).label("count")
+        )
+        .filter(PageView.viewed_at >= since)
+        .group_by("date", PageView.device_type)
+        .order_by("date")
+        .all()
+    )
+
+    # Organize by device type
+    trends = {}
+    for r in results:
+        device = r.device_type or "unknown"
+        if device not in trends:
+            trends[device] = []
+        trends[device].append({
+            "date": r.date,
+            "count": r.count,
+        })
+
+    return trends
+
+
+def get_path_performance_over_time(path: str, days: int = 30) -> List[Dict[str, any]]:
+    """
+    Get performance metrics for a specific path over time.
+
+    Args:
+        path: The page path to analyze
+        days: Number of days to look back
+
+    Returns:
+        List of dicts with date, views, unique_sessions, avg_time_on_page
+    """
+    since = datetime.utcnow() - timedelta(days=days)
+    date_format = func.date_format(PageView.viewed_at, '%Y-%m-%d')
+
+    results = (
+        db.session.query(
+            date_format.label("date"),
+            func.count(PageView.id).label("views"),
+            func.count(func.distinct(PageView.session_id)).label("unique_sessions"),
+            func.avg(PageView.time_on_page).label("avg_time_on_page")
+        )
+        .filter(
+            PageView.path == path,
+            PageView.viewed_at >= since
+        )
+        .group_by("date")
+        .order_by("date")
+        .all()
+    )
+
+    return [
+        {
+            "date": r.date,
+            "views": r.views,
+            "unique_sessions": r.unique_sessions,
+            "avg_time_on_page": round(r.avg_time_on_page, 1) if r.avg_time_on_page else 0,
+        }
+        for r in results
+    ]
+
+
+def get_hourly_traffic_pattern(days: int = 7) -> List[Dict[str, any]]:
+    """
+    Get traffic patterns by hour of day (for identifying peak times).
+
+    Args:
+        days: Number of days to look back
+
+    Returns:
+        List of dicts with hour (0-23) and count
+    """
+    since = datetime.utcnow() - timedelta(days=days)
+
+    results = (
+        db.session.query(
+            func.hour(PageView.viewed_at).label("hour"),
+            func.count(PageView.id).label("count")
+        )
+        .filter(PageView.viewed_at >= since)
+        .group_by("hour")
+        .order_by("hour")
+        .all()
+    )
+
+    return [
+        {
+            "hour": r.hour,
+            "count": r.count,
+        }
+        for r in results
+    ]
+
+
+def get_top_landing_pages(days: int = 7, limit: int = 10) -> List[Tuple[str, int]]:
+    """
+    Get the most common landing pages (first page in a session).
+
+    Args:
+        days: Number of days to look back
+        limit: Maximum number of results
+
+    Returns:
+        List of (path, count) tuples
+    """
+    since = datetime.utcnow() - timedelta(days=days)
+
+    # Get the first page view in each session
+    subquery = (
+        db.session.query(
+            PageView.session_id,
+            func.min(PageView.viewed_at).label("first_viewed")
+        )
+        .filter(PageView.viewed_at >= since)
+        .group_by(PageView.session_id)
+        .subquery()
+    )
+
+    results = (
+        db.session.query(PageView.path, func.count(PageView.id).label("count"))
+        .join(
+            subquery,
+            and_(
+                PageView.session_id == subquery.c.session_id,
+                PageView.viewed_at == subquery.c.first_viewed
+            )
+        )
+        .group_by(PageView.path)
+        .order_by(desc("count"))
+        .limit(limit)
+        .all()
+    )
+
+    return [(r.path, r.count) for r in results]
+
+
+def get_average_session_duration(days: int = 7) -> float:
+    """
+    Calculate average session duration in seconds.
+
+    Args:
+        days: Number of days to look back
+
+    Returns:
+        Average session duration in seconds
+    """
+    since = datetime.utcnow() - timedelta(days=days)
+
+    # Get first and last page view time for each session
+    session_durations = (
+        db.session.query(
+            PageView.session_id,
+            func.min(PageView.viewed_at).label("session_start"),
+            func.max(PageView.viewed_at).label("session_end")
+        )
+        .filter(PageView.viewed_at >= since)
+        .group_by(PageView.session_id)
+        .all()
+    )
+
+    if not session_durations:
+        return 0.0
+
+    # Calculate duration for each session
+    total_duration = 0
+    for session in session_durations:
+        duration = (session.session_end - session.session_start).total_seconds()
+        total_duration += duration
+
+    return round(total_duration / len(session_durations), 1)

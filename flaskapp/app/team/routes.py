@@ -45,7 +45,7 @@ def members():
     # Get seat limit info
     seat_limit = get_account_seat_limit(account)
     seat_usage = get_account_seat_usage(g.user.account_id)
-    can_add, _ = can_add_team_member(account)
+    can_add, _ = can_add_team_member(account, current_user=g.user)
 
     return render_template(
         "team/members.html",

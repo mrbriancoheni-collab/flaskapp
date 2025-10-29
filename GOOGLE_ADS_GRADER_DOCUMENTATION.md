@@ -1788,7 +1788,7 @@ Top Recommendations:
 
 This documentation is part of the FieldSprout platform.
 
-© 2024 FieldSprout / Localized Growth, Inc. All rights reserved.
+© 2024 FieldSprout. All rights reserved.
 
 ---
 

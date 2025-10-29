@@ -49,5 +49,165 @@
     <div class="font-medium mb-2">Notes</div>
     <pre class="whitespace-pre-wrap">{{ item.notes or '—' }}</pre>
   </div>
+
+  <!-- Company Contacts (Team Members) -->
+  {% if company_contacts %}
+  <div class="md:col-span-2 bg-white border rounded p-4">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-medium text-lg"><i class="fa-solid fa-users mr-2"></i>Team Contacts ({{ company_contacts|length }})</h3>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-3 py-2 text-left">Name</th>
+            <th class="px-3 py-2 text-left">Title</th>
+            <th class="px-3 py-2 text-left">Role</th>
+            <th class="px-3 py-2 text-left">Email</th>
+            <th class="px-3 py-2 text-left">Phone</th>
+            <th class="px-3 py-2 text-left">Source</th>
+            <th class="px-3 py-2 text-left">Discovered</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          {% for contact in company_contacts %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-3 py-2 font-medium">{{ contact.full_name }}</td>
+            <td class="px-3 py-2">{{ contact.title or '—' }}</td>
+            <td class="px-3 py-2">
+              {% if contact.role_category == 'executive' %}
+                <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">Executive</span>
+              {% elif contact.role_category == 'owner' %}
+                <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">Owner</span>
+              {% elif contact.role_category == 'marketing' %}
+                <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Marketing</span>
+              {% elif contact.role_category == 'operations' %}
+                <span class="px-2 py-1 bg-orange-100 text-orange-800 rounded text-xs">Operations</span>
+              {% else %}
+                <span class="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">Other</span>
+              {% endif %}
+            </td>
+            <td class="px-3 py-2">
+              {% if contact.email %}
+                <a href="mailto:{{ contact.email }}" class="text-indigo-600 hover:underline">{{ contact.email }}</a>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td class="px-3 py-2">
+              {% if contact.phone %}
+                <a href="tel:{{ contact.phone }}" class="text-indigo-600 hover:underline">{{ contact.phone }}</a>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td class="px-3 py-2 text-xs text-gray-600">{{ contact.source or '—' }}</td>
+            <td class="px-3 py-2 text-xs text-gray-500">{{ contact.discovered_at.strftime('%Y-%m-%d') if contact.discovered_at else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Email History -->
+  <div class="md:col-span-2 bg-white border rounded p-4">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-medium text-lg"><i class="fa-solid fa-envelope mr-2"></i>Email History ({{ emails|length }})</h3>
+      {% if item.email %}
+        <a href="{{ url_for('admin_bp.email_compose', contact_id=item.id) }}" class="px-3 py-2 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700">
+          <i class="fa-solid fa-paper-plane mr-1"></i>Send Email
+        </a>
+      {% endif %}
+    </div>
+
+    {% if emails %}
+    <div class="space-y-3">
+      {% for email in emails %}
+      <div class="border rounded p-4 hover:bg-gray-50">
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <h4 class="font-medium">{{ email.subject }}</h4>
+
+              <!-- Delivery Status Badge -->
+              {% if email.bounced %}
+                <span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">Bounced</span>
+              {% elif email.delivered %}
+                <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Delivered</span>
+              {% else %}
+                <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">Pending</span>
+              {% endif %}
+
+              <!-- Campaign Badge -->
+              {% if email.campaign_name %}
+                <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">{{ email.campaign_name }}</span>
+              {% endif %}
+            </div>
+
+            <div class="text-sm text-gray-600 mb-2">
+              <i class="fa-regular fa-clock"></i> Sent {{ email.sent_at.strftime('%Y-%m-%d %H:%M') }}
+              {% if email.sent_by %}
+                by {{ email.sent_by.name }}
+              {% endif %}
+            </div>
+
+            <!-- Tracking Stats -->
+            <div class="flex items-center gap-4 text-sm">
+              {% if email.was_opened %}
+                <div class="flex items-center gap-1 text-green-600">
+                  <i class="fa-solid fa-envelope-open"></i>
+                  <span>Opened {{ email.open_count }}x</span>
+                  {% if email.first_opened_at %}
+                    <span class="text-xs text-gray-500">(first: {{ email.first_opened_at.strftime('%Y-%m-%d %H:%M') }})</span>
+                  {% endif %}
+                </div>
+              {% else %}
+                <div class="flex items-center gap-1 text-gray-400">
+                  <i class="fa-regular fa-envelope"></i>
+                  <span>Not opened</span>
+                </div>
+              {% endif %}
+
+              {% if email.was_clicked %}
+                <div class="flex items-center gap-1 text-blue-600">
+                  <i class="fa-solid fa-mouse-pointer"></i>
+                  <span>Clicked {{ email.click_count }}x</span>
+                  {% if email.first_clicked_at %}
+                    <span class="text-xs text-gray-500">(first: {{ email.first_clicked_at.strftime('%Y-%m-%d %H:%M') }})</span>
+                  {% endif %}
+                </div>
+              {% else %}
+                <div class="flex items-center gap-1 text-gray-400">
+                  <i class="fa-regular fa-hand-pointer"></i>
+                  <span>No clicks</span>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div>
+            <a href="{{ url_for('admin_bp.email_detail', email_id=email.id) }}" class="text-indigo-600 hover:underline text-sm">
+              View Details →
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-gray-500 text-center py-8">
+      <i class="fa-regular fa-envelope text-3xl mb-2 block"></i>
+      <p>No emails sent to this contact yet.</p>
+      {% if item.email %}
+        <a href="{{ url_for('admin_bp.email_compose', contact_id=item.id) }}" class="text-indigo-600 hover:underline mt-2 inline-block">
+          Send your first email →
+        </a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

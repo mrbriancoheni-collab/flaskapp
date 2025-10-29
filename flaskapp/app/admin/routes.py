@@ -291,8 +291,34 @@ def crm_create():
 @login_required
 @require_admin
 def crm_detail(contact_id: int):
+    from app.models import EmailSent, CompanyContact
+
     item = CRMContact.query.get_or_404(contact_id)
-    return render_template("admin/crm_detail.html", item=item, stages=CRM_STAGES)
+
+    # Get email history with tracking stats
+    emails = (
+        EmailSent.query
+        .filter_by(crm_contact_id=contact_id)
+        .order_by(desc(EmailSent.sent_at))
+        .limit(50)
+        .all()
+    )
+
+    # Get company contacts (team members)
+    company_contacts = (
+        CompanyContact.query
+        .filter_by(crm_contact_id=contact_id)
+        .order_by(CompanyContact.discovered_at.desc())
+        .all()
+    )
+
+    return render_template(
+        "admin/crm_detail.html",
+        item=item,
+        stages=CRM_STAGES,
+        emails=emails,
+        company_contacts=company_contacts
+    )
 
 
 @admin_bp.get("/crm/<int:contact_id>/edit")
@@ -342,6 +368,109 @@ def crm_update(contact_id: int):
 def serp_scraper():
     """Show the SERP scraper form"""
     return render_template("admin/serp_scraper.html")
+
+
+@admin_bp.route("/serp-scraper/manual")
+@login_required
+@require_admin
+def serp_scraper_manual():
+    """Show the manual SERP import form"""
+    return render_template("admin/serp_scraper_manual.html")
+
+
+@admin_bp.post("/serp-scraper/manual/parse")
+@login_required
+@require_admin
+def serp_scraper_manual_parse():
+    """Parse manually pasted Google SERP HTML"""
+    from app.services.serp_scraper import GoogleSerpScraper
+    from bs4 import BeautifulSoup
+
+    html_content = request.form.get("html_content", "").strip()
+    service_type = request.form.get("service_type", "").strip()
+    location = request.form.get("location", "").strip()
+    auto_add = request.form.get("auto_add") == "on"
+
+    if not html_content:
+        flash("Please paste the Google search HTML.", "warning")
+        return redirect(url_for("admin_bp.serp_scraper_manual"))
+
+    if not service_type or not location:
+        flash("Service type and location are required.", "warning")
+        return redirect(url_for("admin_bp.serp_scraper_manual"))
+
+    try:
+        # Parse the HTML
+        soup = BeautifulSoup(html_content, 'html.parser')
+
+        # Use the scraper's extraction methods
+        scraper = GoogleSerpScraper()
+
+        # Extract LSA and PPC leads
+        lsa_leads = scraper._extract_lsa(soup, location)
+        ppc_leads = scraper._extract_ppc_ads(soup, location)
+
+        leads = lsa_leads + ppc_leads
+
+        current_app.logger.info(f"Manual SERP parse: found {len(leads)} leads (LSA: {len(lsa_leads)}, PPC: {len(ppc_leads)})")
+
+        if not leads:
+            flash("No advertiser leads found in the HTML. Make sure you copied the full page source including ads.", "warning")
+            return redirect(url_for("admin_bp.serp_scraper_manual"))
+
+        # Store results in session for review
+        session["scraper_results"] = [
+            {
+                "business_name": lead.business_name,
+                "domain": lead.domain,
+                "phone": lead.phone,
+                "city": lead.city,
+                "region": lead.region,
+                "source": lead.source,
+                "ad_type": lead.ad_type,
+                "snippet": lead.snippet,
+            }
+            for lead in leads
+        ]
+        session.modified = True
+
+        # Auto-add to CRM if requested
+        added_count = 0
+        if auto_add:
+            for lead in leads:
+                # Check if already exists
+                existing = None
+                if lead.domain:
+                    existing = CRMContact.query.filter_by(domain=lead.domain).first()
+                if not existing and lead.business_name:
+                    existing = CRMContact.query.filter_by(business_name=lead.business_name).first()
+
+                if not existing:
+                    contact = CRMContact(
+                        business_name=lead.business_name or "Unknown",
+                        domain=lead.domain,
+                        phone=lead.phone,
+                        city=lead.city,
+                        region=lead.region,
+                        source=f"{lead.source} ({service_type})",
+                        stage="stranger",
+                        notes=f"Ad Type: {lead.ad_type}\n{lead.snippet or ''}"
+                    )
+                    db.session.add(contact)
+                    added_count += 1
+
+            db.session.commit()
+            _audit("serp_manual_import", note=f"service={service_type} location={location} added={added_count}")
+            flash(f"Successfully imported {added_count} new leads to CRM.", "success")
+        else:
+            flash(f"Found {len(leads)} leads. Review below before adding to CRM.", "success")
+
+        return render_template("admin/serp_results.html", leads=leads, auto_added=auto_add, added_count=added_count)
+
+    except Exception as e:
+        current_app.logger.error(f"Error parsing manual SERP HTML: {e}", exc_info=True)
+        flash(f"Error parsing HTML: {str(e)}", "danger")
+        return redirect(url_for("admin_bp.serp_scraper_manual"))
 
 
 @admin_bp.post("/serp-scraper")
@@ -689,11 +818,15 @@ def email_compose():
 @require_admin
 def email_send():
     """Send email to individual or multiple recipients"""
-    from app.services.email_service import send_email
+    from app.services.email_service import send_email, send_tracked_email_to_crm_contact, send_bulk_tracked_emails
 
     subject = request.form.get("subject", "").strip()
     message_body = request.form.get("message", "").strip()
     recipient_type = request.form.get("recipient_type", "")
+    campaign_name = request.form.get("campaign_name", "").strip() or None  # Optional campaign name for bulk
+
+    # Get logged-in user for sender info
+    sent_by_user_id = g.user.id if hasattr(g, 'user') else None
 
     # Validation
     if not subject or not message_body:
@@ -704,7 +837,7 @@ def email_send():
 
     try:
         if recipient_type == "contact":
-            # Single CRM contact
+            # Single CRM contact - use tracked email with user's email as sender
             contact_id = int(request.form.get("contact_id", 0))
             contact = CRMContact.query.get_or_404(contact_id)
 
@@ -712,10 +845,61 @@ def email_send():
                 flash(f"Contact {contact.business_name} has no email address.", "error")
                 return redirect(url_for("admin_bp.crm_detail", contact_id=contact.id))
 
-            recipients.append({
-                "email": contact.email,
-                "name": contact.contact_name or contact.business_name
-            })
+            # Create HTML email body
+            html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <div style="white-space: pre-wrap; font-size: 16px; line-height: 24px; color: #111827;">
+{message_body}
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px 40px; text-align: center; background-color: #f9fafb; border-radius: 0 0 8px 8px;">
+                            <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                                © 2025 FieldSprout. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+            """
+
+            # Send tracked email (will use logged-in user's email as sender)
+            email_sent = send_tracked_email_to_crm_contact(
+                crm_contact_id=contact_id,
+                subject=subject,
+                html_body=html_body,
+                text_body=message_body,
+                sent_by_user_id=sent_by_user_id,
+                track_clicks=True
+            )
+
+            if email_sent and email_sent.delivered:
+                flash(f"Email sent successfully to {contact.business_name}.", "success")
+                _audit("email_sent", note=f"to={contact.email} subject={subject[:100]}")
+                return redirect(url_for("admin_bp.crm_detail", contact_id=contact_id))
+            else:
+                flash(f"Failed to send email to {contact.business_name}. Check SMTP configuration.", "error")
+                return redirect(url_for("admin_bp.crm_detail", contact_id=contact_id))
 
         elif recipient_type == "account":
             # All users in an account
@@ -731,22 +915,81 @@ def email_send():
                     })
 
         elif recipient_type == "bulk":
-            # Multiple CRM contacts
+            # Multiple CRM contacts - use bulk tracked emails with David credentials
             selected_contacts = request.form.getlist("selected_contacts")
 
             if not selected_contacts:
                 flash("No recipients selected for bulk email.", "error")
                 return redirect(url_for("admin_bp.email_compose", bulk=True))
 
-            for contact_id_str in selected_contacts:
-                contact = CRMContact.query.get(int(contact_id_str))
-                if contact and contact.email:
-                    recipients.append({
-                        "email": contact.email,
-                        "name": contact.contact_name or contact.business_name
-                    })
+            contact_ids = [int(cid) for cid in selected_contacts]
 
-        # Send emails
+            # Create HTML email body
+            html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <div style="white-space: pre-wrap; font-size: 16px; line-height: 24px; color: #111827;">
+{message_body}
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px 40px; text-align: center; background-color: #f9fafb; border-radius: 0 0 8px 8px;">
+                            <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                                © 2025 FieldSprout. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+            """
+
+            # Default campaign name if not provided
+            if not campaign_name:
+                from datetime import datetime
+                campaign_name = f"Bulk Email {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+
+            # Send bulk tracked emails (will use David credentials)
+            results = send_bulk_tracked_emails(
+                crm_contact_ids=contact_ids,
+                subject=subject,
+                html_body=html_body,
+                text_body=message_body,
+                campaign_name=campaign_name,
+                sent_by_user_id=sent_by_user_id
+            )
+
+            # Flash message
+            if results['sent'] > 0 and results['failed'] == 0:
+                flash(f"Bulk email sent successfully to {results['sent']} recipient(s).", "success")
+            elif results['sent'] > 0:
+                flash(f"Email sent to {results['sent']} recipient(s). {results['failed']} failed.", "warning")
+            else:
+                flash(f"Failed to send email to all {results['failed']} recipient(s). Check SMTP configuration.", "error")
+
+            _audit("bulk_email_sent", note=f"campaign={campaign_name} sent={results['sent']} failed={results['failed']}")
+            return redirect(url_for("admin_bp.crm_list"))
+
+        # For "account" recipient type (emails to internal users), send without tracking
+        # These use the logged-in admin's email as sender
         if not recipients:
             flash("No valid email addresses found.", "error")
             return redirect(request.referrer or url_for("admin_bp.email_compose"))
@@ -789,7 +1032,14 @@ def email_send():
 </html>
         """
 
-        # Send to all recipients
+        # Get sender email and name from logged-in user
+        from_email = None
+        from_name = None
+        if hasattr(g, 'user') and g.user:
+            from_email = g.user.email
+            from_name = g.user.name
+
+        # Send to all recipients (for account emails)
         success_count = 0
         failed_count = 0
 
@@ -799,7 +1049,9 @@ def email_send():
                     to=recipient["email"],
                     subject=subject,
                     html_body=html_body,
-                    text_body=message_body
+                    text_body=message_body,
+                    from_email=from_email,
+                    from_name=from_name
                 )
 
                 if result:
@@ -815,7 +1067,7 @@ def email_send():
         # Audit log
         _audit(
             "email_sent",
-            note=f"type={recipient_type} count={success_count} failed={failed_count} subject={subject[:100]}"
+            note=f"type={recipient_type} from={from_email} count={success_count} failed={failed_count} subject={subject[:100]}"
         )
 
         # Flash message
@@ -840,6 +1092,152 @@ def email_send():
         logger.exception("Error sending email")
         flash(f"Error sending email: {str(e)}", "error")
         return redirect(request.referrer or url_for("admin_bp.email_compose"))
+
+
+@admin_bp.get("/email/<int:email_id>")
+@login_required
+@require_admin
+def email_detail(email_id: int):
+    """View detailed email performance metrics"""
+    from app.models import EmailSent, EmailOpen, EmailClick
+
+    email = EmailSent.query.get_or_404(email_id)
+
+    # Get all opens with details
+    opens = (
+        EmailOpen.query
+        .filter_by(email_sent_id=email_id)
+        .order_by(EmailOpen.opened_at.desc())
+        .all()
+    )
+
+    # Get all clicks with details
+    clicks = (
+        EmailClick.query
+        .filter_by(email_sent_id=email_id)
+        .order_by(EmailClick.clicked_at.desc())
+        .all()
+    )
+
+    # Calculate engagement metrics
+    open_rate = 100.0 if email.was_opened else 0.0
+    click_rate = (email.click_count / max(email.open_count, 1) * 100) if email.was_opened else 0.0
+
+    return render_template(
+        "admin/email_detail.html",
+        email=email,
+        opens=opens,
+        clicks=clicks,
+        open_rate=open_rate,
+        click_rate=click_rate
+    )
+
+@admin_bp.get("/email-analytics")
+@login_required
+@require_admin
+def email_analytics():
+    """Email campaign analytics dashboard"""
+    from app.models import EmailSent, EmailOpen, EmailClick
+    from sqlalchemy import func
+
+    # Overall stats
+    total_emails = EmailSent.query.count()
+    delivered_emails = EmailSent.query.filter_by(delivered=True).count()
+    bounced_emails = EmailSent.query.filter_by(bounced=True).count()
+
+    # Get emails with tracking stats
+    emails_opened = EmailSent.query.filter(
+        EmailSent.id.in_(
+            db.session.query(EmailOpen.email_sent_id).distinct()
+        )
+    ).count()
+
+    emails_clicked = EmailSent.query.filter(
+        EmailSent.id.in_(
+            db.session.query(EmailClick.email_sent_id).distinct()
+        )
+    ).count()
+
+    total_opens = EmailOpen.query.count()
+    total_clicks = EmailClick.query.count()
+
+    # Calculate rates
+    delivery_rate = (delivered_emails / total_emails * 100) if total_emails > 0 else 0
+    open_rate = (emails_opened / delivered_emails * 100) if delivered_emails > 0 else 0
+    click_rate = (emails_clicked / emails_opened * 100) if emails_opened > 0 else 0
+
+    # Get campaign performance
+    campaign_stats = (
+        db.session.query(
+            EmailSent.campaign_name,
+            func.count(EmailSent.id).label('total'),
+            func.sum(func.cast(EmailSent.delivered, db.Integer)).label('delivered'),
+            func.sum(func.cast(EmailSent.bounced, db.Integer)).label('bounced')
+        )
+        .filter(EmailSent.campaign_name.isnot(None))
+        .group_by(EmailSent.campaign_name)
+        .order_by(desc('total'))
+        .limit(20)
+        .all()
+    )
+
+    # Get subject line performance (top 20)
+    subject_performance = (
+        db.session.query(
+            EmailSent.subject,
+            func.count(EmailSent.id).label('sent_count'),
+            func.count(EmailOpen.id).label('open_count'),
+            func.count(EmailClick.id).label('click_count')
+        )
+        .outerjoin(EmailOpen, EmailSent.id == EmailOpen.email_sent_id)
+        .outerjoin(EmailClick, EmailSent.id == EmailClick.email_sent_id)
+        .group_by(EmailSent.subject)
+        .order_by(desc('open_count'))
+        .limit(20)
+        .all()
+    )
+
+    # Get recent emails
+    recent_emails = (
+        EmailSent.query
+        .order_by(desc(EmailSent.sent_at))
+        .limit(20)
+        .all()
+    )
+
+    # Get best performing emails (by open rate)
+    best_emails = []
+    for email in EmailSent.query.filter_by(delivered=True).limit(100).all():
+        if email.was_opened:
+            best_emails.append({
+                'email': email,
+                'open_rate': 100.0,  # Single recipient, so 100% if opened
+                'click_rate': (email.click_count / max(email.open_count, 1) * 100) if email.was_opened else 0
+            })
+
+    # Sort by click rate
+    best_emails.sort(key=lambda x: x['click_rate'], reverse=True)
+    best_emails = best_emails[:10]
+
+    return render_template(
+        "admin/email_analytics.html",
+        total_emails=total_emails,
+        delivered_emails=delivered_emails,
+        bounced_emails=bounced_emails,
+        emails_opened=emails_opened,
+        emails_clicked=emails_clicked,
+        total_opens=total_opens,
+        total_clicks=total_clicks,
+        delivery_rate=delivery_rate,
+        open_rate=open_rate,
+        click_rate=click_rate,
+        campaign_stats=campaign_stats,
+        subject_performance=subject_performance,
+        recent_emails=recent_emails,
+        best_emails=best_emails
+    )
+
+
 
 # =============================================================================
 # ROI Settings & Pricing Management

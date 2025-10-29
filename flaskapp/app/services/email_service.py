@@ -25,17 +25,34 @@ from flask import current_app, render_template_string
 
 def get_email_config() -> Dict[str, Any]:
     """Get email configuration from app config or environment."""
+    # Prefer David credentials for bulk/CRM emails, fallback to regular credentials
+    smtp_user = (current_app.config.get('MAIL_USERNAME_DAVID') or os.getenv('MAIL_USERNAME_DAVID') or
+                current_app.config.get('SMTP_USER') or os.getenv('SMTP_USER') or
+                current_app.config.get('MAIL_USERNAME') or os.getenv('MAIL_USERNAME') or '')
+
+    smtp_password = (current_app.config.get('MAIL_PASSWORD_DAVID') or os.getenv('MAIL_PASSWORD_DAVID') or
+                    current_app.config.get('SMTP_PASSWORD') or os.getenv('SMTP_PASSWORD') or
+                    current_app.config.get('MAIL_PASSWORD') or os.getenv('MAIL_PASSWORD') or '')
+
+    # Use David email as from address if available
+    from_email = (current_app.config.get('MAIL_USERNAME_DAVID') or os.getenv('MAIL_USERNAME_DAVID') or
+                 current_app.config.get('EMAIL_FROM') or os.getenv('EMAIL_FROM') or
+                 'noreply@fieldsprout.com')
+
     return {
         'provider': current_app.config.get('EMAIL_PROVIDER', os.getenv('EMAIL_PROVIDER', 'smtp')),
-        'from_email': current_app.config.get('EMAIL_FROM', os.getenv('EMAIL_FROM', 'noreply@fieldsprout.com')),
+        'from_email': from_email,
         'from_name': current_app.config.get('EMAIL_FROM_NAME', os.getenv('EMAIL_FROM_NAME', 'FieldSprout')),
 
-        # SMTP settings
-        'smtp_host': current_app.config.get('SMTP_HOST', os.getenv('SMTP_HOST', 'localhost')),
-        'smtp_port': int(current_app.config.get('SMTP_PORT', os.getenv('SMTP_PORT', '587'))),
-        'smtp_user': current_app.config.get('SMTP_USER', os.getenv('SMTP_USER', '')),
-        'smtp_password': current_app.config.get('SMTP_PASSWORD', os.getenv('SMTP_PASSWORD', '')),
-        'smtp_use_tls': current_app.config.get('SMTP_USE_TLS', os.getenv('SMTP_USE_TLS', 'true').lower() == 'true'),
+        # SMTP settings - prefer MAIL_* env vars (used by test_email.py)
+        'smtp_host': (current_app.config.get('MAIL_SERVER') or os.getenv('MAIL_SERVER') or
+                     current_app.config.get('SMTP_HOST') or os.getenv('SMTP_HOST') or 'localhost'),
+        'smtp_port': int(current_app.config.get('MAIL_PORT') or os.getenv('MAIL_PORT') or
+                        current_app.config.get('SMTP_PORT') or os.getenv('SMTP_PORT') or '587'),
+        'smtp_user': smtp_user,
+        'smtp_password': smtp_password,
+        'smtp_use_tls': (current_app.config.get('MAIL_USE_TLS') or os.getenv('MAIL_USE_TLS') or
+                        current_app.config.get('SMTP_USE_TLS') or os.getenv('SMTP_USE_TLS') or 'true').lower() == 'true',
 
         # SendGrid settings
         'sendgrid_api_key': current_app.config.get('SENDGRID_API_KEY', os.getenv('SENDGRID_API_KEY', '')),
@@ -47,7 +64,10 @@ def send_email(
     subject: str,
     html_body: str,
     text_body: Optional[str] = None,
-    reply_to: Optional[str] = None
+    reply_to: Optional[str] = None,
+    from_email: Optional[str] = None,
+    from_name: Optional[str] = None,
+    use_bulk_credentials: bool = False
 ) -> bool:
     """
     Send an email using configured provider.
@@ -58,12 +78,26 @@ def send_email(
         html_body: HTML email body
         text_body: Plain text fallback (optional, generated from HTML if not provided)
         reply_to: Reply-to address (optional)
+        from_email: Override sender email (optional, for individual emails from admin users)
+        from_name: Override sender name (optional)
+        use_bulk_credentials: If True, use David credentials for bulk emails (default: False)
 
     Returns:
         True if email sent successfully, False otherwise
     """
     config = get_email_config()
     provider = config['provider']
+
+    # Override from_email if provided (for individual emails from logged-in user)
+    if from_email:
+        config['from_email'] = from_email
+        if from_name:
+            config['from_name'] = from_name
+    elif not use_bulk_credentials:
+        # For individual emails without explicit sender, log a warning
+        current_app.logger.warning(
+            f"Sending individual email without explicit from_email. Using default: {config['from_email']}"
+        )
 
     try:
         if provider == 'sendgrid':
@@ -485,3 +519,199 @@ def send_payment_failed_email(user, subscription) -> bool:
         subject="Action Required: Payment Failed",
         html_body=html_body
     )
+
+
+# ===== Tracked Email Sending (for CRM contacts) =====
+
+def send_tracked_email_to_crm_contact(
+    crm_contact_id: int,
+    subject: str,
+    html_body: str,
+    text_body: Optional[str] = None,
+    campaign_name: Optional[str] = None,
+    sent_by_user_id: Optional[int] = None,
+    track_clicks: bool = True
+):
+    """
+    Send an email to a CRM contact with tracking enabled.
+
+    This function:
+    1. Generates a tracking token
+    2. Saves the email to the database (EmailSent)
+    3. Injects tracking pixel and wraps links
+    4. Sends the email
+    5. Returns the EmailSent record
+
+    SENDER LOGIC:
+    - Individual emails (no campaign_name): Use the logged-in admin user's email
+    - Bulk campaigns (with campaign_name): Use David credentials (MAIL_USERNAME_DAVID)
+
+    Args:
+        crm_contact_id: ID of the CRMContact to send to
+        subject: Email subject line
+        html_body: HTML email body (will be modified to add tracking)
+        text_body: Plain text version (optional)
+        campaign_name: Optional campaign identifier for grouping (triggers bulk mode)
+        sent_by_user_id: ID of user sending the email (optional)
+        track_clicks: Whether to track link clicks (default: True)
+
+    Returns:
+        EmailSent record if successful, None if failed
+    """
+    from app.models import CRMContact, EmailSent, User
+    from app.extensions import db
+    from app.services.email_tracking import (
+        generate_tracking_token,
+        prepare_tracked_email
+    )
+
+    # Get the CRM contact
+    contact = CRMContact.query.get(crm_contact_id)
+    if not contact:
+        current_app.logger.error(f"CRM contact {crm_contact_id} not found")
+        return None
+
+    if not contact.email:
+        current_app.logger.error(f"CRM contact {crm_contact_id} has no email address")
+        return None
+
+    # Determine sender email and name
+    from_email = None
+    from_name = None
+    use_bulk_credentials = False
+
+    if campaign_name:
+        # Bulk campaign - use David credentials
+        use_bulk_credentials = True
+        current_app.logger.info(f"Bulk campaign '{campaign_name}' - using David credentials")
+    elif sent_by_user_id:
+        # Individual email - use the sender's email
+        sender_user = User.query.get(sent_by_user_id)
+        if sender_user:
+            from_email = sender_user.email
+            from_name = sender_user.name
+            current_app.logger.info(f"Individual email from {from_name} <{from_email}>")
+        else:
+            current_app.logger.warning(f"Sender user {sent_by_user_id} not found, using default")
+    else:
+        current_app.logger.warning("No campaign_name or sent_by_user_id - using default sender")
+
+    # Generate tracking token
+    tracking_token = generate_tracking_token()
+
+    # Get base URL for tracking links
+    base_url = current_app.config.get("BASE_URL", "https://fieldsprout.io")
+
+    # Prepare HTML with tracking pixel and link tracking
+    tracked_html = prepare_tracked_email(
+        html_body=html_body,
+        tracking_token=tracking_token,
+        base_url=base_url,
+        track_clicks=track_clicks
+    )
+
+    # Create EmailSent record
+    email_sent = EmailSent(
+        crm_contact_id=crm_contact_id,
+        sent_by_user_id=sent_by_user_id,
+        subject=subject,
+        body_html=tracked_html,
+        body_text=text_body,
+        tracking_token=tracking_token,
+        campaign_name=campaign_name
+    )
+
+    try:
+        # Save to database first
+        db.session.add(email_sent)
+        db.session.commit()
+
+        # Send the email with appropriate sender
+        success = send_email(
+            to=contact.email,
+            subject=subject,
+            html_body=tracked_html,
+            text_body=text_body,
+            from_email=from_email,
+            from_name=from_name,
+            use_bulk_credentials=use_bulk_credentials
+        )
+
+        if success:
+            email_sent.delivered = True
+            current_app.logger.info(
+                f"Tracked email sent to CRM contact {crm_contact_id} ({contact.email}): {subject}"
+            )
+        else:
+            email_sent.delivered = False
+            email_sent.bounced = True
+            current_app.logger.error(
+                f"Failed to send tracked email to CRM contact {crm_contact_id} ({contact.email})"
+            )
+
+        db.session.commit()
+        return email_sent
+
+    except Exception as e:
+        current_app.logger.error(f"Error sending tracked email: {e}", exc_info=True)
+        db.session.rollback()
+        return None
+
+
+def send_bulk_tracked_emails(
+    crm_contact_ids: List[int],
+    subject: str,
+    html_body: str,
+    text_body: Optional[str] = None,
+    campaign_name: Optional[str] = None,
+    sent_by_user_id: Optional[int] = None
+) -> Dict[str, Any]:
+    """
+    Send tracked emails to multiple CRM contacts.
+
+    Args:
+        crm_contact_ids: List of CRMContact IDs
+        subject: Email subject (same for all)
+        html_body: HTML body (same for all, tracking will be unique per contact)
+        text_body: Plain text version (optional)
+        campaign_name: Campaign identifier for grouping
+        sent_by_user_id: ID of user sending emails
+
+    Returns:
+        Dictionary with results:
+        {
+            'total': int,
+            'sent': int,
+            'failed': int,
+            'email_ids': List[int]  # IDs of EmailSent records created
+        }
+    """
+    results = {
+        'total': len(crm_contact_ids),
+        'sent': 0,
+        'failed': 0,
+        'email_ids': []
+    }
+
+    for contact_id in crm_contact_ids:
+        email_sent = send_tracked_email_to_crm_contact(
+            crm_contact_id=contact_id,
+            subject=subject,
+            html_body=html_body,  # Function will add unique tracking for each email
+            text_body=text_body,
+            campaign_name=campaign_name,
+            sent_by_user_id=sent_by_user_id
+        )
+
+        if email_sent and email_sent.delivered:
+            results['sent'] += 1
+            results['email_ids'].append(email_sent.id)
+        else:
+            results['failed'] += 1
+
+    current_app.logger.info(
+        f"Bulk email campaign '{campaign_name}': "
+        f"{results['sent']}/{results['total']} sent successfully"
+    )
+
+    return results

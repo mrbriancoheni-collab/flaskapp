@@ -1,0 +1,136 @@
+{% extends "base_admin.html" %}
+{% block title %}Manual SERP Import{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+  <!-- Header -->
+  <div class="mb-6">
+    <div class="flex items-center gap-4 mb-2">
+      <a href="{{ url_for('admin_bp.serp_scraper') }}" class="text-indigo-600 hover:text-indigo-800">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Back to Auto Scraper
+      </a>
+    </div>
+    <h1 class="text-3xl font-bold text-gray-900">Manual SERP Import</h1>
+    <p class="text-gray-600 mt-2">Paste Google search HTML to extract advertiser leads (PPC & LSA)</p>
+  </div>
+
+  <!-- Instructions -->
+  <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+    <h2 class="text-lg font-bold text-blue-900 mb-3">
+      <i class="fa-solid fa-info-circle mr-2"></i>
+      How to Use Manual Import
+    </h2>
+    <ol class="space-y-2 text-sm text-blue-900">
+      <li><strong>1. Search Google:</strong> Open your browser, search for your target keywords (e.g., "plumber denver co")</li>
+      <li><strong>2. View Page Source:</strong> Right-click on the page → "View Page Source" (or press Ctrl+U / Cmd+Option+U)</li>
+      <li><strong>3. Copy HTML:</strong> Select ALL (Ctrl+A / Cmd+A) and copy the entire HTML source code</li>
+      <li><strong>4. Paste Below:</strong> Paste the HTML into the textarea below and click "Parse & Import"</li>
+    </ol>
+    <div class="mt-4 p-3 bg-white border border-blue-300 rounded">
+      <p class="text-xs text-blue-800">
+        <i class="fa-solid fa-lightbulb mr-1"></i>
+        <strong>Tip:</strong> This works around Google's bot detection by using HTML from your actual browser session.
+        The parser will extract Google Ads (PPC) and Local Service Ads (LSA) from the HTML.
+      </p>
+    </div>
+  </div>
+
+  <!-- Import Form -->
+  <div class="bg-white rounded-lg shadow-lg p-6">
+    <form method="POST" action="{{ url_for('admin_bp.serp_scraper_manual_parse') }}">
+      <!-- Service Type and Location -->
+      <div class="grid md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Service Type <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            name="service_type"
+            required
+            placeholder="e.g., plumber, hvac repair, electrician"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          >
+          <p class="text-xs text-gray-500 mt-1">What service you searched for</p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Location <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            name="location"
+            required
+            placeholder="e.g., Denver, CO"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          >
+          <p class="text-xs text-gray-500 mt-1">Location you searched for</p>
+        </div>
+      </div>
+
+      <!-- HTML Content Textarea -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Google Search HTML Source <span class="text-red-500">*</span>
+        </label>
+        <textarea
+          name="html_content"
+          required
+          rows="15"
+          placeholder="Paste the complete HTML source code from Google search results here..."
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg font-mono text-xs focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+        ></textarea>
+        <p class="text-xs text-gray-500 mt-1">
+          Paste the entire page source (should be 50,000+ characters)
+        </p>
+      </div>
+
+      <!-- Auto-add Option -->
+      <div class="mb-6">
+        <label class="flex items-center">
+          <input
+            type="checkbox"
+            name="auto_add"
+            class="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+          >
+          <span class="ml-2 text-sm text-gray-700">
+            Automatically add leads to CRM (skip review)
+          </span>
+        </label>
+      </div>
+
+      <!-- Submit Button -->
+      <div class="flex gap-4">
+        <button
+          type="submit"
+          class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 shadow-md"
+        >
+          <i class="fa-solid fa-file-import mr-2"></i>
+          Parse & Import Leads
+        </button>
+        <a
+          href="{{ url_for('admin_bp.crm_list') }}"
+          class="px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300"
+        >
+          View CRM
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Example/Screenshot Section -->
+  <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+    <h3 class="text-lg font-bold text-yellow-900 mb-3">
+      <i class="fa-solid fa-image mr-2"></i>
+      Visual Guide
+    </h3>
+    <div class="space-y-3 text-sm text-yellow-900">
+      <p><strong>Step 1:</strong> Search Google for your keywords in a regular browser window</p>
+      <p><strong>Step 2:</strong> Right-click anywhere on the page → "View Page Source" or press <kbd class="px-2 py-1 bg-white rounded border">Ctrl+U</kbd></p>
+      <p><strong>Step 3:</strong> You'll see raw HTML code. Select all (<kbd class="px-2 py-1 bg-white rounded border">Ctrl+A</kbd>) and copy (<kbd class="px-2 py-1 bg-white rounded border">Ctrl+C</kbd>)</p>
+      <p><strong>Step 4:</strong> Paste into the textarea above and click "Parse & Import Leads"</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

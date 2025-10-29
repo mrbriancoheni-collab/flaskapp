@@ -143,7 +143,7 @@ def check_seat_limit(f: Callable) -> Callable:
             flash("Account not found.", "error")
             return redirect(url_for("account_bp.dashboard"))
 
-        can_add, error_message = can_add_team_member(account)
+        can_add, error_message = can_add_team_member(account, current_user=g.user)
 
         if not can_add:
             flash(error_message, "error")

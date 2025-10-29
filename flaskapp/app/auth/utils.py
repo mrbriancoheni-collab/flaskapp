@@ -150,7 +150,19 @@ def is_paid_account() -> bool:
     Determine if the current account is paid by checking either a 'plan' field
     against PAID_PLANS or a 'stripe_status' against PAID_STRIPE_STATES.
     All names are configurable in app config.
+
+    Admins (users with is_admin = True) bypass this check and are treated as paid.
     """
+    # Check if current user is an admin (bypass plan check)
+    try:
+        from flask import g
+        user = getattr(g, 'user', None)
+        if user and getattr(user, 'is_admin', False):
+            # Admins have access to all paid features
+            return True
+    except Exception:
+        pass  # Continue with normal plan check
+
     aid = current_account_id()
     if not aid:
         return False

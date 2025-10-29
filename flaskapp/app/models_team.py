@@ -202,16 +202,21 @@ def get_account_seat_usage(account_id: int) -> int:
     return User.query.filter_by(account_id=account_id).count()
 
 
-def can_add_team_member(account) -> tuple[bool, Optional[str]]:
+def can_add_team_member(account, current_user=None) -> tuple[bool, Optional[str]]:
     """
     Check if account can add another team member.
 
     Args:
         account: Account model instance
+        current_user: Current user (optional) - admins bypass seat limits
 
     Returns:
         Tuple of (can_add: bool, error_message: Optional[str])
     """
+    # Admins (users with is_admin = True) can bypass seat limits
+    if current_user and getattr(current_user, 'is_admin', False):
+        return True, None
+
     seat_limit = get_account_seat_limit(account)
 
     if seat_limit is None:

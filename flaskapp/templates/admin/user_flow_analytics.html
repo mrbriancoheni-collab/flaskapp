@@ -1,0 +1,598 @@
+{% extends "base_admin.html" %}
+{% block title %}User Flow Analytics – {{ super() }}{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="mb-6 flex items-center justify-between">
+  <div>
+    <h1 class="text-3xl font-bold mb-2">
+      <i class="fa-solid fa-route mr-2"></i>
+      User Flow Analytics
+    </h1>
+    <p class="text-gray-600">Understand how users navigate through your site • {{ range_label }}</p>
+  </div>
+
+  <!-- Time Range Selector -->
+  <div class="flex items-center gap-2">
+    <label class="text-sm text-gray-600 font-medium">Time Range:</label>
+    <select id="rangeSelector" class="border rounded px-3 py-2 font-medium" onchange="location.href='{{ url_for('admin_bp.user_flow_analytics') }}?range=' + this.value">
+      <option value="1d" {% if range_param == '1d' %}selected{% endif %}>Today</option>
+      <option value="7d" {% if range_param == '7d' %}selected{% endif %}>Last 7 Days</option>
+      <option value="30d" {% if range_param == '30d' %}selected{% endif %}>Last 30 Days</option>
+      <option value="90d" {% if range_param == '90d' %}selected{% endif %}>Last 90 Days</option>
+      <option value="1y" {% if range_param == '1y' %}selected{% endif %}>Last Year</option>
+      <option value="all" {% if range_param == 'all' %}selected{% endif %}>All Time</option>
+    </select>
+  </div>
+</div>
+
+<!-- Key Metrics Overview -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+  <!-- Total Page Views -->
+  <div class="bg-white border rounded-lg p-4 shadow-sm">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-sm text-gray-600 font-medium">Total Page Views</span>
+      <i class="fa-solid fa-eye text-blue-500 text-xl"></i>
+    </div>
+    <div class="text-3xl font-bold">{{ "{:,}".format(total_pageviews) }}</div>
+    <div class="text-xs text-gray-500 mt-1">{{ range_label }}</div>
+  </div>
+
+  <!-- Unique Sessions -->
+  <div class="bg-white border rounded-lg p-4 shadow-sm">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-sm text-gray-600 font-medium">Unique Sessions</span>
+      <i class="fa-solid fa-users text-green-500 text-xl"></i>
+    </div>
+    <div class="text-3xl font-bold">{{ "{:,}".format(unique_sessions) }}</div>
+    <div class="text-xs text-gray-500 mt-1">Distinct visitors</div>
+  </div>
+
+  <!-- Avg Pages per Session -->
+  <div class="bg-white border rounded-lg p-4 shadow-sm">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-sm text-gray-600 font-medium">Avg Pages/Session</span>
+      <i class="fa-solid fa-chart-line text-purple-500 text-xl"></i>
+    </div>
+    <div class="text-3xl font-bold">{{ avg_pages_per_session }}</div>
+    <div class="text-xs text-gray-500 mt-1">Pages per visitor</div>
+  </div>
+
+  <!-- Avg Session Duration -->
+  <div class="bg-white border rounded-lg p-4 shadow-sm">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-sm text-gray-600 font-medium">Avg Session Duration</span>
+      <i class="fa-solid fa-clock text-orange-500 text-xl"></i>
+    </div>
+    <div class="text-3xl font-bold">{{ "%.0f"|format(avg_session_duration) }}s</div>
+    <div class="text-xs text-gray-500 mt-1">Time on site</div>
+  </div>
+</div>
+
+<!-- Page Views Over Time Chart -->
+<div class="bg-white border rounded-lg p-6 mb-6 shadow-sm">
+  <h2 class="text-xl font-bold mb-4">
+    <i class="fa-solid fa-chart-area mr-2"></i>
+    Page Views & Sessions Over Time
+  </h2>
+  <div class="h-80">
+    <canvas id="pageviewsChart"></canvas>
+  </div>
+</div>
+
+<!-- Two Column Layout for Smaller Charts -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <!-- Device Trend Over Time -->
+  <div class="bg-white border rounded-lg p-6 shadow-sm">
+    <h2 class="text-xl font-bold mb-4">
+      <i class="fa-solid fa-mobile-screen-button mr-2"></i>
+      Device Trend Over Time
+    </h2>
+    <div class="h-64">
+      <canvas id="deviceTrendChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Hourly Traffic Pattern -->
+  <div class="bg-white border rounded-lg p-6 shadow-sm">
+    <h2 class="text-xl font-bold mb-4">
+      <i class="fa-solid fa-calendar-day mr-2"></i>
+      Traffic by Hour of Day
+    </h2>
+    <div class="h-64">
+      <canvas id="hourlyPatternChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Device & Traffic Source Breakdown -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <!-- Device Breakdown -->
+  <div class="bg-white border rounded-lg p-6 shadow-sm">
+    <h2 class="text-xl font-bold mb-4">
+      <i class="fa-solid fa-laptop-mobile mr-2"></i>
+      Device Breakdown
+    </h2>
+
+    {% if device_breakdown %}
+    <div class="space-y-3">
+      {% for device, count in device_breakdown.items() %}
+      {% set percentage = (count / total_pageviews * 100) if total_pageviews > 0 else 0 %}
+      <div>
+        <div class="flex items-center justify-between mb-1 text-sm">
+          <span class="font-medium capitalize">{{ device }}</span>
+          <span class="text-gray-600">{{ count }} ({{ "%.1f"|format(percentage) }}%)</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+          <div class="bg-indigo-600 h-2 rounded-full transition-all duration-500" style="width: {{ percentage }}%"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-gray-500 text-center py-8">No device data available</p>
+    {% endif %}
+  </div>
+
+  <!-- Traffic Sources -->
+  <div class="bg-white border rounded-lg p-6 shadow-sm">
+    <h2 class="text-xl font-bold mb-4">
+      <i class="fa-solid fa-arrow-right-to-bracket mr-2"></i>
+      Traffic Sources
+    </h2>
+
+    {% if traffic_sources %}
+    <div class="space-y-3">
+      {% for source, count in traffic_sources.items()|sort(attribute='1', reverse=True) %}
+      {% set percentage = (count / unique_sessions * 100) if unique_sessions > 0 else 0 %}
+      <div>
+        <div class="flex items-center justify-between mb-1 text-sm">
+          <span class="font-medium capitalize">{{ source }}</span>
+          <span class="text-gray-600">{{ count }} ({{ "%.1f"|format(percentage) }}%)</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+          <div class="bg-green-600 h-2 rounded-full transition-all duration-500" style="width: {{ percentage }}%"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-gray-500 text-center py-8">No traffic source data available</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Popular Pages & Landing Pages -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <!-- Popular Pages -->
+  <div class="bg-white border rounded-lg p-6 shadow-sm">
+    <h2 class="text-xl font-bold mb-4">
+      <i class="fa-solid fa-fire mr-2"></i>
+      Most Popular Pages
+    </h2>
+
+    {% if popular_paths %}
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 border-b">
+          <tr>
+            <th class="px-3 py-2 text-left font-semibold">#</th>
+            <th class="px-3 py-2 text-left font-semibold">Page</th>
+            <th class="px-3 py-2 text-right font-semibold">Views</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          {% for path, count in popular_paths %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-3 py-2 font-medium text-gray-500">{{ loop.index }}</td>
+            <td class="px-3 py-2 font-mono text-xs">{{ path }}</td>
+            <td class="px-3 py-2 text-right font-semibold">{{ "{:,}".format(count) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-gray-500 text-center py-8">No page view data available</p>
+    {% endif %}
+  </div>
+
+  <!-- Landing Pages -->
+  <div class="bg-white border rounded-lg p-6 shadow-sm">
+    <h2 class="text-xl font-bold mb-4">
+      <i class="fa-solid fa-door-open mr-2"></i>
+      Top Landing Pages
+    </h2>
+
+    {% if landing_pages %}
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 border-b">
+          <tr>
+            <th class="px-3 py-2 text-left font-semibold">#</th>
+            <th class="px-3 py-2 text-left font-semibold">Page</th>
+            <th class="px-3 py-2 text-right font-semibold">Sessions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          {% for path, count in landing_pages %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-3 py-2 font-medium text-gray-500">{{ loop.index }}</td>
+            <td class="px-3 py-2 font-mono text-xs">{{ path }}</td>
+            <td class="px-3 py-2 text-right font-semibold">{{ "{:,}".format(count) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-gray-500 text-center py-8">No landing page data available</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- User Flow Transitions -->
+<div class="bg-white border rounded-lg p-6 mb-6 shadow-sm">
+  <h2 class="text-xl font-bold mb-4">
+    <i class="fa-solid fa-arrows-turn-right mr-2"></i>
+    Common User Flows (Page Transitions)
+  </h2>
+
+  {% if user_flows %}
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50 border-b">
+        <tr>
+          <th class="px-4 py-3 text-left font-semibold">From Page</th>
+          <th class="px-4 py-3 text-center font-semibold">→</th>
+          <th class="px-4 py-3 text-left font-semibold">To Page</th>
+          <th class="px-4 py-3 text-right font-semibold">Count</th>
+          <th class="px-4 py-3 text-left font-semibold">Frequency</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        {% for from_path, to_path, count in user_flows %}
+        {% set max_count = user_flows[0][2] if user_flows else 1 %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 font-mono text-xs text-blue-600">{{ from_path }}</td>
+          <td class="px-4 py-3 text-center text-gray-400">
+            <i class="fa-solid fa-arrow-right"></i>
+          </td>
+          <td class="px-4 py-3 font-mono text-xs text-green-600">{{ to_path }}</td>
+          <td class="px-4 py-3 text-right font-semibold">{{ count }}</td>
+          <td class="px-4 py-3">
+            <div class="w-full bg-gray-200 rounded-full h-2 max-w-xs">
+              <div class="bg-indigo-600 h-2 rounded-full transition-all duration-500" style="width: {{ (count / max_count * 100) }}%"></div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-gray-500 text-center py-8">
+    No user flow data available yet. Need at least 2 page views per session to show transitions.
+  </p>
+  {% endif %}
+</div>
+
+<!-- Exit Pages -->
+<div class="bg-white border rounded-lg p-6 mb-6 shadow-sm">
+  <h2 class="text-xl font-bold mb-4">
+    <i class="fa-solid fa-right-from-bracket mr-2"></i>
+    Exit Pages (Where Users Leave)
+  </h2>
+
+  {% if exit_pages %}
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50 border-b">
+        <tr>
+          <th class="px-4 py-3 text-left font-semibold">Rank</th>
+          <th class="px-4 py-3 text-left font-semibold">Page</th>
+          <th class="px-4 py-3 text-right font-semibold">Exit Count</th>
+          <th class="px-4 py-3 text-right font-semibold">% of Sessions</th>
+          <th class="px-4 py-3 text-left font-semibold">Exit Rate</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        {% for path, count in exit_pages %}
+        {% set percentage = (count / unique_sessions * 100) if unique_sessions > 0 else 0 %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 font-medium text-gray-500">{{ loop.index }}</td>
+          <td class="px-4 py-3 font-mono text-sm">{{ path }}</td>
+          <td class="px-4 py-3 text-right font-semibold text-red-600">{{ "{:,}".format(count) }}</td>
+          <td class="px-4 py-3 text-right text-gray-600">{{ "%.1f"|format(percentage) }}%</td>
+          <td class="px-4 py-3">
+            <div class="w-full bg-gray-200 rounded-full h-2 max-w-xs">
+              <div class="bg-red-600 h-2 rounded-full transition-all duration-500" style="width: {{ min(percentage, 100) }}%"></div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-gray-500 text-center py-8">No exit page data available</p>
+  {% endif %}
+</div>
+
+<!-- Conversion Funnel -->
+<div class="bg-white border rounded-lg p-6 mb-6 shadow-sm">
+  <h2 class="text-xl font-bold mb-4">
+    <i class="fa-solid fa-filter mr-2"></i>
+    Conversion Funnel
+  </h2>
+
+  {% if funnel_stats and funnel_stats.total_sessions > 0 %}
+  <div class="mb-4 text-sm text-gray-600">
+    Total sessions entering funnel: <span class="font-semibold">{{ funnel_stats.total_sessions }}</span>
+  </div>
+
+  <div class="space-y-4">
+    {% for step in funnel_stats.steps %}
+    <div class="border rounded-lg p-4 {% if step.step == 1 %}bg-blue-50{% endif %}">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">
+            {{ step.step }}
+          </div>
+          <div>
+            <div class="font-semibold">{{ step.path }}</div>
+            <div class="text-sm text-gray-600">
+              {{ step.sessions }} sessions
+              {% if step.drop_off > 0 %}
+                <span class="text-red-600">({{ step.drop_off }} dropped off)</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="text-2xl font-bold text-indigo-600">{{ step.conversion_rate }}%</div>
+          <div class="text-xs text-gray-500">Conversion Rate</div>
+        </div>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="w-full bg-gray-200 rounded-full h-3 mt-3">
+        <div class="bg-gradient-to-r from-indigo-500 to-purple-500 h-3 rounded-full transition-all duration-500" style="width: {{ step.conversion_rate }}%"></div>
+      </div>
+    </div>
+
+    <!-- Arrow between steps -->
+    {% if not loop.last %}
+    <div class="text-center text-gray-400">
+      <i class="fa-solid fa-arrow-down text-xl"></i>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-gray-500 text-center py-8">
+    No funnel data available. Tracking pages: {{ funnel_stats.funnel|join(' → ') }}
+  </p>
+  {% endif %}
+</div>
+
+<!-- Chart.js Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Parse data from backend
+const pageviewsData = {{ pageviews_over_time_json|safe }};
+const deviceTrendsData = {{ device_trends_json|safe }};
+const hourlyPatternData = {{ hourly_pattern_json|safe }};
+
+// Chart.js default settings
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#6b7280';
+
+// 1. Page Views Over Time Chart
+const pageviewsCtx = document.getElementById('pageviewsChart').getContext('2d');
+new Chart(pageviewsCtx, {
+  type: 'line',
+  data: {
+    labels: pageviewsData.map(d => d.date),
+    datasets: [
+      {
+        label: 'Page Views',
+        data: pageviewsData.map(d => d.pageviews),
+        borderColor: 'rgb(99, 102, 241)',
+        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2,
+      },
+      {
+        label: 'Unique Sessions',
+        data: pageviewsData.map(d => d.sessions),
+        borderColor: 'rgb(34, 197, 94)',
+        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+      },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        padding: 12,
+        titleColor: '#fff',
+        bodyColor: '#fff',
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          precision: 0
+        },
+        grid: {
+          color: 'rgba(0, 0, 0, 0.05)'
+        }
+      },
+      x: {
+        grid: {
+          display: false
+        }
+      }
+    }
+  }
+});
+
+// 2. Device Trend Chart
+const deviceTrendCtx = document.getElementById('deviceTrendChart').getContext('2d');
+const deviceColors = {
+  'desktop': 'rgb(99, 102, 241)',
+  'mobile': 'rgb(34, 197, 94)',
+  'tablet': 'rgb(251, 146, 60)',
+  'unknown': 'rgb(156, 163, 175)'
+};
+
+const deviceDatasets = Object.keys(deviceTrendsData).map(device => {
+  const data = deviceTrendsData[device];
+  return {
+    label: device.charAt(0).toUpperCase() + device.slice(1),
+    data: data.map(d => ({ x: d.date, y: d.count })),
+    borderColor: deviceColors[device] || 'rgb(156, 163, 175)',
+    backgroundColor: (deviceColors[device] || 'rgb(156, 163, 175)').replace('rgb', 'rgba').replace(')', ', 0.1)'),
+    fill: true,
+    tension: 0.4,
+    borderWidth: 2,
+  };
+});
+
+new Chart(deviceTrendCtx, {
+  type: 'line',
+  data: {
+    datasets: deviceDatasets
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        stacked: false,
+        ticks: {
+          precision: 0
+        }
+      },
+      x: {
+        type: 'category',
+        grid: {
+          display: false
+        }
+      }
+    }
+  }
+});
+
+// 3. Hourly Traffic Pattern Chart
+const hourlyPatternCtx = document.getElementById('hourlyPatternChart').getContext('2d');
+new Chart(hourlyPatternCtx, {
+  type: 'bar',
+  data: {
+    labels: hourlyPatternData.map(d => d.hour + ':00'),
+    datasets: [{
+      label: 'Page Views',
+      data: hourlyPatternData.map(d => d.count),
+      backgroundColor: 'rgba(139, 92, 246, 0.6)',
+      borderColor: 'rgb(139, 92, 246)',
+      borderWidth: 1,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false,
+      },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        padding: 12,
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          precision: 0
+        },
+        grid: {
+          color: 'rgba(0, 0, 0, 0.05)'
+        }
+      },
+      x: {
+        grid: {
+          display: false
+        }
+      }
+    }
+  }
+});
+</script>
+
+<!-- Tips Section -->
+<div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+  <h3 class="text-lg font-bold text-blue-900 mb-3">
+    <i class="fa-solid fa-lightbulb mr-2"></i>
+    Using User Flow Analytics
+  </h3>
+  <div class="grid md:grid-cols-3 gap-4 text-sm text-blue-900">
+    <div>
+      <h4 class="font-semibold mb-2">📊 Track Trends:</h4>
+      <ul class="list-disc list-inside space-y-1 text-blue-800">
+        <li>Monitor traffic growth over time</li>
+        <li>Identify peak traffic hours</li>
+        <li>Compare device usage trends</li>
+        <li>All historical data is saved</li>
+      </ul>
+    </div>
+    <div>
+      <h4 class="font-semibold mb-2">🔍 Identify Issues:</h4>
+      <ul class="list-disc list-inside space-y-1 text-blue-800">
+        <li>Check exit pages for drop-offs</li>
+        <li>Analyze broken conversion funnels</li>
+        <li>Find pages with high bounce rates</li>
+        <li>Test improvements on problem pages</li>
+      </ul>
+    </div>
+    <div>
+      <h4 class="font-semibold mb-2">🎯 Optimize Journeys:</h4>
+      <ul class="list-disc list-inside space-y-1 text-blue-800">
+        <li>Study common page flows</li>
+        <li>Make popular paths prominent</li>
+        <li>Reduce conversion friction</li>
+        <li>Add CTAs for key pages</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

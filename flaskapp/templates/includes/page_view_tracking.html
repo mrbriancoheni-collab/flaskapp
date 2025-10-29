@@ -1,0 +1,93 @@
+<!-- Page View Tracking Script -->
+<script>
+(function() {
+  'use strict';
+
+  // Get or create session ID (stored in localStorage for persistence across pages)
+  function getSessionId() {
+    var sessionId = localStorage.getItem('fs_session_id');
+    if (!sessionId) {
+      // Generate random session ID
+      sessionId = Array.from({length: 32}, function() {
+        return Math.floor(Math.random() * 16).toString(16);
+      }).join('');
+      localStorage.setItem('fs_session_id', sessionId);
+    }
+    return sessionId;
+  }
+
+  // Track page view
+  function trackPageView() {
+    var sessionId = getSessionId();
+    var path = window.location.pathname;
+    var pageTitle = document.title;
+    var referrer = document.referrer || null;
+    var queryString = window.location.search || null;
+
+    var data = {
+      session_id: sessionId,
+      path: path,
+      page_title: pageTitle,
+      referrer: referrer,
+      query_string: queryString
+    };
+
+    // Send to tracking endpoint
+    fetch('/pv/pageview', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+      keepalive: true
+    }).then(function(response) {
+      return response.json();
+    }).then(function(result) {
+      if (result.success && result.page_view_id) {
+        // Store page view ID and start time for time-on-page tracking
+        sessionStorage.setItem('fs_current_page_view_id', result.page_view_id);
+        sessionStorage.setItem('fs_page_start_time', Date.now());
+      }
+    }).catch(function(err) {
+      // Fail silently to not disrupt user experience
+      console.debug('Page tracking error:', err);
+    });
+  }
+
+  // Update time on page when leaving
+  function updateTimeOnPage() {
+    var pageViewId = sessionStorage.getItem('fs_current_page_view_id');
+    var startTime = sessionStorage.getItem('fs_page_start_time');
+
+    if (pageViewId && startTime) {
+      var timeOnPage = Math.floor((Date.now() - parseInt(startTime)) / 1000); // seconds
+
+      // Only track if user spent more than 1 second
+      if (timeOnPage > 1) {
+        navigator.sendBeacon(
+          '/pv/pageview/' + pageViewId + '/time',
+          JSON.stringify({ time_on_page: timeOnPage })
+        );
+      }
+    }
+  }
+
+  // Track page view on load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', trackPageView);
+  } else {
+    trackPageView();
+  }
+
+  // Update time on page when leaving
+  window.addEventListener('beforeunload', updateTimeOnPage);
+  window.addEventListener('pagehide', updateTimeOnPage);
+
+  // Also update on visibility change (when user switches tabs)
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      updateTimeOnPage();
+    }
+  });
+})();
+</script>

@@ -575,6 +575,14 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register email_tracking_bp")
 
+    # --- Page View Tracking (public endpoints for user flow analytics) -----
+    try:
+        from app.page_view_tracking_routes import page_view_tracking_bp
+        app.register_blueprint(page_view_tracking_bp)  # url_prefix is /pv
+        app.logger.info("page_view_tracking_bp registered at /pv")
+    except Exception:
+        app.logger.exception("Failed to register page_view_tracking_bp")
+
     # --- Google Ads Grader (free for all users) -----------------------------
     try:
         from app.ads_grader import ads_grader_bp

@@ -598,3 +598,56 @@ class EmailClick(db.Model):
 
     def __repr__(self) -> str:
         return f"<EmailClick id={self.id} email_id={self.email_sent_id} url={self.url[:50]!r}>"
+
+
+# -------------------------
+# User Flow Tracking
+# -------------------------
+class PageView(db.Model):
+    """
+    Tracks user page views for analyzing user flow through the site.
+    Used to identify conversion funnels, drop-off points, and user journey patterns.
+    """
+    __tablename__ = "page_views"
+
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.String(64), nullable=False, index=True)  # browser session ID
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)  # NULL for anonymous
+
+    # Page information
+    path = db.Column(db.String(512), nullable=False, index=True)  # e.g., "/", "/pricing", "/signup"
+    page_title = db.Column(db.String(255), nullable=True)
+    referrer = db.Column(db.String(512), nullable=True)  # previous page URL
+    query_string = db.Column(db.String(512), nullable=True)  # URL parameters
+
+    # Timing
+    viewed_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    time_on_page = db.Column(db.Integer, nullable=True)  # seconds spent on page (updated when leaving)
+
+    # Technical details
+    ip_address = db.Column(db.String(45), nullable=True)
+    user_agent = db.Column(db.String(512), nullable=True)
+    device_type = db.Column(db.String(20), nullable=True)  # desktop, mobile, tablet
+    browser = db.Column(db.String(50), nullable=True)  # chrome, firefox, safari, etc.
+
+    # UTM parameters for marketing attribution
+    utm_source = db.Column(db.String(100), nullable=True)
+    utm_medium = db.Column(db.String(100), nullable=True)
+    utm_campaign = db.Column(db.String(100), nullable=True)
+    utm_term = db.Column(db.String(100), nullable=True)
+    utm_content = db.Column(db.String(100), nullable=True)
+
+    # Relationships
+    user = db.relationship("User", backref="page_views")
+
+    # Indexes for common queries
+    __table_args__ = (
+        db.Index("idx_page_views_session", "session_id"),
+        db.Index("idx_page_views_user", "user_id"),
+        db.Index("idx_page_views_path", "path"),
+        db.Index("idx_page_views_date", "viewed_at"),
+        db.Index("idx_page_views_session_date", "session_id", "viewed_at"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<PageView id={self.id} session={self.session_id[:8]}... path={self.path!r}>"

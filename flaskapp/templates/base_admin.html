@@ -103,6 +103,18 @@
       <a class="secondary-link {% if request.endpoint in ['admin_bp.crm_list','admin_bp.crm_new','admin_bp.crm_detail','admin_bp.crm_edit'] %}active{% endif %}" href="{{ url_for('admin_bp.crm_list') }}">
         <i class="fa-solid fa-address-book"></i><span>CRM</span>
       </a>
+
+      <div class="sidebar-label mt-4"><i class="fa-solid fa-chart-line"></i>Analytics</div>
+
+      <a class="secondary-link {% if request.endpoint=='admin_bp.email_analytics' %}active{% endif %}" href="{{ url_for('admin_bp.email_analytics') }}">
+        <i class="fa-solid fa-envelope-open-text"></i><span>Email Analytics</span>
+      </a>
+      <a class="secondary-link {% if request.endpoint=='admin_bp.user_flow_analytics' %}active{% endif %}" href="{{ url_for('admin_bp.user_flow_analytics') }}">
+        <i class="fa-solid fa-route"></i><span>User Flow</span>
+      </a>
+
+      <div class="sidebar-label mt-4"><i class="fa-solid fa-cog"></i>System</div>
+
       <a class="secondary-link {% if request.endpoint=='admin_bp.logs' %}active{% endif %}" href="{{ url_for('admin_bp.logs') }}">
         <i class="fa-solid fa-clipboard-list"></i><span>Audit Logs</span>
       </a>

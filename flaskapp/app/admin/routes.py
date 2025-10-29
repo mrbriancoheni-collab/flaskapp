@@ -1238,6 +1238,77 @@ def email_analytics():
     )
 
 
+# =============================================================================
+# User Flow Analytics
+# =============================================================================
+
+@admin_bp.get("/user-flow")
+@login_required
+@require_admin
+def user_flow_analytics():
+    """User flow and conversion funnel analytics dashboard"""
+    from app.services.page_view_tracking import (
+        get_popular_paths,
+        get_common_user_flows,
+        get_exit_pages,
+        get_conversion_funnel_stats,
+        get_device_breakdown,
+        get_traffic_sources,
+    )
+    from app.models import PageView
+    from sqlalchemy import func
+    from datetime import datetime, timedelta
+
+    # Get time range from query params (default: last 7 days)
+    days = int(request.args.get("days", 7))
+
+    # Overall stats
+    since = datetime.utcnow() - timedelta(days=days)
+    total_pageviews = PageView.query.filter(PageView.viewed_at >= since).count()
+    unique_sessions = db.session.query(func.count(func.distinct(PageView.session_id))).filter(
+        PageView.viewed_at >= since
+    ).scalar() or 0
+
+    # Calculate average pages per session
+    avg_pages_per_session = round(total_pageviews / unique_sessions, 2) if unique_sessions > 0 else 0
+
+    # Popular paths
+    popular_paths = get_popular_paths(days=days, limit=10)
+
+    # Common user flows (page to page transitions)
+    user_flows = get_common_user_flows(days=days, limit=15)
+
+    # Exit pages
+    exit_pages = get_exit_pages(days=days, limit=10)
+
+    # Conversion funnel (customize as needed)
+    funnel_paths = ["/", "/pricing", "/signup", "/dashboard"]
+    funnel_stats = get_conversion_funnel_stats(funnel_paths, days=days)
+
+    # Device breakdown
+    device_breakdown = get_device_breakdown(days=days)
+
+    # Traffic sources
+    traffic_sources = get_traffic_sources(days=days)
+
+    # Recent page views for debugging
+    recent_views = PageView.query.order_by(PageView.viewed_at.desc()).limit(20).all()
+
+    return render_template(
+        "admin/user_flow_analytics.html",
+        days=days,
+        total_pageviews=total_pageviews,
+        unique_sessions=unique_sessions,
+        avg_pages_per_session=avg_pages_per_session,
+        popular_paths=popular_paths,
+        user_flows=user_flows,
+        exit_pages=exit_pages,
+        funnel_stats=funnel_stats,
+        device_breakdown=device_breakdown,
+        traffic_sources=traffic_sources,
+        recent_views=recent_views,
+    )
+
 
 # =============================================================================
 # ROI Settings & Pricing Management

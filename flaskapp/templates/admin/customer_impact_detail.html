@@ -1,0 +1,247 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Customer Impact - {{ account.name }} - Admin{% endblock %}
+
+{% block admin_content %}
+<div class="max-w-5xl mx-auto">
+  <!-- Header -->
+  <div class="mb-6">
+    <div class="flex items-center gap-2 text-sm text-gray-600 mb-2">
+      <a href="{{ url_for('admin_bp.marketing_success') }}" class="hover:text-indigo-600">Marketing Success</a>
+      <i class="fa-solid fa-chevron-right text-xs"></i>
+      <span>{{ account.name }}</span>
+    </div>
+    <h1 class="text-3xl font-bold text-gray-900">Customer Impact Metrics</h1>
+    <p class="mt-1 text-sm text-gray-600">{{ account.name }}</p>
+  </div>
+
+  {% if impact %}
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <!-- Total Savings -->
+      <div class="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-6">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-semibold text-green-800">Total Savings</h3>
+          <i class="fa-solid fa-piggy-bank text-3xl text-green-600"></i>
+        </div>
+        <p class="text-4xl font-bold text-green-900 mb-2">${{ "{:,.2f}".format(impact.total_savings) }}</p>
+        <p class="text-sm text-green-700">Cumulative savings since using FieldSprout</p>
+        <div class="mt-3 pt-3 border-t border-green-200">
+          <p class="text-xs text-green-700">Current monthly: <span class="font-bold">${{ "{:,.2f}".format(impact.monthly_savings or 0) }}</span></p>
+        </div>
+      </div>
+
+      <!-- Total Additional Leads -->
+      <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-6">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-semibold text-blue-800">Additional Leads</h3>
+          <i class="fa-solid fa-chart-line text-3xl text-blue-600"></i>
+        </div>
+        <p class="text-4xl font-bold text-blue-900 mb-2">+{{ "{:,.0f}".format(impact.total_additional_leads) }}</p>
+        <p class="text-sm text-blue-700">Cumulative additional leads generated</p>
+        <div class="mt-3 pt-3 border-t border-blue-200">
+          <p class="text-xs text-blue-700">Current monthly: <span class="font-bold">+{{ "{:,.1f}".format(impact.monthly_additional_leads or 0) }}</span></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Baseline vs Current Performance -->
+    <div class="bg-white shadow-sm rounded-lg border mb-8">
+      <div class="px-6 py-4 border-b">
+        <h2 class="text-xl font-bold text-gray-900">Performance Comparison</h2>
+        <p class="text-sm text-gray-600">Pre-FieldSprout vs Current Performance</p>
+      </div>
+      <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Monthly Spend -->
+          <div>
+            <h4 class="text-sm font-semibold text-gray-700 mb-3">Monthly Spend</h4>
+            <div class="space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="text-xs text-gray-600">Baseline:</span>
+                <span class="font-semibold text-gray-900">${{ "{:,.2f}".format(impact.baseline_monthly_spend or 0) }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-xs text-gray-600">Current:</span>
+                <span class="font-semibold text-indigo-600">${{ "{:,.2f}".format(impact.current_monthly_spend or 0) }}</span>
+              </div>
+              <div class="pt-2 border-t">
+                {% set spend_diff = (impact.baseline_monthly_spend or 0) - (impact.current_monthly_spend or 0) %}
+                <div class="flex justify-between items-center">
+                  <span class="text-xs font-semibold {% if spend_diff > 0 %}text-green-700{% elif spend_diff < 0 %}text-red-700{% else %}text-gray-700{% endif %}">
+                    Difference:
+                  </span>
+                  <span class="font-bold {% if spend_diff > 0 %}text-green-700{% elif spend_diff < 0 %}text-red-700{% else %}text-gray-700{% endif %}">
+                    {{ "{:+.2f}".format(-spend_diff) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Monthly Leads -->
+          <div>
+            <h4 class="text-sm font-semibold text-gray-700 mb-3">Monthly Leads</h4>
+            <div class="space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="text-xs text-gray-600">Baseline:</span>
+                <span class="font-semibold text-gray-900">{{ "{:,.1f}".format(impact.baseline_monthly_leads or 0) }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-xs text-gray-600">Current:</span>
+                <span class="font-semibold text-indigo-600">{{ "{:,.1f}".format(impact.current_monthly_leads or 0) }}</span>
+              </div>
+              <div class="pt-2 border-t">
+                {% set leads_diff = (impact.current_monthly_leads or 0) - (impact.baseline_monthly_leads or 0) %}
+                <div class="flex justify-between items-center">
+                  <span class="text-xs font-semibold {% if leads_diff > 0 %}text-green-700{% elif leads_diff < 0 %}text-red-700{% else %}text-gray-700{% endif %}">
+                    Difference:
+                  </span>
+                  <span class="font-bold {% if leads_diff > 0 %}text-green-700{% elif leads_diff < 0 %}text-red-700{% else %}text-gray-700{% endif %}">
+                    {{ "{:+.1f}".format(leads_diff) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cost Per Lead -->
+          <div>
+            <h4 class="text-sm font-semibold text-gray-700 mb-3">Cost Per Lead</h4>
+            <div class="space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="text-xs text-gray-600">Baseline:</span>
+                <span class="font-semibold text-gray-900">${{ "{:,.2f}".format(impact.baseline_cost_per_lead or 0) }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-xs text-gray-600">Current:</span>
+                <span class="font-semibold text-indigo-600">${{ "{:,.2f}".format(impact.current_cost_per_lead or 0) }}</span>
+              </div>
+              <div class="pt-2 border-t">
+                {% set cpl_diff = (impact.baseline_cost_per_lead or 0) - (impact.current_cost_per_lead or 0) %}
+                {% if (impact.baseline_cost_per_lead or 0) > 0 %}
+                  {% set cpl_pct = (cpl_diff / impact.baseline_cost_per_lead * 100) %}
+                  <div class="flex justify-between items-center">
+                    <span class="text-xs font-semibold {% if cpl_diff > 0 %}text-green-700{% elif cpl_diff < 0 %}text-red-700{% else %}text-gray-700{% endif %}">
+                      Improvement:
+                    </span>
+                    <span class="font-bold {% if cpl_diff > 0 %}text-green-700{% elif cpl_diff < 0 %}text-red-700{% else %}text-gray-700{% endif %}">
+                      {{ "{:+.1f}".format(cpl_pct) }}%
+                    </span>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Baseline Info -->
+    {% if impact.baseline_start_date and impact.baseline_end_date %}
+    <div class="bg-gray-50 border rounded-lg p-6 mb-8">
+      <h3 class="text-lg font-semibold text-gray-900 mb-3">Baseline Period</h3>
+      <p class="text-sm text-gray-700">
+        <i class="fa-solid fa-calendar-alt text-gray-500"></i>
+        <strong>{{ impact.baseline_start_date.strftime('%Y-%m-%d') }}</strong> to <strong>{{ impact.baseline_end_date.strftime('%Y-%m-%d') }}</strong>
+        <span class="text-gray-500 ml-2">({{ (impact.baseline_end_date - impact.baseline_start_date).days + 1 }} days)</span>
+      </p>
+      {% if impact.last_calculated_at %}
+      <p class="text-xs text-gray-600 mt-2">
+        <i class="fa-solid fa-clock text-gray-500"></i>
+        Last updated: {{ impact.last_calculated_at.strftime('%Y-%m-%d %H:%M:%S') }}
+      </p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="flex gap-4">
+      <form method="post" action="{{ url_for('admin_bp.update_customer_impact_route', account_id=account.id) }}" class="inline">
+        <button type="submit" class="btn-primary">
+          <i class="fa-solid fa-rotate"></i> Update Metrics
+        </button>
+      </form>
+
+      <button onclick="document.getElementById('baseline-modal').classList.remove('hidden')" class="btn-secondary">
+        <i class="fa-solid fa-calendar"></i> Set New Baseline
+      </button>
+
+      <a href="{{ url_for('admin_bp.account_detail', account_id=account.id) }}" class="btn-secondary">
+        <i class="fa-solid fa-arrow-left"></i> Back to Account
+      </a>
+    </div>
+
+  {% else %}
+    <!-- No Impact Data -->
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center">
+      <i class="fa-solid fa-info-circle text-4xl text-yellow-600 mb-4"></i>
+      <h3 class="text-xl font-semibold text-yellow-900 mb-3">No Impact Data Yet</h3>
+      <p class="text-sm text-yellow-700 mb-6">
+        To start tracking impact metrics for this customer, you need to set their baseline (pre-FieldSprout) performance.
+        <br>This will enable automatic calculation of savings and additional leads generated.
+      </p>
+      <button onclick="document.getElementById('baseline-modal').classList.remove('hidden')" class="btn-primary">
+        <i class="fa-solid fa-calendar"></i> Set Baseline Now
+      </button>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Baseline Modal -->
+<div id="baseline-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div class="px-6 py-4 border-b flex items-center justify-between">
+      <h3 class="text-lg font-bold text-gray-900">Set Baseline Period</h3>
+      <button onclick="document.getElementById('baseline-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+        <i class="fa-solid fa-times"></i>
+      </button>
+    </div>
+    <form method="post" action="{{ url_for('admin_bp.set_customer_baseline', account_id=account.id) }}">
+      <div class="px-6 py-4 space-y-4">
+        <p class="text-sm text-gray-600">
+          Select the date range for the customer's baseline (pre-FieldSprout) performance.
+          This should be a period before they started using FieldSprout, ideally 30-90 days.
+        </p>
+
+        <div>
+          <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+          <input
+            type="date"
+            id="start_date"
+            name="start_date"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+        </div>
+
+        <div>
+          <label for="end_date" class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+          <input
+            type="date"
+            id="end_date"
+            name="end_date"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+        </div>
+
+        <div class="bg-blue-50 border border-blue-200 rounded p-3">
+          <p class="text-xs text-blue-800">
+            <i class="fa-solid fa-info-circle"></i>
+            <strong>Note:</strong> Make sure historical performance metrics have been imported for this date range.
+          </p>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
+        <button type="button" onclick="document.getElementById('baseline-modal').classList.add('hidden')" class="btn-secondary">
+          Cancel
+        </button>
+        <button type="submit" class="btn-primary">
+          <i class="fa-solid fa-check"></i> Set Baseline
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

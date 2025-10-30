@@ -106,6 +106,9 @@
 
       <div class="sidebar-label mt-4"><i class="fa-solid fa-chart-line"></i>Analytics</div>
 
+      <a class="secondary-link {% if request.endpoint in ['admin_bp.marketing_success','admin_bp.customer_impact_detail'] %}active{% endif %}" href="{{ url_for('admin_bp.marketing_success') }}">
+        <i class="fa-solid fa-trophy"></i><span>Marketing Success</span>
+      </a>
       <a class="secondary-link {% if request.endpoint=='admin_bp.email_analytics' %}active{% endif %}" href="{{ url_for('admin_bp.email_analytics') }}">
         <i class="fa-solid fa-envelope-open-text"></i><span>Email Analytics</span>
       </a>

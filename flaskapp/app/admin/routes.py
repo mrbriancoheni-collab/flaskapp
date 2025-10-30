@@ -1502,3 +1502,142 @@ def pricing_tier_new():
             flash(f"Error creating tier: {str(e)}", "error")
 
     return render_template("admin/pricing_tier_edit.html", tier=None)
+
+
+# =============================================================================
+# Customer Impact & Marketing Success Metrics
+# =============================================================================
+
+@admin_bp.route("/marketing-success")
+@login_required
+@require_admin
+def marketing_success():
+    """Display aggregate customer impact metrics for marketing purposes."""
+    from app.services.customer_impact_service import (
+        get_aggregate_impact,
+        get_top_performing_customers
+    )
+    from app.models_ads import CustomerImpact
+
+    # Get aggregate metrics
+    aggregate = get_aggregate_impact()
+
+    # Get top performing customers
+    top_customers = get_top_performing_customers(limit=20)
+
+    # Get all customer impacts for detailed view
+    all_impacts = (
+        CustomerImpact.query
+        .filter(CustomerImpact.total_savings > 0)
+        .order_by(desc(CustomerImpact.updated_at))
+        .all()
+    )
+
+    # Enhance with account names
+    for impact in all_impacts:
+        account = Account.query.get(impact.account_id)
+        impact.account_name = account.name if account else 'Unknown'
+
+    # Calculate some additional stats
+    avg_savings_per_customer = aggregate['total_savings'] / aggregate['customer_count'] if aggregate['customer_count'] > 0 else 0
+    avg_leads_per_customer = aggregate['total_additional_leads'] / aggregate['customer_count'] if aggregate['customer_count'] > 0 else 0
+
+    return render_template(
+        "admin/marketing_success.html",
+        aggregate=aggregate,
+        top_customers=top_customers,
+        all_impacts=all_impacts,
+        avg_savings_per_customer=round(avg_savings_per_customer, 2),
+        avg_leads_per_customer=round(avg_leads_per_customer, 2)
+    )
+
+
+@admin_bp.route("/customer-impact/<int:account_id>")
+@login_required
+@require_admin
+def customer_impact_detail(account_id: int):
+    """View detailed customer impact metrics for a specific account."""
+    from app.models_ads import CustomerImpact
+
+    account = Account.query.get_or_404(account_id)
+    impact = CustomerImpact.query.filter_by(account_id=account_id).first()
+
+    return render_template(
+        "admin/customer_impact_detail.html",
+        account=account,
+        impact=impact
+    )
+
+
+@admin_bp.route("/customer-impact/<int:account_id>/set-baseline", methods=["POST"])
+@login_required
+@require_admin
+def set_customer_baseline(account_id: int):
+    """Set baseline metrics for a customer."""
+    from app.services.customer_impact_service import set_customer_baseline
+    import datetime as dt
+
+    try:
+        start_date_str = request.form.get("start_date")
+        end_date_str = request.form.get("end_date")
+
+        if not start_date_str or not end_date_str:
+            flash("Start date and end date are required.", "error")
+            return redirect(url_for("admin_bp.customer_impact_detail", account_id=account_id))
+
+        start_date = dt.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = dt.datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
+        impact = set_customer_baseline(account_id, start_date, end_date)
+
+        _audit("customer_baseline_set", target_account_id=account_id, note=f"Baseline set: {start_date} to {end_date}")
+
+        flash(f"Baseline metrics set successfully! Monthly spend: ${impact.baseline_monthly_spend:.2f}, Monthly leads: {impact.baseline_monthly_leads:.1f}", "success")
+
+    except Exception as e:
+        logger.exception("Error setting customer baseline")
+        flash(f"Error setting baseline: {str(e)}", "error")
+
+    return redirect(url_for("admin_bp.customer_impact_detail", account_id=account_id))
+
+
+@admin_bp.route("/customer-impact/<int:account_id>/update", methods=["POST"])
+@login_required
+@require_admin
+def update_customer_impact_route(account_id: int):
+    """Manually trigger update of customer impact calculations."""
+    from app.services.customer_impact_service import update_customer_impact
+
+    try:
+        impact = update_customer_impact(account_id)
+
+        _audit("customer_impact_updated", target_account_id=account_id)
+
+        flash(f"Impact metrics updated! Savings: ${impact.total_savings:.2f}, Additional leads: {impact.total_additional_leads:.0f}", "success")
+
+    except Exception as e:
+        logger.exception("Error updating customer impact")
+        flash(f"Error updating impact: {str(e)}", "error")
+
+    return redirect(url_for("admin_bp.customer_impact_detail", account_id=account_id))
+
+
+@admin_bp.route("/customer-impact/update-all", methods=["POST"])
+@login_required
+@require_admin
+def update_all_customer_impacts_route():
+    """Update impact calculations for all customers."""
+    from app.services.customer_impact_service import update_all_customer_impacts
+
+    try:
+        result = update_all_customer_impacts()
+
+        _audit("customer_impact_bulk_update", note=f"Updated {result['updated']} customers")
+
+        flash(f"Updated {result['updated']} customers. Errors: {result['errors']}", "success")
+
+    except Exception as e:
+        logger.exception("Error updating all customer impacts")
+        flash(f"Error: {str(e)}", "error")
+
+    return redirect(url_for("admin_bp.marketing_success"))

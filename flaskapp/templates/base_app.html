@@ -237,6 +237,10 @@
       {% endif %}
 
       <div class="pt-3 mt-3 border-t"></div>
+      {% if g.user and g.user.is_admin %}
+        <a href="{{ url_for('admin_bp.dashboard') }}" class="block px-2 py-2 nav-link"><i class="fa-solid fa-shield-halved"></i><span>Admin Dashboard</span></a>
+      {% endif %}
+      <a href="{{ url_for('account_bp.dashboard') }}" class="block px-2 py-2 nav-link"><i class="fa-solid fa-gauge-high"></i><span>Account Dashboard</span></a>
       <a href="{{ url_for(ep('pricing')) if has_endpoint('pricing') else '#' }}" class="block px-2 py-2 nav-link"><i class="fa-solid fa-tags"></i><span>Upgrade</span></a>
       {% if is_logged_in() and has_endpoint('account_profile') %}
         <a href="{{ url_for(ep('account_profile')) }}" class="block px-2 py-2 nav-link"><i class="fa-solid fa-user"></i><span>Account</span></a>
@@ -272,6 +276,10 @@
       <a href="{{ url_for('reports_bp.index') }}" class="primary-btn {% if SECTION=='reports' %}active{% endif %}" title="Reporting"><i class="fa-solid fa-gauge-high"></i></a>
 
       <div class="mt-auto flex flex-col items-center space-y-3">
+        {% if g.user and g.user.is_admin %}
+          <a href="{{ url_for('admin_bp.dashboard') }}" class="primary-btn" title="Admin Dashboard"><i class="fa-solid fa-shield-halved"></i></a>
+        {% endif %}
+        <a href="{{ url_for('account_bp.dashboard') }}" class="primary-btn" title="Account Dashboard"><i class="fa-solid fa-gauge-high"></i></a>
         {% if has_endpoint('pricing') %}
           <a href="{{ url_for(ep('pricing')) }}" class="primary-btn" title="Upgrade"><i class="fa-solid fa-tags"></i></a>
         {% endif %}
@@ -305,9 +313,16 @@
         </div>
       {% endif %}
       
-      <div class="sidebar-label"><a href="{{ url_for('account_bp.dashboard') }}" class="primary-btn {% if SECTION=='dashboard' %}active{% endif %}" title="Dashboard">
-          <i class="fa-solid fa-house"></i>Dashboard
-        </a></div>
+      <div class="sidebar-label">
+        {% if g.user and g.user.is_admin %}
+          <a href="{{ url_for('admin_bp.dashboard') }}" class="secondary-link mb-2" title="Admin Dashboard">
+            <i class="fa-solid fa-shield-halved"></i><span>Admin Dashboard</span>
+          </a>
+        {% endif %}
+        <a href="{{ url_for('account_bp.dashboard') }}" class="secondary-link {% if SECTION=='dashboard' %}active{% endif %}" title="Account Dashboard">
+          <i class="fa-solid fa-gauge-high"></i><span>Account Dashboard</span>
+        </a>
+      </div>
 
       <!-- Free Tools Section - Prominent -->
       {% if has_endpoint('ads_grader_bp.index') %}

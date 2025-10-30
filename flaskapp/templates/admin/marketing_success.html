@@ -1,0 +1,200 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Marketing Success Metrics - Admin{% endblock %}
+
+{% block admin_content %}
+<div class="max-w-7xl mx-auto">
+  <!-- Header -->
+  <div class="mb-6 flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">Marketing Success Metrics</h1>
+      <p class="mt-1 text-sm text-gray-600">Aggregate customer savings and additional leads generated</p>
+    </div>
+    <form method="post" action="{{ url_for('admin_bp.update_all_customer_impacts_route') }}">
+      <button type="submit" class="btn-primary">
+        <i class="fa-solid fa-rotate"></i> Update All Metrics
+      </button>
+    </form>
+  </div>
+
+  <!-- Aggregate Stats Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+    <!-- Total Savings -->
+    <div class="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-6">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-semibold text-green-800">Total Savings</h3>
+        <i class="fa-solid fa-piggy-bank text-2xl text-green-600"></i>
+      </div>
+      <p class="text-3xl font-bold text-green-900">${{ "{:,.2f}".format(aggregate.total_savings) }}</p>
+      <p class="text-xs text-green-700 mt-1">Cumulative across all customers</p>
+    </div>
+
+    <!-- Total Additional Leads -->
+    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-6">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-semibold text-blue-800">Additional Leads</h3>
+        <i class="fa-solid fa-chart-line text-2xl text-blue-600"></i>
+      </div>
+      <p class="text-3xl font-bold text-blue-900">+{{ "{:,.0f}".format(aggregate.total_additional_leads) }}</p>
+      <p class="text-xs text-blue-700 mt-1">Total increase in leads generated</p>
+    </div>
+
+    <!-- Customer Count -->
+    <div class="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg p-6">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-semibold text-purple-800">Active Customers</h3>
+        <i class="fa-solid fa-users text-2xl text-purple-600"></i>
+      </div>
+      <p class="text-3xl font-bold text-purple-900">{{ aggregate.customer_count }}</p>
+      <p class="text-xs text-purple-700 mt-1">With tracked impact metrics</p>
+    </div>
+
+    <!-- Average Savings -->
+    <div class="bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 rounded-lg p-6">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-semibold text-orange-800">Avg per Customer</h3>
+        <i class="fa-solid fa-trophy text-2xl text-orange-600"></i>
+      </div>
+      <p class="text-2xl font-bold text-orange-900">${{ "{:,.2f}".format(avg_savings_per_customer) }}</p>
+      <p class="text-xs text-orange-700 mt-1">+{{ "{:,.1f}".format(avg_leads_per_customer) }} leads</p>
+    </div>
+  </div>
+
+  <!-- Top Performing Customers -->
+  {% if top_customers %}
+  <div class="bg-white shadow-sm rounded-lg border mb-8">
+    <div class="px-6 py-4 border-b">
+      <h2 class="text-xl font-bold text-gray-900">Top Performing Customers</h2>
+      <p class="text-sm text-gray-600">Ranked by total savings generated</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Rank</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Customer</th>
+            <th class="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Total Savings</th>
+            <th class="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Additional Leads</th>
+            <th class="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Monthly Savings</th>
+            <th class="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase">CPL Improvement</th>
+            <th class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          {% for customer in top_customers %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 text-center">
+              <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-sm">
+                {{ loop.index }}
+              </span>
+            </td>
+            <td class="px-6 py-4">
+              <a href="{{ url_for('admin_bp.customer_impact_detail', account_id=customer.account_id) }}" class="font-semibold text-indigo-600 hover:text-indigo-800">
+                {{ customer.account_name }}
+              </a>
+            </td>
+            <td class="px-6 py-4 text-right">
+              <span class="text-lg font-bold text-green-700">${{ "{:,.2f}".format(customer.total_savings) }}</span>
+            </td>
+            <td class="px-6 py-4 text-right">
+              <span class="text-lg font-bold text-blue-700">+{{ "{:,.0f}".format(customer.total_additional_leads) }}</span>
+            </td>
+            <td class="px-6 py-4 text-right text-gray-700">
+              ${{ "{:,.2f}".format(customer.monthly_savings) }}/mo
+            </td>
+            <td class="px-6 py-4 text-right">
+              {% if customer.baseline_cost_per_lead > 0 and customer.current_cost_per_lead > 0 %}
+                {% set cpl_improvement = ((customer.baseline_cost_per_lead - customer.current_cost_per_lead) / customer.baseline_cost_per_lead * 100) %}
+                <span class="text-sm {% if cpl_improvement > 0 %}text-green-700{% else %}text-red-700{% endif %}">
+                  {{ "{:+.1f}".format(cpl_improvement) }}%
+                </span>
+              {% else %}
+                <span class="text-sm text-gray-500">N/A</span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 text-center">
+              <a href="{{ url_for('admin_bp.customer_impact_detail', account_id=customer.account_id) }}" class="text-indigo-600 hover:text-indigo-800">
+                <i class="fa-solid fa-eye"></i> View
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- All Customer Impacts -->
+  {% if all_impacts %}
+  <div class="bg-white shadow-sm rounded-lg border">
+    <div class="px-6 py-4 border-b">
+      <h2 class="text-xl font-bold text-gray-900">All Customer Impact Metrics</h2>
+      <p class="text-sm text-gray-600">Complete list of customers with tracked impact</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Customer</th>
+            <th class="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Total Savings</th>
+            <th class="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Additional Leads</th>
+            <th class="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Monthly Savings</th>
+            <th class="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Monthly Leads</th>
+            <th class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Last Updated</th>
+            <th class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          {% for impact in all_impacts %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4">
+              <a href="{{ url_for('admin_bp.customer_impact_detail', account_id=impact.account_id) }}" class="font-medium text-indigo-600 hover:text-indigo-800">
+                {{ impact.account_name }}
+              </a>
+            </td>
+            <td class="px-6 py-4 text-right font-semibold text-green-700">
+              ${{ "{:,.2f}".format(impact.total_savings) }}
+            </td>
+            <td class="px-6 py-4 text-right font-semibold text-blue-700">
+              +{{ "{:,.0f}".format(impact.total_additional_leads) }}
+            </td>
+            <td class="px-6 py-4 text-right text-gray-700">
+              ${{ "{:,.2f}".format(impact.monthly_savings or 0) }}
+            </td>
+            <td class="px-6 py-4 text-right text-gray-700">
+              +{{ "{:,.1f}".format(impact.monthly_additional_leads or 0) }}
+            </td>
+            <td class="px-6 py-4 text-center text-sm text-gray-500">
+              {% if impact.last_calculated_at %}
+                {{ impact.last_calculated_at.strftime('%Y-%m-%d') }}
+              {% else %}
+                Never
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 text-center">
+              <a href="{{ url_for('admin_bp.customer_impact_detail', account_id=impact.account_id) }}" class="text-indigo-600 hover:text-indigo-800">
+                <i class="fa-solid fa-eye"></i> View
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+    <i class="fa-solid fa-info-circle text-3xl text-yellow-600 mb-3"></i>
+    <h3 class="text-lg font-semibold text-yellow-900 mb-2">No Customer Impact Data Yet</h3>
+    <p class="text-sm text-yellow-700 mb-4">
+      To start tracking customer impact, you need to set baseline metrics for each customer.
+      <br>Go to individual customer accounts and set their pre-FieldSprout baseline performance.
+    </p>
+    <a href="{{ url_for('admin_bp.accounts') }}" class="btn-primary">
+      <i class="fa-solid fa-users"></i> View Accounts
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

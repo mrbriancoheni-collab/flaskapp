@@ -185,3 +185,85 @@ class GoogleAdsGraderReport(db.Model):
             return "D"
         else:
             return "F"
+
+
+class GoogleAdsAIAnalysisTracker(db.Model):
+    """
+    Tracks AI analysis usage per Google Ads customer ID.
+    Enforces rate limiting: 1 analysis per account per month for free users.
+    """
+    __tablename__ = "google_ads_ai_analysis_tracker"
+
+    id = db.Column(Integer, primary_key=True)
+    google_ads_customer_id = db.Column(String(20), nullable=False, unique=True, index=True)
+
+    # Last analysis tracking
+    last_analysis_at = db.Column(DateTime, nullable=True)
+    analysis_count_current_month = db.Column(Integer, nullable=False, server_default="0")
+    analysis_count_total = db.Column(Integer, nullable=False, server_default="0")
+
+    # Month tracking (to reset monthly count)
+    current_month_year = db.Column(String(7), nullable=True)  # Format: "2025-10"
+
+    # Tracking
+    created_at = db.Column(DateTime, server_default=func.now(), nullable=False)
+    updated_at = db.Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<GoogleAdsAIAnalysisTracker customer_id={self.google_ads_customer_id} count={self.analysis_count_current_month}>"
+
+    @classmethod
+    def can_run_analysis(cls, customer_id: str) -> tuple[bool, Optional[str]]:
+        """
+        Check if AI analysis can be run for this customer.
+        Returns: (allowed, error_message)
+        """
+        tracker = cls.query.filter_by(google_ads_customer_id=customer_id).first()
+        current_month = datetime.utcnow().strftime("%Y-%m")
+
+        if not tracker:
+            # First time - allowed
+            return True, None
+
+        # Check if month changed (reset counter)
+        if tracker.current_month_year != current_month:
+            # New month - reset counter
+            tracker.current_month_year = current_month
+            tracker.analysis_count_current_month = 0
+            db.session.commit()
+            return True, None
+
+        # Check monthly limit (1 per month for free users)
+        if tracker.analysis_count_current_month >= 1:
+            days_until_reset = 30 - datetime.utcnow().day
+            return False, f"Monthly AI analysis limit reached (1 per month). Next analysis available in {days_until_reset} days. Upgrade to Pro for unlimited analyses."
+
+        return True, None
+
+    @classmethod
+    def record_analysis(cls, customer_id: str):
+        """Record that an AI analysis was run for this customer."""
+        tracker = cls.query.filter_by(google_ads_customer_id=customer_id).first()
+        current_month = datetime.utcnow().strftime("%Y-%m")
+
+        if not tracker:
+            tracker = cls(
+                google_ads_customer_id=customer_id,
+                last_analysis_at=datetime.utcnow(),
+                analysis_count_current_month=1,
+                analysis_count_total=1,
+                current_month_year=current_month
+            )
+            db.session.add(tracker)
+        else:
+            # Check if month changed
+            if tracker.current_month_year != current_month:
+                tracker.current_month_year = current_month
+                tracker.analysis_count_current_month = 1
+            else:
+                tracker.analysis_count_current_month += 1
+
+            tracker.analysis_count_total += 1
+            tracker.last_analysis_at = datetime.utcnow()
+
+        db.session.commit()

@@ -417,3 +417,39 @@ class CustomerImpact(db.Model):
 
     def __repr__(self):
         return f"<CustomerImpact account_id={self.account_id} savings=${self.total_savings:.2f} leads=+{self.total_additional_leads:.0f}>"
+
+
+# ---------------------------------------------------------------------------
+# AI Prompts (Dynamic Prompt Management)
+# ---------------------------------------------------------------------------
+
+class AIPrompt(db.Model):
+    """
+    Stores AI prompts for various optimization services.
+    Allows dynamic updates without code changes.
+    """
+    __tablename__ = "ai_prompts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    prompt_key = db.Column(db.String(100), nullable=False, unique=True, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+
+    # Prompt content
+    system_message = db.Column(db.Text, nullable=False)
+    prompt_template = db.Column(db.Text, nullable=False)
+
+    # Model settings
+    model = db.Column(db.String(50), nullable=False, default='gpt-4o-mini')
+    temperature = db.Column(db.Float, nullable=False, default=0.7)
+    max_tokens = db.Column(db.Integer, nullable=False, default=2000)
+
+    # Status
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    # Tracking
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    def __repr__(self):
+        return f"<AIPrompt {self.prompt_key} ({self.name})>"

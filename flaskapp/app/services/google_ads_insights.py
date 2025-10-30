@@ -217,7 +217,7 @@ def _get_search_term_summary(account_id: int, days: int) -> List[Dict]:
     ]
 
 
-def generate_ai_insights(account_id: int, scope: str = "all", regenerate: bool = False) -> Dict:
+def generate_ai_insights(account_id: int, scope: str = "all", regenerate: bool = False, customer_id: str = None) -> Dict:
     """
     Generate AI-powered optimization insights using OpenAI.
 
@@ -225,15 +225,42 @@ def generate_ai_insights(account_id: int, scope: str = "all", regenerate: bool =
         account_id: Account ID
         scope: Analysis scope (all, campaigns, keywords, etc.)
         regenerate: Force regeneration even if recent insights exist
+        customer_id: Google Ads customer ID (for rate limiting)
 
     Returns:
         Dictionary with summary and categorized recommendations
     """
+    from app.models_ads_grader import GoogleAdsAIAnalysisTracker
+
     add_breadcrumb(
         "Generating AI optimization insights",
         category="ai",
         data={"account_id": account_id, "scope": scope}
     )
+
+    # Check rate limit for Google Ads Inspector (1 per month per customer)
+    if customer_id:
+        can_run, error_message = GoogleAdsAIAnalysisTracker.can_run_analysis(customer_id)
+        if not can_run:
+            current_app.logger.warning(f"Rate limit exceeded for customer {customer_id}")
+            return {
+                "error": "rate_limit_exceeded",
+                "message": error_message,
+                "upgrade_required": True,
+                "upgrade_cta": {
+                    "title": "🚀 Upgrade for Unlimited AI Analysis",
+                    "message": "Get unlimited AI-powered insights and recommendations every day with a Pro plan.",
+                    "benefits": [
+                        "Unlimited AI analyses (no monthly limits)",
+                        "Daily optimization recommendations",
+                        "Automated campaign improvements",
+                        "Priority support",
+                        "Advanced reporting"
+                    ],
+                    "cta_button": "Upgrade to Pro",
+                    "cta_link": "/pricing"
+                }
+            }
 
     # Check for recent insights (unless regenerating)
     if not regenerate:
@@ -285,6 +312,14 @@ def generate_ai_insights(account_id: int, scope: str = "all", regenerate: bool =
         category="ai",
         data={"count": len(insights["recommendations"]), "account_id": account_id}
     )
+
+    # Record analysis for rate limiting (if customer_id provided)
+    if customer_id:
+        try:
+            GoogleAdsAIAnalysisTracker.record_analysis(customer_id)
+            current_app.logger.info(f"Recorded AI analysis for customer {customer_id}")
+        except Exception as e:
+            current_app.logger.error(f"Failed to record analysis tracking: {e}")
 
     return insights
 
@@ -370,6 +405,21 @@ Return JSON with: {{"summary": "...", "recommendations": [...]}}"""
     result["generated_at"] = datetime.utcnow().isoformat()
     result["model"] = model
     result["account_id"] = account_id
+
+    # Add upgrade CTA for paid plan
+    result["upgrade_cta"] = {
+        "title": "🚀 Ready to Implement These Optimizations?",
+        "message": "Upgrade to a paid plan to unlock automated implementation, continuous monitoring, and expert support to help you achieve these results faster.",
+        "benefits": [
+            "Automated campaign optimization based on AI recommendations",
+            "Real-time performance monitoring and alerts",
+            "Monthly strategic reviews with optimization experts",
+            "Priority support for campaign issues",
+            "Advanced reporting and ROI tracking"
+        ],
+        "cta_button": "Upgrade to Pro",
+        "cta_link": "/pricing"
+    }
 
     return result
 

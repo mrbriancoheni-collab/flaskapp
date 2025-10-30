@@ -27,46 +27,78 @@ def initialize_ai_prompts(force=False):
             google_ads_prompt = AIPrompt(prompt_key='google_ads_main')
             db.session.add(google_ads_prompt)
 
-        google_ads_prompt.name = 'Google Ads Optimization'
-        google_ads_prompt.description = 'Main prompt for generating Google Ads optimization recommendations'
-        google_ads_prompt.system_message = 'You are a Google Ads optimization expert providing data-driven recommendations in JSON format.'
-        google_ads_prompt.prompt_template = '''You are a Google Ads optimization expert. Analyze the following campaign data and provide actionable recommendations.
+        google_ads_prompt.name = 'Google Ads Comprehensive Optimization'
+        google_ads_prompt.description = 'Comprehensive Google Ads strategist analyzing all campaign components for ≥25% CPL reduction'
+        google_ads_prompt.system_message = '''You are a Google Ads strategist. Analyze and optimize each campaign component (Ad Copy, Keywords, Negatives, Targeting, Bidding, Budget, Landing Page, Automation) independently and cohesively. Goal: increase qualified leads and lower CPL by ≥25% while maintaining conversion volume.'''
+        google_ads_prompt.prompt_template = '''ROLE:
+You are a Google Ads strategist. Analyze and optimize each campaign component (Ad Copy, Keywords, Negatives, Targeting, Bidding, Budget, Landing Page, Automation) independently and cohesively. Goal: increase qualified leads and lower CPL by ≥25% while maintaining conversion volume.
 
 CAMPAIGN PERFORMANCE (Last 30 Days):
 {performance_summary}
 
-CAMPAIGNS:
+CAMPAIGNS DATA:
 {campaigns_data}
 
-AD GROUPS:
-{ad_groups_data}
-
-KEYWORDS:
+KEYWORDS DATA:
 {keywords_data}
 
-SEARCH TERMS:
+SEARCH TERMS DATA:
 {search_terms_data}
 
-Provide 5-10 specific, actionable recommendations in JSON format. Each recommendation should include:
-- title: Brief, action-oriented title
-- description: Detailed explanation (2-3 sentences)
-- category: One of [budget, bidding, keywords, ads, targeting, negatives, landing_pages]
-- severity: 1=critical issue, 2=high-impact opportunity, 3=quick win, 4-5=long-term optimization
-- expected_impact: Specific metric improvement (e.g., "Reduce CPA by 15-20%")
-- data_points: Array of key metrics supporting this recommendation
-- action: Dict with type and target details
+AI TASKS:
+1. CAMPAIGN AUDIT - Evaluate structure, segmentation, Quality Score drivers (CTR, Ad Relevance, Landing Page Experience). Compare to industry benchmarks: CPC $2.69 (Search)/$0.63 (Display), CTR 3.17% (Search)/0.46% (Display), CVR 3.75% (Search)/0.77% (Display), CPA $48.96 (Search)/$75.51 (Display). Identify high performers (CTR>3%, QS>7, CPA≤target) and poor performers (CTR<2%, CPC>$5, QS<6).
 
-Focus on:
-1. Wasted spend (high cost, low conversions)
-2. Budget constraints (lost impression share)
-3. Negative keywords needed
-4. Bidding strategy improvements
-5. Low-quality score keywords
+2. AD COPY ANALYSIS - Review CTR, QS, CVR per ad group. Diagnose low-performing ads; identify missing CTAs or mismatched messaging. Recommend improvements: new headlines, stronger CTAs, localized keywords, dynamic insertion, new ad extensions (sitelinks, callouts, structured snippets, call). Integrate: Align ad text with keyword intent and landing page promise.
 
-Return ONLY valid JSON array of recommendations, no additional text.'''
-        google_ads_prompt.model = 'gpt-4o-mini'
-        google_ads_prompt.temperature = 0.7
-        google_ads_prompt.max_tokens = 2000
+3. KEYWORD ANALYSIS - Segment by match type, CTR, CPC, QS, CVR. Identify high-CPC, low-converting terms and underused long-tail keywords. Recommend: Add long-tail, local, high-intent terms (3–5 words); reallocate spend to exact/phrase; limit broad matches. Integrate: Ensure top keywords appear in ad headlines and landing page H1s to raise QS.
+
+4. NEGATIVE KEYWORD ANALYSIS - Review Search Terms Reports for irrelevant traffic. Identify queries wasting spend (e.g., "DIY," "jobs," "free," "training"). Recommend: Add negatives at account/campaign/ad-group level; maintain a master negative list. Integrate: Balance aggressiveness to preserve valid variations.
+
+5. TARGETING & BIDDING - Review geo, device, and schedule data. Recommend: Apply dayparting (business hours), geotarget profitable ZIPs, adjust device bids (+mobile / -tablet), favor top-performing locations. Integrate: Combine with keyword insights to reach high-intent users at peak hours.
+
+6. BUDGET ALLOCATION & FORECASTING - Evaluate spend vs. CPL and ROI. Recommend: Reallocate 20–30% budget to top campaigns; set daily budget = Target Clicks × Avg CPC. Small local guidance: $30–$100/day per core campaign. Integrate: Pair spend scaling with improved CVR to protect ROI.
+
+7. LANDING PAGE EXPERIENCE - Review relevance, load speed, form length, mobile UX, and trust signals. Recommend: Mirror ad message, one CTA above fold, ≤5 fields, add reviews, trust badges, service map, A/B test headlines/CTAs. Integrate: Reinforce keyword and ad consistency to lift QS and CVR.
+
+8. AUTOMATION & TRACKING - Review tracking setup (conversions, calls, forms). Recommend: Apply automation rules: Pause ads with CTR<2%, Lower bids if CPA>target CPL, Raise bids for top 10% converters, Auto-add negatives from irrelevant queries. Integrate: Build a continuous feedback loop between automation insights, bidding, and keyword refinement.
+
+OUTPUT FORMAT (JSON):
+{
+  "summary": "Overall strategic assessment and key findings",
+  "campaign_audit": {"findings": "...", "high_performers": [], "poor_performers": []},
+  "ad_copy_analysis": {"findings": "...", "recommendations": []},
+  "keyword_analysis": {"findings": "...", "recommendations": []},
+  "negative_keywords": {"findings": "...", "recommendations": []},
+  "targeting_bidding": {"findings": "...", "recommendations": []},
+  "budget_allocation": {"findings": "...", "recommendations": []},
+  "landing_pages": {"findings": "...", "recommendations": []},
+  "automation_tracking": {"findings": "...", "recommendations": []},
+  "top_5_recommendations": [
+    {
+      "rank": 1,
+      "title": "...",
+      "category": "...",
+      "expected_impact": "...",
+      "implementation": "..."
+    }
+  ],
+  "recommendations": [
+    {
+      "title": "Brief, action-oriented title",
+      "description": "Detailed explanation (2-3 sentences)",
+      "category": "One of [budget, bidding, keywords, ads, targeting, negatives, landing_pages, automation]",
+      "severity": 1-5,
+      "expected_impact": "Specific metric improvement",
+      "data_points": ["key metric 1", "key metric 2"],
+      "action": {"type": "...", "details": "..."}
+    }
+  ]
+}
+
+GOAL: Deliver a unified optimization plan that reduces wasted spend, improves Quality Score, and drives more qualified leads through smarter Google Ads management.'''
+        google_ads_prompt.model = 'gpt-4o'
+        google_ads_prompt.temperature = 0.3
+        google_ads_prompt.max_tokens = 4000
         google_ads_prompt.is_active = True
         count += 1
 

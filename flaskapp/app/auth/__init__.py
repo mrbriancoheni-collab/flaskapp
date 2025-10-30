@@ -115,13 +115,19 @@ def _post_auth_target(default_endpoint: str = "account_bp.dashboard") -> str:
     """
     Decide where to send the user after login/register.
     Use ?next= when it's a safe, same-site path and not a login/register/logout loop.
-    Otherwise go to the account dashboard.
+    Otherwise go to the admin dashboard for admins, or account dashboard for regular users.
     """
     next_url = request.values.get("next", "")
     if _is_safe_next(next_url):
         bad_starts = ("/login", "/register", "/logout", "/signup")
         if not next_url.startswith(bad_starts):
             return next_url
+
+    # Check if user is an admin and redirect to admin dashboard
+    from flask import g
+    if hasattr(g, 'user') and g.user and hasattr(g.user, 'is_admin') and g.user.is_admin:
+        return url_for("admin_bp.dashboard")
+
     return url_for(default_endpoint)
 
 

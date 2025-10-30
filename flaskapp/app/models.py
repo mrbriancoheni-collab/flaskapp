@@ -17,6 +17,7 @@ from sqlalchemy.sql import func
 from sqlalchemy import JSON as SAJSON  # generic JSON fallback
 from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.ext.hybrid import hybrid_property
+from flask_login import UserMixin  # Add Flask-Login mixin
 
 try:
     # Prefer native MySQL JSON when available
@@ -82,7 +83,11 @@ class Account(db.Model):
 # -------------------------
 # User
 # -------------------------
-class User(db.Model):
+class User(UserMixin, db.Model):
+    """
+    User model with Flask-Login integration.
+    UserMixin provides: is_authenticated, is_active, is_anonymous, get_id()
+    """
     __tablename__ = "users"
 
     id = db.Column(Integer, primary_key=True)

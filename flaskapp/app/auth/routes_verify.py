@@ -2,6 +2,7 @@
 from __future__ import annotations
 from flask import Blueprint, request, redirect, url_for, flash, current_app, render_template
 from sqlalchemy import text
+from itsdangerous import SignatureExpired  # Add missing import for expired token handling
 from app import db
 from app.emailer import send_mail
 from app.auth.utils import login_required, current_user_id, _session_email  # uses your existing helpers

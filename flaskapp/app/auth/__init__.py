@@ -135,11 +135,23 @@ def _set_login_session(user_id, email):
     """
     Store a few keys that your app treats as 'logged in'.
     (Matches AUTH_SESSION_KEYS defaults in app/__init__.py)
+    Also integrates with Flask-Login for compatibility.
     """
     session["user_id"] = str(user_id)
     session["uid"] = str(user_id)
     session["email"] = email
     session.permanent = True
+
+    # Also log in via Flask-Login for compatibility with current_user
+    try:
+        from flask_login import login_user
+        from app.models import User
+        user = User.query.get(int(user_id))
+        if user:
+            login_user(user, remember=True)
+    except Exception as e:
+        # Log but don't fail if Flask-Login integration has issues
+        current_app.logger.warning(f"Flask-Login integration failed: {e}")
 
 
 def _find_user_by_email(email: str):
@@ -532,7 +544,17 @@ def reset_password(token: str):
 
 @auth_bp.route("/logout", methods=["POST", "GET"], endpoint="logout")
 def logout():
+    # Clear session-based auth
     session.clear()
+
+    # Also logout via Flask-Login
+    try:
+        from flask_login import logout_user
+        logout_user()
+    except Exception:
+        pass  # Gracefully handle if Flask-Login not available
+
+    flash("You have been logged out successfully.", "info")
     return redirect(url_for("main_bp.home"))
 
 

@@ -320,3 +320,100 @@ class OptimizerAction(db.Model):
     change_set_json = db.Column(db.Text, nullable=False)  # JSON list of mutations sent to Ads API
     result_json = db.Column(db.Text, nullable=True)       # API response or error payload
     status = db.Column(db.String(16), nullable=False, default="pending")  # pending|success|failed
+
+
+# ---------------------------------------------------------------------------
+# Performance Metrics (cross-platform)
+# ---------------------------------------------------------------------------
+
+class PerformanceMetrics(db.Model):
+    """
+    Unified storage for historical performance metrics across all platforms.
+    Supports Google Ads, Analytics, Search Console, GLSA, GMB, Facebook Ads, etc.
+    """
+    __tablename__ = "performance_metrics"
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    account_id = db.Column(db.BigInteger, nullable=False, index=True)
+
+    # Source identification
+    source_type = db.Column(db.String(32), nullable=False, index=True)  # google_ads, google_analytics, glsa, etc.
+    source_id = db.Column(db.String(255), nullable=True, index=True)  # Property ID, Customer ID, etc.
+
+    # Time dimension
+    date = db.Column(db.Date, nullable=False, index=True)
+    timeframe = db.Column(db.String(16), nullable=False, default='daily')  # daily, weekly, monthly
+
+    # Entity hierarchy (optional, for drilldown)
+    entity_type = db.Column(db.String(32), nullable=True, index=True)  # account, campaign, ad_group, etc.
+    entity_id = db.Column(db.String(255), nullable=True, index=True)
+    entity_name = db.Column(db.String(255), nullable=True)
+
+    # Core metrics (flexible JSON for source-specific metrics)
+    metrics_json = db.Column(db.Text, nullable=False)
+
+    # Computed aggregates (for quick queries without parsing JSON)
+    impressions = db.Column(db.BigInteger, nullable=True)
+    clicks = db.Column(db.BigInteger, nullable=True)
+    spend = db.Column(db.Float, nullable=True)  # In dollars
+    conversions = db.Column(db.Float, nullable=True)
+
+    # Audit fields
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    __table_args__ = (
+        # Unique constraint: one record per account/source/entity/date
+        db.UniqueConstraint(
+            'account_id', 'source_type', 'source_id', 'entity_type', 'entity_id', 'date', 'timeframe',
+            name='uq_perf_metrics'
+        ),
+        db.Index('ix_perf_account_source_date', 'account_id', 'source_type', 'date'),
+        db.Index('ix_perf_source_entity_date', 'source_type', 'entity_type', 'date'),
+    )
+
+    def __repr__(self):
+        return f"<PerformanceMetrics {self.account_id} {self.source_type} {self.date}>"
+
+
+# ---------------------------------------------------------------------------
+# Customer Impact Tracking (Savings & Additional Leads)
+# ---------------------------------------------------------------------------
+
+class CustomerImpact(db.Model):
+    """
+    Tracks the cumulative savings and additional leads generated for each customer
+    compared to their pre-FieldSprout baseline.
+    """
+    __tablename__ = "customer_impact"
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    account_id = db.Column(db.BigInteger, nullable=False, index=True, unique=True)
+
+    # Baseline metrics (pre-FieldSprout)
+    baseline_start_date = db.Column(db.Date, nullable=True)
+    baseline_end_date = db.Column(db.Date, nullable=True)
+    baseline_monthly_spend = db.Column(db.Float, nullable=True, default=0)
+    baseline_monthly_leads = db.Column(db.Float, nullable=True, default=0)
+    baseline_cost_per_lead = db.Column(db.Float, nullable=True, default=0)
+
+    # Current performance
+    current_monthly_spend = db.Column(db.Float, nullable=True, default=0)
+    current_monthly_leads = db.Column(db.Float, nullable=True, default=0)
+    current_cost_per_lead = db.Column(db.Float, nullable=True, default=0)
+
+    # Running totals
+    total_savings = db.Column(db.Float, nullable=False, default=0)  # Cumulative savings in dollars
+    total_additional_leads = db.Column(db.Float, nullable=False, default=0)  # Cumulative additional leads
+
+    # Monthly tracking
+    monthly_savings = db.Column(db.Float, nullable=True, default=0)  # Last calculated monthly savings
+    monthly_additional_leads = db.Column(db.Float, nullable=True, default=0)  # Last calculated monthly leads
+
+    # Tracking
+    last_calculated_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    def __repr__(self):
+        return f"<CustomerImpact account_id={self.account_id} savings=${self.total_savings:.2f} leads=+{self.total_additional_leads:.0f}>"

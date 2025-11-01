@@ -16,7 +16,7 @@ from datetime import datetime
 
 from app import db
 from app.models_billing import StripeCustomer, Subscription, Payment
-from app.models import Account
+from app.models import Account, User
 
 
 def get_stripe_client() -> stripe:
@@ -234,6 +234,173 @@ def reactivate_subscription(subscription_id: str) -> Subscription:
 
 # ===== Webhook Event Handlers =====
 
+def _notify_new_paying_customer(user_id: int, invoice: Dict[str, Any]):
+    """
+    Send email notification to team when a new paying customer signs up.
+
+    Args:
+        user_id: The user ID of the new paying customer
+        invoice: The Stripe invoice data
+    """
+    try:
+        from app.services.email_service import send_email
+
+        # Get user details
+        user = User.query.get(user_id)
+        if not user:
+            current_app.logger.error(f"User {user_id} not found for new customer notification")
+            return
+
+        # Get subscription details
+        subscription = Subscription.query.filter_by(user_id=user_id).first()
+        plan_name = "Unknown Plan"
+        if subscription:
+            # Try to get plan name from price_id
+            if "monthly" in subscription.price_id.lower():
+                plan_name = "Growth Monthly"
+            elif "yearly" in subscription.price_id.lower() or "annual" in subscription.price_id.lower():
+                plan_name = "Growth Annual"
+            else:
+                plan_name = subscription.price_id
+
+        # Format amount
+        amount_cents = invoice.get("amount_paid", 0)
+        amount_dollars = amount_cents / 100
+        currency = invoice.get("currency", "usd").upper()
+
+        # Build email content
+        subject = f"🎉 New Paying Customer: {user.name}"
+
+        html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 40px 40px 20px 40px; text-align: center;">
+                            <h1 style="margin: 0; font-size: 28px; color: #10b981;">🎉 New Paying Customer!</h1>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 20px 40px;">
+                            <table width="100%" cellpadding="8" cellspacing="0" style="border-collapse: collapse;">
+                                <tr>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                                        <strong style="color: #374151;">Customer Name:</strong>
+                                    </td>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; text-align: right; color: #111827;">
+                                        {user.name}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                                        <strong style="color: #374151;">Email:</strong>
+                                    </td>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; text-align: right; color: #111827;">
+                                        {user.email}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                                        <strong style="color: #374151;">Plan:</strong>
+                                    </td>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; text-align: right; color: #111827;">
+                                        {plan_name}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                                        <strong style="color: #374151;">Payment Amount:</strong>
+                                    </td>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; text-align: right; color: #10b981; font-size: 18px; font-weight: bold;">
+                                        ${amount_dollars:.2f} {currency}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                                        <strong style="color: #374151;">Invoice ID:</strong>
+                                    </td>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; text-align: right; color: #6b7280; font-size: 14px;">
+                                        {invoice.get('id', 'N/A')}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 12px 0;">
+                                        <strong style="color: #374151;">Account Created:</strong>
+                                    </td>
+                                    <td style="padding: 12px 0; text-align: right; color: #6b7280;">
+                                        {user.created_at.strftime('%B %d, %Y at %I:%M %p') if user.created_at else 'N/A'}
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 30px 40px; text-align: center; background-color: #f9fafb; border-radius: 0 0 8px 8px;">
+                            <p style="margin: 0 0 10px 0; font-size: 14px; color: #6b7280;">
+                                This is an automated notification from FieldSprout.
+                            </p>
+                            <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                                © 2025 FieldSprout. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+        """
+
+        text_body = f"""
+🎉 New Paying Customer!
+
+Customer Name: {user.name}
+Email: {user.email}
+Plan: {plan_name}
+Payment Amount: ${amount_dollars:.2f} {currency}
+Invoice ID: {invoice.get('id', 'N/A')}
+Account Created: {user.created_at.strftime('%B %d, %Y at %I:%M %p') if user.created_at else 'N/A'}
+
+This is an automated notification from FieldSprout.
+        """
+
+        # Send to both email addresses
+        notification_emails = [
+            "hi@fieldsprout.io",
+            "mrbriancoheni@gmail.com"
+        ]
+
+        for email in notification_emails:
+            try:
+                send_email(
+                    to=email,
+                    subject=subject,
+                    html_body=html_body,
+                    text_body=text_body,
+                    use_bulk_credentials=True
+                )
+                current_app.logger.info(f"Sent new paying customer notification to {email}")
+            except Exception as e:
+                current_app.logger.error(f"Failed to send notification to {email}: {e}", exc_info=True)
+
+    except Exception as e:
+        current_app.logger.error(f"Error in _notify_new_paying_customer: {e}", exc_info=True)
+
+
 def handle_customer_subscription_created(event_data: Dict[str, Any]):
     """Handle customer.subscription.created webhook event."""
     stripe_sub = event_data["object"]
@@ -322,6 +489,14 @@ def handle_invoice_paid(event_data: Dict[str, Any]):
         current_app.logger.warning(f"Customer {invoice['customer']} not found for invoice {invoice['id']}")
         return
 
+    # Check if this is the first successful payment for this customer
+    previous_payments = Payment.query.filter_by(
+        user_id=customer.user_id,
+        status="paid"
+    ).count()
+
+    is_new_paying_customer = (previous_payments == 0)
+
     # Record payment
     payment = Payment(
         user_id=customer.user_id,
@@ -336,6 +511,10 @@ def handle_invoice_paid(event_data: Dict[str, Any]):
     db.session.commit()
 
     current_app.logger.info(f"Recorded payment for invoice {invoice['id']}, amount {invoice['amount_paid']}")
+
+    # Send notification for new paying customers
+    if is_new_paying_customer:
+        _notify_new_paying_customer(customer.user_id, invoice)
 
 
 def handle_invoice_payment_failed(event_data: Dict[str, Any]):

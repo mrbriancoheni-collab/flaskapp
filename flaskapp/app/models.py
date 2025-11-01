@@ -154,6 +154,39 @@ class User(UserMixin, db.Model):
 
 
 # -------------------------
+# Admin Audit Log
+# -------------------------
+class AdminAuditLog(db.Model):
+    """
+    Tracks admin actions for security and compliance.
+    Records who did what, when, and to which resources.
+    """
+    __tablename__ = "admin_audit_logs"
+
+    id = db.Column(Integer, primary_key=True)
+    admin_user_id = db.Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+
+    # Action details
+    action = db.Column(String(64), nullable=False, index=True)
+    target_user_id = db.Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    target_account_id = db.Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
+    note = db.Column(String(1000), nullable=False, server_default="")
+
+    # Request metadata
+    ip = db.Column(String(45), nullable=True)
+    user_agent = db.Column(String(255), nullable=True)
+    created_at = db.Column(DateTime, server_default=func.now(), nullable=False, index=True)
+
+    # Relationships
+    admin_user = db.relationship("User", foreign_keys=[admin_user_id], backref="admin_actions")
+    target_user = db.relationship("User", foreign_keys=[target_user_id], backref="actions_received")
+    target_account = db.relationship("Account", foreign_keys=[target_account_id], backref="admin_actions")
+
+    def __repr__(self) -> str:
+        return f"<AdminAuditLog id={self.id} action={self.action!r} admin={self.admin_user_id}>"
+
+
+# -------------------------
 # Plan (simple catalog)
 # -------------------------
 class Plan(db.Model):

@@ -113,6 +113,7 @@ def create_app():
         WP_APP_PW=_os.getenv("WP_APP_PW", ""),
     )
 
+    # Enable secure cookies for HTTPS (default on for production)
     if _os.getenv("HTTPS", "on").lower() in ("on", "1", "true", "yes"):
         app.config["SESSION_COOKIE_SECURE"] = True
 
@@ -238,6 +239,17 @@ def create_app():
         csrf.init_app(app)  # is a no-op shim if flask-wtf not installed
     except Exception as e:
         app.logger.warning(f"CSRF init failed: {e}")
+
+    # ---- ProxyFix middleware for reverse proxy HTTPS detection -------------
+    # This ensures Flask correctly detects HTTPS when behind Nginx/Apache
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app,
+        x_for=1,      # Trust X-Forwarded-For
+        x_proto=1,    # Trust X-Forwarded-Proto (critical for HTTPS detection)
+        x_host=1,     # Trust X-Forwarded-Host
+        x_prefix=1    # Trust X-Forwarded-Prefix
+    )
 
     # ---- Flask-Login init ---------------------------------------------------
     login_manager = LoginManager()
@@ -630,6 +642,43 @@ def create_app():
         app.logger.info("CSRF exemptions applied for GMB POST endpoints")
     except Exception as e:
         app.logger.warning(f"Could not exempt GMB endpoints from CSRF: {e}")
+
+    # ---- Debug route for session diagnostics (REMOVE IN PRODUCTION) --------
+    @app.route('/debug-session')
+    def debug_session():
+        """
+        Diagnostic endpoint to debug session and HTTPS detection issues.
+        Visit https://fieldsprout.io/debug-session to see session state.
+
+        IMPORTANT: Remove this route before deploying to production!
+        """
+        from flask import request, session, jsonify
+
+        return jsonify({
+            'session_data': dict(session),
+            'cookies': dict(request.cookies),
+            'request_scheme': request.scheme,
+            'request_is_secure': request.is_secure,
+            'request_url': request.url,
+            'request_base_url': request.base_url,
+            'request_host': request.host,
+            'request_headers': dict(request.headers),
+            'flask_config': {
+                'SESSION_COOKIE_SECURE': app.config.get('SESSION_COOKIE_SECURE'),
+                'SESSION_COOKIE_HTTPONLY': app.config.get('SESSION_COOKIE_HTTPONLY'),
+                'SESSION_COOKIE_SAMESITE': app.config.get('SESSION_COOKIE_SAMESITE'),
+                'PERMANENT_SESSION_LIFETIME': str(app.config.get('PERMANENT_SESSION_LIFETIME')),
+                'PREFERRED_URL_SCHEME': app.config.get('PREFERRED_URL_SCHEME'),
+            },
+            'env_vars': {
+                'HTTPS': _os.getenv('HTTPS'),
+                'SECRET_KEY_SET': bool(_os.getenv('SECRET_KEY')),
+            },
+            'auth_status': {
+                'has_session_cookie': 'session' in request.cookies,
+                'session_keys': list(session.keys()) if session else [],
+            }
+        })
 
     # ---- Request hooks (auth + impersonation) ------------------------------
     try:

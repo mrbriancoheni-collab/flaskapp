@@ -174,6 +174,20 @@ def create_app():
     if login:
         app.config["GOOGLE_ADS_LOGIN_CUSTOMER_ID"] = login.replace("-", "").strip()
 
+    # OAuth credentials for ads-grader
+    client_id = _os.environ.get("GOOGLE_ADS_CLIENT_ID")
+    if client_id:
+        app.config["GOOGLE_ADS_CLIENT_ID"] = client_id.strip()
+    client_secret = _os.environ.get("GOOGLE_ADS_CLIENT_SECRET")
+    if client_secret:
+        app.config["GOOGLE_ADS_CLIENT_SECRET"] = client_secret.strip()
+    redirect_uri = _os.environ.get("GOOGLE_ADS_REDIRECT_URI")
+    if redirect_uri:
+        app.config["GOOGLE_ADS_REDIRECT_URI"] = redirect_uri.strip()
+    else:
+        # Default redirect URI for production
+        app.config["GOOGLE_ADS_REDIRECT_URI"] = "https://fieldsprout.io/ads-grader/connect/callback"
+
     def _protect(key):
         if not app.config.get(key):
             val = _os.environ.get(key)
@@ -182,9 +196,11 @@ def create_app():
     app.config["__protect_ads_config__"] = _protect
 
     app.logger.info(
-        "Ads config: dev_token_len=%s, login_cid=%s",
+        "Ads config: dev_token_len=%s, login_cid=%s, client_id=%s, redirect_uri=%s",
         len(app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN") or ""),
         app.config.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID") or "None",
+        "SET" if app.config.get("GOOGLE_ADS_CLIENT_ID") else "NOT SET",
+        app.config.get("GOOGLE_ADS_REDIRECT_URI") or "default",
     )
 
     # ---- Logging (stderr + rotating file) ----------------------------------

@@ -71,8 +71,10 @@ def connect():
     Initiate OAuth flow to connect Google Ads account.
     """
     try:
-        # Check if OAuth credentials are configured
-        if not current_app.config.get("GOOGLE_ADS_CLIENT_ID"):
+        import os
+        # Check if OAuth credentials are configured (check env vars first, then config)
+        client_id = os.getenv("GOOGLE_ADS_CLIENT_ID") or current_app.config.get("GOOGLE_ADS_CLIENT_ID")
+        if not client_id:
             logger.warning("Google Ads OAuth not configured - using demo mode")
             flash("Google Ads connection not configured. Using demo mode.", "info")
             return redirect(url_for("ads_grader_bp.analyze"))

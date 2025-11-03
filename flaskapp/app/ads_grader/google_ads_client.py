@@ -4,6 +4,7 @@ Google Ads API Client for Grader Tool
 Handles OAuth authentication and data fetching from Google Ads API.
 """
 import logging
+import os
 from typing import Optional, Dict, List, Any
 from datetime import datetime, timedelta
 from google.ads.googleads.client import GoogleAdsClient
@@ -11,6 +12,15 @@ from google.ads.googleads.errors import GoogleAdsException
 from flask import current_app
 
 logger = logging.getLogger(__name__)
+
+
+def _get_config(key: str) -> Optional[str]:
+    """
+    Get configuration value from environment or Flask config.
+    Checks environment variables first, then falls back to Flask config.
+    This pattern matches app/google/__init__.py approach.
+    """
+    return os.getenv(key) or current_app.config.get(key)
 
 
 class GoogleAdsGraderClient:
@@ -28,11 +38,11 @@ class GoogleAdsGraderClient:
         """
         self.customer_id = customer_id.replace("-", "")  # API requires no dashes
 
-        # Build credentials dictionary for Google Ads client
+        # Build credentials dictionary for Google Ads client (env vars first, then Flask config)
         credentials = {
-            "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
-            "client_id": current_app.config.get("GOOGLE_ADS_CLIENT_ID"),
-            "client_secret": current_app.config.get("GOOGLE_ADS_CLIENT_SECRET"),
+            "developer_token": _get_config("GOOGLE_ADS_DEVELOPER_TOKEN"),
+            "client_id": _get_config("GOOGLE_ADS_CLIENT_ID"),
+            "client_secret": _get_config("GOOGLE_ADS_CLIENT_SECRET"),
             "refresh_token": refresh_token,
             "use_proto_plus": True,
         }

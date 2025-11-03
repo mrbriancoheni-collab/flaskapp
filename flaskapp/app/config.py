@@ -25,10 +25,10 @@ class Config:
     GOOGLE_ADS_CLIENT_ID = os.getenv("GOOGLE_ADS_CLIENT_ID","")
     GOOGLE_ADS_CLIENT_SECRET = os.getenv("GOOGLE_ADS_CLIENT_SECRET","")
 
-    # Default redirect URI - override in production
-    # For Ads Grader: should be https://yourdomain.com/ads-grader/connect/callback
-    # Check GOOGLE_REDIRECT_URI first, then fall back to GOOGLE_ADS_REDIRECT_URI
-    GOOGLE_ADS_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI") or os.getenv("GOOGLE_ADS_REDIRECT_URI") or "https://fieldsprout.io/ads-grader/connect/callback"
+    # Default redirect URI for Ads Grader (separate from main Google OAuth)
+    # Main Google OAuth uses GOOGLE_REDIRECT_URI for /account/google/callback
+    # Ads Grader uses GOOGLE_ADS_REDIRECT_URI for /ads-grader/connect/callback
+    GOOGLE_ADS_REDIRECT_URI = os.getenv("GOOGLE_ADS_REDIRECT_URI") or "https://fieldsprout.io/ads-grader/connect/callback"
     APP_FERNET_KEY = os.getenv("APP_FERNET_KEY","")  # set in prod
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY","")
     

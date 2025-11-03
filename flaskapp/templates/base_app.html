@@ -16,6 +16,11 @@
 </script>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class'
+    }
+  </script>
   <!-- Font Awesome for icons -->
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
@@ -62,6 +67,45 @@
     }
     .btn-primary-hero:hover{background:var(--brand-dark);transform:translateY(-1px);box-shadow:0 6px 18px rgba(124,58,237,.5);}
     .fs-chip{display:inline-flex;align-items:center;justify-content:center;text-align:center;min-width:72px;padding:0 .5rem;}
+
+    /* Skeleton loading screens */
+    @keyframes shimmer {
+      0% { background-position: -1000px 0; }
+      100% { background-position: 1000px 0; }
+    }
+
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 1000px 100%;
+      animation: shimmer 2s infinite;
+      border-radius: 0.375rem;
+    }
+
+    .dark .skeleton {
+      background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+      background-size: 1000px 100%;
+    }
+
+    .skeleton-text {
+      height: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .skeleton-title {
+      height: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .skeleton-card {
+      background: white;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+
+    .dark .skeleton-card {
+      background: #1f2937;
+    }
   </style>
 
   <script defer src="{{ url_for('static', filename='js/app_shell.js') }}"></script>
@@ -81,12 +125,21 @@
   })();
   </script>
 
+  <!-- Dark mode theme loader (prevents flash) -->
+  <script>
+  (function() {
+    const theme = localStorage.getItem('theme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.classList.add(theme);
+  })();
+  </script>
+
   <!-- Google Tag Manager -->
   <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-T7TTGMPH');</script>
   <!-- End GTM -->
 </head>
 
-<body id="body" class="min-h-screen flex flex-col bg-gray-50 text-gray-900">
+<body id="body" class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
 
   {# --------------------- Active section detection ---------------------- #}
   {% set bp = request.blueprint or '' %}
@@ -123,64 +176,74 @@
   {% endif %}
 
   <!-- Mobile header (simple) -->
-  <header class="md:hidden bg-white border-b">
+  <header class="md:hidden bg-white dark:bg-gray-800 border-b dark:border-gray-700">
     <div class="h-14 px-4 flex items-center justify-between">
       <a href="{{ url_for(ep('home')) }}" class="flex items-center space-x-2 font-semibold">
         <img src="{{ url_for('static', filename='brand/logos/fieldsprout-wordmark.svg') }}" alt="FieldSprout" style="height:40px;width:auto;">
       </a>
-      <button id="mobile-menu-btn" class="p-2 rounded hover:bg-gray-100" aria-label="Open menu">
-        <i class="fa-solid fa-bars"></i>
-      </button>
+      <div class="flex items-center gap-2">
+        <button id="theme-toggle-mobile" class="p-3 rounded hover:bg-gray-100 dark:hover:bg-gray-700 min-w-12 min-h-12" aria-label="Toggle dark mode">
+          <svg class="w-5 h-5 hidden dark:block" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
+          </svg>
+          <svg class="w-5 h-5 dark:hidden" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+          </svg>
+        </button>
+        <button id="mobile-menu-btn" class="p-3 rounded hover:bg-gray-100 dark:hover:bg-gray-700 min-w-12 min-h-12" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+          <i class="fa-solid fa-bars text-lg"></i>
+        </button>
+      </div>
     </div>
-    <nav id="mobile-menu" class="hidden border-t bg-white px-4 py-3 space-y-1 pb-16">
+    <nav id="mobile-menu" class="hidden border-t bg-white dark:bg-gray-800 dark:border-gray-700 px-4 py-3 space-y-1 pb-16 max-h-[calc(100vh-8rem)] overflow-y-auto" role="navigation" aria-label="Mobile navigation">
       {% if not (current_user_profile and current_user_profile.is_complete()) %}
-        <a href="#" class="onboard-launch btn-primary-hero w-full">
+        <a href="#" class="onboard-launch btn-primary-hero w-full min-h-12">
           <i class="fa-solid fa-rocket"></i>
           <span>Get Started</span>
         </a>
       {% endif %}
-      
-      <a href="{{ url_for('account_bp.dashboard') }}" class="primary-btn {% if SECTION=='dashboard' %}active{% endif %}" title="Dashboard">
+
+      <a href="{{ url_for('account_bp.dashboard') }}" class="primary-btn {% if SECTION=='dashboard' %}active{% endif %} min-h-12" title="Dashboard">
         <i class="fa-solid fa-house"></i>
       </a>
 
       <!-- Flat Google submenu items for mobile -->
-      <div class="pt-2 text-xs font-semibold text-gray-500 uppercase">Google</div>
-      <a class="block px-2 py-2 rounded nav-link" href="{{ url_for('google_bp.index') }}">
+      <div class="pt-2 text-sm font-semibold text-gray-600 uppercase">Google</div>
+      <a class="block px-3 py-3 rounded nav-link min-h-12" href="{{ url_for('google_bp.index') }}">
         <i class="fa-solid fa-gauge"></i><span>Overview / Connect</span>
       </a>
       {% if has_endpoint('google_bp.ads_ui') %}
-        <a href="{{ url_for('google_bp.ads_ui') }}" class="block px-2 py-2 nav-link">
+        <a href="{{ url_for('google_bp.ads_ui') }}" class="block px-3 py-3 nav-link min-h-12">
           <i class="fa-solid fa-bullseye"></i><span>Google Ads</span>
         </a>
       {% endif %}
       {% if has_endpoint('google_bp.gsc_ui') %}
-        <a href="{{ url_for('google_bp.gsc_ui') }}" class="block px-2 py-2 nav-link">
+        <a href="{{ url_for('google_bp.gsc_ui') }}" class="block px-3 py-3 nav-link min-h-12">
           <i class="fa-solid fa-magnifying-glass"></i><span>Search Console</span>
         </a>
       {% endif %}
       {% if has_endpoint('google_bp.ga_ui') %}
-        <a href="{{ url_for('google_bp.ga_ui') }}" class="block px-2 py-2 nav-link">
+        <a href="{{ url_for('google_bp.ga_ui') }}" class="block px-3 py-3 nav-link min-h-12">
           <i class="fa-solid fa-chart-line"></i><span>Analytics</span>
         </a>
       {% endif %}
       {% if has_endpoint('gmb_bp.index') %}
-        <a class="block px-2 py-2 nav-link" href="{{ url_for('gmb_bp.index') }}">
+        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('gmb_bp.index') }}">
           <i class="fa-brands fa-google"></i><span>Google Business</span>
         </a>
       {% endif %}
 
       {% if has_endpoint('glsa_bp.index') %}
-        <a href="{{ url_for('glsa_bp.index') }}" class="block px-2 py-2 nav-link">
+        <a href="{{ url_for('glsa_bp.index') }}" class="block px-3 py-3 nav-link min-h-12">
           <i class="fa-solid fa-bullhorn"></i><span>Local Services Ads</span>
         </a>
         {% if has_endpoint('glsa_bp.leads_page') %}
-          <a href="{{ url_for('glsa_bp.leads_page') }}" class="block px-2 py-2 nav-link">
+          <a href="{{ url_for('glsa_bp.leads_page') }}" class="block px-3 py-3 nav-link min-h-12">
               <i class="fa-solid fa-inbox"></i><span>Review Leads</span>
             </a>
         {% endif %}
         {% if has_endpoint('glsa_bp.optimize') %}
-          <a href="{{ url_for('glsa_bp.optimize') if is_paid else '#' }}" class="block pl-7 pr-2 py-1 text-sm nav-link {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" {% if not is_paid %}onclick="alert('This feature requires a paid plan. Please upgrade.'); return false;"{% endif %}>
+          <a href="{{ url_for('glsa_bp.optimize') if is_paid else '#' }}" class="block pl-6 pr-3 py-3 nav-link min-h-12 {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" {% if not is_paid %}onclick="alert('This feature requires a paid plan. Please upgrade.'); return false;"{% endif %}>
             <i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimize Profiles</span>
             {% if not is_paid %}<i class="fa-solid fa-lock ml-auto text-xs"></i>{% endif %}
           </a>
@@ -198,39 +261,39 @@
       {% endif %} -->
 
       {% if has_endpoint('gmb_bp.index') %}
-        <a href="{{ url_for('gmb_bp.index') }}" class="block px-2 py-2 nav-link"><i class="fa-brands fa-google"></i><span>Google Business</span></a>
+        <a href="{{ url_for('gmb_bp.index') }}" class="block px-3 py-3 nav-link min-h-12"><i class="fa-brands fa-google"></i><span>Google Business</span></a>
         {% if has_endpoint('gmb_bp.reviews') %}
-          <a href="{{ url_for('gmb_bp.reviews') }}" class="block pl-7 pr-2 py-1 text-sm nav-link">Profile Review</a>
+          <a href="{{ url_for('gmb_bp.reviews') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">Profile Review</a>
         {% endif %}
         {% if has_endpoint('gmb_bp.ai_responses') %}
-          <a href="{{ url_for('gmb_bp.ai_responses') }}" class="block pl-7 pr-2 py-1 text-sm nav-link">AI Review Responses</a>
+          <a href="{{ url_for('gmb_bp.ai_responses') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">AI Review Responses</a>
         {% endif %}
         {% if has_endpoint('gmb_bp.requests_email') %}
-          <a href="{{ url_for('gmb_bp.requests_email') }}" class="block pl-7 pr-2 py-1 text-sm nav-link">Review Requests (Email)</a>
+          <a href="{{ url_for('gmb_bp.requests_email') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">Review Requests (Email)</a>
         {% endif %}
       {% endif %}
 
       {% if has_endpoint('linkedin_bp.index') %}
-        <div class="pt-2 text-xs font-semibold text-gray-500 uppercase">LinkedIn</div>
-        <a class="block px-2 py-2 nav-link" href="{{ url_for('linkedin_bp.index') }}">
+        <div class="pt-2 text-sm font-semibold text-gray-600 uppercase">LinkedIn</div>
+        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('linkedin_bp.index') }}">
           <i class="fa-brands fa-linkedin"></i><span>Overview</span>
         </a>
         {% if has_endpoint('linkedin_bp.ads') %}
-          <a href="{{ url_for('linkedin_bp.ads') if is_paid else '#' }}" class="block px-2 py-2 nav-link {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" {% if not is_paid %}onclick="alert('This feature requires a paid plan. Please upgrade.'); return false;"{% endif %}>
+          <a href="{{ url_for('linkedin_bp.ads') if is_paid else '#' }}" class="block px-3 py-3 nav-link min-h-12 {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" {% if not is_paid %}onclick="alert('This feature requires a paid plan. Please upgrade.'); return false;"{% endif %}>
             <i class="fa-solid fa-bullseye"></i><span>Ads Optimizer</span>
             {% if not is_paid %}<i class="fa-solid fa-lock ml-auto text-xs"></i>{% endif %}
           </a>
         {% endif %}
         {% if has_endpoint('linkedin_bp.post_generator') %}
-          <a href="{{ url_for('linkedin_bp.post_generator') }}" class="block px-2 py-2 nav-link">
+          <a href="{{ url_for('linkedin_bp.post_generator') }}" class="block px-3 py-3 nav-link min-h-12">
             <i class="fa-solid fa-pen-to-square"></i><span>Post Generator</span>
           </a>
         {% endif %}
       {% endif %}
 
       {% if has_endpoint('ads_grader_bp.index') %}
-        <div class="pt-3 mt-3 border-t text-xs font-semibold text-green-600 uppercase">Free Tools</div>
-        <a class="block px-2 py-2 nav-link bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 hover:from-green-100 hover:to-emerald-100" href="{{ url_for('ads_grader_bp.index') }}">
+        <div class="pt-3 mt-3 border-t text-sm font-semibold text-green-600 uppercase">Free Tools</div>
+        <a class="block px-3 py-3 nav-link min-h-12 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 hover:from-green-100 hover:to-emerald-100" href="{{ url_for('ads_grader_bp.index') }}">
           <i class="fa-brands fa-google text-green-600"></i><span class="font-semibold text-green-700">Google Ads Inspector</span>
           <span class="ml-auto text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-bold">FREE</span>
         </a>
@@ -238,21 +301,21 @@
 
       <div class="pt-3 mt-3 border-t"></div>
       {% if g.user and g.user.is_admin %}
-        <a href="{{ url_for('admin_bp.dashboard') }}" class="block px-2 py-2 nav-link"><i class="fa-solid fa-shield-halved"></i><span>Admin Dashboard</span></a>
+        <a href="{{ url_for('admin_bp.dashboard') }}" class="block px-3 py-3 nav-link min-h-12"><i class="fa-solid fa-shield-halved"></i><span>Admin Dashboard</span></a>
       {% endif %}
-      <a href="{{ url_for('account_bp.dashboard') }}" class="block px-2 py-2 nav-link"><i class="fa-solid fa-gauge-high"></i><span>Account Dashboard</span></a>
-      <a href="{{ url_for(ep('pricing')) if has_endpoint('pricing') else '#' }}" class="block px-2 py-2 nav-link"><i class="fa-solid fa-tags"></i><span>Upgrade</span></a>
+      <a href="{{ url_for('account_bp.dashboard') }}" class="block px-3 py-3 nav-link min-h-12"><i class="fa-solid fa-gauge-high"></i><span>Account Dashboard</span></a>
+      <a href="{{ url_for(ep('pricing')) if has_endpoint('pricing') else '#' }}" class="block px-3 py-3 nav-link min-h-12"><i class="fa-solid fa-tags"></i><span>Upgrade</span></a>
       {% if is_logged_in() and has_endpoint('account_profile') %}
-        <a href="{{ url_for(ep('account_profile')) }}" class="block px-2 py-2 nav-link"><i class="fa-solid fa-user"></i><span>Account</span></a>
+        <a href="{{ url_for(ep('account_profile')) }}" class="block px-3 py-3 nav-link min-h-12"><i class="fa-solid fa-user"></i><span>Account</span></a>
       {% endif %}
       {% if has_endpoint('logout') %}
-        <a href="{{ url_for(ep('logout')) }}" class="block px-2 py-2 nav-link"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
+        <a href="{{ url_for(ep('logout')) }}" class="block px-3 py-3 nav-link min-h-12"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
       {% endif %}
     </nav>
 
-    <!-- Mobile support bar (fixed at bottom) -->
-    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-3 text-sm text-gray-700">
-      Need support?<br/><a href="cs@fieldsprout.io">cs@fieldsprout.io</a>
+    <!-- Mobile support bar (fixed at bottom with proper z-index) -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t dark:border-gray-700 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 z-30">
+      Need support?<br/><a href="mailto:cs@fieldsprout.io" class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">cs@fieldsprout.io</a>
     </div>
   </header>
 
@@ -286,6 +349,14 @@
         {% if is_logged_in() and has_endpoint('account_profile') %}
           <a href="{{ url_for(ep('account_profile')) }}" class="primary-btn {% if SECTION=='account' %}active{% endif %}" title="Account"><i class="fa-solid fa-user"></i></a>
         {% endif %}
+        <button id="theme-toggle-desktop" class="primary-btn" title="Toggle dark mode" aria-label="Toggle dark mode">
+          <svg class="w-5 h-5 hidden dark:block" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
+          </svg>
+          <svg class="w-5 h-5 dark:hidden" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+          </svg>
+        </button>
         {% if has_endpoint('logout') %}
           <a href="{{ url_for(ep('logout')) }}" class="primary-btn" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
         {% endif %}
@@ -293,7 +364,7 @@
     </aside>
 
     <!-- SECONDARY SIDEBAR (contextual menu) -->
-    <aside class="w-64 bg-white border-r px-3 py-4 overflow-y-auto flex flex-col">
+    <aside class="w-64 bg-white dark:bg-gray-800 border-r dark:border-gray-700 px-3 py-4 overflow-y-auto flex flex-col">
       <a href="{{ url_for(ep('home')) }}" class="hidden lg:flex items-center gap-2 px-2 py-2 mb-2 hover:text-indigo-600">
         <img src="{{ url_for('static', filename='brand/logos/fieldsprout-wordmark.svg') }}" alt="FieldSprout" style="height:32px;width:auto;">
       </a>
@@ -446,40 +517,40 @@
   </div>
 
   <!-- Onboarding Modal -->
-  <div id="onboard-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
-    <div class="absolute inset-0 bg-black/40"></div>
-    <div class="relative bg-white w-full max-w-2xl mx-4 rounded-2xl shadow-xl border overflow-hidden">
-      <div class="px-5 py-4 border-b flex items-center justify-between">
+  <div id="onboard-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/40" onclick=""></div>
+    <div class="relative bg-white w-full max-w-2xl sm:max-w-full sm:mx-2 max-h-[90vh] rounded-2xl shadow-xl border flex flex-col overflow-hidden">
+      <div class="px-4 sm:px-5 py-3 sm:py-4 border-b flex items-center justify-between flex-shrink-0">
         <div>
           <div class="text-xs text-gray-500">Business onboarding</div>
-          <div class="text-lg font-semibold">Let’s tune your strategy</div>
+          <div class="text-base sm:text-lg font-semibold">Let's tune your strategy</div>
         </div>
-        <button id="onboard-close" class="p-2 rounded-lg hover:bg-gray-100" aria-label="Close">
-          <i class="fa-solid fa-xmark"></i>
+        <button id="onboard-close" class="p-3 rounded-lg hover:bg-gray-100 min-w-12 min-h-12" aria-label="Close">
+          <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
 
-      <div class="px-5 pt-4">
+      <div class="px-4 sm:px-5 pt-3 sm:pt-4 flex-shrink-0">
         <div class="w-full bg-gray-200 rounded-full h-2">
-          <div id="onboard-progress" class="bg-[var(--brand)] h-2 rounded-full" style="width:0%"></div>
+          <div id="onboard-progress" class="bg-[var(--brand)] h-2 rounded-full transition-all" style="width:0%"></div>
         </div>
         <div id="onboard-step-label" class="mt-2 text-xs text-gray-500">Step 1 of 8</div>
       </div>
 
-      <div id="onboard-body" class="p-5 space-y-4">
+      <div id="onboard-body" class="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
         <div class="text-center text-gray-500">Loading…</div>
       </div>
 
-      <div class="px-5 py-4 border-t flex items-center justify-between">
-        <button id="onboard-back" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded" disabled>
+      <div class="px-4 sm:px-5 py-3 sm:py-4 border-t flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 flex-shrink-0">
+        <button id="onboard-back" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded min-h-12 order-2 sm:order-1" disabled>
           <i class="fa-solid fa-angle-left"></i><span class="ml-2">Back</span>
         </button>
-        <div class="flex items-center gap-2">
-          <button id="onboard-save-exit" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded hidden">Save & exit</button>
-          <button id="onboard-next" class="px-5 py-2 rounded text-white bg-[var(--brand)] hover:bg-[var(--brand-dark)]">
+        <div class="flex items-center gap-2 order-1 sm:order-2">
+          <button id="onboard-save-exit" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded hidden min-h-12 flex-1 sm:flex-initial">Save & exit</button>
+          <button id="onboard-next" class="px-5 py-3 rounded text-white bg-[var(--brand)] hover:bg-[var(--brand-dark)] min-h-12 flex-1 sm:flex-initial">
             <span>Next</span><i class="fa-solid fa-angle-right ml-2"></i>
           </button>
-          <button id="onboard-finish" class="px-5 py-2 rounded text-white bg-[var(--brand)] hover:bg-[var(--brand-dark)] hidden">
+          <button id="onboard-finish" class="px-5 py-3 rounded text-white bg-[var(--brand)] hover:bg-[var(--brand-dark)] hidden min-h-12 flex-1 sm:flex-initial">
             <span>Finish</span><i class="fa-solid fa-check ml-2"></i>
           </button>
         </div>
@@ -501,7 +572,613 @@
     (function(){
       var btn=document.getElementById('mobile-menu-btn');
       var menu=document.getElementById('mobile-menu');
-      if(btn&&menu){ btn.addEventListener('click',function(){ menu.classList.toggle('hidden');}); }
+
+      if(btn && menu) {
+        // Toggle menu on button click
+        btn.addEventListener('click', function() {
+          var isHidden = menu.classList.contains('hidden');
+          menu.classList.toggle('hidden');
+          btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+          btn.setAttribute('aria-label', isHidden ? 'Close menu' : 'Open menu');
+        });
+
+        // Close menu on Escape key
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape' && !menu.classList.contains('hidden')) {
+            menu.classList.add('hidden');
+            btn.setAttribute('aria-expanded', 'false');
+            btn.setAttribute('aria-label', 'Open menu');
+            btn.focus();
+          }
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', function(e) {
+          if (!menu.contains(e.target) && !btn.contains(e.target) && !menu.classList.contains('hidden')) {
+            menu.classList.add('hidden');
+            btn.setAttribute('aria-expanded', 'false');
+            btn.setAttribute('aria-label', 'Open menu');
+          }
+        });
+
+        // Close menu when clicking a link inside
+        menu.addEventListener('click', function(e) {
+          if (e.target.tagName === 'A' && !e.target.classList.contains('onboard-launch')) {
+            menu.classList.add('hidden');
+            btn.setAttribute('aria-expanded', 'false');
+            btn.setAttribute('aria-label', 'Open menu');
+          }
+        });
+      }
+    })();
+  </script>
+
+  <!-- Theme toggle script -->
+  <script>
+    (function() {
+      function toggleTheme() {
+        const html = document.documentElement;
+        const isDark = html.classList.contains('dark');
+        html.classList.toggle('dark');
+        html.classList.toggle('light');
+        localStorage.setItem('theme', isDark ? 'light' : 'dark');
+      }
+
+      // Bind both mobile and desktop theme toggle buttons
+      const mobileToggle = document.getElementById('theme-toggle-mobile');
+      const desktopToggle = document.getElementById('theme-toggle-desktop');
+
+      if (mobileToggle) {
+        mobileToggle.addEventListener('click', toggleTheme);
+      }
+
+      if (desktopToggle) {
+        desktopToggle.addEventListener('click', toggleTheme);
+      }
+    })();
+  </script>
+
+  <!-- Toast notifications system -->
+  <script>
+    (function() {
+      class ToastManager {
+        constructor() {
+          this.container = this.createContainer();
+        }
+
+        createContainer() {
+          const container = document.createElement('div');
+          container.id = 'toast-container';
+          container.className = 'fixed top-4 right-4 z-[90] space-y-2';
+          container.style.pointerEvents = 'none';
+          document.body.appendChild(container);
+          return container;
+        }
+
+        show(message, type = 'info', duration = 5000) {
+          const toast = document.createElement('div');
+          toast.style.pointerEvents = 'auto';
+          toast.className = `
+            flex items-start gap-3 p-4 rounded-lg shadow-lg min-w-[300px] max-w-md
+            transform transition-all duration-300 translate-x-full opacity-0
+            ${type === 'success' ? 'bg-green-600 text-white' : ''}
+            ${type === 'error' ? 'bg-red-600 text-white' : ''}
+            ${type === 'warning' ? 'bg-yellow-500 text-white' : ''}
+            ${type === 'info' ? 'bg-blue-600 text-white' : ''}
+          `.trim();
+
+          const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-exclamation-circle',
+            warning: 'fa-exclamation-triangle',
+            info: 'fa-info-circle'
+          };
+
+          toast.innerHTML = `
+            <i class="fa-solid ${icons[type]} text-xl flex-shrink-0"></i>
+            <div class="flex-1">${message}</div>
+            <button class="text-white/80 hover:text-white" onclick="this.parentElement.remove()">
+              <i class="fa-solid fa-times"></i>
+            </button>
+          `;
+
+          this.container.appendChild(toast);
+
+          // Animate in
+          requestAnimationFrame(() => {
+            toast.classList.remove('translate-x-full', 'opacity-0');
+          });
+
+          // Auto remove
+          if (duration > 0) {
+            setTimeout(() => {
+              toast.classList.add('translate-x-full', 'opacity-0');
+              setTimeout(() => toast.remove(), 300);
+            }, duration);
+          }
+
+          return toast;
+        }
+
+        success(message, duration) { return this.show(message, 'success', duration); }
+        error(message, duration) { return this.show(message, 'error', duration); }
+        warning(message, duration) { return this.show(message, 'warning', duration); }
+        info(message, duration) { return this.show(message, 'info', duration); }
+      }
+
+      // Initialize global toast instance
+      window.toast = new ToastManager();
+
+      // Example usage:
+      // toast.success('Changes saved successfully!');
+      // toast.error('Failed to save changes');
+      // toast.warning('Your session will expire soon');
+      // toast.info('New feature available!');
+    })();
+  </script>
+
+  <!-- Image lazy loading -->
+  <script>
+    (function() {
+      // Add lazy loading to all images except those with 'no-lazy' class or above-fold images
+      document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('img:not(.no-lazy):not([loading])').forEach(function(img) {
+          // Don't lazy load logo images or images in the header/sidebar
+          const isInHeader = img.closest('header, aside, nav');
+          if (!isInHeader) {
+            img.setAttribute('loading', 'lazy');
+          }
+        });
+      });
+    })();
+  </script>
+
+  <!-- Command Palette -->
+  <script>
+    (function() {
+      class CommandPalette {
+        constructor() {
+          this.commands = [
+            { name: 'Dashboard', icon: 'fa-house', url: '{{ url_for("account_bp.dashboard") }}', keywords: ['home', 'overview'] },
+            {% if has_endpoint('google_bp.index') %}
+            { name: 'Google Overview', icon: 'fa-gauge', url: '{{ url_for("google_bp.index") }}', keywords: ['google', 'connect'] },
+            {% endif %}
+            {% if has_endpoint('google_bp.ads_ui') %}
+            { name: 'Google Ads', icon: 'fa-bullseye', url: '{{ url_for("google_bp.ads_ui") }}', keywords: ['ads', 'ppc', 'search'] },
+            {% endif %}
+            {% if has_endpoint('gmb_bp.index') %}
+            { name: 'Google Business', icon: 'fa-google', url: '{{ url_for("gmb_bp.index") }}', keywords: ['gmb', 'business', 'profile'] },
+            {% endif %}
+            {% if has_endpoint('glsa_bp.index') %}
+            { name: 'Local Services Ads', icon: 'fa-bullhorn', url: '{{ url_for("glsa_bp.index") }}', keywords: ['lsa', 'local services'] },
+            {% endif %}
+            {% if has_endpoint('linkedin_bp.index') %}
+            { name: 'LinkedIn', icon: 'fa-linkedin', url: '{{ url_for("linkedin_bp.index") }}', keywords: ['linkedin', 'social'] },
+            {% endif %}
+            {% if is_logged_in() and has_endpoint('account_profile') %}
+            { name: 'Account Settings', icon: 'fa-gear', url: '{{ url_for(ep("account_profile")) }}', keywords: ['settings', 'account', 'profile'] },
+            {% endif %}
+            {% if has_endpoint('pricing') %}
+            { name: 'Upgrade Plan', icon: 'fa-tags', url: '{{ url_for(ep("pricing")) }}', keywords: ['pricing', 'plans', 'upgrade'] },
+            {% endif %}
+            {% if has_endpoint('logout') %}
+            { name: 'Logout', icon: 'fa-right-from-bracket', url: '{{ url_for(ep("logout")) }}', keywords: ['sign out', 'exit'] }
+            {% endif %}
+          ];
+          this.selectedIndex = 0;
+          this.init();
+        }
+
+        init() {
+          this.createModal();
+
+          // Keyboard shortcut
+          document.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+              e.preventDefault();
+              this.open();
+            }
+          });
+        }
+
+        createModal() {
+          const modal = document.createElement('div');
+          modal.id = 'command-palette';
+          modal.className = 'fixed inset-0 z-[100] hidden items-center justify-center p-4 bg-black/50';
+          modal.innerHTML = `
+            <div class="relative bg-white dark:bg-gray-800 w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden">
+              <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-4 text-gray-400"></i>
+                <input
+                  id="command-search"
+                  type="text"
+                  placeholder="Search commands... (or just start typing)"
+                  class="w-full pl-12 pr-4 py-4 text-lg border-b border-gray-200 dark:border-gray-700 bg-transparent text-gray-900 dark:text-gray-100 focus:outline-none"
+                  autocomplete="off"
+                >
+                <kbd class="absolute right-4 top-4 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">ESC</kbd>
+              </div>
+              <div id="command-results" class="max-h-96 overflow-y-auto"></div>
+            </div>
+          `;
+          document.body.appendChild(modal);
+
+          // Close on Escape
+          document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+              this.close();
+            }
+          });
+
+          // Close on background click
+          modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+              this.close();
+            }
+          });
+
+          // Search input handler
+          const input = document.getElementById('command-search');
+          if (input) {
+            input.addEventListener('input', (e) => {
+              const results = this.search(e.target.value);
+              this.renderResults(results);
+            });
+
+            // Arrow key navigation
+            input.addEventListener('keydown', (e) => {
+              if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                this.selectedIndex = Math.min(this.selectedIndex + 1, this.commands.length - 1);
+                this.updateSelection();
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                this.selectedIndex = Math.max(this.selectedIndex - 1, 0);
+                this.updateSelection();
+              } else if (e.key === 'Enter') {
+                e.preventDefault();
+                const selected = document.querySelector('[data-index="' + this.selectedIndex + '"]');
+                if (selected) {
+                  window.location.href = selected.getAttribute('href');
+                }
+              }
+            });
+          }
+        }
+
+        open() {
+          const modal = document.getElementById('command-palette');
+          const input = document.getElementById('command-search');
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
+          input.value = '';
+          input.focus();
+          this.selectedIndex = 0;
+          this.renderResults(this.commands);
+        }
+
+        close() {
+          const modal = document.getElementById('command-palette');
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+        }
+
+        search(query) {
+          if (!query) return this.commands;
+          query = query.toLowerCase();
+          return this.commands.filter(cmd =>
+            cmd.name.toLowerCase().includes(query) ||
+            (cmd.keywords && cmd.keywords.some(kw => kw.includes(query)))
+          );
+        }
+
+        renderResults(commands) {
+          const container = document.getElementById('command-results');
+          if (commands.length === 0) {
+            container.innerHTML = '<div class="p-8 text-center text-gray-500 dark:text-gray-400">No commands found</div>';
+            return;
+          }
+
+          container.innerHTML = commands.map((cmd, i) => `
+            <a href="${cmd.url}" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-0 ${i === this.selectedIndex ? 'bg-gray-100 dark:bg-gray-700' : ''}" data-index="${i}">
+              <i class="fa-solid ${cmd.icon} w-5 text-gray-600 dark:text-gray-400"></i>
+              <span class="text-gray-900 dark:text-gray-100">${cmd.name}</span>
+            </a>
+          `).join('');
+        }
+
+        updateSelection() {
+          const items = document.querySelectorAll('#command-results a');
+          items.forEach((item, i) => {
+            if (i === this.selectedIndex) {
+              item.classList.add('bg-gray-100', 'dark:bg-gray-700');
+              item.scrollIntoView({ block: 'nearest' });
+            } else {
+              item.classList.remove('bg-gray-100', 'dark:bg-gray-700');
+            }
+          });
+        }
+      }
+
+      // Initialize
+      document.addEventListener('DOMContentLoaded', () => {
+        new CommandPalette();
+      });
+    })();
+  </script>
+
+  <!-- Service Worker Registration -->
+  <script>
+    (function() {
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/static/service-worker.js')
+            .then((registration) => {
+              console.log('Service Worker registered successfully:', registration.scope);
+
+              // Check for updates
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // New service worker available
+                    if (window.toast) {
+                      window.toast.info('New version available! Refresh to update.');
+                    }
+                  }
+                });
+              });
+            })
+            .catch((error) => {
+              console.error('Service Worker registration failed:', error);
+            });
+        });
+      }
+    })();
+  </script>
+
+  <!-- PWA Install Prompt -->
+  <script>
+    (function() {
+      let deferredPrompt;
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent the default install prompt
+        e.preventDefault();
+        deferredPrompt = e;
+
+        // Show custom install button (create it dynamically)
+        const installBanner = document.createElement('div');
+        installBanner.id = 'pwa-install-banner';
+        installBanner.className = 'fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 rounded-lg shadow-2xl z-50 transform transition-all';
+        installBanner.innerHTML = `
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <i class="fa-solid fa-download text-2xl"></i>
+              <div>
+                <div class="font-semibold">Install FieldSprout</div>
+                <div class="text-sm text-white/80">Quick access from your home screen</div>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button id="pwa-install-btn" class="px-4 py-2 bg-white text-purple-600 rounded-lg font-semibold hover:bg-gray-100 transition">
+                Install
+              </button>
+              <button id="pwa-dismiss-btn" class="p-2 hover:bg-white/20 rounded-lg transition">
+                <i class="fa-solid fa-times"></i>
+              </button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(installBanner);
+
+        // Install button handler
+        document.getElementById('pwa-install-btn').addEventListener('click', async () => {
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to install prompt: ${outcome}`);
+            deferredPrompt = null;
+            installBanner.remove();
+          }
+        });
+
+        // Dismiss button handler
+        document.getElementById('pwa-dismiss-btn').addEventListener('click', () => {
+          installBanner.remove();
+        });
+      });
+
+      // Handle successful installation
+      window.addEventListener('appinstalled', () => {
+        console.log('PWA installed successfully');
+        deferredPrompt = null;
+        const banner = document.getElementById('pwa-install-banner');
+        if (banner) banner.remove();
+        if (window.toast) {
+          window.toast.success('FieldSprout installed successfully!');
+        }
+      });
+    })();
+  </script>
+
+  <!-- Keyboard Shortcuts Help Modal -->
+  <script>
+    (function() {
+      // Create keyboard shortcuts modal
+      const modal = document.createElement('div');
+      modal.id = 'shortcuts-modal';
+      modal.className = 'fixed inset-0 z-[100] hidden items-center justify-center p-4 bg-black/50';
+      modal.innerHTML = `
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Keyboard Shortcuts</h2>
+            <button id="shortcuts-close" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+              <i class="fa-solid fa-times text-gray-600 dark:text-gray-400"></i>
+            </button>
+          </div>
+
+          <div class="space-y-6">
+            <div>
+              <h3 class="font-semibold mb-3 text-gray-700 dark:text-gray-300">Navigation</h3>
+              <div class="space-y-2">
+                <div class="flex justify-between items-center py-2">
+                  <span class="text-gray-700 dark:text-gray-300">Open command palette</span>
+                  <kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm font-mono">⌘K / Ctrl+K</kbd>
+                </div>
+                <div class="flex justify-between items-center py-2">
+                  <span class="text-gray-700 dark:text-gray-300">Close modal/menu</span>
+                  <kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm font-mono">ESC</kbd>
+                </div>
+                <div class="flex justify-between items-center py-2">
+                  <span class="text-gray-700 dark:text-gray-300">Show keyboard shortcuts</span>
+                  <kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm font-mono">?</kbd>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 class="font-semibold mb-3 text-gray-700 dark:text-gray-300">Actions</h3>
+              <div class="space-y-2">
+                <div class="flex justify-between items-center py-2">
+                  <span class="text-gray-700 dark:text-gray-300">Navigate command palette</span>
+                  <kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm font-mono">↑ ↓</kbd>
+                </div>
+                <div class="flex justify-between items-center py-2">
+                  <span class="text-gray-700 dark:text-gray-300">Select command</span>
+                  <kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm font-mono">Enter</kbd>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                <i class="fa-solid fa-lightbulb mr-1"></i>
+                Tip: Most modals and dialogs can be closed with the <kbd class="px-1 bg-gray-100 dark:bg-gray-700 rounded text-xs">ESC</kbd> key
+              </p>
+            </div>
+          </div>
+
+          <button id="shortcuts-done" class="mt-6 w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold">
+            Got it!
+          </button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      // Show modal on ? key press
+      document.addEventListener('keydown', (e) => {
+        if (e.key === '?' && !e.target.matches('input, textarea, [contenteditable="true"]')) {
+          e.preventDefault();
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
+        }
+      });
+
+      // Close modal handlers
+      const closeModal = () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      };
+
+      document.getElementById('shortcuts-close').addEventListener('click', closeModal);
+      document.getElementById('shortcuts-done').addEventListener('click', closeModal);
+
+      // Close on background click
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          closeModal();
+        }
+      });
+
+      // Close on Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+          closeModal();
+        }
+      });
+    })();
+  </script>
+
+  <!-- Session Timeout Warning -->
+  <script>
+    (function() {
+      class SessionTimeout {
+        constructor(timeoutMinutes = 30, warningMinutes = 5) {
+          this.timeout = timeoutMinutes * 60 * 1000;
+          this.warning = warningMinutes * 60 * 1000;
+          this.warningTimer = null;
+          this.timeoutTimer = null;
+          this.warningModal = null;
+          this.init();
+        }
+
+        init() {
+          this.resetTimers();
+
+          // Reset on user activity
+          ['mousedown', 'keydown', 'scroll', 'touchstart'].forEach(event => {
+            document.addEventListener(event, () => this.resetTimers(), true);
+          });
+        }
+
+        resetTimers() {
+          clearTimeout(this.warningTimer);
+          clearTimeout(this.timeoutTimer);
+
+          // Hide warning modal if shown
+          if (this.warningModal) {
+            this.warningModal.remove();
+            this.warningModal = null;
+          }
+
+          this.warningTimer = setTimeout(() => this.showWarning(), this.timeout - this.warning);
+          this.timeoutTimer = setTimeout(() => this.logout(), this.timeout);
+        }
+
+        showWarning() {
+          const modal = document.createElement('div');
+          modal.className = 'fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50';
+          modal.innerHTML = `
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md">
+              <div class="flex items-center gap-3 mb-3">
+                <i class="fa-solid fa-clock text-3xl text-yellow-500"></i>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Session Expiring Soon</h3>
+              </div>
+              <p class="text-gray-600 dark:text-gray-400 mb-4">
+                Your session will expire in 5 minutes due to inactivity. Click below to stay logged in.
+              </p>
+              <div class="flex gap-3">
+                <button id="stay-logged-in-btn" class="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold">
+                  Stay Logged In
+                </button>
+                <button id="logout-now-btn" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                  Logout
+                </button>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(modal);
+          this.warningModal = modal;
+
+          // Stay logged in button
+          document.getElementById('stay-logged-in-btn').addEventListener('click', () => {
+            this.resetTimers();
+          });
+
+          // Logout button
+          document.getElementById('logout-now-btn').addEventListener('click', () => {
+            this.logout();
+          });
+        }
+
+        logout() {
+          window.location.href = '{{ url_for(ep("logout")) if has_endpoint("logout") else "/logout" }}?reason=timeout';
+        }
+      }
+
+      // Initialize session timeout (30 minutes timeout, 5 minutes warning)
+      new SessionTimeout(30, 5);
     })();
   </script>
 

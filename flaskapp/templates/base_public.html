@@ -330,6 +330,35 @@
   <!-- Page View Tracking -->
   {% include 'includes/page_view_tracking.html' %}
 
+  <!-- Mobile Menu Toggle Script -->
+  <script>
+    (function() {
+      var openBtn = document.getElementById('openMenu');
+      var mobileMenu = document.getElementById('mobileMenu');
+
+      if (openBtn && mobileMenu) {
+        // Toggle menu on button click
+        openBtn.addEventListener('click', function() {
+          mobileMenu.classList.toggle('hidden');
+        });
+
+        // Close menu when clicking any link inside it (except details/summary)
+        mobileMenu.addEventListener('click', function(e) {
+          if (e.target.tagName === 'A') {
+            mobileMenu.classList.add('hidden');
+          }
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', function(e) {
+          if (!mobileMenu.contains(e.target) && !openBtn.contains(e.target)) {
+            mobileMenu.classList.add('hidden');
+          }
+        });
+      }
+    })();
+  </script>
+
   {% block body_extra %}{% endblock %}
 </body>
 </html>

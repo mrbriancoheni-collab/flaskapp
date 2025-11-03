@@ -181,7 +181,7 @@ def create_app():
     client_secret = _os.environ.get("GOOGLE_ADS_CLIENT_SECRET")
     if client_secret:
         app.config["GOOGLE_ADS_CLIENT_SECRET"] = client_secret.strip()
-    redirect_uri = _os.environ.get("GOOGLE_ADS_REDIRECT_URI")
+    redirect_uri = _os.environ.get("GOOGLE_REDIRECT_URI") or _os.environ.get("GOOGLE_ADS_REDIRECT_URI")
     if redirect_uri:
         app.config["GOOGLE_ADS_REDIRECT_URI"] = redirect_uri.strip()
     else:

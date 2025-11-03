@@ -22,7 +22,14 @@ def _get_config(key: str) -> Optional[str]:
     Get configuration value from environment or Flask config.
     Checks environment variables first, then falls back to Flask config.
     This pattern matches app/google/__init__.py approach.
+
+    Special handling for redirect URI: checks GOOGLE_REDIRECT_URI first,
+    then GOOGLE_ADS_REDIRECT_URI as fallback.
     """
+    if key == "GOOGLE_ADS_REDIRECT_URI":
+        return (os.getenv("GOOGLE_REDIRECT_URI") or
+                os.getenv("GOOGLE_ADS_REDIRECT_URI") or
+                current_app.config.get(key))
     return os.getenv(key) or current_app.config.get(key)
 
 

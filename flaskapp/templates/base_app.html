@@ -49,10 +49,18 @@
     .nav-link:hover{background-color:rgba(0,0,0,.04);}
     .nav-link i{width:1.125rem;text-align:center;flex:0 0 auto;}
 
+    /* Dark mode support for nav-link */
+    .dark .nav-link{color:#e5e7eb;}
+    .dark .nav-link:hover{background-color:rgba(255,255,255,.1);}
+
     /* Three-column shell tweaks */
     .primary-btn{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:.75rem;}
     .primary-btn:hover{background-color:rgba(255,255,255,.08);}
     .primary-btn.active{background:linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.08));border:1px solid rgba(255,255,255,.2);}
+
+    /* Dark mode support for primary-btn */
+    .dark .primary-btn{color:#e5e7eb;}
+    .dark .primary-btn:hover{background-color:rgba(255,255,255,.15);}
 
     .secondary-link{display:flex;align-items:center;gap:.5rem;padding:.5rem .625rem;border-radius:.5rem;color:#111827;}
     .secondary-link:hover{background:#eef2ff;}

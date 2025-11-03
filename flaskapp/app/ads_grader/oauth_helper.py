@@ -4,6 +4,7 @@ OAuth 2.0 Helper for Google Ads Connection
 Handles the OAuth flow for connecting Google Ads accounts.
 """
 import logging
+import os
 import secrets
 from typing import Optional, Dict, Any, List
 from flask import session, url_for, current_app
@@ -14,6 +15,15 @@ logger = logging.getLogger(__name__)
 
 # Google Ads API OAuth scopes
 SCOPES = ['https://www.googleapis.com/auth/adwords']
+
+
+def _get_config(key: str) -> Optional[str]:
+    """
+    Get configuration value from environment or Flask config.
+    Checks environment variables first, then falls back to Flask config.
+    This pattern matches app/google/__init__.py approach.
+    """
+    return os.getenv(key) or current_app.config.get(key)
 
 
 class GoogleAdsOAuthHelper:
@@ -33,14 +43,14 @@ class GoogleAdsOAuthHelper:
         state = secrets.token_urlsafe(32)
         session['oauth_state'] = state
 
-        # Get OAuth credentials from config
+        # Get OAuth credentials from config (env vars first, then Flask config)
         client_config = {
             "web": {
-                "client_id": current_app.config.get("GOOGLE_ADS_CLIENT_ID"),
-                "client_secret": current_app.config.get("GOOGLE_ADS_CLIENT_SECRET"),
+                "client_id": _get_config("GOOGLE_ADS_CLIENT_ID"),
+                "client_secret": _get_config("GOOGLE_ADS_CLIENT_SECRET"),
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [current_app.config.get("GOOGLE_ADS_REDIRECT_URI")],
+                "redirect_uris": [_get_config("GOOGLE_ADS_REDIRECT_URI") or "https://fieldsprout.io/ads-grader/connect/callback"],
             }
         }
 
@@ -52,7 +62,7 @@ class GoogleAdsOAuthHelper:
         )
 
         # Set redirect URI
-        flow.redirect_uri = current_app.config.get("GOOGLE_ADS_REDIRECT_URI")
+        flow.redirect_uri = _get_config("GOOGLE_ADS_REDIRECT_URI") or "https://fieldsprout.io/ads-grader/connect/callback"
 
         # Generate authorization URL
         authorization_url, state = flow.authorization_url(
@@ -85,14 +95,14 @@ class GoogleAdsOAuthHelper:
         session.pop('oauth_state', None)
 
         try:
-            # Get OAuth credentials from config
+            # Get OAuth credentials from config (env vars first, then Flask config)
             client_config = {
                 "web": {
-                    "client_id": current_app.config.get("GOOGLE_ADS_CLIENT_ID"),
-                    "client_secret": current_app.config.get("GOOGLE_ADS_CLIENT_SECRET"),
+                    "client_id": _get_config("GOOGLE_ADS_CLIENT_ID"),
+                    "client_secret": _get_config("GOOGLE_ADS_CLIENT_SECRET"),
                     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                     "token_uri": "https://oauth2.googleapis.com/token",
-                    "redirect_uris": [current_app.config.get("GOOGLE_ADS_REDIRECT_URI")],
+                    "redirect_uris": [_get_config("GOOGLE_ADS_REDIRECT_URI") or "https://fieldsprout.io/ads-grader/connect/callback"],
                 }
             }
 
@@ -104,7 +114,7 @@ class GoogleAdsOAuthHelper:
             )
 
             # Set redirect URI (must match the one used in authorization)
-            flow.redirect_uri = current_app.config.get("GOOGLE_ADS_REDIRECT_URI")
+            flow.redirect_uri = _get_config("GOOGLE_ADS_REDIRECT_URI") or "https://fieldsprout.io/ads-grader/connect/callback"
 
             # Exchange authorization code for tokens
             flow.fetch_token(authorization_response=authorization_response)
@@ -141,8 +151,8 @@ class GoogleAdsOAuthHelper:
                 token=None,
                 refresh_token=refresh_token,
                 token_uri="https://oauth2.googleapis.com/token",
-                client_id=current_app.config.get("GOOGLE_ADS_CLIENT_ID"),
-                client_secret=current_app.config.get("GOOGLE_ADS_CLIENT_SECRET"),
+                client_id=_get_config("GOOGLE_ADS_CLIENT_ID"),
+                client_secret=_get_config("GOOGLE_ADS_CLIENT_SECRET"),
                 scopes=SCOPES
             )
 
@@ -171,9 +181,9 @@ class GoogleAdsOAuthHelper:
             from google.ads.googleads.client import GoogleAdsClient
 
             credentials_dict = {
-                "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
-                "client_id": current_app.config.get("GOOGLE_ADS_CLIENT_ID"),
-                "client_secret": current_app.config.get("GOOGLE_ADS_CLIENT_SECRET"),
+                "developer_token": _get_config("GOOGLE_ADS_DEVELOPER_TOKEN"),
+                "client_id": _get_config("GOOGLE_ADS_CLIENT_ID"),
+                "client_secret": _get_config("GOOGLE_ADS_CLIENT_SECRET"),
                 "refresh_token": access_token,
                 "use_proto_plus": True,
             }

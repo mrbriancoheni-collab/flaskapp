@@ -871,14 +871,243 @@ def create_app():
             return redirect(request.referrer or url_for("main_bp.home")), 400
 
     # ---- General error handlers --------------------------------------------
+    @app.errorhandler(400)
+    def _400(err):
+        """Handle 400 Bad Request errors with clean HTML page"""
+        return render_template_string("""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>400 Bad Request - {{ app_name }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .error-container {
+            background: white;
+            border-radius: 12px;
+            padding: 3rem;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            font-size: 4rem;
+            margin: 0 0 1rem 0;
+            color: #667eea;
+        }
+        h2 {
+            font-size: 1.5rem;
+            margin: 0 0 1rem 0;
+            color: #333;
+            font-weight: 600;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <h1>400</h1>
+        <h2>Bad Request</h2>
+        <p>The request you sent was invalid or malformed. Please check your input and try again.</p>
+        <a href="/" class="btn">Return Home</a>
+    </div>
+</body>
+</html>
+        """, app_name=app.config.get('APP_NAME', 'FieldSprout')), 400
+
     @app.errorhandler(404)
     def _404(err):
-        return (f"404 Not Found: {request.path}", 404)
+        """Handle 404 Not Found errors with clean HTML page"""
+        return render_template_string("""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 Not Found - {{ app_name }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .error-container {
+            background: white;
+            border-radius: 12px;
+            padding: 3rem;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            font-size: 4rem;
+            margin: 0 0 1rem 0;
+            color: #667eea;
+        }
+        h2 {
+            font-size: 1.5rem;
+            margin: 0 0 1rem 0;
+            color: #333;
+            font-weight: 600;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+        .path {
+            font-family: 'Courier New', monospace;
+            background: #f5f5f5;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            color: #e91e63;
+            font-size: 0.9rem;
+            margin: 1rem 0;
+            word-break: break-all;
+        }
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <h1>404</h1>
+        <h2>Page Not Found</h2>
+        <p>The page you're looking for doesn't exist or has been moved.</p>
+        <div class="path">{{ path }}</div>
+        <a href="/" class="btn">Return Home</a>
+    </div>
+</body>
+</html>
+        """, app_name=app.config.get('APP_NAME', 'FieldSprout'), path=request.path), 404
+
+    @app.errorhandler(500)
+    def _500(err):
+        """Handle 500 Internal Server Error with clean HTML page"""
+        app.logger.exception("Unhandled exception")
+        return render_template_string("""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 Internal Server Error - {{ app_name }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .error-container {
+            background: white;
+            border-radius: 12px;
+            padding: 3rem;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            font-size: 4rem;
+            margin: 0 0 1rem 0;
+            color: #e91e63;
+        }
+        h2 {
+            font-size: 1.5rem;
+            margin: 0 0 1rem 0;
+            color: #333;
+            font-weight: 600;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <h1>500</h1>
+        <h2>Internal Server Error</h2>
+        <p>Something went wrong on our end. We've been notified and are working to fix it. Please try again in a few moments.</p>
+        <a href="/" class="btn">Return Home</a>
+    </div>
+</body>
+</html>
+        """, app_name=app.config.get('APP_NAME', 'FieldSprout')), 500
 
     @app.errorhandler(Exception)
-    def _500(err):
+    def _handle_exception(err):
+        """Catch-all exception handler"""
         app.logger.exception("Unhandled exception")
-        return ("Internal Server Error", 500)
+        # If it's an HTTP exception, let Flask handle it normally
+        if hasattr(err, 'code'):
+            return err
+        # Otherwise, return 500
+        return _500(err)
 
     @app.context_processor
     def inject_app_and_config():

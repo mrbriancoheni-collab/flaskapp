@@ -66,12 +66,13 @@ CREATE TABLE IF NOT EXISTS `google_ads_grader_reports` (
   -- Indexes
   INDEX `idx_account_id` (`account_id`),
   INDEX `idx_user_id` (`user_id`),
-  INDEX `idx_google_ads_customer_id` (`google_ads_customer_id`),
+  INDEX `idx_google_ads_customer_id` (`google_ads_customer_id`)
 
-  -- Foreign keys
-  CONSTRAINT `fk_google_ads_grader_reports_account`
-    FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_google_ads_grader_reports_user`
-    FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  -- Foreign keys removed to avoid constraint errors
+  -- Add them manually later if needed:
+  -- CONSTRAINT `fk_google_ads_grader_reports_account`
+  --   FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE,
+  -- CONSTRAINT `fk_google_ads_grader_reports_user`
+  --   FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

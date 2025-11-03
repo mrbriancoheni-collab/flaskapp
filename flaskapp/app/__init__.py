@@ -680,6 +680,32 @@ def create_app():
             }
         })
 
+    # ---- Additional debug route for login check ----------------------------
+    @app.route('/debug-login-check')
+    def debug_login_check():
+        """Check if login_required decorator would pass"""
+        from flask import session, jsonify
+        from app.auth.utils import is_logged_in, current_user_id, current_account_id
+
+        try:
+            logged_in = is_logged_in()
+            user_id = current_user_id()
+            account_id = current_account_id()
+        except Exception as e:
+            return jsonify({
+                'error': str(e),
+                'traceback': __import__('traceback').format_exc()
+            })
+
+        return jsonify({
+            'is_logged_in': logged_in,
+            'current_user_id': user_id,
+            'current_account_id': account_id,
+            'session_keys': list(session.keys()),
+            'would_pass_login_required': logged_in and user_id is not None,
+            'would_pass_dashboard_check': logged_in and account_id is not None
+        })
+
     # ---- Request hooks (auth + impersonation) ------------------------------
     try:
         from app.auth.session_helpers import before_request_hook

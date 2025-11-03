@@ -113,8 +113,8 @@ def create_app():
         WP_APP_PW=_os.getenv("WP_APP_PW", ""),
     )
 
-    # Only set secure cookies if explicitly enabled (fixes session issues on HTTP)
-    if _os.getenv("HTTPS", "off").lower() in ("on", "1", "true", "yes"):
+    # Enable secure cookies for HTTPS (default on for production)
+    if _os.getenv("HTTPS", "on").lower() in ("on", "1", "true", "yes"):
         app.config["SESSION_COOKIE_SECURE"] = True
 
     # (Optional) .env

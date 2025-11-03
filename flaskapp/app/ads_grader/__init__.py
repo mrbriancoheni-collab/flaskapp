@@ -52,9 +52,14 @@ def index():
     # If user is logged in, show their recent reports
     recent_reports = []
     if current_user.is_authenticated:
-        recent_reports = GoogleAdsGraderReport.get_for_account(
-            current_user.account_id, limit=3
-        )
+        try:
+            recent_reports = GoogleAdsGraderReport.get_for_account(
+                current_user.account_id, limit=3
+            )
+        except Exception as e:
+            # Table might not exist yet or other DB error
+            logger.warning(f"Could not fetch recent reports: {e}")
+            recent_reports = []
 
     return render_template(
         "ads_grader/index.html",

@@ -25,7 +25,7 @@ import logging
 from app import db
 from app.models import Account, User
 from app.models_ads_grader import GoogleAdsGraderReport
-from app.ads_grader.oauth_helper import GoogleAdsOAuthHelper
+# NOTE: oauth_helper is deprecated - now uses main Google OAuth integration
 from app.ads_grader.google_ads_client import GoogleAdsGraderClient
 from app.ads_grader.analyzer import GoogleAdsAnalyzer
 from app.ads_grader.pdf_generator import generate_report_pdf, generate_report_filename
@@ -44,150 +44,129 @@ ads_grader_bp = Blueprint(
 # Landing Page
 # ============================================================================
 @ads_grader_bp.route("/")
+@login_required
 def index():
     """
     Landing page for Google Ads Quality Checker.
-    Available to all users (logged in or not).
+    Requires login - uses existing Google Ads OAuth from /account/google/*.
     """
-    # If user is logged in, show their recent reports
+    account_id = current_user.account_id
+
+    # Check if user has Google Ads connected via main integration
+    from sqlalchemy import text
+    with db.engine.connect() as conn:
+        row = conn.execute(
+            text("""
+                SELECT id, google_ads_customer_id
+                FROM google_oauth_tokens
+                WHERE account_id=:aid AND product='ads'
+                ORDER BY updated_at DESC LIMIT 1
+            """),
+            {"aid": account_id}
+        ).mappings().first()
+
+    google_ads_connected = bool(row)
+    customer_id = row['google_ads_customer_id'] if row else None
+
+    # Fetch recent reports
     recent_reports = []
-    if current_user.is_authenticated:
-        try:
-            recent_reports = GoogleAdsGraderReport.get_for_account(
-                current_user.account_id, limit=3
-            )
-        except Exception as e:
-            # Table might not exist yet or other DB error
-            logger.warning(f"Could not fetch recent reports: {e}")
-            recent_reports = []
+    try:
+        recent_reports = GoogleAdsGraderReport.get_for_account(
+            account_id, limit=3
+        )
+    except Exception as e:
+        logger.warning(f"Could not fetch recent reports: {e}")
+        recent_reports = []
 
     return render_template(
         "ads_grader/index.html",
         recent_reports=recent_reports,
+        google_ads_connected=google_ads_connected,
+        customer_id=customer_id,
     )
 
 
 # ============================================================================
-# Google Ads Connection (OAuth Flow)
+# Google Ads Connection - Redirect to Main Integration
 # ============================================================================
 @ads_grader_bp.route("/connect")
+@login_required
 def connect():
     """
-    Initiate OAuth flow to connect Google Ads account.
+    Redirect to main Google Ads OAuth flow.
+    After connecting, user will be redirected back here.
     """
-    try:
-        import os
-        # Check if OAuth credentials are configured (check env vars first, then config)
-        client_id = os.getenv("GOOGLE_ADS_CLIENT_ID") or current_app.config.get("GOOGLE_ADS_CLIENT_ID")
-        if not client_id:
-            logger.warning("Google Ads OAuth not configured - using demo mode")
-            flash("Google Ads connection not configured. Using demo mode.", "info")
-            return redirect(url_for("ads_grader_bp.analyze"))
+    # Set a session flag to redirect back to ads-grader after OAuth
+    session['oauth_redirect_after'] = 'ads_grader_bp.index'
 
-        # Generate authorization URL
-        authorization_url = GoogleAdsOAuthHelper.get_authorization_url()
-
-        # Redirect user to Google OAuth consent screen
-        return redirect(authorization_url)
-
-    except Exception as e:
-        logger.exception(f"Error initiating OAuth flow: {e}")
-        flash("Error connecting to Google Ads. Please try again or use demo mode.", "error")
-        return redirect(url_for("ads_grader_bp.index"))
+    # Redirect to main Google Ads connection flow
+    return redirect(url_for("google_bp.connect_ads", next=url_for("ads_grader_bp.index")))
 
 
 @ads_grader_bp.route("/connect/callback")
 def connect_callback():
     """
-    Handle OAuth callback from Google.
+    DEPRECATED: Callback is now handled by main Google OAuth flow.
+    This route exists for backward compatibility but redirects to index.
     """
-    try:
-        # Get authorization response (full URL)
-        authorization_response = request.url
-        state = request.args.get("state")
-
-        # Exchange code for tokens
-        tokens = GoogleAdsOAuthHelper.handle_callback(authorization_response, state)
-
-        if not tokens:
-            flash("Failed to authorize Google Ads access. Please try again.", "error")
-            return redirect(url_for("ads_grader_bp.index"))
-
-        # Store tokens in session (for single-use grading)
-        # In production, you might want to store these in the database for recurring analysis
-        session['google_ads_tokens'] = tokens
-
-        # Get available customer IDs
-        customer_ids = GoogleAdsOAuthHelper.get_customer_ids(tokens['refresh_token'])
-
-        if not customer_ids:
-            flash("No Google Ads accounts found. Please ensure you have access to at least one account.", "warning")
-            return redirect(url_for("ads_grader_bp.index"))
-
-        # Store customer IDs in session for selection
-        session['google_ads_customers'] = customer_ids
-
-        # If only one account, auto-select it and go to analysis
-        if len(customer_ids) == 1:
-            session['selected_customer_id'] = customer_ids[0]['customer_id']
-            flash(f"Connected to Google Ads account: {customer_ids[0]['name']}", "success")
-            return redirect(url_for("ads_grader_bp.analyze"))
-
-        # Multiple accounts - show selection page
-        flash(f"Connected successfully! Select which account to analyze.", "success")
-        return redirect(url_for("ads_grader_bp.select_account"))
-
-    except Exception as e:
-        logger.exception(f"Error in OAuth callback: {e}")
-        flash("Error connecting to Google Ads. Please try again.", "error")
-        return redirect(url_for("ads_grader_bp.index"))
+    flash("Please connect via your account dashboard.", "info")
+    return redirect(url_for("ads_grader_bp.index"))
 
 
 # ============================================================================
 # Analysis Execution
 # ============================================================================
 @ads_grader_bp.route("/analyze", methods=["GET", "POST"])
+@login_required
 def analyze():
     """
     Run Google Ads analysis and generate report.
+    Requires login - uses existing Google Ads OAuth from /account/google/*.
     """
-    if request.method == "GET":
-        # Check if we have customer selection
-        customers = session.get('google_ads_customers', [])
-        selected_customer = session.get('selected_customer_id')
+    account_id = current_user.account_id
 
+    # Fetch Google Ads OAuth tokens from database
+    from sqlalchemy import text
+    with db.engine.connect() as conn:
+        row = conn.execute(
+            text("""
+                SELECT refresh_token, google_ads_customer_id
+                FROM google_oauth_tokens
+                WHERE account_id=:aid AND product='ads'
+                ORDER BY updated_at DESC LIMIT 1
+            """),
+            {"aid": account_id}
+        ).mappings().first()
+
+    if not row or not row['refresh_token']:
+        flash("Please connect your Google Ads account first.", "error")
+        return redirect(url_for("ads_grader_bp.connect"))
+
+    refresh_token = row['refresh_token']
+    customer_id = row['google_ads_customer_id']
+
+    if not customer_id:
+        flash("No Google Ads customer ID found. Please reconnect your account.", "error")
+        return redirect(url_for("ads_grader_bp.connect"))
+
+    if request.method == "GET":
         return render_template(
             "ads_grader/analyze.html",
-            customers=customers,
-            selected_customer=selected_customer
+            customer_id=customer_id
         )
 
     # POST: Run analysis
     try:
-        # Get customer ID from form or session
-        customer_id = request.form.get("customer_id") or session.get('selected_customer_id')
-
-        if not customer_id:
-            flash("Please connect a Google Ads account first.", "error")
-            return redirect(url_for("ads_grader_bp.connect"))
-
-        # Get tokens from session
-        tokens = session.get('google_ads_tokens')
-
-        # If no tokens, check if demo mode is requested
+        # Check if demo mode is requested
         use_demo = request.form.get("use_demo", "false") == "true"
 
-        if not tokens and not use_demo:
-            flash("Session expired. Please reconnect your Google Ads account.", "warning")
-            return redirect(url_for("ads_grader_bp.connect"))
-
         # Create report
-        if use_demo or not tokens:
+        if use_demo:
             # Demo mode - use mock data
             report = _create_demo_report(customer_id)
         else:
             # Real mode - fetch data from Google Ads API
-            report = _create_real_report(customer_id, tokens['refresh_token'])
+            report = _create_real_report(customer_id, refresh_token)
 
         flash(f"Analysis complete! Your Google Ads Performance Score: {report.overall_score:.0f}/100", "success")
         return redirect(url_for("ads_grader_bp.report", report_id=report.id))
@@ -299,27 +278,15 @@ def history():
 # Account Selection
 # ============================================================================
 @ads_grader_bp.route("/select-account", methods=["GET", "POST"])
+@login_required
 def select_account():
     """
-    Select which Google Ads account to analyze (for users with multiple accounts).
+    DEPRECATED: Account selection is now handled by main Google OAuth flow.
+    Customer ID is stored in google_oauth_tokens table.
+    This route exists for backward compatibility but redirects to analyze.
     """
-    customers = session.get('google_ads_customers', [])
-
-    if not customers:
-        flash("No Google Ads accounts found. Please connect your account.", "error")
-        return redirect(url_for("ads_grader_bp.connect"))
-
-    if request.method == "POST":
-        selected_id = request.form.get("customer_id")
-        if selected_id:
-            session['selected_customer_id'] = selected_id
-            flash("Account selected. Ready to analyze!", "success")
-            return redirect(url_for("ads_grader_bp.analyze"))
-
-    return render_template(
-        "ads_grader/select_account.html",
-        customers=customers
-    )
+    flash("Please use the analyze page to run your Google Ads report.", "info")
+    return redirect(url_for("ads_grader_bp.analyze"))
 
 
 # ============================================================================

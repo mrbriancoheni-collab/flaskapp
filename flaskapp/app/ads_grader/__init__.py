@@ -53,11 +53,13 @@ def index():
     account_id = current_user.account_id
 
     # Check if user has Google Ads connected via main integration
+    # Tokens are in google_oauth_tokens, customer_id is in accounts table
     from sqlalchemy import text
     with db.engine.connect() as conn:
-        row = conn.execute(
+        # Check for OAuth tokens
+        token_row = conn.execute(
             text("""
-                SELECT id, google_ads_customer_id
+                SELECT id
                 FROM google_oauth_tokens
                 WHERE account_id=:aid AND product='ads'
                 ORDER BY updated_at DESC LIMIT 1
@@ -65,8 +67,19 @@ def index():
             {"aid": account_id}
         ).mappings().first()
 
-    google_ads_connected = bool(row)
-    customer_id = row['google_ads_customer_id'] if row else None
+        # Get customer_id from accounts table
+        account_row = conn.execute(
+            text("""
+                SELECT google_ads_customer_id
+                FROM accounts
+                WHERE id=:aid
+                LIMIT 1
+            """),
+            {"aid": account_id}
+        ).mappings().first()
+
+    google_ads_connected = bool(token_row)
+    customer_id = account_row['google_ads_customer_id'] if account_row else None
 
     # Fetch recent reports
     recent_reports = []
@@ -126,11 +139,13 @@ def analyze():
     account_id = current_user.account_id
 
     # Fetch Google Ads OAuth tokens from database
+    # Tokens are in google_oauth_tokens, customer_id is in accounts table
     from sqlalchemy import text
     with db.engine.connect() as conn:
-        row = conn.execute(
+        # Get OAuth tokens
+        token_row = conn.execute(
             text("""
-                SELECT refresh_token, google_ads_customer_id
+                SELECT refresh_token
                 FROM google_oauth_tokens
                 WHERE account_id=:aid AND product='ads'
                 ORDER BY updated_at DESC LIMIT 1
@@ -138,12 +153,23 @@ def analyze():
             {"aid": account_id}
         ).mappings().first()
 
-    if not row or not row['refresh_token']:
+        # Get customer_id from accounts table
+        account_row = conn.execute(
+            text("""
+                SELECT google_ads_customer_id
+                FROM accounts
+                WHERE id=:aid
+                LIMIT 1
+            """),
+            {"aid": account_id}
+        ).mappings().first()
+
+    if not token_row or not token_row['refresh_token']:
         flash("Please connect your Google Ads account first.", "error")
         return redirect(url_for("ads_grader_bp.connect"))
 
-    refresh_token = row['refresh_token']
-    customer_id = row['google_ads_customer_id']
+    refresh_token = token_row['refresh_token']
+    customer_id = account_row['google_ads_customer_id'] if account_row else None
 
     if not customer_id:
         flash("No Google Ads customer ID found. Please reconnect your account.", "error")

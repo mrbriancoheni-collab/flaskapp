@@ -76,6 +76,32 @@
     </div>
   </div>
 
+  <!-- Account selector (like GA/GSC) -->
+  {% if _connected %}
+  <div class="flex items-center gap-3">
+    <label class="font-medium">Account</label>
+    <select id="adsCustomerSelect"
+            class="min-w-[280px] rounded-md border px-2 py-1 text-sm">
+      <option value="">Loading…</option>
+    </select>
+    <button id="adsCustomerSave" class="px-3 py-1 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 text-sm">Save</button>
+    <span id="adsCustomerMsg" class="text-sm text-gray-500"></span>
+
+    <!-- Help tooltip -->
+    <div class="relative group">
+      <button type="button" class="inline-flex items-center justify-center w-5 h-5 text-xs text-gray-400 hover:text-gray-600 border border-gray-300 rounded-full">
+        ?
+      </button>
+      <div class="absolute left-0 top-6 z-10 hidden group-hover:block w-80 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
+        <div class="font-semibold mb-1">Manage multiple accounts?</div>
+        <p class="mb-2">If you have access to multiple Google Ads accounts, use this dropdown to switch between them.</p>
+        <p class="text-gray-300">Data will refresh automatically when you change accounts.</p>
+        <div class="absolute -top-1 left-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="rounded-lg border bg-white p-4 flex flex-wrap items-center justify-between gap-3">
     <div class="flex items-center gap-2">
       <button type="button"
@@ -621,6 +647,77 @@
       }
     });
   }
+})();
+
+// ============= Google Ads Account Selector =============
+(function() {
+  const sel = document.getElementById('adsCustomerSelect');
+  const saveBtn = document.getElementById('adsCustomerSave');
+  const msg = document.getElementById('adsCustomerMsg');
+  if (!sel || !saveBtn) return;
+
+  // Load accessible customers on page load
+  async function loadCustomers() {
+    try {
+      const res = await fetch('{{ url_for("google_bp.ads_list_customers") }}', {
+        credentials: 'same-origin'
+      });
+      const json = await res.json();
+
+      if (json.ok && json.customers) {
+        sel.innerHTML = '';
+        json.customers.forEach(cid => {
+          const opt = document.createElement('option');
+          opt.value = cid;
+          opt.textContent = cid + (cid === json.current ? ' (Current)' : '');
+          if (cid === json.current) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      } else {
+        sel.innerHTML = '<option value="">Error loading accounts</option>';
+      }
+    } catch (e) {
+      console.error('Failed to load Google Ads customers:', e);
+      sel.innerHTML = '<option value="">Error loading accounts</option>';
+    }
+  }
+
+  // Save selected customer
+  saveBtn.addEventListener('click', async () => {
+    const customerId = sel.value;
+    if (!customerId) return;
+
+    msg.textContent = 'Saving...';
+    saveBtn.disabled = true;
+
+    try {
+      const res = await fetch('{{ url_for("google_bp.ads_select_customer") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'customer_id=' + encodeURIComponent(customerId),
+        credentials: 'same-origin'
+      });
+      const json = await res.json();
+
+      if (json.ok) {
+        msg.textContent = 'Saved! Refreshing...';
+        msg.className = 'text-sm text-green-600';
+        setTimeout(() => window.location.reload(), 800);
+      } else {
+        msg.textContent = 'Error: ' + (json.error || 'Failed to save');
+        msg.className = 'text-sm text-red-600';
+      }
+    } catch (e) {
+      console.error('Failed to save customer:', e);
+      msg.textContent = 'Error saving';
+      msg.className = 'text-sm text-red-600';
+    } finally {
+      saveBtn.disabled = false;
+    }
+  });
+
+  // Load customers on page load
+  loadCustomers();
 })();
 </script>
 {% endblock %}

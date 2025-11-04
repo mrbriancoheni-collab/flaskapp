@@ -1911,6 +1911,68 @@ def ga_diag():
 
 # ------------------------- Ads actions -------------------------
 
+@google_bp.route("/ads/list-customers", methods=["GET"], endpoint="ads_list_customers")
+@login_required
+def ads_list_customers():
+    """AJAX endpoint to fetch accessible Google Ads customer IDs."""
+    aid = current_account_id()
+    try:
+        # Get access token
+        with db.engine.connect() as conn:
+            row = conn.execute(
+                text("""
+                    SELECT access_token
+                    FROM google_oauth_tokens
+                    WHERE account_id=:aid AND product='ads'
+                    ORDER BY updated_at DESC LIMIT 1
+                """),
+                {"aid": aid}
+            ).mappings().first()
+
+        if not row or not row['access_token']:
+            return jsonify({"ok": False, "error": "Not connected"}), 400
+
+        from app.google.utils_ads import list_accessible_customers
+        customer_ids = list_accessible_customers(row['access_token'])
+
+        # Get current default customer ID
+        with db.engine.connect() as conn:
+            account_row = conn.execute(
+                text("SELECT google_ads_customer_id FROM accounts WHERE id=:aid LIMIT 1"),
+                {"aid": aid}
+            ).mappings().first()
+
+        current_id = account_row['google_ads_customer_id'] if account_row else None
+
+        return jsonify({
+            "ok": True,
+            "customers": customer_ids,
+            "current": current_id
+        })
+    except Exception as e:
+        current_app.logger.exception("Failed to list Google Ads customers")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@google_bp.route("/ads/select-customer", methods=["POST", "GET"], endpoint="ads_select_customer")
+@login_required
+def ads_select_customer():
+    """AJAX endpoint to save selected Google Ads customer ID."""
+    aid = current_account_id()
+    customer_id = (request.values.get("customer_id") or "").strip()
+
+    if not customer_id:
+        return jsonify({"ok": False, "error": "Missing customer_id"}), 400
+
+    try:
+        from app.google.utils_ads import save_customer_id
+        save_customer_id(aid, customer_id)
+        return jsonify({"ok": True, "customer_id": customer_id})
+    except Exception as e:
+        current_app.logger.exception("Failed to save Google Ads customer ID")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @google_bp.route("/ads/pull-live", methods=["POST"], endpoint="ads_pull_live")
 @login_required
 def ads_pull_live():

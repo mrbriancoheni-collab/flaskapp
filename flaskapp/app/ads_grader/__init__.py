@@ -53,11 +53,13 @@ def index():
     account_id = current_user.account_id
 
     # Check if user has Google Ads connected via main integration
+    # Tokens are in google_oauth_tokens, customer_id is in accounts table
     from sqlalchemy import text
     with db.engine.connect() as conn:
-        row = conn.execute(
+        # Check for OAuth tokens
+        token_row = conn.execute(
             text("""
-                SELECT id, google_ads_customer_id
+                SELECT id
                 FROM google_oauth_tokens
                 WHERE account_id=:aid AND product='ads'
                 ORDER BY updated_at DESC LIMIT 1
@@ -65,8 +67,19 @@ def index():
             {"aid": account_id}
         ).mappings().first()
 
-    google_ads_connected = bool(row)
-    customer_id = row['google_ads_customer_id'] if row else None
+        # Get customer_id from accounts table
+        account_row = conn.execute(
+            text("""
+                SELECT google_ads_customer_id
+                FROM accounts
+                WHERE id=:aid
+                LIMIT 1
+            """),
+            {"aid": account_id}
+        ).mappings().first()
+
+    google_ads_connected = bool(token_row)
+    customer_id = account_row['google_ads_customer_id'] if account_row else None
 
     # Fetch recent reports
     recent_reports = []
@@ -126,11 +139,13 @@ def analyze():
     account_id = current_user.account_id
 
     # Fetch Google Ads OAuth tokens from database
+    # Tokens are in google_oauth_tokens, customer_id is in accounts table
     from sqlalchemy import text
     with db.engine.connect() as conn:
-        row = conn.execute(
+        # Get OAuth tokens
+        token_row = conn.execute(
             text("""
-                SELECT refresh_token, google_ads_customer_id
+                SELECT access_token, refresh_token
                 FROM google_oauth_tokens
                 WHERE account_id=:aid AND product='ads'
                 ORDER BY updated_at DESC LIMIT 1
@@ -138,35 +153,66 @@ def analyze():
             {"aid": account_id}
         ).mappings().first()
 
-    if not row or not row['refresh_token']:
+        # Get default customer_id from accounts table
+        account_row = conn.execute(
+            text("""
+                SELECT google_ads_customer_id
+                FROM accounts
+                WHERE id=:aid
+                LIMIT 1
+            """),
+            {"aid": account_id}
+        ).mappings().first()
+
+    if not token_row or not token_row['refresh_token']:
         flash("Please connect your Google Ads account first.", "error")
         return redirect(url_for("ads_grader_bp.connect"))
 
-    refresh_token = row['refresh_token']
-    customer_id = row['google_ads_customer_id']
+    refresh_token = token_row['refresh_token']
+    access_token = token_row['access_token']
+    default_customer_id = account_row['google_ads_customer_id'] if account_row else None
 
-    if not customer_id:
-        flash("No Google Ads customer ID found. Please reconnect your account.", "error")
-        return redirect(url_for("ads_grader_bp.connect"))
+    # Fetch all accessible customer IDs for dropdown
+    accessible_customers = []
+    try:
+        from app.google.utils_ads import list_accessible_customers
+        accessible_customers = list_accessible_customers(access_token)
+        logger.info(f"Found {len(accessible_customers)} accessible Google Ads accounts")
+    except Exception as e:
+        logger.warning(f"Could not fetch accessible customers: {e}")
+        # Fallback to default customer ID if available
+        if default_customer_id:
+            accessible_customers = [default_customer_id]
 
+    # Determine which customer ID to use
     if request.method == "GET":
+        # Show analyze page with account selector
         return render_template(
             "ads_grader/analyze.html",
-            customer_id=customer_id
+            accessible_customers=accessible_customers,
+            default_customer_id=default_customer_id,
+            connected=True
         )
 
     # POST: Run analysis
     try:
+        # Get selected customer ID from form (or fall back to default)
+        selected_customer_id = request.form.get("customer_id") or default_customer_id
+
+        if not selected_customer_id:
+            flash("Please select a Google Ads account to analyze.", "error")
+            return redirect(url_for("ads_grader_bp.analyze"))
+
         # Check if demo mode is requested
         use_demo = request.form.get("use_demo", "false") == "true"
 
         # Create report
         if use_demo:
             # Demo mode - use mock data
-            report = _create_demo_report(customer_id)
+            report = _create_demo_report(selected_customer_id)
         else:
             # Real mode - fetch data from Google Ads API
-            report = _create_real_report(customer_id, refresh_token)
+            report = _create_real_report(selected_customer_id, refresh_token)
 
         flash(f"Analysis complete! Your Google Ads Performance Score: {report.overall_score:.0f}/100", "success")
         return redirect(url_for("ads_grader_bp.report", report_id=report.id))

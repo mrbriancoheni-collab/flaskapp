@@ -3,6 +3,64 @@
 
 {% block content %}
 <div class="max-w-2xl mx-auto">
+  {% if connected %}
+  {# Connected State - Show Account Selector #}
+  <div class="text-center mb-8">
+    <h1 class="text-3xl font-bold mb-3">Run Google Ads Analysis</h1>
+    <p class="text-gray-600">Select an account to analyze and generate a comprehensive performance report.</p>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-lg p-8 mb-6">
+    <form method="post" action="{{ url_for('ads_grader_bp.analyze') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          <i class="fa-brands fa-google mr-2 text-blue-600"></i>
+          Select Google Ads Account
+        </label>
+        <select name="customer_id"
+                class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 px-4 py-3 text-base"
+                required>
+          {% if accessible_customers %}
+            {% for customer_id in accessible_customers %}
+            <option value="{{ customer_id }}" {% if customer_id == default_customer_id %}selected{% endif %}>
+              {{ customer_id }}{% if customer_id == default_customer_id %} (Default){% endif %}
+            </option>
+            {% endfor %}
+          {% else %}
+            <option value="">No accounts found</option>
+          {% endif %}
+        </select>
+        <p class="mt-2 text-sm text-gray-500">
+          <i class="fa-solid fa-info-circle mr-1"></i>
+          Choose which account you'd like to analyze
+        </p>
+      </div>
+
+      <div class="text-center">
+        <button type="submit"
+                class="inline-flex items-center px-8 py-4 bg-indigo-600 text-white text-lg font-medium rounded-lg hover:bg-indigo-700 transition transform hover:scale-105">
+          <i class="fa-solid fa-chart-line mr-3 text-xl"></i>
+          Run Analysis
+        </button>
+        <p class="text-sm text-gray-500 mt-3">
+          <i class="fa-solid fa-clock mr-1"></i>
+          Analysis typically completes in 30-60 seconds
+        </p>
+      </div>
+    </form>
+
+    <div class="mt-6 pt-6 border-t border-gray-200">
+      <p class="text-sm text-gray-600 text-center">
+        <i class="fa-solid fa-lock mr-1"></i>
+        Read-only access • We never make changes to your account
+      </p>
+    </div>
+  </div>
+
+  {% else %}
+  {# Not Connected State #}
   <div class="text-center mb-8">
     <h1 class="text-3xl font-bold mb-3">Connect Your Google Ads Account</h1>
     <p class="text-gray-600">We'll analyze your account and generate a comprehensive performance report in 60 seconds.</p>
@@ -29,6 +87,7 @@
       </p>
     </div>
   </div>
+  {% endif %}
 
   <!-- Demo Option -->
   <div class="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-6">

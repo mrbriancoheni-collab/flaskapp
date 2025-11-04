@@ -254,7 +254,7 @@ def crm_list():
 @login_required
 @require_admin
 def crm_new():
-    return render_template("admin/crm_edit.html", item=None, stages=CRM_STAGES)
+    return render_template("admin/crm_form.html", item=None, STAGES=CRM_STAGES)
 
 
 @admin_bp.post("/crm/new")
@@ -326,7 +326,7 @@ def crm_detail(contact_id: int):
 @require_admin
 def crm_edit(contact_id: int):
     item = CRMContact.query.get_or_404(contact_id)
-    return render_template("admin/crm_edit.html", item=item, stages=CRM_STAGES)
+    return render_template("admin/crm_form.html", item=item, STAGES=CRM_STAGES)
 
 
 @admin_bp.post("/crm/<int:contact_id>/edit")

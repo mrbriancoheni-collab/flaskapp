@@ -1,0 +1,327 @@
+{# templates/google/ads_opportunities.html #}
+{% extends "base_app.html" %}
+{% set SECTION = 'google' %}
+{% block title %}Opportunities Dashboard - Google Ads{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+  <!-- Header with Back Button -->
+  <div class="flex items-center justify-between">
+    <div>
+      <a href="{{ url_for('google_bp.ads_ui') }}" class="text-sm text-indigo-600 hover:text-indigo-800 mb-2 inline-block">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Back to Google Ads
+      </a>
+      <h1 class="text-3xl font-bold">Opportunities Dashboard</h1>
+      <p class="text-gray-600 mt-1">{{ analysis.account_name }}</p>
+    </div>
+    {% if not connected %}
+    <a href="{{ url_for('google_bp.connect_ads') }}"
+       class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
+      <i class="fa-brands fa-google"></i> Connect Google Ads
+    </a>
+    {% endif %}
+  </div>
+
+  <!-- Overall Health Score Card -->
+  <div class="bg-white rounded-xl shadow-lg p-8">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-8">
+      <!-- Score Circle -->
+      <div class="text-center">
+        <div class="inline-block relative">
+          {% set score_pct = (analysis.scores.overall / 100) * 502.4 %}
+          {% set offset = 502.4 - score_pct %}
+          <svg class="w-48 h-48 transform -rotate-90">
+            <circle cx="96" cy="96" r="80" stroke="#e5e7eb" stroke-width="12" fill="none"/>
+            <circle cx="96" cy="96" r="80"
+                    {% if analysis.scores.overall >= 80 %}stroke="#10b981"
+                    {% elif analysis.scores.overall >= 60 %}stroke="#f59e0b"
+                    {% else %}stroke="#ef4444"{% endif %}
+                    stroke-width="12" fill="none"
+                    stroke-dasharray="502.4" stroke-dashoffset="{{ offset }}" stroke-linecap="round"/>
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <div class="text-5xl font-bold
+                        {% if analysis.scores.overall >= 80 %}text-green-600
+                        {% elif analysis.scores.overall >= 60 %}text-yellow-600
+                        {% else %}text-red-600{% endif %}">
+              {{ analysis.scores.overall }}
+            </div>
+            <div class="text-sm text-gray-500">Health Score</div>
+          </div>
+        </div>
+        <div class="mt-4 text-3xl font-bold text-gray-700">Grade: {{ analysis.grade }}</div>
+      </div>
+
+      <!-- Key Scores -->
+      <div class="flex-1 grid md:grid-cols-3 gap-4">
+        <div class="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-lg p-4">
+          <div class="text-sm text-gray-600 mb-1">Wasted Spend Prevention</div>
+          <div class="text-3xl font-bold text-red-700">{{ analysis.scores.wasted_spend|int }}%</div>
+          <div class="text-xs text-gray-500 mt-1">Negative keywords</div>
+        </div>
+
+        <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-4">
+          <div class="text-sm text-gray-600 mb-1">Quality Score</div>
+          <div class="text-3xl font-bold text-yellow-700">{{ analysis.scores.quality_score|int }}%</div>
+          <div class="text-xs text-gray-500 mt-1">Ad relevance</div>
+        </div>
+
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
+          <div class="text-sm text-gray-600 mb-1">Ad Extensions</div>
+          <div class="text-3xl font-bold text-blue-700">{{ analysis.scores.extensions|int }}%</div>
+          <div class="text-xs text-gray-500 mt-1">CTR boosters</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Total Potential Value -->
+  {% set ns = namespace(total_monthly_savings=0, total_monthly_leads=0) %}
+  {% for opp in analysis.opportunities %}
+    {% if opp.monthly_savings %}
+      {% set ns.total_monthly_savings = ns.total_monthly_savings + opp.monthly_savings %}
+    {% endif %}
+    {% if opp.monthly_leads %}
+      {% set ns.total_monthly_leads = ns.total_monthly_leads + opp.monthly_leads %}
+    {% endif %}
+  {% endfor %}
+
+  {% if ns.total_monthly_savings > 0 or ns.total_monthly_leads > 0 %}
+  <div class="bg-gradient-to-br from-emerald-50 to-green-100 border-2 border-emerald-300 rounded-xl shadow-xl p-8">
+    <div class="text-center mb-6">
+      <h2 class="text-3xl font-extrabold text-gray-900 mb-2">
+        💰 Your Potential Value
+      </h2>
+      <p class="text-gray-700 font-medium">
+        If you implement the recommendations below:
+      </p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6">
+      {% if ns.total_monthly_savings > 0 %}
+      <div class="bg-white rounded-xl p-6 shadow-md border-2 border-green-300">
+        <div class="flex items-center justify-center mb-3">
+          <span class="text-5xl">💵</span>
+        </div>
+        <div class="text-center">
+          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Monthly Savings</div>
+          <div class="text-4xl font-black text-green-600 mb-1">
+            ${{ "%.0f"|format(ns.total_monthly_savings) }}
+          </div>
+          <div class="text-xs text-gray-500">
+            ${{ "%.0f"|format(ns.total_monthly_savings * 12) }}/year
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if ns.total_monthly_leads > 0 %}
+      <div class="bg-white rounded-xl p-6 shadow-md border-2 border-blue-300">
+        <div class="flex items-center justify-center mb-3">
+          <span class="text-5xl">📈</span>
+        </div>
+        <div class="text-center">
+          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">More Leads</div>
+          <div class="text-4xl font-black text-blue-600 mb-1">
+            +{{ ns.total_monthly_leads|int }}
+          </div>
+          <div class="text-xs text-gray-500">
+            +{{ (ns.total_monthly_leads * 12)|int }} leads/year
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="bg-white rounded-xl p-6 shadow-md border-2 border-purple-300">
+        <div class="flex items-center justify-center mb-3">
+          <span class="text-5xl">🚀</span>
+        </div>
+        <div class="text-center">
+          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Implementation Time</div>
+          <div class="text-4xl font-black text-purple-600 mb-1">
+            {{ analysis.opportunities|length }}
+          </div>
+          <div class="text-xs text-gray-500">
+            opportunities identified
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Top 5 Opportunities -->
+  <div class="bg-white rounded-xl shadow-lg p-6">
+    <h2 class="text-2xl font-bold mb-6">
+      <i class="fa-solid fa-bullseye text-indigo-600 mr-2"></i>
+      Top Opportunities
+    </h2>
+
+    <div class="space-y-4">
+      {% for opp in analysis.opportunities %}
+      <div class="border-l-4
+                  {% if opp.priority == 'high' %}border-red-500 bg-red-50
+                  {% elif opp.priority == 'medium' %}border-yellow-500 bg-yellow-50
+                  {% else %}border-gray-400 bg-gray-50{% endif %}
+                  rounded-r-lg p-5 hover:shadow-md transition">
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex items-start gap-4 flex-1">
+            <!-- Icon -->
+            <div class="flex-shrink-0 w-12 h-12 rounded-full
+                        bg-{{ opp.color }}-100 border-2 border-{{ opp.color }}-300
+                        flex items-center justify-center">
+              <i class="fa-solid {{ opp.icon }} text-2xl text-{{ opp.color }}-600"></i>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-1">
+                <h3 class="text-lg font-bold text-gray-900">{{ opp.title }}</h3>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                            {% if opp.priority == 'high' %}bg-red-100 text-red-800
+                            {% elif opp.priority == 'medium' %}bg-yellow-100 text-yellow-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                  {{ opp.priority|upper }} PRIORITY
+                </span>
+                <span class="text-sm text-gray-500">Impact: {{ opp.impact_score }}/100</span>
+              </div>
+              <p class="text-gray-600 mb-3">{{ opp.description }}</p>
+
+              <div class="flex items-center gap-4 text-sm">
+                <div class="flex items-center gap-1 text-gray-700">
+                  <i class="fa-solid fa-clipboard-list text-gray-400"></i>
+                  <span>{{ opp.action }}</span>
+                </div>
+                <div class="text-gray-500">
+                  <i class="fa-regular fa-clock"></i> {{ opp.estimated_time }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ROI Card -->
+          <div class="flex-shrink-0 text-right">
+            {% if opp.monthly_savings %}
+            <div class="bg-white border-2 border-green-200 rounded-lg p-3 min-w-[140px]">
+              <div class="text-xs text-gray-600 uppercase font-semibold">Potential Savings</div>
+              <div class="text-2xl font-bold text-green-600">${{ "%.0f"|format(opp.monthly_savings) }}</div>
+              <div class="text-xs text-gray-500">/month</div>
+            </div>
+            {% elif opp.monthly_leads %}
+            <div class="bg-white border-2 border-blue-200 rounded-lg p-3 min-w-[140px]">
+              <div class="text-xs text-gray-600 uppercase font-semibold">More Leads</div>
+              <div class="text-2xl font-bold text-blue-600">+{{ opp.monthly_leads|int }}</div>
+              <div class="text-xs text-gray-500">/month</div>
+            </div>
+            {% elif opp.monthly_time_saved %}
+            <div class="bg-white border-2 border-purple-200 rounded-lg p-3 min-w-[140px]">
+              <div class="text-xs text-gray-600 uppercase font-semibold">Time Saved</div>
+              <div class="text-2xl font-bold text-purple-600">{{ opp.monthly_time_saved }}h</div>
+              <div class="text-xs text-gray-500">/month</div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Detailed Recommendations by Category -->
+  <div class="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6">
+    <h2 class="text-2xl font-bold mb-6">
+      <i class="fa-solid fa-lightbulb text-indigo-600 mr-2"></i>
+      Detailed Action Plan
+    </h2>
+
+    <div class="space-y-4">
+      {% for rec in analysis.recommendations %}
+      <div class="bg-white rounded-lg border-2
+                  {% if rec.priority == 'high' %}border-red-300
+                  {% elif rec.priority == 'medium' %}border-yellow-300
+                  {% else %}border-gray-300{% endif %}
+                  p-5">
+        <div class="flex items-start justify-between mb-3">
+          <h3 class="text-xl font-bold text-gray-900">{{ rec.title }}</h3>
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+                      {% if rec.priority == 'high' %}bg-red-100 text-red-800
+                      {% elif rec.priority == 'medium' %}bg-yellow-100 text-yellow-800
+                      {% else %}bg-gray-100 text-gray-800{% endif %}">
+            {{ rec.priority|upper }}
+          </span>
+        </div>
+
+        <ul class="space-y-2 mb-4">
+          {% for item in rec.items %}
+          <li class="flex items-start gap-2">
+            <i class="fa-solid fa-check-circle text-green-500 mt-1"></i>
+            <span class="text-gray-700">{{ item }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+
+        <div class="flex items-center gap-2 text-sm pt-3 border-t border-gray-200">
+          <i class="fa-solid fa-chart-line text-indigo-600"></i>
+          <span class="font-semibold text-indigo-700">{{ rec.impact }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Performance Breakdown -->
+  <div class="bg-white rounded-xl shadow-lg p-6">
+    <h2 class="text-2xl font-bold mb-6">
+      <i class="fa-solid fa-sliders text-indigo-600 mr-2"></i>
+      Performance Breakdown
+    </h2>
+
+    {% macro score_bar(label, score, icon="fa-circle") %}
+      {% set color = "bg-red-500" if score < 40 else "bg-yellow-500" if score < 70 else "bg-green-500" %}
+      {% set text_color = "text-red-600" if score < 40 else "text-yellow-600" if score < 70 else "text-green-600" %}
+      <div class="mb-4">
+        <div class="flex justify-between items-center text-sm mb-2">
+          <span class="font-medium"><i class="{{ icon }} mr-2 text-gray-400"></i>{{ label }}</span>
+          <span class="font-bold {{ text_color }}">{{ score|int }}%</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-3">
+          <div class="{{ color }} h-3 rounded-full transition-all duration-500" style="width: {{ score|int }}%"></div>
+        </div>
+      </div>
+    {% endmacro %}
+
+    <div class="grid md:grid-cols-2 gap-6">
+      <div>
+        {{ score_bar("Wasted Spend Prevention", analysis.scores.wasted_spend, "fa-solid fa-ban") }}
+        {{ score_bar("Quality Score Optimization", analysis.scores.quality_score, "fa-solid fa-star") }}
+        {{ score_bar("Click-Through Rate", analysis.scores.ctr, "fa-solid fa-mouse-pointer") }}
+      </div>
+      <div>
+        {{ score_bar("Account Structure", analysis.scores.account_structure, "fa-solid fa-folder-tree") }}
+        {{ score_bar("Mobile Optimization", analysis.scores.mobile, "fa-solid fa-mobile-screen") }}
+        {{ score_bar("Ad Extensions", analysis.scores.extensions, "fa-solid fa-puzzle-piece") }}
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA Section -->
+  <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-xl p-8 text-center text-white">
+    <h2 class="text-3xl font-bold mb-3">Ready to Implement These Changes?</h2>
+    <p class="text-lg mb-6 text-indigo-100">
+      Let our experts handle everything for you. We'll optimize your campaigns and manage them ongoing.
+    </p>
+    <div class="flex items-center justify-center gap-4">
+      <a href="{{ url_for('account_bp.dashboard') }}"
+         class="inline-flex items-center px-8 py-4 bg-white text-indigo-600 font-bold rounded-lg hover:bg-gray-100 shadow-lg transform hover:scale-105 transition">
+        <i class="fa-solid fa-rocket mr-2"></i>
+        Get Started
+      </a>
+      <a href="{{ url_for('google_bp.ads_ui') }}"
+         class="inline-flex items-center px-8 py-4 bg-indigo-500 text-white font-bold rounded-lg hover:bg-indigo-400 shadow-lg border-2 border-white/30">
+        <i class="fa-solid fa-pencil mr-2"></i>
+        Edit Campaigns Manually
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

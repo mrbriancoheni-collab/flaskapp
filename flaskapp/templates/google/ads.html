@@ -57,6 +57,11 @@
       </p>
     </div>
     <div class="flex items-center gap-2">
+      <!-- Opportunities Dashboard Button -->
+      <a href="{{ url_for('google_bp.ads_opportunities') }}"
+         class="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2 text-white hover:from-purple-700 hover:to-indigo-700 shadow-md font-medium">
+        <i class="fa-solid fa-lightbulb"></i> Opportunities
+      </a>
       <span class="inline-flex items-center rounded-full {{ 'bg-green-50 text-green-700 border border-green-200' if _ai_connected else 'bg-amber-50 text-amber-700 border border-amber-200' }} px-2 py-0.5 text-xs">
         <i class="fa-solid fa-robot mr-1"></i> AI {{ 'enabled' if _ai_connected else 'disabled' }}
       </span>

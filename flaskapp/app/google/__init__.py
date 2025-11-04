@@ -2062,6 +2062,349 @@ def ads_optimize():
     flash("Optimization suggestions generated.", "success")
     return redirect(url_for("google_bp.ads_ui"))
 
+
+@google_bp.route("/ads/opportunities", methods=["GET"], endpoint="ads_opportunities")
+@login_required
+def ads_opportunities():
+    """
+    Opportunities Dashboard - Beautiful, actionable insights view.
+    Matches the visual quality of the ads-grader report.
+    """
+    aid = current_account_id()
+    connected = _is_connected(aid, "ads")
+
+    # Get ads data
+    ads_data = _get_ads_state(aid)
+
+    # Generate comprehensive analysis
+    analysis = _analyze_ads_opportunities(aid, ads_data)
+
+    return render_template(
+        "google/ads_opportunities.html",
+        connected=connected,
+        ads_data=ads_data,
+        analysis=analysis,
+        epn=request.endpoint,
+    )
+
+
+def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
+    """
+    Comprehensive analysis of Google Ads account to identify opportunities.
+    Returns scores, top opportunities, and categorized recommendations.
+    """
+    campaigns = ads_data.get("campaigns", [])
+    ad_groups = ads_data.get("ad_groups", [])
+    keywords = ads_data.get("keywords", [])
+    negatives = ads_data.get("negatives", [])
+    ads = ads_data.get("ads", [])
+    extensions = ads_data.get("extensions", [])
+
+    # Calculate health scores (0-100)
+    scores = {
+        "overall": 0,
+        "wasted_spend": 0,
+        "quality_score": 0,
+        "ctr": 0,
+        "account_structure": 0,
+        "mobile": 0,
+        "extensions": 0,
+    }
+
+    # Calculate individual scores
+    # Wasted Spend Score (based on negatives)
+    if len(keywords) > 0:
+        neg_ratio = len(negatives) / max(len(keywords), 1)
+        scores["wasted_spend"] = min(100, neg_ratio * 300)  # Target: 3 negatives per keyword
+    else:
+        scores["wasted_spend"] = 50
+
+    # Quality Score (estimate based on keyword performance)
+    total_keywords = len(keywords)
+    if total_keywords > 0:
+        # In demo mode, estimate based on CPA
+        avg_cpa = sum(k.get("cpa", 0) or 0 for k in keywords if k.get("conv", 0) > 0) / max(1, sum(1 for k in keywords if k.get("conv", 0) > 0))
+        scores["quality_score"] = max(30, min(100, 100 - (avg_cpa / 2)))  # Lower CPA = higher score
+    else:
+        scores["quality_score"] = 50
+
+    # CTR Score (estimate from demo data)
+    total_clicks = sum(k.get("conv", 0) or 0 for k in keywords)
+    if total_clicks > 50:
+        scores["ctr"] = 75
+    elif total_clicks > 20:
+        scores["ctr"] = 60
+    else:
+        scores["ctr"] = 45
+
+    # Account Structure Score
+    enabled_campaigns = sum(1 for c in campaigns if c.get("status", "").lower() == "enabled")
+    ads_per_group = len(ads) / max(1, len(ad_groups))
+    keywords_per_group = len(keywords) / max(1, len(ad_groups))
+
+    structure_score = 50
+    if enabled_campaigns >= 2:
+        structure_score += 15
+    if 2 <= ads_per_group <= 4:
+        structure_score += 20
+    if 5 <= keywords_per_group <= 20:
+        structure_score += 15
+    scores["account_structure"] = min(100, structure_score)
+
+    # Mobile Score (placeholder - would need device data)
+    scores["mobile"] = 60
+
+    # Extensions Score
+    if len(extensions) >= 4:
+        scores["extensions"] = 90
+    elif len(extensions) >= 2:
+        scores["extensions"] = 70
+    elif len(extensions) >= 1:
+        scores["extensions"] = 50
+    else:
+        scores["extensions"] = 20
+
+    # Calculate overall score (weighted average)
+    scores["overall"] = int(
+        scores["wasted_spend"] * 0.25 +
+        scores["quality_score"] * 0.25 +
+        scores["ctr"] * 0.15 +
+        scores["account_structure"] * 0.15 +
+        scores["mobile"] * 0.10 +
+        scores["extensions"] * 0.10
+    )
+
+    # Generate grade
+    if scores["overall"] >= 90:
+        grade = "A+"
+    elif scores["overall"] >= 85:
+        grade = "A"
+    elif scores["overall"] >= 80:
+        grade = "A-"
+    elif scores["overall"] >= 75:
+        grade = "B+"
+    elif scores["overall"] >= 70:
+        grade = "B"
+    elif scores["overall"] >= 65:
+        grade = "B-"
+    elif scores["overall"] >= 60:
+        grade = "C+"
+    elif scores["overall"] >= 55:
+        grade = "C"
+    elif scores["overall"] >= 50:
+        grade = "C-"
+    elif scores["overall"] >= 45:
+        grade = "D+"
+    elif scores["overall"] >= 40:
+        grade = "D"
+    else:
+        grade = "F"
+
+    # Generate top opportunities with ROI projections
+    opportunities = []
+
+    # Opportunity 1: Negative Keywords (if score is low)
+    if scores["wasted_spend"] < 70:
+        monthly_savings = len(keywords) * 50  # Estimate $50/keyword/month in wasted spend
+        opportunities.append({
+            "title": "Add Negative Keywords",
+            "description": "Stop wasted spend on irrelevant searches",
+            "priority": "high",
+            "impact_score": 95,
+            "monthly_savings": monthly_savings,
+            "annual_savings": monthly_savings * 12,
+            "icon": "fa-ban",
+            "color": "red",
+            "category": "wasted_spend",
+            "action": "Add 50+ negative keywords to prevent irrelevant clicks",
+            "estimated_time": "2 hours",
+        })
+
+    # Opportunity 2: Ad Extensions
+    if scores["extensions"] < 70:
+        monthly_leads = 15
+        opportunities.append({
+            "title": "Add Ad Extensions",
+            "description": "Increase CTR and ad visibility",
+            "priority": "high" if scores["extensions"] < 40 else "medium",
+            "impact_score": 85,
+            "monthly_leads": monthly_leads,
+            "annual_leads": monthly_leads * 12,
+            "icon": "fa-puzzle-piece",
+            "color": "blue",
+            "category": "extensions",
+            "action": "Add sitelinks, callouts, and structured snippets",
+            "estimated_time": "1 hour",
+        })
+
+    # Opportunity 3: Quality Score Optimization
+    if scores["quality_score"] < 75:
+        cpc_reduction = 0.25  # 25% CPC reduction possible
+        current_monthly_spend = sum(c.get("daily_budget", 0) * 30 for c in campaigns)
+        monthly_savings = current_monthly_spend * cpc_reduction
+        opportunities.append({
+            "title": "Improve Quality Scores",
+            "description": "Lower your cost per click by 25%",
+            "priority": "high",
+            "impact_score": 90,
+            "monthly_savings": monthly_savings,
+            "annual_savings": monthly_savings * 12,
+            "icon": "fa-star",
+            "color": "yellow",
+            "category": "quality_score",
+            "action": "Optimize ad copy and landing page relevance",
+            "estimated_time": "4 hours",
+        })
+
+    # Opportunity 4: Mobile Optimization
+    if scores["mobile"] < 70:
+        monthly_leads = 10
+        opportunities.append({
+            "title": "Optimize for Mobile",
+            "description": "Capture more mobile conversions",
+            "priority": "medium",
+            "impact_score": 75,
+            "monthly_leads": monthly_leads,
+            "annual_leads": monthly_leads * 12,
+            "icon": "fa-mobile-screen",
+            "color": "green",
+            "category": "mobile",
+            "action": "Add mobile bid adjustments and call extensions",
+            "estimated_time": "2 hours",
+        })
+
+    # Opportunity 5: Account Structure
+    if scores["account_structure"] < 70:
+        opportunities.append({
+            "title": "Improve Account Structure",
+            "description": "Better organization for easier management",
+            "priority": "low",
+            "impact_score": 60,
+            "monthly_time_saved": 5,  # hours saved per month
+            "icon": "fa-folder-tree",
+            "color": "purple",
+            "category": "account_structure",
+            "action": "Reorganize campaigns and ad groups by theme",
+            "estimated_time": "3 hours",
+        })
+
+    # Sort opportunities by priority and impact
+    priority_order = {"high": 0, "medium": 1, "low": 2}
+    opportunities.sort(key=lambda x: (priority_order.get(x["priority"], 3), -x["impact_score"]))
+
+    # Generate detailed recommendations by category
+    recommendations = _generate_detailed_recommendations(aid, ads_data, scores)
+
+    return {
+        "scores": scores,
+        "grade": grade,
+        "opportunities": opportunities[:5],  # Top 5
+        "recommendations": recommendations,
+        "account_name": ads_data.get("account_name", "Google Ads Account"),
+    }
+
+
+def _generate_detailed_recommendations(aid: int, ads_data: dict, scores: dict) -> list:
+    """Generate detailed, actionable recommendations grouped by category."""
+    recommendations = []
+
+    # Negative Keywords recommendations
+    if scores["wasted_spend"] < 70:
+        recommendations.append({
+            "category": "wasted_spend",
+            "title": "Negative Keywords Strategy",
+            "priority": "high",
+            "items": [
+                "Add account-level negatives: 'free', 'DIY', 'cheap', 'how to'",
+                "Review search terms report weekly and add 10+ negatives",
+                "Create negative keyword lists by theme (e.g., job-seeking, competitors)",
+                "Use broad match negatives for obvious irrelevant terms",
+            ],
+            "impact": "Can reduce wasted spend by $500-2,000/month",
+        })
+
+    # Quality Score recommendations
+    if scores["quality_score"] < 75:
+        recommendations.append({
+            "category": "quality_score",
+            "title": "Quality Score Optimization",
+            "priority": "high",
+            "items": [
+                "Match ad headlines to keyword themes (keyword in headline)",
+                "Improve landing page load speed (target <2 seconds)",
+                "Ensure landing page content matches ad promise",
+                "Add relevant keywords to landing page copy",
+                "Use dynamic keyword insertion in ads where appropriate",
+            ],
+            "impact": "Can reduce CPC by 20-35% (saves $300-1,500/month)",
+        })
+
+    # Ad Extensions recommendations
+    if scores["extensions"] < 70:
+        recommendations.append({
+            "category": "extensions",
+            "title": "Ad Extensions Setup",
+            "priority": "high",
+            "items": [
+                "Add sitelinks to key pages (Services, About, Contact, Financing)",
+                "Create callout extensions highlighting benefits (Free Estimates, 24/7, Licensed)",
+                "Add structured snippets for service types",
+                "Enable call extensions with forwarding numbers for tracking",
+                "Add location extensions if you have a physical location",
+            ],
+            "impact": "Can increase CTR by 15-25% (10-20 more leads/month)",
+        })
+
+    # CTR/Ad Copy recommendations
+    if scores["ctr"] < 70:
+        recommendations.append({
+            "category": "ctr",
+            "title": "Ad Copy Improvements",
+            "priority": "medium",
+            "items": [
+                "Test emotional triggers in headlines (Fear of water damage, urgency)",
+                "Add time-sensitive offers ('Same Day Service', '24/7 Emergency')",
+                "Include pricing transparency ('Upfront Pricing', 'No Hidden Fees')",
+                "Test different calls-to-action ('Call Now', 'Get Quote', 'Schedule')",
+                "Use ad customizers for location-specific copy",
+            ],
+            "impact": "Can improve CTR by 30-50% (15-30 more clicks/month)",
+        })
+
+    # Mobile recommendations
+    if scores["mobile"] < 70:
+        recommendations.append({
+            "category": "mobile",
+            "title": "Mobile Optimization",
+            "priority": "medium",
+            "items": [
+                "Increase mobile bid adjustment to +20% for high-performing times",
+                "Create mobile-preferred ads with tap-to-call functionality",
+                "Ensure landing pages are mobile-responsive with large CTAs",
+                "Add call extensions with mobile-click-to-call",
+                "Test mobile-specific ad copy emphasizing speed/convenience",
+            ],
+            "impact": "Can increase mobile conversions by 25-40% (10-15 more calls/month)",
+        })
+
+    # Account Structure recommendations
+    if scores["account_structure"] < 70:
+        recommendations.append({
+            "category": "account_structure",
+            "title": "Account Organization",
+            "priority": "low",
+            "items": [
+                "Create separate campaigns by service type for better budget control",
+                "Use single-keyword ad groups (SKAGs) for top performing keywords",
+                "Split search and display into separate campaigns",
+                "Create branded vs non-branded campaign separation",
+                "Use clear naming conventions (Location-Service-MatchType)",
+            ],
+            "impact": "Easier management, better control, 5+ hours saved/month",
+        })
+
+    return recommendations
+
 @google_bp.route("/ads/update", methods=["POST", "GET"], endpoint="ads_update")
 @login_required
 def ads_update():

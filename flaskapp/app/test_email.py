@@ -71,11 +71,22 @@ def _send_with_smtp(subject: str, recipients: Iterable[str], body: str, html: Op
     if not host:
         raise RuntimeError("MAIL_SERVER not configured")
 
+    # Auto-correct common misconfigurations
+    if port == 587 and use_ssl:
+        current_app.logger.warning(f"Auto-correcting: port 587 requires STARTTLS, not SSL. Setting use_ssl=False, use_tls=True")
+        use_ssl = False
+        use_tls = True
+    elif port == 465 and not use_ssl:
+        current_app.logger.warning(f"Auto-correcting: port 465 requires SSL. Setting use_ssl=True, use_tls=False")
+        use_ssl = True
+        use_tls = False
+
     # Use provided from_email or default sender
     sender = from_email or _default_sender()
     to_list = list(recipients)
 
-    current_app.logger.info(f"Sending email from {sender} to {to_list} via {host}:{port}")
+    current_app.logger.info(f"Sending email from {sender} to {to_list} via {host}:{port} (SSL={use_ssl}, TLS={use_tls})")
+
     # very simple text vs html: prefer html if provided
     if html:
         msg = MIMEText(html, "html", "utf-8")
@@ -85,19 +96,30 @@ def _send_with_smtp(subject: str, recipients: Iterable[str], body: str, html: Op
     msg["From"] = sender
     msg["To"] = ", ".join(to_list)
 
-    if use_ssl:
-        smtp = smtplib.SMTP_SSL(host, port, timeout=20)
-    else:
-        smtp = smtplib.SMTP(host, port, timeout=20)
-
     try:
+        if use_ssl:
+            current_app.logger.debug(f"Connecting via SMTP_SSL to {host}:{port}")
+            smtp = smtplib.SMTP_SSL(host, port, timeout=20)
+        else:
+            current_app.logger.debug(f"Connecting via SMTP to {host}:{port}")
+            smtp = smtplib.SMTP(host, port, timeout=20)
+
         smtp.ehlo()
         if use_tls and not use_ssl:
+            current_app.logger.debug("Starting TLS upgrade (STARTTLS)")
             smtp.starttls()
             smtp.ehlo()
+
         if user and pwd:
+            current_app.logger.debug(f"Authenticating as {user}")
             smtp.login(user, pwd)
+
         smtp.sendmail(sender, to_list, msg.as_string())
+        current_app.logger.info(f"Email sent successfully to {to_list}")
+    except Exception as e:
+        current_app.logger.error(f"SMTP error: {type(e).__name__}: {e}")
+        current_app.logger.error(f"Config: host={host}, port={port}, use_ssl={use_ssl}, use_tls={use_tls}")
+        raise
     finally:
         try:
             smtp.quit()

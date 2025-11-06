@@ -53,6 +53,8 @@ def get_email_config() -> Dict[str, Any]:
         'smtp_password': smtp_password,
         'smtp_use_tls': (current_app.config.get('MAIL_USE_TLS') or os.getenv('MAIL_USE_TLS') or
                         current_app.config.get('SMTP_USE_TLS') or os.getenv('SMTP_USE_TLS') or 'true').lower() == 'true',
+        'smtp_use_ssl': (current_app.config.get('MAIL_USE_SSL') or os.getenv('MAIL_USE_SSL') or
+                        current_app.config.get('SMTP_USE_SSL') or os.getenv('SMTP_USE_SSL') or 'false').lower() == 'true',
 
         # SendGrid settings
         'sendgrid_api_key': current_app.config.get('SENDGRID_API_KEY', os.getenv('SENDGRID_API_KEY', '')),
@@ -140,22 +142,46 @@ def _send_via_smtp(
     # Send via SMTP
     smtp_host = config['smtp_host']
     smtp_port = config['smtp_port']
+    smtp_use_tls = config['smtp_use_tls']
+    smtp_use_ssl = str(config.get('smtp_use_ssl', 'false')).lower() in ('1', 'true', 'yes')
 
     if not smtp_host or smtp_host == 'localhost':
         current_app.logger.warning(f"SMTP not configured, email to {to} not sent: {subject}")
         return False
 
-    with smtplib.SMTP(smtp_host, smtp_port) as server:
-        if config['smtp_use_tls']:
-            server.starttls()
+    # Auto-correct common misconfigurations based on port
+    if smtp_port == 587 and smtp_use_ssl:
+        current_app.logger.warning("Auto-correcting: port 587 requires STARTTLS, not SSL")
+        smtp_use_ssl = False
+        smtp_use_tls = True
+    elif smtp_port == 465 and not smtp_use_ssl:
+        current_app.logger.warning("Auto-correcting: port 465 requires SSL")
+        smtp_use_ssl = True
+        smtp_use_tls = False
 
-        if config['smtp_user'] and config['smtp_password']:
-            server.login(config['smtp_user'], config['smtp_password'])
+    current_app.logger.info(f"Sending email to {to} via {smtp_host}:{smtp_port} (SSL={smtp_use_ssl}, TLS={smtp_use_tls})")
 
-        server.send_message(msg)
+    try:
+        if smtp_use_ssl:
+            # Port 465: SSL/TLS from start
+            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=20) as server:
+                if config['smtp_user'] and config['smtp_password']:
+                    server.login(config['smtp_user'], config['smtp_password'])
+                server.send_message(msg)
+        else:
+            # Port 587: Plain connection, then STARTTLS
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as server:
+                if smtp_use_tls:
+                    server.starttls()
+                if config['smtp_user'] and config['smtp_password']:
+                    server.login(config['smtp_user'], config['smtp_password'])
+                server.send_message(msg)
 
-    current_app.logger.info(f"Email sent via SMTP to {to}: {subject}")
-    return True
+        current_app.logger.info(f"Email sent via SMTP to {to}: {subject}")
+        return True
+    except Exception as e:
+        current_app.logger.error(f"SMTP error sending to {to}: {type(e).__name__}: {e}")
+        raise
 
 
 def _send_via_sendgrid(

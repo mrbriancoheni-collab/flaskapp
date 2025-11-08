@@ -266,23 +266,32 @@
       Performance Analysis
     </h2>
 
-    {% macro score_bar(label, score, icon="fa-circle") %}
-      {% set color = "bg-red-500" if score < 40 else "bg-yellow-500" if score < 70 else "bg-green-500" %}
-      {% set text_color = "text-red-600" if score < 40 else "text-yellow-600" if score < 70 else "text-green-600" %}
+    {% macro score_bar(label, score, icon="fa-circle", inverse=false) %}
+      {% if inverse %}
+        {# For inverse metrics (like wasted spend), lower is better #}
+        {% set display_score = 100 - score %}
+        {% set color = "bg-green-500" if score < 40 else "bg-yellow-500" if score < 70 else "bg-red-500" %}
+        {% set text_color = "text-green-600" if score < 40 else "text-yellow-600" if score < 70 else "text-red-600" %}
+      {% else %}
+        {# Normal metrics: higher is better #}
+        {% set display_score = score %}
+        {% set color = "bg-red-500" if score < 40 else "bg-yellow-500" if score < 70 else "bg-green-500" %}
+        {% set text_color = "text-red-600" if score < 40 else "text-yellow-600" if score < 70 else "text-green-600" %}
+      {% endif %}
       <div class="mb-4">
         <div class="flex justify-between items-center text-sm mb-2">
           <span class="font-medium"><i class="{{ icon }} mr-2 text-gray-400"></i>{{ label }}</span>
-          <span class="font-bold {{ text_color }}">{{ score|round|int }}%</span>
+          <span class="font-bold {{ text_color }}">{{ display_score|round|int }}%</span>
         </div>
         <div class="w-full bg-gray-200 rounded-full h-3">
-          <div class="{{ color }} h-3 rounded-full transition-all duration-500" style="width: {{ score|round|int }}%"></div>
+          <div class="{{ color }} h-3 rounded-full transition-all duration-500" style="width: {{ display_score|round|int }}%"></div>
         </div>
       </div>
     {% endmacro %}
 
     <div class="grid md:grid-cols-2 gap-6">
       <div>
-        {{ score_bar("Wasted Spend", report.wasted_spend_score or 0, "fa-solid fa-dollar-sign") }}
+        {{ score_bar("Wasted Spend", report.wasted_spend_score or 0, "fa-solid fa-dollar-sign", inverse=true) }}
         {{ score_bar("Text Ad Optimization", report.text_ad_optimization_score or 0, "fa-solid fa-rectangle-ad") }}
         {{ score_bar("Quality Score Optimization", report.quality_score_optimization_score or 0, "fa-solid fa-star") }}
         {{ score_bar("CTR Optimization", report.ctr_optimization_score or 0, "fa-solid fa-mouse-pointer") }}
@@ -599,20 +608,40 @@
                   {% endfor %}
                 </div>
               {% else %}
-                {# Free users see blurred/teaser version #}
+                {# Free users see blurred/teaser version with realistic 2-column layout #}
                 <div class="relative">
-                  <div class="space-y-1 text-sm text-gray-700 filter blur-sm select-none pointer-events-none">
+                  <div class="grid md:grid-cols-2 gap-x-8 gap-y-2 text-sm text-gray-700 filter blur-[6px] select-none pointer-events-none">
                     <div class="flex items-start">
-                      <span class="mr-2">1. ████████ ███ ██████ ████ ███████</span>
+                      <span class="mr-2 font-semibold text-indigo-600">1.</span>
+                      <span>Navigate to your Google Ads campaign settings dashboard</span>
                     </div>
                     <div class="flex items-start">
-                      <span class="mr-2">2. ██████ ████ "███████ ████████" ███████</span>
+                      <span class="mr-2 font-semibold text-indigo-600">2.</span>
+                      <span>Click on the "Search Terms" report in the left sidebar</span>
                     </div>
                     <div class="flex items-start">
-                      <span class="mr-2">3. ███ ███ ████████ ████ ██ ████ ███ ███</span>
+                      <span class="mr-2 font-semibold text-indigo-600">3.</span>
+                      <span>Filter for searches with zero conversions and high spend</span>
                     </div>
                     <div class="flex items-start">
-                      <span class="mr-2">4. ████ ████ ████ ██ ███ ████ ████████</span>
+                      <span class="mr-2 font-semibold text-indigo-600">4.</span>
+                      <span>Add irrelevant searches to your negative keyword list</span>
+                    </div>
+                    <div class="flex items-start">
+                      <span class="mr-2 font-semibold text-indigo-600">5.</span>
+                      <span>Create campaign-level or account-level negative lists</span>
+                    </div>
+                    <div class="flex items-start">
+                      <span class="mr-2 font-semibold text-indigo-600">6.</span>
+                      <span>Review and update your lists weekly for optimization</span>
+                    </div>
+                    <div class="flex items-start">
+                      <span class="mr-2 font-semibold text-indigo-600">7.</span>
+                      <span>Monitor cost savings in your performance dashboard</span>
+                    </div>
+                    <div class="flex items-start">
+                      <span class="mr-2 font-semibold text-indigo-600">8.</span>
+                      <span>Document your negative keyword strategy for reference</span>
                     </div>
                   </div>
 

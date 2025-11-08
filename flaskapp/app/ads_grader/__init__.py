@@ -516,11 +516,75 @@ def _create_demo_report(customer_id: str) -> GoogleAdsGraderReport:
         },
 
         recommendations=[
-            "Add 128 negative keywords to reduce wasted spend by $739/month",
-            "Improve Quality Score from 5.2 to 7.0+ to reduce CPC by 30%",
-            "Test 3 new ad variations in your top-performing ad groups",
-            "Increase mobile bids by 15% based on strong mobile performance",
-            "Add sitelink and callout extensions to improve CTR",
+            {
+                'title': "Add Negative Keywords to Stop Wasting Money",
+                'description': "You're spending money on wrong searches. Adding negative keywords will block irrelevant clicks and save you money every month.",
+                'layman_summary': "Think of negative keywords as a 'block list' for your ads. When someone searches for something you DON'T do, negative keywords prevent your ad from showing up.",
+                'category': 'wasted_spend',
+                'severity': 1,
+                'roi': {
+                    'monthly_savings': 739,
+                    'annual_savings': 8868,
+                    'percentage': 15
+                },
+                'effort': {
+                    'time_estimate': '30-45 min',
+                    'difficulty': 'Easy',
+                    'priority': 'High'
+                },
+                'action_steps': [
+                    "1. Open your Google Ads Search Terms report",
+                    "2. Find searches that aren't relevant to your business",
+                    "3. Add 50 negative keywords this week",
+                    "4. Check back next week to add more"
+                ],
+            },
+            {
+                'title': "Improve Ad Quality Score to Lower Costs",
+                'description': "Your ads score 5.2 out of 10. Better ads cost less money! Google charges you less when your ads are high quality.",
+                'layman_summary': "Google grades your ads like a report card (1-10 stars). Higher grades = you pay LESS per click.",
+                'category': 'quality_score',
+                'severity': 2,
+                'roi': {
+                    'monthly_savings': 520,
+                    'annual_savings': 6240,
+                    'percentage': 30
+                },
+                'effort': {
+                    'time_estimate': '1-2 hours',
+                    'difficulty': 'Medium',
+                    'priority': 'High'
+                },
+                'action_steps': [
+                    "1. Find your low-quality ads (score below 6)",
+                    "2. Rewrite them to match what people are searching for",
+                    "3. Use exact keywords in your ad text",
+                    "4. Add a clear call-to-action"
+                ],
+            },
+            {
+                'title': "Test New Ad Variations for More Clicks",
+                'description': "Not enough people are clicking your ads. Test new ad copy to get more leads.",
+                'layman_summary': "Better headlines and descriptions = more clicks = more customers calling you.",
+                'category': 'ctr',
+                'severity': 3,
+                'roi': {
+                    'monthly_leads': 15,
+                    'annual_leads': 180,
+                    'percentage': 12
+                },
+                'effort': {
+                    'time_estimate': '45-60 min',
+                    'difficulty': 'Easy',
+                    'priority': 'Medium'
+                },
+                'action_steps': [
+                    "1. Pick your 3 top-performing ad groups",
+                    "2. Write 2-3 new ads for each group",
+                    "3. Try different headlines with questions or urgency",
+                    "4. Let them run for 2 weeks, then keep the winners"
+                ],
+            },
         ],
 
         # Metadata

@@ -529,18 +529,58 @@
 
             <!-- Action Steps -->
             {% if recommendation.action_steps %}
-            <div class="p-4">
+            <div class="p-4 relative">
               <h4 class="font-semibold text-gray-900 mb-2 flex items-center gap-2">
                 <span class="text-lg">✅</span>
                 How to Do It:
               </h4>
-              <div class="space-y-1 text-sm text-gray-700">
-                {% for step in recommendation.action_steps %}
-                  <div class="flex items-start">
-                    <span class="mr-2">{{ step }}</span>
+
+              {# Check if user is on paid plan #}
+              {% set is_paid = current_user.is_authenticated and current_user.account and current_user.account.plan in config.get('PAID_PLANS', ['pro', 'team', 'enterprise']) %}
+
+              {% if is_paid %}
+                {# Paid users see full action steps #}
+                <div class="space-y-1 text-sm text-gray-700">
+                  {% for step in recommendation.action_steps %}
+                    <div class="flex items-start">
+                      <span class="mr-2">{{ step }}</span>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                {# Free users see blurred/teaser version #}
+                <div class="relative">
+                  <div class="space-y-1 text-sm text-gray-700 filter blur-sm select-none pointer-events-none">
+                    <div class="flex items-start">
+                      <span class="mr-2">1. ████████ ███ ██████ ████ ███████</span>
+                    </div>
+                    <div class="flex items-start">
+                      <span class="mr-2">2. ██████ ████ "███████ ████████" ███████</span>
+                    </div>
+                    <div class="flex items-start">
+                      <span class="mr-2">3. ███ ███ ████████ ████ ██ ████ ███ ███</span>
+                    </div>
+                    <div class="flex items-start">
+                      <span class="mr-2">4. ████ ████ ████ ██ ███ ████ ████████</span>
+                    </div>
                   </div>
-                {% endfor %}
-              </div>
+
+                  {# Unlock overlay #}
+                  <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-white via-white/95 to-white/80">
+                    <div class="text-center p-4">
+                      <div class="mb-3">
+                        <i class="fa-solid fa-lock text-4xl text-indigo-600"></i>
+                      </div>
+                      <p class="font-bold text-gray-900 mb-2">Unlock Full Action Plan</p>
+                      <p class="text-sm text-gray-600 mb-4">Get step-by-step instructions to implement this</p>
+                      <button onclick="openPricingModal()" class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-lg hover:from-indigo-700 hover:to-purple-700 transition shadow-lg">
+                        <i class="fa-solid fa-crown mr-2"></i>
+                        Upgrade to Premium
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              {% endif %}
             </div>
             {% endif %}
           </div>
@@ -802,4 +842,7 @@ document.addEventListener('DOMContentLoaded', function() {
   {% endif %}
 });
 </script>
+
+<!-- Include Pricing Modal for Free Users -->
+{% include 'components/pricing_modal.html' %}
 {% endblock %}

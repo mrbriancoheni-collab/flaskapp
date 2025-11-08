@@ -1,0 +1,248 @@
+<!-- Pricing Upsell Modal Component -->
+<!-- Can be included in any template and triggered via JavaScript -->
+
+<div id="pricingModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4" onclick="if(event.target.id==='pricingModal') closePricingModal()">
+  <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" onclick="event.stopPropagation()">
+    <!-- Header -->
+    <div class="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-white p-8">
+      <button onclick="closePricingModal()" class="absolute top-4 right-4 text-white hover:text-gray-200 text-2xl font-bold">
+        <i class="fa-solid fa-times"></i>
+      </button>
+
+      <div class="text-center">
+        <h2 class="text-3xl md:text-4xl font-extrabold mb-3">
+          Unlock Premium Features 🚀
+        </h2>
+        <p class="text-lg text-indigo-100 max-w-2xl mx-auto">
+          Get full access to AI-powered insights, unlimited reports, and priority support
+        </p>
+      </div>
+    </div>
+
+    <!-- Pricing Cards -->
+    <div class="p-8">
+      <div class="grid md:grid-cols-2 gap-6 mb-6">
+        <!-- Annual Plan (Recommended) -->
+        <div class="relative border-4 border-indigo-500 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-shadow">
+          <!-- Recommended Badge -->
+          <div class="absolute top-0 right-0 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-1 text-sm font-bold rounded-bl-lg">
+            ⭐ BEST VALUE
+          </div>
+
+          <div class="bg-gradient-to-br from-indigo-50 to-purple-50 p-6">
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">Annual Plan</h3>
+            <div class="flex items-baseline gap-2 mb-1">
+              <span class="text-5xl font-black text-indigo-600">$497</span>
+              <span class="text-gray-600">/year</span>
+            </div>
+            <p class="text-sm text-green-600 font-semibold mb-4">
+              Save $191 vs monthly ($41/month)
+            </p>
+
+            <button onclick="upgradeToPlan('annual')" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-4 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg mb-4">
+              Start Annual Plan →
+            </button>
+
+            <div class="space-y-3 text-sm">
+              <div class="flex items-start gap-2">
+                <i class="fa-solid fa-check text-green-600 mt-1"></i>
+                <span class="text-gray-700"><strong>Unlimited</strong> Google Ads reports</span>
+              </div>
+              <div class="flex items-start gap-2">
+                <i class="fa-solid fa-check text-green-600 mt-1"></i>
+                <span class="text-gray-700"><strong>Full optimization recommendations</strong> with action steps</span>
+              </div>
+              <div class="flex items-start gap-2">
+                <i class="fa-solid fa-check text-green-600 mt-1"></i>
+                <span class="text-gray-700"><strong>Historical performance charts</strong> & trend analysis</span>
+              </div>
+              <div class="flex items-start gap-2">
+                <i class="fa-solid fa-check text-green-600 mt-1"></i>
+                <span class="text-gray-700"><strong>AI campaign suggestions</strong> & keyword ideas</span>
+              </div>
+              <div class="flex items-start gap-2">
+                <i class="fa-solid fa-check text-green-600 mt-1"></i>
+                <span class="text-gray-700"><strong>Lead quality insights</strong> & CRM integration</span>
+              </div>
+              <div class="flex items-start gap-2">
+                <i class="fa-solid fa-check text-green-600 mt-1"></i>
+                <span class="text-gray-700"><strong>Team collaboration</strong> (up to 10 members)</span>
+              </div>
+              <div class="flex items-start gap-2">
+                <i class="fa-solid fa-check text-green-600 mt-1"></i>
+                <span class="text-gray-700"><strong>Priority email support</strong></span>
+              </div>
+              <div class="flex items-start gap-2">
+                <i class="fa-solid fa-check text-green-600 mt-1"></i>
+                <span class="text-gray-700"><strong>White-label PDF reports</strong></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monthly Plan -->
+        <div class="border-2 border-gray-300 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow">
+          <div class="bg-gray-50 p-6">
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">Monthly Plan</h3>
+            <div class="flex items-baseline gap-2 mb-1">
+              <span class="text-5xl font-black text-gray-900">$57</span>
+              <span class="text-gray-600">/month</span>
+            </div>
+            <p class="text-sm text-gray-500 mb-4">
+              Billed monthly • Cancel anytime
+            </p>
+
+            <button onclick="upgradeToPlan('monthly')" class="w-full bg-gray-900 text-white font-bold py-4 rounded-lg hover:bg-gray-800 transition-all mb-4">
+              Start Monthly Plan →
+            </button>
+
+            <div class="space-y-3 text-sm text-gray-600">
+              <div class="flex items-start gap-2">
+                <i class="fa-solid fa-check text-gray-500 mt-1"></i>
+                <span>Everything in Annual Plan</span>
+              </div>
+              <div class="flex items-start gap-2">
+                <i class="fa-solid fa-check text-gray-500 mt-1"></i>
+                <span>Pay month-to-month</span>
+              </div>
+              <div class="flex items-start gap-2">
+                <i class="fa-solid fa-check text-gray-500 mt-1"></i>
+                <span>Cancel anytime</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Continue Without Plan -->
+      <div class="text-center pt-4 border-t border-gray-200">
+        <button onclick="closePricingModal()" class="text-sm text-gray-500 hover:text-gray-700 underline">
+          Continue with free plan
+        </button>
+        <p class="text-xs text-gray-400 mt-2">
+          Limited to 1 report per month • Basic recommendations only
+        </p>
+      </div>
+
+      <!-- Trust Signals -->
+      <div class="grid md:grid-cols-3 gap-4 mt-8 pt-6 border-t border-gray-200">
+        <div class="text-center">
+          <div class="text-3xl mb-2">🔒</div>
+          <div class="text-xs font-semibold text-gray-700">Secure Checkout</div>
+          <div class="text-xs text-gray-500">Powered by Stripe</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl mb-2">↩️</div>
+          <div class="text-xs font-semibold text-gray-700">30-Day Guarantee</div>
+          <div class="text-xs text-gray-500">Full refund, no questions</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl mb-2">⚡</div>
+          <div class="text-xs font-semibold text-gray-700">Instant Access</div>
+          <div class="text-xs text-gray-500">Upgrade immediately</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Pricing Modal Functions
+function openPricingModal() {
+  document.getElementById('pricingModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden'; // Prevent background scrolling
+}
+
+function closePricingModal() {
+  document.getElementById('pricingModal').classList.add('hidden');
+  document.body.style.overflow = 'auto';
+}
+
+function upgradeToPlan(planType) {
+  // Get Stripe price IDs from the backend
+  const priceIds = {
+    'annual': '{{ config.STRIPE_YEARLY_PRICE_ID }}',
+    'monthly': '{{ config.STRIPE_MONTHLY_PRICE_ID }}'
+  };
+
+  const priceId = priceIds[planType];
+
+  if (!priceId) {
+    alert('Pricing configuration error. Please contact support.');
+    return;
+  }
+
+  // Show loading state
+  event.target.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading checkout...';
+  event.target.disabled = true;
+
+  // Create Stripe Checkout session
+  fetch('/billing/create-checkout-session', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
+    },
+    body: JSON.stringify({
+      price_id: priceId,
+      plan_type: planType,
+      success_url: window.location.origin + '/account/dashboard?upgrade=success',
+      cancel_url: window.location.href
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.error) {
+      alert('Error: ' + data.error);
+      event.target.disabled = false;
+      event.target.innerHTML = planType === 'annual' ? 'Start Annual Plan →' : 'Start Monthly Plan →';
+    } else if (data.checkout_url) {
+      // Redirect to Stripe Checkout
+      window.location.href = data.checkout_url;
+    } else {
+      alert('Unexpected response. Please try again.');
+      event.target.disabled = false;
+      event.target.innerHTML = planType === 'annual' ? 'Start Annual Plan →' : 'Start Monthly Plan →';
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Network error. Please try again.');
+    event.target.disabled = false;
+    event.target.innerHTML = planType === 'annual' ? 'Start Annual Plan →' : 'Start Monthly Plan →';
+  });
+}
+
+// Auto-show modal on registration completion (if enabled)
+{% if show_pricing_modal %}
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(openPricingModal, 500); // Small delay for smooth appearance
+});
+{% endif %}
+</script>
+
+<style>
+/* Ensure modal appears above everything */
+#pricingModal {
+  z-index: 9999;
+}
+
+/* Smooth fade-in animation */
+#pricingModal:not(.hidden) {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Prevent scrolling when modal is open */
+body.modal-open {
+  overflow: hidden;
+}
+</style>

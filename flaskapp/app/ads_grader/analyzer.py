@@ -78,7 +78,13 @@ class GoogleAdsAnalyzer:
         # Calculate key metrics
         quality_score_avg = self.metrics.get("quality_scores", {}).get("average", 0)
         ctr_avg = self.metrics.get("performance", {}).get("ctr", 0)
-        wasted_spend_90d, projected_waste_12m = self._calculate_wasted_spend()
+
+        # Calculate waste percentage (inverse of efficiency score)
+        # If efficiency is 81%, waste is 19%
+        waste_percentage = 100 - self.scores["wasted_spend"]
+
+        # Calculate wasted spend in dollars using the waste percentage
+        wasted_spend_90d, projected_waste_12m = self._calculate_wasted_spend_dollars(waste_percentage)
 
         return {
             "overall_score": overall_score,
@@ -90,15 +96,20 @@ class GoogleAdsAnalyzer:
                 "ctr_avg": ctr_avg,
                 "wasted_spend_90d": wasted_spend_90d,
                 "projected_waste_12m": projected_waste_12m,
+                "waste_percentage": waste_percentage,
             },
             "account_diagnostics": self._get_account_diagnostics(),
             "best_practices": self._check_best_practices(),
+            "chart_data": self._prepare_chart_data(),
         }
 
     def _score_wasted_spend(self) -> float:
         """
         Score based on negative keywords usage.
         More negative keywords = less wasted spend = higher score.
+
+        NOTE: This returns an EFFICIENCY score (higher = better).
+        The waste percentage is calculated separately in _calculate_wasted_spend().
         """
         negative_keywords = self.metrics.get("negative_keywords", 0)
         benchmark = BENCHMARKS["negative_keywords_avg"]
@@ -373,26 +384,33 @@ class GoogleAdsAnalyzer:
         elif score >= 40: return "D"
         else: return "F"
 
-    def _calculate_wasted_spend(self) -> Tuple[float, float]:
+    def _calculate_wasted_spend_dollars(self, waste_percentage: float) -> Tuple[float, float]:
         """
-        Calculate estimated wasted spend based on negative keyword deficiency.
+        Calculate estimated wasted spend in dollars based on waste percentage.
+
+        The waste percentage comes from the efficiency score:
+        - 81% efficiency (negative keyword coverage) = 19% waste
+        - 19% of spend is being wasted on irrelevant searches
+
+        Args:
+            waste_percentage: Waste percentage (0-100)
+
+        Returns:
+            Tuple of (90-day wasted spend, 12-month projected waste)
         """
         performance = self.metrics.get("performance", {})
-        total_cost_90d = performance.get("cost", 0)
+        # Note: performance.cost is for the full data range (typically 365 days)
+        total_cost = performance.get("cost", 0)
 
-        negative_keywords = self.metrics.get("negative_keywords", 0)
-        benchmark = BENCHMARKS["negative_keywords_avg"]
+        # Convert waste percentage to decimal (19% -> 0.19)
+        waste_decimal = waste_percentage / 100.0
 
-        if negative_keywords >= benchmark:
-            # Well optimized, minimal waste
-            waste_percentage = 0.05  # 5%
-        else:
-            # Calculate waste based on how far below benchmark
-            deficiency = 1 - (negative_keywords / benchmark)
-            waste_percentage = 0.05 + (deficiency * 0.15)  # 5-20%
+        # Apply waste percentage to total cost
+        # For 12-month projection, we use the full year's cost
+        projected_waste_12m = total_cost * waste_decimal
 
-        wasted_spend_90d = total_cost_90d * waste_percentage
-        projected_waste_12m = wasted_spend_90d * 4  # Extrapolate to 12 months
+        # For 90-day estimate, calculate proportionally
+        wasted_spend_90d = projected_waste_12m / 4  # 90 days ≈ 1/4 of year
 
         return round(wasted_spend_90d, 2), round(projected_waste_12m, 2)
 
@@ -415,6 +433,47 @@ class GoogleAdsAnalyzer:
             "avg_cpa_90d": round(performance.get("avg_cpa", 0), 2),
             "avg_monthly_spend": round(performance.get("cost", 0) / 12, 2),  # 365 days / 12 months
         }
+
+    def _prepare_chart_data(self) -> Dict[str, Any]:
+        """
+        Prepare data formatted for charts in the report template.
+        Returns chart-ready data for quality score distribution, CTR by device, and keyword length.
+        """
+        chart_data = {}
+
+        # Quality Score Distribution Chart
+        qs_data = self.metrics.get("quality_scores", {})
+        if qs_data:
+            # Try to get distribution from metrics, or create a simple one
+            qs_distribution = qs_data.get("distribution", {})
+            if not qs_distribution:
+                # If no distribution, estimate based on average
+                avg_qs = qs_data.get("average", 5.0)
+                if avg_qs < 4:
+                    qs_distribution = {"1-3": 60, "4-6": 30, "7-8": 8, "9-10": 2}
+                elif avg_qs < 6:
+                    qs_distribution = {"1-3": 20, "4-6": 50, "7-8": 25, "9-10": 5}
+                elif avg_qs < 8:
+                    qs_distribution = {"1-3": 10, "4-6": 30, "7-8": 45, "9-10": 15}
+                else:
+                    qs_distribution = {"1-3": 5, "4-6": 15, "7-8": 40, "9-10": 40}
+            chart_data["quality_score_distribution"] = qs_distribution
+
+        # CTR by Device Chart
+        device_performance = self.metrics.get("device_performance", {})
+        if device_performance:
+            ctr_by_device = {}
+            for device, data in device_performance.items():
+                ctr_by_device[device] = data.get("ctr", 0)
+            chart_data["ctr_by_device"] = ctr_by_device
+
+        # Keyword Length Distribution Chart
+        keywords = self.metrics.get("keywords", {})
+        keyword_distribution = keywords.get("word_count_distribution", {})
+        if keyword_distribution:
+            chart_data["keywords"] = {"word_count_distribution": keyword_distribution}
+
+        return chart_data
 
     def _check_best_practices(self) -> Dict[str, bool]:
         """

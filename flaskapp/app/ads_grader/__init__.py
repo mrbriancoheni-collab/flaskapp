@@ -359,6 +359,10 @@ def _create_real_report(customer_id: str, refresh_token: str) -> GoogleAdsGrader
         account_info = metrics.get("account_info", {})
         account_name = account_info.get("account_name", f"Account {customer_id}")
 
+        # Merge chart data into detailed_metrics for display
+        detailed_metrics = metrics.copy()
+        detailed_metrics.update(analysis_results.get("chart_data", {}))
+
         # Create report from analysis results
         report = GoogleAdsGraderReport(
             account_id=current_user.account_id if current_user.is_authenticated else None,
@@ -398,8 +402,8 @@ def _create_real_report(customer_id: str, refresh_token: str) -> GoogleAdsGrader
             landing_page_score=analysis_results["section_scores"]["landing_pages"],
             mobile_advertising_score=analysis_results["section_scores"]["mobile_advertising"],
 
-            # Detailed data
-            detailed_metrics=metrics,
+            # Detailed data (includes chart data)
+            detailed_metrics=detailed_metrics,
 
             # Best practices
             best_practices=analysis_results["best_practices"],
@@ -492,6 +496,13 @@ def _create_demo_report(customer_id: str) -> GoogleAdsGraderReport:
                 "mobile": 2.8,
                 "desktop": 3.2,
                 "tablet": 2.1,
+            },
+            "keywords": {
+                "word_count_distribution": {
+                    "1-word": 25,
+                    "2-word": 40,
+                    "3+-word": 35,
+                }
             },
         },
 

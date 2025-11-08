@@ -348,24 +348,34 @@ class GoogleAdsAnalyzer:
     def _calculate_overall_score(self) -> float:
         """
         Calculate weighted average of all section scores.
+        Applies additional penalty for high wasted spend since that's a critical issue.
         """
         weights = {
-            "wasted_spend": 0.15,
+            "wasted_spend": 0.25,  # Increased from 15% - wasted spend is critical
             "quality_score": 0.15,
             "ctr_optimization": 0.12,
             "text_ad_optimization": 0.10,
-            "account_activity": 0.10,
-            "long_tail_keywords": 0.10,
-            "impression_share": 0.10,
-            "landing_pages": 0.08,
-            "mobile_advertising": 0.07,
-            "expanded_text_ads": 0.03,
+            "account_activity": 0.08,
+            "long_tail_keywords": 0.08,
+            "impression_share": 0.08,
+            "landing_pages": 0.07,
+            "mobile_advertising": 0.05,
+            "expanded_text_ads": 0.02,
         }
 
         weighted_sum = sum(
             self.scores.get(section, 0) * weight
             for section, weight in weights.items()
         )
+
+        # Apply penalty for high wasted spend (waste > 10%)
+        # Wasting money is a critical issue that should heavily impact overall score
+        waste_percentage = 100 - self.scores.get("wasted_spend", 100)
+        if waste_percentage > 10:
+            # Harsh penalty: -2 points for each % over 10%
+            # Example: 19% waste = (19-10) * 2 = -18 points
+            waste_penalty = (waste_percentage - 10) * 2.0
+            weighted_sum = max(0, weighted_sum - waste_penalty)
 
         return round(weighted_sum, 1)
 

@@ -269,9 +269,11 @@
     {% macro score_bar(label, score, icon="fa-circle", inverse=false) %}
       {% if inverse %}
         {# For inverse metrics (like wasted spend), lower is better #}
+        {# Display the waste percentage, not efficiency #}
         {% set display_score = 100 - score %}
-        {% set color = "bg-green-500" if score < 40 else "bg-yellow-500" if score < 70 else "bg-red-500" %}
-        {% set text_color = "text-green-600" if score < 40 else "text-yellow-600" if score < 70 else "text-red-600" %}
+        {# Color based on waste amount: <5% green, 5-10% yellow, 10%+ red #}
+        {% set color = "bg-green-500" if score >= 95 else "bg-yellow-500" if score >= 90 else "bg-red-500" %}
+        {% set text_color = "text-green-600" if score >= 95 else "text-yellow-600" if score >= 90 else "text-red-600" %}
       {% else %}
         {# Normal metrics: higher is better #}
         {% set display_score = score %}
@@ -369,7 +371,7 @@
 
       <button onclick="openPricingModal()" class="inline-flex items-center gap-2 px-8 py-4 bg-white text-indigo-700 font-bold text-lg rounded-lg hover:bg-gray-100 transition transform hover:scale-105 shadow-xl">
         <i class="fa-solid fa-crown"></i>
-        Upgrade to Premium - Starting at $497/year
+        Upgrade to Premium - Starting at $2,400/year
         <i class="fa-solid fa-arrow-right"></i>
       </button>
 

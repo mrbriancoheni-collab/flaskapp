@@ -320,6 +320,57 @@
 
   <!-- Recommendations -->
   {% if report.recommendations %}
+
+  {# Check if user is on paid plan #}
+  {% set is_paid = current_user.is_authenticated and current_user.account and current_user.account.plan in config.get('PAID_PLANS', ['pro', 'team', 'enterprise']) %}
+
+  {# Premium Upgrade Banner for Free Users #}
+  {% if not is_paid %}
+  <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-xl shadow-2xl p-8 mb-6 text-white">
+    <div class="text-center max-w-3xl mx-auto">
+      <div class="mb-4">
+        <i class="fa-solid fa-lock text-5xl opacity-90"></i>
+      </div>
+      <h2 class="text-3xl font-extrabold mb-3">
+        🚀 Unlock Full Optimization Action Plans
+      </h2>
+      <p class="text-lg text-indigo-100 mb-6">
+        You can see your potential savings below, but to get the <strong>step-by-step instructions</strong>
+        on how to implement each optimization, upgrade to Premium.
+      </p>
+
+      <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
+        <div class="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2">
+          <i class="fa-solid fa-check-circle"></i>
+          <span class="text-sm font-semibold">Unlimited Reports</span>
+        </div>
+        <div class="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2">
+          <i class="fa-solid fa-check-circle"></i>
+          <span class="text-sm font-semibold">Full Action Steps</span>
+        </div>
+        <div class="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2">
+          <i class="fa-solid fa-check-circle"></i>
+          <span class="text-sm font-semibold">AI Suggestions</span>
+        </div>
+        <div class="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2">
+          <i class="fa-solid fa-check-circle"></i>
+          <span class="text-sm font-semibold">Team Access</span>
+        </div>
+      </div>
+
+      <button onclick="openPricingModal()" class="inline-flex items-center gap-2 px-8 py-4 bg-white text-indigo-700 font-bold text-lg rounded-lg hover:bg-gray-100 transition transform hover:scale-105 shadow-xl">
+        <i class="fa-solid fa-crown"></i>
+        Upgrade to Premium - Starting at $497/year
+        <i class="fa-solid fa-arrow-right"></i>
+      </button>
+
+      <p class="text-xs text-indigo-200 mt-4">
+        30-day money-back guarantee • Cancel anytime
+      </p>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6 mb-6">
     <h2 class="text-2xl font-bold mb-6">
       <i class="fa-solid fa-lightbulb text-indigo-600 mr-2"></i>

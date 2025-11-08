@@ -438,13 +438,49 @@ def _create_real_report(customer_id: str, refresh_token: str) -> GoogleAdsGrader
 
 def _create_demo_report(customer_id: str) -> GoogleAdsGraderReport:
     """
-    Create a demo report with mock data for testing.
-    TODO: Remove this once real Google Ads API integration is complete.
+    Create a demo report with realistic, coherent data.
+    This represents a typical mid-market account with clear optimization opportunities.
     """
-    import random
+    # Realistic account scenario:
+    # - Monthly spend: ~$14,000
+    # - Wasted spend: 19% (efficiency 81% = 110 negative keywords out of 135 benchmark)
+    # - Quality Score: 5.5 (below 7.0 target)
+    # - CTR: 3.2% (decent but improvable)
 
-    # Generate realistic mock scores
-    overall_score = random.uniform(40, 85)
+    # Section scores (out of 100)
+    wasted_spend_score = 81.0  # 81% efficiency = 19% waste
+    quality_score_score = 55.0  # Below target, room for improvement
+    ctr_score = 64.0  # Decent but not great
+    text_ad_score = 58.0  # Needs optimization
+    account_activity_score = 75.0  # Reasonably active
+    long_tail_score = 45.0  # Not enough long-tail keywords
+    impression_share_score = 52.0  # Missing visibility
+    landing_page_score = 68.0  # Okay but could be better
+    mobile_score = 61.0  # Mobile could use work
+    expanded_text_ads_score = 85.0  # Good modern ad adoption
+
+    # Calculate overall score with penalty
+    # Base weighted sum
+    base_score = (
+        wasted_spend_score * 0.25 +
+        quality_score_score * 0.15 +
+        ctr_score * 0.12 +
+        text_ad_score * 0.10 +
+        account_activity_score * 0.08 +
+        long_tail_score * 0.08 +
+        impression_share_score * 0.08 +
+        landing_page_score * 0.07 +
+        mobile_score * 0.05 +
+        expanded_text_ads_score * 0.02
+    )
+
+    # Apply waste penalty (19% waste = 9% over threshold, penalty = 18 points)
+    waste_percentage = 100 - wasted_spend_score
+    if waste_percentage > 10:
+        penalty = (waste_percentage - 10) * 2.0
+        overall_score = max(0, base_score - penalty)
+    else:
+        overall_score = base_score
 
     report = GoogleAdsGraderReport(
         account_id=current_user.account_id if current_user.is_authenticated else None,
@@ -452,67 +488,67 @@ def _create_demo_report(customer_id: str) -> GoogleAdsGraderReport:
         google_ads_customer_id=customer_id,
         google_ads_account_name="Demo Account",
 
-        # Overall score
-        overall_score=overall_score,
+        # Overall score (with waste penalty applied)
+        overall_score=round(overall_score, 1),
         overall_grade=_calculate_grade(overall_score),
 
-        # Key metrics
-        quality_score_avg=random.uniform(4.5, 8.5),
-        ctr_avg=random.uniform(1.2, 5.8),
-        wasted_spend_90d=random.uniform(200, 2500),
-        projected_waste_12m=random.uniform(800, 10000),
+        # Key metrics - realistic values
+        quality_score_avg=5.5,  # Below 7.0 target
+        ctr_avg=3.2,  # Industry average range
+        wasted_spend_90d=7980.0,  # 19% of $42k (quarterly spend)
+        projected_waste_12m=31920.0,  # 19% of $168k annual spend
 
-        # Account diagnostics
-        active_campaigns=random.randint(3, 15),
-        active_ad_groups=random.randint(10, 50),
-        active_text_ads=random.randint(20, 150),
-        active_keywords=random.randint(100, 1000),
-        clicks_90d=random.randint(500, 5000),
-        conversions_90d=random.randint(20, 200),
-        avg_cpa_90d=random.uniform(15, 150),
-        avg_monthly_spend=random.uniform(1000, 15000),
+        # Account diagnostics - realistic structure
+        active_campaigns=6,
+        active_ad_groups=24,
+        active_text_ads=52,
+        active_keywords=485,
+        clicks_90d=3200,
+        conversions_90d=160,  # 5% conversion rate (good performance)
+        avg_cpa_90d=262.50,  # $42,000 / 160 conversions
+        avg_monthly_spend=14000.0,
 
         # Section scores
-        wasted_spend_score=random.uniform(10, 90),
-        expanded_text_ads_score=random.uniform(50, 100),
-        text_ad_optimization_score=random.uniform(30, 90),
-        quality_score_optimization_score=random.uniform(10, 80),
-        ctr_optimization_score=random.uniform(20, 85),
-        account_activity_score=random.uniform(40, 95),
-        long_tail_keywords_score=random.uniform(25, 75),
-        impression_share_score=random.uniform(15, 70),
-        landing_page_score=random.uniform(50, 100),
-        mobile_advertising_score=random.uniform(30, 90),
+        wasted_spend_score=wasted_spend_score,
+        expanded_text_ads_score=expanded_text_ads_score,
+        text_ad_optimization_score=text_ad_score,
+        quality_score_optimization_score=quality_score_score,
+        ctr_optimization_score=ctr_score,
+        account_activity_score=account_activity_score,
+        long_tail_keywords_score=long_tail_score,
+        impression_share_score=impression_share_score,
+        landing_page_score=landing_page_score,
+        mobile_advertising_score=mobile_score,
 
-        # Detailed data (simplified for demo)
+        # Detailed data (realistic distributions)
         detailed_metrics={
             "quality_score_distribution": {
-                "1-3": 15,
-                "4-6": 35,
-                "7-8": 30,
-                "9-10": 20,
+                "1-3": 18,  # Poor quality ads
+                "4-6": 52,  # Most ads here
+                "7-8": 24,  # Some good ads
+                "9-10": 6,   # Few excellent ads
             },
             "ctr_by_device": {
-                "mobile": 2.8,
-                "desktop": 3.2,
-                "tablet": 2.1,
+                "mobile": 2.9,    # Slightly lower on mobile
+                "desktop": 3.5,   # Best performance
+                "tablet": 2.4,    # Lowest
             },
             "keywords": {
                 "word_count_distribution": {
-                    "1-word": 25,
-                    "2-word": 40,
-                    "3+-word": 35,
+                    "1-word": 35,  # Too many short keywords
+                    "2-word": 42,  # Decent
+                    "3+-word": 23,  # Not enough long-tail
                 }
             },
         },
 
         best_practices={
-            "mobile_bid_adjustments": random.choice([True, False]),
-            "multiple_ads_per_group": random.choice([True, False]),
-            "modified_broad_match": random.choice([True, False]),
-            "ad_extensions": random.choice([True, False]),
-            "conversion_tracking": random.choice([True, False]),
-            "negative_keywords": random.choice([True, False]),
+            "mobile_bid_adjustments": True,
+            "multiple_ads_per_group": True,
+            "modified_broad_match": False,  # Missing
+            "ad_extensions": False,  # Missing - opportunity
+            "conversion_tracking": True,
+            "negative_keywords": False,  # Missing - causing waste
         },
 
         recommendations=[

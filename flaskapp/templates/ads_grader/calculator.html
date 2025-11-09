@@ -80,11 +80,11 @@
 
             <!-- Advanced Options (Collapsible) -->
             <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl shadow-md p-6 border-2 border-indigo-200">
-              <button type="button" onclick="toggleAdvanced()" class="w-full flex items-center justify-between text-left">
+              <button type="button" id="advanced-toggle" class="w-full flex items-center justify-between text-left">
                 <span class="text-lg font-bold text-gray-900">
                   <span class="text-indigo-600">3.</span> Advanced Settings (Optional)
                 </span>
-                <i id="advanced-icon" class="fa-solid fa-chevron-down text-indigo-600 transition-transform"></i>
+                <i id="advanced-icon" class="fa-solid fa-chevron-down text-indigo-600 transition-transform duration-300"></i>
               </button>
 
               <div id="advanced-options" class="hidden mt-6 space-y-4">
@@ -104,7 +104,6 @@
                       value="18"
                       step="1"
                       class="flex-1 h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                      oninput="updateWasteDisplay(this.value)"
                     />
                     <div class="text-right min-w-[80px]">
                       <span id="waste-display" class="text-2xl font-bold text-indigo-600">18</span><span class="text-xl text-gray-500">%</span>
@@ -139,6 +138,22 @@
                   </div>
                 </div>
               </div>
+            </div>
+
+            <!-- Calculate Button -->
+            <div class="text-center pt-4">
+              <button
+                type="button"
+                id="calculate-btn"
+                class="inline-flex items-center justify-center px-12 py-5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black text-xl rounded-xl hover:from-indigo-700 hover:to-purple-700 transition shadow-2xl transform hover:scale-105"
+              >
+                <i class="fa-solid fa-calculator mr-3 text-2xl"></i>
+                Calculate My ROI
+                <i class="fa-solid fa-arrow-down ml-3"></i>
+              </button>
+              <p class="text-xs text-gray-500 mt-3">
+                💡 Results update automatically as you type
+              </p>
             </div>
 
           </form>
@@ -311,6 +326,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
+  // Advanced toggle button
+  const advancedToggle = document.getElementById('advanced-toggle');
+  if (advancedToggle) {
+    advancedToggle.addEventListener('click', toggleAdvanced);
+  }
+
+  // Waste slider update display
+  const wasteSlider = document.getElementById('wasted_spend_pct');
+  if (wasteSlider) {
+    wasteSlider.addEventListener('input', function() {
+      document.getElementById('waste-display').textContent = this.value;
+    });
+  }
+
+  // Calculate button
+  const calculateBtn = document.getElementById('calculate-btn');
+  if (calculateBtn) {
+    calculateBtn.addEventListener('click', function() {
+      calculateROI();
+      // Smooth scroll to results
+      document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
   // Calculate on page load
   calculateROI();
 });
@@ -319,18 +358,15 @@ function toggleAdvanced() {
   const options = document.getElementById('advanced-options');
   const icon = document.getElementById('advanced-icon');
 
-  if (options.classList.contains('hidden')) {
-    options.classList.remove('hidden');
-    icon.classList.add('rotate-180');
-  } else {
-    options.classList.add('hidden');
-    icon.classList.remove('rotate-180');
+  if (options && icon) {
+    if (options.classList.contains('hidden')) {
+      options.classList.remove('hidden');
+      icon.classList.add('rotate-180');
+    } else {
+      options.classList.add('hidden');
+      icon.classList.remove('rotate-180');
+    }
   }
-}
-
-function updateWasteDisplay(value) {
-  document.getElementById('waste-display').textContent = value;
-  calculateROI();
 }
 
 function calculateROI() {

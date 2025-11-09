@@ -88,6 +88,17 @@
               </button>
 
               <div id="advanced-options" class="hidden mt-6 space-y-4">
+                <!-- Info Banner -->
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+                  <div class="flex items-start">
+                    <i class="fa-solid fa-info-circle text-blue-500 mt-1 mr-3"></i>
+                    <div class="text-sm">
+                      <p class="font-semibold text-blue-900 mb-1">More Accurate with Google Ads Connected</p>
+                      <p class="text-blue-800">These values are estimates. When you <a href="{{ url_for('ads_grader_bp.analyze') }}" class="underline font-semibold">connect your Google Ads account</a>, we'll use your real CPC, Quality Score, and position data for precise calculations.</p>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Wasted Spend % -->
                 <div>
                   <label class="block text-sm font-semibold text-gray-700 mb-2">
@@ -136,6 +147,75 @@
                     />
                     <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">%</span>
                   </div>
+                </div>
+
+                <!-- Average CPC -->
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Average CPC
+                    <span class="text-xs font-normal text-gray-500 ml-2">(Industry avg: $2.50)</span>
+                  </label>
+                  <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">$</span>
+                    <input
+                      type="number"
+                      id="avg_cpc"
+                      name="avg_cpc"
+                      class="pl-10 w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                      placeholder="2.50"
+                      value="2.50"
+                      min="0.01"
+                      max="100"
+                      step="0.10"
+                    />
+                  </div>
+                  <p class="text-xs text-gray-600 mt-1">Auto-filled when Google Ads connected</p>
+                </div>
+
+                <!-- Quality Score -->
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Average Quality Score
+                    <span class="text-xs font-normal text-gray-500 ml-2">(Scale: 1-10)</span>
+                  </label>
+                  <div class="flex items-center gap-4">
+                    <input
+                      type="range"
+                      id="quality_score"
+                      name="quality_score"
+                      min="1"
+                      max="10"
+                      value="6"
+                      step="1"
+                      class="flex-1 h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                    />
+                    <div class="text-right min-w-[60px]">
+                      <span id="qs-display" class="text-2xl font-bold text-indigo-600">6</span><span class="text-lg text-gray-500">/10</span>
+                    </div>
+                  </div>
+                  <p class="text-xs text-gray-600 mt-1">Higher QS = Lower CPC. Most accounts: 5-7</p>
+                </div>
+
+                <!-- Average Ad Position -->
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Average Ad Position
+                    <span class="text-xs font-normal text-gray-500 ml-2">(1 = top, higher = lower)</span>
+                  </label>
+                  <div class="relative">
+                    <input
+                      type="number"
+                      id="avg_position"
+                      name="avg_position"
+                      class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                      placeholder="2.5"
+                      value="2.5"
+                      min="1"
+                      max="10"
+                      step="0.1"
+                    />
+                  </div>
+                  <p class="text-xs text-gray-600 mt-1">Position 1-2 = Top of page, 3-4 = Bottom, 5+ = Next page</p>
                 </div>
               </div>
             </div>
@@ -221,6 +301,98 @@
                 <span class="text-xs text-gray-600 uppercase font-semibold">Worth</span>
                 <div class="text-2xl font-bold text-blue-700" id="result-more-revenue">$0</div>
               </div>
+            </div>
+          </div>
+
+          <!-- Value Sources Breakdown -->
+          <div class="bg-white rounded-2xl shadow-xl p-8 mb-10 border-2 border-indigo-100">
+            <h3 class="text-2xl font-bold text-gray-900 text-center mb-6">
+              <i class="fa-solid fa-chart-pie text-indigo-600 mr-2"></i>
+              Where Your Value Comes From
+            </h3>
+            <p class="text-center text-gray-600 mb-8 text-sm">Our optimization drives results through multiple channels working together</p>
+
+            <div class="space-y-4">
+              <!-- Waste Elimination -->
+              <div class="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200">
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">1</div>
+                  <div>
+                    <div class="font-semibold text-gray-900">Stop Wasting Money</div>
+                    <div class="text-xs text-gray-600">Eliminate spend on underperforming keywords & placements</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-xl font-black text-red-600" id="breakdown-waste">$0</div>
+                  <div class="text-xs text-gray-500">direct savings</div>
+                </div>
+              </div>
+
+              <!-- Reinvestment -->
+              <div class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="bg-green-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">2</div>
+                  <div>
+                    <div class="font-semibold text-gray-900">Reinvest in Top Performers</div>
+                    <div class="text-xs text-gray-600">Put saved budget into your best campaigns</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-xl font-black text-green-600" id="breakdown-reinvest-leads">+0</div>
+                  <div class="text-xs text-gray-500">extra leads</div>
+                </div>
+              </div>
+
+              <!-- Quality Score -->
+              <div class="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="bg-blue-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">3</div>
+                  <div>
+                    <div class="font-semibold text-gray-900">Improve Quality Scores</div>
+                    <div class="text-xs text-gray-600">Better ads → higher QS → lower CPC → more clicks</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-xl font-black text-blue-600" id="breakdown-qs-leads">+0</div>
+                  <div class="text-xs text-gray-500">extra leads</div>
+                </div>
+              </div>
+
+              <!-- Ad Visibility -->
+              <div class="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="bg-purple-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">4</div>
+                  <div>
+                    <div class="font-semibold text-gray-900">Boost Ad Visibility</div>
+                    <div class="text-xs text-gray-600">Better positions → higher CTR → more traffic</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-xl font-black text-purple-600" id="breakdown-ctr-leads">+0</div>
+                  <div class="text-xs text-gray-500">extra leads</div>
+                </div>
+              </div>
+
+              <!-- Conversion Rate -->
+              <div class="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-200">
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="bg-orange-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">5</div>
+                  <div>
+                    <div class="font-semibold text-gray-900">Optimize Conversion Rate</div>
+                    <div class="text-xs text-gray-600">Better targeting & messaging → more conversions</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-xl font-black text-orange-600" id="breakdown-cvr-leads">+0</div>
+                  <div class="text-xs text-gray-500">extra leads</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border-2 border-indigo-200 text-center">
+              <div class="text-sm text-gray-600 mb-1">Combined Monthly Impact</div>
+              <div class="text-3xl font-black text-indigo-600" id="breakdown-total">$0</div>
+              <div class="text-xs text-gray-500 mt-1">All optimizations working together</div>
             </div>
           </div>
 
@@ -355,54 +527,118 @@
 
     try {
       // Get inputs
+      // NOTE: When Google Ads account is connected, these values can be pre-filled with real data
+      // from the account's performance metrics via the backend template context
       var monthlySpend = parseFloat(document.getElementById('monthly_spend').value) || 0;
       var avgOrderValue = parseFloat(document.getElementById('avg_order_value').value) || 0;
       var wastedSpendPct = parseFloat(document.getElementById('wasted_spend_pct').value) || 18;
       var conversionRate = parseFloat(document.getElementById('conversion_rate').value) || 3.5;
+      var avgCPC = parseFloat(document.getElementById('avg_cpc').value) || 2.50;
+      var qualityScore = parseFloat(document.getElementById('quality_score').value) || 6;
+      var avgPosition = parseFloat(document.getElementById('avg_position').value) || 2.5;
 
-      console.log('Inputs:', {monthlySpend: monthlySpend, avgOrderValue: avgOrderValue, wastedSpendPct: wastedSpendPct, conversionRate: conversionRate});
+      console.log('Inputs:', {
+        monthlySpend: monthlySpend,
+        avgOrderValue: avgOrderValue,
+        wastedSpendPct: wastedSpendPct,
+        conversionRate: conversionRate,
+        avgCPC: avgCPC,
+        qualityScore: qualityScore,
+        avgPosition: avgPosition
+      });
 
       if (monthlySpend <= 0 || avgOrderValue <= 0) {
         console.log('Invalid inputs, skipping calculation');
         return;
       }
 
-      // Calculations
+      // === ENHANCED CALCULATION MODEL ===
       var annualSpend = monthlySpend * 12;
 
-      // 1. Wasted spend savings
+      // 1. WASTED SPEND ELIMINATION
       var monthlyWaste = monthlySpend * (wastedSpendPct / 100);
       var annualWaste = annualSpend * (wastedSpendPct / 100);
+      var effectiveSpend = monthlySpend - monthlyWaste;
 
-      // 2. Estimated improvement in conversions (assume 20% improvement from better CTR/QS)
-      var avgCPC = 2.50; // Assume $2.50 avg CPC
+      // Calculate current performance metrics
       var currentClicks = monthlySpend / avgCPC;
-      var currentConversions = currentClicks * (conversionRate / 100);
-      var improvedConversionRate = conversionRate * 1.20; // 20% improvement
-      var newConversions = currentClicks * (improvedConversionRate / 100);
-      var additionalLeads = Math.round(newConversions - currentConversions);
-      var additionalRevenue = additionalLeads * avgOrderValue;
+      var currentCPL = avgCPC / (conversionRate / 100);
+      var currentLeads = currentClicks * (conversionRate / 100);
 
-      // 3. Total monthly value
-      var totalMonthlyValue = monthlyWaste + additionalRevenue;
+      // 2. REINVESTMENT OF SAVED WASTE
+      // Top 20% of campaigns typically perform 35% better than average
+      var topPerformerCPL = currentCPL * 0.65; // 35% better CPL
+      var leadsFromReinvestment = monthlyWaste / topPerformerCPL;
+      var revenueFromReinvestment = leadsFromReinvestment * avgOrderValue;
 
-      // 4. Net after service fee
+      // 3. QUALITY SCORE IMPROVEMENTS
+      // QS improvement potential based on current score
+      // QS 1-3: 30% improvement potential, QS 4-6: 20%, QS 7-8: 10%, QS 9-10: 5%
+      var qsImprovementPotential = qualityScore <= 3 ? 0.30 :
+                                   qualityScore <= 6 ? 0.20 :
+                                   qualityScore <= 8 ? 0.10 : 0.05;
+
+      // Higher QS reduces CPC
+      var cpcReduction = qsImprovementPotential;
+      var newCPC = avgCPC * (1 - cpcReduction);
+      var additionalClicks = effectiveSpend * (cpcReduction / (1 - cpcReduction)) / newCPC;
+      var leadsFromQS = additionalClicks * (conversionRate / 100);
+      var revenueFromQS = leadsFromQS * avgOrderValue;
+
+      // 4. IMPROVED AD VISIBILITY (CTR from better positions)
+      // Position 1: 35% CTR, Position 2: 25%, Position 3: 18%, Position 4+: 12%
+      var currentPositionCTR = avgPosition <= 1.5 ? 0.35 :
+                               avgPosition <= 2.5 ? 0.25 :
+                               avgPosition <= 3.5 ? 0.18 : 0.12;
+      var targetPositionCTR = 0.35; // Target position 1
+      var ctrImprovement = (targetPositionCTR - currentPositionCTR) / currentPositionCTR;
+      ctrImprovement = Math.max(0, ctrImprovement); // Can't be negative
+
+      var baseClicks = effectiveSpend / newCPC;
+      var leadsFromCTR = baseClicks * ctrImprovement * (conversionRate / 100);
+      var revenueFromCTR = leadsFromCTR * avgOrderValue;
+
+      // 5. IMPROVED CONVERSION RATE
+      // Better targeting, ad copy, and landing page alignment: 12% CVR improvement
+      var cvrImprovement = 0.12;
+      var baseLeadsAfterOptimization = baseClicks * (conversionRate / 100);
+      var leadsFromCVR = baseLeadsAfterOptimization * cvrImprovement;
+      var revenueFromCVR = leadsFromCVR * avgOrderValue;
+
+      // === TOTALS ===
+      var totalAdditionalLeads = Math.round(
+        leadsFromReinvestment + leadsFromQS + leadsFromCTR + leadsFromCVR
+      );
+      var totalAdditionalRevenue =
+        revenueFromReinvestment + revenueFromQS + revenueFromCTR + revenueFromCVR;
+
+      var totalMonthlyValue = monthlyWaste + totalAdditionalRevenue;
+
+      // Net after service fee
       var monthlyFee = 200;
       var netMonthlyGain = totalMonthlyValue - monthlyFee;
       var annualNetGain = netMonthlyGain * 12;
 
-      // 5. ROI multiple
+      // ROI multiple
       var roiMultiple = monthlyFee > 0 ? (totalMonthlyValue / monthlyFee) : 0;
 
       // Update UI with animations
       window.animateValue('total-value-hero', 0, totalMonthlyValue, 1000, true, '/mo');
       window.animateValue('result-monthly-waste', 0, monthlyWaste, 800, true);
       window.animateValue('result-annual-waste', 0, annualWaste, 800, true);
-      window.animateValue('result-more-leads', 0, additionalLeads, 800, false);
+      window.animateValue('result-more-leads', 0, totalAdditionalLeads, 800, false);
 
-      document.getElementById('result-more-revenue').textContent = '$' + window.formatNumber(additionalRevenue);
+      document.getElementById('result-more-revenue').textContent = '$' + window.formatNumber(totalAdditionalRevenue);
       document.getElementById('pricing-total-gain').textContent = '$' + window.formatNumber(totalMonthlyValue);
       document.getElementById('pricing-roi').textContent = roiMultiple.toFixed(1) + 'x';
+
+      // Update breakdown UI
+      document.getElementById('breakdown-waste').textContent = '$' + window.formatNumber(monthlyWaste);
+      document.getElementById('breakdown-reinvest-leads').textContent = '+' + Math.round(leadsFromReinvestment);
+      document.getElementById('breakdown-qs-leads').textContent = '+' + Math.round(leadsFromQS);
+      document.getElementById('breakdown-ctr-leads').textContent = '+' + Math.round(leadsFromCTR);
+      document.getElementById('breakdown-cvr-leads').textContent = '+' + Math.round(leadsFromCVR);
+      document.getElementById('breakdown-total').textContent = '$' + window.formatNumber(totalMonthlyValue);
 
       var bottomLineText = netMonthlyGain > 0
         ? 'Net gain: $' + window.formatNumber(netMonthlyGain) + '/month after our $' + monthlyFee + '/month fee'
@@ -412,6 +648,15 @@
       document.getElementById('annual-net-gain').textContent = '$' + window.formatNumber(annualNetGain);
 
       console.log('Calculation completed successfully');
+      console.log('Breakdown:', {
+        wasteElimination: monthlyWaste,
+        reinvestment: Math.round(leadsFromReinvestment) + ' leads ($' + Math.round(revenueFromReinvestment) + ')',
+        qualityScore: Math.round(leadsFromQS) + ' leads ($' + Math.round(revenueFromQS) + ')',
+        adVisibility: Math.round(leadsFromCTR) + ' leads ($' + Math.round(revenueFromCTR) + ')',
+        conversionRate: Math.round(leadsFromCVR) + ' leads ($' + Math.round(revenueFromCVR) + ')',
+        totalLeads: totalAdditionalLeads,
+        totalValue: Math.round(totalMonthlyValue)
+      });
     } catch (error) {
       console.error('Error in calculateROI:', error);
     }
@@ -498,6 +743,33 @@
     if (conversionRateInput) {
       conversionRateInput.addEventListener('input', window.calculateROI);
       console.log('Added listener to conversion_rate');
+    }
+
+    // Average CPC input
+    var avgCpcInput = document.getElementById('avg_cpc');
+    if (avgCpcInput) {
+      avgCpcInput.addEventListener('input', window.calculateROI);
+      console.log('Added listener to avg_cpc');
+    }
+
+    // Quality Score slider
+    var qualityScoreInput = document.getElementById('quality_score');
+    if (qualityScoreInput) {
+      qualityScoreInput.addEventListener('input', function() {
+        var qsDisplay = document.getElementById('qs-display');
+        if (qsDisplay) {
+          qsDisplay.textContent = this.value;
+        }
+        window.calculateROI();
+      });
+      console.log('Added listener to quality_score');
+    }
+
+    // Average Position input
+    var avgPositionInput = document.getElementById('avg_position');
+    if (avgPositionInput) {
+      avgPositionInput.addEventListener('input', window.calculateROI);
+      console.log('Added listener to avg_position');
     }
 
     // Calculate button

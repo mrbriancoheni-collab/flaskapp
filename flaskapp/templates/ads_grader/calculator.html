@@ -552,7 +552,7 @@
         return;
       }
 
-      // === ENHANCED CALCULATION MODEL ===
+      // === ENHANCED CALCULATION MODEL (Realistic & Conservative) ===
       var annualSpend = monthlySpend * 12;
 
       // 1. WASTED SPEND ELIMINATION
@@ -566,43 +566,49 @@
       var currentLeads = currentClicks * (conversionRate / 100);
 
       // 2. REINVESTMENT OF SAVED WASTE
-      // Top 20% of campaigns typically perform 35% better than average
-      var topPerformerCPL = currentCPL * 0.65; // 35% better CPL
-      var leadsFromReinvestment = monthlyWaste / topPerformerCPL;
+      // Realistically, only ~70% of wasted spend can be efficiently reallocated
+      // Top performers have ~25% better CPL (conservative estimate)
+      var reinvestableWaste = monthlyWaste * 0.70;
+      var topPerformerCPL = currentCPL * 0.75; // 25% better CPL
+      var leadsFromReinvestment = reinvestableWaste / topPerformerCPL;
       var revenueFromReinvestment = leadsFromReinvestment * avgOrderValue;
 
       // 3. QUALITY SCORE IMPROVEMENTS
-      // QS improvement potential based on current score
-      // QS 1-3: 30% improvement potential, QS 4-6: 20%, QS 7-8: 10%, QS 9-10: 5%
-      var qsImprovementPotential = qualityScore <= 3 ? 0.30 :
-                                   qualityScore <= 6 ? 0.20 :
-                                   qualityScore <= 8 ? 0.10 : 0.05;
+      // QS improvement potential (more conservative, with diminishing returns)
+      var qsImprovementPotential = qualityScore <= 3 ? 0.15 :  // 15% CPC reduction
+                                   qualityScore <= 6 ? 0.10 :  // 10% CPC reduction
+                                   qualityScore <= 8 ? 0.05 :  // 5% CPC reduction
+                                                       0.02;   // 2% CPC reduction
 
-      // Higher QS reduces CPC
-      var cpcReduction = qsImprovementPotential;
-      var newCPC = avgCPC * (1 - cpcReduction);
-      var additionalClicks = effectiveSpend * (cpcReduction / (1 - cpcReduction)) / newCPC;
-      var leadsFromQS = additionalClicks * (conversionRate / 100);
+      // CPC reduction means same budget gets more clicks
+      var newCPC = avgCPC * (1 - qsImprovementPotential);
+      var clicksAfterQS = effectiveSpend / newCPC;
+      var currentClicksFromEffectiveSpend = effectiveSpend / avgCPC;
+      var additionalClicksFromQS = clicksAfterQS - currentClicksFromEffectiveSpend;
+      var leadsFromQS = additionalClicksFromQS * (conversionRate / 100);
       var revenueFromQS = leadsFromQS * avgOrderValue;
 
       // 4. IMPROVED AD VISIBILITY (CTR from better positions)
-      // Position 1: 35% CTR, Position 2: 25%, Position 3: 18%, Position 4+: 12%
-      var currentPositionCTR = avgPosition <= 1.5 ? 0.35 :
-                               avgPosition <= 2.5 ? 0.25 :
-                               avgPosition <= 3.5 ? 0.18 : 0.12;
-      var targetPositionCTR = 0.35; // Target position 1
-      var ctrImprovement = (targetPositionCTR - currentPositionCTR) / currentPositionCTR;
-      ctrImprovement = Math.max(0, ctrImprovement); // Can't be negative
+      // Use realistic CTR improvement percentages, not absolute CTRs
+      // Can't assume ALL ads reach position 1, so use partial improvement
+      var ctrImprovementPotential = avgPosition <= 1.5 ? 0.05 :   // Already top, 5% improvement
+                                    avgPosition <= 2.5 ? 0.15 :   // Position 2, 15% improvement
+                                    avgPosition <= 3.5 ? 0.25 :   // Position 3, 25% improvement
+                                                         0.35;    // Position 4+, 35% improvement
 
-      var baseClicks = effectiveSpend / newCPC;
-      var leadsFromCTR = baseClicks * ctrImprovement * (conversionRate / 100);
+      // Only achieve 50% of potential (realistic optimization limits)
+      var actualCTRImprovement = ctrImprovementPotential * 0.50;
+      var clicksAfterCTR = clicksAfterQS * (1 + actualCTRImprovement);
+      var additionalClicksFromCTR = clicksAfterCTR - clicksAfterQS;
+      var leadsFromCTR = additionalClicksFromCTR * (conversionRate / 100);
       var revenueFromCTR = leadsFromCTR * avgOrderValue;
 
       // 5. IMPROVED CONVERSION RATE
-      // Better targeting, ad copy, and landing page alignment: 12% CVR improvement
-      var cvrImprovement = 0.12;
-      var baseLeadsAfterOptimization = baseClicks * (conversionRate / 100);
-      var leadsFromCVR = baseLeadsAfterOptimization * cvrImprovement;
+      // Conservative 6% CVR improvement (not 12%)
+      // Applied to base effective spend leads only (no compounding)
+      var cvrImprovement = 0.06;
+      var baseLeads = currentClicksFromEffectiveSpend * (conversionRate / 100);
+      var leadsFromCVR = baseLeads * cvrImprovement;
       var revenueFromCVR = leadsFromCVR * avgOrderValue;
 
       // === TOTALS ===
@@ -613,6 +619,9 @@
         revenueFromReinvestment + revenueFromQS + revenueFromCTR + revenueFromCVR;
 
       var totalMonthlyValue = monthlyWaste + totalAdditionalRevenue;
+
+      // Calculate improvement percentage for validation
+      var improvementPct = (totalAdditionalLeads / currentLeads) * 100;
 
       // Net after service fee
       var monthlyFee = 200;
@@ -648,14 +657,20 @@
       document.getElementById('annual-net-gain').textContent = '$' + window.formatNumber(annualNetGain);
 
       console.log('Calculation completed successfully');
-      console.log('Breakdown:', {
-        wasteElimination: monthlyWaste,
+      console.log('Current Performance:', {
+        currentLeads: Math.round(currentLeads),
+        currentCPL: '$' + currentCPL.toFixed(2),
+        currentClicks: Math.round(currentClicks)
+      });
+      console.log('Optimization Breakdown:', {
+        wasteElimination: '$' + Math.round(monthlyWaste) + ' saved',
         reinvestment: Math.round(leadsFromReinvestment) + ' leads ($' + Math.round(revenueFromReinvestment) + ')',
         qualityScore: Math.round(leadsFromQS) + ' leads ($' + Math.round(revenueFromQS) + ')',
         adVisibility: Math.round(leadsFromCTR) + ' leads ($' + Math.round(revenueFromCTR) + ')',
         conversionRate: Math.round(leadsFromCVR) + ' leads ($' + Math.round(revenueFromCVR) + ')',
-        totalLeads: totalAdditionalLeads,
-        totalValue: Math.round(totalMonthlyValue)
+        totalAdditionalLeads: totalAdditionalLeads,
+        totalImprovementPct: improvementPct.toFixed(1) + '%',
+        totalValue: '$' + Math.round(totalMonthlyValue)
       });
     } catch (error) {
       console.error('Error in calculateROI:', error);

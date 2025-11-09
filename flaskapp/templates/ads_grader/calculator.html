@@ -51,7 +51,6 @@
                   placeholder="14,000"
                   value="14000"
                   min="100"
-                  oninput="window.calculateROI()"
                   required
                 />
               </div>
@@ -73,7 +72,6 @@
                   placeholder="500"
                   value="500"
                   min="1"
-                  oninput="window.calculateROI()"
                   required
                 />
               </div>
@@ -82,7 +80,7 @@
 
             <!-- Advanced Options (Collapsible) -->
             <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl shadow-md p-6 border-2 border-indigo-200">
-              <button type="button" id="advanced-toggle" onclick="window.toggleAdvancedOptions()" class="w-full flex items-center justify-between text-left">
+              <button type="button" id="advanced-toggle" class="w-full flex items-center justify-between text-left">
                 <span class="text-lg font-bold text-gray-900">
                   <span class="text-indigo-600">3.</span> Advanced Settings (Optional)
                 </span>
@@ -106,7 +104,6 @@
                       value="18"
                       step="1"
                       class="flex-1 h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                      oninput="document.getElementById('waste-display').textContent = this.value; window.calculateROI();"
                     />
                     <div class="text-right min-w-[80px]">
                       <span id="waste-display" class="text-2xl font-bold text-indigo-600">18</span><span class="text-xl text-gray-500">%</span>
@@ -136,7 +133,6 @@
                       min="0"
                       max="100"
                       step="0.1"
-                      oninput="window.calculateROI()"
                     />
                     <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">%</span>
                   </div>
@@ -149,7 +145,6 @@
               <button
                 type="button"
                 id="calculate-btn"
-                onclick="window.calculateROI(); document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });"
                 class="inline-flex items-center justify-center px-12 py-5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black text-xl rounded-xl hover:from-indigo-700 hover:to-purple-700 transition shadow-2xl transform hover:scale-105"
               >
                 <i class="fa-solid fa-calculator mr-3 text-2xl"></i>
@@ -320,15 +315,15 @@
   </div>
 </div>
 
-<script>
-// IMMEDIATELY define global functions (no waiting, no dependencies)
+<script nonce="{{ g.csp_nonce }}">
+// Calculator JavaScript with addEventListener (CSP-compliant)
 (function() {
   'use strict';
 
   console.log('Calculator script loading...');
 
   // Toggle advanced options
-  window.toggleAdvancedOptions = function() {
+  function toggleAdvancedOptions() {
     console.log('toggleAdvancedOptions called!');
     var options = document.getElementById('advanced-options');
     var icon = document.getElementById('advanced-icon');
@@ -352,10 +347,10 @@
     } else {
       console.error('Could not find options or icon elements!');
     }
-  };
+  }
 
   // Calculate ROI
-  window.calculateROI = function() {
+  function calculateROI() {
     console.log('calculateROI called!');
 
     try {
@@ -400,30 +395,30 @@
       var roiMultiple = monthlyFee > 0 ? (totalMonthlyValue / monthlyFee) : 0;
 
       // Update UI with animations
-      window.animateValue('total-value-hero', 0, totalMonthlyValue, 1000, true, '/mo');
-      window.animateValue('result-monthly-waste', 0, monthlyWaste, 800, true);
-      window.animateValue('result-annual-waste', 0, annualWaste, 800, true);
-      window.animateValue('result-more-leads', 0, additionalLeads, 800, false);
+      animateValue('total-value-hero', 0, totalMonthlyValue, 1000, true, '/mo');
+      animateValue('result-monthly-waste', 0, monthlyWaste, 800, true);
+      animateValue('result-annual-waste', 0, annualWaste, 800, true);
+      animateValue('result-more-leads', 0, additionalLeads, 800, false);
 
-      document.getElementById('result-more-revenue').textContent = '$' + window.formatNumber(additionalRevenue);
-      document.getElementById('pricing-total-gain').textContent = '$' + window.formatNumber(totalMonthlyValue);
+      document.getElementById('result-more-revenue').textContent = '$' + formatNumber(additionalRevenue);
+      document.getElementById('pricing-total-gain').textContent = '$' + formatNumber(totalMonthlyValue);
       document.getElementById('pricing-roi').textContent = roiMultiple.toFixed(1) + 'x';
 
       var bottomLineText = netMonthlyGain > 0
-        ? 'Net gain: $' + window.formatNumber(netMonthlyGain) + '/month after our $' + monthlyFee + '/month fee'
+        ? 'Net gain: $' + formatNumber(netMonthlyGain) + '/month after our $' + monthlyFee + '/month fee'
         : "Let's discuss a custom plan for your account size";
 
       document.getElementById('bottom-line').textContent = bottomLineText;
-      document.getElementById('annual-net-gain').textContent = '$' + window.formatNumber(annualNetGain);
+      document.getElementById('annual-net-gain').textContent = '$' + formatNumber(annualNetGain);
 
       console.log('Calculation completed successfully');
     } catch (error) {
       console.error('Error in calculateROI:', error);
     }
-  };
+  }
 
   // Animate value changes
-  window.animateValue = function(id, start, end, duration, isCurrency, suffix) {
+  function animateValue(id, start, end, duration, isCurrency, suffix) {
     var element = document.getElementById(id);
     if (!element) {
       console.warn('animateValue: element not found:', id);
@@ -442,33 +437,87 @@
       }
 
       var displayValue = isCurrency
-        ? '$' + window.formatNumber(Math.round(current)) + (suffix || '')
+        ? '$' + formatNumber(Math.round(current)) + (suffix || '')
         : '+' + Math.round(current) + (suffix || '');
 
       element.textContent = displayValue;
     }, 16);
-  };
+  }
 
   // Format numbers with commas
-  window.formatNumber = function(num) {
+  function formatNumber(num) {
     return Math.round(num).toLocaleString();
-  };
+  }
 
-  console.log('All calculator functions defined!');
-  console.log('window.toggleAdvancedOptions:', typeof window.toggleAdvancedOptions);
-  console.log('window.calculateROI:', typeof window.calculateROI);
-  console.log('window.animateValue:', typeof window.animateValue);
-  console.log('window.formatNumber:', typeof window.formatNumber);
+  // Attach event listeners
+  function attachEventListeners() {
+    console.log('Attaching event listeners...');
+
+    // Advanced toggle button
+    var advancedToggle = document.getElementById('advanced-toggle');
+    if (advancedToggle) {
+      advancedToggle.addEventListener('click', toggleAdvancedOptions);
+      console.log('✓ Advanced toggle listener attached');
+    } else {
+      console.error('✗ Advanced toggle button not found');
+    }
+
+    // Calculate button
+    var calculateBtn = document.getElementById('calculate-btn');
+    if (calculateBtn) {
+      calculateBtn.addEventListener('click', function() {
+        calculateROI();
+        var resultsSection = document.getElementById('results-section');
+        if (resultsSection) {
+          resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+      console.log('✓ Calculate button listener attached');
+    } else {
+      console.error('✗ Calculate button not found');
+    }
+
+    // Auto-calculate on input changes
+    var inputs = ['monthly_spend', 'avg_order_value', 'conversion_rate'];
+    inputs.forEach(function(id) {
+      var element = document.getElementById(id);
+      if (element) {
+        element.addEventListener('input', calculateROI);
+        console.log('✓ Input listener attached to:', id);
+      } else {
+        console.error('✗ Input not found:', id);
+      }
+    });
+
+    // Waste slider - update display and calculate
+    var wasteSlider = document.getElementById('wasted_spend_pct');
+    if (wasteSlider) {
+      wasteSlider.addEventListener('input', function() {
+        var display = document.getElementById('waste-display');
+        if (display) {
+          display.textContent = this.value;
+        }
+        calculateROI();
+      });
+      console.log('✓ Waste slider listener attached');
+    } else {
+      console.error('✗ Waste slider not found');
+    }
+
+    console.log('All event listeners attached!');
+  }
 
   // Run initial calculation when page loads
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('DOM ready, running initial calculation');
-      window.calculateROI();
+      console.log('DOM ready, attaching listeners and running initial calculation');
+      attachEventListeners();
+      calculateROI();
     });
   } else {
-    console.log('DOM already ready, running initial calculation');
-    window.calculateROI();
+    console.log('DOM already ready, attaching listeners and running initial calculation');
+    attachEventListeners();
+    calculateROI();
   }
 })();
 </script>

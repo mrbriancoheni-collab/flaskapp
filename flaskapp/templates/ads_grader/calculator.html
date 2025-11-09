@@ -1,332 +1,449 @@
 {% extends "base_app.html" %}
-{% block title %}Google Ads ROI Calculator – FieldSprout{% endblock %}
+{% block title %}Google Ads ROI Calculator – See Your Potential Savings{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto">
-  <!-- Header -->
-  <div class="text-center mb-8">
-    <h1 class="text-4xl font-bold mb-3">Google Ads ROI Calculator</h1>
-    <p class="text-xl text-gray-600">
-      See how much you could save and earn with better Google Ads management
-    </p>
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+
+  <!-- Hero Section -->
+  <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white py-16">
+    <div class="max-w-6xl mx-auto px-4 text-center">
+      <h1 class="text-5xl md:text-6xl font-black mb-4 animate-fade-in">
+        💰 Google Ads ROI Calculator
+      </h1>
+      <p class="text-2xl md:text-3xl text-indigo-100 mb-2 font-semibold">
+        How much money are you leaving on the table?
+      </p>
+      <p class="text-lg text-indigo-200 max-w-3xl mx-auto">
+        Most Google Ads accounts waste 15-25% of their budget. Calculate your potential savings in 60 seconds.
+      </p>
+    </div>
   </div>
 
-  <!-- Calculator Card -->
-  <div class="bg-white rounded-xl shadow-lg p-8 mb-6">
-    <h2 class="text-2xl font-bold mb-6">
-      <i class="fa-solid fa-calculator text-indigo-600 mr-2"></i>
-      Your Account Details
-    </h2>
+  <div class="max-w-6xl mx-auto px-4 -mt-8">
 
-    <form id="roi-calculator-form" class="space-y-6">
-      <!-- Monthly Spend -->
-      <div>
-        <label for="monthly_spend" class="block text-sm font-semibold text-gray-700 mb-2">
-          Monthly Google Ads Spend <span class="text-red-500">*</span>
-        </label>
-        <div class="relative">
-          <span class="absolute left-3 top-3 text-gray-500">$</span>
-          <input
-            type="number"
-            id="monthly_spend"
-            name="monthly_spend"
-            class="pl-8 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            placeholder="14000"
-            value="14000"
-            min="100"
-            required
-          />
+    <!-- Calculator Card -->
+    <div class="bg-white rounded-2xl shadow-2xl overflow-hidden mb-8">
+
+      <!-- Input Section -->
+      <div class="bg-gradient-to-r from-gray-50 to-white p-8 md:p-12 border-b-4 border-indigo-500">
+        <div class="max-w-3xl mx-auto">
+          <h2 class="text-3xl font-bold text-gray-900 mb-3 text-center">
+            Tell Us About Your Google Ads
+          </h2>
+          <p class="text-gray-600 text-center mb-8">
+            Just 3 simple questions to see your potential ROI
+          </p>
+
+          <form id="roi-calculator-form" class="space-y-6">
+
+            <!-- Monthly Spend -->
+            <div class="bg-white rounded-xl shadow-md p-6 border-2 border-gray-100 hover:border-indigo-300 transition">
+              <label class="block text-lg font-bold text-gray-900 mb-3">
+                <span class="text-indigo-600">1.</span> What's your monthly Google Ads spend?
+              </label>
+              <div class="relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-gray-500 font-bold">$</span>
+                <input
+                  type="number"
+                  id="monthly_spend"
+                  name="monthly_spend"
+                  class="pl-12 w-full px-6 py-4 text-2xl font-bold border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-indigo-200 focus:border-indigo-500 transition"
+                  placeholder="14,000"
+                  value="14000"
+                  min="100"
+                  required
+                />
+              </div>
+              <p class="text-sm text-gray-500 mt-2 ml-1">Enter your average monthly ad spend</p>
+            </div>
+
+            <!-- Average Order Value -->
+            <div class="bg-white rounded-xl shadow-md p-6 border-2 border-gray-100 hover:border-indigo-300 transition">
+              <label class="block text-lg font-bold text-gray-900 mb-3">
+                <span class="text-indigo-600">2.</span> What's your average customer worth?
+              </label>
+              <div class="relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-gray-500 font-bold">$</span>
+                <input
+                  type="number"
+                  id="avg_order_value"
+                  name="avg_order_value"
+                  class="pl-12 w-full px-6 py-4 text-2xl font-bold border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-indigo-200 focus:border-indigo-500 transition"
+                  placeholder="500"
+                  value="500"
+                  min="1"
+                  required
+                />
+              </div>
+              <p class="text-sm text-gray-500 mt-2 ml-1">Lifetime value or average job/sale amount</p>
+            </div>
+
+            <!-- Advanced Options (Collapsible) -->
+            <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl shadow-md p-6 border-2 border-indigo-200">
+              <button type="button" onclick="toggleAdvanced()" class="w-full flex items-center justify-between text-left">
+                <span class="text-lg font-bold text-gray-900">
+                  <span class="text-indigo-600">3.</span> Advanced Settings (Optional)
+                </span>
+                <i id="advanced-icon" class="fa-solid fa-chevron-down text-indigo-600 transition-transform"></i>
+              </button>
+
+              <div id="advanced-options" class="hidden mt-6 space-y-4">
+                <!-- Wasted Spend % -->
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Wasted Spend %
+                    <span class="text-xs font-normal text-gray-500 ml-2">(Industry avg: 18%)</span>
+                  </label>
+                  <div class="flex items-center gap-4">
+                    <input
+                      type="range"
+                      id="wasted_spend_pct"
+                      name="wasted_spend_pct"
+                      min="0"
+                      max="40"
+                      value="18"
+                      step="1"
+                      class="flex-1 h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      oninput="updateWasteDisplay(this.value)"
+                    />
+                    <div class="text-right min-w-[80px]">
+                      <span id="waste-display" class="text-2xl font-bold text-indigo-600">18</span><span class="text-xl text-gray-500">%</span>
+                    </div>
+                  </div>
+                  <p class="text-xs text-gray-600 mt-2">
+                    <a href="{{ url_for('ads_grader_bp.analyze') }}" class="text-indigo-600 hover:underline font-semibold">
+                      Run our free grader
+                    </a> to find your exact wasted spend percentage
+                  </p>
+                </div>
+
+                <!-- Conversion Rate -->
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Conversion Rate
+                    <span class="text-xs font-normal text-gray-500 ml-2">(Default: 3.5%)</span>
+                  </label>
+                  <div class="relative">
+                    <input
+                      type="number"
+                      id="conversion_rate"
+                      name="conversion_rate"
+                      class="pr-12 w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                      placeholder="3.5"
+                      value="3.5"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                    />
+                    <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </form>
         </div>
-        <p class="text-xs text-gray-500 mt-1">How much do you spend on Google Ads per month?</p>
       </div>
 
-      <!-- Average Order Value -->
-      <div>
-        <label for="avg_order_value" class="block text-sm font-semibold text-gray-700 mb-2">
-          Average Customer Value <span class="text-red-500">*</span>
-        </label>
-        <div class="relative">
-          <span class="absolute left-3 top-3 text-gray-500">$</span>
-          <input
-            type="number"
-            id="avg_order_value"
-            name="avg_order_value"
-            class="pl-8 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            placeholder="500"
-            value="500"
-            min="1"
-            required
-          />
-        </div>
-        <p class="text-xs text-gray-500 mt-1">Average revenue per customer or job</p>
-      </div>
+      <!-- Results Section -->
+      <div id="results-section" class="bg-gradient-to-br from-white via-indigo-50 to-purple-50 p-8 md:p-12">
+        <div class="max-w-5xl mx-auto">
 
-      <!-- Wasted Spend Percentage -->
-      <div>
-        <label for="wasted_spend_pct" class="block text-sm font-semibold text-gray-700 mb-2">
-          Wasted Spend Percentage
-        </label>
-        <div class="relative">
-          <input
-            type="number"
-            id="wasted_spend_pct"
-            name="wasted_spend_pct"
-            class="pr-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            placeholder="18"
-            value="18"
-            min="0"
-            max="50"
-            step="1"
-          />
-          <span class="absolute right-3 top-3 text-gray-500">%</span>
-        </div>
-        <p class="text-xs text-gray-500 mt-1">
-          Industry average is 15-25%.
-          <a href="{{ url_for('ads_grader_bp.analyze') }}" class="text-indigo-600 hover:underline">Run our free grader</a> to find your exact number.
-        </p>
-      </div>
-
-      <!-- Current Conversion Rate -->
-      <div>
-        <label for="conversion_rate" class="block text-sm font-semibold text-gray-700 mb-2">
-          Current Conversion Rate (Optional)
-        </label>
-        <div class="relative">
-          <input
-            type="number"
-            id="conversion_rate"
-            name="conversion_rate"
-            class="pr-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            placeholder="3.5"
-            value="3.5"
-            min="0"
-            max="100"
-            step="0.1"
-          />
-          <span class="absolute right-3 top-3 text-gray-500">%</span>
-        </div>
-        <p class="text-xs text-gray-500 mt-1">What % of clicks turn into customers? (Default: 3.5%)</p>
-      </div>
-
-      <!-- Calculate Button -->
-      <div class="pt-4">
-        <button
-          type="submit"
-          class="w-full px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-lg rounded-lg hover:from-indigo-700 hover:to-purple-700 transition shadow-lg"
-        >
-          <i class="fa-solid fa-calculator mr-2"></i>
-          Calculate My Potential ROI
-        </button>
-      </div>
-    </form>
-  </div>
-
-  <!-- Results Section (hidden initially) -->
-  <div id="results-section" class="hidden">
-    <!-- Total Potential Value -->
-    <div class="bg-gradient-to-br from-emerald-50 to-green-100 border-2 border-emerald-300 rounded-xl shadow-xl p-8 mb-6">
-      <div class="text-center mb-6">
-        <h2 class="text-3xl font-extrabold text-gray-900 mb-2">
-          💰 Your Potential Monthly Value
-        </h2>
-        <p class="text-gray-700 font-medium">
-          Here's what you could gain by optimizing your Google Ads
-        </p>
-      </div>
-
-      <div class="grid md:grid-cols-3 gap-6">
-        <!-- Stop Wasting Money -->
-        <div class="bg-white rounded-xl p-6 shadow-md border-2 border-red-300">
-          <div class="flex items-center justify-center mb-3">
-            <span class="text-5xl">🛑</span>
-          </div>
-          <div class="text-center">
-            <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Stop Wasting</div>
-            <div class="text-4xl font-black text-red-600 mb-1" id="result-monthly-waste">
+          <!-- Main Results Hero -->
+          <div class="text-center mb-10">
+            <div class="inline-block bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-2 rounded-full text-sm font-bold mb-4 shadow-lg">
+              ✨ YOUR POTENTIAL VALUE
+            </div>
+            <h2 class="text-4xl md:text-5xl font-black text-gray-900 mb-3">
+              You Could Save & Earn
+            </h2>
+            <div class="text-6xl md:text-7xl font-black bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2" id="total-value-hero">
               $0
             </div>
-            <div class="text-xs text-gray-500" id="result-annual-waste">
-              $0/year
+            <p class="text-xl text-gray-600 font-semibold">
+              every single month
+            </p>
+          </div>
+
+          <!-- Value Breakdown Cards -->
+          <div class="grid md:grid-cols-2 gap-6 mb-10">
+
+            <!-- Stop Wasting -->
+            <div class="bg-white rounded-2xl shadow-xl p-8 border-2 border-red-200 hover:border-red-400 transition transform hover:scale-105">
+              <div class="flex items-center justify-center mb-4">
+                <div class="bg-red-100 rounded-full p-4">
+                  <span class="text-5xl">🛑</span>
+                </div>
+              </div>
+              <h3 class="text-xl font-bold text-gray-900 text-center mb-2">Stop Wasting Money</h3>
+              <div class="text-center mb-3">
+                <div class="text-4xl font-black text-red-600 mb-1" id="result-monthly-waste">
+                  $0
+                </div>
+                <div class="text-sm text-gray-500">per month</div>
+              </div>
+              <div class="bg-red-50 rounded-lg p-3 text-center">
+                <span class="text-xs text-gray-600 uppercase font-semibold">Annual Waste</span>
+                <div class="text-2xl font-bold text-red-700" id="result-annual-waste">$0</div>
+              </div>
+            </div>
+
+            <!-- Get More Leads -->
+            <div class="bg-white rounded-2xl shadow-xl p-8 border-2 border-blue-200 hover:border-blue-400 transition transform hover:scale-105">
+              <div class="flex items-center justify-center mb-4">
+                <div class="bg-blue-100 rounded-full p-4">
+                  <span class="text-5xl">📈</span>
+                </div>
+              </div>
+              <h3 class="text-xl font-bold text-gray-900 text-center mb-2">Get More Leads</h3>
+              <div class="text-center mb-3">
+                <div class="text-4xl font-black text-blue-600 mb-1" id="result-more-leads">
+                  +0
+                </div>
+                <div class="text-sm text-gray-500">leads per month</div>
+              </div>
+              <div class="bg-blue-50 rounded-lg p-3 text-center">
+                <span class="text-xs text-gray-600 uppercase font-semibold">Worth</span>
+                <div class="text-2xl font-bold text-blue-700" id="result-more-revenue">$0</div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Get More Leads -->
-        <div class="bg-white rounded-xl p-6 shadow-md border-2 border-blue-300">
-          <div class="flex items-center justify-center mb-3">
-            <span class="text-5xl">📈</span>
+          <!-- ROI Comparison -->
+          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-2xl p-8 text-white mb-10">
+            <h3 class="text-2xl font-bold text-center mb-6">What Does This Cost?</h3>
+
+            <div class="grid md:grid-cols-3 gap-6 mb-6">
+              <div class="text-center">
+                <div class="text-sm text-indigo-200 uppercase font-semibold mb-2">Your Total Gain</div>
+                <div class="text-4xl font-black mb-1" id="pricing-total-gain">$0</div>
+                <div class="text-xs text-indigo-200">per month</div>
+              </div>
+              <div class="text-center">
+                <div class="text-sm text-indigo-200 uppercase font-semibold mb-2">Our Flat Fee</div>
+                <div class="text-4xl font-black mb-1">$200</div>
+                <div class="text-xs text-indigo-200">$2,400/year</div>
+              </div>
+              <div class="text-center">
+                <div class="text-sm text-indigo-200 uppercase font-semibold mb-2">Your ROI</div>
+                <div class="text-4xl font-black mb-1" id="pricing-roi">0.0x</div>
+                <div class="text-xs text-indigo-200">return on investment</div>
+              </div>
+            </div>
+
+            <div class="bg-white/20 backdrop-blur rounded-xl p-6 text-center">
+              <p class="text-2xl font-bold mb-2" id="bottom-line">
+                Net gain: $0/month after our $200/month fee
+              </p>
+              <p class="text-lg text-indigo-100">
+                That's <span id="annual-net-gain" class="font-bold text-yellow-300">$0</span> extra per year
+              </p>
+            </div>
+          </div>
+
+          <!-- CTA Buttons -->
+          <div class="text-center space-y-4">
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+              <a href="{{ url_for('ads_grader_bp.analyze') }}" class="group inline-flex items-center justify-center px-10 py-5 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-black text-xl rounded-xl hover:from-green-600 hover:to-emerald-700 transition shadow-2xl transform hover:scale-105">
+                <i class="fa-solid fa-chart-line mr-3 text-2xl"></i>
+                Get My Free Report
+                <i class="fa-solid fa-arrow-right ml-3 group-hover:translate-x-1 transition"></i>
+              </a>
+              {% if not current_user.is_authenticated %}
+              <a href="{{ url_for('auth_bp.register') }}" class="inline-flex items-center justify-center px-10 py-5 bg-white border-4 border-indigo-600 text-indigo-700 font-black text-xl rounded-xl hover:bg-indigo-50 transition shadow-xl">
+                <i class="fa-solid fa-user-plus mr-3"></i>
+                Start Free Account
+              </a>
+              {% endif %}
+            </div>
+
+            <p class="text-sm text-gray-500">
+              🔒 No credit card required • Get results in under 2 minutes
+            </p>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Trust Signals -->
+    <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+      <div class="max-w-4xl mx-auto">
+        <h3 class="text-2xl font-bold text-center text-gray-900 mb-8">Why Choose FieldSprout?</h3>
+        <div class="grid md:grid-cols-3 gap-6">
+          <div class="text-center">
+            <div class="bg-indigo-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+              <i class="fa-solid fa-shield-check text-3xl text-indigo-600"></i>
+            </div>
+            <h4 class="font-bold text-gray-900 mb-2">Guaranteed Results</h4>
+            <p class="text-gray-600 text-sm">30-day money-back guarantee if you're not satisfied</p>
           </div>
           <div class="text-center">
-            <div class="text-sm text-gray-600 uppercase font-semibold mb-1">More Leads/Month</div>
-            <div class="text-4xl font-black text-blue-600 mb-1" id="result-more-leads">
-              +0
+            <div class="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+              <i class="fa-solid fa-dollar-sign text-3xl text-green-600"></i>
             </div>
-            <div class="text-xs text-gray-500" id="result-more-revenue">
-              $0 extra revenue
-            </div>
-          </div>
-        </div>
-
-        <!-- Total Value -->
-        <div class="bg-white rounded-xl p-6 shadow-md border-2 border-purple-300">
-          <div class="flex items-center justify-center mb-3">
-            <span class="text-5xl">🚀</span>
+            <h4 class="font-bold text-gray-900 mb-2">Flat Pricing</h4>
+            <p class="text-gray-600 text-sm">No percentage fees. You keep all your savings.</p>
           </div>
           <div class="text-center">
-            <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Total Value</div>
-            <div class="text-4xl font-black text-purple-600 mb-1" id="result-total-value">
-              $0/mo
+            <div class="bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+              <i class="fa-solid fa-users text-3xl text-purple-600"></i>
             </div>
-            <div class="text-xs text-gray-500">
-              Savings + revenue
-            </div>
+            <h4 class="font-bold text-gray-900 mb-2">Expert Team</h4>
+            <p class="text-gray-600 text-sm">Certified Google Ads specialists manage your account</p>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Pricing & ROI -->
-    <div class="bg-white rounded-xl shadow-lg p-8 mb-6">
-      <h2 class="text-2xl font-bold mb-6 text-center">
-        What It Costs vs. What You Get
-      </h2>
-
-      <div class="grid md:grid-cols-3 gap-6 mb-6">
-        <div class="p-6 bg-green-50 rounded-lg border border-green-200 text-center">
-          <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Your Total Gain</div>
-          <div class="text-3xl font-bold text-green-700" id="pricing-total-gain">$0/mo</div>
-          <div class="text-xs text-gray-500 mt-1">From optimizations</div>
-        </div>
-        <div class="p-6 bg-indigo-50 rounded-lg border border-indigo-200 text-center">
-          <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Service Cost</div>
-          <div class="text-3xl font-bold text-indigo-700">$200/mo</div>
-          <div class="text-xs text-gray-500 mt-1">$2,400/year flat fee</div>
-        </div>
-        <div class="p-6 bg-purple-50 rounded-lg border border-purple-200 text-center">
-          <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Your ROI</div>
-          <div class="text-3xl font-bold text-purple-700" id="pricing-roi">0.0x</div>
-          <div class="text-xs text-gray-500 mt-1">Return on investment</div>
-        </div>
-      </div>
-
-      <div class="p-6 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl text-white text-center">
-        <p class="text-2xl font-bold mb-2" id="bottom-line">
-          Net gain: $0/month after our $200/month fee
-        </p>
-        <p class="text-indigo-100">
-          That's <span id="annual-net-gain" class="font-bold">$0</span> extra in your pocket every year
-        </p>
-      </div>
-    </div>
-
-    <!-- CTA Section -->
-    <div class="bg-white rounded-xl shadow-lg p-8 text-center">
-      <h2 class="text-3xl font-bold mb-4">Ready to Start Saving Money?</h2>
-      <p class="text-xl text-gray-600 mb-6">
-        Run our free Google Ads grader to get your exact numbers
-      </p>
-      <div class="flex flex-col sm:flex-row gap-4 justify-center">
-        <a href="{{ url_for('ads_grader_bp.analyze') }}" class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-lg rounded-xl hover:from-indigo-700 hover:to-purple-700 transition shadow-lg">
-          <i class="fa-solid fa-chart-line mr-2"></i>
-          Run Free Grader
-        </a>
-        {% if not current_user.is_authenticated %}
-        <a href="{{ url_for('auth_bp.register') }}" class="inline-flex items-center px-8 py-4 bg-white border-2 border-indigo-600 text-indigo-700 font-bold text-lg rounded-xl hover:bg-indigo-50 transition shadow-lg">
-          <i class="fa-solid fa-user-plus mr-2"></i>
-          Get Started Free
-        </a>
-        {% endif %}
-      </div>
-    </div>
   </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  const form = document.getElementById('roi-calculator-form');
-  const resultsSection = document.getElementById('results-section');
-
-  // Auto-calculate on input change
-  form.addEventListener('input', function() {
-    calculateROI();
-  });
-
-  // Calculate on form submit
-  form.addEventListener('submit', function(e) {
-    e.preventDefault();
-    calculateROI();
-
-    // Scroll to results
-    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-
-  function calculateROI() {
-    // Get inputs
-    const monthlySpend = parseFloat(document.getElementById('monthly_spend').value) || 0;
-    const avgOrderValue = parseFloat(document.getElementById('avg_order_value').value) || 0;
-    const wastedSpendPct = parseFloat(document.getElementById('wasted_spend_pct').value) || 18;
-    const conversionRate = parseFloat(document.getElementById('conversion_rate').value) || 3.5;
-
-    if (monthlySpend <= 0 || avgOrderValue <= 0) {
-      resultsSection.classList.add('hidden');
-      return;
+  // Auto-calculate on any input change
+  const inputs = ['monthly_spend', 'avg_order_value', 'wasted_spend_pct', 'conversion_rate'];
+  inputs.forEach(id => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.addEventListener('input', calculateROI);
     }
+  });
 
-    // Calculations
-    const annualSpend = monthlySpend * 12;
-
-    // 1. Wasted spend savings
-    const monthlyWaste = monthlySpend * (wastedSpendPct / 100);
-    const annualWaste = annualSpend * (wastedSpendPct / 100);
-
-    // 2. Estimated improvement in conversions (assume 20% improvement from better CTR/QS)
-    const currentClicks = monthlySpend / 2.5; // Assume $2.50 avg CPC
-    const currentConversions = currentClicks * (conversionRate / 100);
-    const improvedConversionRate = conversionRate * 1.20; // 20% improvement
-    const newConversions = currentClicks * (improvedConversionRate / 100);
-    const additionalLeads = Math.round(newConversions - currentConversions);
-    const additionalRevenue = additionalLeads * avgOrderValue;
-
-    // 3. Total monthly value
-    const totalMonthlyValue = monthlyWaste + additionalRevenue;
-
-    // 4. Net after service fee
-    const monthlyFee = 200;
-    const netMonthlyGain = totalMonthlyValue - monthlyFee;
-    const annualNetGain = netMonthlyGain * 12;
-
-    // 5. ROI multiple
-    const roiMultiple = monthlyFee > 0 ? (totalMonthlyValue / monthlyFee) : 0;
-
-    // Update UI
-    document.getElementById('result-monthly-waste').textContent = `$${formatNumber(monthlyWaste)}`;
-    document.getElementById('result-annual-waste').textContent = `$${formatNumber(annualWaste)}/year`;
-
-    document.getElementById('result-more-leads').textContent = `+${additionalLeads}`;
-    document.getElementById('result-more-revenue').textContent = `$${formatNumber(additionalRevenue)} extra revenue`;
-
-    document.getElementById('result-total-value').textContent = `$${formatNumber(totalMonthlyValue)}/mo`;
-
-    document.getElementById('pricing-total-gain').textContent = `$${formatNumber(totalMonthlyValue)}/mo`;
-    document.getElementById('pricing-roi').textContent = `${roiMultiple.toFixed(1)}x`;
-
-    document.getElementById('bottom-line').textContent =
-      netMonthlyGain > 0
-        ? `Net gain: $${formatNumber(netMonthlyGain)}/month after our $${monthlyFee}/month fee`
-        : `Your potential value is lower than our service cost. Let's discuss a custom plan.`;
-
-    document.getElementById('annual-net-gain').textContent = `$${formatNumber(annualNetGain)}`;
-
-    // Show results
-    resultsSection.classList.remove('hidden');
-  }
-
-  function formatNumber(num) {
-    return Math.round(num).toLocaleString();
-  }
-
-  // Calculate on page load with default values
+  // Calculate on page load
   calculateROI();
 });
+
+function toggleAdvanced() {
+  const options = document.getElementById('advanced-options');
+  const icon = document.getElementById('advanced-icon');
+
+  if (options.classList.contains('hidden')) {
+    options.classList.remove('hidden');
+    icon.classList.add('rotate-180');
+  } else {
+    options.classList.add('hidden');
+    icon.classList.remove('rotate-180');
+  }
+}
+
+function updateWasteDisplay(value) {
+  document.getElementById('waste-display').textContent = value;
+  calculateROI();
+}
+
+function calculateROI() {
+  // Get inputs
+  const monthlySpend = parseFloat(document.getElementById('monthly_spend').value) || 0;
+  const avgOrderValue = parseFloat(document.getElementById('avg_order_value').value) || 0;
+  const wastedSpendPct = parseFloat(document.getElementById('wasted_spend_pct').value) || 18;
+  const conversionRate = parseFloat(document.getElementById('conversion_rate').value) || 3.5;
+
+  if (monthlySpend <= 0 || avgOrderValue <= 0) {
+    return;
+  }
+
+  // Calculations
+  const annualSpend = monthlySpend * 12;
+
+  // 1. Wasted spend savings
+  const monthlyWaste = monthlySpend * (wastedSpendPct / 100);
+  const annualWaste = annualSpend * (wastedSpendPct / 100);
+
+  // 2. Estimated improvement in conversions (assume 20% improvement from better CTR/QS)
+  const avgCPC = 2.50; // Assume $2.50 avg CPC
+  const currentClicks = monthlySpend / avgCPC;
+  const currentConversions = currentClicks * (conversionRate / 100);
+  const improvedConversionRate = conversionRate * 1.20; // 20% improvement
+  const newConversions = currentClicks * (improvedConversionRate / 100);
+  const additionalLeads = Math.round(newConversions - currentConversions);
+  const additionalRevenue = additionalLeads * avgOrderValue;
+
+  // 3. Total monthly value
+  const totalMonthlyValue = monthlyWaste + additionalRevenue;
+
+  // 4. Net after service fee
+  const monthlyFee = 200;
+  const netMonthlyGain = totalMonthlyValue - monthlyFee;
+  const annualNetGain = netMonthlyGain * 12;
+
+  // 5. ROI multiple
+  const roiMultiple = monthlyFee > 0 ? (totalMonthlyValue / monthlyFee) : 0;
+
+  // Update UI with animations
+  animateValue('total-value-hero', 0, totalMonthlyValue, 1000, true, '/mo');
+  animateValue('result-monthly-waste', 0, monthlyWaste, 800, true);
+  animateValue('result-annual-waste', 0, annualWaste, 800, true);
+  animateValue('result-more-leads', 0, additionalLeads, 800, false);
+
+  document.getElementById('result-more-revenue').textContent = `$${formatNumber(additionalRevenue)}`;
+  document.getElementById('pricing-total-gain').textContent = `$${formatNumber(totalMonthlyValue)}`;
+  document.getElementById('pricing-roi').textContent = `${roiMultiple.toFixed(1)}x`;
+
+  const bottomLineText = netMonthlyGain > 0
+    ? `Net gain: $${formatNumber(netMonthlyGain)}/month after our $${monthlyFee}/month fee`
+    : `Let's discuss a custom plan for your account size`;
+
+  document.getElementById('bottom-line').textContent = bottomLineText;
+  document.getElementById('annual-net-gain').textContent = `$${formatNumber(annualNetGain)}`;
+}
+
+function animateValue(id, start, end, duration, isCurrency = false, suffix = '') {
+  const element = document.getElementById(id);
+  if (!element) return;
+
+  const range = end - start;
+  const increment = range / (duration / 16);
+  let current = start;
+
+  const timer = setInterval(() => {
+    current += increment;
+    if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+      current = end;
+      clearInterval(timer);
+    }
+
+    const displayValue = isCurrency
+      ? `$${formatNumber(Math.round(current))}${suffix}`
+      : `+${Math.round(current)}${suffix}`;
+
+    element.textContent = displayValue;
+  }, 16);
+}
+
+function formatNumber(num) {
+  return Math.round(num).toLocaleString();
+}
 </script>
+
+<style>
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #4F46E5;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #4F46E5;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+</style>
 {% endblock %}

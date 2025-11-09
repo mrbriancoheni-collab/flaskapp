@@ -321,110 +321,156 @@
 </div>
 
 <script>
-// Global functions for inline event handlers
-window.toggleAdvancedOptions = function() {
-  const options = document.getElementById('advanced-options');
-  const icon = document.getElementById('advanced-icon');
+// IMMEDIATELY define global functions (no waiting, no dependencies)
+(function() {
+  'use strict';
 
-  if (options && icon) {
-    const isHidden = options.classList.contains('hidden');
-    if (isHidden) {
-      options.classList.remove('hidden');
-      icon.classList.add('rotate-180');
+  console.log('Calculator script loading...');
+
+  // Toggle advanced options
+  window.toggleAdvancedOptions = function() {
+    console.log('toggleAdvancedOptions called!');
+    var options = document.getElementById('advanced-options');
+    var icon = document.getElementById('advanced-icon');
+
+    console.log('options:', options);
+    console.log('icon:', icon);
+
+    if (options && icon) {
+      var isHidden = options.classList.contains('hidden');
+      console.log('isHidden:', isHidden);
+
+      if (isHidden) {
+        options.classList.remove('hidden');
+        icon.classList.add('rotate-180');
+        console.log('Showing advanced options');
+      } else {
+        options.classList.add('hidden');
+        icon.classList.remove('rotate-180');
+        console.log('Hiding advanced options');
+      }
     } else {
-      options.classList.add('hidden');
-      icon.classList.remove('rotate-180');
+      console.error('Could not find options or icon elements!');
     }
-  }
-};
+  };
 
-window.calculateROI = function() {
-  // Get inputs
-  const monthlySpend = parseFloat(document.getElementById('monthly_spend').value) || 0;
-  const avgOrderValue = parseFloat(document.getElementById('avg_order_value').value) || 0;
-  const wastedSpendPct = parseFloat(document.getElementById('wasted_spend_pct').value) || 18;
-  const conversionRate = parseFloat(document.getElementById('conversion_rate').value) || 3.5;
+  // Calculate ROI
+  window.calculateROI = function() {
+    console.log('calculateROI called!');
 
-  if (monthlySpend <= 0 || avgOrderValue <= 0) {
-    return;
-  }
+    try {
+      // Get inputs
+      var monthlySpend = parseFloat(document.getElementById('monthly_spend').value) || 0;
+      var avgOrderValue = parseFloat(document.getElementById('avg_order_value').value) || 0;
+      var wastedSpendPct = parseFloat(document.getElementById('wasted_spend_pct').value) || 18;
+      var conversionRate = parseFloat(document.getElementById('conversion_rate').value) || 3.5;
 
-  // Calculations
-  const annualSpend = monthlySpend * 12;
+      console.log('Inputs:', {monthlySpend: monthlySpend, avgOrderValue: avgOrderValue, wastedSpendPct: wastedSpendPct, conversionRate: conversionRate});
 
-  // 1. Wasted spend savings
-  const monthlyWaste = monthlySpend * (wastedSpendPct / 100);
-  const annualWaste = annualSpend * (wastedSpendPct / 100);
+      if (monthlySpend <= 0 || avgOrderValue <= 0) {
+        console.log('Invalid inputs, skipping calculation');
+        return;
+      }
 
-  // 2. Estimated improvement in conversions (assume 20% improvement from better CTR/QS)
-  const avgCPC = 2.50; // Assume $2.50 avg CPC
-  const currentClicks = monthlySpend / avgCPC;
-  const currentConversions = currentClicks * (conversionRate / 100);
-  const improvedConversionRate = conversionRate * 1.20; // 20% improvement
-  const newConversions = currentClicks * (improvedConversionRate / 100);
-  const additionalLeads = Math.round(newConversions - currentConversions);
-  const additionalRevenue = additionalLeads * avgOrderValue;
+      // Calculations
+      var annualSpend = monthlySpend * 12;
 
-  // 3. Total monthly value
-  const totalMonthlyValue = monthlyWaste + additionalRevenue;
+      // 1. Wasted spend savings
+      var monthlyWaste = monthlySpend * (wastedSpendPct / 100);
+      var annualWaste = annualSpend * (wastedSpendPct / 100);
 
-  // 4. Net after service fee
-  const monthlyFee = 200;
-  const netMonthlyGain = totalMonthlyValue - monthlyFee;
-  const annualNetGain = netMonthlyGain * 12;
+      // 2. Estimated improvement in conversions (assume 20% improvement from better CTR/QS)
+      var avgCPC = 2.50; // Assume $2.50 avg CPC
+      var currentClicks = monthlySpend / avgCPC;
+      var currentConversions = currentClicks * (conversionRate / 100);
+      var improvedConversionRate = conversionRate * 1.20; // 20% improvement
+      var newConversions = currentClicks * (improvedConversionRate / 100);
+      var additionalLeads = Math.round(newConversions - currentConversions);
+      var additionalRevenue = additionalLeads * avgOrderValue;
 
-  // 5. ROI multiple
-  const roiMultiple = monthlyFee > 0 ? (totalMonthlyValue / monthlyFee) : 0;
+      // 3. Total monthly value
+      var totalMonthlyValue = monthlyWaste + additionalRevenue;
 
-  // Update UI with animations
-  animateValue('total-value-hero', 0, totalMonthlyValue, 1000, true, '/mo');
-  animateValue('result-monthly-waste', 0, monthlyWaste, 800, true);
-  animateValue('result-annual-waste', 0, annualWaste, 800, true);
-  animateValue('result-more-leads', 0, additionalLeads, 800, false);
+      // 4. Net after service fee
+      var monthlyFee = 200;
+      var netMonthlyGain = totalMonthlyValue - monthlyFee;
+      var annualNetGain = netMonthlyGain * 12;
 
-  document.getElementById('result-more-revenue').textContent = `$${formatNumber(additionalRevenue)}`;
-  document.getElementById('pricing-total-gain').textContent = `$${formatNumber(totalMonthlyValue)}`;
-  document.getElementById('pricing-roi').textContent = `${roiMultiple.toFixed(1)}x`;
+      // 5. ROI multiple
+      var roiMultiple = monthlyFee > 0 ? (totalMonthlyValue / monthlyFee) : 0;
 
-  const bottomLineText = netMonthlyGain > 0
-    ? `Net gain: $${formatNumber(netMonthlyGain)}/month after our $${monthlyFee}/month fee`
-    : `Let's discuss a custom plan for your account size`;
+      // Update UI with animations
+      window.animateValue('total-value-hero', 0, totalMonthlyValue, 1000, true, '/mo');
+      window.animateValue('result-monthly-waste', 0, monthlyWaste, 800, true);
+      window.animateValue('result-annual-waste', 0, annualWaste, 800, true);
+      window.animateValue('result-more-leads', 0, additionalLeads, 800, false);
 
-  document.getElementById('bottom-line').textContent = bottomLineText;
-  document.getElementById('annual-net-gain').textContent = `$${formatNumber(annualNetGain)}`;
-};
+      document.getElementById('result-more-revenue').textContent = '$' + window.formatNumber(additionalRevenue);
+      document.getElementById('pricing-total-gain').textContent = '$' + window.formatNumber(totalMonthlyValue);
+      document.getElementById('pricing-roi').textContent = roiMultiple.toFixed(1) + 'x';
 
-window.animateValue = function(id, start, end, duration, isCurrency = false, suffix = '') {
-  const element = document.getElementById(id);
-  if (!element) return;
+      var bottomLineText = netMonthlyGain > 0
+        ? 'Net gain: $' + window.formatNumber(netMonthlyGain) + '/month after our $' + monthlyFee + '/month fee'
+        : "Let's discuss a custom plan for your account size";
 
-  const range = end - start;
-  const increment = range / (duration / 16);
-  let current = start;
+      document.getElementById('bottom-line').textContent = bottomLineText;
+      document.getElementById('annual-net-gain').textContent = '$' + window.formatNumber(annualNetGain);
 
-  const timer = setInterval(() => {
-    current += increment;
-    if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
-      current = end;
-      clearInterval(timer);
+      console.log('Calculation completed successfully');
+    } catch (error) {
+      console.error('Error in calculateROI:', error);
+    }
+  };
+
+  // Animate value changes
+  window.animateValue = function(id, start, end, duration, isCurrency, suffix) {
+    var element = document.getElementById(id);
+    if (!element) {
+      console.warn('animateValue: element not found:', id);
+      return;
     }
 
-    const displayValue = isCurrency
-      ? `$${formatNumber(Math.round(current))}${suffix}`
-      : `+${Math.round(current)}${suffix}`;
+    var range = end - start;
+    var increment = range / (duration / 16);
+    var current = start;
 
-    element.textContent = displayValue;
-  }, 16);
-};
+    var timer = setInterval(function() {
+      current += increment;
+      if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+        current = end;
+        clearInterval(timer);
+      }
 
-window.formatNumber = function(num) {
-  return Math.round(num).toLocaleString();
-};
+      var displayValue = isCurrency
+        ? '$' + window.formatNumber(Math.round(current)) + (suffix || '')
+        : '+' + Math.round(current) + (suffix || '');
 
-// Run initial calculation when page loads
-window.addEventListener('load', function() {
-  window.calculateROI();
-});
+      element.textContent = displayValue;
+    }, 16);
+  };
+
+  // Format numbers with commas
+  window.formatNumber = function(num) {
+    return Math.round(num).toLocaleString();
+  };
+
+  console.log('All calculator functions defined!');
+  console.log('window.toggleAdvancedOptions:', typeof window.toggleAdvancedOptions);
+  console.log('window.calculateROI:', typeof window.calculateROI);
+  console.log('window.animateValue:', typeof window.animateValue);
+  console.log('window.formatNumber:', typeof window.formatNumber);
+
+  // Run initial calculation when page loads
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM ready, running initial calculation');
+      window.calculateROI();
+    });
+  } else {
+    console.log('DOM already ready, running initial calculation');
+    window.calculateROI();
+  }
+})();
 </script>
 
 <style>

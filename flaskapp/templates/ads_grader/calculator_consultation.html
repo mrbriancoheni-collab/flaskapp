@@ -1,0 +1,290 @@
+{% extends "base_app.html" %}
+{% block title %}Book Free Google Ads Consultation – FieldSprout{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+
+  <!-- Hero Section -->
+  <div class="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 text-white py-16">
+    <div class="max-w-4xl mx-auto px-4 text-center">
+      <h1 class="text-5xl md:text-6xl font-black mb-4">
+        📞 Get Your Free Strategy Consultation
+      </h1>
+      <p class="text-2xl md:text-3xl text-purple-100 mb-2 font-semibold">
+        30-Minute Expert Analysis of Your Google Ads
+      </p>
+      <p class="text-lg text-purple-200 max-w-2xl mx-auto">
+        We'll review your campaigns, identify opportunities, and show you exactly how much you could save and earn
+      </p>
+    </div>
+  </div>
+
+  <div class="max-w-5xl mx-auto px-4 -mt-8 pb-16">
+
+    <div class="grid md:grid-cols-2 gap-8">
+
+      <!-- Contact Form -->
+      <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <div class="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-6">
+          <h2 class="text-2xl font-bold">Tell Us About Your Business</h2>
+          <p class="text-purple-100 text-sm mt-1">We'll reach out within 24 hours</p>
+        </div>
+
+        <div class="p-8">
+          <form id="consultation-form" class="space-y-5">
+
+            <!-- Name -->
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                Your Name <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="name"
+                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
+                placeholder="John Smith"
+                required
+              />
+            </div>
+
+            <!-- Email -->
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                Email Address <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                name="email"
+                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
+                placeholder="john@yourcompany.com"
+                required
+              />
+            </div>
+
+            <!-- Phone -->
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                Phone Number <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="tel"
+                name="phone"
+                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
+                placeholder="(555) 123-4567"
+                required
+              />
+            </div>
+
+            <!-- Company -->
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                Company Name <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="company"
+                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
+                placeholder="ABC Plumbing & Heating"
+                required
+              />
+            </div>
+
+            <!-- Industry -->
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                Industry <span class="text-red-500">*</span>
+              </label>
+              <select
+                name="industry"
+                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
+                required
+              >
+                <option value="">Select your industry...</option>
+                <option value="hvac">HVAC</option>
+                <option value="plumbing">Plumbing</option>
+                <option value="electrical">Electrical</option>
+                <option value="roofing">Roofing</option>
+                <option value="landscaping">Landscaping</option>
+                <option value="pest_control">Pest Control</option>
+                <option value="general_contractor">General Contractor</option>
+                <option value="other">Other Home Services</option>
+              </select>
+            </div>
+
+            <!-- Monthly Ad Spend -->
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                Current Monthly Ad Spend <span class="text-red-500">*</span>
+              </label>
+              <select
+                name="monthly_spend"
+                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
+                required
+              >
+                <option value="">Select range...</option>
+                <option value="<5000">Less than $5,000</option>
+                <option value="5000-10000">$5,000 - $10,000</option>
+                <option value="10000-20000">$10,000 - $20,000</option>
+                <option value="20000-50000">$20,000 - $50,000</option>
+                <option value=">50000">More than $50,000</option>
+              </select>
+            </div>
+
+            <!-- Message -->
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                What's your biggest challenge with Google Ads? (Optional)
+              </label>
+              <textarea
+                name="message"
+                rows="4"
+                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition"
+                placeholder="e.g., Not getting enough leads, costs are too high, not sure if campaigns are working..."
+              ></textarea>
+            </div>
+
+            <!-- Submit Button -->
+            <button
+              type="submit"
+              class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-black text-lg rounded-xl hover:from-purple-700 hover:to-pink-700 transition shadow-xl transform hover:scale-105"
+            >
+              <i class="fa-solid fa-calendar-check mr-2"></i>
+              Request Free Consultation
+            </button>
+
+            <p class="text-xs text-gray-500 text-center">
+              🔒 Your information is safe and will never be shared
+            </p>
+          </form>
+        </div>
+      </div>
+
+      <!-- What to Expect -->
+      <div class="space-y-6">
+
+        <!-- What You'll Get -->
+        <div class="bg-white rounded-2xl shadow-xl p-8">
+          <h3 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <i class="fa-solid fa-gift text-purple-600"></i>
+            What You'll Get
+          </h3>
+
+          <ul class="space-y-4">
+            <li class="flex items-start gap-3">
+              <div class="bg-purple-100 rounded-full p-2 flex-shrink-0">
+                <i class="fa-solid fa-chart-line text-purple-600"></i>
+              </div>
+              <div>
+                <div class="font-semibold text-gray-900">Campaign Performance Review</div>
+                <div class="text-sm text-gray-600">We'll analyze your current Google Ads setup and identify immediate opportunities</div>
+              </div>
+            </li>
+
+            <li class="flex items-start gap-3">
+              <div class="bg-green-100 rounded-full p-2 flex-shrink-0">
+                <i class="fa-solid fa-calculator text-green-600"></i>
+              </div>
+              <div>
+                <div class="font-semibold text-gray-900">Custom ROI Projection</div>
+                <div class="text-sm text-gray-600">See exactly how much you could save and earn with your actual data</div>
+              </div>
+            </li>
+
+            <li class="flex items-start gap-3">
+              <div class="bg-blue-100 rounded-full p-2 flex-shrink-0">
+                <i class="fa-solid fa-lightbulb text-blue-600"></i>
+              </div>
+              <div>
+                <div class="font-semibold text-gray-900">Quick Wins Identified</div>
+                <div class="text-sm text-gray-600">Leave with actionable insights you can implement immediately</div>
+              </div>
+            </li>
+
+            <li class="flex items-start gap-3">
+              <div class="bg-orange-100 rounded-full p-2 flex-shrink-0">
+                <i class="fa-solid fa-comments text-orange-600"></i>
+              </div>
+              <div>
+                <div class="font-semibold text-gray-900">Q&A with Our Team</div>
+                <div class="text-sm text-gray-600">Ask anything about Google Ads strategy and optimization</div>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Why Work With Us -->
+        <div class="bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl shadow-xl p-8 text-white">
+          <h3 class="text-2xl font-bold mb-4">
+            Why Work With FieldSprout?
+          </h3>
+
+          <div class="space-y-4 text-purple-100">
+            <div class="flex items-start gap-3">
+              <i class="fa-solid fa-check-circle text-green-300 mt-1 flex-shrink-0"></i>
+              <p><span class="font-semibold text-white">20 years of marketing expertise</span> managing millions in ad spend</p>
+            </div>
+
+            <div class="flex items-start gap-3">
+              <i class="fa-solid fa-check-circle text-green-300 mt-1 flex-shrink-0"></i>
+              <p><span class="font-semibold text-white">Home services specialists</span> – we understand your business model</p>
+            </div>
+
+            <div class="flex items-start gap-3">
+              <i class="fa-solid fa-check-circle text-green-300 mt-1 flex-shrink-0"></i>
+              <p><span class="font-semibold text-white">Transparent pricing</span> – no percentage fees, you keep your savings</p>
+            </div>
+
+            <div class="flex items-start gap-3">
+              <i class="fa-solid fa-check-circle text-green-300 mt-1 flex-shrink-0"></i>
+              <p><span class="font-semibold text-white">Proven results</span> – helping businesses stop wasting 15-25% of ad spend</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Prefer to Explore? -->
+        <div class="bg-gray-50 rounded-xl border-2 border-gray-200 p-6 text-center">
+          <p class="text-gray-700 font-semibold mb-3">Prefer to explore on your own first?</p>
+          <a href="{{ url_for('ads_grader_bp.calculator_self_guided') }}" class="inline-flex items-center justify-center px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 hover:border-gray-400 transition">
+            <i class="fa-solid fa-laptop-code mr-2"></i>
+            Try Self-Guided Demo
+          </a>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<script nonce="{{ g.csp_nonce }}">
+(function() {
+  'use strict';
+
+  var form = document.getElementById('consultation-form');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      var formData = new FormData(form);
+      var data = {};
+      formData.forEach(function(value, key) {
+        data[key] = value;
+      });
+
+      console.log('Consultation request:', data);
+
+      // TODO: Send to backend API
+      // For now, show success message
+      alert('Thank you for your interest! We\'ll contact you within 24 hours to schedule your free consultation.');
+
+      // In production, you would:
+      // 1. Send data to backend API
+      // 2. Create lead in CRM
+      // 3. Send confirmation email
+      // 4. Redirect to thank you page or show calendar
+    });
+  }
+})();
+</script>
+{% endblock %}

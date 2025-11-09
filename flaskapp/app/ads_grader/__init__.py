@@ -55,6 +55,83 @@ def calculator():
     )
 
 
+@ads_grader_bp.route("/calculator-demo")
+def calculator_demo():
+    """
+    Demo landing page - choose between self-guided or sales consultation.
+    Features founder's story and value proposition.
+    Public page - no login required.
+    """
+    return render_template(
+        "ads_grader/calculator_demo.html",
+    )
+
+
+@ads_grader_bp.route("/calculator/self-guided")
+def calculator_self_guided():
+    """
+    Self-guided interactive demo with pre-filled scenarios.
+    Shows step-by-step tooltips and example calculations.
+    Public page - no login required.
+    """
+    # Pre-filled demo scenarios
+    demo_scenarios = {
+        'hvac': {
+            'name': 'HVAC Company',
+            'monthly_spend': 20000,
+            'avg_order_value': 3500,
+            'wasted_spend_pct': 22,
+            'conversion_rate': 4.2,
+            'avg_cpc': 8.50,
+            'quality_score': 5,
+            'avg_position': 3.2
+        },
+        'plumbing': {
+            'name': 'Plumbing Services',
+            'monthly_spend': 8000,
+            'avg_order_value': 850,
+            'wasted_spend_pct': 18,
+            'conversion_rate': 3.8,
+            'avg_cpc': 5.20,
+            'quality_score': 6,
+            'avg_position': 2.8
+        },
+        'electrical': {
+            'name': 'Electrical Contractor',
+            'monthly_spend': 12000,
+            'avg_order_value': 1200,
+            'wasted_spend_pct': 20,
+            'conversion_rate': 3.2,
+            'avg_cpc': 6.80,
+            'quality_score': 5,
+            'avg_position': 3.5
+        }
+    }
+
+    # Get selected scenario or default to HVAC
+    scenario_key = request.args.get('scenario', 'hvac')
+    scenario = demo_scenarios.get(scenario_key, demo_scenarios['hvac'])
+
+    return render_template(
+        "ads_grader/calculator_self_guided.html",
+        scenario=scenario,
+        scenarios=demo_scenarios,
+        demo_mode=True
+    )
+
+
+@ads_grader_bp.route("/calculator/consultation")
+def calculator_consultation():
+    """
+    Sales consultation flow - capture lead info then show personalized calculator.
+    Includes scheduling and contact options.
+    Public page - no login required.
+    """
+    return render_template(
+        "ads_grader/calculator_consultation.html",
+    )
+
+
 # ============================================================================
 # Landing Page
 # ============================================================================

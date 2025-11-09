@@ -317,19 +317,37 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('Calculator page loaded');
+
+  // Prevent form submission
+  const form = document.getElementById('roi-calculator-form');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      console.log('Form submission prevented');
+      return false;
+    });
+  }
+
   // Auto-calculate on any input change
   const inputs = ['monthly_spend', 'avg_order_value', 'wasted_spend_pct', 'conversion_rate'];
   inputs.forEach(id => {
     const element = document.getElementById(id);
     if (element) {
       element.addEventListener('input', calculateROI);
+      console.log('Added input listener to:', id);
     }
   });
 
   // Advanced toggle button
   const advancedToggle = document.getElementById('advanced-toggle');
+  console.log('Advanced toggle element:', advancedToggle);
   if (advancedToggle) {
-    advancedToggle.addEventListener('click', toggleAdvanced);
+    advancedToggle.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('Advanced toggle clicked');
+      toggleAdvanced();
+    });
   }
 
   // Waste slider update display
@@ -342,41 +360,63 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Calculate button
   const calculateBtn = document.getElementById('calculate-btn');
+  console.log('Calculate button element:', calculateBtn);
   if (calculateBtn) {
-    calculateBtn.addEventListener('click', function() {
+    calculateBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('Calculate button clicked');
       calculateROI();
       // Smooth scroll to results
-      document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const resultsSection = document.getElementById('results-section');
+      if (resultsSection) {
+        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     });
   }
 
   // Calculate on page load
+  console.log('Running initial calculation');
   calculateROI();
 });
 
 function toggleAdvanced() {
+  console.log('toggleAdvanced function called');
   const options = document.getElementById('advanced-options');
   const icon = document.getElementById('advanced-icon');
+  console.log('Options element:', options);
+  console.log('Icon element:', icon);
 
   if (options && icon) {
-    if (options.classList.contains('hidden')) {
+    const isHidden = options.classList.contains('hidden');
+    console.log('Currently hidden:', isHidden);
+
+    if (isHidden) {
       options.classList.remove('hidden');
       icon.classList.add('rotate-180');
+      console.log('Showing advanced options');
     } else {
       options.classList.add('hidden');
       icon.classList.remove('rotate-180');
+      console.log('Hiding advanced options');
     }
+  } else {
+    console.error('Could not find options or icon element');
   }
 }
 
 function calculateROI() {
+  console.log('calculateROI called');
+
   // Get inputs
   const monthlySpend = parseFloat(document.getElementById('monthly_spend').value) || 0;
   const avgOrderValue = parseFloat(document.getElementById('avg_order_value').value) || 0;
   const wastedSpendPct = parseFloat(document.getElementById('wasted_spend_pct').value) || 18;
   const conversionRate = parseFloat(document.getElementById('conversion_rate').value) || 3.5;
 
+  console.log('Inputs:', { monthlySpend, avgOrderValue, wastedSpendPct, conversionRate });
+
   if (monthlySpend <= 0 || avgOrderValue <= 0) {
+    console.log('Invalid inputs, skipping calculation');
     return;
   }
 

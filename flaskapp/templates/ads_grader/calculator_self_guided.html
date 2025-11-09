@@ -1,0 +1,615 @@
+{% extends "base_app.html" %}
+{% block title %}Interactive ROI Calculator Demo – {{ scenario.name }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+
+  <!-- Demo Banner -->
+  <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4">
+    <div class="max-w-6xl mx-auto px-4">
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div class="flex items-center gap-3">
+          <i class="fa-solid fa-info-circle text-2xl"></i>
+          <div>
+            <div class="font-bold">Interactive Demo Mode</div>
+            <div class="text-sm text-blue-100">Showing example data for {{ scenario.name }}</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <a href="{{ url_for('ads_grader_bp.calculator_demo') }}" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition">
+            <i class="fa-solid fa-arrow-left mr-2"></i>Back to Options
+          </a>
+          <a href="{{ url_for('ads_grader_bp.calculator') }}" class="px-4 py-2 bg-white text-indigo-600 hover:bg-blue-50 rounded-lg text-sm font-semibold transition">
+            <i class="fa-solid fa-pencil mr-2"></i>Use Your Own Data
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scenario Selector -->
+  <div class="bg-white border-b-2 border-indigo-200 py-4">
+    <div class="max-w-6xl mx-auto px-4">
+      <div class="flex items-center gap-4 flex-wrap">
+        <span class="font-semibold text-gray-700">Try Different Scenarios:</span>
+        <div class="flex gap-2">
+          <a href="?scenario=hvac" class="px-4 py-2 rounded-lg font-semibold text-sm transition {% if request.args.get('scenario', 'hvac') == 'hvac' %}bg-indigo-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+            HVAC Company
+          </a>
+          <a href="?scenario=plumbing" class="px-4 py-2 rounded-lg font-semibold text-sm transition {% if request.args.get('scenario') == 'plumbing' %}bg-indigo-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+            Plumbing Services
+          </a>
+          <a href="?scenario=electrical" class="px-4 py-2 rounded-lg font-semibold text-sm transition {% if request.args.get('scenario') == 'electrical' %}bg-indigo-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+            Electrical Contractor
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hero Section -->
+  <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white py-12">
+    <div class="max-w-6xl mx-auto px-4 text-center">
+      <h1 class="text-4xl md:text-5xl font-black mb-3">
+        💰 See How {{ scenario.name }} Can Save & Earn
+      </h1>
+      <p class="text-xl md:text-2xl text-indigo-100 mb-2 font-semibold">
+        Example: ${{ "{:,}".format(scenario.monthly_spend) }}/month in ad spend
+      </p>
+      <p class="text-indigo-200">
+        Try adjusting the values below to see how results change
+      </p>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-4 -mt-8">
+
+    <!-- Calculator Card -->
+    <div class="bg-white rounded-2xl shadow-2xl overflow-hidden mb-8">
+
+      <!-- Input Section -->
+      <div class="bg-gradient-to-r from-gray-50 to-white p-8 md:p-12 border-b-4 border-indigo-500">
+        <div class="max-w-3xl mx-auto">
+          <h2 class="text-3xl font-bold text-gray-900 mb-3 text-center">
+            Current Campaign Performance
+          </h2>
+          <p class="text-gray-600 text-center mb-8">
+            <i class="fa-solid fa-lightbulb text-yellow-500"></i>
+            Tip: These values are pre-filled. Try changing them to see how it affects ROI!
+          </p>
+
+          <form id="roi-calculator-form" class="space-y-6">
+
+            <!-- Monthly Spend -->
+            <div class="bg-blue-50 rounded-xl shadow-md p-6 border-2 border-blue-200 relative">
+              <div class="absolute -top-3 left-4 bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold">
+                PRE-FILLED
+              </div>
+              <label class="block text-lg font-bold text-gray-900 mb-3">
+                <span class="text-indigo-600">1.</span> Monthly Google Ads Spend
+              </label>
+              <div class="relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-gray-500 font-bold">$</span>
+                <input
+                  type="number"
+                  id="monthly_spend"
+                  name="monthly_spend"
+                  class="pl-12 w-full px-6 py-4 text-2xl font-bold border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-indigo-200 focus:border-indigo-500 transition"
+                  value="{{ scenario.monthly_spend }}"
+                  min="100"
+                  required
+                />
+              </div>
+            </div>
+
+            <!-- Average Order Value -->
+            <div class="bg-blue-50 rounded-xl shadow-md p-6 border-2 border-blue-200 relative">
+              <div class="absolute -top-3 left-4 bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold">
+                PRE-FILLED
+              </div>
+              <label class="block text-lg font-bold text-gray-900 mb-3">
+                <span class="text-indigo-600">2.</span> Average Customer Value
+              </label>
+              <div class="relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-gray-500 font-bold">$</span>
+                <input
+                  type="number"
+                  id="avg_order_value"
+                  name="avg_order_value"
+                  class="pl-12 w-full px-6 py-4 text-2xl font-bold border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-indigo-200 focus:border-indigo-500 transition"
+                  value="{{ scenario.avg_order_value }}"
+                  min="1"
+                  required
+                />
+              </div>
+              <p class="text-sm text-gray-600 mt-2 ml-1">Lifetime value or average job amount</p>
+            </div>
+
+            <!-- Advanced Options (Auto-Expanded in Demo) -->
+            <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl shadow-md p-6 border-2 border-indigo-200">
+              <button type="button" id="advanced-toggle" class="w-full flex items-center justify-between text-left">
+                <span class="text-lg font-bold text-gray-900">
+                  <span class="text-indigo-600">3.</span> Advanced Metrics <span class="text-sm font-normal text-gray-600 ml-2">(Auto-filled from typical {{ scenario.name }} data)</span>
+                </span>
+                <i id="advanced-icon" class="fa-solid fa-chevron-down text-indigo-600 transition-transform duration-300"></i>
+              </button>
+
+              <div id="advanced-options" class="mt-6 space-y-4">
+
+                <!-- Wasted Spend % -->
+                <div class="bg-white rounded-lg p-4">
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Wasted Spend %
+                  </label>
+                  <div class="flex items-center gap-4">
+                    <input
+                      type="range"
+                      id="wasted_spend_pct"
+                      name="wasted_spend_pct"
+                      min="0"
+                      max="40"
+                      value="{{ scenario.wasted_spend_pct }}"
+                      step="1"
+                      class="flex-1 h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                    />
+                    <div class="text-right min-w-[80px]">
+                      <span id="waste-display" class="text-2xl font-bold text-indigo-600">{{ scenario.wasted_spend_pct }}</span><span class="text-xl text-gray-500">%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Conversion Rate -->
+                <div class="bg-white rounded-lg p-4">
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Conversion Rate
+                  </label>
+                  <div class="relative">
+                    <input
+                      type="number"
+                      id="conversion_rate"
+                      name="conversion_rate"
+                      class="pr-12 w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                      value="{{ scenario.conversion_rate }}"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                    />
+                    <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">%</span>
+                  </div>
+                </div>
+
+                <!-- Average CPC -->
+                <div class="bg-white rounded-lg p-4">
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Average CPC
+                  </label>
+                  <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">$</span>
+                    <input
+                      type="number"
+                      id="avg_cpc"
+                      name="avg_cpc"
+                      class="pl-10 w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                      value="{{ scenario.avg_cpc }}"
+                      min="0.01"
+                      max="100"
+                      step="0.10"
+                    />
+                  </div>
+                </div>
+
+                <!-- Quality Score -->
+                <div class="bg-white rounded-lg p-4">
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Average Quality Score
+                  </label>
+                  <div class="flex items-center gap-4">
+                    <input
+                      type="range"
+                      id="quality_score"
+                      name="quality_score"
+                      min="1"
+                      max="10"
+                      value="{{ scenario.quality_score }}"
+                      step="1"
+                      class="flex-1 h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                    />
+                    <div class="text-right min-w-[60px]">
+                      <span id="qs-display" class="text-2xl font-bold text-indigo-600">{{ scenario.quality_score }}</span><span class="text-lg text-gray-500">/10</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Average Position -->
+                <div class="bg-white rounded-lg p-4">
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Average Ad Position
+                  </label>
+                  <div class="relative">
+                    <input
+                      type="number"
+                      id="avg_position"
+                      name="avg_position"
+                      class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                      value="{{ scenario.avg_position }}"
+                      min="1"
+                      max="10"
+                      step="0.1"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </form>
+        </div>
+      </div>
+
+      <!-- Results Section (Same as regular calculator) -->
+      <div id="results-section" class="bg-gradient-to-br from-white via-indigo-50 to-purple-50 p-8 md:p-12">
+        <div class="max-w-5xl mx-auto">
+
+          <!-- Main Results Hero -->
+          <div class="text-center mb-10">
+            <div class="inline-block bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-2 rounded-full text-sm font-bold mb-4 shadow-lg">
+              ✨ YOUR POTENTIAL VALUE
+            </div>
+            <h2 class="text-4xl md:text-5xl font-black text-gray-900 mb-3">
+              You Could Save & Earn
+            </h2>
+            <div class="text-6xl md:text-7xl font-black bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2" id="total-value-hero">
+              $0
+            </div>
+            <p class="text-xl text-gray-600 font-semibold">
+              every single month
+            </p>
+          </div>
+
+          <!-- Value Breakdown Cards -->
+          <div class="grid md:grid-cols-2 gap-6 mb-10">
+
+            <!-- Stop Wasting -->
+            <div class="bg-white rounded-2xl shadow-xl p-8 border-2 border-red-200">
+              <div class="flex items-center justify-center mb-4">
+                <div class="bg-red-100 rounded-full p-4">
+                  <span class="text-5xl">🛑</span>
+                </div>
+              </div>
+              <h3 class="text-xl font-bold text-gray-900 text-center mb-2">Stop Wasting Money</h3>
+              <div class="text-center mb-3">
+                <div class="text-4xl font-black text-red-600 mb-1" id="result-monthly-waste">
+                  $0
+                </div>
+                <div class="text-sm text-gray-500">per month</div>
+              </div>
+              <div class="bg-red-50 rounded-lg p-3 text-center">
+                <span class="text-xs text-gray-600 uppercase font-semibold">Annual Waste</span>
+                <div class="text-2xl font-bold text-red-700" id="result-annual-waste">$0</div>
+              </div>
+            </div>
+
+            <!-- Get More Leads -->
+            <div class="bg-white rounded-2xl shadow-xl p-8 border-2 border-blue-200">
+              <div class="flex items-center justify-center mb-4">
+                <div class="bg-blue-100 rounded-full p-4">
+                  <span class="text-5xl">📈</span>
+                </div>
+              </div>
+              <h3 class="text-xl font-bold text-gray-900 text-center mb-2">Get More Leads</h3>
+              <div class="text-center mb-3">
+                <div class="text-4xl font-black text-blue-600 mb-1" id="result-more-leads">
+                  +0
+                </div>
+                <div class="text-sm text-gray-500">leads per month</div>
+              </div>
+              <div class="bg-blue-50 rounded-lg p-3 text-center">
+                <span class="text-xs text-gray-600 uppercase font-semibold">Worth</span>
+                <div class="text-2xl font-bold text-blue-700" id="result-more-revenue">$0</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Value Sources Breakdown -->
+          <div class="bg-white rounded-2xl shadow-xl p-8 mb-10 border-2 border-indigo-100">
+            <h3 class="text-2xl font-bold text-gray-900 text-center mb-6">
+              <i class="fa-solid fa-chart-pie text-indigo-600 mr-2"></i>
+              Where Your Value Comes From
+            </h3>
+
+            <div class="space-y-4">
+              <!-- Breakdown items -->
+              <div class="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200">
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">1</div>
+                  <div>
+                    <div class="font-semibold text-gray-900">Stop Wasting Money</div>
+                    <div class="text-xs text-gray-600">Eliminate spend on underperforming keywords</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-xl font-black text-red-600" id="breakdown-waste">$0</div>
+                  <div class="text-xs text-gray-500">direct savings</div>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="bg-green-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">2</div>
+                  <div>
+                    <div class="font-semibold text-gray-900">Reinvest in Top Performers</div>
+                    <div class="text-xs text-gray-600">Put saved budget into your best campaigns</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-xl font-black text-green-600" id="breakdown-reinvest-leads">+0</div>
+                  <div class="text-xs text-gray-500">extra leads</div>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="bg-blue-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">3</div>
+                  <div>
+                    <div class="font-semibold text-gray-900">Improve Quality Scores</div>
+                    <div class="text-xs text-gray-600">Better ads → higher QS → lower CPC</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-xl font-black text-blue-600" id="breakdown-qs-leads">+0</div>
+                  <div class="text-xs text-gray-500">extra leads</div>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="bg-purple-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">4</div>
+                  <div>
+                    <div class="font-semibold text-gray-900">Boost Ad Visibility</div>
+                    <div class="text-xs text-gray-600">Better positions → higher CTR</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-xl font-black text-purple-600" id="breakdown-ctr-leads">+0</div>
+                  <div class="text-xs text-gray-500">extra leads</div>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-200">
+                <div class="flex items-center gap-3 flex-1">
+                  <div class="bg-orange-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">5</div>
+                  <div>
+                    <div class="font-semibold text-gray-900">Optimize Conversion Rate</div>
+                    <div class="text-xs text-gray-600">Better targeting & messaging</div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-xl font-black text-orange-600" id="breakdown-cvr-leads">+0</div>
+                  <div class="text-xs text-gray-500">extra leads</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border-2 border-indigo-200 text-center">
+              <div class="text-sm text-gray-600 mb-1">Combined Monthly Impact</div>
+              <div class="text-3xl font-black text-indigo-600" id="breakdown-total">$0</div>
+            </div>
+          </div>
+
+          <!-- CTA -->
+          <div class="text-center space-y-4">
+            <div class="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-6 mb-6">
+              <p class="text-lg font-bold text-gray-900 mb-2">
+                <i class="fa-solid fa-lightbulb text-yellow-500 mr-2"></i>
+                Ready to see YOUR actual numbers?
+              </p>
+              <p class="text-gray-700 mb-4">
+                Connect your Google Ads account for a free, personalized analysis
+              </p>
+              <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="{{ url_for('ads_grader_bp.analyze') }}" class="inline-flex items-center justify-center px-10 py-5 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-black text-xl rounded-xl hover:from-green-600 hover:to-emerald-700 transition shadow-2xl">
+                  <i class="fa-solid fa-chart-line mr-3 text-2xl"></i>
+                  Get My Free Report
+                </a>
+                <a href="{{ url_for('ads_grader_bp.calculator_consultation') }}" class="inline-flex items-center justify-center px-10 py-5 bg-white border-4 border-indigo-600 text-indigo-700 font-black text-xl rounded-xl hover:bg-indigo-50 transition shadow-xl">
+                  <i class="fa-solid fa-calendar-check mr-3"></i>
+                  Book Consultation
+                </a>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- Reuse calculator.html script -->
+<script nonce="{{ g.csp_nonce }}">
+// IMMEDIATELY define global functions (no waiting, no dependencies)
+(function() {
+  'use strict';
+
+  console.log('Calculator script loading...');
+
+  // Toggle advanced options
+  window.toggleAdvancedOptions = function() {
+    var options = document.getElementById('advanced-options');
+    var icon = document.getElementById('advanced-icon');
+
+    if (options && icon) {
+      var isHidden = options.classList.contains('hidden');
+
+      if (isHidden) {
+        options.classList.remove('hidden');
+        icon.classList.add('rotate-180');
+      } else {
+        options.classList.add('hidden');
+        icon.classList.remove('rotate-180');
+      }
+    }
+  };
+
+  // Calculate ROI
+  window.calculateROI = function() {
+    console.log('calculateROI called!');
+
+    try {
+      // Get inputs
+      var monthlySpend = parseFloat(document.getElementById('monthly_spend').value) || 0;
+      var avgOrderValue = parseFloat(document.getElementById('avg_order_value').value) || 0;
+      var wastedSpendPct = parseFloat(document.getElementById('wasted_spend_pct').value) || 18;
+      var conversionRate = parseFloat(document.getElementById('conversion_rate').value) || 3.5;
+      var avgCPC = parseFloat(document.getElementById('avg_cpc').value) || 2.50;
+      var qualityScore = parseFloat(document.getElementById('quality_score').value) || 6;
+      var avgPosition = parseFloat(document.getElementById('avg_position').value) || 2.5;
+
+      if (monthlySpend <= 0 || avgOrderValue <= 0) {
+        console.log('Invalid inputs, skipping calculation');
+        return;
+      }
+
+      // === ENHANCED CALCULATION MODEL (Realistic & Conservative) ===
+      var annualSpend = monthlySpend * 12;
+      var monthlyWaste = monthlySpend * (wastedSpendPct / 100);
+      var annualWaste = annualSpend * (wastedSpendPct / 100);
+      var effectiveSpend = monthlySpend - monthlyWaste;
+
+      var currentClicks = monthlySpend / avgCPC;
+      var currentCPL = avgCPC / (conversionRate / 100);
+      var currentLeads = currentClicks * (conversionRate / 100);
+
+      var reinvestableWaste = monthlyWaste * 0.70;
+      var topPerformerCPL = currentCPL * 0.75;
+      var leadsFromReinvestment = reinvestableWaste / topPerformerCPL;
+      var revenueFromReinvestment = leadsFromReinvestment * avgOrderValue;
+
+      var qsImprovementPotential = qualityScore <= 3 ? 0.15 :
+                                   qualityScore <= 6 ? 0.10 :
+                                   qualityScore <= 8 ? 0.05 : 0.02;
+
+      var newCPC = avgCPC * (1 - qsImprovementPotential);
+      var clicksAfterQS = effectiveSpend / newCPC;
+      var currentClicksFromEffectiveSpend = effectiveSpend / avgCPC;
+      var additionalClicksFromQS = clicksAfterQS - currentClicksFromEffectiveSpend;
+      var leadsFromQS = additionalClicksFromQS * (conversionRate / 100);
+      var revenueFromQS = leadsFromQS * avgOrderValue;
+
+      var ctrImprovementPotential = avgPosition <= 1.5 ? 0.05 :
+                                    avgPosition <= 2.5 ? 0.15 :
+                                    avgPosition <= 3.5 ? 0.25 : 0.35;
+
+      var actualCTRImprovement = ctrImprovementPotential * 0.50;
+      var clicksAfterCTR = clicksAfterQS * (1 + actualCTRImprovement);
+      var additionalClicksFromCTR = clicksAfterCTR - clicksAfterQS;
+      var leadsFromCTR = additionalClicksFromCTR * (conversionRate / 100);
+      var revenueFromCTR = leadsFromCTR * avgOrderValue;
+
+      var cvrImprovement = 0.06;
+      var baseLeads = currentClicksFromEffectiveSpend * (conversionRate / 100);
+      var leadsFromCVR = baseLeads * cvrImprovement;
+      var revenueFromCVR = leadsFromCVR * avgOrderValue;
+
+      var totalAdditionalLeads = Math.round(leadsFromReinvestment + leadsFromQS + leadsFromCTR + leadsFromCVR);
+      var totalAdditionalRevenue = revenueFromReinvestment + revenueFromQS + revenueFromCTR + revenueFromCVR;
+      var totalMonthlyValue = monthlyWaste + totalAdditionalRevenue;
+
+      // Update UI
+      window.animateValue('total-value-hero', 0, totalMonthlyValue, 1000, true, '/mo');
+      window.animateValue('result-monthly-waste', 0, monthlyWaste, 800, true);
+      window.animateValue('result-annual-waste', 0, annualWaste, 800, true);
+      window.animateValue('result-more-leads', 0, totalAdditionalLeads, 800, false);
+
+      document.getElementById('result-more-revenue').textContent = '$' + window.formatNumber(totalAdditionalRevenue);
+      document.getElementById('breakdown-waste').textContent = '$' + window.formatNumber(monthlyWaste);
+      document.getElementById('breakdown-reinvest-leads').textContent = '+' + Math.round(leadsFromReinvestment);
+      document.getElementById('breakdown-qs-leads').textContent = '+' + Math.round(leadsFromQS);
+      document.getElementById('breakdown-ctr-leads').textContent = '+' + Math.round(leadsFromCTR);
+      document.getElementById('breakdown-cvr-leads').textContent = '+' + Math.round(leadsFromCVR);
+      document.getElementById('breakdown-total').textContent = '$' + window.formatNumber(totalMonthlyValue);
+
+    } catch (error) {
+      console.error('Error in calculateROI:', error);
+    }
+  };
+
+  // Animate value changes
+  window.animateValue = function(id, start, end, duration, isCurrency, suffix) {
+    var element = document.getElementById(id);
+    if (!element) return;
+
+    var range = end - start;
+    var increment = range / (duration / 16);
+    var current = start;
+
+    var timer = setInterval(function() {
+      current += increment;
+      if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+        current = end;
+        clearInterval(timer);
+      }
+
+      var displayValue = isCurrency
+        ? '$' + window.formatNumber(Math.round(current)) + (suffix || '')
+        : '+' + Math.round(current) + (suffix || '');
+
+      element.textContent = displayValue;
+    }, 16);
+  };
+
+  // Format numbers with commas
+  window.formatNumber = function(num) {
+    return Math.round(num).toLocaleString();
+  };
+
+  // Set up event listeners
+  function setupEventListeners() {
+    var inputs = ['monthly_spend', 'avg_order_value', 'wasted_spend_pct', 'conversion_rate', 'avg_cpc', 'quality_score', 'avg_position'];
+
+    inputs.forEach(function(inputId) {
+      var input = document.getElementById(inputId);
+      if (input) {
+        input.addEventListener('input', function() {
+          if (inputId === 'wasted_spend_pct') {
+            document.getElementById('waste-display').textContent = this.value;
+          }
+          if (inputId === 'quality_score') {
+            document.getElementById('qs-display').textContent = this.value;
+          }
+          window.calculateROI();
+        });
+      }
+    });
+
+    var toggle = document.getElementById('advanced-toggle');
+    if (toggle) {
+      toggle.addEventListener('click', window.toggleAdvancedOptions);
+    }
+  }
+
+  // Run initial calculation
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      setupEventListeners();
+      // Auto-expand advanced options in demo mode
+      var advancedOptions = document.getElementById('advanced-options');
+      if (advancedOptions) {
+        advancedOptions.classList.remove('hidden');
+        document.getElementById('advanced-icon').classList.add('rotate-180');
+      }
+      window.calculateROI();
+    });
+  } else {
+    setupEventListeners();
+    var advancedOptions = document.getElementById('advanced-options');
+    if (advancedOptions) {
+      advancedOptions.classList.remove('hidden');
+      document.getElementById('advanced-icon').classList.add('rotate-180');
+    }
+    window.calculateROI();
+  }
+})();
+</script>
+{% endblock %}

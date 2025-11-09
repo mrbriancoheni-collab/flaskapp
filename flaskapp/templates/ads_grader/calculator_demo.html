@@ -1,0 +1,214 @@
+{% extends "base_app.html" %}
+{% block title %}See How FieldSprout Can Transform Your Google Ads ROI{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+
+  <!-- Hero Section with Founder Story -->
+  <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white py-20">
+    <div class="max-w-6xl mx-auto px-4">
+      <div class="text-center mb-12">
+        <h1 class="text-5xl md:text-6xl font-black mb-4 animate-fade-in">
+          Stop Leaving Money on the Table
+        </h1>
+        <p class="text-2xl md:text-3xl text-indigo-100 mb-2 font-semibold">
+          Most home service businesses waste 15-25% of their ad spend
+        </p>
+        <p class="text-lg text-indigo-200 max-w-3xl mx-auto">
+          See exactly how much you could save and earn with expert Google Ads management
+        </p>
+      </div>
+
+      <!-- Founder Story Box -->
+      <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8 max-w-4xl mx-auto border border-white/20">
+        <div class="flex items-start gap-6">
+          <div class="hidden md:block">
+            <div class="bg-white/20 rounded-full p-4">
+              <i class="fa-solid fa-user-tie text-5xl text-white"></i>
+            </div>
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold mb-3 flex items-center gap-2">
+              <i class="fa-solid fa-quote-left text-indigo-200"></i>
+              Why We're Different
+            </h2>
+            <p class="text-lg text-indigo-50 mb-4 leading-relaxed">
+              After 20 years managing millions in ad spend and driving marketing strategy—first in traditional marketing, then in private equity—I saw the same problem everywhere:
+            </p>
+            <p class="text-lg text-yellow-200 font-semibold mb-4 leading-relaxed">
+              Home service businesses earning $2M to $50M+ were trusting non-marketers or overworked marketers to manage tens of thousands of dollars in monthly ad spend.
+            </p>
+            <p class="text-lg text-indigo-50 leading-relaxed">
+              The result? Inefficient campaigns costing more per lead than they should, missing opportunities to drive the volume of leads they could be generating, and leaving serious money on the table every single month.
+            </p>
+            <div class="mt-6 pt-6 border-t border-white/20">
+              <p class="text-sm text-indigo-200 italic">
+                — Founder, FieldSprout
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Choice Section -->
+  <div class="max-w-6xl mx-auto px-4 -mt-8 pb-16">
+    <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div class="bg-gradient-to-r from-gray-50 to-white p-8 border-b-4 border-indigo-500">
+        <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">
+          Choose Your Experience
+        </h2>
+        <p class="text-gray-600 text-center text-lg">
+          See your potential ROI in the way that works best for you
+        </p>
+      </div>
+
+      <div class="p-8 md:p-12">
+        <div class="grid md:grid-cols-2 gap-8">
+
+          <!-- Self-Guided Option -->
+          <div class="group relative bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 border-2 border-indigo-200 hover:border-indigo-500 hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+            <div class="absolute top-4 right-4">
+              <span class="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                INSTANT ACCESS
+              </span>
+            </div>
+
+            <div class="text-center mb-6">
+              <div class="bg-indigo-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4 group-hover:bg-indigo-600 transition">
+                <i class="fa-solid fa-laptop-code text-4xl text-indigo-600 group-hover:text-white transition"></i>
+              </div>
+              <h3 class="text-2xl font-bold text-gray-900 mb-2">Explore on Your Own</h3>
+              <p class="text-indigo-600 font-semibold text-sm">Self-Guided Interactive Demo</p>
+            </div>
+
+            <ul class="space-y-3 mb-8">
+              <li class="flex items-start gap-3">
+                <i class="fa-solid fa-check-circle text-green-600 mt-1 flex-shrink-0"></i>
+                <span class="text-gray-700">Pre-loaded scenarios for HVAC, plumbing, electrical businesses</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <i class="fa-solid fa-check-circle text-green-600 mt-1 flex-shrink-0"></i>
+                <span class="text-gray-700">Interactive walkthrough with step-by-step explanations</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <i class="fa-solid fa-check-circle text-green-600 mt-1 flex-shrink-0"></i>
+                <span class="text-gray-700">See detailed breakdown of all 5 optimization strategies</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <i class="fa-solid fa-check-circle text-green-600 mt-1 flex-shrink-0"></i>
+                <span class="text-gray-700">No info required – start exploring immediately</span>
+              </li>
+            </ul>
+
+            <a href="{{ url_for('ads_grader_bp.calculator_self_guided') }}" class="block w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-lg rounded-xl text-center hover:from-indigo-700 hover:to-purple-700 transition shadow-xl transform hover:scale-105">
+              <i class="fa-solid fa-play-circle mr-2"></i>
+              Start Demo Now
+            </a>
+
+            <p class="text-xs text-gray-500 text-center mt-3">
+              ⏱️ Takes 3-5 minutes
+            </p>
+          </div>
+
+          <!-- Consultation Option -->
+          <div class="group relative bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 border-2 border-purple-200 hover:border-purple-500 hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+            <div class="absolute top-4 right-4">
+              <span class="bg-purple-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                PERSONALIZED
+              </span>
+            </div>
+
+            <div class="text-center mb-6">
+              <div class="bg-purple-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-600 transition">
+                <i class="fa-solid fa-users text-4xl text-purple-600 group-hover:text-white transition"></i>
+              </div>
+              <h3 class="text-2xl font-bold text-gray-900 mb-2">Talk to an Expert</h3>
+              <p class="text-purple-600 font-semibold text-sm">Free Strategy Consultation</p>
+            </div>
+
+            <ul class="space-y-3 mb-8">
+              <li class="flex items-start gap-3">
+                <i class="fa-solid fa-check-circle text-green-600 mt-1 flex-shrink-0"></i>
+                <span class="text-gray-700">Personalized analysis based on YOUR actual data</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <i class="fa-solid fa-check-circle text-green-600 mt-1 flex-shrink-0"></i>
+                <span class="text-gray-700">Expert review of your current campaigns</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <i class="fa-solid fa-check-circle text-green-600 mt-1 flex-shrink-0"></i>
+                <span class="text-gray-700">Custom ROI projection specific to your industry</span>
+              </li>
+              <li class="flex items-start gap-3">
+                <i class="fa-solid fa-check-circle text-green-600 mt-1 flex-shrink-0"></i>
+                <span class="text-gray-700">Immediate feedback and Q&A with our team</span>
+              </li>
+            </ul>
+
+            <a href="{{ url_for('ads_grader_bp.calculator_consultation') }}" class="block w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-lg rounded-xl text-center hover:from-purple-700 hover:to-pink-700 transition shadow-xl transform hover:scale-105">
+              <i class="fa-solid fa-calendar-check mr-2"></i>
+              Book Free Consultation
+            </a>
+
+            <p class="text-xs text-gray-500 text-center mt-3">
+              📞 30-minute call, no commitment
+            </p>
+          </div>
+
+        </div>
+
+        <!-- Or Try Basic Calculator -->
+        <div class="mt-12 text-center">
+          <p class="text-gray-600 mb-4">Or try our basic calculator with your own numbers:</p>
+          <a href="{{ url_for('ads_grader_bp.calculator') }}" class="inline-flex items-center justify-center px-8 py-3 bg-white border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 hover:border-gray-400 transition">
+            <i class="fa-solid fa-calculator mr-2"></i>
+            Use Basic Calculator
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trust Signals -->
+    <div class="bg-white rounded-xl shadow-lg p-8 mt-8">
+      <h3 class="text-2xl font-bold text-center text-gray-900 mb-8">Why Home Service Businesses Choose FieldSprout</h3>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="text-center">
+          <div class="bg-indigo-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <i class="fa-solid fa-award text-3xl text-indigo-600"></i>
+          </div>
+          <h4 class="font-bold text-gray-900 mb-2">20 Years of Expertise</h4>
+          <p class="text-gray-600 text-sm">Managing millions in ad spend across marketing and private equity</p>
+        </div>
+        <div class="text-center">
+          <div class="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <i class="fa-solid fa-dollar-sign text-3xl text-green-600"></i>
+          </div>
+          <h4 class="font-bold text-gray-900 mb-2">Flat Pricing, No Hidden Fees</h4>
+          <p class="text-gray-600 text-sm">You keep all your savings. We don't take a percentage.</p>
+        </div>
+        <div class="text-center">
+          <div class="bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <i class="fa-solid fa-home text-3xl text-purple-600"></i>
+          </div>
+          <h4 class="font-bold text-gray-900 mb-2">Home Services Specialists</h4>
+          <p class="text-gray-600 text-sm">We understand your business, your market, and your customers</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out;
+}
+</style>
+{% endblock %}

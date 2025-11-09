@@ -51,7 +51,6 @@
                   placeholder="14,000"
                   value="14000"
                   min="100"
-                  oninput="window.calculateROI()"
                   required
                 />
               </div>
@@ -73,7 +72,6 @@
                   placeholder="500"
                   value="500"
                   min="1"
-                  oninput="window.calculateROI()"
                   required
                 />
               </div>
@@ -82,7 +80,7 @@
 
             <!-- Advanced Options (Collapsible) -->
             <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl shadow-md p-6 border-2 border-indigo-200">
-              <button type="button" id="advanced-toggle" onclick="window.toggleAdvancedOptions()" class="w-full flex items-center justify-between text-left">
+              <button type="button" id="advanced-toggle" class="w-full flex items-center justify-between text-left">
                 <span class="text-lg font-bold text-gray-900">
                   <span class="text-indigo-600">3.</span> Advanced Settings (Optional)
                 </span>
@@ -106,7 +104,6 @@
                       value="18"
                       step="1"
                       class="flex-1 h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                      oninput="document.getElementById('waste-display').textContent = this.value; window.calculateROI();"
                     />
                     <div class="text-right min-w-[80px]">
                       <span id="waste-display" class="text-2xl font-bold text-indigo-600">18</span><span class="text-xl text-gray-500">%</span>
@@ -136,7 +133,6 @@
                       min="0"
                       max="100"
                       step="0.1"
-                      oninput="window.calculateROI()"
                     />
                     <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">%</span>
                   </div>
@@ -149,7 +145,6 @@
               <button
                 type="button"
                 id="calculate-btn"
-                onclick="window.calculateROI(); document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });"
                 class="inline-flex items-center justify-center px-12 py-5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black text-xl rounded-xl hover:from-indigo-700 hover:to-purple-700 transition shadow-2xl transform hover:scale-105"
               >
                 <i class="fa-solid fa-calculator mr-3 text-2xl"></i>
@@ -320,7 +315,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
 // IMMEDIATELY define global functions (no waiting, no dependencies)
 (function() {
   'use strict';
@@ -460,14 +455,77 @@
   console.log('window.animateValue:', typeof window.animateValue);
   console.log('window.formatNumber:', typeof window.formatNumber);
 
+  // Set up event listeners (CSP-compliant way)
+  function setupEventListeners() {
+    console.log('Setting up event listeners...');
+
+    // Monthly spend input
+    var monthlySpendInput = document.getElementById('monthly_spend');
+    if (monthlySpendInput) {
+      monthlySpendInput.addEventListener('input', window.calculateROI);
+      console.log('Added listener to monthly_spend');
+    }
+
+    // Average order value input
+    var avgOrderValueInput = document.getElementById('avg_order_value');
+    if (avgOrderValueInput) {
+      avgOrderValueInput.addEventListener('input', window.calculateROI);
+      console.log('Added listener to avg_order_value');
+    }
+
+    // Advanced toggle button
+    var advancedToggle = document.getElementById('advanced-toggle');
+    if (advancedToggle) {
+      advancedToggle.addEventListener('click', window.toggleAdvancedOptions);
+      console.log('Added listener to advanced-toggle');
+    }
+
+    // Wasted spend percentage slider
+    var wastedSpendInput = document.getElementById('wasted_spend_pct');
+    if (wastedSpendInput) {
+      wastedSpendInput.addEventListener('input', function() {
+        var wasteDisplay = document.getElementById('waste-display');
+        if (wasteDisplay) {
+          wasteDisplay.textContent = this.value;
+        }
+        window.calculateROI();
+      });
+      console.log('Added listener to wasted_spend_pct');
+    }
+
+    // Conversion rate input
+    var conversionRateInput = document.getElementById('conversion_rate');
+    if (conversionRateInput) {
+      conversionRateInput.addEventListener('input', window.calculateROI);
+      console.log('Added listener to conversion_rate');
+    }
+
+    // Calculate button
+    var calculateBtn = document.getElementById('calculate-btn');
+    if (calculateBtn) {
+      calculateBtn.addEventListener('click', function() {
+        window.calculateROI();
+        var resultsSection = document.getElementById('results-section');
+        if (resultsSection) {
+          resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+      console.log('Added listener to calculate-btn');
+    }
+
+    console.log('Event listeners setup complete!');
+  }
+
   // Run initial calculation when page loads
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('DOM ready, running initial calculation');
+      console.log('DOM ready, setting up event listeners and running initial calculation');
+      setupEventListeners();
       window.calculateROI();
     });
   } else {
-    console.log('DOM already ready, running initial calculation');
+    console.log('DOM already ready, setting up event listeners and running initial calculation');
+    setupEventListeners();
     window.calculateROI();
   }
 })();

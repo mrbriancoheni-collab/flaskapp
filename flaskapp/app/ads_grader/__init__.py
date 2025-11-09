@@ -41,6 +41,21 @@ ads_grader_bp = Blueprint(
 
 
 # ============================================================================
+# ROI Calculator
+# ============================================================================
+@ads_grader_bp.route("/calculator")
+def calculator():
+    """
+    ROI calculator for Google Ads optimization.
+    Helps prospects estimate potential savings and revenue increase.
+    Public page - no login required.
+    """
+    return render_template(
+        "ads_grader/calculator.html",
+    )
+
+
+# ============================================================================
 # Landing Page
 # ============================================================================
 @ads_grader_bp.route("/")

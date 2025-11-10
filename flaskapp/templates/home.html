@@ -685,15 +685,15 @@
 
     <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
       {% if has_endpoint('signup') %}
-        <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn bg-white text-primary-700 hover:bg-gray-50 font-semibold px-8 py-4 text-lg">
+        <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn bg-white hover:bg-gray-50 font-semibold px-8 py-4 text-lg" style="color: #6d28d9;">
           Start Saving Now – $2,400/year
         </a>
       {% elif has_endpoint('register') %}
-        <a href="{{ url_for(ep('register')) }}?plan=annual" class="btn bg-white text-primary-700 hover:bg-gray-50 font-semibold px-8 py-4 text-lg">
+        <a href="{{ url_for(ep('register')) }}?plan=annual" class="btn bg-white hover:bg-gray-50 font-semibold px-8 py-4 text-lg" style="color: #6d28d9;">
           Start Saving Now – $2,400/year
         </a>
       {% else %}
-        <a href="/signup?plan=annual" class="btn bg-white text-primary-700 hover:bg-gray-50 font-semibold px-8 py-4 text-lg">
+        <a href="/signup?plan=annual" class="btn bg-white hover:bg-gray-50 font-semibold px-8 py-4 text-lg" style="color: #6d28d9;">
           Start Saving Now – $2,400/year
         </a>
       {% endif %}

@@ -156,13 +156,13 @@
         </li>
         <li>
           {% if has_endpoint('auth_bp.register') %}
-            <a class="btn btn-primary" href="{{ url_for('auth_bp.register') }}">Start free</a>
+            <a class="btn btn-primary" href="{{ url_for('auth_bp.register') }}">Start Saving Now</a>
           {% elif has_endpoint('signup') %}
-            <a class="btn btn-primary" href="{{ url_for(ep('signup')) }}">Start free</a>
+            <a class="btn btn-primary" href="{{ url_for(ep('signup')) }}">Start Saving Now</a>
           {% elif has_endpoint('register') %}
-            <a class="btn btn-primary" href="{{ url_for(ep('register')) }}">Start free</a>
+            <a class="btn btn-primary" href="{{ url_for(ep('register')) }}">Start Saving Now</a>
           {% else %}
-            <a class="btn btn-primary" href="/signup">Start free</a>
+            <a class="btn btn-primary" href="/signup">Start Saving Now</a>
           {% endif %}
         </li>
       </ul>
@@ -226,13 +226,13 @@
             <a class="btn btn-outline flex-1 text-center" href="/login">Sign in</a>
           {% endif %}
           {% if has_endpoint('auth_bp.register') %}
-            <a class="btn btn-primary flex-1 text-center" href="{{ url_for('auth_bp.register') }}">Start free</a>
+            <a class="btn btn-primary flex-1 text-center" href="{{ url_for('auth_bp.register') }}">Start Saving Now</a>
           {% elif has_endpoint('signup') %}
-            <a class="btn btn-primary flex-1 text-center" href="{{ url_for(ep('signup')) }}">Start free</a>
+            <a class="btn btn-primary flex-1 text-center" href="{{ url_for(ep('signup')) }}">Start Saving Now</a>
           {% elif has_endpoint('register') %}
-            <a class="btn btn-primary flex-1 text-center" href="{{ url_for(ep('register')) }}">Start free</a>
+            <a class="btn btn-primary flex-1 text-center" href="{{ url_for(ep('register')) }}">Start Saving Now</a>
           {% else %}
-            <a class="btn btn-primary flex-1 text-center" href="/signup">Start free</a>
+            <a class="btn btn-primary flex-1 text-center" href="/signup">Start Saving Now</a>
           {% endif %}
         </div>
       </div>
@@ -258,13 +258,13 @@
           <p class="mt-4 text-white/70">Get found. Grow leads. Book jobs — with AI that works for local service pros.</p>
           <div class="mt-6 flex gap-3">
             {% if has_endpoint('auth_bp.register') %}
-              <a href="{{ url_for('auth_bp.register') }}" class="btn btn-ghost">Start free</a>
+              <a href="{{ url_for('auth_bp.register') }}" class="btn btn-ghost">Start Saving Now</a>
             {% elif has_endpoint('signup') %}
-              <a href="{{ url_for(ep('signup')) }}" class="btn btn-ghost">Start free</a>
+              <a href="{{ url_for(ep('signup')) }}" class="btn btn-ghost">Start Saving Now</a>
             {% elif has_endpoint('register') %}
-              <a href="{{ url_for(ep('register')) }}" class="btn btn-ghost">Start free</a>
+              <a href="{{ url_for(ep('register')) }}" class="btn btn-ghost">Start Saving Now</a>
             {% else %}
-              <a href="/signup" class="btn btn-ghost">Start free</a>
+              <a href="/signup" class="btn btn-ghost">Start Saving Now</a>
             {% endif %}
           </div>
         </div>

@@ -1641,3 +1641,68 @@ def update_all_customer_impacts_route():
         flash(f"Error: {str(e)}", "error")
 
     return redirect(url_for("admin_bp.marketing_success"))
+
+
+# ===== AI PROMPTS MANAGEMENT =====
+
+@admin_bp.route("/ai-prompts")
+@require_admin
+def ai_prompts():
+    """View and manage all AI prompts."""
+    try:
+        from app.models_ads import AIPrompt
+        prompts = AIPrompt.query.order_by(AIPrompt.prompt_key).all()
+        _audit("ai_prompts_view")
+        return render_template("admin/ai_prompts.html", prompts=prompts)
+    except Exception as e:
+        logger.exception("Error loading AI prompts")
+        flash(f"Error loading prompts: {str(e)}", "error")
+        return redirect(url_for("admin_bp.dashboard"))
+
+
+@admin_bp.route("/ai-prompts/<int:prompt_id>/edit", methods=["GET", "POST"])
+@require_admin
+def ai_prompt_edit(prompt_id: int):
+    """Edit an AI prompt."""
+    try:
+        from app.models_ads import AIPrompt
+        prompt = AIPrompt.query.get_or_404(prompt_id)
+
+        if request.method == "POST":
+            prompt.name = request.form.get("name", prompt.name)
+            prompt.description = request.form.get("description", prompt.description)
+            prompt.system_message = request.form.get("system_message", prompt.system_message)
+            prompt.prompt_template = request.form.get("prompt_template", prompt.prompt_template)
+            prompt.model = request.form.get("model", prompt.model)
+            prompt.temperature = float(request.form.get("temperature", prompt.temperature))
+            prompt.max_tokens = int(request.form.get("max_tokens", prompt.max_tokens))
+            prompt.is_active = request.form.get("is_active") == "1"
+
+            db.session.commit()
+            _audit("ai_prompt_edit", note=f"Updated prompt {prompt.prompt_key}")
+            flash(f"Prompt '{prompt.name}' updated successfully", "success")
+            return redirect(url_for("admin_bp.ai_prompts"))
+
+        return render_template("admin/ai_prompt_edit.html", prompt=prompt)
+
+    except Exception as e:
+        logger.exception("Error editing AI prompt")
+        db.session.rollback()
+        flash(f"Error: {str(e)}", "error")
+        return redirect(url_for("admin_bp.ai_prompts"))
+
+
+@admin_bp.route("/ai-prompts/initialize", methods=["POST"])
+@require_admin
+def ai_prompts_initialize():
+    """Initialize missing AI prompts with defaults."""
+    try:
+        from app.services.ai_prompts_init import initialize_ai_prompts
+        count = initialize_ai_prompts()
+        _audit("ai_prompts_initialize", note=f"Initialized {count} prompts")
+        flash(f"Initialized {count} missing prompts", "success")
+    except Exception as e:
+        logger.exception("Error initializing AI prompts")
+        flash(f"Error initializing prompts: {str(e)}", "error")
+
+    return redirect(url_for("admin_bp.ai_prompts"))

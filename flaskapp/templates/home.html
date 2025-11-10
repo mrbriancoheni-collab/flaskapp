@@ -39,10 +39,22 @@
 
     <!-- CTA buttons with urgency -->
     <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-400">
-      <button onclick="startAnnualPlan()" class="btn btn-primary btn-lg group relative overflow-hidden">
-        <span class="relative z-10">Start Saving Now – $2,400/year</span>
-        <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
-      </button>
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
+          <span class="relative z-10">Start Saving Now – $2,400/year</span>
+          <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
+        </a>
+      {% elif has_endpoint('register') %}
+        <a href="{{ url_for(ep('register')) }}?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
+          <span class="relative z-10">Start Saving Now – $2,400/year</span>
+          <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
+        </a>
+      {% else %}
+        <a href="/signup?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
+          <span class="relative z-10">Start Saving Now – $2,400/year</span>
+          <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
+        </a>
+      {% endif %}
       <a href="/ads-grader/calculator-demo" class="btn btn-outline btn-lg flex items-center gap-2">
         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
           <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
@@ -141,9 +153,13 @@
                 <span class="relative z-10">Try Calculator Demo →</span>
                 <span class="absolute inset-0 bg-gradient-to-r from-primary-700 to-accent-600 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
               </a>
-              <button onclick="startAnnualPlan()" class="btn btn-outline btn-lg">
-                Start Saving Now
-              </button>
+              {% if has_endpoint('signup') %}
+                <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn btn-outline btn-lg">Start Saving Now</a>
+              {% elif has_endpoint('register') %}
+                <a href="{{ url_for(ep('register')) }}?plan=annual" class="btn btn-outline btn-lg">Start Saving Now</a>
+              {% else %}
+                <a href="/signup?plan=annual" class="btn btn-outline btn-lg">Start Saving Now</a>
+              {% endif %}
             </div>
 
             <p class="mt-6 text-sm text-gray-500">No signup required • Takes 2 minutes • See real ROI projections</p>
@@ -563,9 +579,19 @@
           </li>
         </ul>
 
-        <button onclick="startAnnualPlan()" class="mt-8 w-full bg-white text-primary-700 hover:bg-gray-50 font-semibold py-3 px-6 rounded-lg text-center block transition-colors">
-          Start Saving Now – $2,400/year
-        </button>
+        {% if has_endpoint('signup') %}
+          <a href="{{ url_for(ep('signup')) }}?plan=annual" class="mt-8 w-full bg-white text-primary-700 hover:bg-gray-50 font-semibold py-3 px-6 rounded-lg text-center block transition-colors">
+            Start Saving Now – $2,400/year
+          </a>
+        {% elif has_endpoint('register') %}
+          <a href="{{ url_for(ep('register')) }}?plan=annual" class="mt-8 w-full bg-white text-primary-700 hover:bg-gray-50 font-semibold py-3 px-6 rounded-lg text-center block transition-colors">
+            Start Saving Now – $2,400/year
+          </a>
+        {% else %}
+          <a href="/signup?plan=annual" class="mt-8 w-full bg-white text-primary-700 hover:bg-gray-50 font-semibold py-3 px-6 rounded-lg text-center block transition-colors">
+            Start Saving Now – $2,400/year
+          </a>
+        {% endif %}
       </div>
 
       <!-- Enterprise Plan -->
@@ -625,9 +651,19 @@
     <p class="mt-4 text-xl md:text-2xl text-primary-100">Launch campaigns from your services. We'll handle the rest — search to scheduled.</p>
 
     <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-      <button onclick="startAnnualPlan()" class="btn bg-white text-primary-700 hover:bg-gray-50 font-semibold px-8 py-4 text-lg">
-        Start Saving Now – $2,400/year
-      </button>
+      {% if has_endpoint('signup') %}
+        <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn bg-white text-primary-700 hover:bg-gray-50 font-semibold px-8 py-4 text-lg">
+          Start Saving Now – $2,400/year
+        </a>
+      {% elif has_endpoint('register') %}
+        <a href="{{ url_for(ep('register')) }}?plan=annual" class="btn bg-white text-primary-700 hover:bg-gray-50 font-semibold px-8 py-4 text-lg">
+          Start Saving Now – $2,400/year
+        </a>
+      {% else %}
+        <a href="/signup?plan=annual" class="btn bg-white text-primary-700 hover:bg-gray-50 font-semibold px-8 py-4 text-lg">
+          Start Saving Now – $2,400/year
+        </a>
+      {% endif %}
       <a href="/ads-grader/calculator-demo" class="btn border-2 border-white text-white hover:bg-white/10 font-semibold px-8 py-4 text-lg">
         Try Calculator Demo
       </a>
@@ -704,58 +740,5 @@
   @apply px-8 py-4 text-lg font-semibold;
 }
 </style>
-
-<script>
-function startAnnualPlan() {
-  // Get Stripe price ID from config
-  const priceId = '{{ config.STRIPE_YEARLY_PRICE_ID }}';
-
-  if (!priceId) {
-    alert('Pricing configuration error. Please contact support at hi@fieldsprout.io');
-    return;
-  }
-
-  // Show loading state on the button
-  const button = event.target;
-  const originalText = button.innerHTML;
-  button.innerHTML = '<svg class="animate-spin h-5 w-5 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Loading...';
-  button.disabled = true;
-
-  // Create Stripe Checkout session
-  fetch('/billing/create-checkout-session', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      price_id: priceId,
-      plan_type: 'annual',
-      success_url: window.location.origin + '/account/dashboard?upgrade=success',
-      cancel_url: window.location.href
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.error) {
-      alert('Error: ' + data.error);
-      button.disabled = false;
-      button.innerHTML = originalText;
-    } else if (data.checkout_url) {
-      // Redirect to Stripe Checkout
-      window.location.href = data.checkout_url;
-    } else {
-      alert('Unexpected response. Please try again or contact support.');
-      button.disabled = false;
-      button.innerHTML = originalText;
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('Failed to start checkout. Please try again or contact support at hi@fieldsprout.io');
-    button.disabled = false;
-    button.innerHTML = originalText;
-  });
-}
-</script>
 
 {% endblock %}

@@ -134,10 +134,10 @@
     </div>
 
     <div class="max-w-5xl mx-auto">
-      <div class="relative rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-primary-600 to-accent-600 p-1">
+      <div class="relative rounded-3xl overflow-hidden shadow-2xl p-1" style="background: linear-gradient(to bottom right, #7c3aed, #d946ef);">
         <div class="rounded-3xl overflow-hidden bg-white p-12">
           <div class="text-center">
-            <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-primary-500 to-accent-600 text-white mb-6 mx-auto shadow-lg">
+            <div class="inline-flex items-center justify-center w-24 h-24 rounded-full text-white mb-6 mx-auto shadow-lg" style="background: linear-gradient(to bottom right, #8b5cf6, #d946ef);">
               <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
               </svg>
@@ -151,7 +151,7 @@
             <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <a href="/ads-grader/calculator-demo" class="btn btn-primary btn-lg group relative overflow-hidden">
                 <span class="relative z-10">Try Calculator Demo →</span>
-                <span class="absolute inset-0 bg-gradient-to-r from-primary-700 to-accent-600 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
+                <span class="absolute inset-0 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left" style="background: linear-gradient(to right, #6d28d9, #d946ef);"></span>
               </a>
               {% if has_endpoint('signup') %}
                 <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn btn-outline btn-lg">Start Saving Now</a>
@@ -232,12 +232,12 @@
 
     <!-- Platform Dashboard Mockup -->
     <div class="relative order-1 lg:order-2">
-      <div class="rounded-3xl p-1 bg-gradient-to-br from-accent-600 to-primary-600 shadow-2xl transform hover:scale-105 transition-transform duration-300">
+      <div class="rounded-3xl p-1 shadow-2xl transform hover:scale-105 transition-transform duration-300" style="background: linear-gradient(to bottom right, #d946ef, #7c3aed);">
         <div class="rounded-3xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800">
           <div class="aspect-[16/10] w-full p-6">
             <!-- Dashboard Header -->
             <div class="flex items-center justify-between mb-4">
-              <div class="h-8 w-32 bg-primary-500 rounded opacity-90"></div>
+              <div class="h-8 w-32 rounded opacity-90" style="background: #8b5cf6;"></div>
               <div class="flex gap-2">
                 <div class="h-8 w-8 rounded-full bg-gray-700"></div>
                 <div class="h-8 w-24 bg-gray-700 rounded"></div>
@@ -264,10 +264,10 @@
             <div class="bg-gray-700 rounded-lg p-4 mb-3">
               <div class="h-3 w-24 bg-gray-600 rounded mb-3"></div>
               <div class="flex items-end justify-between h-24 gap-2">
-                <div class="w-full bg-gradient-to-t from-primary-500 to-primary-400 rounded-t" style="height: 60%"></div>
-                <div class="w-full bg-gradient-to-t from-primary-500 to-primary-400 rounded-t" style="height: 75%"></div>
-                <div class="w-full bg-gradient-to-t from-primary-500 to-primary-400 rounded-t" style="height: 90%"></div>
-                <div class="w-full bg-gradient-to-t from-accent-500 to-accent-400 rounded-t animate-pulse" style="height: 100%"></div>
+                <div class="w-full rounded-t" style="height: 60%; background: linear-gradient(to top, #8b5cf6, #a78bfa);"></div>
+                <div class="w-full rounded-t" style="height: 75%; background: linear-gradient(to top, #8b5cf6, #a78bfa);"></div>
+                <div class="w-full rounded-t" style="height: 90%; background: linear-gradient(to top, #8b5cf6, #a78bfa);"></div>
+                <div class="w-full rounded-t animate-pulse" style="height: 100%; background: linear-gradient(to top, #d946ef, #f0abfc);"></div>
               </div>
             </div>
 
@@ -289,7 +289,7 @@
       <!-- Floating testimonial card -->
       <div class="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-2xl p-6 border border-gray-100 max-w-sm animate-float">
         <div class="flex items-center gap-3 mb-2">
-          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-accent-500"></div>
+          <div class="w-10 h-10 rounded-full" style="background: linear-gradient(to bottom right, #8b5cf6, #d946ef);"></div>
           <div>
             <div class="font-semibold">Marina Rodriguez</div>
             <div class="text-xs text-gray-500">HVAC Owner</div>
@@ -315,7 +315,7 @@
 
     <div class="mt-12 grid md:grid-cols-2 lg:grid-cols-4 gap-6">
       <div class="rounded-2xl bg-white p-6 shadow-soft border border-gray-100 hover:shadow-xl hover:scale-105 transition-all duration-300 group">
-        <div class="h-14 w-14 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 text-white flex items-center justify-center group-hover:rotate-6 transition-transform">
+        <div class="h-14 w-14 rounded-xl text-white flex items-center justify-center group-hover:rotate-6 transition-transform" style="background: linear-gradient(to bottom right, #8b5cf6, #7c3aed);">
           <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
           </svg>
@@ -370,19 +370,19 @@
   <div class="container-max">
     <!-- Stats with icons -->
     <div class="grid md:grid-cols-3 gap-6 mb-12">
-      <div class="rounded-2xl bg-gradient-to-br from-primary-600 to-primary-700 p-8 shadow-xl text-white text-center transform hover:scale-105 transition-transform">
-        <svg class="w-12 h-12 mx-auto mb-4 text-primary-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="rounded-2xl p-8 shadow-xl text-white text-center transform hover:scale-105 transition-transform" style="background: linear-gradient(to bottom right, #7c3aed, #6d28d9);">
+        <svg class="w-12 h-12 mx-auto mb-4" style="color: rgba(237, 233, 254, 0.8);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
         </svg>
         <div class="text-6xl font-extrabold">50%</div>
-        <p class="mt-2 text-primary-100">faster campaign launch</p>
+        <p class="mt-2" style="color: rgba(237, 233, 254, 0.9);">faster campaign launch</p>
       </div>
-      <div class="rounded-2xl bg-gradient-to-br from-accent-600 to-accent-700 p-8 shadow-xl text-white text-center transform hover:scale-105 transition-transform">
-        <svg class="w-12 h-12 mx-auto mb-4 text-accent-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="rounded-2xl p-8 shadow-xl text-white text-center transform hover:scale-105 transition-transform" style="background: linear-gradient(to bottom right, #d946ef, #c026d3);">
+        <svg class="w-12 h-12 mx-auto mb-4" style="color: rgba(250, 232, 255, 0.8);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
         </svg>
         <div class="text-6xl font-extrabold">4.9/5</div>
-        <p class="mt-2 text-accent-100">average customer rating</p>
+        <p class="mt-2" style="color: rgba(250, 232, 255, 0.9);">average customer rating</p>
       </div>
       <div class="rounded-2xl bg-gradient-to-br from-green-600 to-green-700 p-8 shadow-xl text-white text-center transform hover:scale-105 transition-transform">
         <svg class="w-12 h-12 mx-auto mb-4 text-green-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -674,14 +674,14 @@
 </section>
 
 <!-- FINAL CTA -->
-<section class="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-accent-700">
+<section class="relative overflow-hidden" style="background: linear-gradient(to bottom right, #7c3aed, #6d28d9, #c026d3);">
   <div class="absolute inset-0 opacity-10">
     <div class="absolute inset-0" style="background-image: url('data:image/svg+xml,%3Csvg width=&quot;60&quot; height=&quot;60&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;%3E%3Cpath d=&quot;M30 0l30 30-30 30L0 30z&quot; fill=&quot;%23fff&quot; fill-opacity=&quot;0.05&quot;/%3E%3C/svg%3E'); background-size: 60px 60px;"></div>
   </div>
 
   <div class="container-max relative py-20 text-center text-white">
     <h2 class="text-4xl md:text-6xl font-extrabold">Ready to win more jobs?</h2>
-    <p class="mt-4 text-xl md:text-2xl text-primary-100">Launch campaigns from your services. We'll handle the rest — search to scheduled.</p>
+    <p class="mt-4 text-xl md:text-2xl" style="color: rgba(237, 233, 254, 0.9);">Launch campaigns from your services. We'll handle the rest — search to scheduled.</p>
 
     <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
       {% if has_endpoint('signup') %}

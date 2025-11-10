@@ -495,7 +495,7 @@
   console.log('Calculator script loading...');
 
   // Toggle advanced options
-  window.toggleAdvancedOptions = function() {
+  function toggleAdvancedOptions() {
     console.log('toggleAdvancedOptions called!');
     var options = document.getElementById('advanced-options');
     var icon = document.getElementById('advanced-icon');
@@ -519,10 +519,10 @@
     } else {
       console.error('Could not find options or icon elements!');
     }
-  };
+  }
 
   // Calculate ROI
-  window.calculateROI = function() {
+  function calculateROI() {
     console.log('calculateROI called!');
 
     try {
@@ -675,10 +675,10 @@
     } catch (error) {
       console.error('Error in calculateROI:', error);
     }
-  };
+  }
 
   // Animate value changes
-  window.animateValue = function(id, start, end, duration, isCurrency, suffix) {
+  function animateValue(id, start, end, duration, isCurrency, suffix) {
     var element = document.getElementById(id);
     if (!element) {
       console.warn('animateValue: element not found:', id);
@@ -697,23 +697,75 @@
       }
 
       var displayValue = isCurrency
-        ? '$' + window.formatNumber(Math.round(current)) + (suffix || '')
+        ? '$' + formatNumber(Math.round(current)) + (suffix || '')
         : '+' + Math.round(current) + (suffix || '');
 
       element.textContent = displayValue;
     }, 16);
-  };
+  }
 
   // Format numbers with commas
-  window.formatNumber = function(num) {
+  function formatNumber(num) {
     return Math.round(num).toLocaleString();
-  };
+  }
 
-  console.log('All calculator functions defined!');
-  console.log('window.toggleAdvancedOptions:', typeof window.toggleAdvancedOptions);
-  console.log('window.calculateROI:', typeof window.calculateROI);
-  console.log('window.animateValue:', typeof window.animateValue);
-  console.log('window.formatNumber:', typeof window.formatNumber);
+  // Attach event listeners
+  function attachEventListeners() {
+    console.log('Attaching event listeners...');
+
+    // Advanced toggle button
+    var advancedToggle = document.getElementById('advanced-toggle');
+    if (advancedToggle) {
+      advancedToggle.addEventListener('click', toggleAdvancedOptions);
+      console.log('✓ Advanced toggle listener attached');
+    } else {
+      console.error('✗ Advanced toggle button not found');
+    }
+
+    // Calculate button
+    var calculateBtn = document.getElementById('calculate-btn');
+    if (calculateBtn) {
+      calculateBtn.addEventListener('click', function() {
+        calculateROI();
+        var resultsSection = document.getElementById('results-section');
+        if (resultsSection) {
+          resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+      console.log('✓ Calculate button listener attached');
+    } else {
+      console.error('✗ Calculate button not found');
+    }
+
+    // Auto-calculate on input changes
+    var inputs = ['monthly_spend', 'avg_order_value', 'conversion_rate'];
+    inputs.forEach(function(id) {
+      var element = document.getElementById(id);
+      if (element) {
+        element.addEventListener('input', calculateROI);
+        console.log('✓ Input listener attached to:', id);
+      } else {
+        console.error('✗ Input not found:', id);
+      }
+    });
+
+    // Waste slider - update display and calculate
+    var wasteSlider = document.getElementById('wasted_spend_pct');
+    if (wasteSlider) {
+      wasteSlider.addEventListener('input', function() {
+        var display = document.getElementById('waste-display');
+        if (display) {
+          display.textContent = this.value;
+        }
+        calculateROI();
+      });
+      console.log('✓ Waste slider listener attached');
+    } else {
+      console.error('✗ Waste slider not found');
+    }
+
+    console.log('All event listeners attached!');
+  }
 
   // Set up event listeners (CSP-compliant way)
   function setupEventListeners() {

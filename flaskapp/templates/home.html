@@ -12,7 +12,7 @@
   <div class="absolute top-10 left-10 hidden lg:block animate-float">
     <div class="bg-white rounded-full px-4 py-2 shadow-lg flex items-center gap-2 text-sm">
       <span class="text-green-500">●</span>
-      <span class="font-semibold">47 pros signed up this week</span>
+      <span class="font-semibold"><span id="weeklySignups">1</span> pros signed up this week</span>
     </div>
   </div>
 
@@ -115,10 +115,6 @@
       <!-- Nextdoor -->
       <span class="logo-pill text-gray-700">
         <span class="logo-dot" style="background:#00b246"></span><span class="ml-1">Nextdoor</span>
-      </span>
-      <!-- Stripe -->
-      <span class="logo-pill text-gray-700">
-        <span class="logo-dot" style="background:#635bff"></span><span class="ml-1">Stripe</span>
       </span>
     </div>
   </div>
@@ -774,4 +770,32 @@
 }
 </style>
 
+{% endblock %}
+
+{% block body_extra %}
+<script>
+(function() {
+  // Calculate weekly signup count that climbs from 1 to 19 throughout the week
+  // Sunday morning = 1, Saturday night = 19
+  var now = new Date();
+  var dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
+  var hourOfDay = now.getHours(); // 0-23
+
+  // Calculate current hour in the week (0-167)
+  var hourInWeek = (dayOfWeek * 24) + hourOfDay;
+
+  // Total hours in a week: 168
+  // Map 0-167 hours to 1-19 signups
+  var signupCount = Math.floor((hourInWeek / 168) * 18) + 1;
+
+  // Ensure it's between 1 and 19
+  signupCount = Math.max(1, Math.min(19, signupCount));
+
+  // Update the DOM
+  var element = document.getElementById('weeklySignups');
+  if (element) {
+    element.textContent = signupCount;
+  }
+})();
+</script>
 {% endblock %}

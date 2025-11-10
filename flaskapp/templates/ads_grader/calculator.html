@@ -488,7 +488,7 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
-// IMMEDIATELY define global functions (no waiting, no dependencies)
+// CSP-compliant calculator: Functions scoped to IIFE, using addEventListener (no inline handlers)
 (function() {
   'use strict';
 
@@ -632,29 +632,29 @@
       var roiMultiple = monthlyFee > 0 ? (totalMonthlyValue / monthlyFee) : 0;
 
       // Update UI with animations
-      window.animateValue('total-value-hero', 0, totalMonthlyValue, 1000, true, '/mo');
-      window.animateValue('result-monthly-waste', 0, monthlyWaste, 800, true);
-      window.animateValue('result-annual-waste', 0, annualWaste, 800, true);
-      window.animateValue('result-more-leads', 0, totalAdditionalLeads, 800, false);
+      animateValue('total-value-hero', 0, totalMonthlyValue, 1000, true, '/mo');
+      animateValue('result-monthly-waste', 0, monthlyWaste, 800, true);
+      animateValue('result-annual-waste', 0, annualWaste, 800, true);
+      animateValue('result-more-leads', 0, totalAdditionalLeads, 800, false);
 
-      document.getElementById('result-more-revenue').textContent = '$' + window.formatNumber(totalAdditionalRevenue);
-      document.getElementById('pricing-total-gain').textContent = '$' + window.formatNumber(totalMonthlyValue);
+      document.getElementById('result-more-revenue').textContent = '$' + formatNumber(totalAdditionalRevenue);
+      document.getElementById('pricing-total-gain').textContent = '$' + formatNumber(totalMonthlyValue);
       document.getElementById('pricing-roi').textContent = roiMultiple.toFixed(1) + 'x';
 
       // Update breakdown UI
-      document.getElementById('breakdown-waste').textContent = '$' + window.formatNumber(monthlyWaste);
+      document.getElementById('breakdown-waste').textContent = '$' + formatNumber(monthlyWaste);
       document.getElementById('breakdown-reinvest-leads').textContent = '+' + Math.round(leadsFromReinvestment);
       document.getElementById('breakdown-qs-leads').textContent = '+' + Math.round(leadsFromQS);
       document.getElementById('breakdown-ctr-leads').textContent = '+' + Math.round(leadsFromCTR);
       document.getElementById('breakdown-cvr-leads').textContent = '+' + Math.round(leadsFromCVR);
-      document.getElementById('breakdown-total').textContent = '$' + window.formatNumber(totalMonthlyValue);
+      document.getElementById('breakdown-total').textContent = '$' + formatNumber(totalMonthlyValue);
 
       var bottomLineText = netMonthlyGain > 0
-        ? 'Net gain: $' + window.formatNumber(netMonthlyGain) + '/month after our $' + monthlyFee + '/month fee'
+        ? 'Net gain: $' + formatNumber(netMonthlyGain) + '/month after our $' + monthlyFee + '/month fee'
         : "Let's discuss a custom plan for your account size";
 
       document.getElementById('bottom-line').textContent = bottomLineText;
-      document.getElementById('annual-net-gain').textContent = '$' + window.formatNumber(annualNetGain);
+      document.getElementById('annual-net-gain').textContent = '$' + formatNumber(annualNetGain);
 
       console.log('Calculation completed successfully');
       console.log('Current Performance:', {
@@ -764,108 +764,35 @@
       console.error('✗ Waste slider not found');
     }
 
+    // Quality score slider - update display and calculate
+    var qsSlider = document.getElementById('quality_score');
+    if (qsSlider) {
+      qsSlider.addEventListener('input', function() {
+        var display = document.getElementById('qs-display');
+        if (display) {
+          display.textContent = this.value;
+        }
+        calculateROI();
+      });
+      console.log('✓ Quality score slider listener attached');
+    } else {
+      console.error('✗ Quality score slider not found');
+    }
+
     console.log('All event listeners attached!');
-  }
-
-  // Set up event listeners (CSP-compliant way)
-  function setupEventListeners() {
-    console.log('Setting up event listeners...');
-
-    // Monthly spend input
-    var monthlySpendInput = document.getElementById('monthly_spend');
-    if (monthlySpendInput) {
-      monthlySpendInput.addEventListener('input', window.calculateROI);
-      console.log('Added listener to monthly_spend');
-    }
-
-    // Average order value input
-    var avgOrderValueInput = document.getElementById('avg_order_value');
-    if (avgOrderValueInput) {
-      avgOrderValueInput.addEventListener('input', window.calculateROI);
-      console.log('Added listener to avg_order_value');
-    }
-
-    // Advanced toggle button
-    var advancedToggle = document.getElementById('advanced-toggle');
-    if (advancedToggle) {
-      advancedToggle.addEventListener('click', window.toggleAdvancedOptions);
-      console.log('Added listener to advanced-toggle');
-    }
-
-    // Wasted spend percentage slider
-    var wastedSpendInput = document.getElementById('wasted_spend_pct');
-    if (wastedSpendInput) {
-      wastedSpendInput.addEventListener('input', function() {
-        var wasteDisplay = document.getElementById('waste-display');
-        if (wasteDisplay) {
-          wasteDisplay.textContent = this.value;
-        }
-        window.calculateROI();
-      });
-      console.log('Added listener to wasted_spend_pct');
-    }
-
-    // Conversion rate input
-    var conversionRateInput = document.getElementById('conversion_rate');
-    if (conversionRateInput) {
-      conversionRateInput.addEventListener('input', window.calculateROI);
-      console.log('Added listener to conversion_rate');
-    }
-
-    // Average CPC input
-    var avgCpcInput = document.getElementById('avg_cpc');
-    if (avgCpcInput) {
-      avgCpcInput.addEventListener('input', window.calculateROI);
-      console.log('Added listener to avg_cpc');
-    }
-
-    // Quality Score slider
-    var qualityScoreInput = document.getElementById('quality_score');
-    if (qualityScoreInput) {
-      qualityScoreInput.addEventListener('input', function() {
-        var qsDisplay = document.getElementById('qs-display');
-        if (qsDisplay) {
-          qsDisplay.textContent = this.value;
-        }
-        window.calculateROI();
-      });
-      console.log('Added listener to quality_score');
-    }
-
-    // Average Position input
-    var avgPositionInput = document.getElementById('avg_position');
-    if (avgPositionInput) {
-      avgPositionInput.addEventListener('input', window.calculateROI);
-      console.log('Added listener to avg_position');
-    }
-
-    // Calculate button
-    var calculateBtn = document.getElementById('calculate-btn');
-    if (calculateBtn) {
-      calculateBtn.addEventListener('click', function() {
-        window.calculateROI();
-        var resultsSection = document.getElementById('results-section');
-        if (resultsSection) {
-          resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      });
-      console.log('Added listener to calculate-btn');
-    }
-
-    console.log('Event listeners setup complete!');
   }
 
   // Run initial calculation when page loads
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('DOM ready, setting up event listeners and running initial calculation');
-      setupEventListeners();
-      window.calculateROI();
+      console.log('DOM ready, attaching event listeners and running initial calculation');
+      attachEventListeners();
+      calculateROI();
     });
   } else {
-    console.log('DOM already ready, setting up event listeners and running initial calculation');
-    setupEventListeners();
-    window.calculateROI();
+    console.log('DOM already ready, attaching event listeners and running initial calculation');
+    attachEventListeners();
+    calculateROI();
   }
 })();
 </script>

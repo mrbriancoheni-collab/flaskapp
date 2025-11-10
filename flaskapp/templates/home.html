@@ -651,15 +651,15 @@
         </ul>
 
         {% if has_endpoint('signup') %}
-          <a href="{{ url_for(ep('signup')) }}?plan=annual" class="mt-8 w-full bg-white text-primary-700 hover:bg-gray-50 font-semibold py-3 px-6 rounded-lg text-center block transition-colors">
+          <a href="{{ url_for(ep('signup')) }}?plan=annual" class="mt-8 w-full bg-white hover:bg-gray-50 font-semibold py-3 px-6 rounded-lg text-center block transition-colors" style="color: #6d28d9;">
             Start Saving Now – $2,400/year
           </a>
         {% elif has_endpoint('register') %}
-          <a href="{{ url_for(ep('register')) }}?plan=annual" class="mt-8 w-full bg-white text-primary-700 hover:bg-gray-50 font-semibold py-3 px-6 rounded-lg text-center block transition-colors">
+          <a href="{{ url_for(ep('register')) }}?plan=annual" class="mt-8 w-full bg-white hover:bg-gray-50 font-semibold py-3 px-6 rounded-lg text-center block transition-colors" style="color: #6d28d9;">
             Start Saving Now – $2,400/year
           </a>
         {% else %}
-          <a href="/signup?plan=annual" class="mt-8 w-full bg-white text-primary-700 hover:bg-gray-50 font-semibold py-3 px-6 rounded-lg text-center block transition-colors">
+          <a href="/signup?plan=annual" class="mt-8 w-full bg-white hover:bg-gray-50 font-semibold py-3 px-6 rounded-lg text-center block transition-colors" style="color: #6d28d9;">
             Start Saving Now – $2,400/year
           </a>
         {% endif %}

@@ -349,8 +349,8 @@
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="text-xl font-black text-green-600" id="breakdown-reinvest-leads">+0</div>
-                  <div class="text-xs text-gray-500">extra leads</div>
+                  <div class="text-xl font-black text-green-600" id="breakdown-reinvest-revenue">$0</div>
+                  <div class="text-xs text-gray-500"><span id="breakdown-reinvest-leads">+0</span> extra leads</div>
                 </div>
               </label>
 
@@ -364,8 +364,8 @@
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="text-xl font-black text-blue-600" id="breakdown-qs-leads">+0</div>
-                  <div class="text-xs text-gray-500">extra leads</div>
+                  <div class="text-xl font-black text-blue-600" id="breakdown-qs-revenue">$0</div>
+                  <div class="text-xs text-gray-500"><span id="breakdown-qs-leads">+0</span> extra leads</div>
                 </div>
               </label>
 
@@ -379,8 +379,8 @@
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="text-xl font-black text-purple-600" id="breakdown-ctr-leads">+0</div>
-                  <div class="text-xs text-gray-500">extra leads</div>
+                  <div class="text-xl font-black text-purple-600" id="breakdown-ctr-revenue">$0</div>
+                  <div class="text-xs text-gray-500"><span id="breakdown-ctr-leads">+0</span> extra leads</div>
                 </div>
               </label>
 
@@ -394,8 +394,8 @@
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="text-xl font-black text-orange-600" id="breakdown-cvr-leads">+0</div>
-                  <div class="text-xs text-gray-500">extra leads</div>
+                  <div class="text-xl font-black text-orange-600" id="breakdown-cvr-revenue">$0</div>
+                  <div class="text-xs text-gray-500"><span id="breakdown-cvr-leads">+0</span> extra leads</div>
                 </div>
               </label>
             </div>
@@ -586,10 +586,16 @@
       document.getElementById('result-annual-waste').textContent = '$' + window.formatNumber(annualWaste);
       document.getElementById('result-more-leads').textContent = '+' + totalAdditionalLeads;
       document.getElementById('result-more-revenue').textContent = '$' + window.formatNumber(totalAdditionalRevenue);
+
+      // Update breakdown with both revenue and leads
       document.getElementById('breakdown-waste').textContent = '$' + window.formatNumber(monthlyWaste);
+      document.getElementById('breakdown-reinvest-revenue').textContent = '$' + window.formatNumber(revenueFromReinvestment);
       document.getElementById('breakdown-reinvest-leads').textContent = '+' + Math.round(leadsFromReinvestment);
+      document.getElementById('breakdown-qs-revenue').textContent = '$' + window.formatNumber(revenueFromQS);
       document.getElementById('breakdown-qs-leads').textContent = '+' + Math.round(leadsFromQS);
+      document.getElementById('breakdown-ctr-revenue').textContent = '$' + window.formatNumber(revenueFromCTR);
       document.getElementById('breakdown-ctr-leads').textContent = '+' + Math.round(leadsFromCTR);
+      document.getElementById('breakdown-cvr-revenue').textContent = '$' + window.formatNumber(revenueFromCVR);
       document.getElementById('breakdown-cvr-leads').textContent = '+' + Math.round(leadsFromCVR);
 
       // Update checkbox total

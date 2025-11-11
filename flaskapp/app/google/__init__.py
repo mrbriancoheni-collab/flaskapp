@@ -2129,7 +2129,7 @@ def approve_optimizations():
         # 2. Handle errors for individual optimizations
         # 3. Return detailed success/failure status for each
 
-        logger.info(f"Account {aid} approved {len(optimizations)} optimizations: {opt_titles}")
+        current_app.logger.info(f"Account {aid} approved {len(optimizations)} optimizations: {opt_titles}")
 
         return jsonify({
             "success": True,
@@ -2139,7 +2139,7 @@ def approve_optimizations():
         })
 
     except Exception as e:
-        logger.exception("Error approving optimizations")
+        current_app.logger.exception("Error approving optimizations")
         return jsonify({
             "success": False,
             "error": str(e)

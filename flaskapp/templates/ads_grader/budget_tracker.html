@@ -1,0 +1,346 @@
+{% extends "base_app.html" %}
+{% block title %}Budget Tracker – Google Ads{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <a href="{{ url_for('ads_grader_bp.index') }}" class="text-sm text-indigo-600 hover:text-indigo-800 mb-2 inline-block">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Back to Grader
+      </a>
+      <h1 class="text-3xl font-bold">Budget Tracker</h1>
+      <p class="text-gray-600 mt-1">Monitor your Google Ads spend and get alerts when budgets are running low</p>
+    </div>
+    <div class="flex items-center gap-3">
+      {% if trackers %}
+      <form action="{{ url_for('ads_grader_bp.budget_tracker_refresh_all') }}" method="POST" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <button type="submit"
+                class="inline-flex items-center px-4 py-2 bg-green-50 text-green-700 border-2 border-green-200 rounded-lg hover:bg-green-100">
+          <i class="fa-solid fa-refresh mr-2"></i>Refresh All
+        </button>
+      </form>
+      {% endif %}
+      <button onclick="showCreateBudgetModal()"
+              class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+        <i class="fa-solid fa-plus mr-2"></i>Track New Budget
+      </button>
+    </div>
+  </div>
+
+  {% if trackers %}
+    <!-- Budget Trackers Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      {% for tracker in trackers %}
+        <div class="bg-white rounded-xl shadow border hover:shadow-lg transition">
+          <div class="p-6">
+            <!-- Header -->
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex-1">
+                <h3 class="text-xl font-bold text-gray-900">
+                  {% if tracker.campaign_name %}
+                    {{ tracker.campaign_name }}
+                  {% else %}
+                    Account Budget
+                  {% endif %}
+                </h3>
+                <div class="text-sm text-gray-500 mt-1">
+                  <span class="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                    {{ tracker.budget_type.capitalize() }}
+                  </span>
+                  <span class="ml-2">
+                    {{ tracker.start_date.strftime('%b %d') }} - {{ tracker.end_date.strftime('%b %d, %Y') }}
+                  </span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <!-- Status Badge -->
+                {% if tracker.status == 'active' %}
+                  <span class="inline-flex items-center px-2 py-1 bg-green-50 text-green-700 rounded text-xs font-medium">
+                    <i class="fa-solid fa-circle-check mr-1"></i>Active
+                  </span>
+                {% elif tracker.status == 'paused' %}
+                  <span class="inline-flex items-center px-2 py-1 bg-yellow-50 text-yellow-700 rounded text-xs font-medium">
+                    <i class="fa-solid fa-pause-circle mr-1"></i>Paused
+                  </span>
+                {% elif tracker.status == 'completed' %}
+                  <span class="inline-flex items-center px-2 py-1 bg-gray-50 text-gray-700 rounded text-xs font-medium">
+                    <i class="fa-solid fa-check-circle mr-1"></i>Completed
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Budget Progress -->
+            <div class="mb-4">
+              <div class="flex items-center justify-between text-sm mb-2">
+                <span class="text-gray-600">Budget Progress</span>
+                <span class="font-semibold text-gray-900">
+                  ${{ "{:,.2f}".format(tracker.last_spend_dollars) }} / ${{ "{:,.2f}".format(tracker.budget_amount_dollars) }}
+                </span>
+              </div>
+
+              <!-- Progress Bar -->
+              {% set spend_pct = tracker.spend_percentage %}
+              <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-300
+                           {% if spend_pct >= 100 %}bg-red-600
+                           {% elif spend_pct >= tracker.alert_threshold_percent %}bg-yellow-500
+                           {% else %}bg-green-500{% endif %}"
+                     style="width: {{ [spend_pct, 100]|min }}%">
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between text-sm mt-2">
+                <span class="{% if spend_pct >= 100 %}text-red-600 font-semibold
+                             {% elif spend_pct >= tracker.alert_threshold_percent %}text-yellow-600 font-semibold
+                             {% else %}text-gray-600{% endif %}">
+                  {{ "%.1f"|format(spend_pct) }}% spent
+                </span>
+                <span class="text-gray-600">
+                  ${{ "{:,.2f}".format(tracker.remaining_budget_dollars) }} remaining
+                </span>
+              </div>
+            </div>
+
+            <!-- Pacing Info -->
+            <div class="grid grid-cols-2 gap-4 mb-4">
+              <div class="bg-gray-50 rounded-lg p-3">
+                <div class="text-xs text-gray-600 mb-1">Daily Budget</div>
+                <div class="text-lg font-bold text-gray-900">
+                  ${{ "{:,.2f}".format(tracker.budget_amount_dollars / 30) }}
+                </div>
+              </div>
+              <div class="bg-gray-50 rounded-lg p-3">
+                <div class="text-xs text-gray-600 mb-1">Alert Threshold</div>
+                <div class="text-lg font-bold text-gray-900">
+                  {{ tracker.alert_threshold_percent }}%
+                </div>
+              </div>
+            </div>
+
+            <!-- Recent Alerts -->
+            {% if tracker.alerts.count() > 0 %}
+              <div class="border-t pt-4">
+                <h4 class="text-sm font-semibold text-gray-700 mb-2">
+                  <i class="fa-solid fa-bell mr-1"></i>Recent Alerts
+                </h4>
+                <div class="space-y-2">
+                  {% for alert in tracker.alerts.order_by('sent_at desc').limit(2) %}
+                    <div class="flex items-start gap-2 text-sm">
+                      <i class="fa-solid fa-triangle-exclamation
+                               {% if alert.severity == 'critical' %}text-red-600
+                               {% elif alert.severity == 'warning' %}text-yellow-600
+                               {% else %}text-blue-600{% endif %} mt-0.5"></i>
+                      <div class="flex-1">
+                        <div class="text-gray-700">{{ alert.alert_message }}</div>
+                        <div class="text-xs text-gray-500 mt-0.5">
+                          {{ alert.sent_at.strftime('%b %d at %I:%M %p') }}
+                        </div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+
+            <!-- Actions -->
+            <div class="flex items-center gap-2 mt-4 pt-4 border-t">
+              <form action="{{ url_for('ads_grader_bp.budget_tracker_refresh', tracker_id=tracker.id) }}" method="POST" class="flex-1">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit"
+                        class="w-full px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 text-sm font-medium">
+                  <i class="fa-solid fa-refresh mr-1"></i>Refresh
+                </button>
+              </form>
+              {% if tracker.status == 'active' %}
+                <button onclick="pauseBudgetTracker({{ tracker.id }})"
+                        class="flex-1 px-3 py-2 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 text-sm font-medium">
+                  <i class="fa-solid fa-pause mr-1"></i>Pause
+                </button>
+              {% elif tracker.status == 'paused' %}
+                <button onclick="resumeBudgetTracker({{ tracker.id }})"
+                        class="flex-1 px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 text-sm font-medium">
+                  <i class="fa-solid fa-play mr-1"></i>Resume
+                </button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+  {% else %}
+    <!-- Empty State -->
+    <div class="bg-white rounded-xl shadow-lg p-12 text-center">
+      <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i class="fa-solid fa-wallet text-4xl text-gray-400"></i>
+      </div>
+      <h2 class="text-2xl font-bold mb-2">No Budget Trackers Yet</h2>
+      <p class="text-gray-600 mb-6">Start tracking your Google Ads budgets to prevent overspending and get timely alerts</p>
+      <button onclick="showCreateBudgetModal()"
+              class="inline-flex items-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700">
+        <i class="fa-solid fa-plus mr-2"></i>
+        Track Your First Budget
+      </button>
+    </div>
+  {% endif %}
+
+  <!-- Benefits Section -->
+  <div class="mt-8 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+    <h3 class="font-bold mb-3">
+      <i class="fa-solid fa-lightbulb text-indigo-600 mr-2"></i>
+      Why Track Your Budgets?
+    </h3>
+    <div class="grid md:grid-cols-2 gap-4 text-sm">
+      <div class="flex items-start">
+        <i class="fa-solid fa-check text-green-600 mr-2 mt-1"></i>
+        <span>Get alerts before you overspend and blow your budget</span>
+      </div>
+      <div class="flex items-start">
+        <i class="fa-solid fa-check text-green-600 mr-2 mt-1"></i>
+        <span>Monitor pacing to ensure you're not spending too fast or slow</span>
+      </div>
+      <div class="flex items-start">
+        <i class="fa-solid fa-check text-green-600 mr-2 mt-1"></i>
+        <span>Track budgets for specific campaigns or entire accounts</span>
+      </div>
+      <div class="flex items-start">
+        <i class="fa-solid fa-check text-green-600 mr-2 mt-1"></i>
+        <span>Set custom alert thresholds (default: 80% of budget)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Budget Modal -->
+<div id="createBudgetModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+  <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-2xl font-bold">Track New Budget</h3>
+      <button onclick="hideCreateBudgetModal()" class="text-gray-400 hover:text-gray-600">
+        <i class="fa-solid fa-times text-2xl"></i>
+      </button>
+    </div>
+
+    <form id="createBudgetForm" action="{{ url_for('ads_grader_bp.budget_tracker_create') }}" method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+      <!-- Budget Type -->
+      <div class="mb-4">
+        <label class="block text-sm font-semibold text-gray-700 mb-2">Budget Type</label>
+        <select name="budget_type" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" required>
+          <option value="monthly">Monthly Budget</option>
+          <option value="weekly">Weekly Budget</option>
+          <option value="daily">Daily Budget</option>
+          <option value="campaign">Campaign Budget</option>
+        </select>
+      </div>
+
+      <!-- Budget Amount -->
+      <div class="mb-4">
+        <label class="block text-sm font-semibold text-gray-700 mb-2">Budget Amount ($)</label>
+        <input type="number" name="budget_amount" step="0.01" min="0"
+               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+               placeholder="5000.00" required>
+      </div>
+
+      <!-- Date Range -->
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Start Date</label>
+          <input type="date" name="start_date"
+                 class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" required>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">End Date</label>
+          <input type="date" name="end_date"
+                 class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" required>
+        </div>
+      </div>
+
+      <!-- Alert Threshold -->
+      <div class="mb-4">
+        <label class="block text-sm font-semibold text-gray-700 mb-2">Alert Threshold (%)</label>
+        <input type="number" name="alert_threshold_percent" min="1" max="100" value="80"
+               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" required>
+        <p class="text-xs text-gray-500 mt-1">Get an alert when you reach this percentage of your budget</p>
+      </div>
+
+      <!-- Google Ads Account (will be populated from connected accounts) -->
+      <div class="mb-4">
+        <label class="block text-sm font-semibold text-gray-700 mb-2">Google Ads Account</label>
+        <select name="customer_id" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" required>
+          <option value="">Select an account...</option>
+          <!-- Will be populated via AJAX or server-side -->
+        </select>
+      </div>
+
+      <!-- Campaign (optional, shown when budget_type is campaign) -->
+      <div class="mb-6" id="campaignSelector" style="display: none;">
+        <label class="block text-sm font-semibold text-gray-700 mb-2">Campaign</label>
+        <select name="campaign_id" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
+          <option value="">Select a campaign...</option>
+          <!-- Will be populated via AJAX when account is selected -->
+        </select>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-3">
+        <button type="submit"
+                class="flex-1 px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700">
+          <i class="fa-solid fa-check mr-2"></i>Start Tracking
+        </button>
+        <button type="button" onclick="hideCreateBudgetModal()"
+                class="px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function showCreateBudgetModal() {
+  document.getElementById('createBudgetModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function hideCreateBudgetModal() {
+  document.getElementById('createBudgetModal').classList.add('hidden');
+  document.body.style.overflow = 'auto';
+}
+
+function editBudgetTracker(id) {
+  // TODO: Implement edit functionality
+  console.log('Edit tracker:', id);
+}
+
+function pauseBudgetTracker(id) {
+  // TODO: Implement pause functionality
+  console.log('Pause tracker:', id);
+}
+
+function resumeBudgetTracker(id) {
+  // TODO: Implement resume functionality
+  console.log('Resume tracker:', id);
+}
+
+// Show/hide campaign selector based on budget type
+document.addEventListener('DOMContentLoaded', function() {
+  var budgetTypeSelect = document.querySelector('select[name="budget_type"]');
+  var campaignSelector = document.getElementById('campaignSelector');
+
+  if (budgetTypeSelect) {
+    budgetTypeSelect.addEventListener('change', function() {
+      if (this.value === 'campaign') {
+        campaignSelector.style.display = 'block';
+      } else {
+        campaignSelector.style.display = 'none';
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

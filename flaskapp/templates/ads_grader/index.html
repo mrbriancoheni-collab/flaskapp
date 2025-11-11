@@ -41,12 +41,47 @@
   </div>
 </div>
 
+<!-- Quick Actions (logged in users) -->
+{% if current_user.is_authenticated %}
+<div class="grid md:grid-cols-2 gap-4 mb-8">
+  <!-- Budget Tracker -->
+  <a href="{{ url_for('ads_grader_bp.budget_tracker') }}"
+     class="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6 hover:shadow-lg transition">
+    <div class="flex items-center gap-4">
+      <div class="w-14 h-14 bg-green-500 text-white rounded-full flex items-center justify-center text-2xl">
+        <i class="fa-solid fa-wallet"></i>
+      </div>
+      <div class="flex-1">
+        <h3 class="font-bold text-gray-900 mb-1">Budget Tracker</h3>
+        <p class="text-sm text-gray-600">Monitor spend and get alerts before you overspend</p>
+      </div>
+      <i class="fa-solid fa-arrow-right text-green-600"></i>
+    </div>
+  </a>
+
+  <!-- Report History -->
+  <a href="{{ url_for('ads_grader_bp.history') }}"
+     class="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6 hover:shadow-lg transition">
+    <div class="flex items-center gap-4">
+      <div class="w-14 h-14 bg-indigo-500 text-white rounded-full flex items-center justify-center text-2xl">
+        <i class="fa-solid fa-history"></i>
+      </div>
+      <div class="flex-1">
+        <h3 class="font-bold text-gray-900 mb-1">Report History</h3>
+        <p class="text-sm text-gray-600">View and compare your past performance reports</p>
+      </div>
+      <i class="fa-solid fa-arrow-right text-indigo-600"></i>
+    </div>
+  </a>
+</div>
+{% endif %}
+
 <!-- Recent Reports (logged in users) -->
 {% if current_user.is_authenticated and recent_reports %}
 <div class="bg-white border rounded-xl p-6 mb-8">
   <div class="flex items-center justify-between mb-4">
     <h2 class="text-xl font-bold">
-      <i class="fa-solid fa-history mr-2 text-indigo-600"></i>
+      <i class="fa-solid fa-chart-line mr-2 text-indigo-600"></i>
       Your Recent Reports
     </h2>
     <a href="{{ url_for('ads_grader_bp.history') }}" class="text-sm text-indigo-600 hover:text-indigo-800">

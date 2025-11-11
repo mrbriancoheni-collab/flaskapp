@@ -5,14 +5,18 @@ Email service for sending transactional emails.
 Supports multiple providers:
 - SMTP (via Flask-Mail or standard smtplib)
 - SendGrid API
+- Mailgun API
 - AWS SES (future)
 
 Configuration via environment variables:
-- EMAIL_PROVIDER: 'smtp' or 'sendgrid'
+- EMAIL_PROVIDER: 'smtp', 'sendgrid', or 'mailgun'
 - For SMTP:
   - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_USE_TLS
 - For SendGrid:
   - SENDGRID_API_KEY
+- For Mailgun:
+  - MAILGUN_API_KEY
+  - MAILGUN_DOMAIN (default: mg.fieldsprout.io)
 """
 
 import os
@@ -21,6 +25,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional, List, Dict, Any
 from flask import current_app, render_template_string
+import requests
 
 
 def get_email_config() -> Dict[str, Any]:
@@ -58,6 +63,10 @@ def get_email_config() -> Dict[str, Any]:
 
         # SendGrid settings
         'sendgrid_api_key': current_app.config.get('SENDGRID_API_KEY', os.getenv('SENDGRID_API_KEY', '')),
+
+        # Mailgun settings
+        'mailgun_api_key': current_app.config.get('MAILGUN_API_KEY', os.getenv('MAILGUN_API_KEY', '')),
+        'mailgun_domain': current_app.config.get('MAILGUN_DOMAIN', os.getenv('MAILGUN_DOMAIN', 'mg.fieldsprout.io')),
     }
 
 
@@ -104,6 +113,8 @@ def send_email(
     try:
         if provider == 'sendgrid':
             return _send_via_sendgrid(to, subject, html_body, text_body, reply_to, config)
+        elif provider == 'mailgun':
+            return _send_via_mailgun(to, subject, html_body, text_body, reply_to, config)
         else:  # Default to SMTP
             return _send_via_smtp(to, subject, html_body, text_body, reply_to, config)
     except Exception as e:
@@ -227,6 +238,66 @@ def _send_via_sendgrid(
         return True
     else:
         current_app.logger.error(f"SendGrid returned status {response.status_code} for {to}")
+        return False
+
+
+def _send_via_mailgun(
+    to: str,
+    subject: str,
+    html_body: str,
+    text_body: Optional[str],
+    reply_to: Optional[str],
+    config: Dict[str, Any]
+) -> bool:
+    """Send email via Mailgun API."""
+    api_key = config['mailgun_api_key']
+    domain = config['mailgun_domain']
+
+    if not api_key:
+        current_app.logger.warning(f"Mailgun API key not configured, email to {to} not sent")
+        return False
+
+    if not domain:
+        current_app.logger.warning(f"Mailgun domain not configured, email to {to} not sent")
+        return False
+
+    # Prepare from address
+    from_address = f"{config['from_name']} <postmaster@{domain}>"
+
+    # Prepare request data
+    data = {
+        "from": from_address,
+        "to": to,
+        "subject": subject,
+        "html": html_body
+    }
+
+    if text_body:
+        data["text"] = text_body
+
+    if reply_to:
+        data["h:Reply-To"] = reply_to
+
+    # Send via Mailgun API
+    try:
+        response = requests.post(
+            f"https://api.mailgun.net/v3/{domain}/messages",
+            auth=("api", api_key),
+            data=data,
+            timeout=20
+        )
+
+        if response.status_code == 200:
+            current_app.logger.info(f"Email sent via Mailgun to {to}: {subject}")
+            return True
+        else:
+            current_app.logger.error(
+                f"Mailgun returned status {response.status_code} for {to}: {response.text}"
+            )
+            return False
+
+    except requests.exceptions.RequestException as e:
+        current_app.logger.error(f"Mailgun request failed for {to}: {e}")
         return False
 
 

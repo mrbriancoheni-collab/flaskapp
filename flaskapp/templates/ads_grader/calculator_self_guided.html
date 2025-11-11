@@ -316,15 +316,17 @@
 
           <!-- Value Sources Breakdown -->
           <div class="bg-white rounded-2xl shadow-xl p-8 mb-10 border-2 border-indigo-100">
-            <h3 class="text-2xl font-bold text-gray-900 text-center mb-6">
+            <h3 class="text-2xl font-bold text-gray-900 text-center mb-3">
               <i class="fa-solid fa-chart-pie text-indigo-600 mr-2"></i>
               Where Your Value Comes From
             </h3>
+            <p class="text-sm text-gray-600 text-center mb-6">Check the optimization strategies you'd like to include</p>
 
             <div class="space-y-4">
-              <!-- Breakdown items -->
-              <div class="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200">
+              <!-- Breakdown items with checkboxes -->
+              <label class="flex items-center justify-between p-4 bg-red-50 rounded-lg border-2 border-red-200 cursor-pointer hover:bg-red-100 transition">
                 <div class="flex items-center gap-3 flex-1">
+                  <input type="checkbox" id="check-waste" class="w-6 h-6 text-red-600 rounded focus:ring-2 focus:ring-red-500 cursor-pointer optimization-checkbox" data-type="waste">
                   <div class="bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">1</div>
                   <div>
                     <div class="font-semibold text-gray-900">Stop Wasting Money</div>
@@ -335,10 +337,11 @@
                   <div class="text-xl font-black text-red-600" id="breakdown-waste">$0</div>
                   <div class="text-xs text-gray-500">direct savings</div>
                 </div>
-              </div>
+              </label>
 
-              <div class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+              <label class="flex items-center justify-between p-4 bg-green-50 rounded-lg border-2 border-green-200 cursor-pointer hover:bg-green-100 transition">
                 <div class="flex items-center gap-3 flex-1">
+                  <input type="checkbox" id="check-reinvest" class="w-6 h-6 text-green-600 rounded focus:ring-2 focus:ring-green-500 cursor-pointer optimization-checkbox" data-type="reinvest">
                   <div class="bg-green-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">2</div>
                   <div>
                     <div class="font-semibold text-gray-900">Reinvest in Top Performers</div>
@@ -346,13 +349,14 @@
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="text-xl font-black text-green-600" id="breakdown-reinvest-leads">+0</div>
-                  <div class="text-xs text-gray-500">extra leads</div>
+                  <div class="text-xl font-black text-green-600" id="breakdown-reinvest-revenue">$0</div>
+                  <div class="text-xs text-gray-500"><span id="breakdown-reinvest-leads">+0</span> extra leads</div>
                 </div>
-              </div>
+              </label>
 
-              <div class="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <label class="flex items-center justify-between p-4 bg-blue-50 rounded-lg border-2 border-blue-200 cursor-pointer hover:bg-blue-100 transition">
                 <div class="flex items-center gap-3 flex-1">
+                  <input type="checkbox" id="check-qs" class="w-6 h-6 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer optimization-checkbox" data-type="qs">
                   <div class="bg-blue-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">3</div>
                   <div>
                     <div class="font-semibold text-gray-900">Improve Quality Scores</div>
@@ -360,13 +364,14 @@
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="text-xl font-black text-blue-600" id="breakdown-qs-leads">+0</div>
-                  <div class="text-xs text-gray-500">extra leads</div>
+                  <div class="text-xl font-black text-blue-600" id="breakdown-qs-revenue">$0</div>
+                  <div class="text-xs text-gray-500"><span id="breakdown-qs-leads">+0</span> extra leads</div>
                 </div>
-              </div>
+              </label>
 
-              <div class="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-200">
+              <label class="flex items-center justify-between p-4 bg-purple-50 rounded-lg border-2 border-purple-200 cursor-pointer hover:bg-purple-100 transition">
                 <div class="flex items-center gap-3 flex-1">
+                  <input type="checkbox" id="check-ctr" class="w-6 h-6 text-purple-600 rounded focus:ring-2 focus:ring-purple-500 cursor-pointer optimization-checkbox" data-type="ctr">
                   <div class="bg-purple-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">4</div>
                   <div>
                     <div class="font-semibold text-gray-900">Boost Ad Visibility</div>
@@ -374,13 +379,14 @@
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="text-xl font-black text-purple-600" id="breakdown-ctr-leads">+0</div>
-                  <div class="text-xs text-gray-500">extra leads</div>
+                  <div class="text-xl font-black text-purple-600" id="breakdown-ctr-revenue">$0</div>
+                  <div class="text-xs text-gray-500"><span id="breakdown-ctr-leads">+0</span> extra leads</div>
                 </div>
-              </div>
+              </label>
 
-              <div class="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-200">
+              <label class="flex items-center justify-between p-4 bg-orange-50 rounded-lg border-2 border-orange-200 cursor-pointer hover:bg-orange-100 transition">
                 <div class="flex items-center gap-3 flex-1">
+                  <input type="checkbox" id="check-cvr" class="w-6 h-6 text-orange-600 rounded focus:ring-2 focus:ring-orange-500 cursor-pointer optimization-checkbox" data-type="cvr">
                   <div class="bg-orange-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">5</div>
                   <div>
                     <div class="font-semibold text-gray-900">Optimize Conversion Rate</div>
@@ -388,14 +394,14 @@
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="text-xl font-black text-orange-600" id="breakdown-cvr-leads">+0</div>
-                  <div class="text-xs text-gray-500">extra leads</div>
+                  <div class="text-xl font-black text-orange-600" id="breakdown-cvr-revenue">$0</div>
+                  <div class="text-xs text-gray-500"><span id="breakdown-cvr-leads">+0</span> extra leads</div>
                 </div>
-              </div>
+              </label>
             </div>
 
             <div class="mt-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border-2 border-indigo-200 text-center">
-              <div class="text-sm text-gray-600 mb-1">Combined Monthly Impact</div>
+              <div class="text-sm text-gray-600 mb-1">Total Monthly Impact (Selected Strategies)</div>
               <div class="text-3xl font-black text-indigo-600" id="breakdown-total">$0</div>
             </div>
           </div>
@@ -472,6 +478,30 @@
   'use strict';
 
   console.log('Calculator script loading...');
+
+  // Store optimization values globally
+  window.optimizationValues = {
+    waste: 0,
+    reinvest: 0,
+    qs: 0,
+    ctr: 0,
+    cvr: 0
+  };
+
+  // Update total based on checked boxes
+  window.updateSelectedTotal = function() {
+    var total = 0;
+    var checkboxes = document.querySelectorAll('.optimization-checkbox');
+
+    checkboxes.forEach(function(checkbox) {
+      if (checkbox.checked) {
+        var type = checkbox.getAttribute('data-type');
+        total += window.optimizationValues[type];
+      }
+    });
+
+    document.getElementById('breakdown-total').textContent = '$' + window.formatNumber(total);
+  };
 
   // Toggle advanced options
   window.toggleAdvancedOptions = function() {
@@ -555,18 +585,33 @@
       var totalAdditionalRevenue = revenueFromReinvestment + revenueFromQS + revenueFromCTR + revenueFromCVR;
       var totalMonthlyValue = monthlyWaste + totalAdditionalRevenue;
 
+      // Store individual values for checkbox calculation
+      window.optimizationValues.waste = monthlyWaste;
+      window.optimizationValues.reinvest = revenueFromReinvestment;
+      window.optimizationValues.qs = revenueFromQS;
+      window.optimizationValues.ctr = revenueFromCTR;
+      window.optimizationValues.cvr = revenueFromCVR;
+
       // Update UI (set values immediately for consistency)
       document.getElementById('total-value-hero').textContent = '$' + window.formatNumber(totalMonthlyValue) + '/mo';
       document.getElementById('result-monthly-waste').textContent = '$' + window.formatNumber(monthlyWaste);
       document.getElementById('result-annual-waste').textContent = '$' + window.formatNumber(annualWaste);
       document.getElementById('result-more-leads').textContent = '+' + totalAdditionalLeads;
       document.getElementById('result-more-revenue').textContent = '$' + window.formatNumber(totalAdditionalRevenue);
+
+      // Update breakdown with both revenue and leads
       document.getElementById('breakdown-waste').textContent = '$' + window.formatNumber(monthlyWaste);
+      document.getElementById('breakdown-reinvest-revenue').textContent = '$' + window.formatNumber(revenueFromReinvestment);
       document.getElementById('breakdown-reinvest-leads').textContent = '+' + Math.round(leadsFromReinvestment);
+      document.getElementById('breakdown-qs-revenue').textContent = '$' + window.formatNumber(revenueFromQS);
       document.getElementById('breakdown-qs-leads').textContent = '+' + Math.round(leadsFromQS);
+      document.getElementById('breakdown-ctr-revenue').textContent = '$' + window.formatNumber(revenueFromCTR);
       document.getElementById('breakdown-ctr-leads').textContent = '+' + Math.round(leadsFromCTR);
+      document.getElementById('breakdown-cvr-revenue').textContent = '$' + window.formatNumber(revenueFromCVR);
       document.getElementById('breakdown-cvr-leads').textContent = '+' + Math.round(leadsFromCVR);
-      document.getElementById('breakdown-total').textContent = '$' + window.formatNumber(totalMonthlyValue);
+
+      // Update checkbox total
+      window.updateSelectedTotal();
 
     } catch (error) {
       console.error('Error in calculateROI:', error);
@@ -625,6 +670,12 @@
     if (toggle) {
       toggle.addEventListener('click', window.toggleAdvancedOptions);
     }
+
+    // Add listeners for optimization checkboxes
+    var checkboxes = document.querySelectorAll('.optimization-checkbox');
+    checkboxes.forEach(function(checkbox) {
+      checkbox.addEventListener('change', window.updateSelectedTotal);
+    });
   }
 
   // Run initial calculation

@@ -6,6 +6,51 @@
 {% block content %}
 <div class="max-w-6xl mx-auto space-y-8">
 
+  <!-- Prominent Upgrade Banner for Non-Paid Users -->
+  {% if not is_paid %}
+  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-600 via-green-700 to-emerald-700 shadow-2xl">
+    <div class="absolute inset-0 opacity-20">
+      <div class="absolute inset-0" style="background-image: url('data:image/svg+xml,%3Csvg width=&quot;60&quot; height=&quot;60&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;%3E%3Cpath d=&quot;M30 0l30 30-30 30L0 30z&quot; fill=&quot;%23fff&quot; fill-opacity=&quot;0.1&quot;/%3E%3C/svg%3E'); background-size: 60px 60px;"></div>
+    </div>
+
+    <div class="relative px-6 py-8 md:px-8">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="text-center md:text-left flex-1">
+          <div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-1 text-white text-sm font-semibold mb-3">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
+            </svg>
+            <span>Limited Time Offer</span>
+          </div>
+          <h2 class="text-3xl md:text-4xl font-extrabold text-white mb-2">
+            Complete Your Setup – Save $2,400/year!
+          </h2>
+          <p class="text-green-50 text-lg max-w-2xl">
+            You're just one step away from unlocking AI-powered campaign optimization, automated lead follow-up, and unlimited service pages. Start saving on your annual plan today.
+          </p>
+          <div class="mt-4 flex items-center gap-6 text-white/90 text-sm">
+            <div class="flex items-center gap-2">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
+              </svg>
+              <span>Cancel anytime</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-3">
+          <button onclick="upgradeToAnnual()" class="bg-white text-green-700 hover:bg-green-50 font-bold px-8 py-4 text-lg rounded-lg shadow-xl hover:shadow-2xl transition-all transform hover:scale-105">
+            Complete Setup – $2,400/year
+          </button>
+          <button onclick="showPricingDetails()" class="text-white/90 hover:text-white text-sm underline">
+            View all pricing options
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-2xl font-semibold">Welcome to your dashboard</h1>
@@ -16,10 +61,6 @@
         {% endif %}
       </p>
     </div>
-    {% if not is_paid %}
-      <a href="{{ url_for('account_bp.connect', provider='wp') }}"
-         class="rounded-md bg-rose-600 text-white px-4 py-2 hover:bg-rose-700">Go Pro</a>
-    {% endif %}
   </div>
 
   <!-- Getting Started -->
@@ -308,4 +349,65 @@
     {% endfor %}
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function upgradeToAnnual() {
+  // Get Stripe price ID from config
+  const priceId = '{{ config.STRIPE_YEARLY_PRICE_ID }}';
+
+  if (!priceId) {
+    alert('Pricing configuration error. Please contact support at hi@fieldsprout.io');
+    return;
+  }
+
+  // Show loading state
+  const button = event.target;
+  const originalText = button.innerHTML;
+  button.innerHTML = '<svg class="animate-spin h-5 w-5 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Loading...';
+  button.disabled = true;
+
+  // Create Stripe Checkout session
+  fetch('/billing/create-checkout-session', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      price_id: priceId,
+      plan_type: 'annual',
+      success_url: window.location.origin + '/account/dashboard?upgrade=success',
+      cancel_url: window.location.href
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.error) {
+      alert('Error: ' + data.error);
+      button.disabled = false;
+      button.innerHTML = originalText;
+    } else if (data.checkout_url) {
+      // Redirect to Stripe Checkout
+      window.location.href = data.checkout_url;
+    } else {
+      alert('Unexpected response. Please try again or contact support.');
+      button.disabled = false;
+      button.innerHTML = originalText;
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Failed to start checkout. Please try again or contact support at hi@fieldsprout.io');
+    button.disabled = false;
+    button.innerHTML = originalText;
+  });
+}
+
+function showPricingDetails() {
+  // Redirect to pricing page or show modal
+  // For now, redirect to home page pricing section
+  window.location.href = '/#pricing';
+}
+</script>
 {% endblock %}

@@ -62,6 +62,9 @@
       <a href="{{ url_for('admin_bp.crm_list') }}" class="primary-btn {% if request.endpoint in ['admin_bp.crm_list','admin_bp.crm_new','admin_bp.crm_detail','admin_bp.crm_edit'] %}active{% endif %}" title="CRM">
         <i class="fa-solid fa-address-book"></i>
       </a>
+      <a href="{{ url_for('admin_bp.ai_prompts') }}" class="primary-btn {% if request.endpoint in ['admin_bp.ai_prompts','admin_bp.ai_prompt_edit'] %}active{% endif %}" title="AI Prompts">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+      </a>
       <a href="{{ url_for('admin_bp.logs') }}" class="primary-btn {% if request.endpoint=='admin_bp.logs' %}active{% endif %}" title="Audit Logs">
         <i class="fa-solid fa-clipboard-list"></i>
       </a>
@@ -118,6 +121,9 @@
 
       <div class="sidebar-label mt-4"><i class="fa-solid fa-cog"></i>System</div>
 
+      <a class="secondary-link {% if request.endpoint in ['admin_bp.ai_prompts','admin_bp.ai_prompt_edit'] %}active{% endif %}" href="{{ url_for('admin_bp.ai_prompts') }}">
+        <i class="fa-solid fa-wand-magic-sparkles"></i><span>AI Prompts</span>
+      </a>
       <a class="secondary-link {% if request.endpoint=='admin_bp.logs' %}active{% endif %}" href="{{ url_for('admin_bp.logs') }}">
         <i class="fa-solid fa-clipboard-list"></i><span>Audit Logs</span>
       </a>

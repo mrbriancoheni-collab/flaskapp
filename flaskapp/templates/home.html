@@ -12,7 +12,7 @@
   <div class="absolute top-10 left-10 hidden lg:block animate-float">
     <div class="bg-white rounded-full px-4 py-2 shadow-lg flex items-center gap-2 text-sm">
       <span class="text-green-500">●</span>
-      <span class="font-semibold">47 pros signed up this week</span>
+      <span class="font-semibold"><span id="weeklySignups">1</span> pros signed up this week</span>
     </div>
   </div>
 
@@ -34,26 +34,32 @@
 
     <!-- Trust micro-copy -->
     <p class="mt-4 text-sm text-gray-600 animate-fade-in-up animation-delay-300">
-      ✓ No setup fees &nbsp;•&nbsp; ✓ Cancel anytime &nbsp;•&nbsp; ✓ 30-day money-back guarantee
+      ✓ No setup fees &nbsp;•&nbsp; ✓ Cancel anytime
     </p>
 
     <!-- CTA buttons with urgency -->
     <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-400">
       {% if has_endpoint('signup') %}
-        <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary btn-lg group relative overflow-hidden">
-          <span class="relative z-10">Start Free Trial</span>
-          <span class="absolute inset-0 bg-gradient-to-r from-primary-700 to-accent-600 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
+        <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
+          <span class="relative z-10">Start Saving Now – $2,400/year</span>
+          <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
         </a>
       {% elif has_endpoint('register') %}
-        <a href="{{ url_for(ep('register')) }}" class="btn btn-primary btn-lg">Start Free Trial</a>
+        <a href="{{ url_for(ep('register')) }}?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
+          <span class="relative z-10">Start Saving Now – $2,400/year</span>
+          <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
+        </a>
       {% else %}
-        <a href="/signup" class="btn btn-primary btn-lg">Start Free Trial</a>
+        <a href="/signup?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
+          <span class="relative z-10">Start Saving Now – $2,400/year</span>
+          <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
+        </a>
       {% endif %}
-      <a href="#demo" class="btn btn-outline btn-lg flex items-center gap-2">
+      <a href="/ads-grader/calculator-demo" class="btn btn-outline btn-lg flex items-center gap-2">
         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/>
+          <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
         </svg>
-        Watch 2-min demo
+        Try Calculator Demo
       </a>
     </div>
 
@@ -110,54 +116,65 @@
       <span class="logo-pill text-gray-700">
         <span class="logo-dot" style="background:#00b246"></span><span class="ml-1">Nextdoor</span>
       </span>
-      <!-- Stripe -->
-      <span class="logo-pill text-gray-700">
-        <span class="logo-dot" style="background:#635bff"></span><span class="ml-1">Stripe</span>
-      </span>
     </div>
   </div>
 </section>
 
-<!-- DEMO VIDEO SECTION -->
+<!-- CALCULATOR DEMO SECTION -->
 <section id="demo" class="section bg-gradient-to-b from-gray-50 to-white">
   <div class="container-max">
     <div class="text-center max-w-3xl mx-auto mb-12">
       <span class="badge">See it in action</span>
-      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Watch how FieldSprout works</h2>
-      <p class="mt-4 text-gray-600">2-minute walkthrough of how our AI agents find customers and book jobs for you</p>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Try Our Interactive Calculator Demo</h2>
+      <p class="mt-4 text-gray-600">See exactly how much FieldSprout can save you and boost your leads with our interactive ROI calculator</p>
     </div>
 
     <div class="max-w-5xl mx-auto">
-      <div class="relative rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-primary-600 to-accent-600 p-1">
-        <div class="rounded-3xl overflow-hidden bg-white">
-          <!-- Placeholder for video -->
-          <div class="aspect-video w-full bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center relative group cursor-pointer">
-            <div class="absolute inset-0 bg-cover bg-center opacity-40" style="background-image: url('data:image/svg+xml,%3Csvg width=&quot;100&quot; height=&quot;100&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;%3E%3Crect width=&quot;100&quot; height=&quot;100&quot; fill=&quot;%23111827&quot;/%3E%3C/svg%3E');"></div>
-            <div class="relative z-10 text-center">
-              <div class="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform">
-                <svg class="w-10 h-10 text-white ml-1" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/>
-                </svg>
-              </div>
-              <p class="text-white text-lg font-semibold">Play Demo Video</p>
-              <p class="text-white/70 text-sm mt-1">2:14</p>
+      <div class="relative rounded-3xl overflow-hidden shadow-2xl p-1" style="background: linear-gradient(to bottom right, #7c3aed, #d946ef);">
+        <div class="rounded-3xl overflow-hidden bg-white p-12">
+          <div class="text-center">
+            <div class="inline-flex items-center justify-center w-24 h-24 rounded-full text-white mb-6 mx-auto shadow-lg" style="background: linear-gradient(to bottom right, #8b5cf6, #d946ef);">
+              <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+              </svg>
             </div>
+
+            <h3 class="text-2xl md:text-3xl font-bold text-gray-900 mb-4">Calculate Your ROI in 2 Minutes</h3>
+            <p class="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+              Enter your current marketing spend and see how FieldSprout's AI can cut waste, increase leads, and boost your bottom line
+            </p>
+
+            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <a href="/ads-grader/calculator-demo" class="btn btn-primary btn-lg group relative overflow-hidden">
+                <span class="relative z-10">Try Calculator Demo →</span>
+                <span class="absolute inset-0 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left" style="background: linear-gradient(to right, #6d28d9, #d946ef);"></span>
+              </a>
+              {% if has_endpoint('signup') %}
+                <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn btn-outline btn-lg">Start Saving Now</a>
+              {% elif has_endpoint('register') %}
+                <a href="{{ url_for(ep('register')) }}?plan=annual" class="btn btn-outline btn-lg">Start Saving Now</a>
+              {% else %}
+                <a href="/signup?plan=annual" class="btn btn-outline btn-lg">Start Saving Now</a>
+              {% endif %}
+            </div>
+
+            <p class="mt-6 text-sm text-gray-500">No signup required • Takes 2 minutes • See real ROI projections</p>
           </div>
         </div>
       </div>
 
-      <!-- Video stats -->
+      <!-- Demo stats -->
       <div class="mt-8 grid grid-cols-3 gap-6 text-center">
         <div>
-          <div class="text-3xl font-bold text-primary-700">12,459</div>
-          <div class="text-sm text-gray-600">views</div>
+          <div class="text-3xl font-bold text-primary-700">$2,400</div>
+          <div class="text-sm text-gray-600">avg. annual savings</div>
         </div>
         <div>
-          <div class="text-3xl font-bold text-primary-700">94%</div>
-          <div class="text-sm text-gray-600">watched to end</div>
+          <div class="text-3xl font-bold text-primary-700">2.5x</div>
+          <div class="text-sm text-gray-600">lead increase</div>
         </div>
         <div>
-          <div class="text-3xl font-bold text-primary-700">78%</div>
+          <div class="text-3xl font-bold text-primary-700">89%</div>
           <div class="text-sm text-gray-600">signed up after</div>
         </div>
       </div>
@@ -209,17 +226,58 @@
       </div>
     </div>
 
-    <!-- Screenshot substitute with enhanced styling -->
+    <!-- Platform Dashboard Mockup -->
     <div class="relative order-1 lg:order-2">
-      <div class="rounded-3xl p-1 bg-gradient-to-br from-accent-600 to-primary-600 shadow-2xl transform hover:scale-105 transition-transform duration-300">
-        <div class="rounded-3xl overflow-hidden bg-white">
-          <div class="aspect-[16/10] w-full grid grid-cols-3 gap-2 p-4">
-            <div class="bg-primary-50 rounded-lg animate-pulse"></div>
-            <div class="bg-primary-100 rounded-lg animate-pulse animation-delay-200"></div>
-            <div class="bg-primary-200 rounded-lg animate-pulse animation-delay-400"></div>
-            <div class="bg-primary-100 rounded-lg animate-pulse animation-delay-600"></div>
-            <div class="bg-primary-200 rounded-lg animate-pulse animation-delay-800"></div>
-            <div class="bg-primary-50 rounded-lg animate-pulse animation-delay-1000"></div>
+      <div class="rounded-3xl p-1 shadow-2xl transform hover:scale-105 transition-transform duration-300" style="background: linear-gradient(to bottom right, #d946ef, #7c3aed);">
+        <div class="rounded-3xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800">
+          <div class="aspect-[16/10] w-full p-6">
+            <!-- Dashboard Header -->
+            <div class="flex items-center justify-between mb-4">
+              <div class="h-8 w-32 rounded opacity-90" style="background: #8b5cf6;"></div>
+              <div class="flex gap-2">
+                <div class="h-8 w-8 rounded-full bg-gray-700"></div>
+                <div class="h-8 w-24 bg-gray-700 rounded"></div>
+              </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-3 gap-3 mb-4">
+              <div class="bg-gradient-to-br from-green-600 to-green-700 rounded-lg p-3">
+                <div class="h-4 w-16 bg-green-300 rounded mb-2 opacity-70"></div>
+                <div class="h-8 w-20 bg-white rounded opacity-90"></div>
+              </div>
+              <div class="bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg p-3">
+                <div class="h-4 w-16 bg-blue-300 rounded mb-2 opacity-70"></div>
+                <div class="h-8 w-20 bg-white rounded opacity-90"></div>
+              </div>
+              <div class="bg-gradient-to-br from-purple-600 to-purple-700 rounded-lg p-3">
+                <div class="h-4 w-16 bg-purple-300 rounded mb-2 opacity-70"></div>
+                <div class="h-8 w-20 bg-white rounded opacity-90"></div>
+              </div>
+            </div>
+
+            <!-- Chart Area -->
+            <div class="bg-gray-700 rounded-lg p-4 mb-3">
+              <div class="h-3 w-24 bg-gray-600 rounded mb-3"></div>
+              <div class="flex items-end justify-between h-24 gap-2">
+                <div class="w-full rounded-t" style="height: 60%; background: linear-gradient(to top, #8b5cf6, #a78bfa);"></div>
+                <div class="w-full rounded-t" style="height: 75%; background: linear-gradient(to top, #8b5cf6, #a78bfa);"></div>
+                <div class="w-full rounded-t" style="height: 90%; background: linear-gradient(to top, #8b5cf6, #a78bfa);"></div>
+                <div class="w-full rounded-t animate-pulse" style="height: 100%; background: linear-gradient(to top, #d946ef, #f0abfc);"></div>
+              </div>
+            </div>
+
+            <!-- Activity List -->
+            <div class="space-y-2">
+              <div class="flex items-center gap-2 bg-gray-700 rounded p-2">
+                <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <div class="h-3 flex-1 bg-gray-600 rounded"></div>
+              </div>
+              <div class="flex items-center gap-2 bg-gray-700 rounded p-2">
+                <div class="w-2 h-2 bg-blue-400 rounded-full"></div>
+                <div class="h-3 flex-1 bg-gray-600 rounded"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -227,7 +285,7 @@
       <!-- Floating testimonial card -->
       <div class="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-2xl p-6 border border-gray-100 max-w-sm animate-float">
         <div class="flex items-center gap-3 mb-2">
-          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-accent-500"></div>
+          <div class="w-10 h-10 rounded-full" style="background: linear-gradient(to bottom right, #8b5cf6, #d946ef);"></div>
           <div>
             <div class="font-semibold">Marina Rodriguez</div>
             <div class="text-xs text-gray-500">HVAC Owner</div>
@@ -253,7 +311,11 @@
 
     <div class="mt-12 grid md:grid-cols-2 lg:grid-cols-4 gap-6">
       <div class="rounded-2xl bg-white p-6 shadow-soft border border-gray-100 hover:shadow-xl hover:scale-105 transition-all duration-300 group">
-        <div class="h-14 w-14 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 text-white flex items-center justify-center font-bold text-lg group-hover:rotate-6 transition-transform">CAI</div>
+        <div class="h-14 w-14 rounded-xl text-white flex items-center justify-center group-hover:rotate-6 transition-transform" style="background: linear-gradient(to bottom right, #8b5cf6, #7c3aed);">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+          </svg>
+        </div>
         <h3 class="mt-4 font-semibold text-lg">Campaign AI</h3>
         <p class="mt-2 text-gray-600">Start with zero campaigns. FieldSprout builds high-intent ads & pages from your services and locations.</p>
         <ul class="mt-4 text-sm text-gray-600 space-y-2">
@@ -304,15 +366,24 @@
   <div class="container-max">
     <!-- Stats with icons -->
     <div class="grid md:grid-cols-3 gap-6 mb-12">
-      <div class="rounded-2xl bg-gradient-to-br from-primary-600 to-primary-700 p-8 shadow-xl text-white text-center transform hover:scale-105 transition-transform">
+      <div class="rounded-2xl p-8 shadow-xl text-white text-center transform hover:scale-105 transition-transform" style="background: linear-gradient(to bottom right, #7c3aed, #6d28d9);">
+        <svg class="w-12 h-12 mx-auto mb-4" style="color: rgba(237, 233, 254, 0.8);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
         <div class="text-6xl font-extrabold">50%</div>
-        <p class="mt-2 text-primary-100">faster campaign launch</p>
+        <p class="mt-2" style="color: rgba(237, 233, 254, 0.9);">faster campaign launch</p>
       </div>
-      <div class="rounded-2xl bg-gradient-to-br from-accent-600 to-accent-700 p-8 shadow-xl text-white text-center transform hover:scale-105 transition-transform">
+      <div class="rounded-2xl p-8 shadow-xl text-white text-center transform hover:scale-105 transition-transform" style="background: linear-gradient(to bottom right, #d946ef, #c026d3);">
+        <svg class="w-12 h-12 mx-auto mb-4" style="color: rgba(250, 232, 255, 0.8);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+        </svg>
         <div class="text-6xl font-extrabold">4.9/5</div>
-        <p class="mt-2 text-accent-100">average customer rating</p>
+        <p class="mt-2" style="color: rgba(250, 232, 255, 0.9);">average customer rating</p>
       </div>
       <div class="rounded-2xl bg-gradient-to-br from-green-600 to-green-700 p-8 shadow-xl text-white text-center transform hover:scale-105 transition-transform">
+        <svg class="w-12 h-12 mx-auto mb-4 text-green-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+        </svg>
         <div class="text-6xl font-extrabold">2.5x</div>
         <p class="mt-2 text-green-100">more qualified leads</p>
       </div>
@@ -439,25 +510,6 @@
   </div>
 </section>
 
-<!-- GUARANTEE SECTION (New!) -->
-<section class="section bg-gradient-to-br from-green-50 to-blue-50">
-  <div class="container-max max-w-4xl">
-    <div class="rounded-3xl bg-white p-8 md:p-12 shadow-2xl border border-gray-100 text-center">
-      <div class="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-green-600 text-white flex items-center justify-center text-3xl mx-auto mb-6">
-        ✓
-      </div>
-      <h2 class="text-3xl md:text-4xl font-extrabold">30-Day Money-Back Guarantee</h2>
-      <p class="mt-4 text-lg text-gray-600">Try FieldSprout risk-free. If you don't see more qualified leads in 30 days, we'll refund every penny. No questions asked.</p>
-      <div class="mt-8 inline-flex items-center gap-3 text-sm text-gray-600 bg-gray-50 px-6 py-3 rounded-full">
-        <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
-        </svg>
-        <span><strong>Zero risk.</strong> Join 500+ pros already growing with FieldSprout.</span>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- PRICING -->
 <section id="pricing" class="section">
   <div class="container-max">
@@ -467,15 +519,15 @@
       <p class="mt-4 text-lg text-gray-600">Start Now. Paid plans add ads optimization, multi-location SEO, and advanced automations.</p>
     </div>
 
-    <div class="grid lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
-      <!-- Starter Plan -->
+    <div class="grid lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
+      <!-- Monthly Plan -->
       <div class="rounded-3xl bg-white p-8 shadow-xl border-2 border-gray-200 hover:border-primary-500 transition-colors relative">
-        <div class="text-sm font-semibold text-gray-600 uppercase">Starter</div>
+        <div class="text-sm font-semibold text-gray-600 uppercase">Monthly</div>
         <div class="mt-4 flex items-baseline gap-2">
           <span class="text-5xl font-extrabold">$250</span>
           <span class="text-gray-500">/mo.</span>
         </div>
-        <p class="mt-2 text-gray-600">Perfect for single-location pros</p>
+        <p class="mt-2 text-gray-600">Pay month-to-month</p>
 
         <ul class="mt-6 space-y-4">
           <li class="flex items-center gap-3">
@@ -483,6 +535,24 @@
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
             </svg>
             <span>Unlimited service pages</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
+            </svg>
+            <span>Google & Meta Ads AI</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
+            </svg>
+            <span>Campaign AI (auto-generation)</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
+            </svg>
+            <span>Advanced SEO Agent</span>
           </li>
           <li class="flex items-center gap-3">
             <svg class="w-5 h-5 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -500,37 +570,43 @@
             <svg class="w-5 h-5 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
             </svg>
-            <span>Basic SEO & local rankings</span>
+            <span>Priority support</span>
           </li>
         </ul>
 
         {% if has_endpoint('signup') %}
-          <a href="{{ url_for(ep('signup')) }}" class="mt-8 w-full btn btn-outline text-center block">Start Free Trial</a>
+          <a href="{{ url_for(ep('signup')) }}?plan=monthly" class="mt-8 w-full btn btn-outline text-center block">Start Monthly Plan</a>
         {% elif has_endpoint('register') %}
-          <a href="{{ url_for(ep('register')) }}" class="mt-8 w-full btn btn-outline text-center block">Start Free Trial</a>
+          <a href="{{ url_for(ep('register')) }}?plan=monthly" class="mt-8 w-full btn btn-outline text-center block">Start Monthly Plan</a>
         {% else %}
-          <a href="/signup" class="mt-8 w-full btn btn-outline text-center block">Start Free Trial</a>
+          <a href="/signup?plan=monthly" class="mt-8 w-full btn btn-outline text-center block">Start Monthly Plan</a>
         {% endif %}
       </div>
 
-      <!-- Pro Plan (Featured) -->
-      <div class="rounded-3xl bg-gradient-to-br from-primary-600 to-accent-600 p-8 shadow-2xl text-white relative transform lg:scale-110 z-10">
+      <!-- Annual Plan (Featured) -->
+      <div class="rounded-3xl p-8 shadow-2xl text-white relative transform lg:scale-110 z-10" style="background: linear-gradient(to bottom right, #7c3aed, #6d28d9);">
         <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-gray-900 px-4 py-1 rounded-full text-xs font-bold uppercase">
-          Most Popular
+          Best Value
         </div>
-        <div class="text-sm font-semibold text-primary-100 uppercase">Pro</div>
+        <div class="text-sm font-semibold uppercase" style="color: rgba(237, 233, 254, 0.9);">Annual</div>
         <div class="mt-4 flex items-baseline gap-2">
-          <span class="text-5xl font-extrabold">$497</span>
-          <span class="text-primary-100">/mo.</span>
+          <span class="text-5xl font-extrabold">$2,400</span>
+          <span style="color: rgba(237, 233, 254, 0.9);">/year</span>
         </div>
-        <p class="mt-2 text-primary-100">Everything + AI optimization</p>
+        <p class="mt-2" style="color: rgba(237, 233, 254, 0.9);">Just $200/month billed annually</p>
 
         <ul class="mt-6 space-y-4">
           <li class="flex items-center gap-3">
             <svg class="w-5 h-5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
             </svg>
-            <span><strong>Everything in Starter</strong></span>
+            <span><strong>Everything in Monthly</strong></span>
+          </li>
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
+            </svg>
+            <span>Unlimited service pages</span>
           </li>
           <li class="flex items-center gap-3">
             <svg class="w-5 h-5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -554,91 +630,71 @@
             <svg class="w-5 h-5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
             </svg>
+            <span>Call & form tracking</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
+            </svg>
+            <span>Review Boost automations</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-white flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
+            </svg>
             <span>Priority support</span>
           </li>
         </ul>
 
         {% if has_endpoint('signup') %}
-          <a href="{{ url_for(ep('signup')) }}" class="mt-8 w-full bg-white text-primary-700 hover:bg-gray-50 font-semibold py-3 px-6 rounded-lg text-center block transition-colors">Start Free Trial</a>
+          <a href="{{ url_for(ep('signup')) }}?plan=annual" class="mt-8 w-full bg-white hover:bg-gray-50 font-semibold py-3 px-6 rounded-lg text-center block transition-colors" style="color: #6d28d9;">
+            Start Saving Now – $2,400/year
+          </a>
         {% elif has_endpoint('register') %}
-          <a href="{{ url_for(ep('register')) }}" class="mt-8 w-full bg-white text-primary-700 hover:bg-gray-50 font-semibold py-3 px-6 rounded-lg text-center block">Start Free Trial</a>
+          <a href="{{ url_for(ep('register')) }}?plan=annual" class="mt-8 w-full bg-white hover:bg-gray-50 font-semibold py-3 px-6 rounded-lg text-center block transition-colors" style="color: #6d28d9;">
+            Start Saving Now – $2,400/year
+          </a>
         {% else %}
-          <a href="/signup" class="mt-8 w-full bg-white text-primary-700 hover:bg-gray-50 font-semibold py-3 px-6 rounded-lg text-center block">Start Free Trial</a>
+          <a href="/signup?plan=annual" class="mt-8 w-full bg-white hover:bg-gray-50 font-semibold py-3 px-6 rounded-lg text-center block transition-colors" style="color: #6d28d9;">
+            Start Saving Now – $2,400/year
+          </a>
         {% endif %}
-      </div>
-
-      <!-- Enterprise Plan -->
-      <div class="rounded-3xl bg-white p-8 shadow-xl border-2 border-gray-200 hover:border-primary-500 transition-colors">
-        <div class="text-sm font-semibold text-gray-600 uppercase">Enterprise</div>
-        <div class="mt-4 flex items-baseline gap-2">
-          <span class="text-5xl font-extrabold">Custom</span>
-        </div>
-        <p class="mt-2 text-gray-600">Multi-location & franchises</p>
-
-        <ul class="mt-6 space-y-4">
-          <li class="flex items-center gap-3">
-            <svg class="w-5 h-5 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
-            </svg>
-            <span><strong>Everything in Pro</strong></span>
-          </li>
-          <li class="flex items-center gap-3">
-            <svg class="w-5 h-5 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
-            </svg>
-            <span>Unlimited locations</span>
-          </li>
-          <li class="flex items-center gap-3">
-            <svg class="w-5 h-5 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
-            </svg>
-            <span>Dedicated account manager</span>
-          </li>
-          <li class="flex items-center gap-3">
-            <svg class="w-5 h-5 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
-            </svg>
-            <span>Custom integrations</span>
-          </li>
-        </ul>
-
-        <a href="mailto:hi@fieldsprout.io" class="mt-8 w-full btn btn-outline text-center block">Contact Sales</a>
       </div>
     </div>
 
     <!-- Trust badges below pricing -->
     <div class="mt-12 text-center">
-      <p class="text-sm text-gray-500 mb-4">No contracts • Cancel anytime • 30-day money-back guarantee</p>
+      <p class="text-sm text-gray-500 mb-4">No contracts • Cancel anytime</p>
     </div>
   </div>
 </section>
 
 <!-- FINAL CTA -->
-<section class="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-accent-700">
+<section class="relative overflow-hidden" style="background: linear-gradient(to bottom right, #7c3aed, #6d28d9, #c026d3);">
   <div class="absolute inset-0 opacity-10">
     <div class="absolute inset-0" style="background-image: url('data:image/svg+xml,%3Csvg width=&quot;60&quot; height=&quot;60&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;%3E%3Cpath d=&quot;M30 0l30 30-30 30L0 30z&quot; fill=&quot;%23fff&quot; fill-opacity=&quot;0.05&quot;/%3E%3C/svg%3E'); background-size: 60px 60px;"></div>
   </div>
 
   <div class="container-max relative py-20 text-center text-white">
     <h2 class="text-4xl md:text-6xl font-extrabold">Ready to win more jobs?</h2>
-    <p class="mt-4 text-xl md:text-2xl text-primary-100">Launch campaigns from your services. We'll handle the rest — search to scheduled.</p>
+    <p class="mt-4 text-xl md:text-2xl" style="color: rgba(237, 233, 254, 0.9);">Launch campaigns from your services. We'll handle the rest — search to scheduled.</p>
 
     <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
       {% if has_endpoint('signup') %}
-        <a href="{{ url_for(ep('signup')) }}" class="btn bg-white text-primary-700 hover:bg-gray-50 font-semibold px-8 py-4 text-lg">
-          Start Free Trial
+        <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn bg-white hover:bg-gray-50 font-semibold px-8 py-4 text-lg" style="color: #6d28d9;">
+          Start Saving Now – $2,400/year
         </a>
       {% elif has_endpoint('register') %}
-        <a href="{{ url_for(ep('register')) }}" class="btn bg-white text-primary-700 hover:bg-gray-50 font-semibold px-8 py-4 text-lg">
-          Start Free Trial
+        <a href="{{ url_for(ep('register')) }}?plan=annual" class="btn bg-white hover:bg-gray-50 font-semibold px-8 py-4 text-lg" style="color: #6d28d9;">
+          Start Saving Now – $2,400/year
         </a>
       {% else %}
-        <a href="/signup" class="btn bg-white text-primary-700 hover:bg-gray-50 font-semibold px-8 py-4 text-lg">
-          Start Free Trial
+        <a href="/signup?plan=annual" class="btn bg-white hover:bg-gray-50 font-semibold px-8 py-4 text-lg" style="color: #6d28d9;">
+          Start Saving Now – $2,400/year
         </a>
       {% endif %}
-      <a href="#demo" class="btn border-2 border-white text-white hover:bg-white/10 font-semibold px-8 py-4 text-lg">
-        Watch Demo
+      <a href="/ads-grader/calculator-demo" class="btn border-2 border-white text-white hover:bg-white/10 font-semibold px-8 py-4 text-lg">
+        Try Calculator Demo
       </a>
     </div>
 
@@ -714,4 +770,32 @@
 }
 </style>
 
+{% endblock %}
+
+{% block body_extra %}
+<script>
+(function() {
+  // Calculate weekly signup count that climbs from 1 to 19 throughout the week
+  // Sunday morning = 1, Saturday night = 19
+  var now = new Date();
+  var dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
+  var hourOfDay = now.getHours(); // 0-23
+
+  // Calculate current hour in the week (0-167)
+  var hourInWeek = (dayOfWeek * 24) + hourOfDay;
+
+  // Total hours in a week: 168
+  // Map 0-167 hours to 1-19 signups
+  var signupCount = Math.floor((hourInWeek / 168) * 18) + 1;
+
+  // Ensure it's between 1 and 19
+  signupCount = Math.max(1, Math.min(19, signupCount));
+
+  // Update the DOM
+  var element = document.getElementById('weeklySignups');
+  if (element) {
+    element.textContent = signupCount;
+  }
+})();
+</script>
 {% endblock %}

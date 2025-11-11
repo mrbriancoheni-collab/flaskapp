@@ -76,15 +76,18 @@
   </div>
 
   <!-- Total Potential Value -->
-  {% set ns = namespace(total_monthly_savings=0, total_monthly_leads=0) %}
+  {% set ns = namespace(total_monthly_savings=0, total_monthly_leads=0, total_lead_value=0) %}
   {% for opp in analysis.opportunities %}
     {% if opp.monthly_savings %}
       {% set ns.total_monthly_savings = ns.total_monthly_savings + opp.monthly_savings %}
     {% endif %}
     {% if opp.monthly_leads %}
       {% set ns.total_monthly_leads = ns.total_monthly_leads + opp.monthly_leads %}
+      {# Assume $500 average value per lead for home services #}
+      {% set ns.total_lead_value = ns.total_lead_value + (opp.monthly_leads * 500) %}
     {% endif %}
   {% endfor %}
+  {% set ns.total_combined_value = ns.total_monthly_savings + ns.total_lead_value %}
 
   {% if ns.total_monthly_savings > 0 or ns.total_monthly_leads > 0 %}
   <div class="bg-gradient-to-br from-emerald-50 to-green-100 border-2 border-emerald-300 rounded-xl shadow-xl p-8">
@@ -121,12 +124,12 @@
           <span class="text-5xl">📈</span>
         </div>
         <div class="text-center">
-          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">More Leads</div>
+          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Revenue from Leads</div>
           <div class="text-4xl font-black text-blue-600 mb-1">
-            +{{ ns.total_monthly_leads|int }}
+            ${{ "%.0f"|format(ns.total_lead_value) }}
           </div>
           <div class="text-xs text-gray-500">
-            +{{ (ns.total_monthly_leads * 12)|int }} leads/year
+            +{{ ns.total_monthly_leads|int }} leads/month (${{ "%.0f"|format(ns.total_lead_value * 12) }}/year)
           </div>
         </div>
       </div>
@@ -134,12 +137,12 @@
 
       <div class="bg-white rounded-xl p-6 shadow-md border-2 border-purple-300">
         <div class="flex items-center justify-center mb-3">
-          <span class="text-5xl">🚀</span>
+          <span class="text-5xl">💰</span>
         </div>
         <div class="text-center">
-          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Implementation Time</div>
+          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Total Monthly Value</div>
           <div class="text-4xl font-black text-purple-600 mb-1">
-            {{ analysis.opportunities|length }}
+            ${{ "%.0f"|format(ns.total_combined_value) }}
           </div>
           <div class="text-xs text-gray-500">
             opportunities identified
@@ -209,9 +212,9 @@
             </div>
             {% elif opp.monthly_leads %}
             <div class="bg-white border-2 border-blue-200 rounded-lg p-3 min-w-[140px]">
-              <div class="text-xs text-gray-600 uppercase font-semibold">More Leads</div>
-              <div class="text-2xl font-bold text-blue-600">+{{ opp.monthly_leads|int }}</div>
-              <div class="text-xs text-gray-500">/month</div>
+              <div class="text-xs text-gray-600 uppercase font-semibold">Revenue Value</div>
+              <div class="text-2xl font-bold text-blue-600">${{ "%.0f"|format(opp.monthly_leads * 500) }}</div>
+              <div class="text-xs text-gray-500">+{{ opp.monthly_leads|int }} leads/mo</div>
             </div>
             {% elif opp.monthly_time_saved %}
             <div class="bg-white border-2 border-purple-200 rounded-lg p-3 min-w-[140px]">
@@ -224,6 +227,18 @@
         </div>
       </div>
       {% endfor %}
+    </div>
+
+    <!-- Approve Optimizations Button -->
+    <div class="mt-6 text-center">
+      <button onclick="openOptimizationsModal()" class="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-lg rounded-xl hover:from-green-600 hover:to-emerald-700 transition shadow-xl transform hover:scale-105">
+        <i class="fa-solid fa-check-double text-2xl"></i>
+        <span>Select & Approve Optimizations</span>
+        <span class="bg-white/20 px-3 py-1 rounded-full text-sm">{{ analysis.opportunities|length }} Actions</span>
+      </button>
+      <p class="text-sm text-gray-600 mt-2">
+        <i class="fa-solid fa-info-circle"></i> Choose which changes to implement in your Google Ads account
+      </p>
     </div>
   </div>
 
@@ -324,4 +339,317 @@
     </div>
   </div>
 </div>
+
+<!-- Optimization Approval Modal -->
+<div id="optimizationsModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
+  <div class="min-h-screen px-4 py-8 flex items-center justify-center">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full mx-auto">
+
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-t-2xl">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-2xl font-bold mb-1">Select Optimizations to Approve</h2>
+            <p class="text-indigo-100 text-sm">Choose which changes you'd like to implement in your Google Ads account</p>
+          </div>
+          <button onclick="closeOptimizationsModal()" class="text-white hover:bg-white/20 rounded-lg p-2 transition">
+            <i class="fa-solid fa-times text-2xl"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 max-h-[70vh] overflow-y-auto">
+
+        <!-- Quick Actions -->
+        <div class="flex items-center justify-between mb-6 pb-4 border-b">
+          <div class="text-sm text-gray-600">
+            <i class="fa-solid fa-info-circle text-indigo-600"></i>
+            Select the optimizations you want to implement
+          </div>
+          <div class="flex gap-2">
+            <button onclick="selectAllOptimizations(true)" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium px-3 py-1 hover:bg-indigo-50 rounded">
+              <i class="fa-solid fa-check-square mr-1"></i> Select All
+            </button>
+            <button onclick="selectAllOptimizations(false)" class="text-sm text-gray-600 hover:text-gray-800 font-medium px-3 py-1 hover:bg-gray-100 rounded">
+              <i class="fa-regular fa-square mr-1"></i> Clear All
+            </button>
+          </div>
+        </div>
+
+        <!-- Optimization Items -->
+        <div class="space-y-4">
+          {% for opp in analysis.opportunities %}
+          <div class="border-2
+                      {% if opp.priority == 'high' %}border-red-200 bg-red-50
+                      {% elif opp.priority == 'medium' %}border-yellow-200 bg-yellow-50
+                      {% else %}border-gray-200 bg-gray-50{% endif %}
+                      rounded-xl p-6 hover:shadow-lg transition-all">
+            <div class="flex items-start gap-4">
+              <!-- Checkbox -->
+              <input type="checkbox"
+                     class="optimization-checkbox w-6 h-6 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1"
+                     data-opp-id="{{ loop.index }}"
+                     data-title="{{ opp.title }}"
+                     onchange="updateApproveButton()"
+                     checked>
+
+              <!-- Content -->
+              <div class="flex-1">
+                <!-- Header -->
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="
+                        {% if opp.priority == 'high' %}bg-red-500
+                        {% elif opp.priority == 'medium' %}bg-yellow-500
+                        {% else %}bg-gray-500{% endif %}
+                        text-white px-3 py-1 rounded-full text-xs font-bold uppercase">
+                    {{ opp.priority }} Priority
+                  </span>
+                  <span class="text-gray-600 text-sm">Impact: {{ opp.impact_score }}/100</span>
+                  <span class="text-gray-500 text-xs">
+                    <i class="fa-regular fa-clock"></i> {{ opp.estimated_time }}
+                  </span>
+                </div>
+
+                <!-- Title with Icon -->
+                <h3 class="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  <div class="w-10 h-10 rounded-full bg-{{ opp.color }}-100 border-2 border-{{ opp.color }}-300 flex items-center justify-center flex-shrink-0">
+                    <i class="fa-solid {{ opp.icon }} text-{{ opp.color }}-600"></i>
+                  </div>
+                  {{ opp.title }}
+                </h3>
+
+                <!-- Description -->
+                <p class="text-gray-700 mb-3">{{ opp.description }}</p>
+
+                <!-- Action -->
+                <div class="flex items-center gap-2 text-sm text-gray-600 bg-white rounded-lg p-3 border">
+                  <i class="fa-solid fa-clipboard-list text-indigo-600"></i>
+                  <span class="font-medium">Action:</span>
+                  <span>{{ opp.action }}</span>
+                </div>
+              </div>
+
+              <!-- ROI Value -->
+              <div class="flex-shrink-0">
+                {% if opp.monthly_savings %}
+                <div class="bg-white border-2 border-green-300 rounded-lg p-4 text-center min-w-[140px]">
+                  <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Monthly Savings</div>
+                  <div class="text-3xl font-bold text-green-600">${{ "%.0f"|format(opp.monthly_savings) }}</div>
+                  <div class="text-xs text-gray-500 mt-1">${{ "%.0f"|format(opp.monthly_savings * 12) }}/year</div>
+                </div>
+                {% elif opp.monthly_leads %}
+                <div class="bg-white border-2 border-blue-300 rounded-lg p-4 text-center min-w-[140px]">
+                  <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Revenue Value</div>
+                  <div class="text-3xl font-bold text-blue-600">${{ "%.0f"|format(opp.monthly_leads * 500) }}</div>
+                  <div class="text-xs text-gray-500 mt-1">+{{ opp.monthly_leads|int }} leads/mo</div>
+                </div>
+                {% elif opp.monthly_time_saved %}
+                <div class="bg-white border-2 border-purple-300 rounded-lg p-4 text-center min-w-[140px]">
+                  <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Time Saved</div>
+                  <div class="text-3xl font-bold text-purple-600">{{ opp.monthly_time_saved }}h</div>
+                  <div class="text-xs text-gray-500 mt-1">/month</div>
+                </div>
+                {% else %}
+                <div class="bg-white border-2 border-indigo-300 rounded-lg p-4 text-center min-w-[140px]">
+                  <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Improvement</div>
+                  <div class="text-3xl font-bold text-indigo-600">
+                    <i class="fa-solid fa-arrow-up"></i>
+                  </div>
+                  <div class="text-xs text-gray-500 mt-1">Performance</div>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Total Value Summary -->
+        <div class="mt-6 bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-300 rounded-xl p-5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                <i class="fa-solid fa-chart-line text-white text-xl"></i>
+              </div>
+              <div>
+                <div class="text-sm text-gray-600 font-semibold">Total Potential Value</div>
+                <div class="text-xs text-gray-500">Based on selected optimizations</div>
+              </div>
+            </div>
+            <div class="flex gap-4">
+              {% if ns.total_monthly_savings > 0 %}
+              <div class="text-center">
+                <div class="text-xs text-gray-600 font-semibold">Savings</div>
+                <div class="text-2xl font-bold text-green-600">${{ "%.0f"|format(ns.total_monthly_savings) }}</div>
+                <div class="text-xs text-gray-500">/month</div>
+              </div>
+              {% endif %}
+              {% if ns.total_monthly_leads > 0 %}
+              <div class="text-center">
+                <div class="text-xs text-gray-600 font-semibold">Revenue</div>
+                <div class="text-2xl font-bold text-blue-600">${{ "%.0f"|format(ns.total_lead_value) }}</div>
+                <div class="text-xs text-gray-500">+{{ ns.total_monthly_leads|int }} leads</div>
+              </div>
+              {% endif %}
+              <div class="text-center">
+                <div class="text-xs text-gray-600 font-semibold">Total Value</div>
+                <div class="text-2xl font-bold text-purple-600">${{ "%.0f"|format(ns.total_combined_value) }}</div>
+                <div class="text-xs text-gray-500">/month</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="bg-gray-50 px-6 py-4 rounded-b-2xl flex items-center justify-between">
+        <button onclick="closeOptimizationsModal()" class="px-6 py-2 border border-gray-300 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors">
+          Cancel
+        </button>
+        <button id="approveButton" onclick="approveOptimizations()" class="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg transform hover:scale-105">
+          <i class="fa-solid fa-check-double mr-2"></i>
+          <span id="approveButtonText">Approve {{ analysis.opportunities|length }} Optimizations</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript for Modal -->
+<script>
+function openOptimizationsModal() {
+  document.getElementById('optimizationsModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  updateApproveButton();
+}
+
+function closeOptimizationsModal() {
+  document.getElementById('optimizationsModal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function selectAllOptimizations(checked) {
+  const checkboxes = document.querySelectorAll('.optimization-checkbox');
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = checked;
+  });
+  updateApproveButton();
+}
+
+function updateApproveButton() {
+  const checkboxes = document.querySelectorAll('.optimization-checkbox:checked');
+  const button = document.getElementById('approveButton');
+  const buttonText = document.getElementById('approveButtonText');
+  const count = checkboxes.length;
+
+  if (count > 0) {
+    buttonText.textContent = 'Approve ' + count + ' Optimization' + (count > 1 ? 's' : '');
+    button.classList.remove('opacity-50', 'cursor-not-allowed');
+    button.disabled = false;
+  } else {
+    buttonText.textContent = 'Select optimizations to approve';
+    button.classList.add('opacity-50', 'cursor-not-allowed');
+    button.disabled = true;
+  }
+}
+
+function approveOptimizations() {
+  const checkboxes = document.querySelectorAll('.optimization-checkbox:checked');
+
+  if (checkboxes.length === 0) {
+    alert('Please select at least one optimization to approve.');
+    return;
+  }
+
+  // Collect selected optimization IDs and titles
+  const selectedOptimizations = [];
+  checkboxes.forEach(checkbox => {
+    selectedOptimizations.push({
+      id: checkbox.dataset.oppId,
+      title: checkbox.dataset.title
+    });
+  });
+
+  // Show loading state
+  const button = document.getElementById('approveButton');
+  const originalText = button.innerHTML;
+  button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Submitting...';
+  button.disabled = true;
+
+  // Submit to backend
+  fetch('{{ url_for("google_bp.approve_optimizations") }}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+    },
+    body: JSON.stringify({
+      optimizations: selectedOptimizations,
+      account_id: '{{ analysis.account_name }}'
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Show success message
+      closeOptimizationsModal();
+
+      // Create success notification
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 right-4 bg-green-50 border-2 border-green-500 text-green-900 px-6 py-4 rounded-lg shadow-xl z-50 max-w-md';
+      notification.innerHTML = `
+        <div class="flex items-start gap-3">
+          <i class="fa-solid fa-check-circle text-green-600 text-2xl"></i>
+          <div>
+            <div class="font-bold text-lg mb-1">Optimizations Approved!</div>
+            <div class="text-sm">
+              ${selectedOptimizations.length} optimization${selectedOptimizations.length > 1 ? 's' : ''}
+              ${selectedOptimizations.length > 1 ? 'have' : 'has'} been submitted to your Google Ads account.
+            </div>
+          </div>
+          <button onclick="this.parentElement.parentElement.remove()" class="text-green-600 hover:text-green-800">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+      `;
+      document.body.appendChild(notification);
+
+      // Auto-remove notification after 5 seconds
+      setTimeout(() => notification.remove(), 5000);
+
+      // Optionally reload the page to show updated data
+      setTimeout(() => location.reload(), 2000);
+    } else {
+      throw new Error(data.error || 'Failed to approve optimizations');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Error approving optimizations: ' + error.message + '\n\nPlease try again or contact support.');
+    button.innerHTML = originalText;
+    button.disabled = false;
+  });
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+  const modal = document.getElementById('optimizationsModal');
+  if (event.target === modal) {
+    closeOptimizationsModal();
+  }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape') {
+    const modal = document.getElementById('optimizationsModal');
+    if (!modal.classList.contains('hidden')) {
+      closeOptimizationsModal();
+    }
+  }
+});
+</script>
+
 {% endblock %}

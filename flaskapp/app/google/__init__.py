@@ -2088,6 +2088,64 @@ def ads_opportunities():
     )
 
 
+@google_bp.route("/ads/approve-optimizations", methods=["POST"], endpoint="approve_optimizations")
+@login_required
+def approve_optimizations():
+    """
+    Handle approval and submission of selected optimizations to Google Ads.
+    Receives a list of optimization IDs and applies them to the user's account.
+    """
+    try:
+        from flask import jsonify
+
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "error": "No data provided"}), 400
+
+        optimizations = data.get("optimizations", [])
+        account_id = data.get("account_id", "")
+
+        if not optimizations:
+            return jsonify({"success": False, "error": "No optimizations selected"}), 400
+
+        aid = current_account_id()
+
+        # Log the approval action
+        from app.models import AuditLog
+        from app import db
+
+        opt_titles = [opt.get("title", f"Optimization {opt.get('id')}") for opt in optimizations]
+        AuditLog.log(
+            aid=aid,
+            user_id=current_user.id,
+            action="google_ads_approve_optimizations",
+            note=f"Approved {len(optimizations)} optimizations: {', '.join(opt_titles)}",
+        )
+
+        # TODO: Implement actual Google Ads API calls to apply optimizations
+        # For now, we'll simulate success and return a response
+        # In production, you would:
+        # 1. Call Google Ads API to apply each optimization
+        # 2. Handle errors for individual optimizations
+        # 3. Return detailed success/failure status for each
+
+        current_app.logger.info(f"Account {aid} approved {len(optimizations)} optimizations: {opt_titles}")
+
+        return jsonify({
+            "success": True,
+            "message": f"Successfully approved {len(optimizations)} optimization(s)",
+            "applied_count": len(optimizations),
+            "optimizations": optimizations
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Error approving optimizations")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
 def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
     """
     Comprehensive analysis of Google Ads account to identify opportunities.

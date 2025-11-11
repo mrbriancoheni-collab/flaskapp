@@ -731,6 +731,114 @@ def _create_demo_report(customer_id: str) -> GoogleAdsGraderReport:
     return report
 
 
+# ============================================================================
+# Budget Tracker
+# ============================================================================
+@ads_grader_bp.route("/budget-tracker")
+@login_required
+def budget_tracker():
+    """
+    Budget tracker dashboard showing all tracked budgets and their status.
+    """
+    from app.models import BudgetTracker
+
+    # Get all budget trackers for the current user
+    trackers = BudgetTracker.query.filter_by(
+        user_id=current_user.id
+    ).order_by(
+        BudgetTracker.status.asc(),  # Active first
+        BudgetTracker.created_at.desc()
+    ).all()
+
+    return render_template(
+        "ads_grader/budget_tracker.html",
+        trackers=trackers
+    )
+
+
+@ads_grader_bp.route("/budget-tracker/create", methods=["POST"])
+@login_required
+def budget_tracker_create():
+    """
+    Create a new budget tracker.
+    """
+    from app.models import BudgetTracker
+
+    try:
+        # Get form data
+        budget_type = request.form.get("budget_type", "monthly")
+        budget_amount = float(request.form.get("budget_amount", 0))
+        start_date = datetime.strptime(request.form.get("start_date"), "%Y-%m-%d")
+        end_date = datetime.strptime(request.form.get("end_date"), "%Y-%m-%d")
+        alert_threshold_percent = int(request.form.get("alert_threshold_percent", 80))
+        customer_id = request.form.get("customer_id", "")
+        campaign_id = request.form.get("campaign_id")
+        campaign_name = request.form.get("campaign_name")
+
+        # Convert budget amount to cents
+        budget_amount_cents = int(budget_amount * 100)
+
+        # Create tracker
+        tracker = BudgetTracker(
+            account_id=current_user.account_id,
+            user_id=current_user.id,
+            customer_id=customer_id,
+            campaign_id=campaign_id if campaign_id else None,
+            campaign_name=campaign_name if campaign_name else None,
+            budget_type=budget_type,
+            budget_amount=budget_amount_cents,
+            start_date=start_date,
+            end_date=end_date,
+            alert_threshold_percent=alert_threshold_percent,
+            alert_enabled=True,
+            status="active"
+        )
+
+        db.session.add(tracker)
+        db.session.commit()
+
+        flash("Budget tracker created successfully!", "success")
+        return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+    except Exception as e:
+        logger.error(f"Failed to create budget tracker: {e}")
+        flash("Failed to create budget tracker. Please try again.", "error")
+        return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+
+@ads_grader_bp.route("/budget-tracker/<int:tracker_id>/update-status", methods=["POST"])
+@login_required
+def budget_tracker_update_status(tracker_id):
+    """
+    Update budget tracker status (pause/resume/cancel).
+    """
+    from app.models import BudgetTracker
+
+    try:
+        tracker = BudgetTracker.query.filter_by(
+            id=tracker_id,
+            user_id=current_user.id
+        ).first_or_404()
+
+        new_status = request.form.get("status")
+        if new_status in ["active", "paused", "cancelled"]:
+            tracker.status = new_status
+            db.session.commit()
+            flash(f"Budget tracker {new_status}!", "success")
+        else:
+            flash("Invalid status", "error")
+
+        return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+    except Exception as e:
+        logger.error(f"Failed to update budget tracker status: {e}")
+        flash("Failed to update budget tracker. Please try again.", "error")
+        return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
 def _calculate_grade(score: float) -> str:
     """Convert numerical score to letter grade."""
     if score >= 90: return "A+"

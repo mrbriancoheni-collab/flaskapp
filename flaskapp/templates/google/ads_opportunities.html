@@ -76,15 +76,18 @@
   </div>
 
   <!-- Total Potential Value -->
-  {% set ns = namespace(total_monthly_savings=0, total_monthly_leads=0) %}
+  {% set ns = namespace(total_monthly_savings=0, total_monthly_leads=0, total_lead_value=0) %}
   {% for opp in analysis.opportunities %}
     {% if opp.monthly_savings %}
       {% set ns.total_monthly_savings = ns.total_monthly_savings + opp.monthly_savings %}
     {% endif %}
     {% if opp.monthly_leads %}
       {% set ns.total_monthly_leads = ns.total_monthly_leads + opp.monthly_leads %}
+      {# Assume $500 average value per lead for home services #}
+      {% set ns.total_lead_value = ns.total_lead_value + (opp.monthly_leads * 500) %}
     {% endif %}
   {% endfor %}
+  {% set ns.total_combined_value = ns.total_monthly_savings + ns.total_lead_value %}
 
   {% if ns.total_monthly_savings > 0 or ns.total_monthly_leads > 0 %}
   <div class="bg-gradient-to-br from-emerald-50 to-green-100 border-2 border-emerald-300 rounded-xl shadow-xl p-8">
@@ -121,12 +124,12 @@
           <span class="text-5xl">📈</span>
         </div>
         <div class="text-center">
-          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">More Leads</div>
+          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Revenue from Leads</div>
           <div class="text-4xl font-black text-blue-600 mb-1">
-            +{{ ns.total_monthly_leads|int }}
+            ${{ "%.0f"|format(ns.total_lead_value) }}
           </div>
           <div class="text-xs text-gray-500">
-            +{{ (ns.total_monthly_leads * 12)|int }} leads/year
+            +{{ ns.total_monthly_leads|int }} leads/month (${{ "%.0f"|format(ns.total_lead_value * 12) }}/year)
           </div>
         </div>
       </div>
@@ -134,12 +137,12 @@
 
       <div class="bg-white rounded-xl p-6 shadow-md border-2 border-purple-300">
         <div class="flex items-center justify-center mb-3">
-          <span class="text-5xl">🚀</span>
+          <span class="text-5xl">💰</span>
         </div>
         <div class="text-center">
-          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Implementation Time</div>
+          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Total Monthly Value</div>
           <div class="text-4xl font-black text-purple-600 mb-1">
-            {{ analysis.opportunities|length }}
+            ${{ "%.0f"|format(ns.total_combined_value) }}
           </div>
           <div class="text-xs text-gray-500">
             opportunities identified
@@ -209,9 +212,9 @@
             </div>
             {% elif opp.monthly_leads %}
             <div class="bg-white border-2 border-blue-200 rounded-lg p-3 min-w-[140px]">
-              <div class="text-xs text-gray-600 uppercase font-semibold">More Leads</div>
-              <div class="text-2xl font-bold text-blue-600">+{{ opp.monthly_leads|int }}</div>
-              <div class="text-xs text-gray-500">/month</div>
+              <div class="text-xs text-gray-600 uppercase font-semibold">Revenue Value</div>
+              <div class="text-2xl font-bold text-blue-600">${{ "%.0f"|format(opp.monthly_leads * 500) }}</div>
+              <div class="text-xs text-gray-500">+{{ opp.monthly_leads|int }} leads/mo</div>
             </div>
             {% elif opp.monthly_time_saved %}
             <div class="bg-white border-2 border-purple-200 rounded-lg p-3 min-w-[140px]">
@@ -437,9 +440,9 @@
                 </div>
                 {% elif opp.monthly_leads %}
                 <div class="bg-white border-2 border-blue-300 rounded-lg p-4 text-center min-w-[140px]">
-                  <div class="text-xs text-gray-600 uppercase font-semibold mb-1">More Leads</div>
-                  <div class="text-3xl font-bold text-blue-600">+{{ opp.monthly_leads|int }}</div>
-                  <div class="text-xs text-gray-500 mt-1">+{{ (opp.monthly_leads * 12)|int }}/year</div>
+                  <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Revenue Value</div>
+                  <div class="text-3xl font-bold text-blue-600">${{ "%.0f"|format(opp.monthly_leads * 500) }}</div>
+                  <div class="text-xs text-gray-500 mt-1">+{{ opp.monthly_leads|int }} leads/mo</div>
                 </div>
                 {% elif opp.monthly_time_saved %}
                 <div class="bg-white border-2 border-purple-300 rounded-lg p-4 text-center min-w-[140px]">
@@ -484,11 +487,16 @@
               {% endif %}
               {% if ns.total_monthly_leads > 0 %}
               <div class="text-center">
-                <div class="text-xs text-gray-600 font-semibold">Leads</div>
-                <div class="text-2xl font-bold text-blue-600">+{{ ns.total_monthly_leads|int }}</div>
-                <div class="text-xs text-gray-500">/month</div>
+                <div class="text-xs text-gray-600 font-semibold">Revenue</div>
+                <div class="text-2xl font-bold text-blue-600">${{ "%.0f"|format(ns.total_lead_value) }}</div>
+                <div class="text-xs text-gray-500">+{{ ns.total_monthly_leads|int }} leads</div>
               </div>
               {% endif %}
+              <div class="text-center">
+                <div class="text-xs text-gray-600 font-semibold">Total Value</div>
+                <div class="text-2xl font-bold text-purple-600">${{ "%.0f"|format(ns.total_combined_value) }}</div>
+                <div class="text-xs text-gray-500">/month</div>
+              </div>
             </div>
           </div>
         </div>

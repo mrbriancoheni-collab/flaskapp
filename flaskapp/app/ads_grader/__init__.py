@@ -836,6 +836,107 @@ def budget_tracker_update_status(tracker_id):
         return redirect(url_for("ads_grader_bp.budget_tracker"))
 
 
+@ads_grader_bp.route("/budget-tracker/<int:tracker_id>/refresh", methods=["POST"])
+@login_required
+def budget_tracker_refresh(tracker_id):
+    """
+    Manually refresh spend data for a specific budget tracker.
+    """
+    from app.models import BudgetTracker, UserOAuthProvider
+    from app.ads_grader.budget_tracker_service import BudgetTrackerService
+
+    try:
+        tracker = BudgetTracker.query.filter_by(
+            id=tracker_id,
+            user_id=current_user.id
+        ).first_or_404()
+
+        # Get user's Google refresh token
+        oauth_provider = UserOAuthProvider.query.filter_by(
+            user_id=current_user.id,
+            provider="google"
+        ).first()
+
+        if not oauth_provider or not oauth_provider.refresh_token:
+            flash("Google Ads connection required. Please reconnect your account.", "error")
+            return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+        # Initialize service and update spend
+        service = BudgetTrackerService(refresh_token=oauth_provider.refresh_token)
+        result = service.update_tracker_spend(tracker)
+
+        if result["success"]:
+            flash(f"Budget tracker refreshed! Current spend: ${result['current_spend']:.2f}", "success")
+            if result["alerts_created"] > 0:
+                flash(f"{result['alerts_created']} new alert(s) created", "info")
+        else:
+            flash(f"Failed to refresh: {result.get('error', 'Unknown error')}", "error")
+
+        return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+    except Exception as e:
+        logger.error(f"Failed to refresh budget tracker: {e}")
+        flash("Failed to refresh budget tracker. Please try again.", "error")
+        return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+
+@ads_grader_bp.route("/budget-tracker/refresh-all", methods=["POST"])
+@login_required
+def budget_tracker_refresh_all():
+    """
+    Manually refresh spend data for all user's budget trackers.
+    """
+    from app.models import BudgetTracker, UserOAuthProvider
+    from app.ads_grader.budget_tracker_service import BudgetTrackerService
+
+    try:
+        # Get user's Google refresh token
+        oauth_provider = UserOAuthProvider.query.filter_by(
+            user_id=current_user.id,
+            provider="google"
+        ).first()
+
+        if not oauth_provider or not oauth_provider.refresh_token:
+            flash("Google Ads connection required. Please reconnect your account.", "error")
+            return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+        # Get all active trackers for this user
+        trackers = BudgetTracker.query.filter_by(
+            user_id=current_user.id,
+            status="active"
+        ).all()
+
+        if not trackers:
+            flash("No active budget trackers to refresh.", "info")
+            return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+        # Initialize service
+        service = BudgetTrackerService(refresh_token=oauth_provider.refresh_token)
+
+        # Update all trackers
+        success_count = 0
+        total_alerts = 0
+        for tracker in trackers:
+            try:
+                result = service.update_tracker_spend(tracker)
+                if result["success"]:
+                    success_count += 1
+                    total_alerts += result["alerts_created"]
+            except Exception as e:
+                logger.error(f"Failed to update tracker {tracker.id}: {e}")
+
+        flash(f"Refreshed {success_count}/{len(trackers)} budget trackers", "success")
+        if total_alerts > 0:
+            flash(f"{total_alerts} new alert(s) created", "info")
+
+        return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+    except Exception as e:
+        logger.error(f"Failed to refresh all budget trackers: {e}")
+        flash("Failed to refresh budget trackers. Please try again.", "error")
+        return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+
 # ============================================================================
 # Helper Functions
 # ============================================================================

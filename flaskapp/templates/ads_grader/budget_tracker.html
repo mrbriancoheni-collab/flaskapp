@@ -12,10 +12,21 @@
       <h1 class="text-3xl font-bold">Budget Tracker</h1>
       <p class="text-gray-600 mt-1">Monitor your Google Ads spend and get alerts when budgets are running low</p>
     </div>
-    <button onclick="showCreateBudgetModal()"
-            class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-      <i class="fa-solid fa-plus mr-2"></i>Track New Budget
-    </button>
+    <div class="flex items-center gap-3">
+      {% if trackers %}
+      <form action="{{ url_for('ads_grader_bp.budget_tracker_refresh_all') }}" method="POST" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <button type="submit"
+                class="inline-flex items-center px-4 py-2 bg-green-50 text-green-700 border-2 border-green-200 rounded-lg hover:bg-green-100">
+          <i class="fa-solid fa-refresh mr-2"></i>Refresh All
+        </button>
+      </form>
+      {% endif %}
+      <button onclick="showCreateBudgetModal()"
+              class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+        <i class="fa-solid fa-plus mr-2"></i>Track New Budget
+      </button>
+    </div>
   </div>
 
   {% if trackers %}
@@ -136,10 +147,13 @@
 
             <!-- Actions -->
             <div class="flex items-center gap-2 mt-4 pt-4 border-t">
-              <button onclick="editBudgetTracker({{ tracker.id }})"
-                      class="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">
-                <i class="fa-solid fa-edit mr-1"></i>Edit
-              </button>
+              <form action="{{ url_for('ads_grader_bp.budget_tracker_refresh', tracker_id=tracker.id) }}" method="POST" class="flex-1">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit"
+                        class="w-full px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 text-sm font-medium">
+                  <i class="fa-solid fa-refresh mr-1"></i>Refresh
+                </button>
+              </form>
               {% if tracker.status == 'active' %}
                 <button onclick="pauseBudgetTracker({{ tracker.id }})"
                         class="flex-1 px-3 py-2 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 text-sm font-medium">

@@ -11,7 +11,7 @@ Configuration via environment variables:
 - EMAIL_PROVIDER: 'mailgun' (default), 'sendgrid', or 'smtp'
 - For Mailgun (default):
   - MAILGUN_API_KEY (required)
-  - MAILGUN_DOMAIN (default: fieldsprout.io)
+  - MAILGUN_DOMAIN (default: mg.fieldsprout.io)
 - For SendGrid:
   - SENDGRID_API_KEY
 - For SMTP (legacy):
@@ -65,7 +65,7 @@ def get_email_config() -> Dict[str, Any]:
 
         # Mailgun settings
         'mailgun_api_key': current_app.config.get('MAILGUN_API_KEY', os.getenv('MAILGUN_API_KEY', '')),
-        'mailgun_domain': current_app.config.get('MAILGUN_DOMAIN', os.getenv('MAILGUN_DOMAIN', 'fieldsprout.io')),
+        'mailgun_domain': current_app.config.get('MAILGUN_DOMAIN', os.getenv('MAILGUN_DOMAIN', 'mg.fieldsprout.io')),
     }
 
 

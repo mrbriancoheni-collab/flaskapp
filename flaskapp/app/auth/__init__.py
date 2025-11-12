@@ -27,8 +27,8 @@ try:
 except ImportError:  # fallback to legacy name with same return shape
     from app.auth.passwords import validate_password_strength as validate_strength
 
-# Your email sender helper (must be implemented)
-from app.auth.email_utils import send_email  # def send_email(to, subject, html) -> bool
+# Email service (uses Mailgun API by default)
+from app.services.email_service import send_email
 
 
 auth_bp = Blueprint("auth_bp", __name__, url_prefix="")
@@ -276,9 +276,9 @@ def _send_verification_email(email: str, token: str) -> bool:
     html = f"""
     <p>Confirm your email for <b>{escape(current_app.config.get('APP_NAME','App'))}</b>.</p>
     <p><a href="{escape(verify_url)}">Verify my email</a></p>
-    <p>If the button doesn’t work, copy this URL:<br>{escape(verify_url)}</p>
+    <p>If the button doesn't work, copy this URL:<br>{escape(verify_url)}</p>
     """
-    return send_email(email, "Verify your email", html)
+    return send_email(email, "Verify your email", html_body=html)
 
 
 def _send_reset_email(email: str, token: str) -> bool:
@@ -288,7 +288,7 @@ def _send_reset_email(email: str, token: str) -> bool:
     <p><a href="{escape(reset_url)}">Reset my password</a></p>
     <p>If you did not request this, you can ignore this email.</p>
     """
-    return send_email(email, "Reset your password", html)
+    return send_email(email, "Reset your password", html_body=html)
 
 
 # ---------------------------------------------------------------------

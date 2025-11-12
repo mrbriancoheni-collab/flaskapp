@@ -60,7 +60,7 @@ def send_daily_budget_report():
         logger.info("Starting daily budget report task")
 
         from app.models import BudgetTracker, User
-        from app.emailer import send_email
+        from app.services.email_service import send_email
 
         # Get all active trackers that are approaching their threshold
         active_trackers = BudgetTracker.query.filter_by(status="active").all()

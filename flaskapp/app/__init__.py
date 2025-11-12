@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from flask import Flask, request, abort, redirect, url_for, flash, g
+from flask import Flask, request, abort, redirect, url_for, flash, g, render_template_string
 from markupsafe import escape
 from flask_login import LoginManager
 

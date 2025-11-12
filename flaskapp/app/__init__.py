@@ -582,11 +582,12 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register gads_bp")
 
-    try:
-        from app.test_email import test_mail_bp
-        app.register_blueprint(test_mail_bp)
-    except Exception:
-        app.logger.exception("Failed to register test_mail_bp")
+    # Disabled old SMTP-based test email route - now using Mailgun API in admin_bp
+    # try:
+    #     from app.test_email import test_mail_bp
+    #     app.register_blueprint(test_mail_bp)
+    # except Exception:
+    #     app.logger.exception("Failed to register test_mail_bp")
 
     # --- Admin (employees only; direct URL; no public link) -----------------
     try:

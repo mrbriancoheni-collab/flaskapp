@@ -705,6 +705,7 @@
 function openOptimizationsModal() {
   document.getElementById('optimizationsModal').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
+  updateApproveButton(); // Update totals when modal opens
 }
 
 function closeOptimizationsModal() {
@@ -738,14 +739,39 @@ function updateApproveButton() {
   var button = document.getElementById('approveButton');
   var count = checkboxes.length;
 
+  // Update button state
   if (count > 0) {
-    button.textContent = 'Approve ' + count + ' Optimization' + (count > 1 ? 's' : '');
+    button.innerHTML = '<i class="fa-solid fa-check-circle mr-2"></i>Approve ' + count + ' Optimization' + (count > 1 ? 's' : '');
     button.classList.remove('opacity-50', 'cursor-not-allowed');
     button.disabled = false;
   } else {
-    button.textContent = 'Select Optimizations to Approve';
+    button.innerHTML = '<i class="fa-solid fa-check-circle mr-2"></i>Select Optimizations to Approve';
     button.classList.add('opacity-50', 'cursor-not-allowed');
     button.disabled = true;
+  }
+
+  // Calculate totals
+  var totalSavings = 0;
+  var totalLeads = 0;
+  var totalLeadValue = 0;
+
+  checkboxes.forEach(function(checkbox) {
+    totalSavings += parseFloat(checkbox.dataset.savings) || 0;
+    totalLeads += parseFloat(checkbox.dataset.leads) || 0;
+    totalLeadValue += parseFloat(checkbox.dataset.leadValue) || 0;
+  });
+
+  var totalCombined = totalSavings + totalLeadValue;
+
+  // Update modal totals
+  var modalTotalValue = document.getElementById('modalTotalValue');
+  var modalTotalLeads = document.getElementById('modalTotalLeads');
+
+  if (modalTotalValue) {
+    modalTotalValue.textContent = '$' + Math.round(totalCombined).toLocaleString();
+  }
+  if (modalTotalLeads) {
+    modalTotalLeads.textContent = '+' + Math.round(totalLeads) + ' leads/month';
   }
 }
 
@@ -836,7 +862,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <!-- Optimization 1 -->
           <div class="border-2 border-red-200 bg-red-50 rounded-xl p-6 hover:shadow-lg transition">
             <div class="flex items-start gap-4">
-              <input type="checkbox" class="optimization-checkbox w-6 h-6 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1" checked>
+              <input type="checkbox" class="optimization-checkbox w-6 h-6 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1" data-savings="890" data-leads="0">
               <div class="flex-1">
                 <div class="flex items-start justify-between gap-4 mb-3">
                   <div>
@@ -872,7 +898,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <!-- Optimization 2 -->
           <div class="border-2 border-yellow-200 bg-yellow-50 rounded-xl p-6 hover:shadow-lg transition">
             <div class="flex items-start gap-4">
-              <input type="checkbox" class="optimization-checkbox w-6 h-6 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1" checked>
+              <input type="checkbox" class="optimization-checkbox w-6 h-6 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1" data-savings="0" data-leads="12" data-lead-value="6000">
               <div class="flex-1">
                 <div class="flex items-start justify-between gap-4 mb-3">
                   <div>
@@ -905,7 +931,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <!-- Optimization 3 -->
           <div class="border-2 border-blue-200 bg-blue-50 rounded-xl p-6 hover:shadow-lg transition">
             <div class="flex items-start gap-4">
-              <input type="checkbox" class="optimization-checkbox w-6 h-6 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1" checked>
+              <input type="checkbox" class="optimization-checkbox w-6 h-6 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1" data-savings="0" data-leads="8" data-lead-value="4000">
               <div class="flex-1">
                 <div class="flex items-start justify-between gap-4 mb-3">
                   <div>
@@ -938,7 +964,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <!-- Optimization 4 -->
           <div class="border-2 border-purple-200 bg-purple-50 rounded-xl p-6 hover:shadow-lg transition">
             <div class="flex items-start gap-4">
-              <input type="checkbox" class="optimization-checkbox w-6 h-6 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1" checked>
+              <input type="checkbox" class="optimization-checkbox w-6 h-6 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1" data-savings="320" data-leads="0">
               <div class="flex-1">
                 <div class="flex items-start justify-between gap-4 mb-3">
                   <div>
@@ -971,7 +997,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <!-- Optimization 5 -->
           <div class="border-2 border-indigo-200 bg-indigo-50 rounded-xl p-6 hover:shadow-lg transition">
             <div class="flex items-start gap-4">
-              <input type="checkbox" class="optimization-checkbox w-6 h-6 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1" checked>
+              <input type="checkbox" class="optimization-checkbox w-6 h-6 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1" data-savings="0" data-leads="5" data-lead-value="2500">
               <div class="flex-1">
                 <div class="flex items-start justify-between gap-4 mb-3">
                   <div>
@@ -1008,12 +1034,12 @@ document.addEventListener('DOMContentLoaded', function() {
           <div class="flex items-center justify-between">
             <div>
               <h3 class="text-lg font-bold text-gray-900 mb-1">Total Monthly Impact</h3>
-              <p class="text-sm text-gray-600">When all selected optimizations are implemented</p>
+              <p class="text-sm text-gray-600">Based on selected optimizations</p>
             </div>
             <div class="text-right">
               <div class="text-sm text-gray-600 mb-1">Combined Value</div>
-              <div class="text-4xl font-black text-green-600">$2,890</div>
-              <div class="text-xs text-gray-500">+25 leads/month</div>
+              <div id="modalTotalValue" class="text-4xl font-black text-green-600">$0</div>
+              <div id="modalTotalLeads" class="text-xs text-gray-500">+0 leads/month</div>
             </div>
           </div>
         </div>

@@ -938,6 +938,192 @@ def budget_tracker_refresh_all():
 
 
 # ============================================================================
+# Alerts Dashboard
+# ============================================================================
+@ads_grader_bp.route("/alerts")
+@login_required
+def alerts_dashboard():
+    """
+    Alerts dashboard showing all active alerts for user.
+    Displays paused campaigns, CPL spikes, Quality Score drops, etc.
+    """
+    from app.models_alerts import Alert, AlertSettings
+    from app.services.alert_detection_service import AlertDetectionService
+
+    # Get user's alert settings
+    settings = AlertSettings.get_or_create_for_user(current_user.id)
+
+    # Get active alerts
+    active_alerts = Alert.query.filter_by(
+        user_id=current_user.id,
+        status="active"
+    ).order_by(Alert.created_at.desc()).all()
+
+    # Get recently resolved alerts (last 7 days)
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    resolved_alerts = Alert.query.filter_by(
+        user_id=current_user.id,
+        status="resolved"
+    ).filter(
+        Alert.resolved_at >= seven_days_ago
+    ).order_by(Alert.resolved_at.desc()).limit(10).all()
+
+    # Get alert summary
+    detection_service = AlertDetectionService()
+    summary = detection_service.get_alert_summary_for_user(current_user.id)
+
+    return render_template(
+        "ads_grader/alerts_dashboard.html",
+        active_alerts=active_alerts,
+        resolved_alerts=resolved_alerts,
+        settings=settings,
+        summary=summary
+    )
+
+
+@ads_grader_bp.route("/alerts/<int:alert_id>/resolve", methods=["POST"])
+@login_required
+def resolve_alert(alert_id):
+    """Mark an alert as resolved."""
+    from app.models_alerts import Alert
+
+    alert = Alert.query.get_or_404(alert_id)
+
+    # Security: Ensure user owns this alert
+    if alert.user_id != current_user.id:
+        flash("Unauthorized", "error")
+        return redirect(url_for("ads_grader_bp.alerts_dashboard"))
+
+    alert.resolve()
+    db.session.commit()
+
+    flash(f"Alert '{alert.title}' marked as resolved", "success")
+    return redirect(url_for("ads_grader_bp.alerts_dashboard"))
+
+
+@ads_grader_bp.route("/alerts/<int:alert_id>/dismiss", methods=["POST"])
+@login_required
+def dismiss_alert(alert_id):
+    """Mark an alert as dismissed."""
+    from app.models_alerts import Alert
+
+    alert = Alert.query.get_or_404(alert_id)
+
+    # Security: Ensure user owns this alert
+    if alert.user_id != current_user.id:
+        flash("Unauthorized", "error")
+        return redirect(url_for("ads_grader_bp.alerts_dashboard"))
+
+    alert.dismiss()
+    db.session.commit()
+
+    flash(f"Alert '{alert.title}' dismissed", "success")
+    return redirect(url_for("ads_grader_bp.alerts_dashboard"))
+
+
+@ads_grader_bp.route("/alerts/settings", methods=["GET", "POST"])
+@login_required
+def alert_settings():
+    """Alert settings page - configure alert thresholds and notifications."""
+    from app.models_alerts import AlertSettings
+
+    settings = AlertSettings.get_or_create_for_user(current_user.id)
+
+    if request.method == "POST":
+        # Update settings from form
+        settings.paused_campaign_enabled = request.form.get("paused_campaign_enabled") == "on"
+        settings.cpl_spike_enabled = request.form.get("cpl_spike_enabled") == "on"
+        settings.cpl_spike_threshold_percent = int(request.form.get("cpl_spike_threshold_percent", 20))
+        settings.cpl_spike_lookback_days = int(request.form.get("cpl_spike_lookback_days", 7))
+        settings.quality_score_enabled = request.form.get("quality_score_enabled") == "on"
+        settings.quality_score_threshold = int(request.form.get("quality_score_threshold", 5))
+        settings.email_notifications_enabled = request.form.get("email_notifications_enabled") == "on"
+        settings.email_digest_enabled = request.form.get("email_digest_enabled") == "on"
+        settings.email_digest_time = request.form.get("email_digest_time", "09:00")
+        settings.max_alerts_per_day = int(request.form.get("max_alerts_per_day", 10))
+
+        db.session.commit()
+        flash("Alert settings updated successfully", "success")
+        return redirect(url_for("ads_grader_bp.alert_settings"))
+
+    return render_template(
+        "ads_grader/alert_settings.html",
+        settings=settings
+    )
+
+
+@ads_grader_bp.route("/alerts/check-now", methods=["POST"])
+@login_required
+def check_alerts_now():
+    """Manually trigger alert check for current user."""
+    from app.services.alert_detection_service import AlertDetectionService
+
+    try:
+        detection_service = AlertDetectionService()
+        result = detection_service.check_all_alerts_for_user(current_user.id)
+
+        if result.get("alerts_created", 0) > 0:
+            flash(f"Found {result['alerts_created']} new alert(s)", "success")
+        else:
+            flash("No new alerts found. Everything looks good!", "info")
+
+    except Exception as e:
+        logger.error(f"Failed to check alerts for user {current_user.id}: {e}")
+        flash("Failed to check alerts. Please try again later.", "error")
+
+    return redirect(url_for("ads_grader_bp.alerts_dashboard"))
+
+
+# ============================================================================
+# Quick Wins Dashboard
+# ============================================================================
+@ads_grader_bp.route("/quick-wins")
+@login_required
+def quick_wins_dashboard():
+    """
+    Quick Wins dashboard showing top 3 immediate action items.
+    Analyzes account data to recommend highest-ROI optimizations.
+    """
+    from app.services.quick_wins_service import QuickWinsService
+
+    # Get user's primary Google Ads account
+    account = Account.query.filter_by(
+        user_id=current_user.id,
+        is_active=True
+    ).first()
+
+    quick_wins = []
+    error = None
+
+    if account and account.google_refresh_token:
+        try:
+            service = QuickWinsService()
+            quick_wins_objects = service.get_top_quick_wins(account, limit=3)
+            quick_wins = [win.to_dict() for win in quick_wins_objects]
+
+        except Exception as e:
+            logger.error(f"Failed to get quick wins for user {current_user.id}: {e}")
+            error = "Failed to load quick wins. Please try again later."
+    else:
+        error = "Google Ads connection required. Please connect your account."
+
+    return render_template(
+        "ads_grader/quick_wins_dashboard.html",
+        quick_wins=quick_wins,
+        account=account,
+        error=error
+    )
+
+
+@ads_grader_bp.route("/quick-wins/refresh", methods=["POST"])
+@login_required
+def refresh_quick_wins():
+    """Manually refresh quick wins for current user."""
+    flash("Quick wins refreshed successfully", "success")
+    return redirect(url_for("ads_grader_bp.quick_wins_dashboard"))
+
+
+# ============================================================================
 # Helper Functions
 # ============================================================================
 def _calculate_grade(score: float) -> str:

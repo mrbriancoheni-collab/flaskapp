@@ -1,0 +1,327 @@
+{% extends "base_app.html" %}
+{% block title %}Quick Wins{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Header -->
+  <div class="mb-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">
+          <i class="fa-solid fa-bolt text-yellow-500 mr-2"></i>
+          Quick Wins
+        </h1>
+        <p class="text-gray-600 mt-1">Top 3 immediate actions to improve your ROI</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <form method="POST" action="{{ url_for('ads_grader_bp.refresh_quick_wins') }}" class="inline">
+          <button type="submit" class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition">
+            <i class="fa-solid fa-rotate mr-2"></i>Refresh
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {% if error %}
+    <!-- Error State -->
+    <div class="bg-red-50 border-2 border-red-300 rounded-xl p-8 text-center">
+      <div class="bg-red-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+        <i class="fa-solid fa-exclamation-triangle text-red-600 text-3xl"></i>
+      </div>
+      <h3 class="text-xl font-bold text-gray-900 mb-2">Unable to Load Quick Wins</h3>
+      <p class="text-gray-600">{{ error }}</p>
+      {% if not account or not account.google_refresh_token %}
+      <a href="{{ url_for('google_bp.authorize') }}" class="inline-block mt-4 px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition">
+        <i class="fa-brands fa-google mr-2"></i>Connect Google Ads
+      </a>
+      {% endif %}
+    </div>
+
+  {% elif not quick_wins %}
+    <!-- Empty State -->
+    <div class="bg-white rounded-xl shadow-lg p-12 text-center">
+      <div class="bg-green-100 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
+        <i class="fa-solid fa-trophy text-green-600 text-4xl"></i>
+      </div>
+      <h3 class="text-2xl font-bold text-gray-900 mb-3">Your Account is Optimized!</h3>
+      <p class="text-gray-600 text-lg mb-2">No immediate optimization opportunities found.</p>
+      <p class="text-gray-500">Your campaigns are performing well. Check back later for new recommendations.</p>
+    </div>
+
+  {% else %}
+    <!-- Quick Wins List -->
+    <div class="space-y-6">
+      {% for win in quick_wins %}
+      <div class="bg-white rounded-xl shadow-lg border-2 border-gray-200 hover:shadow-xl transition overflow-hidden">
+
+        <!-- Header with Priority Badge -->
+        <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <!-- Priority Number -->
+              <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xl
+                          {% if loop.index == 1 %}bg-yellow-500
+                          {% elif loop.index == 2 %}bg-orange-500
+                          {% else %}bg-purple-500{% endif %}">
+                #{{ loop.index }}
+              </div>
+
+              <!-- Icon based on win type -->
+              <div class="w-12 h-12 rounded-full flex items-center justify-center
+                          {% if win.win_type == 'negative_keywords' %}bg-red-100
+                          {% elif win.win_type == 'mobile_bid_adjustment' %}bg-blue-100
+                          {% elif win.win_type == 'pause_low_performers' %}bg-orange-100
+                          {% elif win.win_type == 'budget_reallocation' %}bg-green-100
+                          {% elif win.win_type == 'quality_score_improvement' %}bg-purple-100
+                          {% else %}bg-gray-100{% endif %}">
+                {% if win.win_type == 'negative_keywords' %}
+                  <i class="fa-solid fa-ban text-red-600 text-xl"></i>
+                {% elif win.win_type == 'mobile_bid_adjustment' %}
+                  <i class="fa-solid fa-mobile-screen text-blue-600 text-xl"></i>
+                {% elif win.win_type == 'pause_low_performers' %}
+                  <i class="fa-solid fa-pause text-orange-600 text-xl"></i>
+                {% elif win.win_type == 'budget_reallocation' %}
+                  <i class="fa-solid fa-money-bill-transfer text-green-600 text-xl"></i>
+                {% elif win.win_type == 'quality_score_improvement' %}
+                  <i class="fa-solid fa-star text-purple-600 text-xl"></i>
+                {% else %}
+                  <i class="fa-solid fa-lightbulb text-gray-600 text-xl"></i>
+                {% endif %}
+              </div>
+
+              <!-- Title -->
+              <div>
+                <h3 class="text-xl font-bold text-gray-900">{{ win.title }}</h3>
+                <div class="flex items-center gap-3 mt-1">
+                  <!-- Difficulty Badge -->
+                  <span class="px-2 py-1 rounded-full text-xs font-semibold
+                               {% if win.difficulty == 'easy' %}bg-green-100 text-green-700
+                               {% elif win.difficulty == 'medium' %}bg-yellow-100 text-yellow-700
+                               {% else %}bg-red-100 text-red-700{% endif %}">
+                    {{ win.difficulty|capitalize }}
+                  </span>
+                  <!-- Time Estimate -->
+                  <span class="text-sm text-gray-600">
+                    <i class="fa-regular fa-clock mr-1"></i>{{ win.time_estimate }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="p-6">
+          <!-- Description -->
+          <p class="text-gray-700 text-lg mb-6">{{ win.description }}</p>
+
+          <!-- Impact Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {% if win.impact_monthly_value > 0 %}
+            <div class="bg-green-50 rounded-lg p-4 border-2 border-green-200">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-sm text-green-600 font-semibold mb-1">Monthly Savings</div>
+                  <div class="text-3xl font-bold text-green-600">${{ "{:,.0f}".format(win.impact_monthly_value) }}</div>
+                </div>
+                <div class="bg-green-100 rounded-full p-3">
+                  <i class="fa-solid fa-piggy-bank text-green-600 text-2xl"></i>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if win.impact_leads > 0 %}
+            <div class="bg-blue-50 rounded-lg p-4 border-2 border-blue-200">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-sm text-blue-600 font-semibold mb-1">Additional Leads/Month</div>
+                  <div class="text-3xl font-bold text-blue-600">+{{ win.impact_leads }}</div>
+                </div>
+                <div class="bg-blue-100 rounded-full p-3">
+                  <i class="fa-solid fa-user-plus text-blue-600 text-2xl"></i>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if win.impact_monthly_value == 0 and win.impact_leads == 0 %}
+            <div class="bg-purple-50 rounded-lg p-4 border-2 border-purple-200">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-sm text-purple-600 font-semibold mb-1">Performance Improvement</div>
+                  <div class="text-2xl font-bold text-purple-600">Optimization</div>
+                </div>
+                <div class="bg-purple-100 rounded-full p-3">
+                  <i class="fa-solid fa-chart-line text-purple-600 text-2xl"></i>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Details Section (if available) -->
+          {% if win.data %}
+          <div class="bg-gray-50 rounded-lg p-4 mb-6 border">
+            <div class="font-semibold text-gray-700 mb-3 flex items-center">
+              <i class="fa-solid fa-info-circle mr-2"></i>Details
+            </div>
+
+            <!-- Negative Keywords Details -->
+            {% if win.win_type == 'negative_keywords' and win.data.top_terms %}
+            <div class="space-y-2">
+              <p class="text-sm text-gray-600 mb-2">Top wasted search terms:</p>
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                  <thead>
+                    <tr class="border-b">
+                      <th class="text-left py-2 text-gray-600 font-semibold">Search Term</th>
+                      <th class="text-right py-2 text-gray-600 font-semibold">Cost (30d)</th>
+                      <th class="text-right py-2 text-gray-600 font-semibold">Clicks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for term in win.data.top_terms[:5] %}
+                    <tr class="border-b">
+                      <td class="py-2 text-gray-900">{{ term.term }}</td>
+                      <td class="py-2 text-right text-red-600 font-semibold">${{ "{:.2f}".format(term.cost) }}</td>
+                      <td class="py-2 text-right text-gray-700">{{ term.clicks }}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              {% if win.data.top_terms|length > 5 %}
+              <p class="text-xs text-gray-500 mt-2">+ {{ win.data.top_terms|length - 5 }} more terms</p>
+              {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Mobile Bid Adjustment Details -->
+            {% if win.win_type == 'mobile_bid_adjustment' %}
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <div class="text-gray-600">Mobile CPL</div>
+                <div class="font-bold text-gray-900">${{ "{:.2f}".format(win.data.mobile_cpl) }}</div>
+              </div>
+              <div>
+                <div class="text-gray-600">Desktop CPL</div>
+                <div class="font-bold text-gray-900">${{ "{:.2f}".format(win.data.desktop_cpl) }}</div>
+              </div>
+              <div>
+                <div class="text-gray-600">Recommended Adjustment</div>
+                <div class="font-bold text-indigo-600">{{ win.data.recommended_adjustment }}</div>
+              </div>
+              {% if win.data.estimated_additional_leads %}
+              <div>
+                <div class="text-gray-600">Est. Additional Leads</div>
+                <div class="font-bold text-green-600">+{{ win.data.estimated_additional_leads }}</div>
+              </div>
+              {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Low Performer Details -->
+            {% if win.win_type == 'pause_low_performers' %}
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <div class="text-gray-600">Campaign</div>
+                <div class="font-bold text-gray-900">{{ win.data.campaign_name }}</div>
+              </div>
+              <div>
+                <div class="text-gray-600">60-Day Spend</div>
+                <div class="font-bold text-red-600">${{ "{:,.0f}".format(win.data.all_poor_performers[0].cost if win.data.all_poor_performers else 0) }}</div>
+              </div>
+              {% if win.data.total_poor_performers > 1 %}
+              <div class="col-span-2">
+                <div class="text-gray-600">Additional Poor Performers</div>
+                <div class="font-bold text-gray-900">{{ win.data.total_poor_performers - 1 }} more campaign(s)</div>
+              </div>
+              {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Budget Reallocation Details -->
+            {% if win.win_type == 'budget_reallocation' %}
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <div class="text-gray-600">Campaign</div>
+                <div class="font-bold text-gray-900">{{ win.data.campaign_name }}</div>
+              </div>
+              <div>
+                <div class="text-gray-600">Current CPL</div>
+                <div class="font-bold text-green-600">${{ "{:.2f}".format(win.data.current_cpl) }}</div>
+              </div>
+              <div>
+                <div class="text-gray-600">Budget Lost IS</div>
+                <div class="font-bold text-red-600">{{ "{:.1f}".format(win.data.budget_lost_share) }}%</div>
+              </div>
+              <div>
+                <div class="text-gray-600">Recommended Increase</div>
+                <div class="font-bold text-indigo-600">{{ win.data.recommended_increase }}</div>
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- Quality Score Details -->
+            {% if win.win_type == 'quality_score_improvement' and win.data.top_keywords %}
+            <div class="space-y-2">
+              <p class="text-sm text-gray-600 mb-2">Top low-quality keywords (QS ≤4):</p>
+              <div class="space-y-1">
+                {% for kw in win.data.top_keywords %}
+                <div class="flex justify-between items-center py-1 border-b">
+                  <span class="text-gray-900">{{ kw.keyword }}</span>
+                  <div class="flex items-center gap-3">
+                    <span class="text-sm text-gray-600">${{ "{:.2f}".format(kw.cost) }}/mo</span>
+                    <span class="px-2 py-1 rounded text-xs font-bold bg-red-100 text-red-700">QS: {{ kw.quality_score }}</span>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          <!-- Action Button -->
+          <div class="flex items-center gap-3">
+            {% if win.action_url %}
+            <a href="{{ win.action_url }}" class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 transition shadow-lg">
+              <i class="fa-solid fa-rocket mr-2"></i>{{ win.action_text }}
+            </a>
+            {% endif %}
+
+            <div class="text-sm text-gray-500">
+              Priority Score: <span class="font-semibold text-gray-700">{{ "{:.0f}".format(win.priority_score) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Summary Footer -->
+    <div class="mt-8 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-6 border-2 border-indigo-200">
+      <div class="flex items-start gap-4">
+        <div class="bg-indigo-100 rounded-full p-3 flex-shrink-0">
+          <i class="fa-solid fa-lightbulb text-indigo-600 text-2xl"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">What are Quick Wins?</h3>
+          <p class="text-gray-700">
+            Quick Wins are high-impact optimization opportunities identified by analyzing your Google Ads account data.
+            These recommendations are ranked by potential ROI and ease of implementation, helping you maximize results with minimal effort.
+          </p>
+          <p class="text-sm text-gray-600 mt-2">
+            <i class="fa-solid fa-info-circle mr-1"></i>
+            Quick Wins are automatically refreshed every 24 hours or when you click the Refresh button.
+          </p>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

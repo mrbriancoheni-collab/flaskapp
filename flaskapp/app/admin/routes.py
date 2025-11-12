@@ -1739,7 +1739,7 @@ def test_email():
         if provider == 'mailgun':
             # Use Mailgun API directly
             api_key = os.getenv('MAILGUN_API_KEY')
-            domain = os.getenv('MAILGUN_DOMAIN', 'fieldsprout.io')
+            domain = os.getenv('MAILGUN_DOMAIN', 'mg.fieldsprout.io')
 
             if not api_key:
                 return jsonify({

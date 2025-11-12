@@ -2,14 +2,16 @@
 
 ## Configuration
 
-**Domain:** `fieldsprout.io` (primary domain)
-**API Endpoint:** `https://api.mailgun.net/v3/fieldsprout.io/messages`
+**Domain:** `mg.fieldsprout.io` (verified subdomain)
+**API Endpoint:** `https://api.mailgun.net/v3/mg.fieldsprout.io/messages`
+
+> **Note:** To use `fieldsprout.io` instead of `mg.fieldsprout.io`, you must verify the domain in Mailgun by adding DNS records (TXT, MX, CNAME). See "Domain Verification" section below.
 
 ### Environment Variables Required
 
 ```bash
 MAILGUN_API_KEY=your-api-key-here
-MAILGUN_DOMAIN=fieldsprout.io  # Optional, defaults to fieldsprout.io
+MAILGUN_DOMAIN=mg.fieldsprout.io  # Optional, defaults to mg.fieldsprout.io
 EMAIL_PROVIDER=mailgun  # Optional, defaults to mailgun
 ```
 
@@ -159,8 +161,45 @@ curl "https://fieldsprout.io/admin/test-email?to=test@example.com"
 ## Mailgun Dashboard
 
 Monitor email delivery at:
-- **API Logs:** https://app.mailgun.com/app/sending/domains/fieldsprout.io/logs
-- **Domain Settings:** https://app.mailgun.com/app/sending/domains/fieldsprout.io/settings
+- **API Logs:** https://app.mailgun.com/app/sending/domains/mg.fieldsprout.io/logs
+- **Domain Settings:** https://app.mailgun.com/app/sending/domains/mg.fieldsprout.io/settings
+
+---
+
+## Domain Verification (Optional)
+
+### Currently Using: `mg.fieldsprout.io` (Verified Subdomain)
+
+Emails currently send from `noreply@mg.fieldsprout.io` or `postmaster@mg.fieldsprout.io`.
+
+### To Use `fieldsprout.io` Instead:
+
+If you want emails to send from `@fieldsprout.io` instead of `@mg.fieldsprout.io`, you need to verify the domain in Mailgun:
+
+1. **Log in to Mailgun:** https://app.mailgun.com/app/sending/domains
+2. **Add Domain:** Click "Add New Domain" and enter `fieldsprout.io`
+3. **Add DNS Records:** Mailgun will provide DNS records to add:
+   - **TXT records** (for SPF and domain verification)
+   - **MX records** (for receiving bounces)
+   - **CNAME records** (for tracking and DKIM)
+
+4. **Verify DNS:** After adding records, click "Verify DNS Settings"
+5. **Update Environment Variable:**
+   ```bash
+   MAILGUN_DOMAIN=fieldsprout.io
+   ```
+6. **Restart Application:** Clear cache and restart
+
+**DNS Records Example:**
+```
+TXT  @ "v=spf1 include:mailgun.org ~all"
+TXT  mailo._domainkey  "k=rsa; p=MIGfMA0GCSqGSIb3DQEBA..."
+MX   @ mxa.mailgun.org (priority 10)
+MX   @ mxb.mailgun.org (priority 10)
+CNAME email mg.fieldsprout.io
+```
+
+**Verification Time:** DNS changes can take 24-48 hours to propagate.
 
 ---
 

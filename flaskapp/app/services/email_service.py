@@ -3,20 +3,19 @@
 Email service for sending transactional emails.
 
 Supports multiple providers:
-- SMTP (via Flask-Mail or standard smtplib)
+- Mailgun API (default, recommended)
 - SendGrid API
-- Mailgun API
-- AWS SES (future)
+- SMTP (legacy, not recommended)
 
 Configuration via environment variables:
-- EMAIL_PROVIDER: 'smtp', 'sendgrid', or 'mailgun'
-- For SMTP:
-  - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_USE_TLS
+- EMAIL_PROVIDER: 'mailgun' (default), 'sendgrid', or 'smtp'
+- For Mailgun (default):
+  - MAILGUN_API_KEY (required)
+  - MAILGUN_DOMAIN (default: mg.fieldsprout.io)
 - For SendGrid:
   - SENDGRID_API_KEY
-- For Mailgun:
-  - MAILGUN_API_KEY
-  - MAILGUN_DOMAIN (default: mg.fieldsprout.io)
+- For SMTP (legacy):
+  - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_USE_TLS
 """
 
 import os
@@ -45,7 +44,7 @@ def get_email_config() -> Dict[str, Any]:
                  'noreply@fieldsprout.com')
 
     return {
-        'provider': current_app.config.get('EMAIL_PROVIDER', os.getenv('EMAIL_PROVIDER', 'smtp')),
+        'provider': current_app.config.get('EMAIL_PROVIDER', os.getenv('EMAIL_PROVIDER', 'mailgun')),
         'from_email': from_email,
         'from_name': current_app.config.get('EMAIL_FROM_NAME', os.getenv('EMAIL_FROM_NAME', 'FieldSprout')),
 

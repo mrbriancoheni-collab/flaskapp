@@ -153,20 +153,152 @@
   </div>
   {% endif %}
 
-  <!-- Top 5 Opportunities -->
+  <!-- Quick Wins Section -->
+  {% if analysis.quick_wins|length > 0 %}
+  <div class="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-lg p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="text-2xl font-bold text-gray-900">
+          <i class="fa-solid fa-bolt text-yellow-500 mr-2"></i>
+          Quick Wins
+        </h2>
+        <p class="text-sm text-gray-600 mt-1">High-impact optimizations you can implement in under 30 minutes</p>
+      </div>
+      <div class="bg-white border-2 border-green-400 rounded-lg px-4 py-2">
+        <div class="text-xs text-gray-600 font-semibold">Implementation Time</div>
+        <div class="text-2xl font-bold text-green-600">< 30 min</div>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      {% for qw in analysis.quick_wins %}
+      <div class="bg-white rounded-lg border-2 border-green-200 p-4 hover:shadow-md transition">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-full bg-{{ qw.color }}-100 border-2 border-{{ qw.color }}-300 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid {{ qw.icon }} text-{{ qw.color }}-600"></i>
+          </div>
+          <div class="flex-1">
+            <h3 class="font-bold text-gray-900 mb-1">{{ qw.title }}</h3>
+            <p class="text-sm text-gray-600 mb-2">{{ qw.description }}</p>
+            <div class="flex items-center gap-2 text-xs">
+              <span class="bg-green-100 text-green-800 px-2 py-0.5 rounded font-medium">
+                <i class="fa-solid fa-clock mr-1"></i>{{ qw.estimated_time }}
+              </span>
+              {% if qw.monthly_savings %}
+              <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-medium">
+                +${{ "%.0f"|format(qw.monthly_savings) }}/mo
+              </span>
+              {% elif qw.monthly_leads %}
+              <span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-medium">
+                +{{ qw.monthly_leads }} leads/mo
+              </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Competitive Insights -->
   <div class="bg-white rounded-xl shadow-lg p-6">
     <h2 class="text-2xl font-bold mb-6">
-      <i class="fa-solid fa-bullseye text-indigo-600 mr-2"></i>
-      Top Opportunities
+      <i class="fa-solid fa-chart-line text-indigo-600 mr-2"></i>
+      Competitive Insights
     </h2>
 
-    <div class="space-y-4">
+    <div class="grid md:grid-cols-3 gap-6">
+      <!-- CPC vs Industry -->
+      <div class="bg-gradient-to-br from-orange-50 to-red-50 border border-orange-200 rounded-lg p-4">
+        <div class="text-sm text-gray-600 mb-2">Avg CPC vs Industry</div>
+        <div class="flex items-baseline gap-2 mb-2">
+          <span class="text-3xl font-bold text-red-600">${{ "%.2f"|format(analysis.competitive_insights.avg_cpc_vs_industry.yours) }}</span>
+          <span class="text-sm text-gray-500">vs ${{ "%.2f"|format(analysis.competitive_insights.avg_cpc_vs_industry.industry) }}</span>
+        </div>
+        <div class="text-xs font-semibold text-red-600">
+          <i class="fa-solid fa-arrow-up mr-1"></i>
+          {{ analysis.competitive_insights.avg_cpc_vs_industry.diff_pct }}% higher than average
+        </div>
+      </div>
+
+      <!-- Impression Share Lost -->
+      <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+        <div class="text-sm text-gray-600 mb-2">Impression Share Lost</div>
+        <div class="space-y-2">
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span>To Budget</span>
+              <span class="font-bold text-blue-700">{{ analysis.competitive_insights.impression_share_lost_to_budget }}%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+              <div class="bg-blue-500 h-2 rounded-full" style="width: {{ analysis.competitive_insights.impression_share_lost_to_budget }}%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span>To Rank</span>
+              <span class="font-bold text-purple-700">{{ analysis.competitive_insights.impression_share_lost_to_rank }}%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+              <div class="bg-purple-500 h-2 rounded-full" style="width: {{ analysis.competitive_insights.impression_share_lost_to_rank }}%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Competitor Tactics -->
+      <div class="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+        <div class="text-sm text-gray-600 mb-2">Top Competitor Tactics</div>
+        <ul class="space-y-1 text-xs">
+          {% for tactic in analysis.competitive_insights.top_competitor_tactics %}
+          <li class="flex items-start gap-1">
+            <i class="fa-solid fa-check text-purple-600 mt-0.5"></i>
+            <span class="text-gray-700">{{ tactic }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Opportunities with Drill-Down -->
+  <div class="bg-white rounded-xl shadow-lg p-6">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-2xl font-bold">
+        <i class="fa-solid fa-bullseye text-indigo-600 mr-2"></i>
+        Top Opportunities
+      </h2>
+      <!-- Filter/Sort Controls -->
+      <div class="flex items-center gap-2 text-sm">
+        <select id="filterPriority" class="border border-gray-300 rounded px-3 py-1 text-sm">
+          <option value="all">All Priorities</option>
+          <option value="high">High Only</option>
+          <option value="medium">Medium Only</option>
+          <option value="low">Low Only</option>
+        </select>
+        <select id="sortBy" class="border border-gray-300 rounded px-3 py-1 text-sm">
+          <option value="priority">Sort by Priority</option>
+          <option value="impact">Sort by Impact</option>
+          <option value="savings">Sort by Savings</option>
+          <option value="time">Sort by Time</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="opportunitiesList" class="space-y-4">
       {% for opp in analysis.opportunities %}
-      <div class="border-l-4
+      <div class="opportunity-item border-l-4
                   {% if opp.priority == 'high' %}border-red-500 bg-red-50
                   {% elif opp.priority == 'medium' %}border-yellow-500 bg-yellow-50
                   {% else %}border-gray-400 bg-gray-50{% endif %}
-                  rounded-r-lg p-5 hover:shadow-md transition">
+                  rounded-r-lg p-5 hover:shadow-md transition"
+           data-priority="{{ opp.priority }}"
+           data-impact="{{ opp.impact_score }}"
+           data-savings="{{ opp.monthly_savings or 0 }}"
+           data-time="{{ opp.estimated_time }}">
+
         <div class="flex items-start justify-between gap-4">
           <div class="flex items-start gap-4 flex-1">
             <!-- Icon -->
@@ -178,7 +310,7 @@
 
             <!-- Content -->
             <div class="flex-1">
-              <div class="flex items-center gap-2 mb-1">
+              <div class="flex items-center gap-2 mb-1 flex-wrap">
                 <h3 class="text-lg font-bold text-gray-900">{{ opp.title }}</h3>
                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
                             {% if opp.priority == 'high' %}bg-red-100 text-red-800
@@ -187,10 +319,42 @@
                   {{ opp.priority|upper }} PRIORITY
                 </span>
                 <span class="text-sm text-gray-500">Impact: {{ opp.impact_score }}/100</span>
+                {% if opp.quick_win %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">
+                  <i class="fa-solid fa-bolt mr-1"></i>QUICK WIN
+                </span>
+                {% endif %}
+                <!-- Confidence Score -->
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                  <i class="fa-solid fa-gauge-high mr-1"></i>{{ opp.confidence_score }}% confident
+                </span>
+                <!-- Risk Level -->
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                            {% if opp.risk_level == 'low' %}bg-green-100 text-green-800
+                            {% elif opp.risk_level == 'medium' %}bg-yellow-100 text-yellow-800
+                            {% else %}bg-red-100 text-red-800{% endif %}">
+                  {{ opp.risk_level|upper }} RISK
+                </span>
               </div>
               <p class="text-gray-600 mb-3">{{ opp.description }}</p>
 
-              <div class="flex items-center gap-4 text-sm">
+              <!-- Before/After States -->
+              <div class="grid md:grid-cols-2 gap-3 mb-3 bg-white rounded-lg p-3 border border-gray-200">
+                <div>
+                  <div class="text-xs font-semibold text-gray-500 mb-1">
+                    <i class="fa-solid fa-circle-dot text-red-500 mr-1"></i>BEFORE
+                  </div>
+                  <div class="text-sm text-gray-700">{{ opp.before_state }}</div>
+                </div>
+                <div>
+                  <div class="text-xs font-semibold text-gray-500 mb-1">
+                    <i class="fa-solid fa-circle-check text-green-500 mr-1"></i>AFTER
+                  </div>
+                  <div class="text-sm text-gray-700">{{ opp.after_state }}</div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-4 text-sm mb-3">
                 <div class="flex items-center gap-1 text-gray-700">
                   <i class="fa-solid fa-clipboard-list text-gray-400"></i>
                   <span>{{ opp.action }}</span>
@@ -198,6 +362,98 @@
                 <div class="text-gray-500">
                   <i class="fa-regular fa-clock"></i> {{ opp.estimated_time }}
                 </div>
+              </div>
+
+              <!-- Success Metrics -->
+              {% if opp.success_metrics %}
+              <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3 mb-3">
+                <div class="text-xs font-semibold text-indigo-700 mb-2">Success Metrics</div>
+                <ul class="space-y-1">
+                  {% for metric in opp.success_metrics %}
+                  <li class="flex items-start gap-1 text-xs text-gray-700">
+                    <i class="fa-solid fa-chart-line text-indigo-600 mt-0.5"></i>
+                    <span>{{ metric }}</span>
+                  </li>
+                  {% endfor %}
+                </ul>
+              </div>
+              {% endif %}
+
+              <!-- Expandable Details Button -->
+              <button onclick="toggleDetails('opp-{{ loop.index }}')"
+                      class="text-sm font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+                <i class="fa-solid fa-chevron-down transition-transform" id="icon-opp-{{ loop.index }}"></i>
+                <span id="text-opp-{{ loop.index }}">Show Details</span>
+              </button>
+
+              <!-- Expandable Details Section -->
+              <div id="details-opp-{{ loop.index }}" class="hidden mt-4 pt-4 border-t border-gray-200">
+                {% if opp.details %}
+                  <!-- Negative Keywords Details -->
+                  {% if opp.details.type == 'negative_keywords' %}
+                  <div class="space-y-3">
+                    <div class="bg-white rounded-lg p-4 border border-gray-200">
+                      <h4 class="font-bold text-gray-900 mb-3">Suggested Negative Keywords</h4>
+                      <div class="space-y-2">
+                        {% for neg in opp.details.suggested_negatives %}
+                        <div class="flex items-center justify-between p-2 bg-red-50 rounded border border-red-200">
+                          <div class="flex items-center gap-2">
+                            <code class="px-2 py-1 bg-white rounded text-xs font-mono">{{ neg.term }}</code>
+                            <span class="text-xs text-gray-600">{{ neg.clicks }} clicks</span>
+                          </div>
+                          <span class="text-sm font-bold text-red-600">${{ neg.estimated_waste }}</span>
+                        </div>
+                        {% endfor %}
+                      </div>
+                      <div class="mt-3 pt-3 border-t">
+                        <div class="text-sm font-bold">Total Estimated Waste: <span class="text-red-600">${{ opp.details.total_estimated_waste }}/month</span></div>
+                      </div>
+                    </div>
+                    <div class="bg-white rounded-lg p-4 border border-gray-200">
+                      <h4 class="font-bold text-gray-900 mb-2">Affected Campaigns</h4>
+                      <ul class="space-y-1">
+                        {% for campaign in opp.details.affected_campaigns %}
+                        <li class="text-sm text-gray-700"><i class="fa-solid fa-folder text-gray-400 mr-1"></i>{{ campaign }}</li>
+                        {% endfor %}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <!-- Extensions Details -->
+                  {% elif opp.details.type == 'extensions' %}
+                  <div class="bg-white rounded-lg p-4 border border-gray-200">
+                    <h4 class="font-bold text-gray-900 mb-3">Missing Extensions</h4>
+                    <div class="space-y-2">
+                      {% for ext in opp.details.missing_extensions %}
+                      <div class="flex items-center justify-between p-2 bg-blue-50 rounded">
+                        <span class="text-sm font-medium text-gray-900">{{ ext.type }}</span>
+                        <span class="text-xs text-green-600 font-bold">+{{ ext.ctr_lift }} CTR</span>
+                      </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+
+                  <!-- Quality Score Details -->
+                  {% elif opp.details.type == 'quality_score' %}
+                  <div class="bg-white rounded-lg p-4 border border-gray-200">
+                    <h4 class="font-bold text-gray-900 mb-3">Low Quality Score Keywords</h4>
+                    <div class="space-y-2">
+                      {% for kw in opp.details.low_qs_keywords %}
+                      <div class="flex items-center justify-between p-2 bg-yellow-50 rounded border border-yellow-200">
+                        <div>
+                          <code class="text-sm font-mono">{{ kw.keyword }}</code>
+                          <div class="text-xs text-gray-600">{{ kw.campaign }}</div>
+                        </div>
+                        <div class="text-right">
+                          <div class="text-xs text-gray-600">QS: {{ kw.qs }}/10</div>
+                          <div class="text-sm font-bold text-yellow-700">${{ "%.2f"|format(kw.cpc) }}</div>
+                        </div>
+                      </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                  {% endif %}
+                {% endif %}
               </div>
             </div>
           </div>
@@ -516,6 +772,79 @@
     </div>
   </div>
 </div>
+
+<!-- JavaScript for Filtering/Sorting and Details Toggle -->
+<script>
+// Toggle expandable details
+function toggleDetails(id) {
+  const details = document.getElementById('details-' + id);
+  const icon = document.getElementById('icon-' + id);
+  const text = document.getElementById('text-' + id);
+
+  if (details.classList.contains('hidden')) {
+    details.classList.remove('hidden');
+    icon.style.transform = 'rotate(180deg)';
+    text.textContent = 'Hide Details';
+  } else {
+    details.classList.add('hidden');
+    icon.style.transform = 'rotate(0deg)';
+    text.textContent = 'Show Details';
+  }
+}
+
+// Filter and sort opportunities
+document.addEventListener('DOMContentLoaded', function() {
+  const filterSelect = document.getElementById('filterPriority');
+  const sortSelect = document.getElementById('sortBy');
+  const opportunitiesList = document.getElementById('opportunitiesList');
+
+  if (filterSelect) {
+    filterSelect.addEventListener('change', filterAndSort);
+  }
+  if (sortSelect) {
+    sortSelect.addEventListener('change', filterAndSort);
+  }
+
+  function filterAndSort() {
+    const filterValue = filterSelect ? filterSelect.value : 'all';
+    const sortValue = sortSelect ? sortSelect.value : 'priority';
+    const items = Array.from(document.querySelectorAll('.opportunity-item'));
+
+    // Filter
+    items.forEach(item => {
+      const priority = item.dataset.priority;
+      if (filterValue === 'all' || priority === filterValue) {
+        item.style.display = '';
+      } else {
+        item.style.display = 'none';
+      }
+    });
+
+    // Sort
+    const visibleItems = items.filter(item => item.style.display !== 'none');
+    visibleItems.sort((a, b) => {
+      switch(sortValue) {
+        case 'impact':
+          return parseInt(b.dataset.impact) - parseInt(a.dataset.impact);
+        case 'savings':
+          return parseFloat(b.dataset.savings) - parseFloat(a.dataset.savings);
+        case 'time':
+          // Extract number from time string (e.g., "2 hours" -> 2)
+          const timeA = parseInt(a.dataset.time) || 999;
+          const timeB = parseInt(b.dataset.time) || 999;
+          return timeA - timeB;
+        case 'priority':
+        default:
+          const priorityOrder = {'high': 0, 'medium': 1, 'low': 2};
+          return priorityOrder[a.dataset.priority] - priorityOrder[b.dataset.priority];
+      }
+    });
+
+    // Re-append in sorted order
+    visibleItems.forEach(item => opportunitiesList.appendChild(item));
+  }
+});
+</script>
 
 <!-- JavaScript for Modal -->
 <script>

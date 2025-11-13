@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import os
-from email.message import EmailMessage
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 
@@ -337,13 +336,8 @@ def _process_queue(max_jobs: int = 5) -> dict:
 # ---------- email approve ----------
 
 def _send_approval_email(to_email: str, job: WPJob):
-    import smtplib
-
-    host = current_app.config.get("SMTP_HOST")
-    port = int(current_app.config.get("SMTP_PORT", 587))
-    user = current_app.config.get("SMTP_USER")
-    pw = current_app.config.get("SMTP_PASSWORD")
-    sender = current_app.config.get("MAIL_FROM") or user
+    """Send approval email using Mailgun via email_service."""
+    from app.services.email_service import send_email
 
     approve_token = current_app.config.get("APPROVAL_TOKEN") or os.urandom(12).hex()
     approve_url = url_for("wp_bp.approve", job_id=job.id, token=approve_token, _external=True)
@@ -352,11 +346,7 @@ def _send_approval_email(to_email: str, job: WPJob):
     title = p.get("title", "Content approval")
     preview = (p.get("html") or "")[:500]
 
-    msg = EmailMessage()
-    msg["Subject"] = f"[Approve] {title}"
-    msg["From"] = sender
-    msg["To"] = to_email
-    msg.set_content(f"""Please review and approve.
+    text_body = f"""Please review and approve.
 
 Title: {title}
 
@@ -364,15 +354,39 @@ Preview (first 500 chars):
 {preview}
 
 Approve: {approve_url}
-""")
+"""
 
-    with smtplib.SMTP(host, port) as s:
-        s.starttls()
-        if user and pw:
-            s.login(user, pw)
-        s.send_message(msg)
+    html_body = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
+            <h2 style="color: #333; margin-top: 0;">Content Approval Required</h2>
+            <p><strong>Title:</strong> {title}</p>
+            <p><strong>Preview:</strong></p>
+            <div style="background: white; padding: 15px; border-left: 4px solid #7c3aed; margin: 10px 0;">
+                {preview}
+            </div>
+            <div style="margin-top: 20px;">
+                <a href="{approve_url}" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                    Approve Content
+                </a>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
 
-    current_app.logger.info("Sent approval email for job %s to %s", job.id, to_email)
+    success = send_email(
+        to=to_email,
+        subject=f"[Approve] {title}",
+        html_body=html_body,
+        text_body=text_body
+    )
+
+    if success:
+        current_app.logger.info("Sent approval email for job %s to %s", job.id, to_email)
+    else:
+        current_app.logger.error("Failed to send approval email for job %s to %s", job.id, to_email)
 
 # ---------- routes: navigation & setup ----------
 

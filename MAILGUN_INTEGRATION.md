@@ -2,16 +2,16 @@
 
 ## Configuration
 
-**Domain:** `mg.fieldsprout.io` (verified subdomain)
-**API Endpoint:** `https://api.mailgun.net/v3/mg.fieldsprout.io/messages`
+**Domain:** `fieldsprout.io` ✅ **VERIFIED**
+**API Endpoint:** `https://api.mailgun.net/v3/fieldsprout.io/messages`
 
-> **Note:** To use `fieldsprout.io` instead of `mg.fieldsprout.io`, you must verify the domain in Mailgun by adding DNS records (TXT, MX, CNAME). See "Domain Verification" section below.
+> **Note:** The domain `fieldsprout.io` is now fully verified with Mailgun. You can send from any @fieldsprout.io email address (noreply@, support@, alerts@, etc.) without needing to add individual addresses.
 
 ### Environment Variables Required
 
 ```bash
 MAILGUN_API_KEY=your-api-key-here
-MAILGUN_DOMAIN=mg.fieldsprout.io  # Optional, defaults to mg.fieldsprout.io
+MAILGUN_DOMAIN=fieldsprout.io  # Optional, defaults to fieldsprout.io
 EMAIL_PROVIDER=mailgun  # Optional, defaults to mailgun
 ```
 

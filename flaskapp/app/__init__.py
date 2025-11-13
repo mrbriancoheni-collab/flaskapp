@@ -883,10 +883,11 @@ def create_app():
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>400 Bad Request - {{ app_name }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
             color: #333;
             margin: 0;
             padding: 0;
@@ -897,49 +898,134 @@ def create_app():
         }
         .error-container {
             background: white;
-            border-radius: 12px;
-            padding: 3rem;
-            max-width: 500px;
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            max-width: 600px;
+            width: 90%;
             text-align: center;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
         }
-        h1 {
-            font-size: 4rem;
-            margin: 0 0 1rem 0;
-            color: #667eea;
+        .logo {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 2rem;
+        }
+        .error-icon {
+            font-size: 5rem;
+            color: #fbbf24;
+            margin-bottom: 1rem;
+        }
+        .error-code {
+            font-size: 6rem;
+            font-weight: 800;
+            margin: 0;
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
         }
         h2 {
-            font-size: 1.5rem;
-            margin: 0 0 1rem 0;
-            color: #333;
-            font-weight: 600;
+            font-size: 1.75rem;
+            margin: 1rem 0;
+            color: #1f2937;
+            font-weight: 700;
         }
         p {
-            color: #666;
+            color: #6b7280;
             line-height: 1.6;
             margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+        .help-text {
+            background: #f3f4f6;
+            border-left: 4px solid #4f46e5;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            text-align: left;
+            border-radius: 0.5rem;
+        }
+        .help-text strong {
+            color: #1f2937;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        .help-text ul {
+            margin: 0.5rem 0 0 1.5rem;
+            padding: 0;
+            color: #4b5563;
+        }
+        .help-text li {
+            margin: 0.25rem 0;
         }
         .btn {
             display: inline-block;
-            padding: 0.75rem 2rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 0.875rem 2rem;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
             color: white;
             text-decoration: none;
-            border-radius: 6px;
+            border-radius: 8px;
             font-weight: 600;
-            transition: transform 0.2s;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            margin: 0 0.5rem;
         }
         .btn:hover {
             transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        }
+        .btn-secondary {
+            background: white;
+            color: #4f46e5;
+            border: 2px solid #4f46e5;
+        }
+        .btn-secondary:hover {
+            background: #f3f4f6;
+        }
+        .footer {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e5e7eb;
+            color: #9ca3af;
+            font-size: 0.875rem;
         }
     </style>
 </head>
 <body>
     <div class="error-container">
-        <h1>400</h1>
+        <div class="logo">{{ app_name }}</div>
+        <div class="error-icon">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div class="error-code">400</div>
         <h2>Bad Request</h2>
-        <p>The request you sent was invalid or malformed. Please check your input and try again.</p>
-        <a href="/" class="btn">Return Home</a>
+        <p>Oops! The request you sent couldn't be processed. This usually happens when the data format is incorrect or missing required information.</p>
+
+        <div class="help-text">
+            <strong><i class="fa-solid fa-lightbulb"></i> Common causes:</strong>
+            <ul>
+                <li>Missing or invalid form fields</li>
+                <li>Incorrect data format</li>
+                <li>Expired or invalid session</li>
+            </ul>
+        </div>
+
+        <div>
+            <a href="/" class="btn">
+                <i class="fa-solid fa-home"></i> Return Home
+            </a>
+            <a href="javascript:history.back()" class="btn btn-secondary">
+                <i class="fa-solid fa-arrow-left"></i> Go Back
+            </a>
+        </div>
+
+        <div class="footer">
+            Need help? <a href="/contact" style="color: #4f46e5; text-decoration: none;">Contact Support</a>
+        </div>
     </div>
 </body>
 </html>
@@ -1039,10 +1125,11 @@ def create_app():
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>500 Internal Server Error - {{ app_name }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
             color: #333;
             margin: 0;
             padding: 0;
@@ -1053,49 +1140,168 @@ def create_app():
         }
         .error-container {
             background: white;
-            border-radius: 12px;
-            padding: 3rem;
-            max-width: 500px;
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            max-width: 600px;
+            width: 90%;
             text-align: center;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
         }
-        h1 {
-            font-size: 4rem;
-            margin: 0 0 1rem 0;
-            color: #e91e63;
+        .logo {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 2rem;
+        }
+        .error-icon {
+            font-size: 5rem;
+            color: #ef4444;
+            margin-bottom: 1rem;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .error-code {
+            font-size: 6rem;
+            font-weight: 800;
+            margin: 0;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
         }
         h2 {
-            font-size: 1.5rem;
-            margin: 0 0 1rem 0;
-            color: #333;
-            font-weight: 600;
+            font-size: 1.75rem;
+            margin: 1rem 0;
+            color: #1f2937;
+            font-weight: 700;
         }
         p {
-            color: #666;
+            color: #6b7280;
             line-height: 1.6;
             margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+        .status-box {
+            background: #fef2f2;
+            border: 2px solid #fecaca;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin: 1.5rem 0;
+        }
+        .status-box strong {
+            color: #991b1b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+        }
+        .status-box p {
+            margin: 0.5rem 0 0 0;
+            font-size: 0.95rem;
+            color: #7f1d1d;
+        }
+        .help-text {
+            background: #f3f4f6;
+            border-left: 4px solid #4f46e5;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            text-align: left;
+            border-radius: 0.5rem;
+        }
+        .help-text strong {
+            color: #1f2937;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        .help-text ul {
+            margin: 0.5rem 0 0 1.5rem;
+            padding: 0;
+            color: #4b5563;
+        }
+        .help-text li {
+            margin: 0.25rem 0;
         }
         .btn {
             display: inline-block;
-            padding: 0.75rem 2rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 0.875rem 2rem;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
             color: white;
             text-decoration: none;
-            border-radius: 6px;
+            border-radius: 8px;
             font-weight: 600;
-            transition: transform 0.2s;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            margin: 0 0.5rem 0.5rem 0.5rem;
         }
         .btn:hover {
             transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        }
+        .btn-secondary {
+            background: white;
+            color: #4f46e5;
+            border: 2px solid #4f46e5;
+        }
+        .btn-secondary:hover {
+            background: #f3f4f6;
+        }
+        .footer {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e5e7eb;
+            color: #9ca3af;
+            font-size: 0.875rem;
         }
     </style>
 </head>
 <body>
     <div class="error-container">
-        <h1>500</h1>
+        <div class="logo">{{ app_name }}</div>
+        <div class="error-icon">
+            <i class="fa-solid fa-server"></i>
+        </div>
+        <div class="error-code">500</div>
         <h2>Internal Server Error</h2>
-        <p>Something went wrong on our end. We've been notified and are working to fix it. Please try again in a few moments.</p>
-        <a href="/" class="btn">Return Home</a>
+        <p>We're sorry! Something went wrong on our end. Our team has been automatically notified and we're working to fix this issue.</p>
+
+        <div class="status-box">
+            <strong>
+                <i class="fa-solid fa-bell"></i>
+                We've Been Notified
+            </strong>
+            <p>Our engineering team has received an alert about this error and is investigating.</p>
+        </div>
+
+        <div class="help-text">
+            <strong><i class="fa-solid fa-wrench"></i> What you can do:</strong>
+            <ul>
+                <li>Wait a few moments and try again</li>
+                <li>Clear your browser cache and cookies</li>
+                <li>Try a different browser</li>
+                <li>If the issue persists, contact our support team</li>
+            </ul>
+        </div>
+
+        <div>
+            <a href="/" class="btn">
+                <i class="fa-solid fa-home"></i> Return Home
+            </a>
+            <a href="javascript:location.reload()" class="btn btn-secondary">
+                <i class="fa-solid fa-rotate-right"></i> Try Again
+            </a>
+        </div>
+
+        <div class="footer">
+            Need urgent help? <a href="/contact" style="color: #4f46e5; text-decoration: none; font-weight: 600;">Contact Support</a>
+        </div>
     </div>
 </body>
 </html>

@@ -2073,31 +2073,6 @@ def ads_optimize():
     return redirect(url_for("google_bp.ads_ui"))
 
 
-@google_bp.route("/ads/opportunities", methods=["GET"], endpoint="ads_opportunities")
-@login_required
-def ads_opportunities():
-    """
-    Opportunities Dashboard - Beautiful, actionable insights view.
-    Matches the visual quality of the ads-grader report.
-    """
-    aid = current_account_id()
-    connected = _is_connected(aid, "ads")
-
-    # Get ads data
-    ads_data = _get_ads_state(aid)
-
-    # Generate comprehensive analysis
-    analysis = _analyze_ads_opportunities(aid, ads_data)
-
-    return render_template(
-        "google/ads_opportunities.html",
-        connected=connected,
-        ads_data=ads_data,
-        analysis=analysis,
-        epn=request.endpoint,
-    )
-
-
 @google_bp.route("/ads/opportunities/demo", methods=["GET"], endpoint="ads_opportunities_demo")
 def ads_opportunities_demo():
     """
@@ -2151,6 +2126,31 @@ def ads_opportunities_demo():
         analysis=analysis,
         epn=request.endpoint,
         is_demo=True,  # Flag to indicate this is a demo
+    )
+
+
+@google_bp.route("/ads/opportunities", methods=["GET"], endpoint="ads_opportunities")
+@login_required
+def ads_opportunities():
+    """
+    Opportunities Dashboard - Beautiful, actionable insights view.
+    Matches the visual quality of the ads-grader report.
+    """
+    aid = current_account_id()
+    connected = _is_connected(aid, "ads")
+
+    # Get ads data
+    ads_data = _get_ads_state(aid)
+
+    # Generate comprehensive analysis
+    analysis = _analyze_ads_opportunities(aid, ads_data)
+
+    return render_template(
+        "google/ads_opportunities.html",
+        connected=connected,
+        ads_data=ads_data,
+        analysis=analysis,
+        epn=request.endpoint,
     )
 
 

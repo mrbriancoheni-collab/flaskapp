@@ -8,9 +8,15 @@
   <!-- Header with Back Button -->
   <div class="flex items-center justify-between">
     <div>
+      {% if not is_demo %}
       <a href="{{ url_for('google_bp.ads_ui') }}" class="text-sm text-indigo-600 hover:text-indigo-800 mb-2 inline-block">
         <i class="fa-solid fa-arrow-left mr-1"></i> Back to Google Ads
       </a>
+      {% else %}
+      <a href="{{ url_for('home_bp.index') }}" class="text-sm text-indigo-600 hover:text-indigo-800 mb-2 inline-block">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Back to Home
+      </a>
+      {% endif %}
       <h1 class="text-3xl font-bold">Opportunities Dashboard</h1>
       <p class="text-gray-600 mt-1">{{ analysis.account_name }}</p>
     </div>
@@ -21,6 +27,27 @@
     </a>
     {% endif %}
   </div>
+
+  {% if is_demo %}
+  <!-- Demo Mode Banner -->
+  <div class="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg p-6 text-white">
+    <div class="flex items-center gap-4">
+      <div class="flex-shrink-0">
+        <i class="fa-solid fa-flask text-4xl"></i>
+      </div>
+      <div class="flex-1">
+        <h2 class="text-2xl font-bold mb-1">Demo Mode</h2>
+        <p class="text-blue-100">This is a demonstration using sample data from a fictional plumbing & HVAC company. In the live version, you'll see real data from your connected Google Ads account with actionable optimizations you can approve and implement.</p>
+      </div>
+      <div class="flex-shrink-0">
+        <a href="{{ url_for('auth_bp.signup') }}" class="inline-flex items-center gap-2 bg-white text-indigo-600 px-6 py-3 rounded-lg font-bold hover:bg-blue-50 transition shadow-lg">
+          <i class="fa-solid fa-rocket"></i>
+          Start Free Trial
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   <!-- Overall Health Score Card -->
   <div class="bg-white rounded-xl shadow-lg p-8">
@@ -787,6 +814,41 @@ function approveOptimizations() {
       title: checkbox.dataset.title
     });
   });
+
+  {% if is_demo %}
+  // Demo mode - show demo message instead of submitting
+  closeOptimizationsModal();
+
+  // Create demo notification
+  const notification = document.createElement('div');
+  notification.className = 'fixed top-4 right-4 bg-blue-50 border-2 border-blue-500 text-blue-900 px-6 py-4 rounded-lg shadow-xl z-50 max-w-md';
+  notification.innerHTML = `
+    <div class="flex items-start gap-3">
+      <i class="fa-solid fa-flask text-blue-600 text-2xl"></i>
+      <div>
+        <div class="font-bold text-lg mb-1">Demo Mode</div>
+        <div class="text-sm">
+          In the live version, ${selectedOptimizations.length} optimization${selectedOptimizations.length > 1 ? 's' : ''}
+          would be submitted to your Google Ads account for implementation.
+          <a href="{{ url_for('auth_bp.signup') }}" class="block mt-2 text-blue-700 font-bold hover:underline">
+            Start Free Trial →
+          </a>
+        </div>
+      </div>
+      <button onclick="this.parentElement.parentElement.remove()" class="text-blue-600 hover:text-blue-800">
+        <i class="fa-solid fa-times"></i>
+      </button>
+    </div>
+  `;
+  document.body.appendChild(notification);
+
+  // Auto-remove after 8 seconds
+  setTimeout(() => {
+    notification.remove();
+  }, 8000);
+
+  return;
+  {% endif %}
 
   // Show loading state
   const button = document.getElementById('approveButton');

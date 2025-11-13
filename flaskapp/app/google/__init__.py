@@ -2079,54 +2079,62 @@ def ads_opportunities_demo():
     Demo version of Opportunities Dashboard for showing to potential customers.
     Does not require login or connected account - uses mock data.
     """
-    # Generate mock ads data for demo
-    mock_ads_data = {
-        "account_name": "ABC Plumbing & HVAC (Demo)",
-        "campaigns": [
-            {"name": "Emergency Services", "status": "enabled", "daily_budget": 150, "conversions": 45},
-            {"name": "Main Campaign", "status": "enabled", "daily_budget": 200, "conversions": 62},
-            {"name": "Water Heater Services", "status": "enabled", "daily_budget": 100, "conversions": 28},
-            {"name": "Seasonal Campaign", "status": "paused", "daily_budget": 75, "conversions": 12},
-        ],
-        "ad_groups": [
-            {"name": "Emergency Plumbing", "status": "enabled"},
-            {"name": "HVAC Repair", "status": "enabled"},
-            {"name": "Water Heater", "status": "enabled"},
-            {"name": "AC Installation", "status": "enabled"},
-            {"name": "Heating Services", "status": "enabled"},
-        ],
-        "keywords": [
-            {"keyword": "emergency plumber", "cpa": 45, "conv": 15},
-            {"keyword": "24/7 plumbing", "cpa": 38, "conv": 12},
-            {"keyword": "hvac repair", "cpa": 52, "conv": 18},
-            {"keyword": "water heater repair", "cpa": 41, "conv": 10},
-            {"keyword": "ac installation", "cpa": 65, "conv": 8},
-        ],
-        "negatives": [
-            {"keyword": "diy"},
-            {"keyword": "training"},
-        ],
-        "ads": [
-            {"headline": "24/7 Emergency Plumber", "status": "enabled"},
-            {"headline": "Licensed HVAC Repair", "status": "enabled"},
-            {"headline": "Water Heater Installation", "status": "enabled"},
-        ],
-        "extensions": [
-            {"type": "call", "phone": "555-123-4567"},
-        ],
-    }
+    try:
+        current_app.logger.info("Demo route accessed")
 
-    # Generate comprehensive analysis using the same function as the real version
-    analysis = _analyze_ads_opportunities(0, mock_ads_data)  # aid=0 for demo
+        # Generate mock ads data for demo
+        mock_ads_data = {
+            "account_name": "ABC Plumbing & HVAC (Demo)",
+            "campaigns": [
+                {"name": "Emergency Services", "status": "enabled", "daily_budget": 150, "conversions": 45},
+                {"name": "Main Campaign", "status": "enabled", "daily_budget": 200, "conversions": 62},
+                {"name": "Water Heater Services", "status": "enabled", "daily_budget": 100, "conversions": 28},
+                {"name": "Seasonal Campaign", "status": "paused", "daily_budget": 75, "conversions": 12},
+            ],
+            "ad_groups": [
+                {"name": "Emergency Plumbing", "status": "enabled"},
+                {"name": "HVAC Repair", "status": "enabled"},
+                {"name": "Water Heater", "status": "enabled"},
+                {"name": "AC Installation", "status": "enabled"},
+                {"name": "Heating Services", "status": "enabled"},
+            ],
+            "keywords": [
+                {"keyword": "emergency plumber", "cpa": 45, "conv": 15},
+                {"keyword": "24/7 plumbing", "cpa": 38, "conv": 12},
+                {"keyword": "hvac repair", "cpa": 52, "conv": 18},
+                {"keyword": "water heater repair", "cpa": 41, "conv": 10},
+                {"keyword": "ac installation", "cpa": 65, "conv": 8},
+            ],
+            "negatives": [
+                {"keyword": "diy"},
+                {"keyword": "training"},
+            ],
+            "ads": [
+                {"headline": "24/7 Emergency Plumber", "status": "enabled"},
+                {"headline": "Licensed HVAC Repair", "status": "enabled"},
+                {"headline": "Water Heater Installation", "status": "enabled"},
+            ],
+            "extensions": [
+                {"type": "call", "phone": "555-123-4567"},
+            ],
+        }
 
-    return render_template(
-        "google/ads_opportunities.html",
-        connected=True,  # Show as connected for demo purposes
-        ads_data=mock_ads_data,
-        analysis=analysis,
-        epn=request.endpoint,
-        is_demo=True,  # Flag to indicate this is a demo
-    )
+        current_app.logger.info("Generating analysis for demo")
+        # Generate comprehensive analysis using the same function as the real version
+        analysis = _analyze_ads_opportunities(0, mock_ads_data)  # aid=0 for demo
+
+        current_app.logger.info("Rendering template for demo")
+        return render_template(
+            "google/ads_opportunities.html",
+            connected=True,  # Show as connected for demo purposes
+            ads_data=mock_ads_data,
+            analysis=analysis,
+            epn=request.endpoint,
+            is_demo=True,  # Flag to indicate this is a demo
+        )
+    except Exception as e:
+        current_app.logger.exception(f"Error in demo route: {e}")
+        raise  # Re-raise to show branded 500 page
 
 
 @google_bp.route("/ads/opportunities", methods=["GET"], endpoint="ads_opportunities")

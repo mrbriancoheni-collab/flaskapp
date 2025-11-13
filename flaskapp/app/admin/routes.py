@@ -824,6 +824,7 @@ def email_send():
     message_body = request.form.get("message", "").strip()
     recipient_type = request.form.get("recipient_type", "")
     campaign_name = request.form.get("campaign_name", "").strip() or None  # Optional campaign name for bulk
+    from_email = request.form.get("from_email", "").strip() or None  # Optional custom from address
 
     # Get logged-in user for sender info
     sent_by_user_id = g.user.id if hasattr(g, 'user') else None
@@ -883,13 +884,14 @@ def email_send():
 </html>
             """
 
-            # Send tracked email (will use logged-in user's email as sender)
+            # Send tracked email with custom from address
             email_sent = send_tracked_email_to_crm_contact(
                 crm_contact_id=contact_id,
                 subject=subject,
                 html_body=html_body,
                 text_body=message_body,
                 sent_by_user_id=sent_by_user_id,
+                from_email=from_email,
                 track_clicks=True
             )
 

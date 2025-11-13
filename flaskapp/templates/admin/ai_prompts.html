@@ -120,26 +120,5 @@
     </div>
   </div>
 
-  <!-- Reset to Defaults -->
-  {% if prompts %}
-  <div class="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
-    <div class="flex items-center justify-between">
-      <div class="flex items-start gap-3">
-        <i class="fa-solid fa-triangle-exclamation text-amber-600 text-xl mt-0.5"></i>
-        <div class="text-sm text-amber-900">
-          <strong>Reset to Defaults:</strong> This will overwrite all prompts with the default values. Use with caution!
-        </div>
-      </div>
-      <form method="post" action="{{ url_for('admin_bp.ai_prompts_initialize') }}" onsubmit="return confirm('Are you sure you want to reset all prompts to defaults? This will overwrite any custom changes.');">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="force" value="on">
-        <button type="submit" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium">
-          <i class="fa-solid fa-rotate-left mr-1"></i> Reset All to Defaults
-        </button>
-      </form>
-    </div>
-  </div>
-  {% endif %}
-
 </div>
 {% endblock %}

@@ -1806,6 +1806,16 @@ def ads_ui():
 @google_bp.route("/analytics/data", methods=["GET"], endpoint="ga_data")
 @login_required
 def ga_data():
+    # Detect if this is being accessed directly in a browser (not AJAX)
+    # If so, redirect to the main analytics page
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    accepts_json = 'application/json' in request.headers.get('Accept', '')
+
+    if not is_ajax and not accepts_json:
+        # User is accessing this directly - redirect to main analytics page
+        timeframe = request.args.get("timeframe", "28d")
+        return redirect(url_for("google_bp.ga_ui", timeframe=timeframe))
+
     timeframe = request.args.get("timeframe", "28d")
     start_date, end_date, label = _resolve_timeframe(timeframe)
 

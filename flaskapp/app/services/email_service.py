@@ -3,16 +3,19 @@
 Email service for sending transactional emails.
 
 Supports multiple providers:
-- SMTP (via Flask-Mail or standard smtplib)
+- Mailgun API (default, recommended)
 - SendGrid API
-- AWS SES (future)
+- SMTP (legacy, not recommended)
 
 Configuration via environment variables:
-- EMAIL_PROVIDER: 'smtp' or 'sendgrid'
-- For SMTP:
-  - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_USE_TLS
+- EMAIL_PROVIDER: 'mailgun' (default), 'sendgrid', or 'smtp'
+- For Mailgun (default):
+  - MAILGUN_API_KEY (required)
+  - MAILGUN_DOMAIN (default: fieldsprout.io)
 - For SendGrid:
   - SENDGRID_API_KEY
+- For SMTP (legacy):
+  - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_USE_TLS
 """
 
 import os
@@ -21,6 +24,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional, List, Dict, Any
 from flask import current_app, render_template_string
+import requests
 
 
 def get_email_config() -> Dict[str, Any]:
@@ -40,7 +44,7 @@ def get_email_config() -> Dict[str, Any]:
                  'noreply@fieldsprout.com')
 
     return {
-        'provider': current_app.config.get('EMAIL_PROVIDER', os.getenv('EMAIL_PROVIDER', 'smtp')),
+        'provider': current_app.config.get('EMAIL_PROVIDER', os.getenv('EMAIL_PROVIDER', 'mailgun')),
         'from_email': from_email,
         'from_name': current_app.config.get('EMAIL_FROM_NAME', os.getenv('EMAIL_FROM_NAME', 'FieldSprout')),
 
@@ -58,6 +62,10 @@ def get_email_config() -> Dict[str, Any]:
 
         # SendGrid settings
         'sendgrid_api_key': current_app.config.get('SENDGRID_API_KEY', os.getenv('SENDGRID_API_KEY', '')),
+
+        # Mailgun settings
+        'mailgun_api_key': current_app.config.get('MAILGUN_API_KEY', os.getenv('MAILGUN_API_KEY', '')),
+        'mailgun_domain': current_app.config.get('MAILGUN_DOMAIN', os.getenv('MAILGUN_DOMAIN', 'fieldsprout.io')),
     }
 
 
@@ -104,6 +112,8 @@ def send_email(
     try:
         if provider == 'sendgrid':
             return _send_via_sendgrid(to, subject, html_body, text_body, reply_to, config)
+        elif provider == 'mailgun':
+            return _send_via_mailgun(to, subject, html_body, text_body, reply_to, config)
         else:  # Default to SMTP
             return _send_via_smtp(to, subject, html_body, text_body, reply_to, config)
     except Exception as e:
@@ -227,6 +237,66 @@ def _send_via_sendgrid(
         return True
     else:
         current_app.logger.error(f"SendGrid returned status {response.status_code} for {to}")
+        return False
+
+
+def _send_via_mailgun(
+    to: str,
+    subject: str,
+    html_body: str,
+    text_body: Optional[str],
+    reply_to: Optional[str],
+    config: Dict[str, Any]
+) -> bool:
+    """Send email via Mailgun API."""
+    api_key = config['mailgun_api_key']
+    domain = config['mailgun_domain']
+
+    if not api_key:
+        current_app.logger.warning(f"Mailgun API key not configured, email to {to} not sent")
+        return False
+
+    if not domain:
+        current_app.logger.warning(f"Mailgun domain not configured, email to {to} not sent")
+        return False
+
+    # Prepare from address
+    from_address = f"{config['from_name']} <postmaster@{domain}>"
+
+    # Prepare request data
+    data = {
+        "from": from_address,
+        "to": to,
+        "subject": subject,
+        "html": html_body
+    }
+
+    if text_body:
+        data["text"] = text_body
+
+    if reply_to:
+        data["h:Reply-To"] = reply_to
+
+    # Send via Mailgun API
+    try:
+        response = requests.post(
+            f"https://api.mailgun.net/v3/{domain}/messages",
+            auth=("api", api_key),
+            data=data,
+            timeout=20
+        )
+
+        if response.status_code == 200:
+            current_app.logger.info(f"Email sent via Mailgun to {to}: {subject}")
+            return True
+        else:
+            current_app.logger.error(
+                f"Mailgun returned status {response.status_code} for {to}: {response.text}"
+            )
+            return False
+
+    except requests.exceptions.RequestException as e:
+        current_app.logger.error(f"Mailgun request failed for {to}: {e}")
         return False
 
 
@@ -556,6 +626,7 @@ def send_tracked_email_to_crm_contact(
     text_body: Optional[str] = None,
     campaign_name: Optional[str] = None,
     sent_by_user_id: Optional[int] = None,
+    from_email: Optional[str] = None,
     track_clicks: bool = True
 ):
     """
@@ -569,8 +640,10 @@ def send_tracked_email_to_crm_contact(
     5. Returns the EmailSent record
 
     SENDER LOGIC:
-    - Individual emails (no campaign_name): Use the logged-in admin user's email
+    - If from_email is provided: Use that email address (highest priority)
     - Bulk campaigns (with campaign_name): Use David credentials (MAIL_USERNAME_DAVID)
+    - Individual emails (sent_by_user_id): Use the logged-in admin user's email
+    - Default: Use system default sender
 
     Args:
         crm_contact_id: ID of the CRMContact to send to
@@ -579,6 +652,7 @@ def send_tracked_email_to_crm_contact(
         text_body: Plain text version (optional)
         campaign_name: Optional campaign identifier for grouping (triggers bulk mode)
         sent_by_user_id: ID of user sending the email (optional)
+        from_email: Optional custom sender email address (overrides other sender logic)
         track_clicks: Whether to track link clicks (default: True)
 
     Returns:
@@ -602,25 +676,34 @@ def send_tracked_email_to_crm_contact(
         return None
 
     # Determine sender email and name
-    from_email = None
-    from_name = None
+    sender_email = None
+    sender_name = None
     use_bulk_credentials = False
 
-    if campaign_name:
-        # Bulk campaign - use David credentials
+    # Priority 1: Use explicitly provided from_email (user selected from dropdown)
+    if from_email:
+        sender_email = from_email
+        # Extract name from email if it's support@, hello@, etc.
+        if '@' in from_email:
+            local_part = from_email.split('@')[0]
+            sender_name = local_part.capitalize() if local_part != 'noreply' else 'FieldSprout'
+        current_app.logger.info(f"Using custom from address: {sender_email}")
+    # Priority 2: Bulk campaign - use David credentials
+    elif campaign_name:
         use_bulk_credentials = True
         current_app.logger.info(f"Bulk campaign '{campaign_name}' - using David credentials")
+    # Priority 3: Individual email - use the sender's email
     elif sent_by_user_id:
-        # Individual email - use the sender's email
         sender_user = User.query.get(sent_by_user_id)
         if sender_user:
-            from_email = sender_user.email
-            from_name = sender_user.name
-            current_app.logger.info(f"Individual email from {from_name} <{from_email}>")
+            sender_email = sender_user.email
+            sender_name = sender_user.name
+            current_app.logger.info(f"Individual email from {sender_name} <{sender_email}>")
         else:
             current_app.logger.warning(f"Sender user {sent_by_user_id} not found, using default")
+    # Priority 4: Default sender
     else:
-        current_app.logger.warning("No campaign_name or sent_by_user_id - using default sender")
+        current_app.logger.warning("No from_email, campaign_name, or sent_by_user_id - using default sender")
 
     # Generate tracking token
     tracking_token = generate_tracking_token()
@@ -658,8 +741,8 @@ def send_tracked_email_to_crm_contact(
             subject=subject,
             html_body=tracked_html,
             text_body=text_body,
-            from_email=from_email,
-            from_name=from_name,
+            from_email=sender_email,
+            from_name=sender_name,
             use_bulk_credentials=use_bulk_credentials
         )
 

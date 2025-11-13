@@ -4,7 +4,7 @@ from flask import Blueprint, request, redirect, url_for, flash, current_app, ren
 from sqlalchemy import text
 from itsdangerous import SignatureExpired  # Add missing import for expired token handling
 from app import db
-from app.emailer import send_mail
+from app.services.email_service import send_email
 from app.auth.utils import login_required, current_user_id, _session_email  # uses your existing helpers
 from .verify import make_verify_token, read_verify_token, verify_link
 from .forms import RegistrationForm, LoginForm
@@ -42,11 +42,11 @@ def send_verification():
     html = f"""<p>Please verify your email by clicking this link:</p>
                <p><a href="{link}">{link}</a></p>"""
     try:
-        send_mail(email, subj, txt, html)
+        send_email(email, subj, html, text_body=txt)
         flash("Verification email sent.", "success")
     except Exception:
         current_app.logger.exception("Failed to send verification email")
-        flash("Could not send verification email. Check SMTP settings.", "error")
+        flash("Could not send verification email. Check email settings.", "error")
 
     return redirect(url_for("main_bp.home"))
 

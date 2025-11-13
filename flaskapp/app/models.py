@@ -689,3 +689,140 @@ class PageView(db.Model):
 
     def __repr__(self) -> str:
         return f"<PageView id={self.id} session={self.session_id[:8]}... path={self.path!r}>"
+
+
+# -------------------------
+# Budget Tracking
+# -------------------------
+class BudgetTracker(db.Model):
+    """
+    Tracks budgets for Google Ads campaigns/accounts.
+    Monitors spend vs. budget and generates alerts when thresholds are hit.
+    """
+    __tablename__ = "budget_trackers"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+
+    # Google Ads identifiers
+    customer_id = db.Column(db.String(32), nullable=False, index=True)  # Google Ads account ID
+    campaign_id = db.Column(db.String(32), nullable=True, index=True)  # Optional: specific campaign
+    campaign_name = db.Column(db.String(255), nullable=True)  # For display purposes
+
+    # Budget configuration
+    budget_type = db.Column(
+        SAEnum("monthly", "weekly", "daily", "campaign", name="budget_type_enum"),
+        nullable=False,
+        default="monthly"
+    )
+    budget_amount = db.Column(db.Integer, nullable=False)  # in cents
+
+    # Time period
+    start_date = db.Column(db.DateTime, nullable=False)
+    end_date = db.Column(db.DateTime, nullable=False, index=True)
+
+    # Alert configuration
+    alert_threshold_percent = db.Column(db.Integer, nullable=False, default=80)  # Alert at 80% by default
+    alert_enabled = db.Column(db.Boolean, nullable=False, default=True)
+
+    # Status
+    status = db.Column(
+        SAEnum("active", "paused", "completed", "cancelled", name="budget_status_enum"),
+        nullable=False,
+        default="active",
+        index=True
+    )
+
+    # Tracking
+    last_checked_at = db.Column(db.DateTime, nullable=True)
+    last_spend_amount = db.Column(db.Integer, nullable=True)  # Last known spend in cents
+
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    account = db.relationship("Account", backref="budget_trackers")
+    user = db.relationship("User", backref="budget_trackers")
+    alerts = db.relationship("BudgetAlert", backref="budget_tracker", cascade="all, delete-orphan", lazy="dynamic")
+
+    # Indexes
+    __table_args__ = (
+        db.Index("idx_budget_trackers_account", "account_id"),
+        db.Index("idx_budget_trackers_customer", "customer_id"),
+        db.Index("idx_budget_trackers_status", "status"),
+        db.Index("idx_budget_trackers_end_date", "end_date"),
+    )
+
+    @property
+    def budget_amount_dollars(self):
+        """Return budget amount in dollars"""
+        return self.budget_amount / 100.0 if self.budget_amount else 0
+
+    @property
+    def last_spend_dollars(self):
+        """Return last spend amount in dollars"""
+        return self.last_spend_amount / 100.0 if self.last_spend_amount else 0
+
+    @property
+    def spend_percentage(self):
+        """Return percentage of budget spent"""
+        if not self.budget_amount or not self.last_spend_amount:
+            return 0
+        return (self.last_spend_amount / self.budget_amount) * 100
+
+    @property
+    def remaining_budget_dollars(self):
+        """Return remaining budget in dollars"""
+        if not self.budget_amount or not self.last_spend_amount:
+            return self.budget_amount_dollars
+        return (self.budget_amount - self.last_spend_amount) / 100.0
+
+    def __repr__(self) -> str:
+        return f"<BudgetTracker id={self.id} account_id={self.account_id} type={self.budget_type} status={self.status}>"
+
+
+class BudgetAlert(db.Model):
+    """
+    Tracks alerts sent for budget tracking.
+    Records when users are notified about budget issues.
+    """
+    __tablename__ = "budget_alerts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    budget_tracker_id = db.Column(db.Integer, db.ForeignKey("budget_trackers.id"), nullable=False, index=True)
+
+    # Alert details
+    alert_type = db.Column(
+        SAEnum("threshold_reached", "overspend", "underspend", "pacing_ahead", "pacing_behind", "budget_depleted", name="budget_alert_type_enum"),
+        nullable=False,
+        index=True
+    )
+    alert_message = db.Column(db.Text, nullable=False)
+    severity = db.Column(
+        SAEnum("info", "warning", "critical", name="alert_severity_enum"),
+        nullable=False,
+        default="warning"
+    )
+
+    # Spend details at time of alert
+    spend_amount = db.Column(db.Integer, nullable=False)  # in cents
+    budget_amount = db.Column(db.Integer, nullable=False)  # in cents
+    spend_percentage = db.Column(db.Float, nullable=False)  # percentage at time of alert
+
+    # Notification tracking
+    sent_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    acknowledged = db.Column(db.Boolean, nullable=False, default=False)
+    acknowledged_at = db.Column(db.DateTime, nullable=True)
+    acknowledged_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+    # Indexes
+    __table_args__ = (
+        db.Index("idx_budget_alerts_tracker", "budget_tracker_id"),
+        db.Index("idx_budget_alerts_type", "alert_type"),
+        db.Index("idx_budget_alerts_sent", "sent_at"),
+        db.Index("idx_budget_alerts_ack", "acknowledged"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<BudgetAlert id={self.id} tracker_id={self.budget_tracker_id} type={self.alert_type} severity={self.severity}>"

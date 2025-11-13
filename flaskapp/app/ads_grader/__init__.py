@@ -731,6 +731,401 @@ def _create_demo_report(customer_id: str) -> GoogleAdsGraderReport:
     return report
 
 
+# ============================================================================
+# Budget Tracker
+# ============================================================================
+@ads_grader_bp.route("/budget-tracker")
+@login_required
+def budget_tracker():
+    """
+    Budget tracker dashboard showing all tracked budgets and their status.
+    """
+    from app.models import BudgetTracker
+
+    # Get all budget trackers for the current user
+    trackers = BudgetTracker.query.filter_by(
+        user_id=current_user.id
+    ).order_by(
+        BudgetTracker.status.asc(),  # Active first
+        BudgetTracker.created_at.desc()
+    ).all()
+
+    return render_template(
+        "ads_grader/budget_tracker.html",
+        trackers=trackers
+    )
+
+
+@ads_grader_bp.route("/budget-tracker/create", methods=["POST"])
+@login_required
+def budget_tracker_create():
+    """
+    Create a new budget tracker.
+    """
+    from app.models import BudgetTracker
+
+    try:
+        # Get form data
+        budget_type = request.form.get("budget_type", "monthly")
+        budget_amount = float(request.form.get("budget_amount", 0))
+        start_date = datetime.strptime(request.form.get("start_date"), "%Y-%m-%d")
+        end_date = datetime.strptime(request.form.get("end_date"), "%Y-%m-%d")
+        alert_threshold_percent = int(request.form.get("alert_threshold_percent", 80))
+        customer_id = request.form.get("customer_id", "")
+        campaign_id = request.form.get("campaign_id")
+        campaign_name = request.form.get("campaign_name")
+
+        # Convert budget amount to cents
+        budget_amount_cents = int(budget_amount * 100)
+
+        # Create tracker
+        tracker = BudgetTracker(
+            account_id=current_user.account_id,
+            user_id=current_user.id,
+            customer_id=customer_id,
+            campaign_id=campaign_id if campaign_id else None,
+            campaign_name=campaign_name if campaign_name else None,
+            budget_type=budget_type,
+            budget_amount=budget_amount_cents,
+            start_date=start_date,
+            end_date=end_date,
+            alert_threshold_percent=alert_threshold_percent,
+            alert_enabled=True,
+            status="active"
+        )
+
+        db.session.add(tracker)
+        db.session.commit()
+
+        flash("Budget tracker created successfully!", "success")
+        return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+    except Exception as e:
+        logger.error(f"Failed to create budget tracker: {e}")
+        flash("Failed to create budget tracker. Please try again.", "error")
+        return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+
+@ads_grader_bp.route("/budget-tracker/<int:tracker_id>/update-status", methods=["POST"])
+@login_required
+def budget_tracker_update_status(tracker_id):
+    """
+    Update budget tracker status (pause/resume/cancel).
+    """
+    from app.models import BudgetTracker
+
+    try:
+        tracker = BudgetTracker.query.filter_by(
+            id=tracker_id,
+            user_id=current_user.id
+        ).first_or_404()
+
+        new_status = request.form.get("status")
+        if new_status in ["active", "paused", "cancelled"]:
+            tracker.status = new_status
+            db.session.commit()
+            flash(f"Budget tracker {new_status}!", "success")
+        else:
+            flash("Invalid status", "error")
+
+        return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+    except Exception as e:
+        logger.error(f"Failed to update budget tracker status: {e}")
+        flash("Failed to update budget tracker. Please try again.", "error")
+        return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+
+@ads_grader_bp.route("/budget-tracker/<int:tracker_id>/refresh", methods=["POST"])
+@login_required
+def budget_tracker_refresh(tracker_id):
+    """
+    Manually refresh spend data for a specific budget tracker.
+    """
+    from app.models import BudgetTracker, UserOAuthProvider
+    from app.ads_grader.budget_tracker_service import BudgetTrackerService
+
+    try:
+        tracker = BudgetTracker.query.filter_by(
+            id=tracker_id,
+            user_id=current_user.id
+        ).first_or_404()
+
+        # Get user's Google refresh token
+        oauth_provider = UserOAuthProvider.query.filter_by(
+            user_id=current_user.id,
+            provider="google"
+        ).first()
+
+        if not oauth_provider or not oauth_provider.refresh_token:
+            flash("Google Ads connection required. Please reconnect your account.", "error")
+            return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+        # Initialize service and update spend
+        service = BudgetTrackerService(refresh_token=oauth_provider.refresh_token)
+        result = service.update_tracker_spend(tracker)
+
+        if result["success"]:
+            flash(f"Budget tracker refreshed! Current spend: ${result['current_spend']:.2f}", "success")
+            if result["alerts_created"] > 0:
+                flash(f"{result['alerts_created']} new alert(s) created", "info")
+        else:
+            flash(f"Failed to refresh: {result.get('error', 'Unknown error')}", "error")
+
+        return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+    except Exception as e:
+        logger.error(f"Failed to refresh budget tracker: {e}")
+        flash("Failed to refresh budget tracker. Please try again.", "error")
+        return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+
+@ads_grader_bp.route("/budget-tracker/refresh-all", methods=["POST"])
+@login_required
+def budget_tracker_refresh_all():
+    """
+    Manually refresh spend data for all user's budget trackers.
+    """
+    from app.models import BudgetTracker, UserOAuthProvider
+    from app.ads_grader.budget_tracker_service import BudgetTrackerService
+
+    try:
+        # Get user's Google refresh token
+        oauth_provider = UserOAuthProvider.query.filter_by(
+            user_id=current_user.id,
+            provider="google"
+        ).first()
+
+        if not oauth_provider or not oauth_provider.refresh_token:
+            flash("Google Ads connection required. Please reconnect your account.", "error")
+            return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+        # Get all active trackers for this user
+        trackers = BudgetTracker.query.filter_by(
+            user_id=current_user.id,
+            status="active"
+        ).all()
+
+        if not trackers:
+            flash("No active budget trackers to refresh.", "info")
+            return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+        # Initialize service
+        service = BudgetTrackerService(refresh_token=oauth_provider.refresh_token)
+
+        # Update all trackers
+        success_count = 0
+        total_alerts = 0
+        for tracker in trackers:
+            try:
+                result = service.update_tracker_spend(tracker)
+                if result["success"]:
+                    success_count += 1
+                    total_alerts += result["alerts_created"]
+            except Exception as e:
+                logger.error(f"Failed to update tracker {tracker.id}: {e}")
+
+        flash(f"Refreshed {success_count}/{len(trackers)} budget trackers", "success")
+        if total_alerts > 0:
+            flash(f"{total_alerts} new alert(s) created", "info")
+
+        return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+    except Exception as e:
+        logger.error(f"Failed to refresh all budget trackers: {e}")
+        flash("Failed to refresh budget trackers. Please try again.", "error")
+        return redirect(url_for("ads_grader_bp.budget_tracker"))
+
+
+# ============================================================================
+# Alerts Dashboard
+# ============================================================================
+@ads_grader_bp.route("/alerts")
+@login_required
+def alerts_dashboard():
+    """
+    Alerts dashboard showing all active alerts for user.
+    Displays paused campaigns, CPL spikes, Quality Score drops, etc.
+    """
+    from app.models_alerts import Alert, AlertSettings
+    from app.services.alert_detection_service import AlertDetectionService
+
+    # Get user's alert settings
+    settings = AlertSettings.get_or_create_for_user(current_user.id)
+
+    # Get active alerts
+    active_alerts = Alert.query.filter_by(
+        user_id=current_user.id,
+        status="active"
+    ).order_by(Alert.created_at.desc()).all()
+
+    # Get recently resolved alerts (last 7 days)
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    resolved_alerts = Alert.query.filter_by(
+        user_id=current_user.id,
+        status="resolved"
+    ).filter(
+        Alert.resolved_at >= seven_days_ago
+    ).order_by(Alert.resolved_at.desc()).limit(10).all()
+
+    # Get alert summary
+    detection_service = AlertDetectionService()
+    summary = detection_service.get_alert_summary_for_user(current_user.id)
+
+    return render_template(
+        "ads_grader/alerts_dashboard.html",
+        active_alerts=active_alerts,
+        resolved_alerts=resolved_alerts,
+        settings=settings,
+        summary=summary
+    )
+
+
+@ads_grader_bp.route("/alerts/<int:alert_id>/resolve", methods=["POST"])
+@login_required
+def resolve_alert(alert_id):
+    """Mark an alert as resolved."""
+    from app.models_alerts import Alert
+
+    alert = Alert.query.get_or_404(alert_id)
+
+    # Security: Ensure user owns this alert
+    if alert.user_id != current_user.id:
+        flash("Unauthorized", "error")
+        return redirect(url_for("ads_grader_bp.alerts_dashboard"))
+
+    alert.resolve()
+    db.session.commit()
+
+    flash(f"Alert '{alert.title}' marked as resolved", "success")
+    return redirect(url_for("ads_grader_bp.alerts_dashboard"))
+
+
+@ads_grader_bp.route("/alerts/<int:alert_id>/dismiss", methods=["POST"])
+@login_required
+def dismiss_alert(alert_id):
+    """Mark an alert as dismissed."""
+    from app.models_alerts import Alert
+
+    alert = Alert.query.get_or_404(alert_id)
+
+    # Security: Ensure user owns this alert
+    if alert.user_id != current_user.id:
+        flash("Unauthorized", "error")
+        return redirect(url_for("ads_grader_bp.alerts_dashboard"))
+
+    alert.dismiss()
+    db.session.commit()
+
+    flash(f"Alert '{alert.title}' dismissed", "success")
+    return redirect(url_for("ads_grader_bp.alerts_dashboard"))
+
+
+@ads_grader_bp.route("/alerts/settings", methods=["GET", "POST"])
+@login_required
+def alert_settings():
+    """Alert settings page - configure alert thresholds and notifications."""
+    from app.models_alerts import AlertSettings
+
+    settings = AlertSettings.get_or_create_for_user(current_user.id)
+
+    if request.method == "POST":
+        # Update settings from form
+        settings.paused_campaign_enabled = request.form.get("paused_campaign_enabled") == "on"
+        settings.cpl_spike_enabled = request.form.get("cpl_spike_enabled") == "on"
+        settings.cpl_spike_threshold_percent = int(request.form.get("cpl_spike_threshold_percent", 20))
+        settings.cpl_spike_lookback_days = int(request.form.get("cpl_spike_lookback_days", 7))
+        settings.quality_score_enabled = request.form.get("quality_score_enabled") == "on"
+        settings.quality_score_threshold = int(request.form.get("quality_score_threshold", 5))
+        settings.email_notifications_enabled = request.form.get("email_notifications_enabled") == "on"
+        settings.email_digest_enabled = request.form.get("email_digest_enabled") == "on"
+        settings.email_digest_time = request.form.get("email_digest_time", "09:00")
+        settings.max_alerts_per_day = int(request.form.get("max_alerts_per_day", 10))
+
+        db.session.commit()
+        flash("Alert settings updated successfully", "success")
+        return redirect(url_for("ads_grader_bp.alert_settings"))
+
+    return render_template(
+        "ads_grader/alert_settings.html",
+        settings=settings
+    )
+
+
+@ads_grader_bp.route("/alerts/check-now", methods=["POST"])
+@login_required
+def check_alerts_now():
+    """Manually trigger alert check for current user."""
+    from app.services.alert_detection_service import AlertDetectionService
+
+    try:
+        detection_service = AlertDetectionService()
+        result = detection_service.check_all_alerts_for_user(current_user.id)
+
+        if result.get("alerts_created", 0) > 0:
+            flash(f"Found {result['alerts_created']} new alert(s)", "success")
+        else:
+            flash("No new alerts found. Everything looks good!", "info")
+
+    except Exception as e:
+        logger.error(f"Failed to check alerts for user {current_user.id}: {e}")
+        flash("Failed to check alerts. Please try again later.", "error")
+
+    return redirect(url_for("ads_grader_bp.alerts_dashboard"))
+
+
+# ============================================================================
+# Quick Wins Dashboard
+# ============================================================================
+@ads_grader_bp.route("/quick-wins")
+@login_required
+def quick_wins_dashboard():
+    """
+    Quick Wins dashboard showing top 3 immediate action items.
+    Analyzes account data to recommend highest-ROI optimizations.
+    """
+    from app.services.quick_wins_service import QuickWinsService
+
+    # Get user's primary Google Ads account
+    account = Account.query.filter_by(
+        user_id=current_user.id,
+        is_active=True
+    ).first()
+
+    quick_wins = []
+    error = None
+
+    if account and account.google_refresh_token:
+        try:
+            service = QuickWinsService()
+            quick_wins_objects = service.get_top_quick_wins(account, limit=3)
+            quick_wins = [win.to_dict() for win in quick_wins_objects]
+
+        except Exception as e:
+            logger.error(f"Failed to get quick wins for user {current_user.id}: {e}")
+            error = "Failed to load quick wins. Please try again later."
+    else:
+        error = "Google Ads connection required. Please connect your account."
+
+    return render_template(
+        "ads_grader/quick_wins_dashboard.html",
+        quick_wins=quick_wins,
+        account=account,
+        error=error
+    )
+
+
+@ads_grader_bp.route("/quick-wins/refresh", methods=["POST"])
+@login_required
+def refresh_quick_wins():
+    """Manually refresh quick wins for current user."""
+    flash("Quick wins refreshed successfully", "success")
+    return redirect(url_for("ads_grader_bp.quick_wins_dashboard"))
+
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
 def _calculate_grade(score: float) -> str:
     """Convert numerical score to letter grade."""
     if score >= 90: return "A+"

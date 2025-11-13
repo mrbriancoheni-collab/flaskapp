@@ -564,8 +564,10 @@
                      class="optimization-checkbox w-6 h-6 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1"
                      data-opp-id="{{ loop.index }}"
                      data-title="{{ opp.title }}"
-                     onchange="updateApproveButton()"
-                     checked>
+                     data-savings="{{ opp.monthly_savings|default(0) }}"
+                     data-leads="{{ opp.monthly_leads|default(0) }}"
+                     data-lead-value="{{ opp.lead_value|default(0) }}"
+                     onchange="updateTotals()">
 
               <!-- Content -->
               <div class="flex-1">
@@ -651,23 +653,19 @@
               </div>
             </div>
             <div class="flex gap-4">
-              {% if ns.total_monthly_savings > 0 %}
-              <div class="text-center">
+              <div id="savingsSection" class="text-center" style="display: none;">
                 <div class="text-xs text-gray-600 font-semibold">Savings</div>
-                <div class="text-2xl font-bold text-green-600">${{ "%.0f"|format(ns.total_monthly_savings) }}</div>
+                <div id="totalSavings" class="text-2xl font-bold text-green-600">$0</div>
                 <div class="text-xs text-gray-500">/month</div>
               </div>
-              {% endif %}
-              {% if ns.total_monthly_leads > 0 %}
-              <div class="text-center">
+              <div id="revenueSection" class="text-center" style="display: none;">
                 <div class="text-xs text-gray-600 font-semibold">Revenue</div>
-                <div class="text-2xl font-bold text-blue-600">${{ "%.0f"|format(ns.total_lead_value) }}</div>
-                <div class="text-xs text-gray-500">+{{ ns.total_monthly_leads|int }} leads</div>
+                <div id="totalRevenue" class="text-2xl font-bold text-blue-600">$0</div>
+                <div id="totalLeadsText" class="text-xs text-gray-500">+0 leads</div>
               </div>
-              {% endif %}
               <div class="text-center">
                 <div class="text-xs text-gray-600 font-semibold">Total Value</div>
-                <div class="text-2xl font-bold text-purple-600">${{ "%.0f"|format(ns.total_combined_value) }}</div>
+                <div id="totalCombined" class="text-2xl font-bold text-purple-600">$0</div>
                 <div class="text-xs text-gray-500">/month</div>
               </div>
             </div>
@@ -765,7 +763,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function openOptimizationsModal() {
   document.getElementById('optimizationsModal').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
-  updateApproveButton();
+  updateTotals();
 }
 
 function closeOptimizationsModal() {
@@ -778,15 +776,16 @@ function selectAllOptimizations(checked) {
   checkboxes.forEach(checkbox => {
     checkbox.checked = checked;
   });
-  updateApproveButton();
+  updateTotals();
 }
 
-function updateApproveButton() {
+function updateTotals() {
   const checkboxes = document.querySelectorAll('.optimization-checkbox:checked');
   const button = document.getElementById('approveButton');
   const buttonText = document.getElementById('approveButtonText');
   const count = checkboxes.length;
 
+  // Update button text and state
   if (count > 0) {
     buttonText.textContent = 'Approve ' + count + ' Optimization' + (count > 1 ? 's' : '');
     button.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -796,6 +795,29 @@ function updateApproveButton() {
     button.classList.add('opacity-50', 'cursor-not-allowed');
     button.disabled = true;
   }
+
+  // Calculate totals from checked checkboxes
+  let totalSavings = 0;
+  let totalLeads = 0;
+  let totalLeadValue = 0;
+
+  checkboxes.forEach(checkbox => {
+    totalSavings += parseFloat(checkbox.dataset.savings) || 0;
+    totalLeads += parseFloat(checkbox.dataset.leads) || 0;
+    totalLeadValue += parseFloat(checkbox.dataset.leadValue) || 0;
+  });
+
+  const totalCombined = totalSavings + totalLeadValue;
+
+  // Update UI
+  document.getElementById('totalSavings').textContent = '$' + Math.round(totalSavings).toLocaleString();
+  document.getElementById('totalRevenue').textContent = '$' + Math.round(totalLeadValue).toLocaleString();
+  document.getElementById('totalLeadsText').textContent = '+' + Math.round(totalLeads) + ' leads';
+  document.getElementById('totalCombined').textContent = '$' + Math.round(totalCombined).toLocaleString();
+
+  // Show/hide sections based on values
+  document.getElementById('savingsSection').style.display = totalSavings > 0 ? 'block' : 'none';
+  document.getElementById('revenueSection').style.display = totalLeadValue > 0 ? 'block' : 'none';
 }
 
 function approveOptimizations() {

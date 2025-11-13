@@ -824,6 +824,7 @@ def email_send():
     message_body = request.form.get("message", "").strip()
     recipient_type = request.form.get("recipient_type", "")
     campaign_name = request.form.get("campaign_name", "").strip() or None  # Optional campaign name for bulk
+    from_email = request.form.get("from_email", "").strip() or None  # Optional custom from address
 
     # Get logged-in user for sender info
     sent_by_user_id = g.user.id if hasattr(g, 'user') else None
@@ -883,13 +884,14 @@ def email_send():
 </html>
             """
 
-            # Send tracked email (will use logged-in user's email as sender)
+            # Send tracked email with custom from address
             email_sent = send_tracked_email_to_crm_contact(
                 crm_contact_id=contact_id,
                 subject=subject,
                 html_body=html_body,
                 text_body=message_body,
                 sent_by_user_id=sent_by_user_id,
+                from_email=from_email,
                 track_clicks=True
             )
 
@@ -1706,3 +1708,201 @@ def ai_prompts_initialize():
         flash(f"Error initializing prompts: {str(e)}", "error")
 
     return redirect(url_for("admin_bp.ai_prompts"))
+
+
+@admin_bp.route("/test-email")
+@require_admin
+def test_email():
+    """
+    Test email sending functionality using Mailgun.
+
+    Query parameters:
+    - to: recipient email address (required)
+    - provider: email provider to use (optional, default: mailgun)
+
+    Example: /admin/test-email?to=test@example.com
+    """
+    import os
+    import requests
+    from flask import jsonify
+
+    recipient = request.args.get('to')
+
+    if not recipient:
+        return jsonify({
+            'success': False,
+            'error': 'Missing "to" parameter. Usage: /admin/test-email?to=email@example.com'
+        }), 400
+
+    # Get email provider from query param or default to mailgun
+    provider = request.args.get('provider', 'mailgun').lower()
+
+    try:
+        if provider == 'mailgun':
+            # Use Mailgun API directly
+            api_key = os.getenv('MAILGUN_API_KEY')
+            domain = os.getenv('MAILGUN_DOMAIN', 'fieldsprout.io')
+
+            if not api_key:
+                return jsonify({
+                    'success': False,
+                    'error': 'MAILGUN_API_KEY environment variable not set'
+                }), 500
+
+            # Debug info (masked API key for security)
+            api_key_preview = f"{api_key[:8]}...{api_key[-4:]}" if len(api_key) > 12 else "***"
+            logger.info(f"Attempting to send test email via Mailgun to {recipient}")
+            logger.info(f"Mailgun domain: {domain}, API key: {api_key_preview}")
+
+            try:
+                response = requests.post(
+                    f"https://api.mailgun.net/v3/{domain}/messages",
+                    auth=("api", api_key),
+                    data={
+                        "from": f"FieldSprout Test <postmaster@{domain}>",
+                        "to": recipient,
+                        "subject": f"Test Email from FieldSprout - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                        "text": f"Congratulations! This is a test email sent from FieldSprout.\n\nRecipient: {recipient}\nProvider: Mailgun\nTime: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\nIf you received this, your email configuration is working correctly!",
+                        "html": f"""
+                        <html>
+                        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <div style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); color: white; padding: 30px; border-radius: 8px; text-align: center;">
+                                <h1 style="margin: 0;">✅ Email Test Successful!</h1>
+                            </div>
+                            <div style="padding: 30px; background-color: #f9fafb; border-radius: 8px; margin-top: 20px;">
+                                <p style="font-size: 16px; color: #111827;">Congratulations! This is a test email sent from FieldSprout.</p>
+                                <div style="background-color: #ffffff; padding: 20px; border-radius: 6px; margin: 20px 0;">
+                                    <p style="margin: 5px 0;"><strong>Recipient:</strong> {recipient}</p>
+                                    <p style="margin: 5px 0;"><strong>Provider:</strong> Mailgun</p>
+                                    <p style="margin: 5px 0;"><strong>Domain:</strong> {domain}</p>
+                                    <p style="margin: 5px 0;"><strong>Time:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+                                </div>
+                                <p style="font-size: 14px; color: #6b7280;">If you received this email, your email configuration is working correctly!</p>
+                            </div>
+                            <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
+                                <p>© 2025 FieldSprout. All rights reserved.</p>
+                            </div>
+                        </body>
+                        </html>
+                        """
+                    },
+                    timeout=30,
+                    verify=True  # Verify SSL certificates
+                )
+
+                logger.info(f"Mailgun API response status: {response.status_code}")
+
+                if response.status_code == 200:
+                    _audit("email_test", note=f"Sent test email to {recipient} via Mailgun")
+                    return jsonify({
+                        'success': True,
+                        'message': f'Test email sent successfully to {recipient} via Mailgun',
+                        'provider': 'mailgun',
+                        'domain': domain,
+                        'api_key_preview': api_key_preview,
+                        'response': response.json()
+                    })
+                else:
+                    logger.error(f"Mailgun API error: {response.status_code} - {response.text}")
+                    return jsonify({
+                        'success': False,
+                        'error': f'Mailgun API returned status {response.status_code}',
+                        'details': response.text,
+                        'api_key_preview': api_key_preview,
+                        'domain': domain
+                    }), 500
+
+            except requests.exceptions.ConnectionError as e:
+                logger.error(f"Mailgun connection error: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': 'Connection error: Unable to connect to Mailgun API',
+                    'details': str(e),
+                    'api_key_preview': api_key_preview,
+                    'domain': domain,
+                    'help': 'Check network connectivity and firewall settings. Verify Mailgun API endpoint is accessible.'
+                }), 500
+
+            except requests.exceptions.Timeout as e:
+                logger.error(f"Mailgun timeout error: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': 'Timeout: Mailgun API did not respond in time',
+                    'details': str(e),
+                    'api_key_preview': api_key_preview,
+                    'domain': domain,
+                    'help': 'The request timed out after 30 seconds. Try again or check network connectivity.'
+                }), 500
+
+            except requests.exceptions.SSLError as e:
+                logger.error(f"Mailgun SSL error: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': 'SSL Error: Unable to verify SSL certificate',
+                    'details': str(e),
+                    'api_key_preview': api_key_preview,
+                    'domain': domain,
+                    'help': 'SSL certificate verification failed. Check system certificates or try with verify=False (not recommended for production).'
+                }), 500
+
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Mailgun request error: {type(e).__name__}: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Request error: {type(e).__name__}',
+                    'details': str(e),
+                    'api_key_preview': api_key_preview,
+                    'domain': domain,
+                    'help': 'An unexpected error occurred while sending the request to Mailgun.'
+                }), 500
+
+        else:
+            # Use the email service with configured provider
+            from app.services.email_service import send_email
+
+            success = send_email(
+                to=recipient,
+                subject=f"Test Email from FieldSprout - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                html_body=f"""
+                <html>
+                <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); color: white; padding: 30px; border-radius: 8px; text-align: center;">
+                        <h1 style="margin: 0;">✅ Email Test Successful!</h1>
+                    </div>
+                    <div style="padding: 30px; background-color: #f9fafb; border-radius: 8px; margin-top: 20px;">
+                        <p style="font-size: 16px; color: #111827;">Congratulations! This is a test email sent from FieldSprout.</p>
+                        <div style="background-color: #ffffff; padding: 20px; border-radius: 6px; margin: 20px 0;">
+                            <p style="margin: 5px 0;"><strong>Recipient:</strong> {recipient}</p>
+                            <p style="margin: 5px 0;"><strong>Provider:</strong> {provider}</p>
+                            <p style="margin: 5px 0;"><strong>Time:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+                        </div>
+                        <p style="font-size: 14px; color: #6b7280;">If you received this email, your email configuration is working correctly!</p>
+                    </div>
+                    <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
+                        <p>© 2025 FieldSprout. All rights reserved.</p>
+                    </div>
+                </body>
+                </html>
+                """,
+                text_body=f"Congratulations! This is a test email sent from FieldSprout.\n\nRecipient: {recipient}\nProvider: {provider}\nTime: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\nIf you received this, your email configuration is working correctly!"
+            )
+
+            if success:
+                _audit("email_test", note=f"Sent test email to {recipient} via {provider}")
+                return jsonify({
+                    'success': True,
+                    'message': f'Test email sent successfully to {recipient} via {provider}',
+                    'provider': provider
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to send email via {provider}. Check application logs for details.'
+                }), 500
+
+    except Exception as e:
+        logger.exception(f"Error sending test email to {recipient}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500

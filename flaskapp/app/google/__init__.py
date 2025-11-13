@@ -2079,8 +2079,10 @@ def ads_opportunities_demo():
     Demo version of Opportunities Dashboard for showing to potential customers.
     Does not require login or connected account - uses mock data.
     """
+    from flask import current_app, render_template
+
     try:
-        current_app.logger.info("Demo route accessed")
+        current_app.logger.info("Demo route accessed - starting")
 
         # Generate mock ads data for demo
         mock_ads_data = {
@@ -2119,22 +2121,32 @@ def ads_opportunities_demo():
             ],
         }
 
-        current_app.logger.info("Generating analysis for demo")
+        current_app.logger.info("Mock data created - generating analysis")
         # Generate comprehensive analysis using the same function as the real version
         analysis = _analyze_ads_opportunities(0, mock_ads_data)  # aid=0 for demo
+        current_app.logger.info(f"Analysis completed - opportunities count: {len(analysis.get('opportunities', []))}")
 
-        current_app.logger.info("Rendering template for demo")
+        current_app.logger.info("Rendering template")
         return render_template(
             "google/ads_opportunities.html",
             connected=True,  # Show as connected for demo purposes
             ads_data=mock_ads_data,
             analysis=analysis,
-            epn=request.endpoint,
+            epn="ads_opportunities_demo",
             is_demo=True,  # Flag to indicate this is a demo
         )
     except Exception as e:
-        current_app.logger.exception(f"Error in demo route: {e}")
-        raise  # Re-raise to show branded 500 page
+        current_app.logger.exception(f"Error in demo route: {str(e)}")
+        # Return detailed error for debugging
+        import traceback
+        return f"""
+        <html><body>
+        <h1>Demo Error Debug Info</h1>
+        <p><strong>Error:</strong> {str(e)}</p>
+        <p><strong>Type:</strong> {type(e).__name__}</p>
+        <pre>{traceback.format_exc()}</pre>
+        </body></html>
+        """, 500
 
 
 @google_bp.route("/ads/opportunities", methods=["GET"], endpoint="ads_opportunities")

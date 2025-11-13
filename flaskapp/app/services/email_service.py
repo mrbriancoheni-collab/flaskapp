@@ -11,7 +11,7 @@ Configuration via environment variables:
 - EMAIL_PROVIDER: 'mailgun' (default), 'sendgrid', or 'smtp'
 - For Mailgun (default):
   - MAILGUN_API_KEY (required)
-  - MAILGUN_DOMAIN (default: mg.fieldsprout.io)
+  - MAILGUN_DOMAIN (default: fieldsprout.io)
 - For SendGrid:
   - SENDGRID_API_KEY
 - For SMTP (legacy):
@@ -65,7 +65,7 @@ def get_email_config() -> Dict[str, Any]:
 
         # Mailgun settings
         'mailgun_api_key': current_app.config.get('MAILGUN_API_KEY', os.getenv('MAILGUN_API_KEY', '')),
-        'mailgun_domain': current_app.config.get('MAILGUN_DOMAIN', os.getenv('MAILGUN_DOMAIN', 'mg.fieldsprout.io')),
+        'mailgun_domain': current_app.config.get('MAILGUN_DOMAIN', os.getenv('MAILGUN_DOMAIN', 'fieldsprout.io')),
     }
 
 
@@ -626,6 +626,7 @@ def send_tracked_email_to_crm_contact(
     text_body: Optional[str] = None,
     campaign_name: Optional[str] = None,
     sent_by_user_id: Optional[int] = None,
+    from_email: Optional[str] = None,
     track_clicks: bool = True
 ):
     """
@@ -639,8 +640,10 @@ def send_tracked_email_to_crm_contact(
     5. Returns the EmailSent record
 
     SENDER LOGIC:
-    - Individual emails (no campaign_name): Use the logged-in admin user's email
+    - If from_email is provided: Use that email address (highest priority)
     - Bulk campaigns (with campaign_name): Use David credentials (MAIL_USERNAME_DAVID)
+    - Individual emails (sent_by_user_id): Use the logged-in admin user's email
+    - Default: Use system default sender
 
     Args:
         crm_contact_id: ID of the CRMContact to send to
@@ -649,6 +652,7 @@ def send_tracked_email_to_crm_contact(
         text_body: Plain text version (optional)
         campaign_name: Optional campaign identifier for grouping (triggers bulk mode)
         sent_by_user_id: ID of user sending the email (optional)
+        from_email: Optional custom sender email address (overrides other sender logic)
         track_clicks: Whether to track link clicks (default: True)
 
     Returns:
@@ -672,25 +676,34 @@ def send_tracked_email_to_crm_contact(
         return None
 
     # Determine sender email and name
-    from_email = None
-    from_name = None
+    sender_email = None
+    sender_name = None
     use_bulk_credentials = False
 
-    if campaign_name:
-        # Bulk campaign - use David credentials
+    # Priority 1: Use explicitly provided from_email (user selected from dropdown)
+    if from_email:
+        sender_email = from_email
+        # Extract name from email if it's support@, hello@, etc.
+        if '@' in from_email:
+            local_part = from_email.split('@')[0]
+            sender_name = local_part.capitalize() if local_part != 'noreply' else 'FieldSprout'
+        current_app.logger.info(f"Using custom from address: {sender_email}")
+    # Priority 2: Bulk campaign - use David credentials
+    elif campaign_name:
         use_bulk_credentials = True
         current_app.logger.info(f"Bulk campaign '{campaign_name}' - using David credentials")
+    # Priority 3: Individual email - use the sender's email
     elif sent_by_user_id:
-        # Individual email - use the sender's email
         sender_user = User.query.get(sent_by_user_id)
         if sender_user:
-            from_email = sender_user.email
-            from_name = sender_user.name
-            current_app.logger.info(f"Individual email from {from_name} <{from_email}>")
+            sender_email = sender_user.email
+            sender_name = sender_user.name
+            current_app.logger.info(f"Individual email from {sender_name} <{sender_email}>")
         else:
             current_app.logger.warning(f"Sender user {sent_by_user_id} not found, using default")
+    # Priority 4: Default sender
     else:
-        current_app.logger.warning("No campaign_name or sent_by_user_id - using default sender")
+        current_app.logger.warning("No from_email, campaign_name, or sent_by_user_id - using default sender")
 
     # Generate tracking token
     tracking_token = generate_tracking_token()
@@ -728,8 +741,8 @@ def send_tracked_email_to_crm_contact(
             subject=subject,
             html_body=tracked_html,
             text_body=text_body,
-            from_email=from_email,
-            from_name=from_name,
+            from_email=sender_email,
+            from_name=sender_name,
             use_bulk_credentials=use_bulk_credentials
         )
 

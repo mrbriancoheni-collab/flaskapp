@@ -20,7 +20,7 @@ def test_mailgun_connection(recipient_email):
 
     # Get configuration from environment
     api_key = os.getenv('MAILGUN_API_KEY')
-    domain = os.getenv('MAILGUN_DOMAIN', 'mg.fieldsprout.io')
+    domain = os.getenv('MAILGUN_DOMAIN', 'fieldsprout.io')
 
     print("=" * 70)
     print("Mailgun Email Test")

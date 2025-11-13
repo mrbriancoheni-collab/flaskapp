@@ -316,17 +316,15 @@
 
           <!-- Value Sources Breakdown -->
           <div class="bg-white rounded-2xl shadow-xl p-8 mb-10 border-2 border-indigo-100">
-            <h3 class="text-2xl font-bold text-gray-900 text-center mb-3">
+            <h3 class="text-2xl font-bold text-gray-900 text-center mb-6">
               <i class="fa-solid fa-chart-pie text-indigo-600 mr-2"></i>
               Where Your Value Comes From
             </h3>
-            <p class="text-sm text-gray-600 text-center mb-6">Check the optimization strategies you'd like to include</p>
 
             <div class="space-y-4">
-              <!-- Breakdown items with checkboxes -->
-              <label class="flex items-center justify-between p-4 bg-red-50 rounded-lg border-2 border-red-200 cursor-pointer hover:bg-red-100 transition">
+              <!-- Breakdown items -->
+              <div class="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200">
                 <div class="flex items-center gap-3 flex-1">
-                  <input type="checkbox" id="check-waste" class="w-6 h-6 text-red-600 rounded focus:ring-2 focus:ring-red-500 cursor-pointer optimization-checkbox" data-type="waste">
                   <div class="bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">1</div>
                   <div>
                     <div class="font-semibold text-gray-900">Stop Wasting Money</div>
@@ -337,11 +335,10 @@
                   <div class="text-xl font-black text-red-600" id="breakdown-waste">$0</div>
                   <div class="text-xs text-gray-500">direct savings</div>
                 </div>
-              </label>
+              </div>
 
-              <label class="flex items-center justify-between p-4 bg-green-50 rounded-lg border-2 border-green-200 cursor-pointer hover:bg-green-100 transition">
+              <div class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
                 <div class="flex items-center gap-3 flex-1">
-                  <input type="checkbox" id="check-reinvest" class="w-6 h-6 text-green-600 rounded focus:ring-2 focus:ring-green-500 cursor-pointer optimization-checkbox" data-type="reinvest">
                   <div class="bg-green-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">2</div>
                   <div>
                     <div class="font-semibold text-gray-900">Reinvest in Top Performers</div>
@@ -349,14 +346,13 @@
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="text-xl font-black text-green-600" id="breakdown-reinvest-revenue">$0</div>
-                  <div class="text-xs text-gray-500"><span id="breakdown-reinvest-leads">+0</span> extra leads</div>
+                  <div class="text-xl font-black text-green-600" id="breakdown-reinvest-leads">+0</div>
+                  <div class="text-xs text-gray-500">extra leads</div>
                 </div>
-              </label>
+              </div>
 
-              <label class="flex items-center justify-between p-4 bg-blue-50 rounded-lg border-2 border-blue-200 cursor-pointer hover:bg-blue-100 transition">
+              <div class="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div class="flex items-center gap-3 flex-1">
-                  <input type="checkbox" id="check-qs" class="w-6 h-6 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer optimization-checkbox" data-type="qs">
                   <div class="bg-blue-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">3</div>
                   <div>
                     <div class="font-semibold text-gray-900">Improve Quality Scores</div>
@@ -364,14 +360,13 @@
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="text-xl font-black text-blue-600" id="breakdown-qs-revenue">$0</div>
-                  <div class="text-xs text-gray-500"><span id="breakdown-qs-leads">+0</span> extra leads</div>
+                  <div class="text-xl font-black text-blue-600" id="breakdown-qs-leads">+0</div>
+                  <div class="text-xs text-gray-500">extra leads</div>
                 </div>
-              </label>
+              </div>
 
-              <label class="flex items-center justify-between p-4 bg-purple-50 rounded-lg border-2 border-purple-200 cursor-pointer hover:bg-purple-100 transition">
+              <div class="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-200">
                 <div class="flex items-center gap-3 flex-1">
-                  <input type="checkbox" id="check-ctr" class="w-6 h-6 text-purple-600 rounded focus:ring-2 focus:ring-purple-500 cursor-pointer optimization-checkbox" data-type="ctr">
                   <div class="bg-purple-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">4</div>
                   <div>
                     <div class="font-semibold text-gray-900">Boost Ad Visibility</div>
@@ -379,14 +374,13 @@
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="text-xl font-black text-purple-600" id="breakdown-ctr-revenue">$0</div>
-                  <div class="text-xs text-gray-500"><span id="breakdown-ctr-leads">+0</span> extra leads</div>
+                  <div class="text-xl font-black text-purple-600" id="breakdown-ctr-leads">+0</div>
+                  <div class="text-xs text-gray-500">extra leads</div>
                 </div>
-              </label>
+              </div>
 
-              <label class="flex items-center justify-between p-4 bg-orange-50 rounded-lg border-2 border-orange-200 cursor-pointer hover:bg-orange-100 transition">
+              <div class="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-200">
                 <div class="flex items-center gap-3 flex-1">
-                  <input type="checkbox" id="check-cvr" class="w-6 h-6 text-orange-600 rounded focus:ring-2 focus:ring-orange-500 cursor-pointer optimization-checkbox" data-type="cvr">
                   <div class="bg-orange-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">5</div>
                   <div>
                     <div class="font-semibold text-gray-900">Optimize Conversion Rate</div>
@@ -394,14 +388,14 @@
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="text-xl font-black text-orange-600" id="breakdown-cvr-revenue">$0</div>
-                  <div class="text-xs text-gray-500"><span id="breakdown-cvr-leads">+0</span> extra leads</div>
+                  <div class="text-xl font-black text-orange-600" id="breakdown-cvr-leads">+0</div>
+                  <div class="text-xs text-gray-500">extra leads</div>
                 </div>
-              </label>
+              </div>
             </div>
 
             <div class="mt-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border-2 border-indigo-200 text-center">
-              <div class="text-sm text-gray-600 mb-1">Total Monthly Impact (Selected Strategies)</div>
+              <div class="text-sm text-gray-600 mb-1">Combined Monthly Impact</div>
               <div class="text-3xl font-black text-indigo-600" id="breakdown-total">$0</div>
             </div>
           </div>
@@ -411,10 +405,10 @@
             <button id="openModalBtn" class="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-lg rounded-xl hover:from-indigo-700 hover:to-purple-700 transition shadow-xl transform hover:scale-105">
               <i class="fa-solid fa-list-check text-2xl"></i>
               <span>View Recommended Optimizations</span>
-              <span class="bg-white/20 px-3 py-1 rounded-full text-sm">5 Actions</span>
+              <span class="bg-white/20 px-3 py-1 rounded-full text-sm">12 Actions</span>
             </button>
             <p class="text-sm text-gray-600 mt-2">
-              <i class="fa-solid fa-info-circle"></i> See the exact changes needed to achieve these results
+              <i class="fa-solid fa-info-circle"></i> Choose which specific optimizations to implement
             </p>
           </div>
 
@@ -478,30 +472,6 @@
   'use strict';
 
   console.log('Calculator script loading...');
-
-  // Store optimization values globally
-  window.optimizationValues = {
-    waste: 0,
-    reinvest: 0,
-    qs: 0,
-    ctr: 0,
-    cvr: 0
-  };
-
-  // Update total based on checked boxes
-  window.updateSelectedTotal = function() {
-    var total = 0;
-    var checkboxes = document.querySelectorAll('.optimization-checkbox');
-
-    checkboxes.forEach(function(checkbox) {
-      if (checkbox.checked) {
-        var type = checkbox.getAttribute('data-type');
-        total += window.optimizationValues[type];
-      }
-    });
-
-    document.getElementById('breakdown-total').textContent = '$' + window.formatNumber(total);
-  };
 
   // Toggle advanced options
   window.toggleAdvancedOptions = function() {
@@ -585,33 +555,18 @@
       var totalAdditionalRevenue = revenueFromReinvestment + revenueFromQS + revenueFromCTR + revenueFromCVR;
       var totalMonthlyValue = monthlyWaste + totalAdditionalRevenue;
 
-      // Store individual values for checkbox calculation
-      window.optimizationValues.waste = monthlyWaste;
-      window.optimizationValues.reinvest = revenueFromReinvestment;
-      window.optimizationValues.qs = revenueFromQS;
-      window.optimizationValues.ctr = revenueFromCTR;
-      window.optimizationValues.cvr = revenueFromCVR;
-
       // Update UI (set values immediately for consistency)
       document.getElementById('total-value-hero').textContent = '$' + window.formatNumber(totalMonthlyValue) + '/mo';
       document.getElementById('result-monthly-waste').textContent = '$' + window.formatNumber(monthlyWaste);
       document.getElementById('result-annual-waste').textContent = '$' + window.formatNumber(annualWaste);
       document.getElementById('result-more-leads').textContent = '+' + totalAdditionalLeads;
       document.getElementById('result-more-revenue').textContent = '$' + window.formatNumber(totalAdditionalRevenue);
-
-      // Update breakdown with both revenue and leads
       document.getElementById('breakdown-waste').textContent = '$' + window.formatNumber(monthlyWaste);
-      document.getElementById('breakdown-reinvest-revenue').textContent = '$' + window.formatNumber(revenueFromReinvestment);
       document.getElementById('breakdown-reinvest-leads').textContent = '+' + Math.round(leadsFromReinvestment);
-      document.getElementById('breakdown-qs-revenue').textContent = '$' + window.formatNumber(revenueFromQS);
       document.getElementById('breakdown-qs-leads').textContent = '+' + Math.round(leadsFromQS);
-      document.getElementById('breakdown-ctr-revenue').textContent = '$' + window.formatNumber(revenueFromCTR);
       document.getElementById('breakdown-ctr-leads').textContent = '+' + Math.round(leadsFromCTR);
-      document.getElementById('breakdown-cvr-revenue').textContent = '$' + window.formatNumber(revenueFromCVR);
       document.getElementById('breakdown-cvr-leads').textContent = '+' + Math.round(leadsFromCVR);
-
-      // Update checkbox total
-      window.updateSelectedTotal();
+      document.getElementById('breakdown-total').textContent = '$' + window.formatNumber(totalMonthlyValue);
 
     } catch (error) {
       console.error('Error in calculateROI:', error);
@@ -670,12 +625,6 @@
     if (toggle) {
       toggle.addEventListener('click', window.toggleAdvancedOptions);
     }
-
-    // Add listeners for optimization checkboxes
-    var checkboxes = document.querySelectorAll('.optimization-checkbox');
-    checkboxes.forEach(function(checkbox) {
-      checkbox.addEventListener('change', window.updateSelectedTotal);
-    });
   }
 
   // Run initial calculation
@@ -705,7 +654,6 @@
 function openOptimizationsModal() {
   document.getElementById('optimizationsModal').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
-  updateApproveButton(); // Update totals when modal opens
 }
 
 function closeOptimizationsModal() {
@@ -739,39 +687,14 @@ function updateApproveButton() {
   var button = document.getElementById('approveButton');
   var count = checkboxes.length;
 
-  // Update button state
   if (count > 0) {
-    button.innerHTML = '<i class="fa-solid fa-check-circle mr-2"></i>Approve ' + count + ' Optimization' + (count > 1 ? 's' : '');
+    button.textContent = 'Approve ' + count + ' Optimization' + (count > 1 ? 's' : '');
     button.classList.remove('opacity-50', 'cursor-not-allowed');
     button.disabled = false;
   } else {
-    button.innerHTML = '<i class="fa-solid fa-check-circle mr-2"></i>Select Optimizations to Approve';
+    button.textContent = 'Select Optimizations to Approve';
     button.classList.add('opacity-50', 'cursor-not-allowed');
     button.disabled = true;
-  }
-
-  // Calculate totals
-  var totalSavings = 0;
-  var totalLeads = 0;
-  var totalLeadValue = 0;
-
-  checkboxes.forEach(function(checkbox) {
-    totalSavings += parseFloat(checkbox.dataset.savings) || 0;
-    totalLeads += parseFloat(checkbox.dataset.leads) || 0;
-    totalLeadValue += parseFloat(checkbox.dataset.leadValue) || 0;
-  });
-
-  var totalCombined = totalSavings + totalLeadValue;
-
-  // Update modal totals
-  var modalTotalValue = document.getElementById('modalTotalValue');
-  var modalTotalLeads = document.getElementById('modalTotalLeads');
-
-  if (modalTotalValue) {
-    modalTotalValue.textContent = '$' + Math.round(totalCombined).toLocaleString();
-  }
-  if (modalTotalLeads) {
-    modalTotalLeads.textContent = '+' + Math.round(totalLeads) + ' leads/month';
   }
 }
 
@@ -833,9 +756,9 @@ document.addEventListener('DOMContentLoaded', function() {
           <div>
             <h2 class="text-3xl font-bold mb-2">
               <i class="fa-solid fa-list-check mr-2"></i>
-              Recommended Optimizations
+              Select Optimizations to Implement
             </h2>
-            <p class="text-indigo-100">Select the changes you want to implement in your Google Ads account</p>
+            <p class="text-indigo-100">12 specific optimizations identified - select individual items below</p>
           </div>
           <button id="closeModalBtn" class="text-white hover:bg-white/20 rounded-lg p-2 transition">
             <i class="fa-solid fa-times text-2xl"></i>
@@ -856,176 +779,307 @@ document.addEventListener('DOMContentLoaded', function() {
           </div>
         </div>
 
-        <!-- Optimizations List -->
-        <div class="space-y-4 mb-6">
+        <!-- Granular Optimizations List -->
+        <div class="space-y-1 mb-6">
 
-          <!-- Optimization 1 -->
-          <div class="border-2 border-red-200 bg-red-50 rounded-xl p-6 hover:shadow-lg transition">
-            <div class="flex items-start gap-4">
-              <input type="checkbox" class="optimization-checkbox w-6 h-6 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1" data-savings="890" data-leads="0">
-              <div class="flex-1">
-                <div class="flex items-start justify-between gap-4 mb-3">
-                  <div>
-                    <div class="flex items-center gap-2 mb-2">
-                      <span class="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold">HIGH PRIORITY</span>
-                      <span class="text-gray-600 text-sm">Impact: 95/100</span>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">
-                      <i class="fa-solid fa-ban text-red-600 mr-2"></i>
-                      Add Negative Keywords
-                    </h3>
-                    <p class="text-gray-700 mb-3">
-                      Block 47 irrelevant search terms that are wasting your budget. These terms have 0% conversion rate but cost $890/month.
-                    </p>
-                    <div class="flex items-center gap-4 text-sm text-gray-600">
-                      <span><i class="fa-solid fa-clock mr-1"></i> 15 minutes</span>
-                      <span><i class="fa-solid fa-tag mr-1"></i> Campaign: All Campaigns</span>
-                    </div>
-                  </div>
-                  <div class="bg-white border-2 border-green-300 rounded-lg p-4 text-center min-w-[140px]">
-                    <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Monthly Savings</div>
-                    <div class="text-3xl font-bold text-green-600">$890</div>
-                  </div>
+          <!-- Negative Keyword 1 -->
+          <label class="block cursor-pointer hover:bg-gray-50 rounded-lg transition">
+            <div class="flex items-center gap-3 p-3 border border-l-4 border-l-red-500 rounded">
+              <input type="checkbox" class="optimization-checkbox w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 flex-shrink-0" checked>
+              <div class="flex-shrink-0 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                <i class="fa-solid fa-ban text-red-600"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-bold text-gray-900 text-sm">Add negative keyword: "free HVAC"</h3>
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">
+                    <i class="fa-solid fa-bolt mr-1"></i>QUICK
+                  </span>
                 </div>
-                <div class="bg-white rounded-lg p-3 text-sm">
-                  <strong class="text-gray-700">Examples:</strong>
-                  <span class="text-gray-600"> "free HVAC", "diy repair", "hvac jobs hiring"</span>
+                <p class="text-xs text-gray-600 mt-0.5">Add 'free HVAC' as negative keyword to Main Campaign, Emergency Services</p>
+              </div>
+              <div class="flex items-center gap-3 flex-shrink-0">
+                <div class="text-xs text-gray-500"><i class="fa-regular fa-clock"></i> 5 min</div>
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">HIGH</span>
+                <div class="text-right min-w-[80px]">
+                  <div class="text-xs text-gray-600">Save</div>
+                  <div class="text-lg font-bold text-green-600">$280</div>
+                  <div class="text-xs text-gray-500">/mo</div>
                 </div>
               </div>
             </div>
-          </div>
+          </label>
 
-          <!-- Optimization 2 -->
-          <div class="border-2 border-yellow-200 bg-yellow-50 rounded-xl p-6 hover:shadow-lg transition">
-            <div class="flex items-start gap-4">
-              <input type="checkbox" class="optimization-checkbox w-6 h-6 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1" data-savings="0" data-leads="12" data-lead-value="6000">
-              <div class="flex-1">
-                <div class="flex items-start justify-between gap-4 mb-3">
-                  <div>
-                    <div class="flex items-center gap-2 mb-2">
-                      <span class="bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-bold">MEDIUM PRIORITY</span>
-                      <span class="text-gray-600 text-sm">Impact: 78/100</span>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">
-                      <i class="fa-solid fa-rectangle-ad text-yellow-600 mr-2"></i>
-                      Improve Ad Copy
-                    </h3>
-                    <p class="text-gray-700 mb-3">
-                      Update 8 ads with low CTR. Add specific benefits, pricing, and stronger calls-to-action to increase click-through rate.
-                    </p>
-                    <div class="flex items-center gap-4 text-sm text-gray-600">
-                      <span><i class="fa-solid fa-clock mr-1"></i> 30 minutes</span>
-                      <span><i class="fa-solid fa-tag mr-1"></i> Multiple Ad Groups</span>
-                    </div>
-                  </div>
-                  <div class="bg-white border-2 border-blue-300 rounded-lg p-4 text-center min-w-[140px]">
-                    <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Revenue Value</div>
-                    <div class="text-3xl font-bold text-blue-600">$6,000</div>
-                    <div class="text-xs text-gray-500">+12 leads/mo</div>
-                  </div>
+          <!-- Negative Keyword 2 -->
+          <label class="block cursor-pointer hover:bg-gray-50 rounded-lg transition">
+            <div class="flex items-center gap-3 p-3 border border-l-4 border-l-red-500 rounded">
+              <input type="checkbox" class="optimization-checkbox w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 flex-shrink-0" checked>
+              <div class="flex-shrink-0 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                <i class="fa-solid fa-ban text-red-600"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-bold text-gray-900 text-sm">Add negative keyword: "diy repair"</h3>
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">
+                    <i class="fa-solid fa-bolt mr-1"></i>QUICK
+                  </span>
+                </div>
+                <p class="text-xs text-gray-600 mt-0.5">Add 'diy repair' as negative keyword to Main Campaign, Repair Services</p>
+              </div>
+              <div class="flex items-center gap-3 flex-shrink-0">
+                <div class="text-xs text-gray-500"><i class="fa-regular fa-clock"></i> 5 min</div>
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">HIGH</span>
+                <div class="text-right min-w-[80px]">
+                  <div class="text-xs text-gray-600">Save</div>
+                  <div class="text-lg font-bold text-green-600">$220</div>
+                  <div class="text-xs text-gray-500">/mo</div>
                 </div>
               </div>
             </div>
-          </div>
+          </label>
 
-          <!-- Optimization 3 -->
-          <div class="border-2 border-blue-200 bg-blue-50 rounded-xl p-6 hover:shadow-lg transition">
-            <div class="flex items-start gap-4">
-              <input type="checkbox" class="optimization-checkbox w-6 h-6 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1" data-savings="0" data-leads="8" data-lead-value="4000">
-              <div class="flex-1">
-                <div class="flex items-start justify-between gap-4 mb-3">
-                  <div>
-                    <div class="flex items-center gap-2 mb-2">
-                      <span class="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-bold">MEDIUM PRIORITY</span>
-                      <span class="text-gray-600 text-sm">Impact: 72/100</span>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">
-                      <i class="fa-solid fa-puzzle-piece text-blue-600 mr-2"></i>
-                      Add Ad Extensions
-                    </h3>
-                    <p class="text-gray-700 mb-3">
-                      Add callout extensions, sitelink extensions, and call extensions to make your ads more prominent and improve CTR by 15-25%.
-                    </p>
-                    <div class="flex items-center gap-4 text-sm text-gray-600">
-                      <span><i class="fa-solid fa-clock mr-1"></i> 20 minutes</span>
-                      <span><i class="fa-solid fa-tag mr-1"></i> All Active Campaigns</span>
-                    </div>
-                  </div>
-                  <div class="bg-white border-2 border-blue-300 rounded-lg p-4 text-center min-w-[140px]">
-                    <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Revenue Value</div>
-                    <div class="text-3xl font-bold text-blue-600">$4,000</div>
-                    <div class="text-xs text-gray-500">+8 leads/mo</div>
-                  </div>
+          <!-- Negative Keyword 3 -->
+          <label class="block cursor-pointer hover:bg-gray-50 rounded-lg transition">
+            <div class="flex items-center gap-3 p-3 border border-l-4 border-l-yellow-500 rounded">
+              <input type="checkbox" class="optimization-checkbox w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 flex-shrink-0" checked>
+              <div class="flex-shrink-0 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                <i class="fa-solid fa-ban text-red-600"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-bold text-gray-900 text-sm">Add negative keyword: "hvac jobs"</h3>
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">
+                    <i class="fa-solid fa-bolt mr-1"></i>QUICK
+                  </span>
+                </div>
+                <p class="text-xs text-gray-600 mt-0.5">Add 'hvac jobs' as negative keyword to Main Campaign</p>
+              </div>
+              <div class="flex items-center gap-3 flex-shrink-0">
+                <div class="text-xs text-gray-500"><i class="fa-regular fa-clock"></i> 5 min</div>
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">MEDIUM</span>
+                <div class="text-right min-w-[80px]">
+                  <div class="text-xs text-gray-600">Save</div>
+                  <div class="text-lg font-bold text-green-600">$190</div>
+                  <div class="text-xs text-gray-500">/mo</div>
                 </div>
               </div>
             </div>
-          </div>
+          </label>
 
-          <!-- Optimization 4 -->
-          <div class="border-2 border-purple-200 bg-purple-50 rounded-xl p-6 hover:shadow-lg transition">
-            <div class="flex items-start gap-4">
-              <input type="checkbox" class="optimization-checkbox w-6 h-6 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1" data-savings="320" data-leads="0">
-              <div class="flex-1">
-                <div class="flex items-start justify-between gap-4 mb-3">
-                  <div>
-                    <div class="flex items-center gap-2 mb-2">
-                      <span class="bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-bold">MEDIUM PRIORITY</span>
-                      <span class="text-gray-600 text-sm">Impact: 68/100</span>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">
-                      <i class="fa-solid fa-chart-line text-purple-600 mr-2"></i>
-                      Adjust Bid Strategy
-                    </h3>
-                    <p class="text-gray-700 mb-3">
-                      Switch to Target CPA bidding for 3 campaigns currently using manual bidding. This will optimize bids automatically for better conversion rates.
-                    </p>
-                    <div class="flex items-center gap-4 text-sm text-gray-600">
-                      <span><i class="fa-solid fa-clock mr-1"></i> 10 minutes</span>
-                      <span><i class="fa-solid fa-tag mr-1"></i> 3 Campaigns</span>
-                    </div>
-                  </div>
-                  <div class="bg-white border-2 border-green-300 rounded-lg p-4 text-center min-w-[140px]">
-                    <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Est. Savings</div>
-                    <div class="text-3xl font-bold text-green-600">$320</div>
-                    <div class="text-xs text-gray-500">/month</div>
-                  </div>
+          <!-- Negative Keyword 4 -->
+          <label class="block cursor-pointer hover:bg-gray-50 rounded-lg transition">
+            <div class="flex items-center gap-3 p-3 border border-l-4 border-l-yellow-500 rounded">
+              <input type="checkbox" class="optimization-checkbox w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 flex-shrink-0" checked>
+              <div class="flex-shrink-0 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                <i class="fa-solid fa-ban text-red-600"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-bold text-gray-900 text-sm">Add negative keyword: "how to"</h3>
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">
+                    <i class="fa-solid fa-bolt mr-1"></i>QUICK
+                  </span>
+                </div>
+                <p class="text-xs text-gray-600 mt-0.5">Add 'how to' as negative keyword to All Campaigns</p>
+              </div>
+              <div class="flex items-center gap-3 flex-shrink-0">
+                <div class="text-xs text-gray-500"><i class="fa-regular fa-clock"></i> 5 min</div>
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">MEDIUM</span>
+                <div class="text-right min-w-[80px]">
+                  <div class="text-xs text-gray-600">Save</div>
+                  <div class="text-lg font-bold text-green-600">$140</div>
+                  <div class="text-xs text-gray-500">/mo</div>
                 </div>
               </div>
             </div>
-          </div>
+          </label>
 
-          <!-- Optimization 5 -->
-          <div class="border-2 border-indigo-200 bg-indigo-50 rounded-xl p-6 hover:shadow-lg transition">
-            <div class="flex items-start gap-4">
-              <input type="checkbox" class="optimization-checkbox w-6 h-6 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1" data-savings="0" data-leads="5" data-lead-value="2500">
-              <div class="flex-1">
-                <div class="flex items-start justify-between gap-4 mb-3">
-                  <div>
-                    <div class="flex items-center gap-2 mb-2">
-                      <span class="bg-gray-500 text-white px-3 py-1 rounded-full text-xs font-bold">LOW PRIORITY</span>
-                      <span class="text-gray-600 text-sm">Impact: 52/100</span>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">
-                      <i class="fa-solid fa-mobile-screen text-indigo-600 mr-2"></i>
-                      Optimize for Mobile
-                    </h3>
-                    <p class="text-gray-700 mb-3">
-                      Increase mobile bid adjustments by 15% for campaigns with high mobile traffic. 60% of your traffic is mobile but bids aren't optimized.
-                    </p>
-                    <div class="flex items-center gap-4 text-sm text-gray-600">
-                      <span><i class="fa-solid fa-clock mr-1"></i> 5 minutes</span>
-                      <span><i class="fa-solid fa-tag mr-1"></i> All Campaigns</span>
-                    </div>
-                  </div>
-                  <div class="bg-white border-2 border-blue-300 rounded-lg p-4 text-center min-w-[140px]">
-                    <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Revenue Value</div>
-                    <div class="text-3xl font-bold text-blue-600">$2,500</div>
-                    <div class="text-xs text-gray-500">+5 leads/mo</div>
-                  </div>
+          <!-- Negative Keyword 5 -->
+          <label class="block cursor-pointer hover:bg-gray-50 rounded-lg transition">
+            <div class="flex items-center gap-3 p-3 border border-l-4 border-l-yellow-500 rounded">
+              <input type="checkbox" class="optimization-checkbox w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 flex-shrink-0" checked>
+              <div class="flex-shrink-0 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                <i class="fa-solid fa-ban text-red-600"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-bold text-gray-900 text-sm">Add negative keyword: "course"</h3>
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">
+                    <i class="fa-solid fa-bolt mr-1"></i>QUICK
+                  </span>
+                </div>
+                <p class="text-xs text-gray-600 mt-0.5">Add 'course' as negative keyword to Main Campaign</p>
+              </div>
+              <div class="flex items-center gap-3 flex-shrink-0">
+                <div class="text-xs text-gray-500"><i class="fa-regular fa-clock"></i> 5 min</div>
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">MEDIUM</span>
+                <div class="text-right min-w-[80px]">
+                  <div class="text-xs text-gray-600">Save</div>
+                  <div class="text-lg font-bold text-green-600">$60</div>
+                  <div class="text-xs text-gray-500">/mo</div>
                 </div>
               </div>
             </div>
-          </div>
+          </label>
+
+          <!-- Extension 1: Sitelinks -->
+          <label class="block cursor-pointer hover:bg-gray-50 rounded-lg transition">
+            <div class="flex items-center gap-3 p-3 border border-l-4 border-l-red-500 rounded">
+              <input type="checkbox" class="optimization-checkbox w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 flex-shrink-0" checked>
+              <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                <i class="fa-solid fa-puzzle-piece text-blue-600"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-bold text-gray-900 text-sm">Add Sitelinks</h3>
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">
+                    <i class="fa-solid fa-bolt mr-1"></i>QUICK
+                  </span>
+                </div>
+                <p class="text-xs text-gray-600 mt-0.5">Enable Sitelinks for all campaigns</p>
+              </div>
+              <div class="flex items-center gap-3 flex-shrink-0">
+                <div class="text-xs text-gray-500"><i class="fa-regular fa-clock"></i> 20 min</div>
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">HIGH</span>
+                <div class="text-right min-w-[80px]">
+                  <div class="text-xs text-gray-600">Value</div>
+                  <div class="text-lg font-bold text-blue-600">$4,000</div>
+                  <div class="text-xs text-gray-500">+8 leads</div>
+                </div>
+              </div>
+            </div>
+          </label>
+
+          <!-- Extension 2: Callouts -->
+          <label class="block cursor-pointer hover:bg-gray-50 rounded-lg transition">
+            <div class="flex items-center gap-3 p-3 border border-l-4 border-l-yellow-500 rounded">
+              <input type="checkbox" class="optimization-checkbox w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 flex-shrink-0" checked>
+              <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                <i class="fa-solid fa-puzzle-piece text-blue-600"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-bold text-gray-900 text-sm">Add Callouts</h3>
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">
+                    <i class="fa-solid fa-bolt mr-1"></i>QUICK
+                  </span>
+                </div>
+                <p class="text-xs text-gray-600 mt-0.5">Enable Callouts for all campaigns</p>
+              </div>
+              <div class="flex items-center gap-3 flex-shrink-0">
+                <div class="text-xs text-gray-500"><i class="fa-regular fa-clock"></i> 15 min</div>
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">MEDIUM</span>
+                <div class="text-right min-w-[80px]">
+                  <div class="text-xs text-gray-600">Value</div>
+                  <div class="text-lg font-bold text-blue-600">$2,500</div>
+                  <div class="text-xs text-gray-500">+5 leads</div>
+                </div>
+              </div>
+            </div>
+          </label>
+
+          <!-- Extension 3: Call Extensions -->
+          <label class="block cursor-pointer hover:bg-gray-50 rounded-lg transition">
+            <div class="flex items-center gap-3 p-3 border border-l-4 border-l-red-500 rounded">
+              <input type="checkbox" class="optimization-checkbox w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 flex-shrink-0" checked>
+              <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                <i class="fa-solid fa-puzzle-piece text-blue-600"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-bold text-gray-900 text-sm">Add Call Extensions</h3>
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">
+                    <i class="fa-solid fa-bolt mr-1"></i>QUICK
+                  </span>
+                </div>
+                <p class="text-xs text-gray-600 mt-0.5">Enable Call Extensions for all campaigns</p>
+              </div>
+              <div class="flex items-center gap-3 flex-shrink-0">
+                <div class="text-xs text-gray-500"><i class="fa-regular fa-clock"></i> 10 min</div>
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">HIGH</span>
+                <div class="text-right min-w-[80px]">
+                  <div class="text-xs text-gray-600">Value</div>
+                  <div class="text-lg font-bold text-blue-600">$6,000</div>
+                  <div class="text-xs text-gray-500">+12 leads</div>
+                </div>
+              </div>
+            </div>
+          </label>
+
+          <!-- Quality Score 1 -->
+          <label class="block cursor-pointer hover:bg-gray-50 rounded-lg transition">
+            <div class="flex items-center gap-3 p-3 border border-l-4 border-l-yellow-500 rounded">
+              <input type="checkbox" class="optimization-checkbox w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 flex-shrink-0" checked>
+              <div class="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
+                <i class="fa-solid fa-star text-yellow-600"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-bold text-gray-900 text-sm">Improve Quality Score for "emergency HVAC"</h3>
+                <p class="text-xs text-gray-600 mt-0.5">Improve ad copy relevance and landing page for 'emergency HVAC'</p>
+              </div>
+              <div class="flex items-center gap-3 flex-shrink-0">
+                <div class="text-xs text-gray-500"><i class="fa-regular fa-clock"></i> 45 min</div>
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">MEDIUM</span>
+                <div class="text-right min-w-[80px]">
+                  <div class="text-xs text-gray-600">Save</div>
+                  <div class="text-lg font-bold text-green-600">$180</div>
+                  <div class="text-xs text-gray-500">/mo</div>
+                </div>
+              </div>
+            </div>
+          </label>
+
+          <!-- Quality Score 2 -->
+          <label class="block cursor-pointer hover:bg-gray-50 rounded-lg transition">
+            <div class="flex items-center gap-3 p-3 border border-l-4 border-l-yellow-500 rounded">
+              <input type="checkbox" class="optimization-checkbox w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 flex-shrink-0" checked>
+              <div class="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
+                <i class="fa-solid fa-star text-yellow-600"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-bold text-gray-900 text-sm">Improve Quality Score for "24/7 HVAC service"</h3>
+                <p class="text-xs text-gray-600 mt-0.5">Improve ad copy relevance and landing page for '24/7 HVAC service'</p>
+              </div>
+              <div class="flex items-center gap-3 flex-shrink-0">
+                <div class="text-xs text-gray-500"><i class="fa-regular fa-clock"></i> 45 min</div>
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">MEDIUM</span>
+                <div class="text-right min-w-[80px]">
+                  <div class="text-xs text-gray-600">Save</div>
+                  <div class="text-lg font-bold text-green-600">$150</div>
+                  <div class="text-xs text-gray-500">/mo</div>
+                </div>
+              </div>
+            </div>
+          </label>
+
+          <!-- Mobile Optimization -->
+          <label class="block cursor-pointer hover:bg-gray-50 rounded-lg transition">
+            <div class="flex items-center gap-3 p-3 border border-l-4 border-l-yellow-500 rounded">
+              <input type="checkbox" class="optimization-checkbox w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 flex-shrink-0" checked>
+              <div class="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                <i class="fa-solid fa-mobile-screen text-green-600"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-bold text-gray-900 text-sm">Add +20% mobile bid adjustment</h3>
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">
+                    <i class="fa-solid fa-bolt mr-1"></i>QUICK
+                  </span>
+                </div>
+                <p class="text-xs text-gray-600 mt-0.5">Set mobile bid modifier to +20% for all campaigns</p>
+              </div>
+              <div class="flex items-center gap-3 flex-shrink-0">
+                <div class="text-xs text-gray-500"><i class="fa-regular fa-clock"></i> 10 min</div>
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">MEDIUM</span>
+                <div class="text-right min-w-[80px]">
+                  <div class="text-xs text-gray-600">Value</div>
+                  <div class="text-lg font-bold text-blue-600">$3,000</div>
+                  <div class="text-xs text-gray-500">+6 leads</div>
+                </div>
+              </div>
+            </div>
+          </label>
+
 
         </div>
 
@@ -1034,12 +1088,12 @@ document.addEventListener('DOMContentLoaded', function() {
           <div class="flex items-center justify-between">
             <div>
               <h3 class="text-lg font-bold text-gray-900 mb-1">Total Monthly Impact</h3>
-              <p class="text-sm text-gray-600">Based on selected optimizations</p>
+              <p class="text-sm text-gray-600">When all 12 selected optimizations are implemented</p>
             </div>
             <div class="text-right">
               <div class="text-sm text-gray-600 mb-1">Combined Value</div>
-              <div id="modalTotalValue" class="text-4xl font-black text-green-600">$0</div>
-              <div id="modalTotalLeads" class="text-xs text-gray-500">+0 leads/month</div>
+              <div class="text-4xl font-black text-green-600">$16,720</div>
+              <div class="text-xs text-gray-500">$1,220 savings + 31 leads/month</div>
             </div>
           </div>
         </div>

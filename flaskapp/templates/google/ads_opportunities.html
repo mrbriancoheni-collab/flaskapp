@@ -8,9 +8,15 @@
   <!-- Header with Back Button -->
   <div class="flex items-center justify-between">
     <div>
+      {% if not is_demo %}
       <a href="{{ url_for('google_bp.ads_ui') }}" class="text-sm text-indigo-600 hover:text-indigo-800 mb-2 inline-block">
         <i class="fa-solid fa-arrow-left mr-1"></i> Back to Google Ads
       </a>
+      {% else %}
+      <a href="{{ url_for('home_bp.index') }}" class="text-sm text-indigo-600 hover:text-indigo-800 mb-2 inline-block">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Back to Home
+      </a>
+      {% endif %}
       <h1 class="text-3xl font-bold">Opportunities Dashboard</h1>
       <p class="text-gray-600 mt-1">{{ analysis.account_name }}</p>
     </div>
@@ -21,6 +27,27 @@
     </a>
     {% endif %}
   </div>
+
+  {% if is_demo %}
+  <!-- Demo Mode Banner -->
+  <div class="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg p-6 text-white">
+    <div class="flex items-center gap-4">
+      <div class="flex-shrink-0">
+        <i class="fa-solid fa-flask text-4xl"></i>
+      </div>
+      <div class="flex-1">
+        <h2 class="text-2xl font-bold mb-1">Demo Mode</h2>
+        <p class="text-blue-100">This is a demonstration using sample data from a fictional plumbing & HVAC company. In the live version, you'll see real data from your connected Google Ads account with actionable optimizations you can approve and implement.</p>
+      </div>
+      <div class="flex-shrink-0">
+        <a href="{{ url_for('auth_bp.signup') }}" class="inline-flex items-center gap-2 bg-white text-indigo-600 px-6 py-3 rounded-lg font-bold hover:bg-blue-50 transition shadow-lg">
+          <i class="fa-solid fa-rocket"></i>
+          Start Free Trial
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   <!-- Overall Health Score Card -->
   <div class="bg-white rounded-xl shadow-lg p-8">
@@ -153,79 +180,225 @@
   </div>
   {% endif %}
 
-  <!-- Top 5 Opportunities -->
-  <div class="bg-white rounded-xl shadow-lg p-6">
-    <h2 class="text-2xl font-bold mb-6">
-      <i class="fa-solid fa-bullseye text-indigo-600 mr-2"></i>
-      Top Opportunities
-    </h2>
+  <!-- Quick Wins Section -->
+  {% if analysis.quick_wins|length > 0 %}
+  <div class="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-lg p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="text-2xl font-bold text-gray-900">
+          <i class="fa-solid fa-bolt text-yellow-500 mr-2"></i>
+          Quick Wins
+        </h2>
+        <p class="text-sm text-gray-600 mt-1">High-impact optimizations you can implement in under 30 minutes</p>
+      </div>
+      <div class="bg-white border-2 border-green-400 rounded-lg px-4 py-2">
+        <div class="text-xs text-gray-600 font-semibold">Implementation Time</div>
+        <div class="text-2xl font-bold text-green-600">< 30 min</div>
+      </div>
+    </div>
 
-    <div class="space-y-4">
-      {% for opp in analysis.opportunities %}
-      <div class="border-l-4
-                  {% if opp.priority == 'high' %}border-red-500 bg-red-50
-                  {% elif opp.priority == 'medium' %}border-yellow-500 bg-yellow-50
-                  {% else %}border-gray-400 bg-gray-50{% endif %}
-                  rounded-r-lg p-5 hover:shadow-md transition">
-        <div class="flex items-start justify-between gap-4">
-          <div class="flex items-start gap-4 flex-1">
-            <!-- Icon -->
-            <div class="flex-shrink-0 w-12 h-12 rounded-full
-                        bg-{{ opp.color }}-100 border-2 border-{{ opp.color }}-300
-                        flex items-center justify-center">
-              <i class="fa-solid {{ opp.icon }} text-2xl text-{{ opp.color }}-600"></i>
-            </div>
-
-            <!-- Content -->
-            <div class="flex-1">
-              <div class="flex items-center gap-2 mb-1">
-                <h3 class="text-lg font-bold text-gray-900">{{ opp.title }}</h3>
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                            {% if opp.priority == 'high' %}bg-red-100 text-red-800
-                            {% elif opp.priority == 'medium' %}bg-yellow-100 text-yellow-800
-                            {% else %}bg-gray-100 text-gray-800{% endif %}">
-                  {{ opp.priority|upper }} PRIORITY
-                </span>
-                <span class="text-sm text-gray-500">Impact: {{ opp.impact_score }}/100</span>
-              </div>
-              <p class="text-gray-600 mb-3">{{ opp.description }}</p>
-
-              <div class="flex items-center gap-4 text-sm">
-                <div class="flex items-center gap-1 text-gray-700">
-                  <i class="fa-solid fa-clipboard-list text-gray-400"></i>
-                  <span>{{ opp.action }}</span>
-                </div>
-                <div class="text-gray-500">
-                  <i class="fa-regular fa-clock"></i> {{ opp.estimated_time }}
-                </div>
-              </div>
+    <div class="grid md:grid-cols-2 gap-4">
+      {% for qw in analysis.quick_wins %}
+      <div class="bg-white rounded-lg border-2 border-green-200 p-4 hover:shadow-md transition">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-full bg-{{ qw.color }}-100 border-2 border-{{ qw.color }}-300 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid {{ qw.icon }} text-{{ qw.color }}-600"></i>
+          </div>
+          <div class="flex-1">
+            <h3 class="font-bold text-gray-900 mb-1">{{ qw.title }}</h3>
+            <p class="text-sm text-gray-600 mb-2">{{ qw.description }}</p>
+            <div class="flex items-center gap-2 text-xs">
+              <span class="bg-green-100 text-green-800 px-2 py-0.5 rounded font-medium">
+                <i class="fa-solid fa-clock mr-1"></i>{{ qw.estimated_time }}
+              </span>
+              {% if qw.monthly_savings %}
+              <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-medium">
+                +${{ "%.0f"|format(qw.monthly_savings) }}/mo
+              </span>
+              {% elif qw.monthly_leads %}
+              <span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-medium">
+                +{{ qw.monthly_leads }} leads/mo
+              </span>
+              {% endif %}
             </div>
           </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 
-          <!-- ROI Card -->
-          <div class="flex-shrink-0 text-right">
+  <!-- Competitive Insights -->
+  <div class="bg-white rounded-xl shadow-lg p-6">
+    <h2 class="text-2xl font-bold mb-6">
+      <i class="fa-solid fa-chart-line text-indigo-600 mr-2"></i>
+      Competitive Insights
+    </h2>
+
+    <div class="grid md:grid-cols-3 gap-6">
+      <!-- CPC vs Industry -->
+      <div class="bg-gradient-to-br from-orange-50 to-red-50 border border-orange-200 rounded-lg p-4">
+        <div class="text-sm text-gray-600 mb-2">Avg CPC vs Industry</div>
+        <div class="flex items-baseline gap-2 mb-2">
+          <span class="text-3xl font-bold text-red-600">${{ "%.2f"|format(analysis.competitive_insights.avg_cpc_vs_industry.yours) }}</span>
+          <span class="text-sm text-gray-500">vs ${{ "%.2f"|format(analysis.competitive_insights.avg_cpc_vs_industry.industry) }}</span>
+        </div>
+        <div class="text-xs font-semibold text-red-600">
+          <i class="fa-solid fa-arrow-up mr-1"></i>
+          {{ analysis.competitive_insights.avg_cpc_vs_industry.diff_pct }}% higher than average
+        </div>
+      </div>
+
+      <!-- Impression Share Lost -->
+      <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+        <div class="text-sm text-gray-600 mb-2">Impression Share Lost</div>
+        <div class="space-y-2">
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span>To Budget</span>
+              <span class="font-bold text-blue-700">{{ analysis.competitive_insights.impression_share_lost_to_budget }}%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+              <div class="bg-blue-500 h-2 rounded-full" style="width: {{ analysis.competitive_insights.impression_share_lost_to_budget }}%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span>To Rank</span>
+              <span class="font-bold text-purple-700">{{ analysis.competitive_insights.impression_share_lost_to_rank }}%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+              <div class="bg-purple-500 h-2 rounded-full" style="width: {{ analysis.competitive_insights.impression_share_lost_to_rank }}%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Competitor Tactics -->
+      <div class="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+        <div class="text-sm text-gray-600 mb-2">Top Competitor Tactics</div>
+        <ul class="space-y-1 text-xs">
+          {% for tactic in analysis.competitive_insights.top_competitor_tactics %}
+          <li class="flex items-start gap-1">
+            <i class="fa-solid fa-check text-purple-600 mt-0.5"></i>
+            <span class="text-gray-700">{{ tactic }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Individual Optimization Line Items -->
+  <div class="bg-white rounded-xl shadow-lg p-6">
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h2 class="text-2xl font-bold">
+          <i class="fa-solid fa-list-check text-indigo-600 mr-2"></i>
+          Select Optimizations to Implement
+        </h2>
+        <p class="text-sm text-gray-600 mt-1">{{ analysis.opportunities|length }} specific optimizations identified - select individual items below</p>
+      </div>
+      <!-- Filter/Sort Controls -->
+      <div class="flex items-center gap-2 text-sm">
+        <select id="filterPriority" class="border border-gray-300 rounded px-3 py-1 text-sm">
+          <option value="all">All Priorities</option>
+          <option value="high">High Only</option>
+          <option value="medium">Medium Only</option>
+          <option value="low">Low Only</option>
+        </select>
+        <select id="sortBy" class="border border-gray-300 rounded px-3 py-1 text-sm">
+          <option value="priority">Sort by Priority</option>
+          <option value="impact">Sort by Impact</option>
+          <option value="savings">Sort by Savings</option>
+          <option value="time">Sort by Time</option>
+        </select>
+        <button onclick="selectAllOptimizations(true)" class="text-indigo-600 hover:bg-indigo-50 px-3 py-1 rounded font-medium">
+          Select All
+        </button>
+      </div>
+    </div>
+
+    <!-- Compact List of Individual Optimizations -->
+    <div id="opportunitiesList" class="space-y-1">
+      {% for opp in analysis.opportunities %}
+      <label class="opportunity-item block cursor-pointer hover:bg-gray-50 rounded-lg transition"
+             data-priority="{{ opp.priority }}"
+             data-impact="{{ opp.impact_score }}"
+             data-savings="{{ opp.monthly_savings or 0 }}"
+             data-time="{{ opp.estimated_time }}">
+        <div class="flex items-center gap-3 p-3 border
+                    {% if opp.priority == 'high' %}border-l-4 border-l-red-500
+                    {% elif opp.priority == 'medium' %}border-l-4 border-l-yellow-500
+                    {% else %}border-l-4 border-l-gray-400{% endif %} rounded">
+
+          <!-- Checkbox -->
+          <input type="checkbox"
+                 class="optimization-checkbox w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 flex-shrink-0"
+                 data-opp-id="{{ loop.index }}"
+                 data-title="{{ opp.title }}"
+                 data-savings="{{ opp.monthly_savings or 0 }}"
+                 data-leads="{{ opp.monthly_leads or 0 }}"
+                 onchange="updateSelectedCount()"
+                 checked>
+
+          <!-- Icon -->
+          <div class="flex-shrink-0 w-8 h-8 rounded-full bg-{{ opp.color }}-100 flex items-center justify-center">
+            <i class="fa-solid {{ opp.icon }} text-{{ opp.color }}-600"></i>
+          </div>
+
+          <!-- Content -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <h3 class="font-bold text-gray-900 text-sm">{{ opp.title }}</h3>
+              {% if opp.quick_win %}
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">
+                <i class="fa-solid fa-bolt mr-1"></i>QUICK
+              </span>
+              {% endif %}
+            </div>
+            <p class="text-xs text-gray-600 mt-0.5">{{ opp.action }}</p>
+          </div>
+
+          <!-- Badges & Metrics -->
+          <div class="flex items-center gap-3 flex-shrink-0">
+            <!-- Time -->
+            <div class="text-xs text-gray-500">
+              <i class="fa-regular fa-clock"></i> {{ opp.estimated_time }}
+            </div>
+
+            <!-- Priority Badge -->
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium
+                        {% if opp.priority == 'high' %}bg-red-100 text-red-800
+                        {% elif opp.priority == 'medium' %}bg-yellow-100 text-yellow-800
+                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+              {{ opp.priority|upper }}
+            </span>
+
+            <!-- ROI Value -->
             {% if opp.monthly_savings %}
-            <div class="bg-white border-2 border-green-200 rounded-lg p-3 min-w-[140px]">
-              <div class="text-xs text-gray-600 uppercase font-semibold">Potential Savings</div>
-              <div class="text-2xl font-bold text-green-600">${{ "%.0f"|format(opp.monthly_savings) }}</div>
-              <div class="text-xs text-gray-500">/month</div>
+            <div class="text-right min-w-[80px]">
+              <div class="text-xs text-gray-600">Save</div>
+              <div class="text-lg font-bold text-green-600">${{ "%.0f"|format(opp.monthly_savings) }}</div>
+              <div class="text-xs text-gray-500">/mo</div>
             </div>
             {% elif opp.monthly_leads %}
-            <div class="bg-white border-2 border-blue-200 rounded-lg p-3 min-w-[140px]">
-              <div class="text-xs text-gray-600 uppercase font-semibold">Revenue Value</div>
-              <div class="text-2xl font-bold text-blue-600">${{ "%.0f"|format(opp.monthly_leads * 500) }}</div>
-              <div class="text-xs text-gray-500">+{{ opp.monthly_leads|int }} leads/mo</div>
+            <div class="text-right min-w-[80px]">
+              <div class="text-xs text-gray-600">Value</div>
+              <div class="text-lg font-bold text-blue-600">${{ "%.0f"|format(opp.monthly_leads * 500) }}</div>
+              <div class="text-xs text-gray-500">+{{ opp.monthly_leads }} leads</div>
             </div>
             {% elif opp.monthly_time_saved %}
-            <div class="bg-white border-2 border-purple-200 rounded-lg p-3 min-w-[140px]">
-              <div class="text-xs text-gray-600 uppercase font-semibold">Time Saved</div>
-              <div class="text-2xl font-bold text-purple-600">{{ opp.monthly_time_saved }}h</div>
-              <div class="text-xs text-gray-500">/month</div>
+            <div class="text-right min-w-[80px]">
+              <div class="text-xs text-gray-600">Time Saved</div>
+              <div class="text-lg font-bold text-purple-600">{{ opp.monthly_time_saved }}h</div>
+              <div class="text-xs text-gray-500">/mo</div>
             </div>
             {% endif %}
           </div>
         </div>
-      </div>
+      </label>
       {% endfor %}
     </div>
 
@@ -515,6 +688,76 @@
   </div>
 </div>
 
+<!-- JavaScript for Filtering/Sorting and Selection -->
+<script>
+// Update selected count display
+function updateSelectedCount() {
+  const checkboxes = document.querySelectorAll('.optimization-checkbox:checked');
+  console.log(`${checkboxes.length} optimizations selected`);
+}
+
+// Filter and sort opportunities
+document.addEventListener('DOMContentLoaded', function() {
+  const filterSelect = document.getElementById('filterPriority');
+  const sortSelect = document.getElementById('sortBy');
+  const opportunitiesList = document.getElementById('opportunitiesList');
+
+  if (filterSelect) {
+    filterSelect.addEventListener('change', filterAndSort);
+  }
+  if (sortSelect) {
+    sortSelect.addEventListener('change', filterAndSort);
+  }
+
+  function filterAndSort() {
+    const filterValue = filterSelect ? filterSelect.value : 'all';
+    const sortValue = sortSelect ? sortSelect.value : 'priority';
+    const items = Array.from(document.querySelectorAll('.opportunity-item'));
+
+    // Filter
+    items.forEach(item => {
+      const priority = item.dataset.priority;
+      if (filterValue === 'all' || priority === filterValue) {
+        item.style.display = '';
+      } else {
+        item.style.display = 'none';
+      }
+    });
+
+    // Sort
+    const visibleItems = items.filter(item => item.style.display !== 'none');
+    visibleItems.sort((a, b) => {
+      switch(sortValue) {
+        case 'impact':
+          return parseInt(b.dataset.impact) - parseInt(a.dataset.impact);
+        case 'savings':
+          return parseFloat(b.dataset.savings) - parseFloat(a.dataset.savings);
+        case 'time':
+          // Extract number from time string (e.g., "5 min" -> 5, "2 hours" -> 120)
+          const parseTime = (str) => {
+            const match = str.match(/(\d+)\s*(min|hour)/i);
+            if (!match) return 999;
+            const num = parseInt(match[1]);
+            const unit = match[2].toLowerCase();
+            return unit.startsWith('hour') ? num * 60 : num;
+          };
+          return parseTime(a.dataset.time) - parseTime(b.dataset.time);
+        case 'priority':
+        default:
+          const priorityOrder = {'high': 0, 'medium': 1, 'low': 2};
+          return priorityOrder[a.dataset.priority] - priorityOrder[b.dataset.priority];
+      }
+    });
+
+    // Re-append in sorted order
+    visibleItems.forEach(item => opportunitiesList.appendChild(item));
+  }
+
+  // Initialize selected count
+  updateSelectedCount();
+});
+</script>
+
 <!-- JavaScript for Modal -->
 <script>
 function openOptimizationsModal() {
@@ -593,6 +836,41 @@ function approveOptimizations() {
       title: checkbox.dataset.title
     });
   });
+
+  {% if is_demo %}
+  // Demo mode - show demo message instead of submitting
+  closeOptimizationsModal();
+
+  // Create demo notification
+  const notification = document.createElement('div');
+  notification.className = 'fixed top-4 right-4 bg-blue-50 border-2 border-blue-500 text-blue-900 px-6 py-4 rounded-lg shadow-xl z-50 max-w-md';
+  notification.innerHTML = `
+    <div class="flex items-start gap-3">
+      <i class="fa-solid fa-flask text-blue-600 text-2xl"></i>
+      <div>
+        <div class="font-bold text-lg mb-1">Demo Mode</div>
+        <div class="text-sm">
+          In the live version, ${selectedOptimizations.length} optimization${selectedOptimizations.length > 1 ? 's' : ''}
+          would be submitted to your Google Ads account for implementation.
+          <a href="{{ url_for('auth_bp.signup') }}" class="block mt-2 text-blue-700 font-bold hover:underline">
+            Start Free Trial →
+          </a>
+        </div>
+      </div>
+      <button onclick="this.parentElement.parentElement.remove()" class="text-blue-600 hover:text-blue-800">
+        <i class="fa-solid fa-times"></i>
+      </button>
+    </div>
+  `;
+  document.body.appendChild(notification);
+
+  // Auto-remove after 8 seconds
+  setTimeout(() => {
+    notification.remove();
+  }, 8000);
+
+  return;
+  {% endif %}
 
   // Show loading state
   const button = document.getElementById('approveButton');

@@ -603,7 +603,8 @@
                      data-savings="{{ opp.monthly_savings|default(0) }}"
                      data-leads="{{ opp.monthly_leads|default(0) }}"
                      data-lead-value="{{ opp.lead_value|default(0) }}"
-                     onchange="updateTotals()">
+                     onchange="updateTotals()"
+                     checked>
 
               <!-- Content -->
               <div class="flex-1">
@@ -839,8 +840,10 @@ function updateTotals() {
 
   checkboxes.forEach(checkbox => {
     totalSavings += parseFloat(checkbox.dataset.savings) || 0;
-    totalLeads += parseFloat(checkbox.dataset.leads) || 0;
-    totalLeadValue += parseFloat(checkbox.dataset.leadValue) || 0;
+    const leads = parseFloat(checkbox.dataset.leads) || 0;
+    totalLeads += leads;
+    // Calculate lead value as leads * $500 (average home services lead value)
+    totalLeadValue += leads * 500;
   });
 
   const totalCombined = totalSavings + totalLeadValue;

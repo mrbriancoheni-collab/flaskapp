@@ -350,7 +350,7 @@
           <option value="savings">Sort by Savings</option>
           <option value="time">Sort by Time</option>
         </select>
-        <button onclick="selectAllOptimizations(true)" class="text-indigo-600 hover:bg-indigo-50 px-3 py-1 rounded font-medium">
+        <button id="selectAllMain" class="text-indigo-600 hover:bg-indigo-50 px-3 py-1 rounded font-medium">
           Select All
         </button>
       </div>
@@ -440,7 +440,7 @@
 
     <!-- Approve Optimizations Button -->
     <div class="mt-6 text-center">
-      <button onclick="openOptimizationsModal()" class="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-lg rounded-xl hover:from-green-600 hover:to-emerald-700 transition shadow-xl transform hover:scale-105">
+      <button id="openModalButton" class="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-lg rounded-xl hover:from-green-600 hover:to-emerald-700 transition shadow-xl transform hover:scale-105">
         <i class="fa-solid fa-check-double text-2xl"></i>
         <span>Select & Approve Optimizations</span>
         <span class="bg-white/20 px-3 py-1 rounded-full text-sm">{{ analysis.opportunities|length }} Actions</span>
@@ -561,7 +561,7 @@
             <h2 class="text-2xl font-bold mb-1">Select Optimizations to Approve</h2>
             <p class="text-indigo-100 text-sm">Choose which changes you'd like to implement in your Google Ads account</p>
           </div>
-          <button onclick="closeOptimizationsModal()" class="text-white hover:bg-white/20 rounded-lg p-2 transition">
+          <button id="closeModalX" class="text-white hover:bg-white/20 rounded-lg p-2 transition">
             <i class="fa-solid fa-times text-2xl"></i>
           </button>
         </div>
@@ -577,10 +577,10 @@
             Select the optimizations you want to implement
           </div>
           <div class="flex gap-2">
-            <button onclick="selectAllOptimizations(true)" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium px-3 py-1 hover:bg-indigo-50 rounded">
+            <button id="selectAllModal" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium px-3 py-1 hover:bg-indigo-50 rounded">
               <i class="fa-solid fa-check-square mr-1"></i> Select All
             </button>
-            <button onclick="selectAllOptimizations(false)" class="text-sm text-gray-600 hover:text-gray-800 font-medium px-3 py-1 hover:bg-gray-100 rounded">
+            <button id="clearAllModal" class="text-sm text-gray-600 hover:text-gray-800 font-medium px-3 py-1 hover:bg-gray-100 rounded">
               <i class="fa-regular fa-square mr-1"></i> Clear All
             </button>
           </div>
@@ -712,10 +712,10 @@
 
       <!-- Modal Footer -->
       <div class="bg-gray-50 px-6 py-4 rounded-b-2xl flex items-center justify-between">
-        <button onclick="closeOptimizationsModal()" class="px-6 py-2 border border-gray-300 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors">
+        <button id="cancelButton" class="px-6 py-2 border border-gray-300 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors">
           Cancel
         </button>
-        <button id="approveButton" onclick="approveOptimizations()" class="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg transform hover:scale-105">
+        <button id="approveButton" class="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg transform hover:scale-105">
           <i class="fa-solid fa-check-double mr-2"></i>
           <span id="approveButtonText">Approve {{ analysis.opportunities|length }} Optimizations</span>
         </button>
@@ -726,7 +726,7 @@
 </div>
 
 <!-- JavaScript for Filtering/Sorting and Selection -->
-<script>
+<script nonce="{{ g.csp_nonce }}">
 // Update selected count display
 function updateSelectedCount() {
   const checkboxes = document.querySelectorAll('.optimization-checkbox:checked');
@@ -796,7 +796,54 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <!-- JavaScript for Modal -->
-<script>
+<script nonce="{{ g.csp_nonce }}">
+// Add event listeners for all buttons (to comply with CSP)
+document.addEventListener('DOMContentLoaded', function() {
+  // Main "Select & Approve" button
+  const openButton = document.getElementById('openModalButton');
+  if (openButton) {
+    openButton.addEventListener('click', openOptimizationsModal);
+  }
+
+  // Select All button in main list
+  const selectAllMain = document.getElementById('selectAllMain');
+  if (selectAllMain) {
+    selectAllMain.addEventListener('click', function() {
+      selectAllOptimizations(true);
+    });
+  }
+
+  // Modal buttons
+  const closeModalX = document.getElementById('closeModalX');
+  if (closeModalX) {
+    closeModalX.addEventListener('click', closeOptimizationsModal);
+  }
+
+  const selectAllModal = document.getElementById('selectAllModal');
+  if (selectAllModal) {
+    selectAllModal.addEventListener('click', function() {
+      selectAllOptimizations(true);
+    });
+  }
+
+  const clearAllModal = document.getElementById('clearAllModal');
+  if (clearAllModal) {
+    clearAllModal.addEventListener('click', function() {
+      selectAllOptimizations(false);
+    });
+  }
+
+  const cancelButton = document.getElementById('cancelButton');
+  if (cancelButton) {
+    cancelButton.addEventListener('click', closeOptimizationsModal);
+  }
+
+  const approveButton = document.getElementById('approveButton');
+  if (approveButton) {
+    approveButton.addEventListener('click', approveOptimizations);
+  }
+});
+
 function openOptimizationsModal() {
   document.getElementById('optimizationsModal').classList.remove('hidden');
   document.body.style.overflow = 'hidden';

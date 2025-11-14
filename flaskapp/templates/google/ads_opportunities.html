@@ -376,7 +376,6 @@
                  data-title="{{ opp.title }}"
                  data-savings="{{ opp.monthly_savings or 0 }}"
                  data-leads="{{ opp.monthly_leads or 0 }}"
-                 onchange="updateSelectedCount()"
                  checked>
 
           <!-- Icon -->
@@ -603,7 +602,6 @@
                      data-savings="{{ opp.monthly_savings|default(0) }}"
                      data-leads="{{ opp.monthly_leads|default(0) }}"
                      data-lead-value="{{ opp.lead_value|default(0) }}"
-                     onchange="updateTotals()"
                      checked>
 
               <!-- Content -->
@@ -745,6 +743,19 @@ document.addEventListener('DOMContentLoaded', function() {
   if (sortSelect) {
     sortSelect.addEventListener('change', filterAndSort);
   }
+
+  // Event delegation for all checkboxes (CSP compliance)
+  document.body.addEventListener('change', function(e) {
+    if (e.target.classList.contains('optimization-checkbox')) {
+      // Check if we're in the modal or main list
+      const modal = document.getElementById('optimizationsModal');
+      if (modal && !modal.classList.contains('hidden')) {
+        updateTotals();
+      } else {
+        updateSelectedCount();
+      }
+    }
+  });
 
   function filterAndSort() {
     const filterValue = filterSelect ? filterSelect.value : 'all';
@@ -943,12 +954,20 @@ function approveOptimizations() {
           </a>
         </div>
       </div>
-      <button onclick="this.parentElement.parentElement.remove()" class="text-blue-600 hover:text-blue-800">
+      <button class="notification-close text-blue-600 hover:text-blue-800">
         <i class="fa-solid fa-times"></i>
       </button>
     </div>
   `;
   document.body.appendChild(notification);
+
+  // Add close button listener (CSP compliance)
+  const closeBtn = notification.querySelector('.notification-close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function() {
+      notification.remove();
+    });
+  }
 
   // Auto-remove after 8 seconds
   setTimeout(() => {
@@ -995,12 +1014,20 @@ function approveOptimizations() {
               ${selectedOptimizations.length > 1 ? 'have' : 'has'} been submitted to your Google Ads account.
             </div>
           </div>
-          <button onclick="this.parentElement.parentElement.remove()" class="text-green-600 hover:text-green-800">
+          <button class="notification-close text-green-600 hover:text-green-800">
             <i class="fa-solid fa-times"></i>
           </button>
         </div>
       `;
       document.body.appendChild(notification);
+
+      // Add close button listener (CSP compliance)
+      const closeBtn = notification.querySelector('.notification-close');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+          notification.remove();
+        });
+      }
 
       // Auto-remove notification after 5 seconds
       setTimeout(() => notification.remove(), 5000);

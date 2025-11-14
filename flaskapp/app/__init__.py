@@ -520,6 +520,13 @@ def create_app():
         app.logger.exception("Failed to register legal_bp")
 
     try:
+        from app.pages import pages_bp
+        app.register_blueprint(pages_bp)
+        app.logger.info("pages_bp registered (about, contact, security)")
+    except Exception:
+        app.logger.exception("Failed to register pages_bp")
+
+    try:
         from app.public import public_bp
         app.register_blueprint(public_bp)
         app.logger.info("public_bp registered")

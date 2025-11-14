@@ -1,0 +1,58 @@
+{% extends "base_public.html" %}
+{% set SECTION = 'products' %}
+{% block title %}Forms & Chat for Home Services — FieldSprout{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Capture leads 24/7, even when you're closed</h1>
+  <p class="sub">Smart contact forms and live chat that qualify leads, book appointments, and integrate with your CRM. Built for HVAC, Plumbing, Electrical, Roofing, and Pest businesses.</p>
+  <div class="cta-row">
+    <a class="btn btn-primary" href="/demo">Get a demo</a>
+    <a class="btn btn-secondary" href="#features">See how it works</a>
+  </div>
+</section>
+
+<section class="proof">
+  <ul class="stats">
+    <li><strong>+43%</strong> more after-hours leads captured</li>
+    <li><strong>2.3 min</strong> average response time with auto-chat</li>
+    <li><strong>67%</strong> of visitors prefer chat over phone</li>
+  </ul>
+</section>
+
+<section class="features grid-2" id="features">
+  <div>
+    <h2>What's included</h2>
+    <ul class="checklist">
+      <li>Smart contact forms that qualify leads by service type & urgency</li>
+      <li>Live chat widget with AI-powered auto-responses</li>
+      <li>After-hours mode: collect info & promise callback in morning</li>
+      <li>Emergency triage: urgent requests get instant notification</li>
+      <li>Booking integration: customers can schedule appointments directly</li>
+      <li>CRM sync: leads flow into your ServiceTitan, Housecall Pro, or Jobber</li>
+    </ul>
+  </div>
+  <div>
+    <h2>Why it works</h2>
+    <ul class="bullets">
+      <li><strong>Never miss a lead</strong> — capture inquiries even at 2 AM</li>
+      <li><strong>Qualify automatically</strong> — emergency vs. maintenance, in service area?</li>
+      <li><strong>Instant engagement</strong> — chat responds in seconds, not minutes</li>
+      <li><strong>Book while hot</strong> — let customers schedule immediately</li>
+    </ul>
+  </div>
+</section>
+
+<section class="playbooks">
+  <h2>Trade-specific workflows</h2>
+  <div class="cards">
+    <article class="card"><h3>HVAC</h3><p>Emergency AC/furnace failures routed immediately. Maintenance requests collected with preferred timing & system details.</p></article>
+    <article class="card"><h3>Plumbing</h3><p>Leak & drain emergencies flagged for instant dispatch. Water heater quotes collected with make/model for accurate pricing.</p></article>
+    <article class="card"><h3>Electrical</h3><p>Power outages & panel issues marked urgent. Lighting & outlet requests qualified by scope for proper scheduling.</p></article>
+  </div>
+</section>
+
+<section class="cta center">
+  <a class="btn btn-primary" href="/signup">Start capturing more leads</a>
+  <p class="fine">14-day free trial. Install in 5 minutes.</p>
+</section>
+{% endblock %}

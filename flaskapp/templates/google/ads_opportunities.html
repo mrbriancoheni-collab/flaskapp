@@ -82,21 +82,36 @@
       <!-- Key Scores with Financial Context -->
       <div class="flex-1 grid md:grid-cols-3 gap-4">
         <div class="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-lg p-4">
-          <div class="text-sm text-gray-600 mb-1">💸 Wasted Spend</div>
+          <div class="text-sm text-gray-600 mb-1">💸 Wasted Spend Prevention</div>
           <div class="text-3xl font-bold text-red-700">{{ analysis.scores.wasted_spend|int }}%</div>
-          <div class="text-xs text-red-600 mt-1 font-semibold">Save $2,701/mo with negatives</div>
+          <div class="text-xs text-red-600 mt-1 font-semibold">
+            {% if analysis.scores.wasted_spend < 30 %}Critical - High waste detected
+            {% elif analysis.scores.wasted_spend < 60 %}Needs improvement
+            {% elif analysis.scores.wasted_spend < 80 %}Good coverage
+            {% else %}Excellent{% endif %}
+          </div>
         </div>
 
         <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-4">
-          <div class="text-sm text-gray-600 mb-1">⭐ Quality Score</div>
+          <div class="text-sm text-gray-600 mb-1">⭐ Quality Score Health</div>
           <div class="text-3xl font-bold text-yellow-700">{{ analysis.scores.quality_score|int }}%</div>
-          <div class="text-xs text-yellow-700 mt-1 font-semibold">Save $2,373/mo on CPC</div>
+          <div class="text-xs text-yellow-700 mt-1 font-semibold">
+            {% if analysis.scores.quality_score < 40 %}Poor QS - High CPCs
+            {% elif analysis.scores.quality_score < 65 %}Below average
+            {% elif analysis.scores.quality_score < 80 %}Good
+            {% else %}Excellent{% endif %}
+          </div>
         </div>
 
         <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
           <div class="text-sm text-gray-600 mb-1">🧩 Ad Extensions</div>
           <div class="text-3xl font-bold text-blue-700">{{ analysis.scores.extensions|int }}%</div>
-          <div class="text-xs text-blue-600 mt-1 font-semibold">Add 47 leads/mo ($23.5k)</div>
+          <div class="text-xs text-blue-600 mt-1 font-semibold">
+            {% if analysis.scores.extensions < 40 %}Critical - Missing key extensions
+            {% elif analysis.scores.extensions < 70 %}Needs more extensions
+            {% elif analysis.scores.extensions < 85 %}Good coverage
+            {% else %}Excellent{% endif %}
+          </div>
         </div>
       </div>
     </div>

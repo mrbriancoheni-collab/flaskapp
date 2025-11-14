@@ -2348,25 +2348,26 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
     opportunities = []
 
     # Negative Keywords - Create individual line item for each keyword
+    # Showing diminishing returns: first keywords save most, later ones save less
     if scores["wasted_spend"] < 70:
-        # Each negative keyword gets its own line
+        # Each negative keyword gets its own line - ordered by impact (diminishing returns)
         negative_suggestions = [
-            {"term": "jobs", "estimated_waste": 250, "clicks": 50, "campaigns": ["Main Campaign", "Emergency Services"]},
-            {"term": "careers", "estimated_waste": 180, "clicks": 36, "campaigns": ["Main Campaign"]},
-            {"term": "DIY", "estimated_waste": 160, "clicks": 32, "campaigns": ["Main Campaign", "Repair Services"]},
-            {"term": "how to", "estimated_waste": 140, "clicks": 28, "campaigns": ["All Campaigns"]},
-            {"term": "free", "estimated_waste": 120, "clicks": 24, "campaigns": ["Main Campaign"]},
-            {"term": "cheap", "estimated_waste": 110, "clicks": 22, "campaigns": ["Main Campaign"]},
-            {"term": "training", "estimated_waste": 95, "clicks": 19, "campaigns": ["Main Campaign"]},
-            {"term": "course", "estimated_waste": 85, "clicks": 17, "campaigns": ["Main Campaign"]},
+            {"term": "jobs", "estimated_waste": 808, "clicks": 95, "cpc": 8.50, "campaigns": ["Main Campaign", "Emergency Services"]},
+            {"term": "careers", "estimated_waste": 468, "clicks": 65, "cpc": 7.20, "campaigns": ["Main Campaign"]},
+            {"term": "DIY", "estimated_waste": 408, "clicks": 85, "cpc": 4.80, "campaigns": ["Main Campaign", "Repair Services"]},
+            {"term": "how to", "estimated_waste": 333, "clicks": 95, "cpc": 3.50, "campaigns": ["All Campaigns"]},
+            {"term": "free", "estimated_waste": 260, "clicks": 50, "cpc": 5.20, "campaigns": ["Main Campaign"]},
+            {"term": "cheap", "estimated_waste": 214, "clicks": 35, "cpc": 6.10, "campaigns": ["Main Campaign"]},
+            {"term": "training", "estimated_waste": 126, "clicks": 28, "cpc": 4.50, "campaigns": ["Main Campaign"]},
+            {"term": "course", "estimated_waste": 84, "clicks": 22, "cpc": 3.80, "campaigns": ["Main Campaign"]},
         ]
 
         for neg in negative_suggestions:
             opportunities.append({
                 "title": f"Add negative keyword: \"{neg['term']}\"",
-                "description": f"Stop wasted spend on '{neg['term']}' searches ({neg['clicks']} irrelevant clicks)",
-                "priority": "high" if neg["estimated_waste"] > 150 else "medium",
-                "impact_score": min(100, int((neg["estimated_waste"] / 250) * 100)),
+                "description": f"Stop wasted spend on '{neg['term']}' searches ({neg['clicks']} irrelevant clicks at ${neg['cpc']:.2f} CPC)",
+                "priority": "high" if neg["estimated_waste"] > 300 else "medium",
+                "impact_score": min(100, int((neg["estimated_waste"] / 808) * 100)),
                 "monthly_savings": neg["estimated_waste"],
                 "annual_savings": neg["estimated_waste"] * 12,
                 "icon": "fa-ban",
@@ -2375,75 +2376,87 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
                 "action": f"Add '{neg['term']}' as negative keyword to {', '.join(neg['campaigns'][:2])}",
                 "estimated_time": "5 min",
                 "quick_win": True,
-                "confidence_score": 90,
+                "confidence_score": 95 if neg["estimated_waste"] > 400 else 90,
                 "risk_level": "low",
-                "before_state": f"'{neg['term']}' triggering ads, wasting ${neg['estimated_waste']}/mo",
-                "after_state": f"'{neg['term']}' blocked, saving ${neg['estimated_waste']}/mo",
-                "success_metrics": [f"Block {neg['clicks']} irrelevant clicks", f"Save ${neg['estimated_waste']}/month"],
+                "before_state": f"'{neg['term']}' triggering ads, wasting ${neg['estimated_waste']:.0f}/mo ({neg['clicks']} clicks × ${neg['cpc']:.2f})",
+                "after_state": f"'{neg['term']}' blocked, saving ${neg['estimated_waste']:.0f}/mo",
+                "success_metrics": [f"Block {neg['clicks']} irrelevant clicks", f"Save ${neg['estimated_waste']:.0f}/month"],
                 "optimization_type": "negative_keyword",
                 "optimization_data": neg,
             })
 
     # Ad Extensions - Create individual line item for each extension type
+    # Showing diminishing returns: first extensions have most impact, later ones add less
+    # Order: Call (highest for service business) > Sitelinks > Callouts > Location > Structured Snippets
     if scores["extensions"] < 70:
         extension_opportunities = []
 
+        # Call extensions - HIGHEST impact for service business (mobile-heavy)
+        if len([e for e in extensions if e.get("type") == "call"]) == 0:
+            extension_opportunities.append({
+                "type": "Call Extensions",
+                "ctr_lift": "15-25%",
+                "leads_per_month": 18,
+                "time": "10 min",
+                "description": "Add click-to-call button to your mobile ads",
+                "example": "Call Now: (555) 123-4567",
+                "order": 1
+            })
+
+        # Sitelinks - Second highest, compounds with call extensions
         if len([e for e in extensions if e.get("type") == "sitelink"]) == 0:
             extension_opportunities.append({
                 "type": "Sitelinks",
                 "ctr_lift": "10-15%",
-                "leads_per_month": 8,
+                "leads_per_month": 12,
                 "time": "20 min",
                 "description": "Add quick links to specific services below your ads",
-                "example": "24/7 Emergency | Same Day Service | Free Estimate"
+                "example": "24/7 Emergency | Same Day Service | Free Estimate",
+                "order": 2
             })
 
+        # Callouts - Moderate impact, diminishing returns starting
         if len([e for e in extensions if e.get("type") == "callout"]) == 0:
             extension_opportunities.append({
                 "type": "Callouts",
-                "ctr_lift": "8-12%",
-                "leads_per_month": 5,
+                "ctr_lift": "6-10%",
+                "leads_per_month": 8,
                 "time": "15 min",
                 "description": "Highlight key benefits and USPs in your ads",
-                "example": "Licensed & Insured | 20+ Years Experience | 5-Star Rated"
+                "example": "Licensed & Insured | 20+ Years Experience | 5-Star Rated",
+                "order": 3
             })
 
-        if len([e for e in extensions if e.get("type") == "call"]) == 0:
-            extension_opportunities.append({
-                "type": "Call Extensions",
-                "ctr_lift": "10-20%",
-                "leads_per_month": 12,
-                "time": "10 min",
-                "description": "Add click-to-call button to your mobile ads",
-                "example": "Call Now: (555) 123-4567"
-            })
-
-        if len([e for e in extensions if e.get("type") == "structured_snippet"]) == 0:
-            extension_opportunities.append({
-                "type": "Structured Snippets",
-                "ctr_lift": "5-8%",
-                "leads_per_month": 3,
-                "time": "15 min",
-                "description": "List your services or product categories",
-                "example": "Services: Repairs, Installation, Maintenance, Emergency"
-            })
-
+        # Location - Good for local business, but incremental at this point
         if len([e for e in extensions if e.get("type") == "location"]) == 0:
             extension_opportunities.append({
                 "type": "Location Extensions",
-                "ctr_lift": "7-10%",
+                "ctr_lift": "4-7%",
                 "leads_per_month": 6,
                 "time": "10 min",
                 "description": "Show your business address and help customers find you",
-                "example": "123 Main St, City - Get Directions"
+                "example": "123 Main St, City - Get Directions",
+                "order": 4
+            })
+
+        # Structured Snippets - Minimal incremental value at this point
+        if len([e for e in extensions if e.get("type") == "structured_snippet"]) == 0:
+            extension_opportunities.append({
+                "type": "Structured Snippets",
+                "ctr_lift": "2-4%",
+                "leads_per_month": 3,
+                "time": "15 min",
+                "description": "List your services or product categories",
+                "example": "Services: Repairs, Installation, Maintenance, Emergency",
+                "order": 5
             })
 
         for ext in extension_opportunities:
             opportunities.append({
                 "title": f"Add {ext['type']}",
                 "description": ext["description"],
-                "priority": "high" if ext["leads_per_month"] > 7 else "medium",
-                "impact_score": min(100, ext["leads_per_month"] * 7),
+                "priority": "high" if ext["leads_per_month"] > 10 else "medium",
+                "impact_score": min(100, int((ext["leads_per_month"] / 18) * 100)),
                 "monthly_leads": ext["leads_per_month"],
                 "annual_leads": ext["leads_per_month"] * 12,
                 "icon": "fa-puzzle-piece",
@@ -2452,7 +2465,7 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
                 "action": f"Enable {ext['type']} for all campaigns",
                 "estimated_time": ext["time"],
                 "quick_win": True if ext["time"] == "10 min" or ext["time"] == "15 min" else False,
-                "confidence_score": 85,
+                "confidence_score": 95 if ext.get("order", 5) <= 2 else 85,
                 "risk_level": "low",
                 "before_state": f"No {ext['type']} enabled",
                 "after_state": f"{ext['type']} showing on all ads, CTR up {ext['ctr_lift']}",
@@ -2462,87 +2475,107 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
             })
 
     # Quality Score - Create individual line item for each low QS keyword
+    # Showing diminishing returns: Lower QS keywords have bigger improvement potential
+    # QS 3→8 = huge savings, QS 7→8 = minimal savings
     if scores["quality_score"] < 75:
         low_qs_keywords = [
-            {"keyword": "emergency plumber", "qs": 4, "cpc": 12.50, "campaign": "Main Campaign", "potential_savings": 180},
-            {"keyword": "24/7 plumbing", "qs": 5, "cpc": 11.20, "campaign": "Main Campaign", "potential_savings": 150},
-            {"keyword": "water heater repair", "qs": 6, "cpc": 9.80, "campaign": "Water Heater", "potential_savings": 120},
-            {"keyword": "plumber near me", "qs": 5, "cpc": 10.50, "campaign": "Local Services", "potential_savings": 140},
-            {"keyword": "drain cleaning", "qs": 6, "cpc": 8.90, "campaign": "Main Campaign", "potential_savings": 110},
+            {"keyword": "emergency plumber", "qs": 3, "cpc": 15.50, "monthly_clicks": 180, "campaign": "Emergency Services"},
+            {"keyword": "24/7 plumbing", "qs": 4, "cpc": 13.20, "monthly_clicks": 148, "campaign": "Main Campaign"},
+            {"keyword": "plumber near me", "qs": 5, "cpc": 11.50, "monthly_clicks": 165, "campaign": "Local Services"},
+            {"keyword": "water heater repair", "qs": 6, "cpc": 9.80, "monthly_clicks": 122, "campaign": "Water Heater"},
+            {"keyword": "drain cleaning", "qs": 7, "cpc": 8.90, "monthly_clicks": 95, "campaign": "Main Campaign"},
         ]
 
         for kw in low_qs_keywords:
-            cpc_reduction_pct = (10 - kw["qs"]) * 5  # Each QS point can reduce CPC by ~5%
+            # Target QS is 8 for all
+            target_qs = 8
+            qs_improvement = target_qs - kw["qs"]
+            # Each QS point improvement reduces CPC by ~6-8%, but with diminishing returns
+            # Use a logarithmic scale for more realistic improvement
+            if kw["qs"] <= 3:
+                cpc_reduction_pct = qs_improvement * 8  # 40% for QS 3→8
+            elif kw["qs"] <= 4:
+                cpc_reduction_pct = qs_improvement * 7  # 28% for QS 4→8
+            elif kw["qs"] <= 5:
+                cpc_reduction_pct = qs_improvement * 6  # 18% for QS 5→8
+            elif kw["qs"] <= 6:
+                cpc_reduction_pct = qs_improvement * 5  # 10% for QS 6→8
+            else:
+                cpc_reduction_pct = qs_improvement * 4  # 4% for QS 7→8
+
             new_cpc = kw["cpc"] * (1 - cpc_reduction_pct / 100)
+            monthly_savings = (kw["cpc"] - new_cpc) * kw["monthly_clicks"]
+            kw["potential_savings"] = int(monthly_savings)
 
             opportunities.append({
                 "title": f"Improve Quality Score for \"{kw['keyword']}\"",
-                "description": f"Optimize ad relevance and landing page for this keyword (Current QS: {kw['qs']}/10)",
+                "description": f"Optimize ad relevance and landing page for this keyword (Current QS: {kw['qs']}/10, {kw['monthly_clicks']} clicks/mo at ${kw['cpc']:.2f})",
                 "priority": "high" if kw["qs"] <= 4 else "medium",
-                "impact_score": min(100, (10 - kw["qs"]) * 15),
+                "impact_score": min(100, int((kw["potential_savings"] / 1116) * 100)),  # Based on max savings
                 "monthly_savings": kw["potential_savings"],
                 "annual_savings": kw["potential_savings"] * 12,
                 "icon": "fa-star",
                 "color": "yellow",
                 "category": "quality_score",
                 "action": f"Improve ad copy relevance and landing page for '{kw['keyword']}'",
-                "estimated_time": "45 min",
+                "estimated_time": "60 min" if kw["qs"] <= 4 else "45 min",
                 "quick_win": False,
-                "confidence_score": 75,
+                "confidence_score": 80 if kw["qs"] <= 4 else 75,
                 "risk_level": "medium",
-                "before_state": f"QS: {kw['qs']}/10, CPC: ${kw['cpc']:.2f}",
-                "after_state": f"QS: 8/10, CPC: ${new_cpc:.2f} (-{cpc_reduction_pct}%)",
-                "success_metrics": [f"QS increased to 8+", f"CPC reduced by {cpc_reduction_pct}%", f"Save ${kw['potential_savings']}/mo"],
+                "before_state": f"QS: {kw['qs']}/10, CPC: ${kw['cpc']:.2f}, {kw['monthly_clicks']} clicks/mo",
+                "after_state": f"QS: 8/10, CPC: ${new_cpc:.2f} (-{cpc_reduction_pct:.0f}%), save ${monthly_savings:.0f}/mo",
+                "success_metrics": [f"QS increased to 8/10", f"CPC reduced by {cpc_reduction_pct:.0f}%", f"Save ${kw['potential_savings']:.0f}/month"],
                 "optimization_type": "quality_score",
                 "optimization_data": kw,
             })
 
     # Mobile Optimization - Break down into specific actions
+    # Note: These two actions compound - doing both together yields 12 leads, not 13 (some overlap)
     if scores["mobile"] < 70:
-        # Mobile bid adjustment
+        # Mobile bid adjustment - Do this FIRST
         opportunities.append({
             "title": "Add +20% mobile bid adjustment",
-            "description": "Increase bids on mobile devices to capture more mobile traffic",
+            "description": "Increase bids on mobile devices to capture more mobile traffic (do first, compounds with mobile ads)",
             "priority": "medium",
             "impact_score": 70,
-            "monthly_leads": 6,
-            "annual_leads": 72,
+            "monthly_leads": 8,
+            "annual_leads": 96,
             "icon": "fa-mobile-screen",
             "color": "green",
             "category": "mobile",
             "action": "Set mobile bid modifier to +20% for all campaigns",
             "estimated_time": "10 min",
             "quick_win": True,
-            "confidence_score": 80,
+            "confidence_score": 85,
             "risk_level": "low",
-            "before_state": "Mobile bids at 0% (same as desktop)",
-            "after_state": "Mobile bids +20%, capturing more mobile traffic",
-            "success_metrics": ["Mobile impressions up 25%", "+6 mobile leads/month"],
+            "before_state": "Mobile bids at 0% (same as desktop), losing impression share",
+            "after_state": "Mobile bids +20%, capturing 25% more mobile traffic",
+            "success_metrics": ["Mobile impressions up 25%", "+8 mobile leads/month"],
             "optimization_type": "mobile_bid",
             "optimization_data": {"bid_adjustment": 20},
         })
 
-        # Mobile-preferred ads
+        # Mobile-preferred ads - Compounds with bid adjustment
         opportunities.append({
             "title": "Create mobile-preferred ads",
-            "description": "Design ad copy specifically for mobile searchers with shorter headlines",
+            "description": "Design ad copy specifically for mobile searchers with shorter headlines (compounds with bid adjustment for +4 more)",
             "priority": "medium",
-            "impact_score": 65,
+            "impact_score": 50,
             "monthly_leads": 4,
             "annual_leads": 48,
             "icon": "fa-mobile-screen",
             "color": "green",
             "category": "mobile",
-            "action": "Create 3-5 mobile-preferred ad variations",
+            "action": "Create 3-5 mobile-preferred ad variations with click-to-call",
             "estimated_time": "30 min",
-            "quick_win": True,
+            "quick_win": False,
             "confidence_score": 75,
             "risk_level": "low",
-            "before_state": "Same ads shown on all devices",
-            "after_state": "Mobile-optimized ads with click-to-call CTAs",
-            "success_metrics": ["Mobile CTR up 15%", "+4 mobile leads/month"],
+            "before_state": "Same generic ads shown on all devices",
+            "after_state": "Mobile-optimized ads with urgent CTAs and tap-to-call",
+            "success_metrics": ["Mobile CTR up 12% additional", "+4 more mobile leads/month (total 12 with bid adjustment)"],
             "optimization_type": "mobile_ads",
-            "optimization_data": {"ad_count": 5},
+            "optimization_data": {"ad_count": 5, "compounds_with": "mobile_bid"},
         })
 
     # Account Structure - Keep as strategic level optimization
@@ -2591,15 +2624,16 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
             "health_score": min(100, max(30, 50 + (i * 10))),  # Mock score
         })
 
-    # Add competitive insights
+    # Add competitive insights - realistic for plumbing/HVAC industry
     competitive_insights = {
-        "avg_cpc_vs_industry": {"yours": 8.50, "industry": 6.50, "diff_pct": 30},
-        "impression_share_lost_to_budget": 40,
-        "impression_share_lost_to_rank": 20,
+        "avg_cpc_vs_industry": {"yours": 10.80, "industry": 8.20, "diff_pct": 32},
+        "impression_share_lost_to_budget": 35,
+        "impression_share_lost_to_rank": 25,
         "top_competitor_tactics": [
-            "Using 'Same Day Service' in 80% of ads",
-            "Average 5+ ad extensions per ad",
-            "Mobile bid adjustments +25%",
+            "Using 'Same Day Service' or '24/7' in 85% of ads",
+            "Average 4-5 ad extensions per ad (especially call extensions)",
+            "Mobile bid adjustments +20-30% (mobile-first strategy)",
+            "Quality Score 8+ on top keywords (lower CPCs)",
         ],
     }
 
@@ -2630,12 +2664,13 @@ def _generate_detailed_recommendations(aid: int, ads_data: dict, scores: dict) -
             "title": "Negative Keywords Strategy",
             "priority": "high",
             "items": [
-                "Add account-level negatives: 'free', 'DIY', 'cheap', 'how to'",
-                "Review search terms report weekly and add 10+ negatives",
-                "Create negative keyword lists by theme (e.g., job-seeking, competitors)",
+                "Add top 4 negatives first: 'jobs', 'careers', 'DIY', 'how to' (saves $2,017/mo)",
+                "Review search terms report weekly and add 5-10 more negatives",
+                "Create negative keyword lists by theme (e.g., job-seeking, free/cheap seekers)",
                 "Use broad match negatives for obvious irrelevant terms",
+                "Focus on high-waste terms first - diminishing returns after top 5-6",
             ],
-            "impact": "Can reduce wasted spend by $500-2,000/month",
+            "impact": "Can reduce wasted spend by $1,800-2,700/month (decreasing returns after top terms)",
         })
 
     # Quality Score recommendations
@@ -2645,13 +2680,13 @@ def _generate_detailed_recommendations(aid: int, ads_data: dict, scores: dict) -
             "title": "Quality Score Optimization",
             "priority": "high",
             "items": [
-                "Match ad headlines to keyword themes (keyword in headline)",
-                "Improve landing page load speed (target <2 seconds)",
-                "Ensure landing page content matches ad promise",
-                "Add relevant keywords to landing page copy",
-                "Use dynamic keyword insertion in ads where appropriate",
+                "Focus on lowest QS keywords first (QS 3-4) - biggest CPC reduction potential",
+                "Match ad headlines to keyword themes (include exact keyword in headline)",
+                "Improve landing page load speed (target <2 seconds, especially mobile)",
+                "Ensure landing page content matches ad promise and keyword intent",
+                "Use dynamic keyword insertion sparingly in appropriate ad groups",
             ],
-            "impact": "Can reduce CPC by 20-35% (saves $300-1,500/month)",
+            "impact": "Can reduce CPC by 15-40% on low QS keywords (saves $800-2,200/month, highest impact on QS 3-4)",
         })
 
     # Ad Extensions recommendations
@@ -2661,13 +2696,13 @@ def _generate_detailed_recommendations(aid: int, ads_data: dict, scores: dict) -
             "title": "Ad Extensions Setup",
             "priority": "high",
             "items": [
-                "Add sitelinks to key pages (Services, About, Contact, Financing)",
-                "Create callout extensions highlighting benefits (Free Estimates, 24/7, Licensed)",
-                "Add structured snippets for service types",
-                "Enable call extensions with forwarding numbers for tracking",
-                "Add location extensions if you have a physical location",
+                "Add call extensions FIRST - highest impact for service business (18 leads/mo)",
+                "Add sitelinks to key pages - compounds well with call extensions (12 more leads/mo)",
+                "Create callout extensions highlighting benefits (8 more leads/mo)",
+                "Add location extensions if you have a physical location (6 more leads/mo)",
+                "Add structured snippets last - minimal incremental value (3 leads/mo)",
             ],
-            "impact": "Can increase CTR by 15-25% (10-20 more leads/month)",
+            "impact": "Can increase CTR by 20-35% and add 30-47 leads/month (diminishing returns after first 3 extensions)",
         })
 
     # CTR/Ad Copy recommendations
@@ -2677,13 +2712,13 @@ def _generate_detailed_recommendations(aid: int, ads_data: dict, scores: dict) -
             "title": "Ad Copy Improvements",
             "priority": "medium",
             "items": [
-                "Test emotional triggers in headlines (Fear of water damage, urgency)",
-                "Add time-sensitive offers ('Same Day Service', '24/7 Emergency')",
-                "Include pricing transparency ('Upfront Pricing', 'No Hidden Fees')",
-                "Test different calls-to-action ('Call Now', 'Get Quote', 'Schedule')",
-                "Use ad customizers for location-specific copy",
+                "Test emotional triggers in headlines (urgency: 'Fast Response', 'Same Day')",
+                "Add time-sensitive offers in descriptions ('24/7 Emergency', 'Available Now')",
+                "Include pricing transparency to build trust ('Upfront Pricing', 'No Hidden Fees')",
+                "Test different calls-to-action ('Call Now' vs 'Get Quote' vs 'Schedule Today')",
+                "Use ad customizers for location and time-based copy variations",
             ],
-            "impact": "Can improve CTR by 30-50% (15-30 more clicks/month)",
+            "impact": "Can improve CTR by 20-40% (10-25 more clicks/month, compounds with extensions)",
         })
 
     # Mobile recommendations
@@ -2693,13 +2728,13 @@ def _generate_detailed_recommendations(aid: int, ads_data: dict, scores: dict) -
             "title": "Mobile Optimization",
             "priority": "medium",
             "items": [
-                "Increase mobile bid adjustment to +20% for high-performing times",
-                "Create mobile-preferred ads with tap-to-call functionality",
-                "Ensure landing pages are mobile-responsive with large CTAs",
-                "Add call extensions with mobile-click-to-call",
-                "Test mobile-specific ad copy emphasizing speed/convenience",
+                "Increase mobile bid adjustment to +20% FIRST (captures 8 more mobile leads/mo)",
+                "Create mobile-preferred ads with tap-to-call - compounds with bid adjustment",
+                "Ensure landing pages are mobile-responsive with large tap-friendly CTAs",
+                "Add call extensions if not done yet - critical for mobile conversions",
+                "Test mobile-specific ad copy emphasizing speed and convenience",
             ],
-            "impact": "Can increase mobile conversions by 25-40% (10-15 more calls/month)",
+            "impact": "Can increase mobile conversions by 35-50% (12 total leads/month when both optimizations done)",
         })
 
     # Account Structure recommendations

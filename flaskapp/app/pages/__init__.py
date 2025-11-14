@@ -7,10 +7,7 @@ pages_bp = Blueprint("pages", __name__)
 
 logger = logging.getLogger(__name__)
 
-@pages_bp.route("/about")
-def about():
-    # TODO: Create about.html template
-    return render_template("pages/about.html")
+# Note: /about route is handled by main_bp in views.py
 
 @pages_bp.route("/contact", methods=["GET", "POST"])
 def contact():
@@ -59,5 +56,4 @@ def contact():
 
 @pages_bp.route("/security")
 def security():
-    # TODO: Create security.html template
-    return render_template("pages/security.html")
+    return render_template("security.html")

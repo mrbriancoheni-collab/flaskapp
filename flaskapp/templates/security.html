@@ -1,0 +1,110 @@
+{% extends 'base_public.html' %}
+{% block title %}Security — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto px-4 py-12">
+  <h1 class="text-3xl font-bold mb-8">Security & Data Protection</h1>
+
+  <div class="prose max-w-none">
+    <section class="mb-8">
+      <h2 class="text-2xl font-semibold mb-4">Our Commitment to Security</h2>
+      <p class="mb-4">
+        At FieldSprout, we take the security of your data seriously. Your business information and customer data
+        are protected with industry-standard security measures and best practices.
+      </p>
+    </section>
+
+    <section class="mb-8">
+      <h2 class="text-2xl font-semibold mb-4">Data Encryption</h2>
+      <ul class="list-disc pl-6 mb-4 space-y-2">
+        <li><strong>In Transit:</strong> All data transmitted between your browser and our servers is encrypted using TLS 1.2+ (HTTPS)</li>
+        <li><strong>At Rest:</strong> Sensitive data is encrypted at rest using industry-standard encryption algorithms</li>
+        <li><strong>Database Security:</strong> All databases are encrypted and access-controlled</li>
+      </ul>
+    </section>
+
+    <section class="mb-8">
+      <h2 class="text-2xl font-semibold mb-4">Infrastructure Security</h2>
+      <ul class="list-disc pl-6 mb-4 space-y-2">
+        <li><strong>Cloud Provider:</strong> Hosted on secure, SOC 2 compliant infrastructure</li>
+        <li><strong>Regular Updates:</strong> Security patches applied promptly</li>
+        <li><strong>Monitoring:</strong> 24/7 security monitoring and intrusion detection</li>
+        <li><strong>Backups:</strong> Regular automated backups with encryption</li>
+      </ul>
+    </section>
+
+    <section class="mb-8">
+      <h2 class="text-2xl font-semibold mb-4">Access Controls</h2>
+      <ul class="list-disc pl-6 mb-4 space-y-2">
+        <li><strong>Authentication:</strong> Secure password requirements and optional two-factor authentication</li>
+        <li><strong>Authorization:</strong> Role-based access control to limit data access</li>
+        <li><strong>Session Management:</strong> Secure session handling with automatic timeouts</li>
+        <li><strong>API Security:</strong> OAuth 2.0 for third-party integrations (Google, Facebook, etc.)</li>
+      </ul>
+    </section>
+
+    <section class="mb-8">
+      <h2 class="text-2xl font-semibold mb-4">Third-Party Integrations</h2>
+      <p class="mb-4">
+        When you connect third-party services (Google Ads, Google Analytics, Facebook, etc.), we use official OAuth flows
+        and store only the minimum necessary credentials. We never store your passwords for external services.
+      </p>
+      <ul class="list-disc pl-6 mb-4 space-y-2">
+        <li>Credentials are encrypted and stored securely</li>
+        <li>Access tokens are refreshed automatically using secure refresh token flows</li>
+        <li>You can revoke access at any time from your account settings</li>
+      </ul>
+    </section>
+
+    <section class="mb-8">
+      <h2 class="text-2xl font-semibold mb-4">Data Privacy</h2>
+      <p class="mb-4">
+        Your data belongs to you. We follow strict privacy policies:
+      </p>
+      <ul class="list-disc pl-6 mb-4 space-y-2">
+        <li>We never sell your data to third parties</li>
+        <li>We only access your data to provide services or with your explicit consent</li>
+        <li>You can export or delete your data at any time</li>
+        <li>See our <a href="{{ url_for('public_bp.privacy_policy') }}" class="text-indigo-600 hover:underline">Privacy Policy</a> for details</li>
+      </ul>
+    </section>
+
+    <section class="mb-8">
+      <h2 class="text-2xl font-semibold mb-4">Compliance</h2>
+      <ul class="list-disc pl-6 mb-4 space-y-2">
+        <li><strong>GDPR:</strong> European data protection compliance</li>
+        <li><strong>CCPA:</strong> California Consumer Privacy Act compliance</li>
+        <li><strong>PCI DSS:</strong> Payment card data handled by certified payment processors (Stripe)</li>
+      </ul>
+    </section>
+
+    <section class="mb-8">
+      <h2 class="text-2xl font-semibold mb-4">Incident Response</h2>
+      <p class="mb-4">
+        In the unlikely event of a security incident:
+      </p>
+      <ul class="list-disc pl-6 mb-4 space-y-2">
+        <li>We have an incident response plan in place</li>
+        <li>Affected users will be notified promptly</li>
+        <li>We will work quickly to resolve the issue and prevent recurrence</li>
+      </ul>
+    </section>
+
+    <section class="mb-8">
+      <h2 class="text-2xl font-semibold mb-4">Questions?</h2>
+      <p class="mb-4">
+        If you have security questions or concerns, please contact us at
+        <a href="mailto:security@fieldsprout.io" class="text-indigo-600 hover:underline">security@fieldsprout.io</a>
+      </p>
+    </section>
+
+    <div class="bg-gray-50 border rounded-lg p-6 mt-8">
+      <p class="text-sm text-gray-700">
+        <strong>Note:</strong> This security page outlines our general security practices. For enterprise customers
+        requiring additional security measures, custom SLAs, or compliance documentation, please
+        <a href="{{ url_for('pages.contact') }}" class="text-indigo-600 hover:underline">contact our sales team</a>.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}

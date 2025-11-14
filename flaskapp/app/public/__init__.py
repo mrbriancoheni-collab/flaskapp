@@ -15,6 +15,7 @@ def privacy_policy():
 def terms_of_service():
     return render_template("public/terms_of_service.html")
 
+@public_bp.route("/products/ads")
 @public_bp.route("/products/google-ads")
 def product_google_ads(): return render_template("google_ads.html")
 
@@ -26,6 +27,15 @@ def product_gbp(): return render_template("gbp.html")
 
 @public_bp.route("/products/facebook-ads")
 def product_facebook_ads(): return render_template("facebook_ads.html")
+
+@public_bp.route("/products/reviews")
+def product_reviews(): return render_template("product_reviews.html")
+
+@public_bp.route("/products/listings")
+def product_listings(): return render_template("product_listings.html")
+
+@public_bp.route("/products/forms-chat")
+def product_forms_chat(): return render_template("product_forms_chat.html")
 
 @public_bp.route("/solutions/lead-generation")
 def solution_lead_gen(): return render_template("lead_generation.html")

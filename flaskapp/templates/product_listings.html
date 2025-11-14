@@ -1,0 +1,58 @@
+{% extends "base_public.html" %}
+{% set SECTION = 'products' %}
+{% block title %}Local Listings Management — FieldSprout{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Show up everywhere customers search</h1>
+  <p class="sub">Manage your business listings across 50+ directories from one dashboard. FieldSprout keeps your NAP (Name, Address, Phone) consistent across Google, Yelp, Facebook, and industry-specific sites.</p>
+  <div class="cta-row">
+    <a class="btn btn-primary" href="/demo">Get a demo</a>
+    <a class="btn btn-secondary" href="#features">See directories</a>
+  </div>
+</section>
+
+<section class="proof">
+  <ul class="stats">
+    <li><strong>50+</strong> directories synced automatically</li>
+    <li><strong>94%</strong> NAP consistency across platforms</li>
+    <li><strong>−62%</strong> time spent on listing management</li>
+  </ul>
+</section>
+
+<section class="features grid-2" id="features">
+  <div>
+    <h2>What's included</h2>
+    <ul class="checklist">
+      <li>Automatic sync to Google Business Profile, Yelp, Facebook, Bing</li>
+      <li>Industry directories: HomeAdvisor, Angi, Thumbtack, BBB</li>
+      <li>Listing accuracy monitoring & duplicate suppression</li>
+      <li>Bulk hours updates for holidays and seasonal schedules</li>
+      <li>Photo & service menu management across all platforms</li>
+      <li>Citation building to improve local SEO rankings</li>
+    </ul>
+  </div>
+  <div>
+    <h2>Why it matters</h2>
+    <ul class="bullets">
+      <li><strong>Local SEO boost</strong> — consistent NAP signals to Google you're legitimate</li>
+      <li><strong>Show up everywhere</strong> — customers find you on their preferred platform</li>
+      <li><strong>Save time</strong> — update once, sync everywhere instantly</li>
+      <li><strong>Accuracy matters</strong> — wrong hours or phone = lost jobs</li>
+    </ul>
+  </div>
+</section>
+
+<section class="playbooks">
+  <h2>Key directories by trade</h2>
+  <div class="cards">
+    <article class="card"><h3>HVAC</h3><p>Google, Yelp, HomeAdvisor, Angi, Carrier locator, Trane dealer finder, plus local chambers.</p></article>
+    <article class="card"><h3>Plumbing</h3><p>Google, Yelp, Angi, Thumbtack, local service directories, and emergency plumber sites.</p></article>
+    <article class="card"><h3>Electrical</h3><p>Google, BBB, electrical contractor directories, safety certification sites, HomeAdvisor.</p></article>
+  </div>
+</section>
+
+<section class="cta center">
+  <a class="btn btn-primary" href="/signup">Start managing your listings</a>
+  <p class="fine">Get a free listing audit. See where you're missing.</p>
+</section>
+{% endblock %}

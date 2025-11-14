@@ -14,7 +14,8 @@ import redis
 REDIS_URL = os.getenv("REDIS_URL", "")
 redis_client = None
 
-def _probe_redis(url: str) -> bool:
+def _probe_redis(url: str, log_error: bool = True) -> bool:
+    """Probe Redis connectivity. Returns True if connection succeeds."""
     if not url:
         return False
     try:
@@ -22,11 +23,15 @@ def _probe_redis(url: str) -> bool:
         client.ping()
         return True
     except Exception as e:
-        app.logger.warning(f"Redis probe failed: {e}")
+        if log_error:
+            app.logger.warning(f"Redis probe failed: {e}")
         return False
 
+# Probe Redis once and cache the result to avoid duplicate warnings
+redis_available = _probe_redis(REDIS_URL, log_error=True)
+
 # Try to establish an app-wide Redis client (optional utility)
-if _probe_redis(REDIS_URL):
+if redis_available:
     redis_client = redis.from_url(REDIS_URL, decode_responses=True, socket_timeout=3)
     app.logger.info("Connected to Redis")
 else:
@@ -38,7 +43,17 @@ try:
     from flask_limiter.util import get_remote_address
 
     preferred = os.getenv("RATELIMIT_STORAGE_URI") or REDIS_URL
-    storage_uri = preferred if _probe_redis(preferred) else "memory://"
+    storage_uri = "memory://"
+
+    # Reuse cached result if preferred URL is same as REDIS_URL
+    if preferred != "memory://":
+        if preferred == REDIS_URL:
+            if redis_available:
+                storage_uri = preferred
+        else:
+            # Different URL - probe without logging to avoid duplicate warnings
+            if _probe_redis(preferred, log_error=False):
+                storage_uri = preferred
 
     limiter = Limiter(
         key_func=get_remote_address,

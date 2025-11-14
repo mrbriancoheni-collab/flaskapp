@@ -688,11 +688,11 @@ function updateApproveButton() {
   var count = checkboxes.length;
 
   if (count > 0) {
-    button.textContent = 'Approve ' + count + ' Optimization' + (count > 1 ? 's' : '');
+    button.innerHTML = '<i class="fa-solid fa-check-circle mr-2"></i>Approve ' + count + ' Optimization' + (count > 1 ? 's' : '');
     button.classList.remove('opacity-50', 'cursor-not-allowed');
     button.disabled = false;
   } else {
-    button.textContent = 'Select Optimizations to Approve';
+    button.innerHTML = '<i class="fa-solid fa-check-circle mr-2"></i>Select Optimizations to Approve';
     button.classList.add('opacity-50', 'cursor-not-allowed');
     button.disabled = true;
   }

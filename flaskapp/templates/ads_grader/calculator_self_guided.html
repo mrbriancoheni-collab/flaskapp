@@ -662,8 +662,10 @@ function closeOptimizationsModal() {
 }
 
 function approveOptimizations() {
+  console.log('approveOptimizations called');
   var checkboxes = document.querySelectorAll('.optimization-checkbox:checked');
   var selectedCount = checkboxes.length;
+  console.log('Selected count:', selectedCount);
 
   if (selectedCount === 0) {
     alert('Please select at least one optimization to approve.');
@@ -685,7 +687,12 @@ function selectAllOptimizations() {
 function updateApproveButton() {
   var checkboxes = document.querySelectorAll('.optimization-checkbox:checked');
   var button = document.getElementById('approveButton');
+  if (!button) {
+    console.log('Approve button not found');
+    return;
+  }
   var count = checkboxes.length;
+  console.log('Updating approve button, checked count:', count);
 
   if (count > 0) {
     button.innerHTML = '<i class="fa-solid fa-check-circle mr-2"></i>Approve ' + count + ' Optimization' + (count > 1 ? 's' : '');
@@ -733,7 +740,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Approve button
   var approveBtn = document.getElementById('approveButton');
   if (approveBtn) {
+    console.log('Adding click listener to approve button');
     approveBtn.addEventListener('click', approveOptimizations);
+  } else {
+    console.log('Approve button not found during DOMContentLoaded');
   }
 
   // Checkbox change event delegation

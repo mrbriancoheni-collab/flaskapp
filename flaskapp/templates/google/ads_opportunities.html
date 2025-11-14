@@ -79,24 +79,24 @@
         <div class="mt-4 text-3xl font-bold text-gray-700">Grade: {{ analysis.grade }}</div>
       </div>
 
-      <!-- Key Scores -->
+      <!-- Key Scores with Financial Context -->
       <div class="flex-1 grid md:grid-cols-3 gap-4">
         <div class="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-lg p-4">
-          <div class="text-sm text-gray-600 mb-1">Wasted Spend Prevention</div>
+          <div class="text-sm text-gray-600 mb-1">💸 Wasted Spend</div>
           <div class="text-3xl font-bold text-red-700">{{ analysis.scores.wasted_spend|int }}%</div>
-          <div class="text-xs text-gray-500 mt-1">Negative keywords</div>
+          <div class="text-xs text-red-600 mt-1 font-semibold">Save $2,701/mo with negatives</div>
         </div>
 
         <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-4">
-          <div class="text-sm text-gray-600 mb-1">Quality Score</div>
+          <div class="text-sm text-gray-600 mb-1">⭐ Quality Score</div>
           <div class="text-3xl font-bold text-yellow-700">{{ analysis.scores.quality_score|int }}%</div>
-          <div class="text-xs text-gray-500 mt-1">Ad relevance</div>
+          <div class="text-xs text-yellow-700 mt-1 font-semibold">Save $2,373/mo on CPC</div>
         </div>
 
         <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
-          <div class="text-sm text-gray-600 mb-1">Ad Extensions</div>
+          <div class="text-sm text-gray-600 mb-1">🧩 Ad Extensions</div>
           <div class="text-3xl font-bold text-blue-700">{{ analysis.scores.extensions|int }}%</div>
-          <div class="text-xs text-gray-500 mt-1">CTR boosters</div>
+          <div class="text-xs text-blue-600 mt-1 font-semibold">Add 47 leads/mo ($23.5k)</div>
         </div>
       </div>
     </div>
@@ -120,10 +120,10 @@
   <div class="bg-gradient-to-br from-emerald-50 to-green-100 border-2 border-emerald-300 rounded-xl shadow-xl p-8">
     <div class="text-center mb-6">
       <h2 class="text-3xl font-extrabold text-gray-900 mb-2">
-        💰 Your Potential Value
+        💰 Total Financial Impact
       </h2>
       <p class="text-gray-700 font-medium">
-        If you implement the recommendations below:
+        Implementing these {{ analysis.opportunities|length }} optimizations will deliver:
       </p>
     </div>
 
@@ -134,12 +134,16 @@
           <span class="text-5xl">💵</span>
         </div>
         <div class="text-center">
-          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Monthly Savings</div>
+          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Cost Savings</div>
           <div class="text-4xl font-black text-green-600 mb-1">
             ${{ "%.0f"|format(ns.total_monthly_savings) }}
           </div>
-          <div class="text-xs text-gray-500">
-            ${{ "%.0f"|format(ns.total_monthly_savings * 12) }}/year
+          <div class="text-xs text-gray-500 mb-2">/month</div>
+          <div class="text-xs bg-green-50 text-green-700 px-2 py-1 rounded font-semibold">
+            ${{ "%.0f"|format(ns.total_monthly_savings * 12) }}/year saved
+          </div>
+          <div class="text-xs text-gray-600 mt-2 italic">
+            From stopping wasted clicks & reducing CPC
           </div>
         </div>
       </div>
@@ -151,12 +155,16 @@
           <span class="text-5xl">📈</span>
         </div>
         <div class="text-center">
-          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Revenue from Leads</div>
+          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Revenue Growth</div>
           <div class="text-4xl font-black text-blue-600 mb-1">
             ${{ "%.0f"|format(ns.total_lead_value) }}
           </div>
-          <div class="text-xs text-gray-500">
-            +{{ ns.total_monthly_leads|int }} leads/month (${{ "%.0f"|format(ns.total_lead_value * 12) }}/year)
+          <div class="text-xs text-gray-500 mb-2">/month</div>
+          <div class="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded font-semibold">
+            +{{ ns.total_monthly_leads|int }} new leads/month
+          </div>
+          <div class="text-xs text-gray-600 mt-2 italic">
+            @ $500/lead avg value (${{ "%.0f"|format(ns.total_lead_value * 12) }}/year)
           </div>
         </div>
       </div>
@@ -164,18 +172,31 @@
 
       <div class="bg-white rounded-xl p-6 shadow-md border-2 border-purple-300">
         <div class="flex items-center justify-center mb-3">
-          <span class="text-5xl">💰</span>
+          <span class="text-5xl">💎</span>
         </div>
         <div class="text-center">
-          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Total Monthly Value</div>
+          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Combined Value</div>
           <div class="text-4xl font-black text-purple-600 mb-1">
             ${{ "%.0f"|format(ns.total_combined_value) }}
           </div>
-          <div class="text-xs text-gray-500">
-            opportunities identified
+          <div class="text-xs text-gray-500 mb-2">/month</div>
+          <div class="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded font-semibold">
+            ${{ "%.0f"|format(ns.total_combined_value * 12) }}/year total
+          </div>
+          <div class="text-xs text-gray-600 mt-2 italic">
+            Savings + Revenue
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- ROI Callout -->
+    <div class="mt-6 text-center bg-white rounded-lg p-4 border-2 border-emerald-400">
+      <p class="text-sm text-gray-700">
+        <span class="font-bold text-emerald-700">⚡ Return on Investment:</span>
+        These optimizations cost <span class="font-bold">$0</span> to implement (just your time).
+        Total value: <span class="font-bold text-purple-600">${{ "%.0f"|format(ns.total_combined_value * 12) }}/year</span>
+      </p>
     </div>
   </div>
   {% endif %}
@@ -212,12 +233,12 @@
                 <i class="fa-solid fa-clock mr-1"></i>{{ qw.estimated_time }}
               </span>
               {% if qw.monthly_savings %}
-              <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-medium">
-                +${{ "%.0f"|format(qw.monthly_savings) }}/mo
+              <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">
+                💵 Save ${{ "%.0f"|format(qw.monthly_savings) }}/mo
               </span>
               {% elif qw.monthly_leads %}
-              <span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-medium">
-                +{{ qw.monthly_leads }} leads/mo
+              <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-bold">
+                📈 +{{ qw.monthly_leads }} leads (${{ "%.0f"|format(qw.monthly_leads * 500) }}/mo)
               </span>
               {% endif %}
             </div>

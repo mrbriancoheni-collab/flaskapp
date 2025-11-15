@@ -356,22 +356,22 @@ def generate_google_ads_insights_weekly(app: Flask):
 
                     processed_count += 1
 
-                    # TODO: Send email notification if critical issues found
+                    # Send weekly email with performance summary and optimizations
                     critical_count = len([
                         r for r in insights.get("recommendations", [])
                         if r.get("severity") == 1
                     ])
 
-                    if critical_count > 0:
+                    # Always send weekly email (includes performance summary + optimizations)
+                    from app.models import User
+                    user = User.query.filter_by(id=account.user_id).first() if hasattr(account, 'user_id') else None
+                    if user:
+                        from app.services.google_ads_insights import send_insights_email
+                        send_insights_email(account.id, user.email, insights)
                         current_app.logger.info(
-                            f"Account {account.id}: Found {critical_count} critical issues"
+                            f"Account {account.id}: Sent weekly email with {len(insights.get('recommendations', []))} optimizations"
+                            f"{f' (including {critical_count} critical)' if critical_count > 0 else ''}"
                         )
-                        # Get primary user for email notification
-                        from app.models import User
-                        user = User.query.filter_by(id=account.user_id).first() if hasattr(account, 'user_id') else None
-                        if user:
-                            from app.services.google_ads_insights import send_insights_email
-                            send_insights_email(account.id, user.email, insights)
 
                 except Exception as e:
                     current_app.logger.error(

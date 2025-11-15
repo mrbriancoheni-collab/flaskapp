@@ -144,10 +144,11 @@
         <div class="text-center">
           <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Total Value</div>
           <div class="text-4xl font-black text-purple-600 mb-1">
-            ${{ "%.0f"|format(ns.total_monthly_savings + (ns.total_monthly_leads * (report.avg_cpa_90d or 50))) }}/mo
+            {# 20% win rate (1 in 5 leads convert) × $500 customer value = $100 per lead #}
+            ${{ "%.0f"|format(ns.total_monthly_savings + (ns.total_monthly_leads * 100)) }}/mo
           </div>
           <div class="text-xs text-gray-500">
-            Combined savings + lead value
+            Combined savings + lead value (20% win rate)
           </div>
         </div>
       </div>

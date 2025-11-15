@@ -2155,10 +2155,10 @@ def ads_opportunities():
     """
     Opportunities Dashboard - Beautiful, actionable insights view.
     Matches the visual quality of the ads-grader report.
-    """
-    from app.services.email_service import send_google_ads_optimizations_email
-    from app.models import User, Account
 
+    Note: Email notifications are sent by the daily cron job (see cron_tasks.py),
+    not when users view this page.
+    """
     aid = current_account_id()
     connected = _is_connected(aid, "ads")
 
@@ -2167,45 +2167,6 @@ def ads_opportunities():
 
     # Generate comprehensive analysis
     analysis = _analyze_ads_opportunities(aid, ads_data)
-
-    # Send email notification if optimizations found
-    # Check if we should send email (only if analysis is fresh or manually triggered)
-    send_email = request.args.get('notify', 'true').lower() in ('true', '1', 'yes')
-
-    if send_email and analysis.get('opportunities') and len(analysis['opportunities']) > 0:
-        try:
-            # Get user and account info
-            account = Account.query.get(aid)
-            user = User.query.get(current_user.id)
-
-            if user and account:
-                # Calculate total monthly value
-                total_savings = sum(opp.get('monthly_savings', 0) for opp in analysis['opportunities'])
-                total_leads = sum(opp.get('monthly_leads', 0) for opp in analysis['opportunities'])
-                total_lead_value = total_leads * 500  # $500 per lead
-                total_monthly_value = total_savings + total_lead_value
-
-                # Generate opportunities URL
-                base_url = current_app.config.get("BASE_URL", "https://fieldsprout.io")
-                opportunities_url = f"{base_url}/account/google/ads/opportunities"
-
-                # Send email notification
-                email_sent = send_google_ads_optimizations_email(
-                    user=user,
-                    account=account,
-                    optimization_count=len(analysis['opportunities']),
-                    total_monthly_value=total_monthly_value,
-                    opportunities_url=opportunities_url
-                )
-
-                if email_sent:
-                    current_app.logger.info(f"Sent optimization email to {user.email} for account {account.name}")
-                else:
-                    current_app.logger.warning(f"Failed to send optimization email to {user.email}")
-
-        except Exception as e:
-            # Don't fail the page load if email fails
-            current_app.logger.error(f"Error sending optimization email: {e}", exc_info=True)
 
     return render_template(
         "google/ads_opportunities.html",

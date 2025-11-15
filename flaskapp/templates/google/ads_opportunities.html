@@ -173,6 +173,20 @@
     </div>
   </div>
 
+  <!-- Total Potential Value -->
+  {% set ns = namespace(total_monthly_savings=0, total_monthly_leads=0, total_lead_value=0) %}
+  {% for opp in analysis.opportunities %}
+    {% if opp.monthly_savings %}
+      {% set ns.total_monthly_savings = ns.total_monthly_savings + opp.monthly_savings %}
+    {% endif %}
+    {% if opp.monthly_leads %}
+      {% set ns.total_monthly_leads = ns.total_monthly_leads + opp.monthly_leads %}
+      {# 20% win rate (1 in 5 leads convert) × $500 customer value = $100 per lead #}
+      {% set ns.total_lead_value = ns.total_lead_value + (opp.monthly_leads * 100) %}
+    {% endif %}
+  {% endfor %}
+  {% set ns.total_combined_value = ns.total_monthly_savings + ns.total_lead_value %}
+
   {% if is_demo %}
   <!-- Problem Identification Section -->
   <div class="bg-gradient-to-br from-red-50 to-orange-50 border-2 border-red-300 rounded-xl shadow-lg p-8">
@@ -224,20 +238,6 @@
     </div>
   </div>
   {% endif %}
-
-  <!-- Total Potential Value -->
-  {% set ns = namespace(total_monthly_savings=0, total_monthly_leads=0, total_lead_value=0) %}
-  {% for opp in analysis.opportunities %}
-    {% if opp.monthly_savings %}
-      {% set ns.total_monthly_savings = ns.total_monthly_savings + opp.monthly_savings %}
-    {% endif %}
-    {% if opp.monthly_leads %}
-      {% set ns.total_monthly_leads = ns.total_monthly_leads + opp.monthly_leads %}
-      {# 20% win rate (1 in 5 leads convert) × $500 customer value = $100 per lead #}
-      {% set ns.total_lead_value = ns.total_lead_value + (opp.monthly_leads * 100) %}
-    {% endif %}
-  {% endfor %}
-  {% set ns.total_combined_value = ns.total_monthly_savings + ns.total_lead_value %}
 
   {% if ns.total_monthly_savings > 0 or ns.total_monthly_leads > 0 %}
   <div id="financialImpact" class="bg-gradient-to-br from-emerald-50 to-green-100 border-2 border-emerald-300 rounded-xl shadow-xl p-8">
@@ -1225,8 +1225,8 @@ function updateTotals() {
     totalSavings += parseFloat(checkbox.dataset.savings) || 0;
     const leads = parseFloat(checkbox.dataset.leads) || 0;
     totalLeads += leads;
-    // Calculate lead value as leads * $500 (average home services lead value)
-    totalLeadValue += leads * 500;
+    // Calculate lead value: 20% win rate (1 in 5 leads convert) × $500 customer value = $100 per lead
+    totalLeadValue += leads * 100;
   });
 
   const totalCombined = totalSavings + totalLeadValue;

@@ -144,10 +144,11 @@
         <div class="text-center">
           <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Total Value</div>
           <div class="text-4xl font-black text-purple-600 mb-1">
-            ${{ "%.0f"|format(ns.total_monthly_savings + (ns.total_monthly_leads * (report.avg_cpa_90d or 50))) }}/mo
+            {# 20% win rate (1 in 5 leads convert) × $500 customer value = $100 per lead #}
+            ${{ "%.0f"|format(ns.total_monthly_savings + (ns.total_monthly_leads * 100)) }}/mo
           </div>
           <div class="text-xs text-gray-500">
-            Combined savings + lead value
+            Combined savings + lead value (20% win rate)
           </div>
         </div>
       </div>
@@ -217,10 +218,15 @@
 
   <!-- Account Diagnostics -->
   <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
-    <h2 class="text-2xl font-bold mb-4">
-      <i class="fa-solid fa-chart-pie text-indigo-600 mr-2"></i>
-      Account Diagnostics
-    </h2>
+    <button id="accountDiagnosticsToggle" class="w-full flex items-center justify-between mb-4 cursor-pointer hover:opacity-80 transition">
+      <h2 class="text-2xl font-bold text-left">
+        <i class="fa-solid fa-chart-pie text-indigo-600 mr-2"></i>
+        Account Diagnostics
+      </h2>
+      <i id="accountDiagnosticsChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl transition-transform duration-300"></i>
+    </button>
+
+    <div id="accountDiagnosticsContent" class="hidden">
     <div class="grid md:grid-cols-4 gap-4">
       <div class="text-center p-4 bg-gray-50 rounded-lg">
         <div class="text-3xl font-bold text-indigo-600">{{ report.active_campaigns or 0 }}</div>
@@ -258,14 +264,20 @@
         <div class="text-sm text-gray-600 mt-1">Monthly Spend</div>
       </div>
     </div>
+    </div>
   </div>
 
   <!-- Performance Sections -->
   <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
-    <h2 class="text-2xl font-bold mb-6">
-      <i class="fa-solid fa-sliders text-indigo-600 mr-2"></i>
-      Performance Analysis
-    </h2>
+    <button id="performanceAnalysisToggle" class="w-full flex items-center justify-between mb-6 cursor-pointer hover:opacity-80 transition">
+      <h2 class="text-2xl font-bold text-left">
+        <i class="fa-solid fa-sliders text-indigo-600 mr-2"></i>
+        Performance Analysis
+      </h2>
+      <i id="performanceAnalysisChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl transition-transform duration-300"></i>
+    </button>
+
+    <div id="performanceAnalysisContent" class="hidden">
 
     {% macro score_bar(label, score, icon="fa-circle", inverse=false) %}
       {% if inverse %}
@@ -308,15 +320,21 @@
         {{ score_bar("Mobile Advertising", report.mobile_advertising_score or 0, "fa-solid fa-mobile-screen") }}
       </div>
     </div>
+    </div>
   </div>
 
   <!-- Best Practices Checklist -->
   {% if report.best_practices %}
   <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
-    <h2 class="text-2xl font-bold mb-4">
-      <i class="fa-solid fa-check-circle text-indigo-600 mr-2"></i>
-      Best Practices Checklist
-    </h2>
+    <button id="bestPracticesToggle" class="w-full flex items-center justify-between mb-4 cursor-pointer hover:opacity-80 transition">
+      <h2 class="text-2xl font-bold text-left">
+        <i class="fa-solid fa-check-circle text-indigo-600 mr-2"></i>
+        Best Practices Checklist
+      </h2>
+      <i id="bestPracticesChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl transition-transform duration-300"></i>
+    </button>
+
+    <div id="bestPracticesContent" class="hidden">
     <div class="grid md:grid-cols-2 gap-4">
       {% for key, value in report.best_practices.items() %}
         <div class="flex items-center p-3 rounded-lg border {% if value %}bg-green-50 border-green-200{% else %}bg-red-50 border-red-200{% endif %}">
@@ -326,6 +344,7 @@
           </span>
         </div>
       {% endfor %}
+    </div>
     </div>
   </div>
   {% endif %}
@@ -688,10 +707,15 @@
   <!-- Charts Section -->
   {% if report.detailed_metrics %}
   <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
-    <h2 class="text-2xl font-bold mb-6">
-      <i class="fa-solid fa-chart-bar text-indigo-600 mr-2"></i>
-      Performance Charts
-    </h2>
+    <button id="performanceChartsToggle" class="w-full flex items-center justify-between mb-6 cursor-pointer hover:opacity-80 transition">
+      <h2 class="text-2xl font-bold text-left">
+        <i class="fa-solid fa-chart-bar text-indigo-600 mr-2"></i>
+        Performance Charts
+      </h2>
+      <i id="performanceChartsChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl transition-transform duration-300"></i>
+    </button>
+
+    <div id="performanceChartsContent" class="hidden">
 
     <div class="grid md:grid-cols-2 gap-6">
       <!-- Quality Score Distribution -->
@@ -726,6 +750,7 @@
       </div>
     </div>
     {% endif %}
+    </div>
   </div>
   {% endif %}
 
@@ -775,7 +800,38 @@
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
+// Accordion toggle functionality
+function toggleAccordion(contentId, chevronId) {
+  const content = document.getElementById(contentId);
+  const chevron = document.getElementById(chevronId);
+
+  if (content.classList.contains('hidden')) {
+    content.classList.remove('hidden');
+    chevron.classList.add('rotate-180');
+  } else {
+    content.classList.add('hidden');
+    chevron.classList.remove('rotate-180');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+  // Setup accordion toggles
+  const accordionToggles = [
+    { toggleId: 'accountDiagnosticsToggle', contentId: 'accountDiagnosticsContent', chevronId: 'accountDiagnosticsChevron' },
+    { toggleId: 'performanceAnalysisToggle', contentId: 'performanceAnalysisContent', chevronId: 'performanceAnalysisChevron' },
+    { toggleId: 'bestPracticesToggle', contentId: 'bestPracticesContent', chevronId: 'bestPracticesChevron' },
+    { toggleId: 'performanceChartsToggle', contentId: 'performanceChartsContent', chevronId: 'performanceChartsChevron' }
+  ];
+
+  accordionToggles.forEach(accordion => {
+    const toggleBtn = document.getElementById(accordion.toggleId);
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', function() {
+        toggleAccordion(accordion.contentId, accordion.chevronId);
+      });
+    }
+  });
+
   {% if report.detailed_metrics %}
 
   // Quality Score Distribution Chart

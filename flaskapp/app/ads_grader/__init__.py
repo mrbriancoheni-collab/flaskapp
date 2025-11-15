@@ -78,33 +78,36 @@ def calculator_self_guided():
     demo_scenarios = {
         'hvac': {
             'name': 'HVAC Company',
-            'monthly_spend': 20000,
-            'avg_order_value': 3500,
+            'monthly_spend': 5000,
+            'avg_order_value': 500,
             'wasted_spend_pct': 22,
             'conversion_rate': 4.2,
             'avg_cpc': 8.50,
             'quality_score': 5,
-            'avg_position': 3.2
+            'avg_position': 3.2,
+            'win_rate': 20  # 20% of leads convert to customers
         },
         'plumbing': {
             'name': 'Plumbing Services',
-            'monthly_spend': 8000,
-            'avg_order_value': 850,
+            'monthly_spend': 3000,
+            'avg_order_value': 500,
             'wasted_spend_pct': 18,
             'conversion_rate': 3.8,
             'avg_cpc': 5.20,
             'quality_score': 6,
-            'avg_position': 2.8
+            'avg_position': 2.8,
+            'win_rate': 20  # 20% of leads convert to customers
         },
         'electrical': {
             'name': 'Electrical Contractor',
-            'monthly_spend': 12000,
-            'avg_order_value': 1200,
+            'monthly_spend': 4000,
+            'avg_order_value': 500,
             'wasted_spend_pct': 20,
             'conversion_rate': 3.2,
             'avg_cpc': 6.80,
             'quality_score': 5,
-            'avg_position': 3.5
+            'avg_position': 3.5,
+            'win_rate': 20  # 20% of leads convert to customers
         }
     }
 

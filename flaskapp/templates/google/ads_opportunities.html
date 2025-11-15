@@ -249,7 +249,7 @@
   <!-- Quick Wins Section -->
   {% if analysis.quick_wins|length > 0 %}
   <div id="quickWins" class="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-lg p-6">
-    <button onclick="toggleAccordion('quickWinsContent', 'quickWinsChevron')" class="w-full flex items-center justify-between mb-4 cursor-pointer hover:opacity-80 transition">
+    <button id="quickWinsToggle" class="w-full flex items-center justify-between mb-4 cursor-pointer hover:opacity-80 transition">
       <div class="flex items-center gap-4">
         <div>
           <h2 class="text-2xl font-bold text-gray-900 text-left">
@@ -300,7 +300,7 @@
 
   <!-- Competitive Insights -->
   <div id="competitiveInsights" class="bg-white rounded-xl shadow-lg p-6">
-    <button onclick="toggleAccordion('competitiveInsightsContent', 'competitiveInsightsChevron')" class="w-full flex items-center justify-between mb-6 cursor-pointer hover:opacity-80 transition">
+    <button id="competitiveInsightsToggle" class="w-full flex items-center justify-between mb-6 cursor-pointer hover:opacity-80 transition">
       <h2 class="text-2xl font-bold text-left">
         <i class="fa-solid fa-chart-line text-indigo-600 mr-2"></i>
         Competitive Insights
@@ -364,7 +364,7 @@
 
   <!-- Individual Optimization Line Items -->
   <div id="optimizationList" class="bg-white rounded-xl shadow-lg p-6">
-    <button onclick="toggleAccordion('optimizationListContent', 'optimizationListChevron')" class="w-full flex items-center justify-between mb-6 cursor-pointer hover:opacity-80 transition">
+    <button id="optimizationListToggle" class="w-full flex items-center justify-between mb-6 cursor-pointer hover:opacity-80 transition">
       <div class="text-left">
         <h2 class="text-2xl font-bold">
           <i class="fa-solid fa-list-check text-indigo-600 mr-2"></i>
@@ -488,7 +488,7 @@
 
   <!-- Detailed Recommendations by Category -->
   <div class="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6">
-    <button onclick="toggleAccordion('detailedActionPlanContent', 'detailedActionPlanChevron')" class="w-full flex items-center justify-between mb-6 cursor-pointer hover:opacity-80 transition">
+    <button id="detailedActionPlanToggle" class="w-full flex items-center justify-between mb-6 cursor-pointer hover:opacity-80 transition">
       <h2 class="text-2xl font-bold text-left">
         <i class="fa-solid fa-lightbulb text-indigo-600 mr-2"></i>
         Detailed Action Plan
@@ -835,6 +835,23 @@ function updateSelectedCount() {
 
 // Filter and sort opportunities
 document.addEventListener('DOMContentLoaded', function() {
+  // Setup accordion toggles
+  const accordionToggles = [
+    { toggleId: 'quickWinsToggle', contentId: 'quickWinsContent', chevronId: 'quickWinsChevron' },
+    { toggleId: 'competitiveInsightsToggle', contentId: 'competitiveInsightsContent', chevronId: 'competitiveInsightsChevron' },
+    { toggleId: 'optimizationListToggle', contentId: 'optimizationListContent', chevronId: 'optimizationListChevron' },
+    { toggleId: 'detailedActionPlanToggle', contentId: 'detailedActionPlanContent', chevronId: 'detailedActionPlanChevron' }
+  ];
+
+  accordionToggles.forEach(accordion => {
+    const toggleBtn = document.getElementById(accordion.toggleId);
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', function() {
+        toggleAccordion(accordion.contentId, accordion.chevronId);
+      });
+    }
+  });
+
   const filterSelect = document.getElementById('filterPriority');
   const sortSelect = document.getElementById('sortBy');
   const opportunitiesList = document.getElementById('opportunitiesList');

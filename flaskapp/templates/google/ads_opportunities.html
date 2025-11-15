@@ -760,6 +760,9 @@
   </div>
 </div>
 
+<!-- Tutorial Popups Library -->
+<script src="{{ url_for('static', filename='js/tutorial-popups.js') }}"></script>
+
 <!-- JavaScript for Filtering/Sorting and Selection -->
 <script nonce="{{ g.csp_nonce }}">
 // Update selected count display and sticky footer
@@ -1195,6 +1198,20 @@ document.addEventListener('keydown', function(event) {
     }
   }
 });
+
+// ===== Tutorial Popups Initialization =====
+// Initialize interactive tutorial popups (Pendo-style onboarding)
+if (typeof TutorialPopups !== 'undefined') {
+  // Wait for page to fully load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      TutorialPopups.init();
+    });
+  } else {
+    // DOM already loaded
+    TutorialPopups.init();
+  }
+}
 </script>
 
 {% endblock %}

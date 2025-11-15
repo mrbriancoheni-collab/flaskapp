@@ -1,0 +1,293 @@
+{% extends "base_admin.html" %}
+{% block title %}Admin – {{ 'Edit' if popup else 'New' }} Tutorial Popup{% endblock %}
+{% block content %}
+
+<div class="mb-6">
+  <div class="flex items-center gap-2 text-sm text-gray-600 mb-2">
+    <a href="{{ url_for('admin_bp.tutorials_list') }}" class="hover:text-indigo-600">Tutorial Popups</a>
+    <span>/</span>
+    <span>{{ 'Edit' if popup else 'New' }}</span>
+  </div>
+  <h1 class="text-2xl font-bold">{{ 'Edit' if popup else 'Create New' }} Tutorial Popup</h1>
+</div>
+
+<form method="post" action="{{ url_for('admin_bp.tutorials_update', popup_id=popup.id) if popup else url_for('admin_bp.tutorials_create') }}" class="max-w-4xl">
+
+  <div class="bg-white border rounded-xl p-6 mb-6">
+    <h2 class="text-lg font-semibold mb-4">Basic Information</h2>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Unique Key *
+          <span class="text-gray-500 font-normal">(e.g., demo-welcome)</span>
+        </label>
+        <input
+          type="text"
+          name="key"
+          value="{{ popup.key if popup else '' }}"
+          required
+          pattern="[a-z0-9-]+"
+          placeholder="demo-feature-tour"
+          class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+        <p class="text-xs text-gray-500 mt-1">Lowercase letters, numbers, and hyphens only</p>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Title *
+        </label>
+        <input
+          type="text"
+          name="title"
+          value="{{ popup.title if popup else '' }}"
+          required
+          placeholder="Welcome to Feature X!"
+          class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="block text-sm font-medium text-gray-700 mb-1">
+        Content *
+        <span class="text-gray-500 font-normal">(HTML supported)</span>
+      </label>
+      <textarea
+        name="content"
+        rows="4"
+        required
+        placeholder="<p>This is the popup content. You can use <strong>HTML</strong> for formatting.</p>"
+        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
+      >{{ popup.content if popup else '' }}</textarea>
+      <p class="text-xs text-gray-500 mt-1">HTML allowed: p, strong, em, ul, li, br, etc.</p>
+    </div>
+  </div>
+
+  <div class="bg-white border rounded-xl p-6 mb-6">
+    <h2 class="text-lg font-semibold mb-4">Positioning</h2>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Page Path *
+        </label>
+        <input
+          type="text"
+          name="page_path"
+          value="{{ popup.page_path if popup else '' }}"
+          required
+          placeholder="/account/google/ads/opportunities/demo"
+          class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+        <p class="text-xs text-gray-500 mt-1">Full path where popup appears</p>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Sequence Order
+        </label>
+        <input
+          type="number"
+          name="sequence_order"
+          value="{{ popup.sequence_order if popup else 0 }}"
+          min="0"
+          class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+        <p class="text-xs text-gray-500 mt-1">0 = first, 1 = second, etc.</p>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4 mt-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Target Selector
+          <span class="text-gray-500 font-normal">(optional)</span>
+        </label>
+        <input
+          type="text"
+          name="target_selector"
+          value="{{ popup.target_selector if popup else '' }}"
+          placeholder="#selectHighPriority or leave empty for modal"
+          class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
+        >
+        <p class="text-xs text-gray-500 mt-1">CSS selector or blank for centered modal</p>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Position
+        </label>
+        <select name="position" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="top" {% if popup and popup.position == 'top' %}selected{% endif %}>Top</option>
+          <option value="bottom" {% if popup and popup.position == 'bottom' %}selected{% elif not popup %}selected{% endif %}>Bottom</option>
+          <option value="left" {% if popup and popup.position == 'left' %}selected{% endif %}>Left</option>
+          <option value="right" {% if popup and popup.position == 'right' %}selected{% endif %}>Right</option>
+          <option value="center" {% if popup and popup.position == 'center' %}selected{% endif %}>Center</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white border rounded-xl p-6 mb-6">
+    <h2 class="text-lg font-semibold mb-4">Trigger & Behavior</h2>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Trigger Type
+        </label>
+        <select name="trigger_type" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="page_load" {% if not popup or popup.trigger_type == 'page_load' %}selected{% endif %}>Page Load</option>
+          <option value="click" {% if popup and popup.trigger_type == 'click' %}selected{% endif %}>Click</option>
+          <option value="hover" {% if popup and popup.trigger_type == 'hover' %}selected{% endif %}>Hover</option>
+          <option value="scroll" {% if popup and popup.trigger_type == 'scroll' %}selected{% endif %}>Scroll</option>
+          <option value="delay" {% if popup and popup.trigger_type == 'delay' %}selected{% endif %}>Delay</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Trigger Value
+          <span class="text-gray-500 font-normal">(optional)</span>
+        </label>
+        <input
+          type="text"
+          name="trigger_value"
+          value="{{ popup.trigger_value if popup else '' }}"
+          placeholder="e.g., 2000 (for 2s delay)"
+          class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-4 mt-4">
+      <div>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            name="dismissible"
+            {% if not popup or popup.dismissible %}checked{% endif %}
+            class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+          >
+          <span class="text-sm font-medium text-gray-700">Dismissible</span>
+        </label>
+        <p class="text-xs text-gray-500 mt-1 ml-6">User can close popup</p>
+      </div>
+
+      <div>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            name="show_once"
+            {% if not popup or popup.show_once %}checked{% endif %}
+            class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+          >
+          <span class="text-sm font-medium text-gray-700">Show Once</span>
+        </label>
+        <p class="text-xs text-gray-500 mt-1 ml-6">Only show once per user</p>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Auto-dismiss (seconds)
+        </label>
+        <input
+          type="number"
+          name="auto_dismiss_seconds"
+          value="{{ popup.auto_dismiss_seconds if popup else '' }}"
+          min="1"
+          placeholder="Optional"
+          class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white border rounded-xl p-6 mb-6">
+    <h2 class="text-lg font-semibold mb-4">Styling & CTA</h2>
+
+    <div class="grid md:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Theme
+        </label>
+        <select name="theme" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="default" {% if not popup or popup.theme == 'default' %}selected{% endif %}>Default (Gray)</option>
+          <option value="primary" {% if popup and popup.theme == 'primary' %}selected{% endif %}>Primary (Indigo)</option>
+          <option value="success" {% if popup and popup.theme == 'success' %}selected{% endif %}>Success (Green)</option>
+          <option value="warning" {% if popup and popup.theme == 'warning' %}selected{% endif %}>Warning (Yellow)</option>
+          <option value="info" {% if popup and popup.theme == 'info' %}selected{% endif %}>Info (Blue)</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Width
+        </label>
+        <input
+          type="text"
+          name="width"
+          value="{{ popup.width if popup else '320px' }}"
+          placeholder="320px"
+          class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+      </div>
+
+      <div>
+        <label class="flex items-center gap-2 cursor-pointer mt-6">
+          <input
+            type="checkbox"
+            name="is_active"
+            {% if not popup or popup.is_active %}checked{% endif %}
+            class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+          >
+          <span class="text-sm font-medium text-gray-700">Active</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4 mt-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          CTA Button Text
+          <span class="text-gray-500 font-normal">(optional)</span>
+        </label>
+        <input
+          type="text"
+          name="cta_text"
+          value="{{ popup.cta_text if popup else '' }}"
+          placeholder="Got it!"
+          class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          CTA Link
+          <span class="text-gray-500 font-normal">(optional)</span>
+        </label>
+        <input
+          type="text"
+          name="cta_link"
+          value="{{ popup.cta_link if popup else '' }}"
+          placeholder="/account/settings"
+          class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+      </div>
+    </div>
+  </div>
+
+  <div class="flex gap-3">
+    <button type="submit" class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
+      {{ 'Update' if popup else 'Create' }} Popup
+    </button>
+    <a href="{{ url_for('admin_bp.tutorials_list') }}" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">
+      Cancel
+    </a>
+  </div>
+
+</form>
+
+{% endblock %}

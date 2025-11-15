@@ -255,11 +255,11 @@
           <i class="fa-solid fa-bolt text-yellow-500 mr-2"></i>
           Quick Wins
         </h2>
-        <p class="text-sm text-gray-600 mt-1">High-impact optimizations you can implement in under 30 minutes</p>
+        <p class="text-sm text-gray-600 mt-1">High-impact optimizations automated by AI</p>
       </div>
       <div class="bg-white border-2 border-green-400 rounded-lg px-4 py-2">
-        <div class="text-xs text-gray-600 font-semibold">Implementation Time</div>
-        <div class="text-2xl font-bold text-green-600">< 30 min</div>
+        <div class="text-xs text-gray-600 font-semibold">Implementation</div>
+        <div class="text-2xl font-bold text-green-600">AI Automated</div>
       </div>
     </div>
 
@@ -275,7 +275,7 @@
             <p class="text-sm text-gray-600 mb-2">{{ qw.description }}</p>
             <div class="flex items-center gap-2 text-xs">
               <span class="bg-green-100 text-green-800 px-2 py-0.5 rounded font-medium">
-                <i class="fa-solid fa-clock mr-1"></i>{{ qw.estimated_time }}
+                <i class="fa-solid fa-robot mr-1"></i>AI Automated
               </span>
               {% if qw.monthly_savings %}
               <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">
@@ -378,7 +378,6 @@
           <option value="priority">Sort by Priority</option>
           <option value="impact">Sort by Impact</option>
           <option value="savings">Sort by Savings</option>
-          <option value="time">Sort by Time</option>
         </select>
         <div class="border-l border-gray-300 pl-2 flex gap-2">
           <button id="selectHighPriority" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded font-medium text-xs">
@@ -435,11 +434,6 @@
 
           <!-- Badges & Metrics -->
           <div class="flex items-center gap-3 flex-shrink-0">
-            <!-- Time -->
-            <div class="text-xs text-gray-500">
-              <i class="fa-regular fa-clock"></i> {{ opp.estimated_time }}
-            </div>
-
             <!-- Priority Badge -->
             <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium
                         {% if opp.priority == 'high' %}bg-red-100 text-red-800
@@ -594,10 +588,6 @@
           <i class="fa-solid fa-check-circle text-green-600 text-xl"></i>
           <span class="font-bold text-gray-900"><span id="footerSelectedCount">0</span> Selected</span>
         </div>
-        <div class="text-sm text-gray-600">
-          <i class="fa-regular fa-clock mr-1"></i>
-          Est. time: <span id="footerTotalTime" class="font-semibold">0 min</span>
-        </div>
         <div class="text-sm">
           <span class="text-gray-600">Monthly value:</span>
           <span id="footerTotalValue" class="font-bold text-purple-600 text-lg ml-1">$0</span>
@@ -683,9 +673,6 @@
                     {{ opp.priority }} Priority
                   </span>
                   <span class="text-gray-600 text-sm">Impact: {{ opp.impact_score }}/100</span>
-                  <span class="text-gray-500 text-xs">
-                    <i class="fa-regular fa-clock"></i> {{ opp.estimated_time }}
-                  </span>
                 </div>
 
                 <!-- Title with Icon -->
@@ -808,21 +795,11 @@ function updateSelectedCount() {
     // Calculate totals
     let totalSavings = 0;
     let totalLeads = 0;
-    let totalTime = 0; // in minutes
 
     checkboxes.forEach(checkbox => {
       totalSavings += parseFloat(checkbox.dataset.savings) || 0;
       const leads = parseFloat(checkbox.dataset.leads) || 0;
       totalLeads += leads;
-
-      // Parse time (e.g., "5 min", "2 hours")
-      const timeStr = checkbox.closest('.opportunity-item').dataset.time || '';
-      const match = timeStr.match(/(\d+)\s*(min|hour)/i);
-      if (match) {
-        const num = parseInt(match[1]);
-        const unit = match[2].toLowerCase();
-        totalTime += unit.startsWith('hour') ? num * 60 : num;
-      }
     });
 
     const totalLeadValue = totalLeads * 500; // $500 per lead
@@ -830,9 +807,6 @@ function updateSelectedCount() {
 
     // Update footer UI
     document.getElementById('footerSelectedCount').textContent = count;
-    document.getElementById('footerTotalTime').textContent = totalTime >= 60
-      ? `${Math.floor(totalTime / 60)}h ${totalTime % 60}min`
-      : `${totalTime} min`;
     document.getElementById('footerTotalValue').textContent = '$' + Math.round(totalCombined).toLocaleString();
 
     // Show footer
@@ -892,16 +866,6 @@ document.addEventListener('DOMContentLoaded', function() {
           return parseInt(b.dataset.impact) - parseInt(a.dataset.impact);
         case 'savings':
           return parseFloat(b.dataset.savings) - parseFloat(a.dataset.savings);
-        case 'time':
-          // Extract number from time string (e.g., "5 min" -> 5, "2 hours" -> 120)
-          const parseTime = (str) => {
-            const match = str.match(/(\d+)\s*(min|hour)/i);
-            if (!match) return 999;
-            const num = parseInt(match[1]);
-            const unit = match[2].toLowerCase();
-            return unit.startsWith('hour') ? num * 60 : num;
-          };
-          return parseTime(a.dataset.time) - parseTime(b.dataset.time);
         case 'priority':
         default:
           const priorityOrder = {'high': 0, 'medium': 1, 'low': 2};

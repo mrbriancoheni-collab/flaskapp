@@ -107,6 +107,49 @@
   </div>
   {% endif %}
 
+  <!-- Quick Performance Summary (Demo Mode or Connected) -->
+  <div class="bg-gradient-to-r from-slate-700 to-slate-900 rounded-xl shadow-lg p-6">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+      <!-- Quick Grade -->
+      <div class="text-center md:w-1/4">
+        <div class="text-sm text-gray-300 uppercase font-semibold mb-2">Account Health</div>
+        <div class="text-5xl font-black text-yellow-400 mb-1">B-</div>
+        <div class="text-sm text-gray-300">Room for improvement</div>
+      </div>
+
+      <!-- Quick Problems -->
+      <div class="flex-1 grid md:grid-cols-2 gap-3">
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xl">🔴</span>
+            <span class="text-sm font-semibold text-white">High wasted spend</span>
+          </div>
+          <div class="text-xs text-gray-300">~22% of budget on poor keywords</div>
+          <div class="text-xs text-gray-400 mt-1">vs. 15-20% typical</div>
+        </div>
+
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xl">🟡</span>
+            <span class="text-sm font-semibold text-white">Low quality scores</span>
+          </div>
+          <div class="text-xs text-gray-300">Avg 5.8/10 - paying 25% more/click</div>
+          <div class="text-xs text-gray-400 mt-1">Target: 7+</div>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="text-center md:w-1/5">
+        <a href="{{ url_for('google_bp.ads_opportunities') }}"
+           class="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition shadow-lg">
+          <i class="fa-solid fa-lightbulb"></i>
+          <span>Fix Issues</span>
+        </a>
+        <div class="text-xs text-gray-400 mt-2">View opportunities</div>
+      </div>
+    </div>
+  </div>
+
   <div class="rounded-lg border bg-white p-4 flex flex-wrap items-center justify-between gap-3">
     <div class="flex items-center gap-2">
       <button type="button"

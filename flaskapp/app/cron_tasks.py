@@ -37,7 +37,6 @@ def run_daily(app, db):
     """
     Daily heavy tasks.
     - Generates Google Business Profile monthly insights (at most every ~27 days per account).
-    - Generates Google Ads optimization analysis and sends email notifications.
     """
     app.logger.info("[CRON] daily tick at %s", datetime.utcnow().isoformat())
 
@@ -45,11 +44,6 @@ def run_daily(app, db):
         _run_daily_gmb_insights(app)
     except Exception:
         app.logger.exception("[CRON] GMB monthly insights run failed")
-
-    try:
-        _run_daily_google_ads_optimizations(app)
-    except Exception:
-        app.logger.exception("[CRON] Google Ads optimizations analysis run failed")
 
     # TODO: email digests, cleanups, churn pings, etc.
 

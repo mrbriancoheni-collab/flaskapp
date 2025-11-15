@@ -49,8 +49,38 @@
   </div>
   {% endif %}
 
+  <!-- Campaign Summary -->
+  <div id="campaignSummary" class="bg-white rounded-xl shadow-lg p-6">
+    <h2 class="text-xl font-bold text-gray-900 mb-4">
+      <i class="fa-solid fa-chart-bar text-indigo-600 mr-2"></i>
+      Campaign Overview
+    </h2>
+    <div class="grid md:grid-cols-4 gap-4">
+      <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Monthly Spend</div>
+        <div class="text-2xl font-bold text-gray-900">${{ "{:,.0f}".format(analysis.performance.monthly_spend) }}</div>
+        <div class="text-xs text-gray-500 mt-1">Avg. ${{ "{:,.0f}".format(analysis.performance.daily_spend) }}/day</div>
+      </div>
+      <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Impressions</div>
+        <div class="text-2xl font-bold text-gray-900">{{ "{:,.0f}".format(analysis.performance.impressions) }}</div>
+        <div class="text-xs text-gray-500 mt-1">Last 30 days</div>
+      </div>
+      <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Clicks</div>
+        <div class="text-2xl font-bold text-gray-900">{{ "{:,.0f}".format(analysis.performance.clicks) }}</div>
+        <div class="text-xs text-gray-500 mt-1">{{ "%.2f"|format(analysis.performance.ctr * 100) }}% CTR</div>
+      </div>
+      <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Conversions</div>
+        <div class="text-2xl font-bold text-gray-900">{{ "{:,.0f}".format(analysis.performance.conversions) }}</div>
+        <div class="text-xs text-gray-500 mt-1">${{ "{:,.0f}".format(analysis.performance.cost_per_conversion) }}/lead</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Overall Health Score Card -->
-  <div class="bg-white rounded-xl shadow-lg p-8">
+  <div id="healthScoreCard" class="bg-white rounded-xl shadow-lg p-8">
     <div class="flex flex-col md:flex-row items-center justify-between gap-8">
       <!-- Score Circle -->
       <div class="text-center">
@@ -132,7 +162,7 @@
   {% set ns.total_combined_value = ns.total_monthly_savings + ns.total_lead_value %}
 
   {% if ns.total_monthly_savings > 0 or ns.total_monthly_leads > 0 %}
-  <div class="bg-gradient-to-br from-emerald-50 to-green-100 border-2 border-emerald-300 rounded-xl shadow-xl p-8">
+  <div id="financialImpact" class="bg-gradient-to-br from-emerald-50 to-green-100 border-2 border-emerald-300 rounded-xl shadow-xl p-8">
     <div class="text-center mb-6">
       <h2 class="text-3xl font-extrabold text-gray-900 mb-2">
         💰 Total Financial Impact
@@ -218,7 +248,7 @@
 
   <!-- Quick Wins Section -->
   {% if analysis.quick_wins|length > 0 %}
-  <div class="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-lg p-6">
+  <div id="quickWins" class="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-lg p-6">
     <div class="flex items-center justify-between mb-4">
       <div>
         <h2 class="text-2xl font-bold text-gray-900">
@@ -266,7 +296,7 @@
   {% endif %}
 
   <!-- Competitive Insights -->
-  <div class="bg-white rounded-xl shadow-lg p-6">
+  <div id="competitiveInsights" class="bg-white rounded-xl shadow-lg p-6">
     <h2 class="text-2xl font-bold mb-6">
       <i class="fa-solid fa-chart-line text-indigo-600 mr-2"></i>
       Competitive Insights
@@ -327,7 +357,7 @@
   </div>
 
   <!-- Individual Optimization Line Items -->
-  <div class="bg-white rounded-xl shadow-lg p-6">
+  <div id="optimizationList" class="bg-white rounded-xl shadow-lg p-6">
     <div class="flex items-center justify-between mb-6">
       <div>
         <h2 class="text-2xl font-bold">
@@ -759,6 +789,9 @@
     </div>
   </div>
 </div>
+
+<!-- Tutorial Popups Library -->
+<script src="{{ url_for('static', filename='js/tutorial-popups.js') }}"></script>
 
 <!-- JavaScript for Filtering/Sorting and Selection -->
 <script nonce="{{ g.csp_nonce }}">
@@ -1195,6 +1228,20 @@ document.addEventListener('keydown', function(event) {
     }
   }
 });
+
+// ===== Tutorial Popups Initialization =====
+// Initialize interactive tutorial popups (Pendo-style onboarding)
+if (typeof TutorialPopups !== 'undefined') {
+  // Wait for page to fully load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      TutorialPopups.init();
+    });
+  } else {
+    // DOM already loaded
+    TutorialPopups.init();
+  }
+}
 </script>
 
 {% endblock %}

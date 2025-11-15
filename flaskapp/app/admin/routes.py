@@ -1906,3 +1906,370 @@ def test_email():
             'success': False,
             'error': str(e)
         }), 500
+
+
+# ========================================================================
+# TUTORIAL POPUPS MANAGEMENT (Pendo-style onboarding)
+# ========================================================================
+
+@admin_bp.route("/tutorials", methods=["GET"])
+@require_admin
+def tutorials_list():
+    """List all tutorial popups."""
+    from app.models_tutorials import TutorialPopup
+
+    # Get filter parameters
+    page_path_filter = request.args.get("page_path", "")
+    is_active_filter = request.args.get("is_active", "all")
+
+    # Build query
+    query = TutorialPopup.query
+
+    if page_path_filter:
+        query = query.filter(TutorialPopup.page_path.ilike(f"%{page_path_filter}%"))
+
+    if is_active_filter == "active":
+        query = query.filter(TutorialPopup.is_active == True)
+    elif is_active_filter == "inactive":
+        query = query.filter(TutorialPopup.is_active == False)
+
+    # Order by page and sequence
+    popups = query.order_by(
+        TutorialPopup.page_path,
+        TutorialPopup.sequence_order
+    ).all()
+
+    _audit("tutorials_list_viewed", note=f"Viewed {len(popups)} tutorial popups")
+
+    return render_template(
+        "admin/tutorials_list.html",
+        popups=popups,
+        page_path_filter=page_path_filter,
+        is_active_filter=is_active_filter
+    )
+
+
+@admin_bp.route("/tutorials/new", methods=["GET"])
+@require_admin
+def tutorials_new():
+    """Show form to create a new tutorial popup."""
+    return render_template("admin/tutorials_form.html", popup=None)
+
+
+@admin_bp.route("/tutorials/create", methods=["POST"])
+@require_admin
+def tutorials_create():
+    """Create a new tutorial popup."""
+    from app.models_tutorials import TutorialPopup
+
+    try:
+        popup = TutorialPopup(
+            key=request.form.get("key"),
+            title=request.form.get("title"),
+            content=request.form.get("content"),
+            page_path=request.form.get("page_path"),
+            target_selector=request.form.get("target_selector") or None,
+            position=request.form.get("position", "bottom"),
+            sequence_order=int(request.form.get("sequence_order", 0)),
+            trigger_type=request.form.get("trigger_type", "page_load"),
+            trigger_value=request.form.get("trigger_value") or None,
+            dismissible=request.form.get("dismissible") == "on",
+            auto_dismiss_seconds=int(request.form.get("auto_dismiss_seconds")) if request.form.get("auto_dismiss_seconds") else None,
+            show_once=request.form.get("show_once") == "on",
+            theme=request.form.get("theme", "default"),
+            width=request.form.get("width", "320px"),
+            cta_text=request.form.get("cta_text") or None,
+            cta_link=request.form.get("cta_link") or None,
+            is_active=request.form.get("is_active") == "on",
+            created_by=g.user.id if hasattr(g, "user") else None
+        )
+
+        db.session.add(popup)
+        db.session.commit()
+
+        _audit("tutorial_created", note=f"Created tutorial popup: {popup.key}")
+        flash(f"Tutorial popup '{popup.title}' created successfully!", "success")
+        return redirect(url_for("admin_bp.tutorials_list"))
+
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Error creating tutorial popup")
+        flash(f"Error creating tutorial popup: {str(e)}", "error")
+        return redirect(url_for("admin_bp.tutorials_new"))
+
+
+@admin_bp.route("/tutorials/<int:popup_id>/edit", methods=["GET"])
+@require_admin
+def tutorials_edit(popup_id):
+    """Show form to edit a tutorial popup."""
+    from app.models_tutorials import TutorialPopup
+
+    popup = TutorialPopup.query.get_or_404(popup_id)
+    return render_template("admin/tutorials_form.html", popup=popup)
+
+
+@admin_bp.route("/tutorials/<int:popup_id>/update", methods=["POST"])
+@require_admin
+def tutorials_update(popup_id):
+    """Update an existing tutorial popup."""
+    from app.models_tutorials import TutorialPopup
+
+    try:
+        popup = TutorialPopup.query.get_or_404(popup_id)
+
+        popup.key = request.form.get("key")
+        popup.title = request.form.get("title")
+        popup.content = request.form.get("content")
+        popup.page_path = request.form.get("page_path")
+        popup.target_selector = request.form.get("target_selector") or None
+        popup.position = request.form.get("position", "bottom")
+        popup.sequence_order = int(request.form.get("sequence_order", 0))
+        popup.trigger_type = request.form.get("trigger_type", "page_load")
+        popup.trigger_value = request.form.get("trigger_value") or None
+        popup.dismissible = request.form.get("dismissible") == "on"
+        popup.auto_dismiss_seconds = int(request.form.get("auto_dismiss_seconds")) if request.form.get("auto_dismiss_seconds") else None
+        popup.show_once = request.form.get("show_once") == "on"
+        popup.theme = request.form.get("theme", "default")
+        popup.width = request.form.get("width", "320px")
+        popup.cta_text = request.form.get("cta_text") or None
+        popup.cta_link = request.form.get("cta_link") or None
+        popup.is_active = request.form.get("is_active") == "on"
+
+        db.session.commit()
+
+        _audit("tutorial_updated", note=f"Updated tutorial popup: {popup.key}")
+        flash(f"Tutorial popup '{popup.title}' updated successfully!", "success")
+        return redirect(url_for("admin_bp.tutorials_list"))
+
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Error updating tutorial popup")
+        flash(f"Error updating tutorial popup: {str(e)}", "error")
+        return redirect(url_for("admin_bp.tutorials_edit", popup_id=popup_id))
+
+
+@admin_bp.route("/tutorials/<int:popup_id>/delete", methods=["POST"])
+@require_admin
+def tutorials_delete(popup_id):
+    """Delete a tutorial popup."""
+    from app.models_tutorials import TutorialPopup
+
+    try:
+        popup = TutorialPopup.query.get_or_404(popup_id)
+        popup_key = popup.key
+
+        db.session.delete(popup)
+        db.session.commit()
+
+        _audit("tutorial_deleted", note=f"Deleted tutorial popup: {popup_key}")
+        flash(f"Tutorial popup '{popup_key}' deleted successfully!", "success")
+
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Error deleting tutorial popup")
+        flash(f"Error deleting tutorial popup: {str(e)}", "error")
+
+    return redirect(url_for("admin_bp.tutorials_list"))
+
+
+@admin_bp.route("/tutorials/<int:popup_id>/toggle", methods=["POST"])
+@require_admin
+def tutorials_toggle(popup_id):
+    """Toggle active status of a tutorial popup."""
+    from app.models_tutorials import TutorialPopup
+
+    try:
+        popup = TutorialPopup.query.get_or_404(popup_id)
+        popup.is_active = not popup.is_active
+        db.session.commit()
+
+        status = "activated" if popup.is_active else "deactivated"
+        _audit("tutorial_toggled", note=f"{status.capitalize()} tutorial popup: {popup.key}")
+
+        return jsonify({
+            'success': True,
+            'is_active': popup.is_active,
+            'message': f"Tutorial popup '{popup.title}' {status}!"
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Error toggling tutorial popup")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@admin_bp.route("/tutorials/analytics", methods=["GET"])
+@require_admin
+def tutorials_analytics():
+    """View analytics for tutorial popups."""
+    from app.models_tutorials import TutorialPopup, TutorialUserProgress
+    from sqlalchemy import func
+
+    # Get view counts per popup
+    analytics = db.session.query(
+        TutorialPopup.id,
+        TutorialPopup.key,
+        TutorialPopup.title,
+        TutorialPopup.page_path,
+        func.count(TutorialUserProgress.id).label('total_views'),
+        func.count(func.nullif(TutorialUserProgress.dismissed_at, None)).label('total_dismissals'),
+        func.sum(TutorialUserProgress.view_count).label('total_impressions')
+    ).outerjoin(
+        TutorialUserProgress,
+        TutorialPopup.id == TutorialUserProgress.popup_id
+    ).group_by(
+        TutorialPopup.id,
+        TutorialPopup.key,
+        TutorialPopup.title,
+        TutorialPopup.page_path
+    ).order_by(
+        func.count(TutorialUserProgress.id).desc()
+    ).all()
+
+    return render_template("admin/tutorials_analytics.html", analytics=analytics)
+
+
+# ========================================================================
+# TUTORIAL POPUPS JSON API (for frontend consumption)
+# ========================================================================
+
+from flask import jsonify as flask_jsonify
+
+@admin_bp.route("/api/tutorials/for-page", methods=["GET"])
+@login_required
+def api_tutorials_for_page():
+    """
+    API endpoint to fetch active tutorial popups for a specific page.
+    Used by frontend JavaScript to display popups.
+
+    Query parameters:
+    - page_path: The URL path to fetch popups for (required)
+
+    Returns:
+    - JSON array of popup definitions
+    """
+    from app.models_tutorials import TutorialPopup, TutorialUserProgress
+
+    page_path = request.args.get("page_path")
+    if not page_path:
+        return flask_jsonify({"error": "page_path parameter required"}), 400
+
+    # Get active popups for this page
+    popups_query = TutorialPopup.query.filter(
+        TutorialPopup.page_path == page_path,
+        TutorialPopup.is_active == True
+    ).order_by(TutorialPopup.sequence_order)
+
+    popups = popups_query.all()
+
+    # Get user progress if logged in
+    user_id = g.user.id if hasattr(g, "user") and g.user else None
+    seen_popup_ids = set()
+
+    if user_id:
+        progress_records = TutorialUserProgress.query.filter(
+            TutorialUserProgress.user_id == user_id,
+            TutorialUserProgress.popup_id.in_([p.id for p in popups])
+        ).all()
+
+        # Filter out popups that should only show once and have been seen
+        seen_popup_ids = {
+            pr.popup_id for pr in progress_records
+            if pr.dismissed_at is not None
+        }
+
+    # Filter out seen popups if show_once is True
+    filtered_popups = [
+        p for p in popups
+        if not (p.show_once and p.id in seen_popup_ids)
+    ]
+
+    # Convert to dictionaries
+    popup_dicts = [p.to_dict() for p in filtered_popups]
+
+    return flask_jsonify(popup_dicts)
+
+
+@admin_bp.route("/api/tutorials/<int:popup_id>/track-view", methods=["POST"])
+@login_required
+def api_tutorials_track_view(popup_id):
+    """Track that a user viewed a tutorial popup."""
+    from app.models_tutorials import TutorialPopup, TutorialUserProgress
+
+    if not hasattr(g, "user") or not g.user:
+        return flask_jsonify({"error": "Authentication required"}), 401
+
+    try:
+        # Check if popup exists
+        popup = TutorialPopup.query.get_or_404(popup_id)
+
+        # Check if progress record exists
+        progress = TutorialUserProgress.query.filter_by(
+            user_id=g.user.id,
+            popup_id=popup_id
+        ).first()
+
+        if progress:
+            # Increment view count
+            progress.view_count += 1
+        else:
+            # Create new progress record
+            progress = TutorialUserProgress(
+                user_id=g.user.id,
+                popup_id=popup_id,
+                view_count=1
+            )
+            db.session.add(progress)
+
+        db.session.commit()
+
+        return flask_jsonify({"success": True})
+
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Error tracking tutorial view")
+        return flask_jsonify({"error": str(e)}), 500
+
+
+@admin_bp.route("/api/tutorials/<int:popup_id>/track-dismiss", methods=["POST"])
+@login_required
+def api_tutorials_track_dismiss(popup_id):
+    """Track that a user dismissed a tutorial popup."""
+    from app.models_tutorials import TutorialPopup, TutorialUserProgress
+
+    if not hasattr(g, "user") or not g.user:
+        return flask_jsonify({"error": "Authentication required"}), 401
+
+    try:
+        # Check if popup exists
+        popup = TutorialPopup.query.get_or_404(popup_id)
+
+        # Get or create progress record
+        progress = TutorialUserProgress.query.filter_by(
+            user_id=g.user.id,
+            popup_id=popup_id
+        ).first()
+
+        if not progress:
+            progress = TutorialUserProgress(
+                user_id=g.user.id,
+                popup_id=popup_id,
+                view_count=1
+            )
+            db.session.add(progress)
+
+        # Mark as dismissed
+        progress.dismissed_at = datetime.utcnow()
+        progress.dismissed_action = request.json.get("action", "close_button") if request.is_json else "close_button"
+
+        db.session.commit()
+
+        return flask_jsonify({"success": True})
+
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Error tracking tutorial dismiss")
+        return flask_jsonify({"error": str(e)}), 500

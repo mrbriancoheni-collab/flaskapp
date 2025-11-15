@@ -1,0 +1,136 @@
+{% extends "base_admin.html" %}
+{% block title %}Admin – Tutorial Popup Analytics{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <div class="flex items-center gap-2 text-sm text-gray-600 mb-2">
+      <a href="{{ url_for('admin_bp.tutorials_list') }}" class="hover:text-indigo-600">Tutorial Popups</a>
+      <span>/</span>
+      <span>Analytics</span>
+    </div>
+    <h1 class="text-2xl font-bold">Tutorial Popup Analytics</h1>
+    <p class="text-gray-600 text-sm mt-1">View engagement metrics for your onboarding popups</p>
+  </div>
+  <a href="{{ url_for('admin_bp.tutorials_list') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-medium">
+    ← Back to List
+  </a>
+</div>
+
+{% if analytics %}
+<div class="bg-white border rounded-xl overflow-hidden">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50 border-b">
+      <tr>
+        <th class="px-4 py-3 text-left font-medium text-gray-700">Popup</th>
+        <th class="px-4 py-3 text-left font-medium text-gray-700">Page</th>
+        <th class="px-4 py-3 text-center font-medium text-gray-700">Unique Views</th>
+        <th class="px-4 py-3 text-center font-medium text-gray-700">Total Impressions</th>
+        <th class="px-4 py-3 text-center font-medium text-gray-700">Dismissals</th>
+        <th class="px-4 py-3 text-center font-medium text-gray-700">Completion Rate</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in analytics %}
+      {% set completion_rate = (row.total_dismissals / row.total_views * 100) if row.total_views > 0 else 0 %}
+      <tr class="border-b hover:bg-gray-50">
+        <td class="px-4 py-3">
+          <div class="font-medium">{{ row.title }}</div>
+          <code class="text-xs text-gray-500">{{ row.key }}</code>
+        </td>
+        <td class="px-4 py-3">
+          <div class="text-xs text-gray-600">{{ row.page_path }}</div>
+        </td>
+        <td class="px-4 py-3 text-center">
+          <div class="text-2xl font-bold text-gray-900">{{ row.total_views or 0 }}</div>
+          <div class="text-xs text-gray-500">users</div>
+        </td>
+        <td class="px-4 py-3 text-center">
+          <div class="text-2xl font-bold text-indigo-600">{{ row.total_impressions or 0 }}</div>
+          <div class="text-xs text-gray-500">views</div>
+        </td>
+        <td class="px-4 py-3 text-center">
+          <div class="text-2xl font-bold text-green-600">{{ row.total_dismissals or 0 }}</div>
+          <div class="text-xs text-gray-500">completed</div>
+        </td>
+        <td class="px-4 py-3 text-center">
+          <div class="flex items-center justify-center gap-2">
+            <div class="text-2xl font-bold
+              {% if completion_rate >= 80 %}text-green-600
+              {% elif completion_rate >= 50 %}text-yellow-600
+              {% else %}text-red-600{% endif %}">
+              {{ "%.0f"|format(completion_rate) }}%
+            </div>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+            <div class="
+              {% if completion_rate >= 80 %}bg-green-600
+              {% elif completion_rate >= 50 %}bg-yellow-600
+              {% else %}bg-red-600{% endif %}
+              h-2 rounded-full transition-all"
+              style="width: {{ completion_rate }}%"></div>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="mt-6 grid md:grid-cols-3 gap-4">
+  <!-- Total Stats -->
+  <div class="bg-white border rounded-xl p-6">
+    <div class="text-sm text-gray-600 mb-1">Total Unique Users</div>
+    <div class="text-3xl font-bold text-gray-900">
+      {{ analytics|sum(attribute='total_views') or 0 }}
+    </div>
+  </div>
+
+  <div class="bg-white border rounded-xl p-6">
+    <div class="text-sm text-gray-600 mb-1">Total Impressions</div>
+    <div class="text-3xl font-bold text-indigo-600">
+      {{ analytics|sum(attribute='total_impressions') or 0 }}
+    </div>
+  </div>
+
+  <div class="bg-white border rounded-xl p-6">
+    <div class="text-sm text-gray-600 mb-1">Average Completion</div>
+    {% set total_views = analytics|sum(attribute='total_views') or 1 %}
+    {% set total_dismissals = analytics|sum(attribute='total_dismissals') or 0 %}
+    {% set avg_completion = (total_dismissals / total_views * 100) if total_views > 0 else 0 %}
+    <div class="text-3xl font-bold
+      {% if avg_completion >= 80 %}text-green-600
+      {% elif avg_completion >= 50 %}text-yellow-600
+      {% else %}text-red-600{% endif %}">
+      {{ "%.0f"|format(avg_completion) }}%
+    </div>
+  </div>
+</div>
+
+<div class="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
+  <div class="flex items-start gap-3">
+    <div class="text-2xl">💡</div>
+    <div class="flex-1">
+      <div class="font-semibold text-blue-900 mb-1">Analytics Tips</div>
+      <ul class="text-sm text-blue-800 space-y-1">
+        <li>• <strong>Unique Views:</strong> Number of individual users who saw the popup</li>
+        <li>• <strong>Total Impressions:</strong> Total times the popup was displayed (may be higher if users saw it multiple times)</li>
+        <li>• <strong>Dismissals:</strong> Number of users who completed/dismissed the popup</li>
+        <li>• <strong>Completion Rate:</strong> Percentage of users who dismissed vs viewed (higher is better)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<div class="bg-white border rounded-xl p-12 text-center">
+  <div class="text-6xl mb-4">📊</div>
+  <h3 class="text-lg font-semibold text-gray-900 mb-2">No Analytics Data Yet</h3>
+  <p class="text-gray-600 mb-6">Analytics will appear here once users start viewing your tutorial popups</p>
+  <a href="{{ url_for('admin_bp.tutorials_list') }}" class="inline-block px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
+    Manage Popups
+  </a>
+</div>
+{% endif %}
+
+{% endblock %}

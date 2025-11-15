@@ -2155,6 +2155,9 @@ def ads_opportunities():
     """
     Opportunities Dashboard - Beautiful, actionable insights view.
     Matches the visual quality of the ads-grader report.
+
+    Note: Email notifications are sent by the daily cron job (see cron_tasks.py),
+    not when users view this page.
     """
     aid = current_account_id()
     connected = _is_connected(aid, "ads")

@@ -233,12 +233,12 @@
           </div>`);
         }
 
-        // Add effort if available
-        if (roi.effort && roi.effort.time_estimate) {
+        // Add difficulty if available
+        if (roi.effort && roi.effort.difficulty) {
           const difficultyColor = roi.effort.difficulty === 'Easy' ? 'text-green-600' :
                                    roi.effort.difficulty === 'Hard' ? 'text-purple-600' : 'text-blue-600';
           parts.push(`<div class="text-xs ${difficultyColor}">
-            ⏱️ ${roi.effort.time_estimate} • ${roi.effort.difficulty}
+            ${roi.effort.difficulty}
           </div>`);
         }
 

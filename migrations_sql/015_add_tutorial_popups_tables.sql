@@ -87,38 +87,122 @@ BEFORE UPDATE ON tutorial_popups
 FOR EACH ROW
 EXECUTE FUNCTION update_tutorial_popups_updated_at();
 
--- Insert sample popups for Google Ads demo page
-INSERT INTO tutorial_popups (key, title, content, page_path, target_selector, position, sequence_order, theme, cta_text) VALUES
+-- Insert comprehensive tutorial popups for Google Ads demo page
+INSERT INTO tutorial_popups (key, title, content, page_path, target_selector, position, sequence_order, theme, cta_text, width) VALUES
+-- Welcome popup
 (
     'demo-welcome',
-    'Welcome to Google Ads Opportunities! 👋',
-    '<p>This demo page shows how AI-powered optimization recommendations can help you improve your Google Ads performance.</p><p>Each recommendation includes estimated value, implementation time, and priority level.</p>',
+    '💡 Welcome to Your Optimization Dashboard!',
+    '<p>This dashboard analyzes your Google Ads account and identifies <strong>specific opportunities</strong> to save money and generate more leads.</p><p class="mt-2">Let me walk you through each section so you understand the value you''re getting. Click "Start Tour" to begin!</p>',
     '/account/google/ads/opportunities/demo',
     NULL,
     'center',
     0,
     'primary',
-    'Show me around'
+    'Start Tour',
+    '400px'
 ),
+-- Campaign Summary
+(
+    'demo-campaign-summary',
+    '📊 Campaign Overview - Your Current Performance',
+    '<p><strong>Why this matters:</strong> This summary shows your baseline performance metrics.</p><ul class="list-disc pl-5 mt-2 space-y-1 text-sm"><li>See how much you''re spending and what you''re getting</li><li>Compare your cost-per-lead to industry benchmarks</li><li>Identify if you''re getting enough clicks for your spend</li></ul><p class="mt-3 text-sm"><strong>What to look for:</strong> If your cost/lead is above $50-75 for home services, there''s room for improvement.</p>',
+    '/account/google/ads/opportunities/demo',
+    '#campaignSummary',
+    'bottom',
+    1,
+    'info',
+    'Next',
+    '420px'
+),
+-- Health Score
+(
+    'demo-health-score',
+    '❤️ Health Score - Your Account''s Overall Grade',
+    '<p><strong>Why this matters:</strong> This single number (0-100) tells you how well-optimized your account is.</p><ul class="list-disc pl-5 mt-2 space-y-1 text-sm"><li><strong>80+:</strong> Excellent - Minor improvements available</li><li><strong>60-79:</strong> Good - Several optimization opportunities</li><li><strong>Below 60:</strong> Needs work - Significant savings possible</li></ul><p class="mt-3 text-sm"><strong>The 3 sub-scores</strong> below show WHERE to focus: wasted spend, quality scores, or ad extensions.</p>',
+    '/account/google/ads/opportunities/demo',
+    '#healthScoreCard',
+    'right',
+    2,
+    'warning',
+    'Next',
+    '420px'
+),
+-- Financial Impact
+(
+    'demo-financial-impact',
+    '💰 Total Financial Impact - Your Bottom Line',
+    '<p><strong>Why this is THE most important section:</strong> This shows exactly how much money you can save or earn by implementing the recommendations.</p><ul class="list-disc pl-5 mt-2 space-y-1 text-sm"><li><strong>Cost Savings:</strong> Money you''ll stop wasting on bad clicks</li><li><strong>Revenue Growth:</strong> New leads × average job value</li><li><strong>Combined Value:</strong> Total annual impact to your business</li></ul><p class="mt-3 text-sm bg-green-50 p-2 rounded"><strong>💡 Key insight:</strong> These optimizations cost $0 to implement - just your time. Most take under 30 minutes.</p>',
+    '/account/google/ads/opportunities/demo',
+    '#financialImpact',
+    'top',
+    3,
+    'success',
+    'Next',
+    '440px'
+),
+-- Quick Wins
+(
+    'demo-quick-wins',
+    '⚡ Quick Wins - Start Here for Fast Results',
+    '<p><strong>Why start here:</strong> These optimizations give you the biggest bang for your buck.</p><ul class="list-disc pl-5 mt-2 space-y-1 text-sm"><li>Each takes <strong>under 30 minutes</strong> to implement</li><li>High financial impact relative to effort</li><li>Often one-time fixes with permanent benefits</li></ul><p class="mt-3 text-sm"><strong>Pro tip:</strong> Block out 1 hour this week to knock out all the Quick Wins. You''ll see results within days.</p>',
+    '/account/google/ads/opportunities/demo',
+    '#quickWins',
+    'top',
+    4,
+    'success',
+    'Next',
+    '420px'
+),
+-- Competitive Insights
+(
+    'demo-competitive-insights',
+    '🎯 Competitive Insights - How You Stack Up',
+    '<p><strong>Why this matters:</strong> See how your performance compares to competitors in your industry.</p><ul class="list-disc pl-5 mt-2 space-y-1 text-sm"><li><strong>CPC vs Industry:</strong> Are you overpaying per click?</li><li><strong>Impression Share Lost:</strong> Are you missing opportunities due to budget or rank?</li><li><strong>Competitor Tactics:</strong> What are successful competitors doing?</li></ul><p class="mt-3 text-sm"><strong>Action item:</strong> If your CPC is 20%+ above industry average, focus on Quality Score improvements.</p>',
+    '/account/google/ads/opportunities/demo',
+    '#competitiveInsights',
+    'top',
+    5,
+    'info',
+    'Next',
+    '440px'
+),
+-- Optimization List
+(
+    'demo-optimization-list',
+    '📋 Optimization List - Your Action Items',
+    '<p><strong>Why this section is powerful:</strong> Every line item is a specific, actionable fix with estimated value.</p><ul class="list-disc pl-5 mt-2 space-y-1 text-sm"><li><strong>Select the ones</strong> you want to implement</li><li><strong>See exactly what to do</strong> in the description</li><li><strong>Track the value</strong> of what you''re implementing</li></ul><p class="mt-3 text-sm bg-blue-50 p-2 rounded"><strong>💡 Smart approach:</strong> Start with Quick Wins, then tackle High Priority items. You don''t have to do everything at once.</p>',
+    '/account/google/ads/opportunities/demo',
+    '#optimizationList',
+    'top',
+    6,
+    'info',
+    'Next',
+    '440px'
+),
+-- Bulk Selection
 (
     'demo-bulk-selection',
-    'Bulk Selection Tools ⚡',
-    '<p>Use these quick selection buttons to:</p><ul class="list-disc pl-5 mt-2 space-y-1"><li><strong>High Priority</strong>: Select critical issues first</li><li><strong>Quick Wins</strong>: Choose easy optimizations</li><li><strong>Select All</strong>: Mark everything for review</li></ul>',
+    '🎛️ Bulk Selection Tools - Work Smarter',
+    '<p><strong>Why use these:</strong> Quickly select multiple optimizations based on criteria.</p><ul class="list-disc pl-5 mt-2 space-y-1 text-sm"><li><strong>High Priority</strong>: Critical issues that are costing you money NOW</li><li><strong>Quick Wins</strong>: Fast, high-impact changes</li><li><strong>Select All</strong>: Review everything at once</li></ul><p class="mt-3 text-sm"><strong>Pro tip:</strong> Use "High Priority" first, then "Quick Wins" for your first implementation session.</p>',
     '/account/google/ads/opportunities/demo',
     '#selectHighPriority',
     'bottom',
-    1,
+    7,
     'success',
-    'Got it'
+    'Next',
+    '400px'
 ),
+-- Sticky Footer
 (
     'demo-sticky-footer',
-    'Track Your Selections 📊',
-    '<p>The sticky footer at the bottom shows:</p><ul class="list-disc pl-5 mt-2 space-y-1"><li><strong>Selected count</strong>: How many optimizations you chose</li><li><strong>Est. time</strong>: Total implementation time</li><li><strong>Monthly value</strong>: Potential revenue impact</li></ul><p class="mt-2">Try selecting some optimizations to see it in action!</p>',
+    '💎 Selection Tracker - Know Your Value',
+    '<p><strong>Why this is useful:</strong> As you select optimizations, this footer tracks your progress in real-time.</p><ul class="list-disc pl-5 mt-2 space-y-1 text-sm"><li><strong>Selected count:</strong> How many items you''ve chosen</li><li><strong>Est. time:</strong> Total implementation time needed</li><li><strong>Monthly value:</strong> Total financial impact of your selections</li></ul><p class="mt-3 text-sm bg-purple-50 p-2 rounded"><strong>🎯 Try it:</strong> Select a few optimizations above and watch this footer update!</p>',
     '/account/google/ads/opportunities/demo',
     '#stickyFooter',
     'top',
-    2,
+    8,
     'info',
-    'Awesome!'
+    'Got it!',
+    '400px'
 );

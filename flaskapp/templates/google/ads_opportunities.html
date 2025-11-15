@@ -249,21 +249,24 @@
   <!-- Quick Wins Section -->
   {% if analysis.quick_wins|length > 0 %}
   <div id="quickWins" class="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-lg p-6">
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <h2 class="text-2xl font-bold text-gray-900">
-          <i class="fa-solid fa-bolt text-yellow-500 mr-2"></i>
-          Quick Wins
-        </h2>
-        <p class="text-sm text-gray-600 mt-1">High-impact optimizations automated by AI</p>
+    <button onclick="toggleAccordion('quickWinsContent', 'quickWinsChevron')" class="w-full flex items-center justify-between mb-4 cursor-pointer hover:opacity-80 transition">
+      <div class="flex items-center gap-4">
+        <div>
+          <h2 class="text-2xl font-bold text-gray-900 text-left">
+            <i class="fa-solid fa-bolt text-yellow-500 mr-2"></i>
+            Quick Wins
+          </h2>
+          <p class="text-sm text-gray-600 mt-1 text-left">High-impact optimizations automated by AI</p>
+        </div>
+        <div class="bg-white border-2 border-green-400 rounded-lg px-4 py-2">
+          <div class="text-xs text-gray-600 font-semibold">Implementation</div>
+          <div class="text-2xl font-bold text-green-600">AI Automated</div>
+        </div>
       </div>
-      <div class="bg-white border-2 border-green-400 rounded-lg px-4 py-2">
-        <div class="text-xs text-gray-600 font-semibold">Implementation</div>
-        <div class="text-2xl font-bold text-green-600">AI Automated</div>
-      </div>
-    </div>
+      <i id="quickWinsChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl transition-transform duration-300"></i>
+    </button>
 
-    <div class="grid md:grid-cols-2 gap-4">
+    <div id="quickWinsContent" class="grid md:grid-cols-2 gap-4 hidden">
       {% for qw in analysis.quick_wins %}
       <div class="bg-white rounded-lg border-2 border-green-200 p-4 hover:shadow-md transition">
         <div class="flex items-start gap-3">
@@ -297,12 +300,15 @@
 
   <!-- Competitive Insights -->
   <div id="competitiveInsights" class="bg-white rounded-xl shadow-lg p-6">
-    <h2 class="text-2xl font-bold mb-6">
-      <i class="fa-solid fa-chart-line text-indigo-600 mr-2"></i>
-      Competitive Insights
-    </h2>
+    <button onclick="toggleAccordion('competitiveInsightsContent', 'competitiveInsightsChevron')" class="w-full flex items-center justify-between mb-6 cursor-pointer hover:opacity-80 transition">
+      <h2 class="text-2xl font-bold text-left">
+        <i class="fa-solid fa-chart-line text-indigo-600 mr-2"></i>
+        Competitive Insights
+      </h2>
+      <i id="competitiveInsightsChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl transition-transform duration-300"></i>
+    </button>
 
-    <div class="grid md:grid-cols-3 gap-6">
+    <div id="competitiveInsightsContent" class="grid md:grid-cols-3 gap-6 hidden">
       <!-- CPC vs Industry -->
       <div class="bg-gradient-to-br from-orange-50 to-red-50 border border-orange-200 rounded-lg p-4">
         <div class="text-sm text-gray-600 mb-2">Avg CPC vs Industry</div>
@@ -358,16 +364,20 @@
 
   <!-- Individual Optimization Line Items -->
   <div id="optimizationList" class="bg-white rounded-xl shadow-lg p-6">
-    <div class="flex items-center justify-between mb-6">
-      <div>
+    <button onclick="toggleAccordion('optimizationListContent', 'optimizationListChevron')" class="w-full flex items-center justify-between mb-6 cursor-pointer hover:opacity-80 transition">
+      <div class="text-left">
         <h2 class="text-2xl font-bold">
           <i class="fa-solid fa-list-check text-indigo-600 mr-2"></i>
           Select Optimizations to Implement
         </h2>
         <p class="text-sm text-gray-600 mt-1">{{ analysis.opportunities|length }} specific optimizations identified - select individual items below</p>
       </div>
+      <i id="optimizationListChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl transition-transform duration-300 ml-4"></i>
+    </button>
+
+    <div id="optimizationListContent" class="hidden">
       <!-- Filter/Sort Controls -->
-      <div class="flex items-center gap-2 text-sm">
+      <div class="flex items-center justify-end gap-2 text-sm mb-6">
         <select id="filterPriority" class="border border-gray-300 rounded px-3 py-1 text-sm">
           <option value="all">All Priorities</option>
           <option value="high">High Only</option>
@@ -462,27 +472,31 @@
       {% endfor %}
     </div>
 
-    <!-- Approve Optimizations Button -->
-    <div class="mt-6 text-center">
-      <button id="openModalButton" class="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-lg rounded-xl hover:from-green-600 hover:to-emerald-700 transition shadow-xl transform hover:scale-105">
-        <i class="fa-solid fa-check-double text-2xl"></i>
-        <span>Select & Approve Optimizations</span>
-        <span class="bg-white/20 px-3 py-1 rounded-full text-sm">{{ analysis.opportunities|length }} Actions</span>
-      </button>
-      <p class="text-sm text-gray-600 mt-2">
-        <i class="fa-solid fa-info-circle"></i> Choose which changes to implement in your Google Ads account
-      </p>
+      <!-- Approve Optimizations Button -->
+      <div class="mt-6 text-center">
+        <button id="openModalButton" class="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-lg rounded-xl hover:from-green-600 hover:to-emerald-700 transition shadow-xl transform hover:scale-105">
+          <i class="fa-solid fa-check-double text-2xl"></i>
+          <span>Select & Approve Optimizations</span>
+          <span class="bg-white/20 px-3 py-1 rounded-full text-sm">{{ analysis.opportunities|length }} Actions</span>
+        </button>
+        <p class="text-sm text-gray-600 mt-2">
+          <i class="fa-solid fa-info-circle"></i> Choose which changes to implement in your Google Ads account
+        </p>
+      </div>
     </div>
   </div>
 
   <!-- Detailed Recommendations by Category -->
   <div class="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6">
-    <h2 class="text-2xl font-bold mb-6">
-      <i class="fa-solid fa-lightbulb text-indigo-600 mr-2"></i>
-      Detailed Action Plan
-    </h2>
+    <button onclick="toggleAccordion('detailedActionPlanContent', 'detailedActionPlanChevron')" class="w-full flex items-center justify-between mb-6 cursor-pointer hover:opacity-80 transition">
+      <h2 class="text-2xl font-bold text-left">
+        <i class="fa-solid fa-lightbulb text-indigo-600 mr-2"></i>
+        Detailed Action Plan
+      </h2>
+      <i id="detailedActionPlanChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl transition-transform duration-300"></i>
+    </button>
 
-    <div class="space-y-4">
+    <div id="detailedActionPlanContent" class="space-y-4 hidden">
       {% for rec in analysis.recommendations %}
       <div class="bg-white rounded-lg border-2
                   {% if rec.priority == 'high' %}border-red-300
@@ -770,6 +784,20 @@
 
 <!-- JavaScript for Filtering/Sorting and Selection -->
 <script nonce="{{ g.csp_nonce }}">
+// Toggle accordion sections
+function toggleAccordion(contentId, chevronId) {
+  const content = document.getElementById(contentId);
+  const chevron = document.getElementById(chevronId);
+
+  if (content.classList.contains('hidden')) {
+    content.classList.remove('hidden');
+    chevron.classList.add('rotate-180');
+  } else {
+    content.classList.add('hidden');
+    chevron.classList.remove('rotate-180');
+  }
+}
+
 // Update selected count display and sticky footer
 function updateSelectedCount() {
   const checkboxes = document.querySelectorAll('.optimization-checkbox:checked');
@@ -790,7 +818,7 @@ function updateSelectedCount() {
       totalLeads += leads;
     });
 
-    const totalLeadValue = totalLeads * 500; // $500 per lead
+    const totalLeadValue = totalLeads * 100; // $100 per lead (20% win rate × $500 customer value)
     const totalCombined = totalSavings + totalLeadValue;
 
     // Update footer UI

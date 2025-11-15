@@ -2247,6 +2247,35 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
     ads = ads_data.get("ads", [])
     extensions = ads_data.get("extensions", [])
 
+    # Calculate performance metrics
+    enabled_campaigns = [c for c in campaigns if c.get("status", "").lower() in ("enabled", "active")]
+    daily_spend = sum(c.get("daily_budget", 0) for c in enabled_campaigns)
+    monthly_spend = daily_spend * 30
+
+    # Calculate conversions from campaigns or keywords
+    total_conversions = sum(c.get("conversions", 0) for c in campaigns)
+    if total_conversions == 0:
+        total_conversions = sum(k.get("conv", 0) for k in keywords)
+
+    # Estimate impressions and clicks based on spend and industry benchmarks
+    # Home services avg: $3-5 CPC, 3-5% CTR, impressions = clicks / CTR
+    avg_cpc = 4.0  # Average for home services
+    estimated_clicks = int(monthly_spend / avg_cpc) if monthly_spend > 0 else 0
+    avg_ctr = 0.04  # 4% CTR
+    estimated_impressions = int(estimated_clicks / avg_ctr) if estimated_clicks > 0 else 0
+
+    cost_per_conversion = (monthly_spend / total_conversions) if total_conversions > 0 else 0
+
+    performance = {
+        "monthly_spend": monthly_spend,
+        "daily_spend": daily_spend,
+        "impressions": estimated_impressions,
+        "clicks": estimated_clicks,
+        "ctr": avg_ctr,
+        "conversions": total_conversions,
+        "cost_per_conversion": cost_per_conversion,
+    }
+
     # Calculate health scores (0-100)
     scores = {
         "overall": 0,
@@ -2670,6 +2699,7 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
         "competitive_insights": competitive_insights,
         "quick_wins": quick_wins,
         "total_opportunities": len(opportunities),
+        "performance": performance,
     }
 
 

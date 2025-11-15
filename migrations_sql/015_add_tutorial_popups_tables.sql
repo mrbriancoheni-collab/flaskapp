@@ -132,7 +132,7 @@ INSERT INTO tutorial_popups (key, title, content, page_path, target_selector, po
 (
     'demo-financial-impact',
     '💰 Total Financial Impact - Your Bottom Line',
-    '<p><strong>Why this is THE most important section:</strong> This shows exactly how much money you can save or earn by implementing the recommendations.</p><ul class="list-disc pl-5 mt-2 space-y-1 text-sm"><li><strong>Cost Savings:</strong> Money you''ll stop wasting on bad clicks</li><li><strong>Revenue Growth:</strong> New leads × average job value</li><li><strong>Combined Value:</strong> Total annual impact to your business</li></ul><p class="mt-3 text-sm bg-green-50 p-2 rounded"><strong>💡 Key insight:</strong> These optimizations cost $0 to implement - just your time. Most take under 30 minutes.</p>',
+    '<p><strong>Why this is THE most important section:</strong> This shows exactly how much money you can save or earn by approving these AI-powered recommendations.</p><ul class="list-disc pl-5 mt-2 space-y-1 text-sm"><li><strong>Cost Savings:</strong> Money you''ll stop wasting on bad clicks</li><li><strong>Revenue Growth:</strong> New leads × average job value</li><li><strong>Combined Value:</strong> Total annual impact to your business</li></ul><p class="mt-3 text-sm bg-green-50 p-2 rounded"><strong>💡 The best part:</strong> Just select and approve - our AI implements the changes automatically. No manual work in Google Ads required.</p>',
     '/account/google/ads/opportunities/demo',
     '#financialImpact',
     'top',
@@ -145,7 +145,7 @@ INSERT INTO tutorial_popups (key, title, content, page_path, target_selector, po
 (
     'demo-quick-wins',
     '⚡ Quick Wins - Start Here for Fast Results',
-    '<p><strong>Why start here:</strong> These optimizations give you the biggest bang for your buck.</p><ul class="list-disc pl-5 mt-2 space-y-1 text-sm"><li>Each takes <strong>under 30 minutes</strong> to implement</li><li>High financial impact relative to effort</li><li>Often one-time fixes with permanent benefits</li></ul><p class="mt-3 text-sm"><strong>Pro tip:</strong> Block out 1 hour this week to knock out all the Quick Wins. You''ll see results within days.</p>',
+    '<p><strong>Why start here:</strong> These optimizations deliver the highest immediate impact to your bottom line.</p><ul class="list-disc pl-5 mt-2 space-y-1 text-sm"><li><strong>Immediate implementation</strong> - AI applies changes right away</li><li>High financial impact with minimal risk</li><li>Often one-time fixes with permanent benefits</li></ul><p class="mt-3 text-sm"><strong>Pro tip:</strong> Approve all Quick Wins first - you''ll see results within days and the AI handles everything automatically.</p>',
     '/account/google/ads/opportunities/demo',
     '#quickWins',
     'top',
@@ -170,8 +170,8 @@ INSERT INTO tutorial_popups (key, title, content, page_path, target_selector, po
 -- Optimization List
 (
     'demo-optimization-list',
-    '📋 Optimization List - Your Action Items',
-    '<p><strong>Why this section is powerful:</strong> Every line item is a specific, actionable fix with estimated value.</p><ul class="list-disc pl-5 mt-2 space-y-1 text-sm"><li><strong>Select the ones</strong> you want to implement</li><li><strong>See exactly what to do</strong> in the description</li><li><strong>Track the value</strong> of what you''re implementing</li></ul><p class="mt-3 text-sm bg-blue-50 p-2 rounded"><strong>💡 Smart approach:</strong> Start with Quick Wins, then tackle High Priority items. You don''t have to do everything at once.</p>',
+    '📋 Optimization List - Just Approve What You Want',
+    '<p><strong>Why this section is powerful:</strong> Every line item shows the exact financial impact and what the AI will change.</p><ul class="list-disc pl-5 mt-2 space-y-1 text-sm"><li><strong>Review the recommendations</strong> - see what changes AI will make</li><li><strong>Select the ones you want</strong> - you stay in control</li><li><strong>Track the total value</strong> - see cumulative impact as you select</li></ul><p class="mt-3 text-sm bg-blue-50 p-2 rounded"><strong>💡 How it works:</strong> Select → Click "Approve" → AI implements → You see results. Start with Quick Wins for fastest impact.</p>',
     '/account/google/ads/opportunities/demo',
     '#optimizationList',
     'top',
@@ -196,8 +196,8 @@ INSERT INTO tutorial_popups (key, title, content, page_path, target_selector, po
 -- Sticky Footer
 (
     'demo-sticky-footer',
-    '💎 Selection Tracker - Know Your Value',
-    '<p><strong>Why this is useful:</strong> As you select optimizations, this footer tracks your progress in real-time.</p><ul class="list-disc pl-5 mt-2 space-y-1 text-sm"><li><strong>Selected count:</strong> How many items you''ve chosen</li><li><strong>Est. time:</strong> Total implementation time needed</li><li><strong>Monthly value:</strong> Total financial impact of your selections</li></ul><p class="mt-3 text-sm bg-purple-50 p-2 rounded"><strong>🎯 Try it:</strong> Select a few optimizations above and watch this footer update!</p>',
+    '💎 Selection Tracker - Know Your Impact',
+    '<p><strong>Why this is useful:</strong> As you select optimizations, this footer shows the total value you''re about to unlock.</p><ul class="list-disc pl-5 mt-2 space-y-1 text-sm"><li><strong>Selected count:</strong> How many AI optimizations you''ve approved</li><li><strong>Est. time:</strong> How long until you see results (not your time - AI handles it)</li><li><strong>Monthly value:</strong> Total financial impact when AI completes the changes</li></ul><p class="mt-3 text-sm bg-purple-50 p-2 rounded"><strong>🎯 Try it:</strong> Select a few optimizations above and watch the total value grow!</p>',
     '/account/google/ads/opportunities/demo',
     '#stickyFooter',
     'top',

@@ -350,9 +350,17 @@
           <option value="savings">Sort by Savings</option>
           <option value="time">Sort by Time</option>
         </select>
-        <button id="selectAllMain" class="text-indigo-600 hover:bg-indigo-50 px-3 py-1 rounded font-medium">
-          Select All
-        </button>
+        <div class="border-l border-gray-300 pl-2 flex gap-2">
+          <button id="selectHighPriority" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded font-medium text-xs">
+            <i class="fa-solid fa-fire mr-1"></i>High Priority
+          </button>
+          <button id="selectQuickWins" class="text-green-600 hover:bg-green-50 px-3 py-1 rounded font-medium text-xs">
+            <i class="fa-solid fa-bolt mr-1"></i>Quick Wins
+          </button>
+          <button id="selectAllMain" class="text-indigo-600 hover:bg-indigo-50 px-3 py-1 rounded font-medium text-xs">
+            <i class="fa-solid fa-check-square mr-1"></i>Select All
+          </button>
+        </div>
       </div>
     </div>
 
@@ -547,6 +555,37 @@
   </div>
 </div>
 
+<!-- Sticky Footer (shows when items selected) -->
+<div id="stickyFooter" class="hidden fixed bottom-0 left-0 right-0 bg-gradient-to-r from-emerald-50 to-green-50 border-t-2 border-emerald-300 shadow-xl z-40">
+  <div class="max-w-7xl mx-auto px-4 py-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-6">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-check-circle text-green-600 text-xl"></i>
+          <span class="font-bold text-gray-900"><span id="footerSelectedCount">0</span> Selected</span>
+        </div>
+        <div class="text-sm text-gray-600">
+          <i class="fa-regular fa-clock mr-1"></i>
+          Est. time: <span id="footerTotalTime" class="font-semibold">0 min</span>
+        </div>
+        <div class="text-sm">
+          <span class="text-gray-600">Monthly value:</span>
+          <span id="footerTotalValue" class="font-bold text-purple-600 text-lg ml-1">$0</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="clearAllFooter" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition">
+          Clear All
+        </button>
+        <button id="openModalFromFooter" class="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-lg hover:from-green-600 hover:to-emerald-700 transition shadow-lg">
+          <i class="fa-solid fa-check-double mr-2"></i>
+          Review & Approve
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Optimization Approval Modal -->
 <div id="optimizationsModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 overflow-y-auto">
   <div class="min-h-screen px-4 py-8 flex items-center justify-center">
@@ -723,10 +762,52 @@
 
 <!-- JavaScript for Filtering/Sorting and Selection -->
 <script nonce="{{ g.csp_nonce }}">
-// Update selected count display
+// Update selected count display and sticky footer
 function updateSelectedCount() {
   const checkboxes = document.querySelectorAll('.optimization-checkbox:checked');
-  console.log(`${checkboxes.length} optimizations selected`);
+  const count = checkboxes.length;
+
+  console.log(`${count} optimizations selected`);
+
+  // Update sticky footer
+  const stickyFooter = document.getElementById('stickyFooter');
+  if (count > 0) {
+    // Calculate totals
+    let totalSavings = 0;
+    let totalLeads = 0;
+    let totalTime = 0; // in minutes
+
+    checkboxes.forEach(checkbox => {
+      totalSavings += parseFloat(checkbox.dataset.savings) || 0;
+      const leads = parseFloat(checkbox.dataset.leads) || 0;
+      totalLeads += leads;
+
+      // Parse time (e.g., "5 min", "2 hours")
+      const timeStr = checkbox.closest('.opportunity-item').dataset.time || '';
+      const match = timeStr.match(/(\d+)\s*(min|hour)/i);
+      if (match) {
+        const num = parseInt(match[1]);
+        const unit = match[2].toLowerCase();
+        totalTime += unit.startsWith('hour') ? num * 60 : num;
+      }
+    });
+
+    const totalLeadValue = totalLeads * 500; // $500 per lead
+    const totalCombined = totalSavings + totalLeadValue;
+
+    // Update footer UI
+    document.getElementById('footerSelectedCount').textContent = count;
+    document.getElementById('footerTotalTime').textContent = totalTime >= 60
+      ? `${Math.floor(totalTime / 60)}h ${totalTime % 60}min`
+      : `${totalTime} min`;
+    document.getElementById('footerTotalValue').textContent = '$' + Math.round(totalCombined).toLocaleString();
+
+    // Show footer
+    stickyFooter.classList.remove('hidden');
+  } else {
+    // Hide footer when nothing selected
+    stickyFooter.classList.add('hidden');
+  }
 }
 
 // Filter and sort opportunities
@@ -851,6 +932,34 @@ document.addEventListener('DOMContentLoaded', function() {
   if (approveButton) {
     approveButton.addEventListener('click', approveOptimizations);
   }
+
+  // Bulk selection buttons
+  const selectHighPriority = document.getElementById('selectHighPriority');
+  if (selectHighPriority) {
+    selectHighPriority.addEventListener('click', function() {
+      selectByPriority('high');
+    });
+  }
+
+  const selectQuickWinsBtn = document.getElementById('selectQuickWins');
+  if (selectQuickWinsBtn) {
+    selectQuickWinsBtn.addEventListener('click', function() {
+      selectQuickWinsOnly();
+    });
+  }
+
+  // Sticky footer buttons
+  const clearAllFooter = document.getElementById('clearAllFooter');
+  if (clearAllFooter) {
+    clearAllFooter.addEventListener('click', function() {
+      selectAllOptimizations(false);
+    });
+  }
+
+  const openModalFromFooter = document.getElementById('openModalFromFooter');
+  if (openModalFromFooter) {
+    openModalFromFooter.addEventListener('click', openOptimizationsModal);
+  }
 });
 
 function openOptimizationsModal() {
@@ -870,6 +979,31 @@ function selectAllOptimizations(checked) {
     checkbox.checked = checked;
   });
   updateTotals();
+  updateSelectedCount();
+}
+
+function selectByPriority(priority) {
+  const items = document.querySelectorAll('.opportunity-item');
+  items.forEach(item => {
+    const checkbox = item.querySelector('.optimization-checkbox');
+    if (checkbox) {
+      checkbox.checked = (item.dataset.priority === priority);
+    }
+  });
+  updateSelectedCount();
+}
+
+function selectQuickWinsOnly() {
+  const items = document.querySelectorAll('.opportunity-item');
+  items.forEach(item => {
+    const checkbox = item.querySelector('.optimization-checkbox');
+    if (checkbox) {
+      // Check if this optimization is marked as a quick win
+      const isQuickWin = item.textContent.includes('QUICK') || item.querySelector('.fa-bolt');
+      checkbox.checked = isQuickWin;
+    }
+  });
+  updateSelectedCount();
 }
 
 function updateTotals() {

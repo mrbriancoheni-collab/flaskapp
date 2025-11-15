@@ -576,6 +576,147 @@ def send_subscription_confirmation_email(user, subscription) -> bool:
     )
 
 
+def send_google_ads_optimizations_email(user, account, optimization_count, total_monthly_value, opportunities_url) -> bool:
+    """
+    Send email notification when new Google Ads optimizations are found.
+
+    Args:
+        user: User model instance
+        account: Account model instance
+        optimization_count: Number of optimizations found
+        total_monthly_value: Total monthly value of all optimizations
+        opportunities_url: Full URL to the optimizations page
+
+    Returns:
+        True if sent successfully
+    """
+    html_body = render_template_string("""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Google Ads Optimizations Found</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 8px 8px 0 0;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">💰 New Optimization Opportunities!</h1>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <p style="margin: 0 0 20px; font-size: 16px; line-height: 24px; color: #111827;">
+                                Hi <strong>{{ user.name }}</strong>,
+                            </p>
+
+                            <p style="margin: 0 0 20px; font-size: 16px; line-height: 24px; color: #111827;">
+                                Great news! We've analyzed your Google Ads account and found <strong>{{ optimization_count }} optimization{{ 's' if optimization_count != 1 else '' }}</strong> that could improve your campaign performance.
+                            </p>
+
+                            <!-- Value Highlight Box -->
+                            <div style="margin: 30px 0; padding: 24px; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-left: 4px solid #10b981; border-radius: 8px;">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 14px; color: #047857; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
+                                        Potential Monthly Value
+                                    </div>
+                                    <div style="font-size: 48px; font-weight: 800; color: #047857; margin: 0;">
+                                        ${{ "{:,.0f}".format(total_monthly_value) }}
+                                    </div>
+                                    <div style="font-size: 14px; color: #059669; margin-top: 8px;">
+                                        From savings + new revenue opportunities
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="margin: 30px 0; padding: 20px; background-color: #f3f4f6; border-radius: 8px;">
+                                <h3 style="margin: 0 0 15px; font-size: 18px; color: #111827; text-align: center;">What's included:</h3>
+                                <ul style="margin: 0; padding-left: 20px; color: #4b5563;">
+                                    <li style="margin-bottom: 10px;">High-impact optimizations to reduce wasted spend</li>
+                                    <li style="margin-bottom: 10px;">Opportunities to improve Quality Score and lower CPC</li>
+                                    <li style="margin-bottom: 10px;">Missing ad extensions that can boost conversions</li>
+                                    <li>Step-by-step implementation guides for each optimization</li>
+                                </ul>
+                            </div>
+
+                            <!-- CTA Button -->
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="center" style="padding: 20px 0;">
+                                        <a href="{{ opportunities_url }}" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 18px; font-weight: 700; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
+                                            Review Optimizations →
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="margin: 20px 0 0; font-size: 14px; line-height: 22px; color: #6b7280; text-align: center;">
+                                💡 <strong>Pro Tip:</strong> Start with high-priority items marked with a 🔥 for the biggest impact.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px 40px; text-align: center; background-color: #f9fafb; border-radius: 0 0 8px 8px;">
+                            <p style="margin: 0 0 10px; font-size: 12px; color: #9ca3af;">
+                                This analysis was automatically generated for <strong>{{ account.name }}</strong>
+                            </p>
+                            <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                                © {{ year }} FieldSprout. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+    """, user=user, account=account, optimization_count=optimization_count,
+    total_monthly_value=total_monthly_value, opportunities_url=opportunities_url, year=2025)
+
+    text_body = f"""
+New Google Ads Optimization Opportunities Found!
+
+Hi {user.name},
+
+Great news! We've analyzed your Google Ads account and found {optimization_count} optimization{'s' if optimization_count != 1 else ''} that could improve your campaign performance.
+
+Potential Monthly Value: ${total_monthly_value:,.0f}
+From savings + new revenue opportunities
+
+What's included:
+- High-impact optimizations to reduce wasted spend
+- Opportunities to improve Quality Score and lower CPC
+- Missing ad extensions that can boost conversions
+- Step-by-step implementation guides for each optimization
+
+Review your optimizations here:
+{opportunities_url}
+
+Pro Tip: Start with high-priority items for the biggest impact.
+
+This analysis was automatically generated for {account.name}
+
+© 2025 FieldSprout. All rights reserved.
+    """
+
+    return send_email(
+        to=user.email,
+        subject=f"💰 {optimization_count} Google Ads Optimizations Found (${total_monthly_value:,.0f}/mo potential)",
+        html_body=html_body,
+        text_body=text_body
+    )
+
+
 def send_payment_failed_email(user, subscription) -> bool:
     """Send email when payment fails."""
     html_body = render_template_string("""

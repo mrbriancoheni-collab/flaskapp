@@ -1350,6 +1350,14 @@ def create_app():
         from flask import current_app
         return {"app": current_app, "config": current_app.config}
 
+    # ---- Register CLI commands ---------------------------------------------
+    try:
+        from app.commands import register_commands
+        register_commands(app)
+        app.logger.info("CLI commands registered (run-agents)")
+    except Exception as e:
+        app.logger.warning(f"Failed to register CLI commands: {e}")
+
     return app
 
 

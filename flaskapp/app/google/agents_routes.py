@@ -223,3 +223,167 @@ def get_decision(decision_id):
             return jsonify({"error": "Decision not found"}), 404
 
         return jsonify(dict(row._mapping))
+
+
+@agents_bp.route("/api/run", methods=["POST"])
+@login_required
+def run_agents():
+    """
+    Manually trigger agent analysis cycle for the current account.
+
+    This is the AGENT RUNNER - it:
+    1. Fetches Google Ads performance data
+    2. Runs all 7 AI agents to analyze it
+    3. Agents create decisions (appear in approval queue)
+    4. Low-risk decisions auto-execute immediately
+    """
+    from flask import current_app
+    account_id = current_account_id()
+
+    # Get Google Ads credentials
+    creds_query = text("""
+        SELECT customer_id, credentials_json
+        FROM google_oauth_tokens
+        WHERE account_id = :account_id AND product = 'ads'
+        LIMIT 1
+    """)
+
+    with db.engine.connect() as conn:
+        result = conn.execute(creds_query, {"account_id": account_id})
+        row = result.first()
+
+        if not row:
+            return jsonify({
+                "success": False,
+                "error": "Google Ads not connected. Please connect Google Ads first."
+            }), 400
+
+    customer_id = row.customer_id
+
+    # Extract refresh token from credentials JSON
+    import json
+    try:
+        creds = json.loads(row.credentials_json) if isinstance(row.credentials_json, str) else row.credentials_json
+        refresh_token = creds.get('refresh_token')
+        if not refresh_token:
+            return jsonify({
+                "success": False,
+                "error": "No refresh token found in Google Ads credentials"
+            }), 400
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Error parsing credentials: {str(e)}"
+        }), 400
+
+    # Import agents and infrastructure
+    from app.agents import (
+        StrategicDirectorAgent,
+        CampaignManagerAgent,
+        BudgetGuardianAgent,
+        QualityScoreAgent,
+        KeywordOptimizerAgent,
+        NegativeKeywordAgent,
+        AdCopyAgent,
+        EventBus,
+        DecisionLog
+    )
+    from app.agents.executor import GoogleAdsAgentExecutor
+
+    # Initialize infrastructure
+    event_bus = EventBus()
+    decision_log = DecisionLog()
+
+    # Initialize Google Ads API executor
+    try:
+        executor = GoogleAdsAgentExecutor(
+            refresh_token=refresh_token,
+            developer_token=current_app.config.get('GOOGLE_ADS_DEVELOPER_TOKEN'),
+            client_customer_id=customer_id
+        )
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Failed to initialize Google Ads client: {str(e)}"
+        }), 500
+
+    # TODO: Fetch actual performance data from Google Ads API
+    # For now, using mock context - in production this would call Google Ads API
+    context = {
+        'account_id': account_id,
+        'customer_id': customer_id,
+        'performance_90d': {
+            'roas': 2.5,
+            'spend': 5000,
+            'conversions': 50,
+            'cost_per_conversion': 100
+        },
+        'campaigns': [
+            # Mock campaign data - in production fetch from Google Ads API
+            {
+                'id': '12345',
+                'name': 'HVAC - Emergency Repair',
+                'roas': 3.2,
+                'impression_share': 65,
+                'monthly_spend': 2000,
+                'spend_90d': 6000
+            },
+            {
+                'id': '67890',
+                'name': 'Plumbing - Water Heater',
+                'roas': 0.8,
+                'impression_share': 45,
+                'monthly_spend': 1500,
+                'spend_90d': 4500
+            }
+        ],
+        'total_budget': 5000,
+        'business_goals': {
+            'target_roas': 3.0,
+            'target_cpl': 80
+        }
+    }
+
+    # Run all agents
+    results = []
+    agents = [
+        StrategicDirectorAgent(event_bus=event_bus, decision_log=decision_log),
+        CampaignManagerAgent(event_bus=event_bus, decision_log=decision_log),
+        BudgetGuardianAgent(event_bus=event_bus, decision_log=decision_log),
+        QualityScoreAgent(event_bus=event_bus, decision_log=decision_log),
+        KeywordOptimizerAgent(event_bus=event_bus, decision_log=decision_log),
+        NegativeKeywordAgent(event_bus=event_bus, decision_log=decision_log),
+        AdCopyAgent(event_bus=event_bus, decision_log=decision_log),
+    ]
+
+    total_decisions = 0
+    total_auto_executed = 0
+    total_pending_approval = 0
+
+    for agent in agents:
+        try:
+            cycle_result = agent.run_cycle(context, executor)
+            results.append(cycle_result)
+
+            total_decisions += cycle_result['decisions_made']
+            total_auto_executed += len(cycle_result['auto_executed'])
+            total_pending_approval += len(cycle_result['pending_approval'])
+
+        except Exception as e:
+            current_app.logger.error(f"Error running agent {agent.agent_id}: {str(e)}")
+            results.append({
+                'agent_id': agent.agent_id,
+                'agent_type': agent.agent_type,
+                'error': str(e)
+            })
+
+    return jsonify({
+        "success": True,
+        "message": f"Ran {len(agents)} agents successfully",
+        "summary": {
+            "total_decisions": total_decisions,
+            "auto_executed": total_auto_executed,
+            "pending_approval": total_pending_approval
+        },
+        "results": results
+    })

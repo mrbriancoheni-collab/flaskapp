@@ -14,6 +14,14 @@
             <p class="text-gray-600">Review and approve high-risk decisions from your AI agents</p>
         </div>
         <div class="flex items-center space-x-4">
+            <button
+                onclick="runAgentsNow()"
+                id="runAgentsBtn"
+                class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg"
+            >
+                <i class="fa-solid fa-play mr-2"></i>
+                Run Agents Now
+            </button>
             <a href="{{ url_for('agents_bp.dashboard') }}" class="text-indigo-600 hover:text-indigo-800 font-semibold">
                 <i class="fa-solid fa-chart-line mr-1"></i>
                 View Dashboard
@@ -239,6 +247,45 @@ function rejectDecision(decisionId) {
     })
     .catch(error => {
         alert('Error rejecting decision: ' + error);
+    });
+}
+
+function runAgentsNow() {
+    const btn = document.getElementById('runAgentsBtn');
+    const originalText = btn.innerHTML;
+
+    // Disable button and show loading state
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Running Agents...';
+
+    fetch('/account/google/ads/agents/api/run', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const summary = data.summary;
+            alert(
+                `Agents ran successfully!\n\n` +
+                `Total Decisions: ${summary.total_decisions}\n` +
+                `Auto-Executed: ${summary.auto_executed}\n` +
+                `Pending Approval: ${summary.pending_approval}\n\n` +
+                `Reloading page to show new decisions...`
+            );
+            location.reload();
+        } else {
+            alert('Error running agents: ' + (data.error || 'Unknown error'));
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        alert('Error running agents: ' + error);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     });
 }
 </script>

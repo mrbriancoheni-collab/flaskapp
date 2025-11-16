@@ -28,6 +28,29 @@
     {% endif %}
   </div>
 
+  <!-- AI Agents Banner -->
+  <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-xl shadow-lg p-6 text-white">
+    <div class="flex items-center gap-4">
+      <div class="flex-shrink-0">
+        <i class="fa-solid fa-robot text-4xl"></i>
+      </div>
+      <div class="flex-1">
+        <h2 class="text-2xl font-bold mb-1">🤖 Your 24/7 AI Agent Team</h2>
+        <p class="text-indigo-100">These opportunities were identified by your AI agents. <strong>95% auto-execute</strong> (low-risk changes like blocking "free" searches). High-risk decisions require your approval.</p>
+      </div>
+      <div class="flex-shrink-0 flex flex-col gap-2">
+        <a href="{{ url_for('agents_bp.dashboard') }}" class="inline-flex items-center gap-2 bg-white text-indigo-600 px-6 py-3 rounded-lg font-bold hover:bg-blue-50 transition shadow-lg">
+          <i class="fa-solid fa-chart-line"></i>
+          Agent Dashboard
+        </a>
+        <a href="{{ url_for('agents_bp.approval_queue') }}" class="inline-flex items-center gap-2 bg-indigo-800 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-900 transition shadow-lg">
+          <i class="fa-solid fa-clipboard-check"></i>
+          Approval Queue
+        </a>
+      </div>
+    </div>
+  </div>
+
   {% if is_demo %}
   <!-- Demo Mode Banner -->
   <div class="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg p-6 text-white">

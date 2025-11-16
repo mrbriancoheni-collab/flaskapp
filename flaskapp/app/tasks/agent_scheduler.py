@@ -1,0 +1,221 @@
+"""
+Agent Scheduler - Runs AI agents periodically for all active accounts.
+
+This module provides functions to run agents on a schedule:
+- Strategic agents: Daily at 6am
+- Operational agents: Every 4 hours
+- Tactical agents: Hourly
+
+Usage:
+    flask run-agents --layer tactical
+    flask run-agents --layer operational
+    flask run-agents --layer strategic
+    flask run-agents --all
+"""
+import os
+from datetime import datetime
+from typing import List, Dict, Any
+from sqlalchemy import text
+from flask import current_app
+
+
+def run_agents_for_all_accounts(layer: str = 'all'):
+    """
+    Run AI agents for all active accounts with Google Ads connected.
+
+    Args:
+        layer: Which layer to run ('strategic', 'operational', 'tactical', or 'all')
+    """
+    from app import db
+
+    # Get all active accounts with Google Ads connected
+    query = text("""
+        SELECT DISTINCT
+            a.id as account_id,
+            got.customer_id,
+            got.credentials_json
+        FROM accounts a
+        JOIN google_oauth_tokens got ON a.id = got.account_id
+        WHERE got.product = 'ads'
+          AND a.plan IN ('pro', 'team', 'enterprise')
+          AND (a.stripe_status IN ('active', 'trialing') OR a.plan = 'enterprise')
+    """)
+
+    with db.engine.connect() as conn:
+        accounts = [dict(row._mapping) for row in conn.execute(query)]
+
+    print(f"Running {layer} agents for {len(accounts)} accounts...")
+
+    success_count = 0
+    error_count = 0
+
+    for account in accounts:
+        try:
+            run_agents_for_account(
+                account_id=account['account_id'],
+                customer_id=account['customer_id'],
+                credentials_json=account['credentials_json'],
+                layer=layer
+            )
+            success_count += 1
+            print(f"✓ Account {account['account_id']} completed")
+        except Exception as e:
+            error_count += 1
+            print(f"✗ Account {account['account_id']} failed: {str(e)}")
+
+    print(f"\nCompleted: {success_count} succeeded, {error_count} failed")
+    return success_count, error_count
+
+
+def run_agents_for_account(
+    account_id: int,
+    customer_id: str,
+    credentials_json: Any,
+    layer: str = 'all'
+):
+    """
+    Run agents for a single account.
+
+    Args:
+        account_id: Account ID
+        customer_id: Google Ads customer ID
+        credentials_json: Google Ads credentials (JSON or dict)
+        layer: Which layer to run ('strategic', 'operational', 'tactical', or 'all')
+    """
+    from app import db
+    import json
+
+    # Extract refresh token from credentials
+    if isinstance(credentials_json, str):
+        creds = json.loads(credentials_json)
+    else:
+        creds = credentials_json
+
+    refresh_token = creds.get('refresh_token')
+    if not refresh_token:
+        raise ValueError(f"No refresh token for account {account_id}")
+
+    # Import agents
+    from app.agents import (
+        StrategicDirectorAgent,
+        CampaignManagerAgent,
+        BudgetGuardianAgent,
+        QualityScoreAgent,
+        KeywordOptimizerAgent,
+        NegativeKeywordAgent,
+        AdCopyAgent,
+        EventBus,
+        DecisionLog
+    )
+    from app.agents.executor import GoogleAdsAgentExecutor
+
+    # Initialize infrastructure
+    event_bus = EventBus()
+    decision_log = DecisionLog()
+
+    # Initialize Google Ads client
+    try:
+        executor = GoogleAdsAgentExecutor(
+            refresh_token=refresh_token,
+            developer_token=current_app.config.get('GOOGLE_ADS_DEVELOPER_TOKEN'),
+            client_customer_id=customer_id
+        )
+    except Exception as e:
+        raise RuntimeError(f"Failed to initialize Google Ads client: {str(e)}")
+
+    # TODO: Fetch real performance data from Google Ads API
+    # For now using mock data - in production this would call the API
+    context = {
+        'account_id': account_id,
+        'customer_id': customer_id,
+        'performance_90d': {
+            'roas': 2.5,
+            'spend': 5000,
+            'conversions': 50
+        },
+        'campaigns': [],
+        'total_budget': 5000,
+        'business_goals': {
+            'target_roas': 3.0,
+            'target_cpl': 80
+        }
+    }
+
+    # Select agents based on layer
+    if layer == 'strategic':
+        agents = [
+            StrategicDirectorAgent(event_bus=event_bus, decision_log=decision_log),
+        ]
+    elif layer == 'operational':
+        agents = [
+            CampaignManagerAgent(event_bus=event_bus, decision_log=decision_log),
+            BudgetGuardianAgent(event_bus=event_bus, decision_log=decision_log),
+            QualityScoreAgent(event_bus=event_bus, decision_log=decision_log),
+        ]
+    elif layer == 'tactical':
+        agents = [
+            KeywordOptimizerAgent(event_bus=event_bus, decision_log=decision_log),
+            NegativeKeywordAgent(event_bus=event_bus, decision_log=decision_log),
+            AdCopyAgent(event_bus=event_bus, decision_log=decision_log),
+        ]
+    else:  # 'all'
+        agents = [
+            StrategicDirectorAgent(event_bus=event_bus, decision_log=decision_log),
+            CampaignManagerAgent(event_bus=event_bus, decision_log=decision_log),
+            BudgetGuardianAgent(event_bus=event_bus, decision_log=decision_log),
+            QualityScoreAgent(event_bus=event_bus, decision_log=decision_log),
+            KeywordOptimizerAgent(event_bus=event_bus, decision_log=decision_log),
+            NegativeKeywordAgent(event_bus=event_bus, decision_log=decision_log),
+            AdCopyAgent(event_bus=event_bus, decision_log=decision_log),
+        ]
+
+    # Run agents and log execution
+    for agent in agents:
+        try:
+            result = agent.run_cycle(context, executor)
+
+            # Log execution to database
+            log_query = text("""
+                INSERT INTO agent_execution_log
+                (account_id, agent_id, agent_type, cycle_start, cycle_duration_seconds,
+                 opportunities_found, decisions_made, auto_executed, pending_approval, status)
+                VALUES
+                (:account_id, :agent_id, :agent_type, :cycle_start, :cycle_duration,
+                 :opportunities, :decisions, :auto_exec, :pending, :status)
+            """)
+
+            with db.engine.begin() as conn:
+                conn.execute(log_query, {
+                    'account_id': account_id,
+                    'agent_id': result['agent_id'],
+                    'agent_type': result['agent_type'],
+                    'cycle_start': result['cycle_start'],
+                    'cycle_duration': result['cycle_duration_seconds'],
+                    'opportunities': result['opportunities_found'],
+                    'decisions': result['decisions_made'],
+                    'auto_exec': len(result['auto_executed']),
+                    'pending': len(result['pending_approval']),
+                    'status': 'completed'
+                })
+
+            print(f"  ✓ {agent.agent_type}: {result['decisions_made']} decisions")
+
+        except Exception as e:
+            # Log error to database
+            error_query = text("""
+                INSERT INTO agent_execution_log
+                (account_id, agent_id, agent_type, cycle_start, status, error_message)
+                VALUES
+                (:account_id, :agent_id, :agent_type, NOW(), 'failed', :error)
+            """)
+
+            with db.engine.begin() as conn:
+                conn.execute(error_query, {
+                    'account_id': account_id,
+                    'agent_id': agent.agent_id,
+                    'agent_type': agent.agent_type,
+                    'error': str(e)
+                })
+
+            print(f"  ✗ {agent.agent_type} failed: {str(e)}")
+            raise

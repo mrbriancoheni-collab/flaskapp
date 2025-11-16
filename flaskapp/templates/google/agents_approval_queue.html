@@ -1,0 +1,292 @@
+{% extends "base_app.html" %}
+
+{% block title %}AI Agent Approval Queue - FieldSprout{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                <i class="fa-solid fa-robot text-indigo-600 mr-2"></i>
+                AI Agent Approval Queue
+            </h1>
+            <p class="text-gray-600">Review and approve high-risk decisions from your AI agents</p>
+        </div>
+        <div class="flex items-center space-x-4">
+            <button
+                onclick="runAgentsNow()"
+                id="runAgentsBtn"
+                class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg"
+            >
+                <i class="fa-solid fa-play mr-2"></i>
+                Run Agents Now
+            </button>
+            <a href="{{ url_for('agents_bp.dashboard') }}" class="text-indigo-600 hover:text-indigo-800 font-semibold">
+                <i class="fa-solid fa-chart-line mr-1"></i>
+                View Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-600 text-sm">Total Pending</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ total_pending }}</p>
+                </div>
+                <i class="fa-solid fa-clock text-gray-400 text-3xl"></i>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-600 text-sm">Critical</p>
+                    <p class="text-3xl font-bold text-red-600">{{ decisions_by_risk.critical|length }}</p>
+                </div>
+                <i class="fa-solid fa-triangle-exclamation text-red-400 text-3xl"></i>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-600 text-sm">High Risk</p>
+                    <p class="text-3xl font-bold text-orange-600">{{ decisions_by_risk.high|length }}</p>
+                </div>
+                <i class="fa-solid fa-exclamation text-orange-400 text-3xl"></i>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-600 text-sm">Medium Risk</p>
+                    <p class="text-3xl font-bold text-yellow-600">{{ decisions_by_risk.medium|length }}</p>
+                </div>
+                <i class="fa-solid fa-info-circle text-yellow-400 text-3xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Critical Decisions -->
+    {% if decisions_by_risk.critical %}
+    <div class="mb-8">
+        <h2 class="text-2xl font-bold text-red-600 mb-4">
+            <i class="fa-solid fa-triangle-exclamation mr-2"></i>
+            Critical Decisions ({{ decisions_by_risk.critical|length }})
+        </h2>
+        {% for decision in decisions_by_risk.critical %}
+            {{ render_decision_card(decision, 'critical') }}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- High Risk Decisions -->
+    {% if decisions_by_risk.high %}
+    <div class="mb-8">
+        <h2 class="text-2xl font-bold text-orange-600 mb-4">
+            <i class="fa-solid fa-exclamation mr-2"></i>
+            High Risk Decisions ({{ decisions_by_risk.high|length }})
+        </h2>
+        {% for decision in decisions_by_risk.high %}
+            {{ render_decision_card(decision, 'high') }}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Medium Risk Decisions -->
+    {% if decisions_by_risk.medium %}
+    <div class="mb-8">
+        <h2 class="text-2xl font-bold text-yellow-600 mb-4">
+            <i class="fa-solid fa-info-circle mr-2"></i>
+            Medium Risk Decisions ({{ decisions_by_risk.medium|length }})
+        </h2>
+        {% for decision in decisions_by_risk.medium %}
+            {{ render_decision_card(decision, 'medium') }}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if total_pending == 0 %}
+    <div class="bg-white rounded-lg shadow-lg p-12 text-center">
+        <i class="fa-solid fa-check-circle text-green-500 text-6xl mb-4"></i>
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">All Caught Up!</h2>
+        <p class="text-gray-600">No pending decisions requiring your approval. Your AI agents are working autonomously.</p>
+        <a href="{{ url_for('agents_bp.dashboard') }}" class="inline-block mt-6 bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700">
+            View Agent Dashboard
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Decision Card Macro -->
+{% macro render_decision_card(decision, risk_class) %}
+<div class="bg-white rounded-lg shadow-lg p-6 mb-4 border-l-4 {% if risk_class == 'critical' %}border-red-500{% elif risk_class == 'high' %}border-orange-500{% elif risk_class == 'medium' %}border-yellow-500{% else %}border-blue-500{% endif %}">
+    <div class="flex items-start justify-between mb-4">
+        <div class="flex-1">
+            <div class="flex items-center space-x-2 mb-2">
+                <span class="px-2 py-1 text-xs font-semibold rounded {% if risk_class == 'critical' %}bg-red-100 text-red-800{% elif risk_class == 'high' %}bg-orange-100 text-orange-800{% elif risk_class == 'medium' %}bg-yellow-100 text-yellow-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                    {{ decision.agent_type }}
+                </span>
+                <span class="px-2 py-1 text-xs font-semibold rounded bg-gray-100 text-gray-800">
+                    {{ decision.decision_type|replace('_', ' ')|title }}
+                </span>
+                <span class="text-xs text-gray-500">
+                    Confidence: {{ "%.0f"|format(decision.confidence * 100) }}%
+                </span>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">{{ decision.title }}</h3>
+            <p class="text-gray-700 mb-3">{{ decision.description }}</p>
+
+            <!-- Reasoning -->
+            <div class="bg-gray-50 rounded p-3 mb-3">
+                <p class="text-sm text-gray-600"><span class="font-semibold">Reasoning:</span> {{ decision.reasoning }}</p>
+            </div>
+
+            <!-- Expected Impact -->
+            <div class="flex items-center space-x-6 text-sm">
+                {% if decision.expected_monthly_savings %}
+                <div class="flex items-center text-green-600">
+                    <i class="fa-solid fa-piggy-bank mr-1"></i>
+                    <span class="font-semibold">${{ "%.0f"|format(decision.expected_monthly_savings) }}/mo savings</span>
+                </div>
+                {% endif %}
+                {% if decision.expected_monthly_leads %}
+                <div class="flex items-center text-blue-600">
+                    <i class="fa-solid fa-user-plus mr-1"></i>
+                    <span class="font-semibold">+{{ decision.expected_monthly_leads }} leads/mo</span>
+                </div>
+                {% endif %}
+                {% if decision.expected_improvement_pct %}
+                <div class="flex items-center text-purple-600">
+                    <i class="fa-solid fa-arrow-up mr-1"></i>
+                    <span class="font-semibold">+{{ "%.0f"|format(decision.expected_improvement_pct) }}% improvement</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex flex-col space-y-2 ml-6">
+            <button
+                onclick="approveDecision({{ decision.id }})"
+                class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition flex items-center justify-center"
+            >
+                <i class="fa-solid fa-check mr-2"></i>
+                Approve
+            </button>
+            <button
+                onclick="rejectDecision({{ decision.id }})"
+                class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition flex items-center justify-center"
+            >
+                <i class="fa-solid fa-times mr-2"></i>
+                Reject
+            </button>
+        </div>
+    </div>
+
+    <!-- Metadata -->
+    <div class="flex items-center text-xs text-gray-500 space-x-4 pt-3 border-t">
+        <span><i class="fa-solid fa-clock mr-1"></i>Created {{ decision.created_at.strftime('%b %d, %Y %I:%M %p') if decision.created_at else 'Unknown' }}</span>
+        {% if decision.campaign_id %}
+        <span><i class="fa-solid fa-bullhorn mr-1"></i>Campaign ID: {{ decision.campaign_id }}</span>
+        {% endif %}
+    </div>
+</div>
+{% endmacro %}
+
+<script>
+function approveDecision(decisionId) {
+    if (!confirm('Are you sure you want to approve this decision? This action will execute the change in Google Ads.')) {
+        return;
+    }
+
+    fetch(`/account/google/ads/agents/api/decisions/${decisionId}/approve`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Decision approved successfully!');
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        alert('Error approving decision: ' + error);
+    });
+}
+
+function rejectDecision(decisionId) {
+    const reason = prompt('Why are you rejecting this decision? (Optional)');
+    if (reason === null) return; // User canceled
+
+    fetch(`/account/google/ads/agents/api/decisions/${decisionId}/reject`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason: reason || 'User rejected' })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Decision rejected');
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        alert('Error rejecting decision: ' + error);
+    });
+}
+
+function runAgentsNow() {
+    const btn = document.getElementById('runAgentsBtn');
+    const originalText = btn.innerHTML;
+
+    // Disable button and show loading state
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Running Agents...';
+
+    fetch('/account/google/ads/agents/api/run', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const summary = data.summary;
+            alert(
+                `Agents ran successfully!\n\n` +
+                `Total Decisions: ${summary.total_decisions}\n` +
+                `Auto-Executed: ${summary.auto_executed}\n` +
+                `Pending Approval: ${summary.pending_approval}\n\n` +
+                `Reloading page to show new decisions...`
+            );
+            location.reload();
+        } else {
+            alert('Error running agents: ' + (data.error || 'Unknown error'));
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        alert('Error running agents: ' + error);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+}
+</script>
+{% endblock %}

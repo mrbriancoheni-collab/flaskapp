@@ -507,6 +507,13 @@ def create_app():
         app.logger.exception("Failed to import google_bp")
 
     try:
+        from app.google.agents_routes import agents_bp
+        app.register_blueprint(agents_bp)
+        app.logger.info("agents_bp registered at /account/google/ads/agents")
+    except Exception:
+        app.logger.exception("Failed to import/register agents_bp")
+
+    try:
         from app.glsa import glsa_bp
         app.register_blueprint(glsa_bp, url_prefix="/account/glsa")
         app.logger.info("glsa_bp registered at /account/glsa")
@@ -617,6 +624,13 @@ def create_app():
         app.logger.info("admin_bp registered")
     except Exception:
         app.logger.exception("Failed to register admin_bp")
+
+    try:
+        from app.admin.agent_config_routes import agent_config_bp
+        app.register_blueprint(agent_config_bp)  # url_prefix=/admin/agents
+        app.logger.info("agent_config_bp registered at /admin/agents")
+    except Exception:
+        app.logger.exception("Failed to register agent_config_bp")
 
     # --- Email Tracking (public endpoints for pixel and click tracking) ----
     try:
@@ -1342,6 +1356,14 @@ def create_app():
     def inject_app_and_config():
         from flask import current_app
         return {"app": current_app, "config": current_app.config}
+
+    # ---- Register CLI commands ---------------------------------------------
+    try:
+        from app.commands import register_commands
+        register_commands(app)
+        app.logger.info("CLI commands registered (run-agents)")
+    except Exception as e:
+        app.logger.warning(f"Failed to register CLI commands: {e}")
 
     return app
 

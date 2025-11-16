@@ -132,6 +132,7 @@ class BaseAgent(ABC):
         auto_execute_threshold: float = 0.95,
         event_bus: Optional[Any] = None,
         decision_log: Optional[Any] = None,
+        account_id: Optional[int] = None,
     ):
         """
         Initialize agent.
@@ -142,6 +143,7 @@ class BaseAgent(ABC):
             auto_execute_threshold: Confidence threshold for auto-execution
             event_bus: Event bus for inter-agent communication
             decision_log: Decision log for tracking all decisions
+            account_id: Account ID for loading account-specific configuration
         """
         self.agent_id = agent_id
         self.agent_type = self.__class__.__name__
@@ -149,10 +151,45 @@ class BaseAgent(ABC):
         self.auto_execute_threshold = auto_execute_threshold
         self.event_bus = event_bus
         self.decision_log = decision_log
+        self.account_id = account_id
+
+        # Load configuration from database (global or account-specific)
+        self.config = self._load_configuration(account_id)
+
+        # Apply configuration overrides
+        if not self.config.get('enabled', True):
+            # Agent is disabled for this account
+            pass  # Could raise exception or just skip analysis
+
+        if 'auto_execute_threshold' in self.config:
+            self.auto_execute_threshold = self.config['auto_execute_threshold']
+
+        self.custom_prompt = self.config.get('custom_prompt')
+        self.risk_overrides = self.config.get('risk_overrides', {})
+        self.business_rules = self.config.get('business_rules', [])
 
         # Learning
         self.confidence_model = {}  # Track prediction accuracy per decision type
         self.last_analysis_time = None
+
+    def _load_configuration(self, account_id: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Load agent configuration from database.
+
+        Tries account-specific first, falls back to global defaults.
+        """
+        try:
+            from app.admin.agent_config_routes import get_agent_configuration
+            return get_agent_configuration(self.agent_id, account_id)
+        except Exception:
+            # If loading fails, return defaults
+            return {
+                'enabled': True,
+                'auto_execute_threshold': self.auto_execute_threshold,
+                'custom_prompt': None,
+                'risk_overrides': {},
+                'business_rules': []
+            }
 
     @abstractmethod
     def analyze(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -179,6 +216,74 @@ class BaseAgent(ABC):
             List of decisions to take
         """
         pass
+
+    def apply_configuration_to_decision(self, decision: AgentDecision, context: Dict[str, Any] = None) -> AgentDecision:
+        """
+        Apply agent configuration to a decision (risk overrides, business rules).
+
+        This should be called by subclasses after creating a decision.
+        """
+        # Apply risk level override
+        if decision.decision_type in self.risk_overrides:
+            override_risk = self.risk_overrides[decision.decision_type]
+            decision.risk_level = DecisionRiskLevel(override_risk)
+
+            # Update requires_approval based on risk level
+            if decision.risk_level == DecisionRiskLevel.LOW:
+                decision.requires_approval = False
+            else:
+                decision.requires_approval = True
+
+        # Apply business rules
+        if context:
+            for rule in self.business_rules:
+                if self._evaluate_business_rule(rule, context, decision):
+                    action = rule.get('then', '')
+
+                    if action == 'require_approval':
+                        decision.requires_approval = True
+                    elif action == 'auto_execute':
+                        decision.requires_approval = False
+                    elif action.startswith('set_risk_'):
+                        risk_level = action.replace('set_risk_', '')
+                        decision.risk_level = DecisionRiskLevel(risk_level)
+
+        return decision
+
+    def _evaluate_business_rule(self, rule: Dict, context: Dict[str, Any], decision: AgentDecision) -> bool:
+        """Evaluate if a business rule applies to this context/decision."""
+        condition = rule.get('if', '')
+
+        if not condition:
+            return False
+
+        try:
+            # Create evaluation context with both campaign context and decision data
+            eval_context = {
+                **context,
+                'decision_type': decision.decision_type,
+                'confidence': decision.confidence,
+                'expected_savings': decision.expected_monthly_savings or 0,
+            }
+
+            # Simple safe expression evaluation
+            # TODO: Replace with proper safe expression evaluator
+            import re
+            allowed_pattern = r'^[\w\s\.\(\)<>=!&|+\-*/]+$'
+
+            if not re.match(allowed_pattern, condition):
+                return False
+
+            # Replace variables
+            for key, value in eval_context.items():
+                condition = condition.replace(key, str(value))
+
+            # Evaluate
+            result = eval(condition)
+            return bool(result)
+
+        except Exception:
+            return False
 
     def execute(self, decision: AgentDecision, google_ads_client: Any) -> Dict[str, Any]:
         """

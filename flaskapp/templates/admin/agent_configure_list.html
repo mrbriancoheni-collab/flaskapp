@@ -1,0 +1,64 @@
+{% extends "base_app.html" %}
+
+{% block title %}AI Agent Configuration - Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6">
+        <i class="fa-solid fa-robot text-indigo-600 mr-2"></i>
+        AI Agent Configuration
+    </h1>
+
+    <!-- Global Configurations -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h2 class="text-2xl font-bold mb-4">Global Default Settings</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b-2 border-gray-200">
+                        <th class="text-left py-3 px-4">Agent</th>
+                        <th class="text-center py-3 px-4">Enabled</th>
+                        <th class="text-center py-3 px-4">Auto-Execute Threshold</th>
+                        <th class="text-right py-3 px-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for config in global_configs %}
+                    <tr class="border-b border-gray-100">
+                        <td class="py-4 px-4 font-semibold">{{ config.agent_id }}</td>
+                        <td class="text-center py-4 px-4">
+                            <span class="px-2 py-1 rounded text-xs {% if config.enabled %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ 'Enabled' if config.enabled else 'Disabled' }}
+                            </span>
+                        </td>
+                        <td class="text-center py-4 px-4">{{ "%.0f"|format(config.auto_execute_threshold * 100) }}%</td>
+                        <td class="text-right py-4 px-4">
+                            <a href="{{ url_for('agent_config_bp.configure_global', agent_id=config.agent_id) }}" class="text-indigo-600 hover:text-indigo-800">
+                                <i class="fa-solid fa-edit"></i> Configure
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Account-Specific Overrides -->
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-2xl font-bold mb-4">Account-Specific Overrides</h2>
+        <p class="text-gray-600 mb-4">Configure agents differently for specific accounts (overrides global settings)</p>
+
+        <div class="space-y-2">
+            {% for account in accounts[:10] %}
+            <div class="flex items-center justify-between p-3 border border-gray-200 rounded hover:bg-gray-50">
+                <span class="font-semibold">{{ account.name }}</span>
+                <a href="{{ url_for('agent_config_bp.configure_account', account_id=account.id, agent_id='strategic_director') }}" class="text-indigo-600 hover:text-indigo-800 text-sm">
+                    <i class="fa-solid fa-cog"></i> Configure Agents
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

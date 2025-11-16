@@ -172,11 +172,20 @@ class CampaignManagerAgent(BaseAgent):
 
     def _adjust_campaign_bids(self, decision: AgentDecision, client: Any) -> Dict[str, Any]:
         """Adjust campaign-level bids."""
+        from .executor import GoogleAdsAgentExecutor
+
+        if isinstance(client, GoogleAdsAgentExecutor):
+            return client.adjust_campaign_bids(
+                campaign_id=decision.campaign_id,
+                bid_change_pct=decision.action_data['bid_change_pct']
+            )
+
+        # Fallback mock response
         return {
             'success': True,
             'campaign_id': decision.campaign_id,
             'bid_change_pct': decision.action_data['bid_change_pct'],
-            'keywords_updated': 42  # Mock
+            'keywords_updated': 0
         }
 
 
@@ -314,6 +323,18 @@ class BudgetGuardianAgent(BaseAgent):
 
     def _execute_impl(self, decision: AgentDecision, google_ads_client: Any) -> Dict[str, Any]:
         """Execute budget protection decisions."""
+        from .executor import GoogleAdsAgentExecutor
+
+        if isinstance(google_ads_client, GoogleAdsAgentExecutor):
+            if decision.decision_type == 'adjust_daily_budget':
+                return google_ads_client.adjust_daily_budget(
+                    campaign_id=decision.campaign_id,
+                    new_daily_budget=decision.action_data['new_daily_budget']
+                )
+            elif decision.decision_type == 'emergency_pause':
+                return google_ads_client.pause_campaign(campaign_id=decision.campaign_id)
+
+        # Fallback mock response
         if decision.decision_type == 'adjust_daily_budget':
             return {
                 'success': True,

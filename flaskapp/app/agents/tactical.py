@@ -176,18 +176,38 @@ class KeywordOptimizerAgent(BaseAgent):
 
     def _execute_impl(self, decision: AgentDecision, google_ads_client: Any) -> Dict[str, Any]:
         """Execute keyword optimizations."""
+        from .executor import GoogleAdsAgentExecutor
+
         decision_type = decision.decision_type
 
+        if isinstance(google_ads_client, GoogleAdsAgentExecutor):
+            if decision_type == 'pause_keyword':
+                return google_ads_client.pause_keyword(
+                    ad_group_id=decision.ad_group_id or '',
+                    keyword_id=decision.action_data['keyword_id']
+                )
+            elif decision_type == 'adjust_keyword_bid':
+                return google_ads_client.adjust_keyword_bid(
+                    ad_group_id=decision.ad_group_id or '',
+                    keyword_id=decision.action_data['keyword_id'],
+                    bid_change_pct=decision.action_data['bid_change_pct']
+                )
+            elif decision_type == 'add_keyword':
+                return google_ads_client.add_keyword(
+                    ad_group_id=decision.ad_group_id or '',
+                    keyword_text=decision.action_data['keyword_text'],
+                    match_type=decision.action_data['match_type']
+                )
+
+        # Fallback mock responses
         if decision_type == 'pause_keyword':
             return {'success': True, 'keyword_id': decision.action_data['keyword_id'], 'status': 'PAUSED'}
-
         elif decision_type == 'adjust_keyword_bid':
             return {
                 'success': True,
                 'keyword_id': decision.action_data['keyword_id'],
                 'bid_change_pct': decision.action_data['bid_change_pct']
             }
-
         elif decision_type == 'add_keyword':
             return {
                 'success': True,
@@ -312,6 +332,15 @@ class NegativeKeywordAgent(BaseAgent):
 
     def _execute_impl(self, decision: AgentDecision, google_ads_client: Any) -> Dict[str, Any]:
         """Execute negative keyword additions."""
+        from .executor import GoogleAdsAgentExecutor
+
+        if isinstance(google_ads_client, GoogleAdsAgentExecutor):
+            return google_ads_client.add_negative_keyword(
+                campaign_id=decision.campaign_id or '',
+                keyword_text=decision.action_data['keyword_text'],
+                match_type=decision.action_data['match_type']
+            )
+
         return {
             'success': True,
             'negative_keyword': decision.action_data['keyword_text'],
@@ -446,8 +475,15 @@ class AdCopyAgent(BaseAgent):
 
     def _execute_impl(self, decision: AgentDecision, google_ads_client: Any) -> Dict[str, Any]:
         """Execute ad copy changes."""
+        from .executor import GoogleAdsAgentExecutor
+
         decision_type = decision.decision_type
 
+        if isinstance(google_ads_client, GoogleAdsAgentExecutor):
+            if decision_type == 'pause_ad':
+                return google_ads_client.pause_ad(ad_id=decision.action_data['ad_id'])
+
+        # Fallback mock responses
         if decision_type == 'create_ad_variations':
             # In production, would use AI to generate ad copy
             return {
@@ -455,7 +491,6 @@ class AdCopyAgent(BaseAgent):
                 'ad_group_id': decision.action_data['ad_group_id'],
                 'ads_created': decision.action_data['variations_needed']
             }
-
         elif decision_type == 'pause_ad':
             return {
                 'success': True,

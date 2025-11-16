@@ -1,0 +1,224 @@
+{% extends "base_app.html" %}
+
+{% block title %}AI Agent Dashboard - FieldSprout{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                <i class="fa-solid fa-chart-line text-indigo-600 mr-2"></i>
+                AI Agent Performance Dashboard
+            </h1>
+            <p class="text-gray-600">Monitor your autonomous AI agents optimizing your Google Ads</p>
+        </div>
+        <div class="flex items-center space-x-4">
+            <a href="{{ url_for('agents_bp.approval_queue') }}" class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 font-semibold">
+                <i class="fa-solid fa-clipboard-check mr-2"></i>
+                Approval Queue
+            </a>
+        </div>
+    </div>
+
+    <!-- Overall Metrics -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-indigo-100 text-sm mb-1">Total Decisions</p>
+                    <p class="text-4xl font-bold">{{ total_decisions }}</p>
+                </div>
+                <i class="fa-solid fa-brain text-white opacity-20 text-5xl"></i>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-green-500 to-teal-600 rounded-lg shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-green-100 text-sm mb-1">Executed</p>
+                    <p class="text-4xl font-bold">{{ total_executed }}</p>
+                </div>
+                <i class="fa-solid fa-check-circle text-white opacity-20 text-5xl"></i>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-blue-100 text-sm mb-1">Monthly Savings</p>
+                    <p class="text-4xl font-bold">${{ "%.0f"|format(total_savings) }}</p>
+                </div>
+                <i class="fa-solid fa-piggy-bank text-white opacity-20 text-5xl"></i>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-orange-500 to-red-600 rounded-lg shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-orange-100 text-sm mb-1">Extra Leads/mo</p>
+                    <p class="text-4xl font-bold">+{{ total_leads }}</p>
+                </div>
+                <i class="fa-solid fa-user-plus text-white opacity-20 text-5xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent Performance by Type -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">
+            <i class="fa-solid fa-users mr-2"></i>
+            Agent Performance by Type
+        </h2>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b-2 border-gray-200">
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Agent Type</th>
+                        <th class="text-center py-3 px-4 font-semibold text-gray-700">Total Decisions</th>
+                        <th class="text-center py-3 px-4 font-semibold text-gray-700">Executed</th>
+                        <th class="text-center py-3 px-4 font-semibold text-gray-700">Approved</th>
+                        <th class="text-center py-3 px-4 font-semibold text-gray-700">Avg Confidence</th>
+                        <th class="text-center py-3 px-4 font-semibold text-gray-700">Avg Accuracy</th>
+                        <th class="text-right py-3 px-4 font-semibold text-gray-700">Expected Savings</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in agent_stats %}
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="py-4 px-4">
+                            <span class="font-semibold text-gray-900">{{ stat.agent_type }}</span>
+                        </td>
+                        <td class="text-center py-4 px-4 text-gray-700">{{ stat.total_decisions }}</td>
+                        <td class="text-center py-4 px-4">
+                            <span class="text-green-600 font-semibold">{{ stat.executed_count }}</span>
+                        </td>
+                        <td class="text-center py-4 px-4">
+                            <span class="text-blue-600 font-semibold">{{ stat.approved_count }}</span>
+                        </td>
+                        <td class="text-center py-4 px-4">
+                            <span class="font-semibold">{{ "%.0f"|format((stat.avg_confidence or 0) * 100) }}%</span>
+                        </td>
+                        <td class="text-center py-4 px-4">
+                            {% if stat.avg_accuracy %}
+                            <span class="font-semibold {% if stat.avg_accuracy > 0.8 %}text-green-600{% elif stat.avg_accuracy > 0.6 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                                {{ "%.0f"|format(stat.avg_accuracy * 100) }}%
+                            </span>
+                            {% else %}
+                            <span class="text-gray-400">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-right py-4 px-4">
+                            <span class="text-green-600 font-semibold">${{ "%.0f"|format(stat.total_expected_savings or 0) }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <!-- Auto-Execution Stats -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">
+                <i class="fa-solid fa-bolt mr-2"></i>
+                Auto-Executed Decisions
+            </h2>
+
+            <div class="space-y-3">
+                {% for stat in auto_exec_stats %}
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                    <div>
+                        <p class="font-semibold text-gray-900">{{ stat.decision_type|replace('_', ' ')|title }}</p>
+                        <p class="text-sm text-gray-600">Confidence: {{ "%.0f"|format((stat.avg_confidence or 0) * 100) }}%</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-2xl font-bold text-indigo-600">{{ stat.count }}</p>
+                        <p class="text-xs text-gray-500">${{ "%.0f"|format(stat.total_savings or 0) }} saved</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">
+                <i class="fa-solid fa-history mr-2"></i>
+                Recent Activity
+            </h2>
+
+            <div class="space-y-3 max-h-96 overflow-y-auto">
+                {% for activity in recent_activity %}
+                <div class="flex items-start space-x-3 p-3 border-b border-gray-100">
+                    <div class="flex-shrink-0">
+                        {% if activity.status == 'executed' %}
+                        <i class="fa-solid fa-check-circle text-green-500 text-xl"></i>
+                        {% elif activity.status == 'approved' %}
+                        <i class="fa-solid fa-thumbs-up text-blue-500 text-xl"></i>
+                        {% elif activity.status == 'rejected' %}
+                        <i class="fa-solid fa-times-circle text-red-500 text-xl"></i>
+                        {% else %}
+                        <i class="fa-solid fa-clock text-gray-400 text-xl"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-semibold text-gray-900 text-sm">{{ activity.title }}</p>
+                        <div class="flex items-center space-x-3 mt-1">
+                            <span class="text-xs text-gray-500">{{ activity.agent_type }}</span>
+                            <span class="text-xs px-2 py-0.5 rounded {% if activity.status == 'executed' %}bg-green-100 text-green-800{% elif activity.status == 'approved' %}bg-blue-100 text-blue-800{% elif activity.status == 'rejected' %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ activity.status }}
+                            </span>
+                            <span class="text-xs text-gray-500">{{ activity.created_at.strftime('%b %d') if activity.created_at else '' }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent Explanations -->
+    <div class="bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-xl shadow-lg p-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">
+            <i class="fa-solid fa-robot text-indigo-600 mr-2"></i>
+            Your AI Agent Team
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Strategic Layer -->
+            <div class="bg-white rounded-lg p-6 shadow">
+                <h3 class="text-lg font-bold text-indigo-600 mb-3">Strategic Layer</h3>
+                <ul class="space-y-2 text-sm text-gray-700">
+                    <li><i class="fa-solid fa-chess-king text-indigo-600 mr-2"></i>Strategic Director</li>
+                    <li class="text-xs text-gray-600 ml-6">Budget allocation, scaling, quarterly goals</li>
+                </ul>
+            </div>
+
+            <!-- Operational Layer -->
+            <div class="bg-white rounded-lg p-6 shadow">
+                <h3 class="text-lg font-bold text-blue-600 mb-3">Operational Layer</h3>
+                <ul class="space-y-2 text-sm text-gray-700">
+                    <li><i class="fa-solid fa-chart-line text-blue-600 mr-2"></i>Campaign Manager</li>
+                    <li><i class="fa-solid fa-shield text-blue-600 mr-2"></i>Budget Guardian</li>
+                    <li><i class="fa-solid fa-star text-blue-600 mr-2"></i>Quality Score Doctor</li>
+                    <li class="text-xs text-gray-600 ml-6">Daily monitoring, anomaly detection</li>
+                </ul>
+            </div>
+
+            <!-- Tactical Layer -->
+            <div class="bg-white rounded-lg p-6 shadow">
+                <h3 class="text-lg font-bold text-green-600 mb-3">Tactical Layer</h3>
+                <ul class="space-y-2 text-sm text-gray-700">
+                    <li><i class="fa-solid fa-key text-green-600 mr-2"></i>Keyword Optimizer</li>
+                    <li><i class="fa-solid fa-ban text-green-600 mr-2"></i>Negative Keyword Agent</li>
+                    <li><i class="fa-solid fa-pen text-green-600 mr-2"></i>Ad Copy Scientist</li>
+                    <li class="text-xs text-gray-600 ml-6">Keyword bids, ad testing, waste blocking</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

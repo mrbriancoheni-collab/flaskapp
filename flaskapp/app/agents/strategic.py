@@ -248,8 +248,16 @@ class StrategicDirectorAgent(BaseAgent):
 
     def _reallocate_budget(self, decision: AgentDecision, client: Any) -> Dict[str, Any]:
         """Reallocate budget from losing to winning campaigns."""
-        # Implementation would use Google Ads API to update campaign budgets
-        # For now, return a mock result
+        from .executor import GoogleAdsAgentExecutor
+
+        if isinstance(client, GoogleAdsAgentExecutor):
+            return client.reallocate_budget(
+                from_campaigns=decision.action_data['from_campaigns'],
+                to_campaigns=decision.action_data['to_campaigns'],
+                amount=decision.action_data['amount']
+            )
+
+        # Fallback mock result
         return {
             'success': True,
             'from_campaigns_updated': len(decision.action_data['from_campaigns']),
@@ -259,6 +267,14 @@ class StrategicDirectorAgent(BaseAgent):
 
     def _scale_campaign(self, decision: AgentDecision, client: Any) -> Dict[str, Any]:
         """Increase campaign budget."""
+        from .executor import GoogleAdsAgentExecutor
+
+        if isinstance(client, GoogleAdsAgentExecutor):
+            return client.scale_campaign_budget(
+                campaign_id=decision.campaign_id,
+                new_budget=decision.action_data['new_budget']
+            )
+
         return {
             'success': True,
             'campaign_id': decision.campaign_id,
@@ -268,6 +284,11 @@ class StrategicDirectorAgent(BaseAgent):
 
     def _pause_campaign(self, decision: AgentDecision, client: Any) -> Dict[str, Any]:
         """Pause a campaign."""
+        from .executor import GoogleAdsAgentExecutor
+
+        if isinstance(client, GoogleAdsAgentExecutor):
+            return client.pause_campaign(campaign_id=decision.campaign_id)
+
         return {
             'success': True,
             'campaign_id': decision.campaign_id,

@@ -38,6 +38,7 @@
         <h2 class="text-2xl font-bold mb-1">🤖 Your 24/7 AI Agent Team</h2>
         <p class="text-indigo-100">These opportunities were identified by your AI agents. <strong>95% auto-execute</strong> (low-risk changes like blocking "free" searches). High-risk decisions require your approval.</p>
       </div>
+      {% if not is_demo %}
       <div class="flex-shrink-0 flex flex-col gap-2">
         <a href="{{ url_for('agents_bp.dashboard') }}" class="inline-flex items-center gap-2 bg-white text-indigo-600 px-6 py-3 rounded-lg font-bold hover:bg-blue-50 transition shadow-lg">
           <i class="fa-solid fa-chart-line"></i>
@@ -48,6 +49,14 @@
           Approval Queue
         </a>
       </div>
+      {% else %}
+      <div class="flex-shrink-0">
+        <a href="{{ url_for('auth_bp.signup') }}" class="inline-flex items-center gap-2 bg-white text-indigo-600 px-6 py-3 rounded-lg font-bold hover:bg-blue-50 transition shadow-lg">
+          <i class="fa-solid fa-rocket mr-1"></i>
+          Start Free Trial
+        </a>
+      </div>
+      {% endif %}
     </div>
   </div>
 

@@ -54,3 +54,4 @@ instance/
 Thumbs.db
 .env.ads_grader
 .env
+/tmp/

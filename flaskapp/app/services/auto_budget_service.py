@@ -528,3 +528,160 @@ class AutoBudgetService:
                     notif['metadata'] = None
 
         return notifications
+
+    def calculate_budget_adjustments_for_group(
+        self,
+        account_id: int,
+        customer_id: str,
+        budget_group: Dict[str, Any],
+        group_campaigns: List[Dict[str, Any]],
+        seasonality_data: Optional[Dict[str, float]] = None,
+        capacity_utilization: Optional[float] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Calculate recommended budget adjustments for a specific budget group.
+
+        Args:
+            account_id: Account ID
+            customer_id: Google Ads customer ID
+            budget_group: Budget group settings dict
+            group_campaigns: List of campaigns in this group
+            seasonality_data: Optional seasonality multipliers by campaign
+            capacity_utilization: Optional capacity utilization (0-100)
+
+        Returns:
+            List of recommended adjustments
+        """
+        if not budget_group.get('enabled'):
+            return []
+
+        monthly_target = float(budget_group['monthly_budget_target'])
+        perf_weight = float(budget_group.get('performance_weight', 0.70))
+        season_weight = float(budget_group.get('seasonality_weight', 0.20))
+        capacity_weight = float(budget_group.get('capacity_weight', 0.10))
+
+        # Calculate month progress
+        now = datetime.now()
+        days_in_month = 30  # Simplified
+        current_day = now.day
+        days_remaining = days_in_month - current_day
+        elapsed_pct = current_day / days_in_month
+
+        # Calculate total spend so far this month for this group
+        total_spend_mtd = sum(c.get('spend_mtd', 0) for c in group_campaigns)
+
+        # Project end-of-month spend if we continue at current pace
+        total_daily_avg = sum(c.get('daily_spend_avg_7d', 0) for c in group_campaigns)
+        projected_total_spend = total_spend_mtd + (total_daily_avg * days_remaining)
+
+        # Remaining budget to allocate
+        remaining_budget = monthly_target - total_spend_mtd
+
+        if remaining_budget <= 0:
+            # Already over budget - reduce all campaigns proportionally
+            return self._create_reduction_plan_for_group(
+                group_campaigns,
+                budget_group
+            )
+
+        # Score each campaign for budget allocation
+        scored_campaigns = []
+        for campaign in group_campaigns:
+            score = self._calculate_campaign_score(
+                campaign,
+                perf_weight,
+                season_weight,
+                capacity_weight,
+                seasonality_data,
+                capacity_utilization
+            )
+            scored_campaigns.append({
+                'campaign': campaign,
+                'score': score
+            })
+
+        # Sort by score (highest first)
+        scored_campaigns.sort(key=lambda x: x['score'], reverse=True)
+
+        # Calculate total score
+        total_score = sum(sc['score'] for sc in scored_campaigns)
+
+        if total_score == 0:
+            return []
+
+        # Allocate remaining budget based on scores
+        adjustments = []
+        for sc in scored_campaigns:
+            campaign = sc['campaign']
+            score = sc['score']
+
+            # Calculate this campaign's share of remaining budget
+            budget_share = (score / total_score) * remaining_budget
+
+            # Convert to daily budget
+            recommended_daily = budget_share / days_remaining if days_remaining > 0 else 0
+
+            # Apply min/max constraints
+            min_daily = float(budget_group.get('min_daily_budget', 10))
+            max_daily = float(budget_group.get('max_daily_budget', 1000))
+            recommended_daily = max(min_daily, min(max_daily, recommended_daily))
+
+            current_daily = campaign.get('daily_budget', 0)
+
+            if abs(recommended_daily - current_daily) > 5:  # Only adjust if >$5 difference
+                change_pct = ((recommended_daily - current_daily) / current_daily * 100) if current_daily > 0 else 0
+
+                adjustments.append({
+                    'budget_group_id': budget_group['id'],
+                    'budget_group_name': budget_group['name'],
+                    'campaign_id': campaign['id'],
+                    'campaign_name': campaign.get('name', ''),
+                    'current_daily_budget': current_daily,
+                    'recommended_daily_budget': recommended_daily,
+                    'change_amount': recommended_daily - current_daily,
+                    'change_pct': change_pct,
+                    'reason': self._get_adjustment_reason(campaign, score, projected_total_spend, monthly_target),
+                    'score': score
+                })
+
+        return adjustments
+
+    def _create_reduction_plan_for_group(
+        self,
+        campaigns: List[Dict[str, Any]],
+        budget_group: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """Create a plan to reduce budgets for a specific budget group when over target."""
+
+        adjustments = []
+        min_daily = float(budget_group.get('min_daily_budget', 10))
+
+        for campaign in campaigns:
+            current_daily = campaign.get('daily_budget', 0)
+            roas = campaign.get('roas_7d', 0)
+
+            # Reduce more for low-performing campaigns
+            if roas < 1.0:
+                reduction_pct = 40  # Reduce by 40%
+            elif roas < 2.0:
+                reduction_pct = 25  # Reduce by 25%
+            else:
+                reduction_pct = 10  # Reduce by 10% even for good performers
+
+            new_daily = current_daily * (1 - reduction_pct / 100)
+            new_daily = max(min_daily, new_daily)
+
+            adjustments.append({
+                'budget_group_id': budget_group['id'],
+                'budget_group_name': budget_group['name'],
+                'campaign_id': campaign['id'],
+                'campaign_name': campaign.get('name', ''),
+                'current_daily_budget': current_daily,
+                'recommended_daily_budget': new_daily,
+                'change_amount': new_daily - current_daily,
+                'change_pct': -reduction_pct,
+                'reason': f"Overspend prevention for {budget_group['name']}: Reduce budget {reduction_pct}% (ROAS: {roas:.2f}x)",
+                'score': 0
+            })
+
+        return adjustments

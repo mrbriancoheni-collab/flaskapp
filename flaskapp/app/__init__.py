@@ -469,6 +469,13 @@ def create_app():
         app.logger.exception("Failed to import/register competitive_bp")
 
     try:
+        from app.account.budget_groups_routes import budget_groups_bp
+        app.register_blueprint(budget_groups_bp)
+        app.logger.info("budget_groups_bp registered at /account/budget-groups")
+    except Exception:
+        app.logger.exception("Failed to import/register budget_groups_bp")
+
+    try:
         from app.onboarding_bp import onboarding_bp
         app.register_blueprint(onboarding_bp)
         app.logger.info("onboarding_bp registered")

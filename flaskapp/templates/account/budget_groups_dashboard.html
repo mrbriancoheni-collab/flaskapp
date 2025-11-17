@@ -1,0 +1,539 @@
+{% extends "base_dash.html" %}
+
+{% block title %}Budget Groups{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-8 flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Budget Groups</h1>
+            <p class="text-gray-600">Create multiple budgets and assign campaigns to each group</p>
+        </div>
+        <button id="btnCreateGroup" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md">
+            <i class="fa-solid fa-plus mr-2"></i>Create Budget Group
+        </button>
+    </div>
+
+    <!-- Budget Groups List -->
+    <div id="groupsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <p class="text-gray-500 col-span-full text-center py-12">Loading budget groups...</p>
+    </div>
+</div>
+
+<!-- Create/Edit Budget Group Modal -->
+<div id="modalGroup" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b">
+            <h2 id="modalTitle" class="text-2xl font-bold text-gray-900">Create Budget Group</h2>
+        </div>
+
+        <div class="p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Group Name *</label>
+                <input type="text" id="inputName" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="e.g., HVAC Campaigns Budget">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea id="inputDescription" class="w-full px-3 py-2 border border-gray-300 rounded-md" rows="2" placeholder="Optional description"></textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Monthly Budget Target * ($)</label>
+                    <input type="number" id="inputMonthlyBudget" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="5000" step="100">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Color</label>
+                    <input type="color" id="inputColor" class="w-full h-10 px-2 border border-gray-300 rounded-md" value="#3B82F6">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Min Daily Budget ($)</label>
+                    <input type="number" id="inputMinDaily" class="w-full px-3 py-2 border border-gray-300 rounded-md" value="10" step="5">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Max Daily Budget ($)</label>
+                    <input type="number" id="inputMaxDaily" class="w-full px-3 py-2 border border-gray-300 rounded-md" value="1000" step="50">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Industry (for seasonality)</label>
+                <select id="inputIndustry" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    <option value="hvac_heating">HVAC - Heating</option>
+                    <option value="hvac_cooling">HVAC - Cooling</option>
+                    <option value="plumbing_general">Plumbing - General</option>
+                    <option value="plumbing_emergency">Plumbing - Emergency</option>
+                    <option value="electrical">Electrical</option>
+                    <option value="roofing">Roofing</option>
+                    <option value="landscaping">Landscaping</option>
+                    <option value="snow_removal">Snow Removal</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Adjustment Frequency</label>
+                <select id="inputFrequency" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    <option value="hourly">Hourly</option>
+                    <option value="daily" selected>Daily</option>
+                    <option value="weekly">Weekly</option>
+                </select>
+            </div>
+
+            <div class="flex items-center">
+                <input type="checkbox" id="inputEnabled" checked class="rounded mr-2">
+                <label for="inputEnabled" class="text-sm text-gray-700">Enabled (auto-adjust budgets)</label>
+            </div>
+
+            <div class="flex items-center">
+                <input type="checkbox" id="inputNotifications" checked class="rounded mr-2">
+                <label for="inputNotifications" class="text-sm text-gray-700">Send notifications</label>
+            </div>
+        </div>
+
+        <div class="p-6 border-t flex justify-end space-x-3">
+            <button id="btnCancelModal" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                Cancel
+            </button>
+            <button id="btnSaveGroup" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md">
+                <span id="btnSaveText">Create Budget Group</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Manage Campaigns Modal -->
+<div id="modalCampaigns" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b">
+            <h2 id="modalCampaignsTitle" class="text-2xl font-bold text-gray-900">Manage Campaigns</h2>
+        </div>
+
+        <div class="p-6">
+            <div class="grid grid-cols-2 gap-6">
+                <!-- Assigned Campaigns -->
+                <div>
+                    <h3 class="font-semibold text-gray-900 mb-3">Assigned Campaigns (<span id="countAssigned">0</span>)</h3>
+                    <div id="assignedCampaigns" class="space-y-2 max-h-96 overflow-y-auto">
+                        <p class="text-gray-500 text-sm">Loading...</p>
+                    </div>
+                </div>
+
+                <!-- Available Campaigns -->
+                <div>
+                    <h3 class="font-semibold text-gray-900 mb-3">Available Campaigns (<span id="countAvailable">0</span>)</h3>
+                    <div id="availableCampaigns" class="space-y-2 max-h-96 overflow-y-auto">
+                        <p class="text-gray-500 text-sm">Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 border-t flex justify-end">
+            <button id="btnCloseCampaignsModal" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const CUSTOMER_ID = 'demo-customer';  // TODO: Get from user context
+    let currentGroupId = null;
+    let allCampaigns = [];  // Mock data for now
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadBudgetGroups();
+        setupEventListeners();
+        loadMockCampaigns();  // TODO: Replace with real Google Ads API call
+    });
+
+    function setupEventListeners() {
+        document.getElementById('btnCreateGroup').addEventListener('click', () => openGroupModal());
+        document.getElementById('btnCancelModal').addEventListener('click', closeGroupModal);
+        document.getElementById('btnSaveGroup').addEventListener('click', saveGroup);
+        document.getElementById('btnCloseCampaignsModal').addEventListener('click', closeCampaignsModal);
+    }
+
+    async function loadBudgetGroups() {
+        try {
+            const response = await fetch(`/account/budget-groups/api/groups?customer_id=${CUSTOMER_ID}`);
+            const data = await response.json();
+
+            if (data.success && data.groups.length > 0) {
+                renderBudgetGroups(data.groups);
+            } else {
+                document.getElementById('groupsContainer').innerHTML = `
+                    <div class="col-span-full text-center py-12">
+                        <i class="fa-solid fa-layer-group text-6xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500 mb-4">No budget groups yet. Create your first one!</p>
+                        <button onclick="openGroupModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md">
+                            <i class="fa-solid fa-plus mr-2"></i>Create Budget Group
+                        </button>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading budget groups:', error);
+            document.getElementById('groupsContainer').innerHTML = `
+                <p class="text-red-500 col-span-full text-center">Error loading budget groups: ${error.message}</p>
+            `;
+        }
+    }
+
+    function renderBudgetGroups(groups) {
+        const html = groups.map(group => `
+            <div class="bg-white rounded-lg shadow-md p-6 border-l-4" style="border-left-color: ${group.color}">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">${escapeHtml(group.name)}</h3>
+                        ${group.description ? `<p class="text-sm text-gray-600 mt-1">${escapeHtml(group.description)}</p>` : ''}
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="editGroup(${group.id})" class="text-blue-600 hover:text-blue-800" title="Edit">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button onclick="deleteGroup(${group.id}, '${escapeHtml(group.name)}')" class="text-red-600 hover:text-red-800" title="Delete">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-600">Monthly Budget</span>
+                            <span class="font-medium">$${formatNumber(group.monthly_budget_target)}</span>
+                        </div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-600">MTD Spend</span>
+                            <span class="font-medium ${group.mtd_spend > group.monthly_budget_target ? 'text-red-600' : 'text-green-600'}">
+                                $${formatNumber(group.mtd_spend || 0)}
+                            </span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                            <div class="bg-blue-600 h-2 rounded-full" style="width: ${Math.min(100, (group.mtd_spend / group.monthly_budget_target * 100))}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t">
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-gray-600">${group.campaign_count || 0} Campaigns</span>
+                            <button onclick="manageCampaigns(${group.id}, '${escapeHtml(group.name)}')" class="text-blue-600 hover:text-blue-800 font-medium">
+                                Manage <i class="fa-solid fa-arrow-right ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs px-2 py-1 rounded-full ${group.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}">
+                                ${group.enabled ? 'Auto-Adjust ON' : 'Auto-Adjust OFF'}
+                            </span>
+                            <span class="text-xs text-gray-500">${group.industry.replace('_', ' ')}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        document.getElementById('groupsContainer').innerHTML = html;
+    }
+
+    function openGroupModal(groupId = null) {
+        currentGroupId = groupId;
+
+        if (groupId) {
+            // Edit mode - load group data
+            document.getElementById('modalTitle').textContent = 'Edit Budget Group';
+            document.getElementById('btnSaveText').textContent = 'Save Changes';
+            loadGroupData(groupId);
+        } else {
+            // Create mode - reset form
+            document.getElementById('modalTitle').textContent = 'Create Budget Group';
+            document.getElementById('btnSaveText').textContent = 'Create Budget Group';
+            resetGroupForm();
+        }
+
+        document.getElementById('modalGroup').classList.remove('hidden');
+    }
+
+    function closeGroupModal() {
+        document.getElementById('modalGroup').classList.add('hidden');
+        currentGroupId = null;
+    }
+
+    function resetGroupForm() {
+        document.getElementById('inputName').value = '';
+        document.getElementById('inputDescription').value = '';
+        document.getElementById('inputMonthlyBudget').value = '';
+        document.getElementById('inputMinDaily').value = '10';
+        document.getElementById('inputMaxDaily').value = '1000';
+        document.getElementById('inputIndustry').value = 'hvac_heating';
+        document.getElementById('inputFrequency').value = 'daily';
+        document.getElementById('inputColor').value = '#3B82F6';
+        document.getElementById('inputEnabled').checked = true;
+        document.getElementById('inputNotifications').checked = true;
+    }
+
+    async function loadGroupData(groupId) {
+        try {
+            const response = await fetch(`/account/budget-groups/api/groups/${groupId}`);
+            const data = await response.json();
+
+            if (data.success) {
+                const group = data.group;
+                document.getElementById('inputName').value = group.name || '';
+                document.getElementById('inputDescription').value = group.description || '';
+                document.getElementById('inputMonthlyBudget').value = group.monthly_budget_target || '';
+                document.getElementById('inputMinDaily').value = group.min_daily_budget || 10;
+                document.getElementById('inputMaxDaily').value = group.max_daily_budget || 1000;
+                document.getElementById('inputIndustry').value = group.industry || 'hvac_heating';
+                document.getElementById('inputFrequency').value = group.adjustment_frequency || 'daily';
+                document.getElementById('inputColor').value = group.color || '#3B82F6';
+                document.getElementById('inputEnabled').checked = group.enabled;
+                document.getElementById('inputNotifications').checked = group.send_notifications;
+            }
+        } catch (error) {
+            console.error('Error loading group data:', error);
+            alert('Error loading group data');
+        }
+    }
+
+    async function saveGroup() {
+        const name = document.getElementById('inputName').value.trim();
+        const monthlyBudget = parseFloat(document.getElementById('inputMonthlyBudget').value);
+
+        if (!name || !monthlyBudget || monthlyBudget <= 0) {
+            alert('Please fill in all required fields');
+            return;
+        }
+
+        const data = {
+            customer_id: CUSTOMER_ID,
+            name: name,
+            description: document.getElementById('inputDescription').value.trim(),
+            monthly_budget_target: monthlyBudget,
+            min_daily_budget: parseFloat(document.getElementById('inputMinDaily').value),
+            max_daily_budget: parseFloat(document.getElementById('inputMaxDaily').value),
+            industry: document.getElementById('inputIndustry').value,
+            adjustment_frequency: document.getElementById('inputFrequency').value,
+            color: document.getElementById('inputColor').value,
+            enabled: document.getElementById('inputEnabled').checked,
+            send_notifications: document.getElementById('inputNotifications').checked,
+            performance_weight: 0.70,
+            seasonality_weight: 0.20,
+            capacity_weight: 0.10
+        };
+
+        try {
+            const url = currentGroupId
+                ? `/account/budget-groups/api/groups/${currentGroupId}`
+                : '/account/budget-groups/api/groups';
+
+            const method = currentGroupId ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                closeGroupModal();
+                loadBudgetGroups();
+                alert(result.message);
+            } else {
+                alert('Error: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error saving group:', error);
+            alert('Error saving budget group');
+        }
+    }
+
+    async function editGroup(groupId) {
+        openGroupModal(groupId);
+    }
+
+    async function deleteGroup(groupId, groupName) {
+        if (!confirm(`Are you sure you want to delete "${groupName}"? All campaign assignments will be removed.`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/account/budget-groups/api/groups/${groupId}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                loadBudgetGroups();
+                alert(result.message);
+            } else {
+                alert('Error: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error deleting group:', error);
+            alert('Error deleting budget group');
+        }
+    }
+
+    async function manageCampaigns(groupId, groupName) {
+        currentGroupId = groupId;
+        document.getElementById('modalCampaignsTitle').textContent = `Manage Campaigns - ${groupName}`;
+        document.getElementById('modalCampaigns').classList.remove('hidden');
+
+        await loadCampaignsForGroup(groupId);
+    }
+
+    function closeCampaignsModal() {
+        document.getElementById('modalCampaigns').classList.add('hidden');
+        currentGroupId = null;
+        loadBudgetGroups();  // Refresh to show updated campaign counts
+    }
+
+    async function loadCampaignsForGroup(groupId) {
+        try {
+            // Load assigned campaigns
+            const assignedResponse = await fetch(`/account/budget-groups/api/groups/${groupId}/campaigns`);
+            const assignedData = await assignedResponse.json();
+
+            if (assignedData.success) {
+                renderAssignedCampaigns(assignedData.campaigns);
+            }
+
+            // Load unassigned campaigns
+            const unassignedResponse = await fetch('/account/budget-groups/api/unassigned-campaigns', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    customer_id: CUSTOMER_ID,
+                    campaigns: allCampaigns
+                })
+            });
+
+            const unassignedData = await unassignedResponse.json();
+
+            if (unassignedData.success) {
+                renderAvailableCampaigns(unassignedData.campaigns);
+            }
+        } catch (error) {
+            console.error('Error loading campaigns:', error);
+        }
+    }
+
+    function renderAssignedCampaigns(campaigns) {
+        document.getElementById('countAssigned').textContent = campaigns.length;
+
+        if (campaigns.length === 0) {
+            document.getElementById('assignedCampaigns').innerHTML = '<p class="text-gray-500 text-sm">No campaigns assigned yet</p>';
+            return;
+        }
+
+        const html = campaigns.map(camp => `
+            <div class="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded">
+                <span class="text-sm text-gray-900">${escapeHtml(camp.campaign_name)}</span>
+                <button onclick="unassignCampaign('${camp.campaign_id}')" class="text-red-600 hover:text-red-800 text-sm">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+        `).join('');
+
+        document.getElementById('assignedCampaigns').innerHTML = html;
+    }
+
+    function renderAvailableCampaigns(campaigns) {
+        document.getElementById('countAvailable').textContent = campaigns.length;
+
+        if (campaigns.length === 0) {
+            document.getElementById('availableCampaigns').innerHTML = '<p class="text-gray-500 text-sm">All campaigns are assigned</p>';
+            return;
+        }
+
+        const html = campaigns.map(camp => `
+            <div class="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded">
+                <span class="text-sm text-gray-900">${escapeHtml(camp.name)}</span>
+                <button onclick="assignCampaign('${camp.id}', '${escapeHtml(camp.name)}')" class="text-blue-600 hover:text-blue-800 text-sm">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </div>
+        `).join('');
+
+        document.getElementById('availableCampaigns').innerHTML = html;
+    }
+
+    async function assignCampaign(campaignId, campaignName) {
+        try {
+            const response = await fetch(`/account/budget-groups/api/groups/${currentGroupId}/campaigns`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    customer_id: CUSTOMER_ID,
+                    campaign_id: campaignId,
+                    campaign_name: campaignName
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                loadCampaignsForGroup(currentGroupId);
+            } else {
+                alert('Error: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error assigning campaign:', error);
+            alert('Error assigning campaign');
+        }
+    }
+
+    async function unassignCampaign(campaignId) {
+        try {
+            const response = await fetch(`/account/budget-groups/api/groups/${currentGroupId}/campaigns/${campaignId}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                loadCampaignsForGroup(currentGroupId);
+            } else {
+                alert('Error: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error unassigning campaign:', error);
+            alert('Error unassigning campaign');
+        }
+    }
+
+    function loadMockCampaigns() {
+        // TODO: Replace with real Google Ads API call
+        allCampaigns = [
+            {id: 'camp_1', name: 'HVAC - AC Repair', daily_budget: 150, spend_mtd: 2100},
+            {id: 'camp_2', name: 'HVAC - Furnace Installation', daily_budget: 200, spend_mtd: 2800},
+            {id: 'camp_3', name: 'Plumbing - Emergency', daily_budget: 100, spend_mtd: 1400},
+            {id: 'camp_4', name: 'Plumbing - Water Heater', daily_budget: 80, spend_mtd: 1120},
+            {id: 'camp_5', name: 'Electrical - Repairs', daily_budget: 60, spend_mtd: 840}
+        ];
+    }
+
+    function formatNumber(num) {
+        return new Intl.NumberFormat('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2}).format(num);
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+{% endblock %}

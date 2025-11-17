@@ -521,6 +521,13 @@ def create_app():
         app.logger.exception("Failed to import/register budget_bp")
 
     try:
+        from app.google.alerts_routes import alerts_bp
+        app.register_blueprint(alerts_bp)
+        app.logger.info("alerts_bp registered at /account/google/ads/alerts")
+    except Exception:
+        app.logger.exception("Failed to import/register alerts_bp")
+
+    try:
         from app.glsa import glsa_bp
         app.register_blueprint(glsa_bp, url_prefix="/account/glsa")
         app.logger.info("glsa_bp registered at /account/glsa")

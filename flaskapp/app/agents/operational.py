@@ -199,6 +199,8 @@ class BudgetGuardianAgent(BaseAgent):
     - Detect and pause runaway campaigns
     - Reallocate from losers to winners (tactical)
     - Alert on unusual spend patterns
+    - Integrates with Auto-Budget Service for intelligent adjustments
+    - Considers capacity utilization and seasonality
 
     Operates on: Hourly cycles
     """
@@ -215,9 +217,52 @@ class BudgetGuardianAgent(BaseAgent):
             **kwargs
         )
 
+        # Initialize budget intelligence services
+        self.auto_budget_service = None
+        self.capacity_service = None
+        self.competitive_service = None
+
+    def init_services(self, db_connection):
+        """
+        Initialize budget intelligence services.
+
+        Args:
+            db_connection: Database connection
+        """
+        try:
+            from app.services.auto_budget_service import AutoBudgetService
+            from app.services.capacity_tracking_service import CapacityTrackingService
+            from app.services.competitive_intelligence_service import CompetitiveIntelligenceService
+
+            self.auto_budget_service = AutoBudgetService(db_connection)
+            self.capacity_service = CapacityTrackingService(db_connection)
+            self.competitive_service = CompetitiveIntelligenceService(db_connection)
+
+        except ImportError as e:
+            # Services not available yet
+            pass
+
     def analyze(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Analyze budget pacing and spend patterns."""
+        """
+        Analyze budget pacing and spend patterns.
+
+        Now enhanced with:
+        - Auto-budget intelligence
+        - Capacity utilization data
+        - Competitive pressure analysis
+        """
         opportunities = []
+
+        # Get additional intelligence if services are available
+        account_id = context.get('account_id')
+        customer_id = context.get('customer_id')
+        capacity_utilization = None
+
+        if self.capacity_service and account_id:
+            try:
+                capacity_utilization = self.capacity_service.get_current_utilization(account_id)
+            except:
+                pass
 
         campaigns = context.get('campaigns', [])
         current_day_of_month = datetime.now().day

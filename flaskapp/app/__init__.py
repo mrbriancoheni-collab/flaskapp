@@ -453,6 +453,21 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to import account_bp")
 
+    # Budget Intelligence Features
+    try:
+        from app.account.auto_budget_routes import auto_budget_bp
+        app.register_blueprint(auto_budget_bp)
+        app.logger.info("auto_budget_bp registered at /account/auto-budget")
+    except Exception:
+        app.logger.exception("Failed to import/register auto_budget_bp")
+
+    try:
+        from app.account.competitive_routes import competitive_bp
+        app.register_blueprint(competitive_bp)
+        app.logger.info("competitive_bp registered at /account/competitive")
+    except Exception:
+        app.logger.exception("Failed to import/register competitive_bp")
+
     try:
         from app.onboarding_bp import onboarding_bp
         app.register_blueprint(onboarding_bp)

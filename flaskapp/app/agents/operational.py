@@ -216,7 +216,15 @@ class BudgetGuardianAgent(BaseAgent):
         )
 
     def analyze(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Analyze budget pacing and spend patterns."""
+        """
+        Analyze budget pacing and spend patterns using intelligent forecasting.
+
+        Enhanced with:
+        - Historical performance baselines
+        - Seasonality adjustments
+        - Weather impact analysis
+        - Anomaly detection
+        """
         opportunities = []
 
         campaigns = context.get('campaigns', [])
@@ -224,6 +232,52 @@ class BudgetGuardianAgent(BaseAgent):
         current_day_of_month = datetime.now().day
         days_in_month = 30  # Simplified
         elapsed_pct = current_day_of_month / days_in_month
+
+        # Enhanced: Check for detected anomalies
+        try:
+            from app.services.budget_forecasting_service import detect_budget_anomalies
+            for campaign in campaigns:
+                anomalies = detect_budget_anomalies(campaign['id'], lookback_days=3)
+                for anomaly in anomalies:
+                    if anomaly['severity'] in ['high', 'critical']:
+                        opportunities.append({
+                            'type': 'performance_anomaly',
+                            'severity': 'high',
+                            'campaign_id': campaign['id'],
+                            'campaign_name': campaign.get('name', ''),
+                            'anomaly_type': anomaly['anomaly_type'],
+                            'metric': anomaly['metric_name'],
+                            'baseline': anomaly['baseline_value'],
+                            'actual': anomaly['actual_value'],
+                            'deviation_pct': anomaly['deviation_pct']
+                        })
+        except Exception as e:
+            # Silently fail if forecasting service not available
+            pass
+
+        # Enhanced: Check weather impact for budget adjustments
+        service_type = context.get('service_type', 'hvac_ac')
+        zip_code = context.get('zip_code', None)
+
+        if zip_code:
+            try:
+                from app.services.weather_service import fetch_current_weather, calculate_weather_impact_multiplier
+                weather = fetch_current_weather(zip_code)
+                impact_multiplier = calculate_weather_impact_multiplier(weather, service_type)
+
+                # If extreme weather (2x+ demand), recommend budget increase
+                if impact_multiplier >= 2.0:
+                    opportunities.append({
+                        'type': 'weather_driven_demand_spike',
+                        'severity': 'high',
+                        'weather_condition': weather.get('condition'),
+                        'temp_high': weather.get('temp_high'),
+                        'impact_multiplier': impact_multiplier,
+                        'recommendation': f"Increase budget by {int((impact_multiplier - 1) * 100)}% due to extreme weather"
+                    })
+            except Exception as e:
+                # Silently fail if weather service not available
+                pass
 
         # 1. Analyze budget groups (if enabled)
         if budget_groups:

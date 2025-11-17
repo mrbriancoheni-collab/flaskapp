@@ -1,0 +1,239 @@
+# app/google/forecasting_routes.py
+"""
+Budget Forecasting Routes - Dashboard and API endpoints for budget forecasting.
+"""
+from flask import Blueprint, render_template, jsonify, request
+from sqlalchemy import text
+from datetime import datetime, date, timedelta
+import calendar
+
+from app import db
+from app.auth.utils import login_required, current_account_id
+from app.services.budget_forecasting_service import (
+    generate_monthly_forecast,
+    generate_seasonal_budget_recommendations,
+    detect_budget_anomalies,
+    store_anomaly
+)
+from app.services.historical_data_service import (
+    calculate_baseline_metrics,
+    get_year_over_year_comparison,
+    detect_day_of_week_patterns
+)
+from app.services.weather_service import fetch_current_weather, fetch_weather_forecast
+
+forecasting_bp = Blueprint("forecasting_bp", __name__, url_prefix="/account/google/ads/forecasting")
+
+
+@forecasting_bp.route("/")
+@login_required
+def forecasting_dashboard():
+    """
+    Budget Forecasting Dashboard - View forecasts, trends, and recommendations.
+    """
+    account_id = current_account_id()
+
+    # Get campaigns
+    campaigns_query = text("""
+        SELECT id, name, daily_budget_cents, google_campaign_id
+        FROM ads_campaigns
+        WHERE account_id = :account_id
+        ORDER BY name
+    """)
+
+    with db.engine.connect() as conn:
+        result = conn.execute(campaigns_query, {"account_id": account_id})
+        campaigns = [dict(row._mapping) for row in result]
+
+    return render_template(
+        "google/forecasting_dashboard.html",
+        campaigns=campaigns
+    )
+
+
+@forecasting_bp.route("/api/forecast/monthly", methods=["POST"])
+@login_required
+def get_monthly_forecast():
+    """Generate monthly forecast for a campaign."""
+    account_id = current_account_id()
+    data = request.get_json()
+
+    campaign_id = data.get('campaign_id')
+    service_type = data.get('service_type', 'hvac_ac')
+    target_month = data.get('month', date.today().month)
+    target_year = data.get('year', date.today().year)
+
+    try:
+        forecast = generate_monthly_forecast(
+            account_id=account_id,
+            campaign_id=campaign_id,
+            service_type=service_type,
+            target_month=target_month,
+            target_year=target_year,
+            include_weather=True,
+            include_capacity=False
+        )
+
+        return jsonify(forecast)
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@forecasting_bp.route("/api/forecast/seasonal", methods=["POST"])
+@login_required
+def get_seasonal_recommendations():
+    """Get 12-month seasonal budget recommendations."""
+    account_id = current_account_id()
+    data = request.get_json()
+
+    campaign_id = data.get('campaign_id')
+    service_type = data.get('service_type', 'hvac_ac')
+    current_budget = data.get('current_monthly_budget', 5000)
+
+    try:
+        recommendations = generate_seasonal_budget_recommendations(
+            account_id=account_id,
+            campaign_id=campaign_id,
+            service_type=service_type,
+            current_monthly_budget=current_budget
+        )
+
+        return jsonify({
+            "success": True,
+            "recommendations": recommendations
+        })
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@forecasting_bp.route("/api/baseline/<int:campaign_id>", methods=["GET"])
+@login_required
+def get_campaign_baseline(campaign_id):
+    """Get baseline metrics for a campaign."""
+    try:
+        baseline = calculate_baseline_metrics(campaign_id, days=90)
+        yoy = get_year_over_year_comparison(campaign_id, date.today())
+        dow_patterns = detect_day_of_week_patterns(campaign_id, days=90)
+
+        return jsonify({
+            "success": True,
+            "baseline": baseline,
+            "year_over_year": yoy,
+            "day_of_week_patterns": dow_patterns
+        })
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@forecasting_bp.route("/api/anomalies/<int:campaign_id>", methods=["GET"])
+@login_required
+def get_campaign_anomalies(campaign_id):
+    """Detect anomalies in campaign performance."""
+    account_id = current_account_id()
+
+    try:
+        anomalies = detect_budget_anomalies(campaign_id, lookback_days=7)
+
+        # Store new anomalies
+        for anomaly in anomalies:
+            # Check if this anomaly already exists
+            check_query = text("""
+                SELECT id FROM budget_anomalies
+                WHERE campaign_id = :campaign_id
+                  AND anomaly_type = :anomaly_type
+                  AND affected_period_start = :date
+                  AND resolved = FALSE
+            """)
+
+            with db.engine.connect() as conn:
+                existing = conn.execute(check_query, {
+                    "campaign_id": campaign_id,
+                    "anomaly_type": anomaly['anomaly_type'],
+                    "date": anomaly['date']
+                }).first()
+
+                if not existing:
+                    store_anomaly(account_id, campaign_id, anomaly)
+
+        return jsonify({
+            "success": True,
+            "anomalies": anomalies
+        })
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@forecasting_bp.route("/api/weather/current", methods=["POST"])
+@login_required
+def get_current_weather_impact():
+    """Get current weather and its impact on budget."""
+    data = request.get_json()
+
+    zip_code = data.get('zip_code', '10001')
+    service_type = data.get('service_type', 'hvac_ac')
+
+    try:
+        weather = fetch_current_weather(zip_code)
+
+        from app.services.weather_service import calculate_weather_impact_multiplier
+        impact_multiplier = calculate_weather_impact_multiplier(weather, service_type)
+
+        return jsonify({
+            "success": True,
+            "weather": weather,
+            "impact_multiplier": impact_multiplier,
+            "recommendation": get_weather_recommendation(impact_multiplier)
+        })
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@forecasting_bp.route("/api/weather/forecast", methods=["POST"])
+@login_required
+def get_weather_forecast_impact():
+    """Get 7-day weather forecast and budget impact."""
+    data = request.get_json()
+
+    zip_code = data.get('zip_code', '10001')
+    service_type = data.get('service_type', 'hvac_ac')
+
+    try:
+        forecast = fetch_weather_forecast(zip_code, days=7)
+
+        # Calculate impact for each day
+        from app.services.weather_service import calculate_weather_impact_multiplier
+        for day in forecast:
+            day['impact_multiplier'] = calculate_weather_impact_multiplier({
+                'temp_high': day['temp_high'],
+                'temp_low': day['temp_low'],
+                'condition': day['condition']
+            }, service_type)
+
+        return jsonify({
+            "success": True,
+            "forecast": forecast
+        })
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+def get_weather_recommendation(multiplier: float) -> str:
+    """Get budget recommendation based on weather impact multiplier."""
+    if multiplier >= 2.5:
+        return "CRITICAL: Extreme weather event. Increase budget by 100%+ immediately."
+    elif multiplier >= 2.0:
+        return "HIGH DEMAND: Increase budget by 50-100% to capture seasonal spike."
+    elif multiplier >= 1.5:
+        return "MODERATE INCREASE: Consider increasing budget by 25-50%."
+    elif multiplier >= 1.2:
+        return "SLIGHT INCREASE: Weather favors your service. Increase budget by 10-25%."
+    elif multiplier <= 0.8:
+        return "REDUCE BUDGET: Low demand period. Consider reducing budget by 20-30%."
+    else:
+        return "MAINTAIN: Weather conditions are normal for your service."

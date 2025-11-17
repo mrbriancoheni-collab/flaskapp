@@ -528,6 +528,13 @@ def create_app():
         app.logger.exception("Failed to import/register alerts_bp")
 
     try:
+        from app.google.forecasting_routes import forecasting_bp
+        app.register_blueprint(forecasting_bp)
+        app.logger.info("forecasting_bp registered at /account/google/ads/forecasting")
+    except Exception:
+        app.logger.exception("Failed to import/register forecasting_bp")
+
+    try:
         from app.glsa import glsa_bp
         app.register_blueprint(glsa_bp, url_prefix="/account/glsa")
         app.logger.info("glsa_bp registered at /account/glsa")

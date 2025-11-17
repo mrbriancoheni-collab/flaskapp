@@ -1,0 +1,415 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'google' %}
+{% block title %}Campaign Budget Groups — FieldSprout{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Header -->
+  <div class="mb-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Campaign Budget Groups</h1>
+        <p class="mt-2 text-sm text-gray-600">
+          Organize campaigns into budget-controlled groups. Each group gets its own monthly budget and the Budget Guardian agent monitors spend across groups.
+        </p>
+      </div>
+      <button onclick="openCreateGroupModal()" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+        <i class="fas fa-plus mr-2"></i>
+        Create Budget Group
+      </button>
+    </div>
+  </div>
+
+  <!-- Budget Groups List -->
+  <div class="space-y-6">
+    {% if budget_groups %}
+      {% for group in budget_groups %}
+      <div class="bg-white shadow rounded-lg border border-gray-200">
+        <!-- Group Header -->
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+              <h3 class="text-lg font-semibold text-gray-900">{{ group.name }}</h3>
+              <span class="px-2 py-1 text-xs font-medium rounded-full
+                {% if group.status == 'active' %}bg-green-100 text-green-800
+                {% elif group.status == 'paused' %}bg-yellow-100 text-yellow-800
+                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                {{ group.status|upper }}
+              </span>
+              <span class="text-sm text-gray-500">{{ group.campaign_count }} campaigns</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button onclick="openEditGroupModal({{ group.id }})" class="text-indigo-600 hover:text-indigo-900">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button onclick="openAssignCampaignsModal({{ group.id }})" class="text-green-600 hover:text-green-900" title="Assign Campaigns">
+                <i class="fas fa-plus-circle"></i>
+              </button>
+              <button onclick="deleteGroup({{ group.id }})" class="text-red-600 hover:text-red-900">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+          {% if group.description %}
+          <p class="mt-2 text-sm text-gray-600">{{ group.description }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Budget Status -->
+        <div class="px-6 py-4">
+          <div class="grid grid-cols-4 gap-4 mb-4">
+            <div>
+              <p class="text-xs text-gray-500">Monthly Budget</p>
+              <p class="text-lg font-semibold text-gray-900">${{ "%.2f"|format(group.monthly_budget_cents / 100) }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">Daily Budget</p>
+              <p class="text-lg font-semibold text-gray-900">${{ "%.2f"|format(group.daily_budget_cents / 100) }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">Current Spend ({{ current_month.strftime('%B') }})</p>
+              <p class="text-lg font-semibold
+                {% if group.spend_pct >= 100 %}text-red-600
+                {% elif group.spend_pct >= (group.alert_threshold_pct * 100) %}text-yellow-600
+                {% else %}text-green-600{% endif %}">
+                ${{ "%.2f"|format(group.current_spend_cents / 100) }}
+              </p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">Budget Used</p>
+              <p class="text-lg font-semibold
+                {% if group.spend_pct >= 100 %}text-red-600
+                {% elif group.spend_pct >= (group.alert_threshold_pct * 100) %}text-yellow-600
+                {% else %}text-green-600{% endif %}">
+                {{ "%.1f"|format(group.spend_pct) }}%
+              </p>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="w-full bg-gray-200 rounded-full h-2.5">
+            <div class="h-2.5 rounded-full
+              {% if group.spend_pct >= 100 %}bg-red-600
+              {% elif group.spend_pct >= (group.alert_threshold_pct * 100) %}bg-yellow-500
+              {% else %}bg-green-600{% endif %}"
+              style="width: {{ [group.spend_pct, 100]|min }}%"></div>
+          </div>
+
+          <!-- Settings -->
+          <div class="mt-4 flex items-center space-x-6 text-xs text-gray-500">
+            <span>
+              <i class="fas fa-shield-alt mr-1"></i>
+              Auto-pause: <strong>{{ 'Yes' if group.auto_pause_on_overspend else 'No' }}</strong>
+            </span>
+            <span>
+              <i class="fas fa-bell mr-1"></i>
+              Alert at: <strong>{{ (group.alert_threshold_pct * 100)|int }}%</strong>
+            </span>
+            <span>
+              <i class="fas fa-sort-numeric-up mr-1"></i>
+              Priority: <strong>{{ group.priority }}</strong>
+            </span>
+          </div>
+
+          <!-- Assigned Campaigns -->
+          <div class="mt-4">
+            <p class="text-sm font-medium text-gray-700 mb-2">Assigned Campaigns:</p>
+            <div class="flex flex-wrap gap-2">
+              {% set group_campaigns = campaigns|selectattr('budget_group_id', 'equalto', group.id)|list %}
+              {% if group_campaigns %}
+                {% for campaign in group_campaigns %}
+                <div class="inline-flex items-center px-3 py-1 bg-indigo-50 text-indigo-700 text-sm rounded-full">
+                  {{ campaign.name }}
+                  <button onclick="unassignCampaign({{ campaign.id }})" class="ml-2 text-indigo-500 hover:text-indigo-700">
+                    <i class="fas fa-times text-xs"></i>
+                  </button>
+                </div>
+                {% endfor %}
+              {% else %}
+                <span class="text-sm text-gray-400 italic">No campaigns assigned</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <!-- Empty State -->
+      <div class="bg-white shadow rounded-lg border border-gray-200 px-6 py-12 text-center">
+        <i class="fas fa-folder-open text-6xl text-gray-300 mb-4"></i>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No Budget Groups Yet</h3>
+        <p class="text-gray-500 mb-6">Create your first budget group to start organizing campaigns and controlling spend.</p>
+        <button onclick="openCreateGroupModal()" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+          <i class="fas fa-plus mr-2"></i>
+          Create Budget Group
+        </button>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Unassigned Campaigns -->
+  {% if unassigned_campaigns %}
+  <div class="mt-8">
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+      <div class="flex items-start">
+        <i class="fas fa-exclamation-triangle text-yellow-600 mt-1 mr-3"></i>
+        <div class="flex-1">
+          <h4 class="text-sm font-medium text-yellow-800 mb-2">
+            {{ unassigned_campaigns|length }} Unassigned Campaign{{ 's' if unassigned_campaigns|length != 1 else '' }}
+          </h4>
+          <p class="text-sm text-yellow-700 mb-3">
+            These campaigns are not assigned to any budget group. They will use their individual campaign budgets.
+          </p>
+          <div class="flex flex-wrap gap-2">
+            {% for campaign in unassigned_campaigns %}
+            <span class="px-3 py-1 bg-white text-yellow-800 text-sm rounded-full border border-yellow-300">
+              {{ campaign.name }}
+            </span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Create/Edit Group Modal -->
+<div id="groupModal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h3 id="groupModalTitle" class="text-lg font-medium text-gray-900">Create Budget Group</h3>
+    </div>
+    <form id="groupForm" class="px-6 py-4 space-y-4">
+      <input type="hidden" id="groupId" value="">
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Group Name</label>
+        <input type="text" id="groupName" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Description (optional)</label>
+        <textarea id="groupDescription" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></textarea>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Monthly Budget ($)</label>
+        <input type="number" id="groupBudget" required min="1" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Priority (higher = first)</label>
+        <input type="number" id="groupPriority" value="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Alert Threshold (%)</label>
+        <input type="number" id="groupAlertThreshold" value="80" min="1" max="100" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+        <p class="mt-1 text-xs text-gray-500">Send alert when this % of budget is spent</p>
+      </div>
+
+      <div class="flex items-center">
+        <input type="checkbox" id="groupAutoPause" checked class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+        <label for="groupAutoPause" class="ml-2 block text-sm text-gray-900">
+          Auto-pause campaigns when budget is exhausted
+        </label>
+      </div>
+    </form>
+    <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+      <button onclick="closeGroupModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+        Cancel
+      </button>
+      <button onclick="saveGroup()" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">
+        Save Group
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Campaigns Modal -->
+<div id="assignModal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h3 class="text-lg font-medium text-gray-900">Assign Campaigns to Budget Group</h3>
+    </div>
+    <div class="px-6 py-4 overflow-y-auto flex-1">
+      <input type="hidden" id="assignGroupId" value="">
+      <p class="text-sm text-gray-600 mb-4">Select campaigns to assign to this budget group:</p>
+
+      <div class="space-y-2" id="campaignCheckboxes">
+        {% for campaign in campaigns %}
+        <div class="flex items-center p-3 hover:bg-gray-50 rounded-md border border-gray-200">
+          <input type="checkbox" id="campaign_{{ campaign.id }}" value="{{ campaign.id }}"
+                 class="campaign-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+          <label for="campaign_{{ campaign.id }}" class="ml-3 flex-1">
+            <span class="block text-sm font-medium text-gray-900">{{ campaign.name }}</span>
+            {% if campaign.group_name %}
+            <span class="text-xs text-gray-500">Currently in: {{ campaign.group_name }}</span>
+            {% else %}
+            <span class="text-xs text-gray-400">Unassigned</span>
+            {% endif %}
+          </label>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+      <button onclick="closeAssignModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+        Cancel
+      </button>
+      <button onclick="saveAssignments()" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">
+        Assign Campaigns
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Group Modal Functions
+function openCreateGroupModal() {
+  document.getElementById('groupModalTitle').textContent = 'Create Budget Group';
+  document.getElementById('groupId').value = '';
+  document.getElementById('groupForm').reset();
+  document.getElementById('groupAutoPause').checked = true;
+  document.getElementById('groupAlertThreshold').value = '80';
+  document.getElementById('groupPriority').value = '0';
+  document.getElementById('groupModal').classList.remove('hidden');
+}
+
+function openEditGroupModal(groupId) {
+  // TODO: Fetch group data and populate form
+  document.getElementById('groupModalTitle').textContent = 'Edit Budget Group';
+  document.getElementById('groupId').value = groupId;
+  document.getElementById('groupModal').classList.remove('hidden');
+}
+
+function closeGroupModal() {
+  document.getElementById('groupModal').classList.add('hidden');
+}
+
+async function saveGroup() {
+  const groupId = document.getElementById('groupId').value;
+  const isEdit = groupId !== '';
+
+  const data = {
+    name: document.getElementById('groupName').value,
+    description: document.getElementById('groupDescription').value,
+    monthly_budget: parseFloat(document.getElementById('groupBudget').value),
+    priority: parseInt(document.getElementById('groupPriority').value),
+    auto_pause_on_overspend: document.getElementById('groupAutoPause').checked,
+    alert_threshold_pct: parseFloat(document.getElementById('groupAlertThreshold').value) / 100
+  };
+
+  const url = isEdit ? `/account/google/ads/budget/api/groups/${groupId}` : '/account/google/ads/budget/api/groups';
+  const method = isEdit ? 'PUT' : 'POST';
+
+  try {
+    const response = await fetch(url, {
+      method: method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      closeGroupModal();
+      location.reload();
+    } else {
+      alert('Error: ' + result.error);
+    }
+  } catch (error) {
+    alert('Error saving group: ' + error.message);
+  }
+}
+
+async function deleteGroup(groupId) {
+  if (!confirm('Are you sure you want to delete this budget group? All campaign assignments will be removed.')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/account/google/ads/budget/api/groups/${groupId}`, {
+      method: 'DELETE'
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      location.reload();
+    } else {
+      alert('Error: ' + result.error);
+    }
+  } catch (error) {
+    alert('Error deleting group: ' + error.message);
+  }
+}
+
+// Assign Campaigns Modal Functions
+function openAssignCampaignsModal(groupId) {
+  document.getElementById('assignGroupId').value = groupId;
+
+  // Uncheck all checkboxes
+  document.querySelectorAll('.campaign-checkbox').forEach(cb => cb.checked = false);
+
+  document.getElementById('assignModal').classList.remove('hidden');
+}
+
+function closeAssignModal() {
+  document.getElementById('assignModal').classList.add('hidden');
+}
+
+async function saveAssignments() {
+  const groupId = document.getElementById('assignGroupId').value;
+  const selectedCampaigns = Array.from(document.querySelectorAll('.campaign-checkbox:checked'))
+    .map(cb => parseInt(cb.value));
+
+  if (selectedCampaigns.length === 0) {
+    alert('Please select at least one campaign');
+    return;
+  }
+
+  try {
+    const response = await fetch(`/account/google/ads/budget/api/groups/${groupId}/assign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ campaign_ids: selectedCampaigns })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      closeAssignModal();
+      location.reload();
+    } else {
+      alert('Error: ' + result.error);
+    }
+  } catch (error) {
+    alert('Error assigning campaigns: ' + error.message);
+  }
+}
+
+async function unassignCampaign(campaignId) {
+  if (!confirm('Remove this campaign from the budget group?')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/account/google/ads/budget/api/campaigns/${campaignId}/unassign`, {
+      method: 'POST'
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      location.reload();
+    } else {
+      alert('Error: ' + result.error);
+    }
+  } catch (error) {
+    alert('Error unassigning campaign: ' + error.message);
+  }
+}
+</script>
+{% endblock %}

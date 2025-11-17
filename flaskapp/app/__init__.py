@@ -514,6 +514,13 @@ def create_app():
         app.logger.exception("Failed to import/register agents_bp")
 
     try:
+        from app.google.budget_routes import budget_bp
+        app.register_blueprint(budget_bp)
+        app.logger.info("budget_bp registered at /account/google/ads/budget")
+    except Exception:
+        app.logger.exception("Failed to import/register budget_bp")
+
+    try:
         from app.glsa import glsa_bp
         app.register_blueprint(glsa_bp, url_prefix="/account/glsa")
         app.logger.info("glsa_bp registered at /account/glsa")

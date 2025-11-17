@@ -220,40 +220,85 @@ class BudgetGuardianAgent(BaseAgent):
         opportunities = []
 
         campaigns = context.get('campaigns', [])
+        budget_groups = context.get('budget_groups', [])
         current_day_of_month = datetime.now().day
         days_in_month = 30  # Simplified
         elapsed_pct = current_day_of_month / days_in_month
 
+        # 1. Analyze budget groups (if enabled)
+        if budget_groups:
+            for group in budget_groups:
+                group_id = group['id']
+                group_name = group['name']
+                monthly_budget = group['monthly_budget_cents'] / 100
+                spend_mtd = group.get('current_spend_cents', 0) / 100
+                alert_threshold = group.get('alert_threshold_pct', 0.80)
+                auto_pause = group.get('auto_pause_on_overspend', True)
+
+                if monthly_budget == 0:
+                    continue
+
+                # Budget pacing check for group
+                expected_spend = monthly_budget * elapsed_pct
+                spend_pct = spend_mtd / monthly_budget
+
+                # Check if approaching alert threshold
+                if spend_pct >= alert_threshold and spend_pct < 1.0:
+                    opportunities.append({
+                        'type': 'budget_group_alert',
+                        'severity': 'medium',
+                        'group_id': group_id,
+                        'group_name': group_name,
+                        'budget': monthly_budget,
+                        'spend_mtd': spend_mtd,
+                        'spend_pct': spend_pct * 100,
+                        'alert_threshold_pct': alert_threshold * 100,
+                        'campaign_ids': group.get('campaign_ids', [])
+                    })
+
+                # Check if budget exceeded
+                if spend_pct >= 1.0:
+                    opportunities.append({
+                        'type': 'budget_group_exceeded',
+                        'severity': 'critical',
+                        'group_id': group_id,
+                        'group_name': group_name,
+                        'budget': monthly_budget,
+                        'spend_mtd': spend_mtd,
+                        'overspend_amount': spend_mtd - monthly_budget,
+                        'auto_pause': auto_pause,
+                        'campaign_ids': group.get('campaign_ids', [])
+                    })
+
+                # Check if overpacing (spending too fast)
+                elif spend_mtd > expected_spend * 1.5:  # Spending 50% faster than expected
+                    days_remaining = days_in_month - current_day_of_month
+                    avg_daily_spend = spend_mtd / current_day_of_month
+                    projected_spend = spend_mtd + (avg_daily_spend * days_remaining)
+
+                    if projected_spend > monthly_budget:
+                        opportunities.append({
+                            'type': 'budget_group_overrun_risk',
+                            'severity': 'high',
+                            'group_id': group_id,
+                            'group_name': group_name,
+                            'budget': monthly_budget,
+                            'spend_mtd': spend_mtd,
+                            'projected_spend': projected_spend,
+                            'overrun_amount': projected_spend - monthly_budget,
+                            'campaign_ids': group.get('campaign_ids', [])
+                        })
+
+        # 2. Analyze individual campaigns (for non-grouped campaigns or runaway detection)
         for campaign in campaigns:
             campaign_id = campaign['id']
             campaign_name = campaign.get('name', '')
+            budget_group_id = campaign.get('budget_group_id')  # Check if in a group
             monthly_budget = campaign.get('monthly_budget', 0)
             spend_mtd = campaign.get('spend_mtd', 0)
             daily_spend_avg = campaign.get('daily_spend_avg_7d', 0)
 
-            if monthly_budget == 0:
-                continue
-
-            # 1. Budget pacing check
-            expected_spend = monthly_budget * elapsed_pct
-            spend_pct = spend_mtd / monthly_budget
-
-            if spend_mtd > expected_spend * 1.5:  # Spending 50% faster than expected
-                days_remaining = days_in_month - current_day_of_month
-                projected_spend = spend_mtd + (daily_spend_avg * days_remaining)
-
-                opportunities.append({
-                    'type': 'budget_overrun_risk',
-                    'severity': 'critical',
-                    'campaign_id': campaign_id,
-                    'campaign_name': campaign_name,
-                    'budget': monthly_budget,
-                    'spend_mtd': spend_mtd,
-                    'projected_spend': projected_spend,
-                    'overrun_amount': projected_spend - monthly_budget
-                })
-
-            # 2. Runaway campaign detection (sudden spend spike)
+            # Runaway campaign detection (applies to ALL campaigns, grouped or not)
             daily_spend_yesterday = campaign.get('daily_spend_yesterday', 0)
             if daily_spend_yesterday > daily_spend_avg * 3:  # 3x normal spend in one day
                 opportunities.append({
@@ -261,9 +306,29 @@ class BudgetGuardianAgent(BaseAgent):
                     'severity': 'critical',
                     'campaign_id': campaign_id,
                     'campaign_name': campaign_name,
+                    'budget_group_id': budget_group_id,
                     'daily_avg': daily_spend_avg,
                     'yesterday_spend': daily_spend_yesterday
                 })
+
+            # Individual campaign budget checks (only for non-grouped campaigns)
+            if budget_group_id is None and monthly_budget > 0:
+                expected_spend = monthly_budget * elapsed_pct
+
+                if spend_mtd > expected_spend * 1.5:  # Spending 50% faster than expected
+                    days_remaining = days_in_month - current_day_of_month
+                    projected_spend = spend_mtd + (daily_spend_avg * days_remaining)
+
+                    opportunities.append({
+                        'type': 'budget_overrun_risk',
+                        'severity': 'critical',
+                        'campaign_id': campaign_id,
+                        'campaign_name': campaign_name,
+                        'budget': monthly_budget,
+                        'spend_mtd': spend_mtd,
+                        'projected_spend': projected_spend,
+                        'overrun_amount': projected_spend - monthly_budget
+                    })
 
         return opportunities
 
@@ -274,8 +339,101 @@ class BudgetGuardianAgent(BaseAgent):
         for opp in opportunities:
             opp_type = opp['type']
 
-            if opp_type == 'budget_overrun_risk':
-                # Reduce daily budget to prevent overrun
+            if opp_type == 'budget_group_alert':
+                # Send alert that budget group is approaching limit
+                decision = AgentDecision(
+                    agent_id=self.agent_id,
+                    agent_type=self.agent_type,
+                    decision_type='budget_group_alert',
+                    title=f"⚠️ Budget group '{opp['group_name']}' at {opp['spend_pct']:.0f}% of budget",
+                    description=f"Spent ${opp['spend_mtd']:,.0f} of ${opp['budget']:,.0f} budget this month",
+                    reasoning=f"Budget group has reached {opp['alert_threshold_pct']:.0f}% alert threshold",
+                    account_id=0,
+                    customer_id='',
+                    action_data={
+                        'group_id': opp['group_id'],
+                        'alert_type': 'threshold_reached',
+                        'campaign_ids': opp['campaign_ids']
+                    },
+                    risk_level=DecisionRiskLevel.LOW,
+                    requires_approval=False,
+                    confidence=0.99
+                )
+                decisions.append(decision)
+
+            elif opp_type == 'budget_group_exceeded':
+                # Budget exceeded - pause campaigns if auto_pause is enabled
+                if opp['auto_pause']:
+                    decision = AgentDecision(
+                        agent_id=self.agent_id,
+                        agent_type=self.agent_type,
+                        decision_type='pause_budget_group',
+                        title=f"🛑 Pause budget group '{opp['group_name']}' - budget exceeded",
+                        description=f"Spent ${opp['spend_mtd']:,.0f} of ${opp['budget']:,.0f} budget (${opp['overspend_amount']:,.0f} over)",
+                        reasoning="Budget group has exceeded monthly budget. Auto-pause is enabled.",
+                        account_id=0,
+                        customer_id='',
+                        action_data={
+                            'group_id': opp['group_id'],
+                            'campaign_ids': opp['campaign_ids']
+                        },
+                        risk_level=DecisionRiskLevel.LOW,
+                        requires_approval=False,
+                        confidence=0.99,
+                        expected_monthly_savings=opp['overspend_amount'] * 1.5  # Prevent further overspend
+                    )
+                    decisions.append(decision)
+                else:
+                    # Just send alert if auto-pause is disabled
+                    decision = AgentDecision(
+                        agent_id=self.agent_id,
+                        agent_type=self.agent_type,
+                        decision_type='budget_group_alert',
+                        title=f"🚨 Budget group '{opp['group_name']}' has exceeded budget",
+                        description=f"Spent ${opp['spend_mtd']:,.0f} of ${opp['budget']:,.0f} budget (${opp['overspend_amount']:,.0f} over)",
+                        reasoning="Budget group has exceeded monthly budget. Auto-pause is disabled - manual review required.",
+                        account_id=0,
+                        customer_id='',
+                        action_data={
+                            'group_id': opp['group_id'],
+                            'alert_type': 'budget_exceeded',
+                            'campaign_ids': opp['campaign_ids']
+                        },
+                        risk_level=DecisionRiskLevel.MEDIUM,
+                        requires_approval=True,  # Require approval since auto-pause is off
+                        confidence=0.99
+                    )
+                    decisions.append(decision)
+
+            elif opp_type == 'budget_group_overrun_risk':
+                # Reduce daily budgets for campaigns in the group to prevent overrun
+                days_remaining = 30 - datetime.now().day
+                remaining_budget = opp['budget'] - opp['spend_mtd']
+                safe_daily_budget = remaining_budget / max(1, days_remaining)
+
+                decision = AgentDecision(
+                    agent_id=self.agent_id,
+                    agent_type=self.agent_type,
+                    decision_type='adjust_group_daily_budget',
+                    title=f"Reduce daily budget for budget group '{opp['group_name']}'",
+                    description=f"On track to overspend by ${opp['overrun_amount']:,.0f} this month",
+                    reasoning=f"Spent ${opp['spend_mtd']:,.0f} of ${opp['budget']:,.0f} budget with {days_remaining} days remaining. Projected spend: ${opp['projected_spend']:,.0f}",
+                    account_id=0,
+                    customer_id='',
+                    action_data={
+                        'group_id': opp['group_id'],
+                        'campaign_ids': opp['campaign_ids'],
+                        'new_daily_budget': safe_daily_budget
+                    },
+                    risk_level=DecisionRiskLevel.LOW,
+                    requires_approval=False,
+                    confidence=0.98,
+                    expected_monthly_savings=opp['overrun_amount']
+                )
+                decisions.append(decision)
+
+            elif opp_type == 'budget_overrun_risk':
+                # Reduce daily budget to prevent overrun (individual campaign)
                 days_remaining = 30 - datetime.now().day
                 remaining_budget = opp['budget'] - opp['spend_mtd']
                 safe_daily_budget = remaining_budget / max(1, days_remaining)

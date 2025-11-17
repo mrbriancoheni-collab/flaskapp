@@ -1,0 +1,183 @@
+{% extends "base_dash.html" %}
+
+{% block title %}Auto-Budget Intelligence{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Auto-Budget Intelligence</h1>
+        <p class="text-gray-600">Automatically adjust campaign budgets to hit your monthly target without overspending</p>
+    </div>
+
+    <!-- Settings Card -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Auto-Budget Settings</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Enabled</label>
+                <input type="checkbox" id="enabled" class="rounded">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Monthly Budget Target</label>
+                <input type="number" id="monthly_budget_target" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="10000">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Min Daily Budget</label>
+                <input type="number" id="min_daily_budget" class="w-full px-3 py-2 border border-gray-300 rounded-md" value="10">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Max Daily Budget</label>
+                <input type="number" id="max_daily_budget" class="w-full px-3 py-2 border border-gray-300 rounded-md" value="1000">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Adjustment Frequency</label>
+                <select id="adjustment_frequency" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    <option value="hourly">Hourly</option>
+                    <option value="daily" selected>Daily</option>
+                    <option value="weekly">Weekly</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Send Notifications</label>
+                <input type="checkbox" id="send_notifications" checked class="rounded">
+            </div>
+        </div>
+
+        <div class="mt-6">
+            <button id="saveSettings" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md">
+                Save Settings
+            </button>
+        </div>
+    </div>
+
+    <!-- Budget Change History -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-4">Recent Budget Changes</h2>
+
+        <div id="historyContainer">
+            <p class="text-gray-500">Loading budget change history...</p>
+        </div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="bg-white rounded-lg shadow-md p-6 mt-6">
+        <h2 class="text-xl font-semibold mb-4">Notifications</h2>
+
+        <div id="notificationsContainer">
+            <p class="text-gray-500">Loading notifications...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Load settings on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadSettings();
+        loadHistory();
+        loadNotifications();
+    });
+
+    // Save settings
+    document.getElementById('saveSettings').addEventListener('click', async function() {
+        const data = {
+            customer_id: 'demo-customer',  // TODO: Get from user context
+            enabled: document.getElementById('enabled').checked,
+            monthly_budget_target: parseFloat(document.getElementById('monthly_budget_target').value),
+            min_daily_budget: parseFloat(document.getElementById('min_daily_budget').value),
+            max_daily_budget: parseFloat(document.getElementById('max_daily_budget').value),
+            adjustment_frequency: document.getElementById('adjustment_frequency').value,
+            send_notifications: document.getElementById('send_notifications').checked,
+            performance_weight: 0.70,
+            seasonality_weight: 0.20,
+            capacity_weight: 0.10
+        };
+
+        const response = await fetch('/account/auto-budget/api/settings', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            alert('Settings saved successfully!');
+        } else {
+            alert('Error: ' + result.error);
+        }
+    });
+
+    async function loadSettings() {
+        const response = await fetch('/account/auto-budget/api/settings?customer_id=demo-customer');
+        const data = await response.json();
+
+        if (data.success && data.settings) {
+            const s = data.settings;
+            document.getElementById('enabled').checked = s.enabled;
+            document.getElementById('monthly_budget_target').value = s.monthly_budget_target;
+            document.getElementById('min_daily_budget').value = s.min_daily_budget;
+            document.getElementById('max_daily_budget').value = s.max_daily_budget;
+            document.getElementById('adjustment_frequency').value = s.adjustment_frequency;
+            document.getElementById('send_notifications').checked = s.send_notifications;
+        }
+    }
+
+    async function loadHistory() {
+        const response = await fetch('/account/auto-budget/api/history?customer_id=demo-customer&limit=20');
+        const data = await response.json();
+
+        if (data.success && data.history.length > 0) {
+            let html = '<table class="min-w-full divide-y divide-gray-200">';
+            html += '<thead><tr><th class="px-4 py-2 text-left">Campaign</th><th class="px-4 py-2 text-left">Change</th><th class="px-4 py-2 text-left">Reason</th><th class="px-4 py-2 text-left">Date</th></tr></thead><tbody>';
+
+            data.history.forEach(change => {
+                const changeClass = change.change_type === 'increase' ? 'text-green-600' : 'text-red-600';
+                html += `<tr class="border-t">
+                    <td class="px-4 py-2">${change.campaign_name}</td>
+                    <td class="px-4 py-2 ${changeClass}">$${change.old_budget} → $${change.new_budget}</td>
+                    <td class="px-4 py-2 text-sm text-gray-600">${change.reason}</td>
+                    <td class="px-4 py-2 text-sm text-gray-500">${new Date(change.created_at).toLocaleString()}</td>
+                </tr>`;
+            });
+
+            html += '</tbody></table>';
+            document.getElementById('historyContainer').innerHTML = html;
+        } else {
+            document.getElementById('historyContainer').innerHTML = '<p class="text-gray-500">No budget changes yet.</p>';
+        }
+    }
+
+    async function loadNotifications() {
+        const response = await fetch('/account/auto-budget/api/notifications?limit=10');
+        const data = await response.json();
+
+        if (data.success && data.notifications.length > 0) {
+            let html = '<div class="space-y-3">';
+
+            data.notifications.forEach(notif => {
+                const severityColors = {
+                    info: 'bg-blue-50 border-blue-200',
+                    warning: 'bg-yellow-50 border-yellow-200',
+                    critical: 'bg-red-50 border-red-200'
+                };
+
+                html += `<div class="border-l-4 p-4 ${severityColors[notif.severity]}">
+                    <h3 class="font-semibold">${notif.title}</h3>
+                    <p class="text-sm text-gray-700 mt-1">${notif.message}</p>
+                    <p class="text-xs text-gray-500 mt-1">${new Date(notif.created_at).toLocaleString()}</p>
+                </div>`;
+            });
+
+            html += '</div>';
+            document.getElementById('notificationsContainer').innerHTML = html;
+        } else {
+            document.getElementById('notificationsContainer').innerHTML = '<p class="text-gray-500">No notifications.</p>';
+        }
+    }
+</script>
+{% endblock %}

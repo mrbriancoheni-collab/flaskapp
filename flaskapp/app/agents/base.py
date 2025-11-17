@@ -20,6 +20,7 @@ class AgentCapability(Enum):
     QUALITY_SCORE_OPTIMIZATION = "quality_score_optimization"
     PERFORMANCE_MONITORING = "performance_monitoring"
     AUTONOMOUS_EXECUTION = "autonomous_execution"
+    LANDING_PAGE_OPTIMIZATION = "landing_page_optimization"
 
 
 class DecisionRiskLevel(Enum):

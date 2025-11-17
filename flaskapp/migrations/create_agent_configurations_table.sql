@@ -59,4 +59,5 @@ INSERT INTO agent_configurations (account_id, agent_id, agent_type, enabled, aut
 (NULL, 'quality_score_agent', 'QualityScoreAgent', TRUE, 0.90, NULL),
 (NULL, 'keyword_optimizer', 'KeywordOptimizerAgent', TRUE, 0.92, NULL),
 (NULL, 'negative_keyword_agent', 'NegativeKeywordAgent', TRUE, 0.95, NULL),
-(NULL, 'ad_copy_agent', 'AdCopyAgent', TRUE, 0.90, NULL);
+(NULL, 'ad_copy_agent', 'AdCopyAgent', TRUE, 0.90, NULL),
+(NULL, 'landing_page_analyst', 'LandingPageAnalystAgent', TRUE, 0.75, NULL);

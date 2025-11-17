@@ -499,3 +499,351 @@ class AdCopyAgent(BaseAgent):
             }
 
         return {'success': False, 'error': f'Unknown decision type: {decision_type}'}
+
+class LandingPageAnalystAgent(BaseAgent):
+    """
+    Landing Page Analyst - CRO Expert ensuring message match.
+
+    Responsibilities:
+    - Analyze landing page alignment with ad copy
+    - Ensure keyword-to-page relevance for Quality Score
+    - Identify CRO issues (page speed, form friction, trust signals)
+    - Optimize conversion funnel elements
+    - A/B test recommendations for landing pages
+    - Monitor mobile vs desktop experience gaps
+
+    Operates on: Weekly cycles
+    """
+
+    def __init__(self, agent_id: str = "landing_page_analyst", **kwargs):
+        super().__init__(
+            agent_id=agent_id,
+            capabilities=[
+                AgentCapability.LANDING_PAGE_OPTIMIZATION,
+                AgentCapability.QUALITY_SCORE_OPTIMIZATION,
+            ],
+            auto_execute_threshold=0.75,  # Lower threshold since LPs require manual changes
+            **kwargs
+        )
+
+    def analyze(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Analyze landing page performance and alignment."""
+        opportunities = []
+
+        campaigns = context.get('campaigns', [])
+        keywords = context.get('keywords', [])
+
+        for campaign in campaigns:
+            campaign_id = campaign.get('id', '')
+            landing_url = campaign.get('landing_url', '')
+
+            if not landing_url:
+                continue
+
+            # 1. Message Match Analysis
+            ad_headlines = campaign.get('ad_headlines', [])
+            keywords_list = [k.get('text', '') for k in keywords if k.get('campaign_id') == campaign_id]
+
+            # Check if landing page title matches ad copy
+            page_title = campaign.get('page_title', '')
+            headline_match = any(headline.lower() in page_title.lower() for headline in ad_headlines)
+
+            if not headline_match and ad_headlines:
+                opportunities.append({
+                    'type': 'improve_message_match',
+                    'severity': 'high',
+                    'campaign_id': campaign_id,
+                    'landing_url': landing_url,
+                    'ad_headlines': ad_headlines,
+                    'page_title': page_title,
+                    'issue': 'Ad headline not reflected in landing page H1/title'
+                })
+
+            # 2. Keyword Relevance
+            # Check if top keywords appear on landing page
+            top_keywords = [k for k in keywords_list[:5]]  # Top 5 keywords
+            page_content = campaign.get('page_content', '').lower()
+
+            missing_keywords = [kw for kw in top_keywords if kw.lower() not in page_content]
+            if len(missing_keywords) >= 2:  # 2+ top keywords missing
+                opportunities.append({
+                    'type': 'add_keywords_to_page',
+                    'severity': 'medium',
+                    'campaign_id': campaign_id,
+                    'landing_url': landing_url,
+                    'missing_keywords': missing_keywords,
+                    'issue': 'Top keywords not found on landing page - hurts Quality Score'
+                })
+
+            # 3. Page Speed Issues
+            load_time = campaign.get('page_load_time_seconds', 0)
+            if load_time > 3.0:  # Google recommends <3 seconds
+                mobile_load = campaign.get('mobile_load_time_seconds', 0)
+                opportunities.append({
+                    'type': 'improve_page_speed',
+                    'severity': 'high',
+                    'campaign_id': campaign_id,
+                    'landing_url': landing_url,
+                    'load_time': load_time,
+                    'mobile_load_time': mobile_load,
+                    'issue': f'Page loads in {load_time:.1f}s - should be <3s'
+                })
+
+            # 4. Form Friction
+            form_fields = campaign.get('form_field_count', 0)
+            if form_fields > 5:
+                opportunities.append({
+                    'type': 'reduce_form_friction',
+                    'severity': 'medium',
+                    'campaign_id': campaign_id,
+                    'landing_url': landing_url,
+                    'form_fields': form_fields,
+                    'issue': f'Form has {form_fields} fields - recommended ≤5 for better conversion'
+                })
+
+            # 5. Trust Signals
+            has_reviews = campaign.get('has_reviews', False)
+            has_trust_badges = campaign.get('has_trust_badges', False)
+            has_guarantees = campaign.get('has_guarantees', False)
+
+            missing_trust = []
+            if not has_reviews:
+                missing_trust.append('customer reviews')
+            if not has_trust_badges:
+                missing_trust.append('trust badges (BBB, license #)')
+            if not has_guarantees:
+                missing_trust.append('service guarantee')
+
+            if len(missing_trust) >= 2:
+                opportunities.append({
+                    'type': 'add_trust_signals',
+                    'severity': 'medium',
+                    'campaign_id': campaign_id,
+                    'landing_url': landing_url,
+                    'missing_signals': missing_trust,
+                    'issue': 'Missing trust signals that increase conversion rates'
+                })
+
+            # 6. Mobile Experience Gap
+            mobile_cvr = campaign.get('mobile_conversion_rate', 0)
+            desktop_cvr = campaign.get('desktop_conversion_rate', 0)
+
+            if desktop_cvr > 0 and mobile_cvr < desktop_cvr * 0.6:  # Mobile <60% of desktop
+                opportunities.append({
+                    'type': 'improve_mobile_experience',
+                    'severity': 'high',
+                    'campaign_id': campaign_id,
+                    'landing_url': landing_url,
+                    'mobile_cvr': mobile_cvr,
+                    'desktop_cvr': desktop_cvr,
+                    'issue': f'Mobile CVR ({mobile_cvr:.1%}) is {(1 - mobile_cvr/desktop_cvr)*100:.0f}% lower than desktop'
+                })
+
+            # 7. CTA Analysis
+            cta_above_fold = campaign.get('cta_above_fold', False)
+            cta_count = campaign.get('cta_count', 0)
+
+            if not cta_above_fold or cta_count < 2:
+                opportunities.append({
+                    'type': 'optimize_cta_placement',
+                    'severity': 'medium',
+                    'campaign_id': campaign_id,
+                    'landing_url': landing_url,
+                    'cta_above_fold': cta_above_fold,
+                    'cta_count': cta_count,
+                    'issue': 'CTA not prominent - should be above fold + 2-3 total CTAs'
+                })
+
+        return opportunities
+
+    def decide(self, opportunities: List[Dict[str, Any]]) -> List[AgentDecision]:
+        """Make landing page optimization decisions."""
+        decisions = []
+
+        for opp in opportunities:
+            opp_type = opp['type']
+            severity = opp.get('severity', 'medium')
+
+            # Map severity to risk level
+            risk_map = {
+                'low': DecisionRiskLevel.LOW,
+                'medium': DecisionRiskLevel.MEDIUM,
+                'high': DecisionRiskLevel.HIGH
+            }
+            risk_level = risk_map.get(severity, DecisionRiskLevel.MEDIUM)
+
+            if opp_type == 'improve_message_match':
+                decision = AgentDecision(
+                    agent_id=self.agent_id,
+                    agent_type=self.agent_type,
+                    decision_type='improve_message_match',
+                    title=f"Align landing page with ad copy",
+                    description=f"Page title: '{opp['page_title']}' doesn't match ad headlines",
+                    reasoning="Message match improves Quality Score and conversion rate by meeting user expectations",
+                    account_id=0,
+                    customer_id='',
+                    campaign_id=opp['campaign_id'],
+                    action_data={
+                        'landing_url': opp['landing_url'],
+                        'suggested_h1': opp['ad_headlines'][0] if opp['ad_headlines'] else '',
+                        'ad_headlines': opp['ad_headlines']
+                    },
+                    risk_level=risk_level,
+                    requires_approval=True,
+                    confidence=0.85,
+                    expected_improvement_pct=15
+                )
+                decisions.append(decision)
+
+            elif opp_type == 'add_keywords_to_page':
+                decision = AgentDecision(
+                    agent_id=self.agent_id,
+                    agent_type=self.agent_type,
+                    decision_type='add_keywords_to_page',
+                    title=f"Add missing keywords to landing page",
+                    description=f"Keywords missing: {', '.join(opp['missing_keywords'])}",
+                    reasoning="Including target keywords on landing page improves Quality Score",
+                    account_id=0,
+                    customer_id='',
+                    campaign_id=opp['campaign_id'],
+                    action_data={
+                        'landing_url': opp['landing_url'],
+                        'missing_keywords': opp['missing_keywords']
+                    },
+                    risk_level=risk_level,
+                    requires_approval=True,
+                    confidence=0.90,
+                    expected_improvement_pct=10
+                )
+                decisions.append(decision)
+
+            elif opp_type == 'improve_page_speed':
+                decision = AgentDecision(
+                    agent_id=self.agent_id,
+                    agent_type=self.agent_type,
+                    decision_type='improve_page_speed',
+                    title=f"Optimize page speed ({opp['load_time']:.1f}s → <3s)",
+                    description=f"Current load: {opp['load_time']:.1f}s desktop, {opp.get('mobile_load_time', 0):.1f}s mobile",
+                    reasoning="Page speed directly impacts conversion rate and Quality Score",
+                    account_id=0,
+                    customer_id='',
+                    campaign_id=opp['campaign_id'],
+                    action_data={
+                        'landing_url': opp['landing_url'],
+                        'current_load_time': opp['load_time'],
+                        'target_load_time': 2.5
+                    },
+                    risk_level=risk_level,
+                    requires_approval=True,
+                    confidence=0.95,
+                    expected_improvement_pct=25
+                )
+                decisions.append(decision)
+
+            elif opp_type == 'reduce_form_friction':
+                decision = AgentDecision(
+                    agent_id=self.agent_id,
+                    agent_type=self.agent_type,
+                    decision_type='reduce_form_friction',
+                    title=f"Simplify form ({opp['form_fields']} → ≤5 fields)",
+                    description=f"Each extra field reduces conversions ~11%",
+                    reasoning="Forms with ≤5 fields convert 120% better than longer forms",
+                    account_id=0,
+                    customer_id='',
+                    campaign_id=opp['campaign_id'],
+                    action_data={
+                        'landing_url': opp['landing_url'],
+                        'current_fields': opp['form_fields'],
+                        'recommended_fields': 5
+                    },
+                    risk_level=risk_level,
+                    requires_approval=True,
+                    confidence=0.88,
+                    expected_improvement_pct=30
+                )
+                decisions.append(decision)
+
+            elif opp_type == 'add_trust_signals':
+                decision = AgentDecision(
+                    agent_id=self.agent_id,
+                    agent_type=self.agent_type,
+                    decision_type='add_trust_signals',
+                    title=f"Add trust signals to landing page",
+                    description=f"Missing: {', '.join(opp['missing_signals'])}",
+                    reasoning="Trust signals increase conversion rates by 12-42%",
+                    account_id=0,
+                    customer_id='',
+                    campaign_id=opp['campaign_id'],
+                    action_data={
+                        'landing_url': opp['landing_url'],
+                        'missing_signals': opp['missing_signals']
+                    },
+                    risk_level=risk_level,
+                    requires_approval=True,
+                    confidence=0.80,
+                    expected_improvement_pct=20
+                )
+                decisions.append(decision)
+
+            elif opp_type == 'improve_mobile_experience':
+                decision = AgentDecision(
+                    agent_id=self.agent_id,
+                    agent_type=self.agent_type,
+                    decision_type='improve_mobile_experience',
+                    title=f"Fix mobile conversion gap",
+                    description=f"Mobile CVR ({opp['mobile_cvr']:.1%}) vs desktop ({opp['desktop_cvr']:.1%})",
+                    reasoning="Mobile users are >50% of traffic - fixing mobile UX unlocks major revenue",
+                    account_id=0,
+                    customer_id='',
+                    campaign_id=opp['campaign_id'],
+                    action_data={
+                        'landing_url': opp['landing_url'],
+                        'mobile_cvr': opp['mobile_cvr'],
+                        'desktop_cvr': opp['desktop_cvr']
+                    },
+                    risk_level=risk_level,
+                    requires_approval=True,
+                    confidence=0.92,
+                    expected_improvement_pct=40
+                )
+                decisions.append(decision)
+
+            elif opp_type == 'optimize_cta_placement':
+                decision = AgentDecision(
+                    agent_id=self.agent_id,
+                    agent_type=self.agent_type,
+                    decision_type='optimize_cta_placement',
+                    title=f"Improve CTA visibility and placement",
+                    description=f"CTA above fold: {opp['cta_above_fold']}, Total: {opp['cta_count']}",
+                    reasoning="Above-fold CTA + 2-3 strategic CTAs increases conversions 20-30%",
+                    account_id=0,
+                    customer_id='',
+                    campaign_id=opp['campaign_id'],
+                    action_data={
+                        'landing_url': opp['landing_url'],
+                        'cta_above_fold': opp['cta_above_fold'],
+                        'recommended_cta_count': 3
+                    },
+                    risk_level=risk_level,
+                    requires_approval=True,
+                    confidence=0.87,
+                    expected_improvement_pct=25
+                )
+                decisions.append(decision)
+
+        return decisions
+
+    def _execute_impl(self, decision: AgentDecision, google_ads_client: Any) -> Dict[str, Any]:
+        """
+        Landing page changes require manual implementation.
+        This agent creates recommendations but does not auto-execute.
+        """
+        # Landing page optimizations cannot be automated via Google Ads API
+        # They require developer/designer work on the actual website
+        return {
+            'success': True,
+            'note': 'Landing page optimization requires manual implementation',
+            'decision_type': decision.decision_type,
+            'landing_url': decision.action_data.get('landing_url'),
+            'requires_manual_work': True
+        }

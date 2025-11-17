@@ -17,7 +17,7 @@ from .event_bus import EventBus, AgentEvent
 from .decision_log import DecisionLog
 from .strategic import StrategicDirectorAgent
 from .operational import CampaignManagerAgent, BudgetGuardianAgent, QualityScoreAgent
-from .tactical import KeywordOptimizerAgent, AdCopyAgent, NegativeKeywordAgent
+from .tactical import KeywordOptimizerAgent, AdCopyAgent, NegativeKeywordAgent, LandingPageAnalystAgent
 
 __all__ = [
     # Base
@@ -38,4 +38,5 @@ __all__ = [
     'KeywordOptimizerAgent',
     'AdCopyAgent',
     'NegativeKeywordAgent',
+    'LandingPageAnalystAgent',
 ]

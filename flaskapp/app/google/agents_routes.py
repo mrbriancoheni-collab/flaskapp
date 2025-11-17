@@ -285,6 +285,7 @@ def run_agents():
         KeywordOptimizerAgent,
         NegativeKeywordAgent,
         AdCopyAgent,
+        LandingPageAnalystAgent,
         EventBus,
         DecisionLog
     )
@@ -385,6 +386,7 @@ def run_agents():
         KeywordOptimizerAgent(event_bus=event_bus, decision_log=decision_log),
         NegativeKeywordAgent(event_bus=event_bus, decision_log=decision_log),
         AdCopyAgent(event_bus=event_bus, decision_log=decision_log),
+        LandingPageAnalystAgent(event_bus=event_bus, decision_log=decision_log),
     ]
 
     total_decisions = 0

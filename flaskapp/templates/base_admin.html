@@ -65,6 +65,9 @@
       <a href="{{ url_for('admin_bp.ai_prompts') }}" class="primary-btn {% if request.endpoint in ['admin_bp.ai_prompts','admin_bp.ai_prompt_edit'] %}active{% endif %}" title="AI Prompts">
         <i class="fa-solid fa-wand-magic-sparkles"></i>
       </a>
+      <a href="{{ url_for('agent_config_bp.configure_list') }}" class="primary-btn {% if request.endpoint in ['agent_config_bp.configure_list','agent_config_bp.configure_global','agent_config_bp.configure_account'] %}active{% endif %}" title="AI Agents">
+        <i class="fa-solid fa-robot"></i>
+      </a>
       <a href="{{ url_for('admin_bp.logs') }}" class="primary-btn {% if request.endpoint=='admin_bp.logs' %}active{% endif %}" title="Audit Logs">
         <i class="fa-solid fa-clipboard-list"></i>
       </a>
@@ -123,6 +126,9 @@
 
       <a class="secondary-link {% if request.endpoint in ['admin_bp.ai_prompts','admin_bp.ai_prompt_edit'] %}active{% endif %}" href="{{ url_for('admin_bp.ai_prompts') }}">
         <i class="fa-solid fa-wand-magic-sparkles"></i><span>AI Prompts</span>
+      </a>
+      <a class="secondary-link {% if request.endpoint in ['agent_config_bp.configure_list','agent_config_bp.configure_global','agent_config_bp.configure_account'] %}active{% endif %}" href="{{ url_for('agent_config_bp.configure_list') }}">
+        <i class="fa-solid fa-robot"></i><span>AI Agents</span>
       </a>
       <a class="secondary-link {% if request.endpoint=='admin_bp.logs' %}active{% endif %}" href="{{ url_for('admin_bp.logs') }}">
         <i class="fa-solid fa-clipboard-list"></i><span>Audit Logs</span>

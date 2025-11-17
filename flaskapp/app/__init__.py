@@ -535,6 +535,20 @@ def create_app():
         app.logger.exception("Failed to import/register forecasting_bp")
 
     try:
+        from app.google.auto_budget_routes import auto_budget_bp
+        app.register_blueprint(auto_budget_bp)
+        app.logger.info("auto_budget_bp registered at /account/google/ads/auto-budget")
+    except Exception:
+        app.logger.exception("Failed to import/register auto_budget_bp")
+
+    try:
+        from app.google.competitive_routes import competitive_bp
+        app.register_blueprint(competitive_bp)
+        app.logger.info("competitive_bp registered at /account/google/ads/competitive")
+    except Exception:
+        app.logger.exception("Failed to import/register competitive_bp")
+
+    try:
         from app.glsa import glsa_bp
         app.register_blueprint(glsa_bp, url_prefix="/account/glsa")
         app.logger.info("glsa_bp registered at /account/glsa")

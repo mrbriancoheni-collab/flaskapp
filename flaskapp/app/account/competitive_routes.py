@@ -214,3 +214,45 @@ def mark_addressed(alert_id):
     except Exception as e:
         logger.error(f"Error marking alert: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+@competitive_bp.route("/api/add-competitor", methods=["POST"])
+@login_required
+def add_competitor():
+    """Manually add a competitor to track."""
+    user = g.user
+    account_id = user.account_id if user and hasattr(user, 'account_id') else None
+
+    data = request.get_json()
+    customer_id = data.get('customer_id', '')
+    competitor_domain = data.get('competitor_domain', '').strip()
+    company_name = data.get('company_name', '').strip()
+    notes = data.get('notes', '').strip()
+
+    if not account_id or not customer_id or not competitor_domain:
+        return jsonify({"error": "Missing required parameters"}), 400
+
+    try:
+        db = get_db()
+        cursor = db.cursor()
+
+        # Insert manually tracked competitor (we'll create a new table for this)
+        # For now, create a placeholder entry in auction_insights with zeros
+        cursor.execute("""
+            INSERT INTO auction_insights
+            (account_id, customer_id, competitor_domain, report_date, impression_share,
+             overlap_rate, position_above_rate, top_of_page_rate, notes)
+            VALUES (%s, %s, %s, CURDATE(), 0, 0, 0, 0, %s)
+            ON DUPLICATE KEY UPDATE notes = VALUES(notes)
+        """, (account_id, customer_id, competitor_domain,
+              f"{company_name or ''} - {notes or 'Manually tracked competitor'}"))
+
+        db.commit()
+        cursor.close()
+
+        return jsonify({"success": True, "message": "Competitor added successfully"})
+
+    except Exception as e:
+        logger.error(f"Error adding competitor: {e}")
+        db.rollback()
+        return jsonify({"error": str(e)}), 500

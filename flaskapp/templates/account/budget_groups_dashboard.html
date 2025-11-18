@@ -142,7 +142,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
     const ACCOUNT_ID = {{ account_id|tojson }};
     const CUSTOMER_ID = {{ customer_id|tojson }};
     let currentGroupId = null;

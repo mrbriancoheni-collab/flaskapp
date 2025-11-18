@@ -24,7 +24,44 @@ def dashboard():
     user = g.user
     account_id = user.account_id if user and hasattr(user, 'account_id') else None
 
-    return render_template("account/auto_budget_dashboard.html", user=user, account_id=account_id)
+    # Check if budget groups exist
+    budget_groups_count = 0
+    customer_id = None
+    if account_id:
+        try:
+            db = get_db_connection()
+            cursor = db.cursor(dictionary=True)
+
+            # Get customer_id from first campaign
+            cursor.execute(
+                "SELECT google_customer_id FROM ads_campaigns WHERE account_id = %s AND google_customer_id IS NOT NULL LIMIT 1",
+                (account_id,)
+            )
+            row = cursor.fetchone()
+            if row:
+                customer_id = row['google_customer_id']
+
+            # Count budget groups for this account/customer
+            if customer_id:
+                cursor.execute(
+                    "SELECT COUNT(*) as count FROM budget_groups WHERE account_id = %s AND customer_id = %s",
+                    (account_id, customer_id)
+                )
+                result = cursor.fetchone()
+                budget_groups_count = result['count'] if result else 0
+
+            cursor.close()
+            db.close()
+        except Exception as e:
+            logger.error(f"Error checking budget groups: {e}")
+
+    return render_template(
+        "account/auto_budget_dashboard.html",
+        user=user,
+        account_id=account_id,
+        customer_id=customer_id,
+        budget_groups_count=budget_groups_count
+    )
 
 
 @auto_budget_bp.route("/api/settings", methods=["GET"])

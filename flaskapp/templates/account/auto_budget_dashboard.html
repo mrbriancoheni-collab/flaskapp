@@ -130,6 +130,166 @@
         </div>
     </div>
 
+    <!-- Safeguard Settings -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-xl font-semibold">
+                    <i class="fa-solid fa-shield-halved text-blue-600 mr-2"></i>
+                    Budget Change Safeguards
+                </h2>
+                <p class="text-sm text-gray-600 mt-1">Prevent drastic budget changes that could put you over budget</p>
+            </div>
+        </div>
+
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <div class="flex items-start space-x-3">
+                <i class="fa-solid fa-info-circle text-blue-600 mt-0.5"></i>
+                <div class="text-sm text-gray-700">
+                    <p class="font-medium mb-1">How safeguards work:</p>
+                    <ul class="space-y-1">
+                        <li>• <strong>Daily/Weekly Limits:</strong> Cap maximum budget changes per day and week</li>
+                        <li>• <strong>Gradual Ramping:</strong> Spread large changes over multiple days</li>
+                        <li>• <strong>Approval Workflow:</strong> Require manual approval for changes above threshold</li>
+                        <li>• <strong>Alerts:</strong> Get notified when significant changes occur</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Change Limits -->
+            <div class="space-y-4">
+                <h3 class="text-md font-semibold text-gray-800 border-b pb-2">
+                    <i class="fa-solid fa-gauge-high text-orange-600 mr-2"></i>Change Limits
+                </h3>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Maximum Daily Change (%)
+                        <span class="text-gray-500 font-normal">- Cap budget changes per day</span>
+                    </label>
+                    <input type="number" id="max_daily_change_pct"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                           value="20" min="5" max="100" step="5">
+                    <p class="text-xs text-gray-500 mt-1">Default: 20% - prevents budget from changing more than 20% per day</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Maximum Weekly Change (%)
+                        <span class="text-gray-500 font-normal">- Cap cumulative changes per week</span>
+                    </label>
+                    <input type="number" id="max_weekly_change_pct"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                           value="40" min="10" max="200" step="5">
+                    <p class="text-xs text-gray-500 mt-1">Default: 40% - total changes within a week cannot exceed 40%</p>
+                </div>
+            </div>
+
+            <!-- Gradual Ramping -->
+            <div class="space-y-4">
+                <h3 class="text-md font-semibold text-gray-800 border-b pb-2">
+                    <i class="fa-solid fa-stairs text-green-600 mr-2"></i>Gradual Ramping
+                </h3>
+
+                <div>
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" id="enable_gradual_ramp" checked class="rounded">
+                        <span class="text-sm font-medium text-gray-700">Enable Gradual Ramp</span>
+                    </label>
+                    <p class="text-xs text-gray-500 mt-1 ml-6">Spread large budget changes over multiple days</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Ramp Duration (days)
+                        <span class="text-gray-500 font-normal">- How many days to reach target</span>
+                    </label>
+                    <input type="number" id="ramp_days"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                           value="3" min="1" max="14" step="1">
+                    <p class="text-xs text-gray-500 mt-1">Default: 3 days - changes will be applied gradually over 3 days</p>
+                </div>
+            </div>
+
+            <!-- Approval & Alerts -->
+            <div class="space-y-4">
+                <h3 class="text-md font-semibold text-gray-800 border-b pb-2">
+                    <i class="fa-solid fa-user-check text-purple-600 mr-2"></i>Approval Workflow
+                </h3>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Approval Required Above (%)
+                        <span class="text-gray-500 font-normal">- Manual approval threshold</span>
+                    </label>
+                    <input type="number" id="require_approval_threshold_pct"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                           value="30" min="0" max="100" step="5">
+                    <p class="text-xs text-gray-500 mt-1">Default: 30% - changes above 30% require manual approval</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Alert Threshold (%)
+                        <span class="text-gray-500 font-normal">- Send notification when exceeded</span>
+                    </label>
+                    <input type="number" id="alert_threshold_pct"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                           value="15" min="5" max="100" step="5">
+                    <p class="text-xs text-gray-500 mt-1">Default: 15% - get notified for changes above 15%</p>
+                </div>
+            </div>
+
+            <!-- Rollback (Future Feature) -->
+            <div class="space-y-4">
+                <h3 class="text-md font-semibold text-gray-800 border-b pb-2">
+                    <i class="fa-solid fa-rotate-left text-red-600 mr-2"></i>Auto-Rollback
+                    <span class="text-xs font-normal text-gray-500">(Coming Soon)</span>
+                </h3>
+
+                <div class="opacity-50">
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" id="enable_rollback" disabled class="rounded">
+                        <span class="text-sm font-medium text-gray-700">Enable Auto-Rollback</span>
+                    </label>
+                    <p class="text-xs text-gray-500 mt-1 ml-6">Automatically revert changes if performance drops</p>
+                </div>
+
+                <div class="opacity-50">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Rollback Window (hours)
+                    </label>
+                    <input type="number" id="rollback_window_hours" disabled
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                           value="24" min="1" max="168" step="1">
+                    <p class="text-xs text-gray-500 mt-1">Monitor performance for this duration after changes</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 flex items-center space-x-3">
+            <button id="saveSafeguards" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md">
+                <i class="fa-solid fa-shield-halved mr-2"></i>Save Safeguard Settings
+            </button>
+            <span id="safeguardsSaveStatus" class="text-sm text-gray-600"></span>
+        </div>
+    </div>
+
+    <!-- Pending Changes (Requiring Approval) -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6" id="pendingChangesCard">
+        <h2 class="text-xl font-semibold mb-4">
+            <i class="fa-solid fa-clock text-orange-600 mr-2"></i>
+            Pending Budget Changes
+            <span id="pendingCount" class="text-sm font-normal text-gray-600"></span>
+        </h2>
+
+        <div id="pendingChangesContainer">
+            <p class="text-gray-500">Loading pending changes...</p>
+        </div>
+    </div>
+
     <!-- Budget Change History -->
     <div class="bg-white rounded-lg shadow-md p-6">
         <h2 class="text-xl font-semibold mb-4">Recent Budget Changes</h2>
@@ -155,6 +315,7 @@
         loadSettings();
         loadHistory();
         loadNotifications();
+        loadPendingChanges();
     });
 
     // Save settings
@@ -186,6 +347,42 @@
         }
     });
 
+    // Save safeguards
+    document.getElementById('saveSafeguards').addEventListener('click', async function() {
+        const statusEl = document.getElementById('safeguardsSaveStatus');
+        statusEl.textContent = 'Saving...';
+        statusEl.className = 'text-sm text-blue-600';
+
+        const data = {
+            customer_id: 'demo-customer',  // TODO: Get from user context
+            max_daily_change_pct: parseFloat(document.getElementById('max_daily_change_pct').value),
+            max_weekly_change_pct: parseFloat(document.getElementById('max_weekly_change_pct').value),
+            enable_gradual_ramp: document.getElementById('enable_gradual_ramp').checked,
+            ramp_days: parseInt(document.getElementById('ramp_days').value),
+            require_approval_threshold_pct: parseFloat(document.getElementById('require_approval_threshold_pct').value),
+            alert_threshold_pct: parseFloat(document.getElementById('alert_threshold_pct').value),
+            enable_rollback: false, // Disabled for now
+            rollback_window_hours: 24,
+            rollback_performance_drop_pct: 20
+        };
+
+        const response = await fetch('/account/auto-budget/api/settings', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            statusEl.textContent = '✓ Safeguards saved successfully!';
+            statusEl.className = 'text-sm text-green-600';
+            setTimeout(() => { statusEl.textContent = ''; }, 3000);
+        } else {
+            statusEl.textContent = '✗ Error: ' + result.error;
+            statusEl.className = 'text-sm text-red-600';
+        }
+    });
+
     async function loadSettings() {
         const response = await fetch('/account/auto-budget/api/settings?customer_id=demo-customer');
         const data = await response.json();
@@ -198,6 +395,26 @@
             document.getElementById('max_daily_budget').value = s.max_daily_budget;
             document.getElementById('adjustment_frequency').value = s.adjustment_frequency;
             document.getElementById('send_notifications').checked = s.send_notifications;
+
+            // Load safeguard settings
+            if (s.max_daily_change_pct !== undefined) {
+                document.getElementById('max_daily_change_pct').value = s.max_daily_change_pct;
+            }
+            if (s.max_weekly_change_pct !== undefined) {
+                document.getElementById('max_weekly_change_pct').value = s.max_weekly_change_pct;
+            }
+            if (s.enable_gradual_ramp !== undefined) {
+                document.getElementById('enable_gradual_ramp').checked = s.enable_gradual_ramp;
+            }
+            if (s.ramp_days !== undefined) {
+                document.getElementById('ramp_days').value = s.ramp_days;
+            }
+            if (s.require_approval_threshold_pct !== undefined) {
+                document.getElementById('require_approval_threshold_pct').value = s.require_approval_threshold_pct;
+            }
+            if (s.alert_threshold_pct !== undefined) {
+                document.getElementById('alert_threshold_pct').value = s.alert_threshold_pct;
+            }
         }
     }
 
@@ -251,6 +468,122 @@
             document.getElementById('notificationsContainer').innerHTML = html;
         } else {
             document.getElementById('notificationsContainer').innerHTML = '<p class="text-gray-500">No notifications.</p>';
+        }
+    }
+
+    async function loadPendingChanges() {
+        const response = await fetch('/account/auto-budget/api/pending-changes?customer_id=demo-customer');
+        const data = await response.json();
+
+        const countEl = document.getElementById('pendingCount');
+        const containerEl = document.getElementById('pendingChangesContainer');
+
+        if (data.success && data.pending_changes && data.pending_changes.length > 0) {
+            const count = data.pending_changes.length;
+            countEl.textContent = `(${count} pending)`;
+            countEl.className = 'text-sm font-normal text-orange-600';
+
+            let html = '<div class="space-y-4">';
+
+            data.pending_changes.forEach(change => {
+                const changePct = parseFloat(change.change_pct);
+                const changeColor = changePct > 0 ? 'text-green-600' : 'text-red-600';
+                const changeIcon = changePct > 0 ? 'fa-arrow-up' : 'fa-arrow-down';
+
+                html += `
+                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-gray-900">${change.campaign_name}</h3>
+                            <p class="text-sm text-gray-600 mt-1">${change.reason}</p>
+
+                            <div class="mt-3 grid grid-cols-3 gap-4 text-sm">
+                                <div>
+                                    <span class="text-gray-500">Current Budget:</span>
+                                    <p class="font-medium">$${parseFloat(change.current_daily_budget).toFixed(2)}/day</p>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500">Proposed Budget:</span>
+                                    <p class="font-medium">$${parseFloat(change.proposed_daily_budget).toFixed(2)}/day</p>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500">Change:</span>
+                                    <p class="font-medium ${changeColor}">
+                                        <i class="fa-solid ${changeIcon} mr-1"></i>
+                                        ${Math.abs(changePct).toFixed(1)}%
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="mt-2 text-xs text-gray-500">
+                                <i class="fa-solid fa-clock mr-1"></i>
+                                Requested: ${new Date(change.created_at).toLocaleString()}
+                                ${change.expires_at ? ` • Expires: ${new Date(change.expires_at).toLocaleString()}` : ''}
+                            </div>
+                        </div>
+
+                        <div class="ml-4 flex flex-col space-y-2">
+                            <button onclick="approveChange(${change.id})"
+                                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm">
+                                <i class="fa-solid fa-check mr-1"></i>Approve
+                            </button>
+                            <button onclick="rejectChange(${change.id})"
+                                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm">
+                                <i class="fa-solid fa-times mr-1"></i>Reject
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            });
+
+            html += '</div>';
+            containerEl.innerHTML = html;
+        } else {
+            countEl.textContent = '(0 pending)';
+            countEl.className = 'text-sm font-normal text-gray-600';
+            containerEl.innerHTML = '<p class="text-gray-500">No pending budget changes requiring approval.</p>';
+        }
+    }
+
+    async function approveChange(changeId) {
+        if (!confirm('Are you sure you want to approve this budget change?')) {
+            return;
+        }
+
+        const response = await fetch('/account/auto-budget/api/pending-changes/' + changeId + '/approve', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({})
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            alert('Budget change approved and applied!');
+            loadPendingChanges();
+            loadHistory();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    }
+
+    async function rejectChange(changeId) {
+        const reason = prompt('Enter rejection reason (optional):');
+        if (reason === null) return; // User cancelled
+
+        const response = await fetch('/account/auto-budget/api/pending-changes/' + changeId + '/reject', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                rejection_reason: reason || 'Manually rejected by user'
+            })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            alert('Budget change rejected.');
+            loadPendingChanges();
+        } else {
+            alert('Error: ' + result.error);
         }
     }
 </script>

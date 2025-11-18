@@ -685,3 +685,650 @@ class AutoBudgetService:
             })
 
         return adjustments
+
+    # ============================================
+    # SAFEGUARD ENFORCEMENT METHODS
+    # ============================================
+
+    def _get_weekly_budget_change(
+        self,
+        account_id: int,
+        customer_id: str,
+        campaign_id: str
+    ) -> Dict[str, Any]:
+        """
+        Get total budget changes for the current week.
+
+        Returns:
+            Dict with starting_budget, current_budget, total_change_pct
+        """
+        from datetime import date, timedelta
+
+        # Calculate current week (Monday-Sunday)
+        today = date.today()
+        week_start = today - timedelta(days=today.weekday())  # Monday
+        week_end = week_start + timedelta(days=6)  # Sunday
+
+        cursor = self.db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT * FROM budget_weekly_changes
+            WHERE account_id = %s AND customer_id = %s
+            AND campaign_id = %s AND week_start_date = %s
+        """, (account_id, customer_id, campaign_id, week_start))
+
+        result = cursor.fetchone()
+        cursor.close()
+
+        if result:
+            return {
+                'starting_budget': float(result['starting_budget']),
+                'current_budget': float(result['current_budget']),
+                'total_change_pct': float(result['total_change_pct']),
+                'num_changes': result['num_changes']
+            }
+        else:
+            return {
+                'starting_budget': 0,
+                'current_budget': 0,
+                'total_change_pct': 0,
+                'num_changes': 0
+            }
+
+    def _update_weekly_budget_tracking(
+        self,
+        account_id: int,
+        customer_id: str,
+        campaign_id: str,
+        old_budget: float,
+        new_budget: float
+    ) -> bool:
+        """Update weekly budget change tracking."""
+        from datetime import date, timedelta
+
+        today = date.today()
+        week_start = today - timedelta(days=today.weekday())
+        week_end = week_start + timedelta(days=6)
+
+        cursor = self.db.cursor(dictionary=True)
+
+        try:
+            # Get existing record or create new
+            cursor.execute("""
+                SELECT * FROM budget_weekly_changes
+                WHERE account_id = %s AND customer_id = %s
+                AND campaign_id = %s AND week_start_date = %s
+            """, (account_id, customer_id, campaign_id, week_start))
+
+            existing = cursor.fetchone()
+
+            if existing:
+                # Update existing record
+                starting_budget = float(existing['starting_budget'])
+                total_change_pct = ((new_budget - starting_budget) / starting_budget * 100) if starting_budget > 0 else 0
+
+                cursor.execute("""
+                    UPDATE budget_weekly_changes
+                    SET current_budget = %s,
+                        total_change_amount = %s,
+                        total_change_pct = %s,
+                        num_changes = num_changes + 1
+                    WHERE id = %s
+                """, (new_budget, new_budget - starting_budget, total_change_pct, existing['id']))
+            else:
+                # Create new record
+                cursor.execute("""
+                    INSERT INTO budget_weekly_changes (
+                        account_id, customer_id, campaign_id, week_start_date, week_end_date,
+                        starting_budget, current_budget, total_change_amount, total_change_pct, num_changes
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    account_id, customer_id, campaign_id, week_start, week_end,
+                    old_budget, new_budget, new_budget - old_budget,
+                    ((new_budget - old_budget) / old_budget * 100) if old_budget > 0 else 0, 1
+                ))
+
+            self.db.commit()
+            cursor.close()
+            return True
+
+        except Exception as e:
+            logger.error(f"Error updating weekly budget tracking: {e}")
+            self.db.rollback()
+            cursor.close()
+            return False
+
+    def _check_change_limits(
+        self,
+        account_id: int,
+        customer_id: str,
+        campaign_id: str,
+        current_budget: float,
+        proposed_budget: float,
+        settings: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Check if proposed change exceeds daily/weekly limits.
+
+        Returns:
+            Dict with 'allowed', 'reason', 'capped_budget', 'exceeds_daily', 'exceeds_weekly'
+        """
+        if current_budget <= 0:
+            return {
+                'allowed': True,
+                'reason': 'Current budget is 0',
+                'capped_budget': proposed_budget,
+                'exceeds_daily': False,
+                'exceeds_weekly': False
+            }
+
+        change_pct = abs((proposed_budget - current_budget) / current_budget * 100)
+        max_daily_pct = float(settings.get('max_daily_change_pct', 20))
+        max_weekly_pct = float(settings.get('max_weekly_change_pct', 40))
+
+        # Check daily limit
+        exceeds_daily = change_pct > max_daily_pct
+
+        # Check weekly limit
+        weekly_data = self._get_weekly_budget_change(account_id, customer_id, campaign_id)
+
+        # Calculate what the new weekly change would be
+        if weekly_data['starting_budget'] > 0:
+            new_weekly_change_pct = abs((proposed_budget - weekly_data['starting_budget']) / weekly_data['starting_budget'] * 100)
+        else:
+            new_weekly_change_pct = 0
+
+        exceeds_weekly = new_weekly_change_pct > max_weekly_pct
+
+        # Determine capped budget
+        capped_budget = proposed_budget
+
+        if exceeds_daily:
+            # Cap to max daily change
+            if proposed_budget > current_budget:
+                capped_budget = current_budget * (1 + max_daily_pct / 100)
+            else:
+                capped_budget = current_budget * (1 - max_daily_pct / 100)
+
+        if exceeds_weekly:
+            # Cap to max weekly change
+            if weekly_data['starting_budget'] > 0:
+                if proposed_budget > weekly_data['starting_budget']:
+                    max_allowed = weekly_data['starting_budget'] * (1 + max_weekly_pct / 100)
+                else:
+                    max_allowed = weekly_data['starting_budget'] * (1 - max_weekly_pct / 100)
+
+                capped_budget = min(capped_budget, max_allowed) if proposed_budget > current_budget else max(capped_budget, max_allowed)
+
+        allowed = not (exceeds_daily or exceeds_weekly)
+        reason = []
+        if exceeds_daily:
+            reason.append(f"Exceeds daily limit of {max_daily_pct}%")
+        if exceeds_weekly:
+            reason.append(f"Exceeds weekly limit of {max_weekly_pct}%")
+
+        return {
+            'allowed': allowed,
+            'reason': '; '.join(reason) if reason else 'Within limits',
+            'capped_budget': capped_budget,
+            'exceeds_daily': exceeds_daily,
+            'exceeds_weekly': exceeds_weekly,
+            'change_pct': change_pct
+        }
+
+    def _apply_gradual_ramp(
+        self,
+        current_budget: float,
+        target_budget: float,
+        settings: Dict[str, Any]
+    ) -> float:
+        """
+        Apply gradual ramping to spread changes over multiple days.
+
+        Returns:
+            Budget for today (first step of ramp)
+        """
+        if not settings.get('enable_gradual_ramp', True):
+            return target_budget
+
+        ramp_days = int(settings.get('ramp_days', 3))
+        if ramp_days <= 1:
+            return target_budget
+
+        # Calculate daily increment
+        total_change = target_budget - current_budget
+        daily_increment = total_change / ramp_days
+
+        # Return budget after first day of ramp
+        return current_budget + daily_increment
+
+    def _requires_approval(
+        self,
+        change_pct: float,
+        settings: Dict[str, Any]
+    ) -> bool:
+        """Determine if a change requires manual approval."""
+        threshold = float(settings.get('require_approval_threshold_pct', 30))
+        return abs(change_pct) > threshold
+
+    def _create_pending_change(
+        self,
+        account_id: int,
+        customer_id: str,
+        budget_group_id: Optional[int],
+        adjustment: Dict[str, Any],
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """
+        Create a pending change awaiting approval.
+
+        Args:
+            account_id: Account ID
+            customer_id: Google Ads customer ID
+            budget_group_id: Budget group ID (None for account-level)
+            adjustment: Adjustment dict with campaign info and proposed budget
+            metadata: Additional context
+
+        Returns:
+            True if successful
+        """
+        cursor = self.db.cursor()
+
+        try:
+            import json
+            from datetime import datetime, timedelta
+
+            metadata_json = json.dumps(metadata) if metadata else None
+            expires_at = datetime.now() + timedelta(hours=48)  # 48 hour expiration
+
+            cursor.execute("""
+                INSERT INTO budget_pending_changes (
+                    account_id, customer_id, budget_group_id, campaign_id, campaign_name,
+                    current_daily_budget, proposed_daily_budget, change_amount, change_pct,
+                    reason, triggered_by, status, requires_approval, expires_at, metadata
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                account_id, customer_id, budget_group_id,
+                adjustment['campaign_id'], adjustment.get('campaign_name', ''),
+                adjustment['current_daily_budget'], adjustment['recommended_daily_budget'],
+                adjustment['change_amount'], adjustment['change_pct'],
+                adjustment.get('reason', ''), 'auto', 'pending', True, expires_at, metadata_json
+            ))
+
+            self.db.commit()
+            cursor.close()
+
+            # Create notification for user
+            self.create_notification(
+                account_id=account_id,
+                user_id=None,  # Account-level notification
+                notification_type='budget_change',
+                severity='warning',
+                title=f'Budget Change Approval Required',
+                message=f'Campaign "{adjustment.get("campaign_name", "")}" needs approval for {adjustment["change_pct"]:.1f}% budget change',
+                action_url='/account/auto-budget?tab=pending',
+                related_entity_type='campaign',
+                related_entity_id=adjustment['campaign_id'],
+                metadata={'change_pct': adjustment['change_pct'], 'reason': adjustment.get('reason', '')}
+            )
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Error creating pending change: {e}")
+            self.db.rollback()
+            cursor.close()
+            return False
+
+    def apply_budget_adjustments_with_safeguards(
+        self,
+        account_id: int,
+        customer_id: str,
+        adjustments: List[Dict[str, Any]],
+        settings: Dict[str, Any],
+        budget_group_id: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """
+        Apply budget adjustments with safeguard enforcement.
+
+        Args:
+            account_id: Account ID
+            customer_id: Google Ads customer ID
+            adjustments: List of proposed adjustments
+            settings: Settings dict with safeguard configuration
+            budget_group_id: Optional budget group ID
+
+        Returns:
+            Dict with 'applied', 'pending_approval', 'blocked', 'alerts'
+        """
+        applied = []
+        pending_approval = []
+        blocked = []
+        alerts = []
+
+        for adjustment in adjustments:
+            campaign_id = adjustment['campaign_id']
+            current_budget = adjustment['current_daily_budget']
+            proposed_budget = adjustment['recommended_daily_budget']
+            change_pct = adjustment['change_pct']
+
+            # Check limits
+            limit_check = self._check_change_limits(
+                account_id, customer_id, campaign_id,
+                current_budget, proposed_budget, settings
+            )
+
+            # Apply gradual ramp if enabled
+            if settings.get('enable_gradual_ramp', True):
+                ramped_budget = self._apply_gradual_ramp(
+                    current_budget, limit_check['capped_budget'], settings
+                )
+            else:
+                ramped_budget = limit_check['capped_budget']
+
+            # Recalculate change with ramped budget
+            actual_change_pct = ((ramped_budget - current_budget) / current_budget * 100) if current_budget > 0 else 0
+
+            # Check if approval required
+            needs_approval = self._requires_approval(actual_change_pct, settings)
+
+            # Check alert threshold
+            alert_threshold = float(settings.get('alert_threshold_pct', 15))
+            if abs(actual_change_pct) > alert_threshold:
+                alerts.append({
+                    'campaign_id': campaign_id,
+                    'campaign_name': adjustment.get('campaign_name', ''),
+                    'change_pct': actual_change_pct,
+                    'reason': adjustment.get('reason', '')
+                })
+
+            # Create updated adjustment
+            final_adjustment = adjustment.copy()
+            final_adjustment['recommended_daily_budget'] = ramped_budget
+            final_adjustment['change_amount'] = ramped_budget - current_budget
+            final_adjustment['change_pct'] = actual_change_pct
+            final_adjustment['limit_check'] = limit_check
+
+            if limit_check['exceeds_daily'] or limit_check['exceeds_weekly']:
+                # Budget was capped or blocked
+                if ramped_budget != current_budget:
+                    final_adjustment['reason'] += f" (Capped: {limit_check['reason']})"
+                    if needs_approval:
+                        self._create_pending_change(
+                            account_id, customer_id, budget_group_id,
+                            final_adjustment,
+                            metadata={'limit_check': limit_check, 'original_proposed': proposed_budget}
+                        )
+                        pending_approval.append(final_adjustment)
+                    else:
+                        applied.append(final_adjustment)
+                else:
+                    # Change completely blocked
+                    blocked.append({
+                        **final_adjustment,
+                        'block_reason': limit_check['reason']
+                    })
+            elif needs_approval:
+                # Within limits but needs approval
+                self._create_pending_change(
+                    account_id, customer_id, budget_group_id,
+                    final_adjustment,
+                    metadata={'requires_approval': True}
+                )
+                pending_approval.append(final_adjustment)
+            else:
+                # Safe to apply immediately
+                applied.append(final_adjustment)
+
+        # Send alerts if any
+        if alerts:
+            for alert in alerts:
+                self.create_notification(
+                    account_id=account_id,
+                    user_id=None,
+                    notification_type='budget_change',
+                    severity='info',
+                    title=f'Significant Budget Change',
+                    message=f'Campaign "{alert["campaign_name"]}" budget changed by {alert["change_pct"]:.1f}%',
+                    action_url='/account/auto-budget',
+                    related_entity_type='campaign',
+                    related_entity_id=alert['campaign_id']
+                )
+
+        return {
+            'applied': applied,
+            'pending_approval': pending_approval,
+            'blocked': blocked,
+            'alerts': alerts,
+            'summary': {
+                'total_adjustments': len(adjustments),
+                'applied_count': len(applied),
+                'pending_count': len(pending_approval),
+                'blocked_count': len(blocked),
+                'alert_count': len(alerts)
+            }
+        }
+
+    def get_pending_changes(
+        self,
+        account_id: int,
+        customer_id: str,
+        status: str = 'pending'
+    ) -> List[Dict[str, Any]]:
+        """Get pending budget changes awaiting approval."""
+        cursor = self.db.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT * FROM budget_pending_changes
+            WHERE account_id = %s AND customer_id = %s AND status = %s
+            ORDER BY created_at DESC
+        """, (account_id, customer_id, status))
+
+        changes = cursor.fetchall()
+        cursor.close()
+
+        # Parse JSON metadata
+        import json
+        for change in changes:
+            if change.get('metadata'):
+                try:
+                    change['metadata'] = json.loads(change['metadata'])
+                except:
+                    change['metadata'] = None
+
+        return changes
+
+    def approve_pending_change(
+        self,
+        change_id: int,
+        user_id: int,
+        execute_immediately: bool = True
+    ) -> bool:
+        """
+        Approve a pending budget change.
+
+        Args:
+            change_id: Pending change ID
+            user_id: User approving the change
+            execute_immediately: Whether to apply the change now
+
+        Returns:
+            True if successful
+        """
+        cursor = self.db.cursor(dictionary=True)
+
+        try:
+            # Get the pending change
+            cursor.execute("SELECT * FROM budget_pending_changes WHERE id = %s", (change_id,))
+            change = cursor.fetchone()
+
+            if not change or change['status'] != 'pending':
+                cursor.close()
+                return False
+
+            # Update status to approved
+            cursor.execute("""
+                UPDATE budget_pending_changes
+                SET status = 'approved', approved_by = %s, approved_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """, (user_id, change_id))
+
+            if execute_immediately:
+                # Log the budget change
+                self.log_budget_change(
+                    account_id=change['account_id'],
+                    customer_id=change['customer_id'],
+                    campaign_id=change['campaign_id'],
+                    campaign_name=change['campaign_name'],
+                    change_type='increase' if change['change_amount'] > 0 else 'decrease',
+                    old_budget=float(change['current_daily_budget']),
+                    new_budget=float(change['proposed_daily_budget']),
+                    reason=f"Manual approval: {change['reason']}",
+                    triggered_by='manual'
+                )
+
+                # Update weekly tracking
+                self._update_weekly_budget_tracking(
+                    change['account_id'],
+                    change['customer_id'],
+                    change['campaign_id'],
+                    float(change['current_daily_budget']),
+                    float(change['proposed_daily_budget'])
+                )
+
+            self.db.commit()
+            cursor.close()
+            return True
+
+        except Exception as e:
+            logger.error(f"Error approving pending change: {e}")
+            self.db.rollback()
+            cursor.close()
+            return False
+
+    def reject_pending_change(
+        self,
+        change_id: int,
+        user_id: int,
+        rejection_reason: str
+    ) -> bool:
+        """Reject a pending budget change."""
+        cursor = self.db.cursor()
+
+        try:
+            cursor.execute("""
+                UPDATE budget_pending_changes
+                SET status = 'rejected', rejected_by = %s, rejected_at = CURRENT_TIMESTAMP,
+                    rejection_reason = %s
+                WHERE id = %s AND status = 'pending'
+            """, (user_id, rejection_reason, change_id))
+
+            self.db.commit()
+            cursor.close()
+            return cursor.rowcount > 0
+
+        except Exception as e:
+            logger.error(f"Error rejecting pending change: {e}")
+            self.db.rollback()
+            cursor.close()
+            return False
+
+    def check_for_rollback(
+        self,
+        account_id: int,
+        customer_id: str,
+        campaign_id: str,
+        settings: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Check if a recent budget change should be rolled back due to performance drop.
+
+        Returns:
+            Rollback info dict if rollback needed, None otherwise
+        """
+        if not settings.get('enable_rollback', False):
+            return None
+
+        rollback_window_hours = int(settings.get('rollback_window_hours', 24))
+        performance_drop_threshold = float(settings.get('rollback_performance_drop_pct', 20))
+
+        cursor = self.db.cursor(dictionary=True)
+
+        # Get recent budget changes within rollback window
+        cursor.execute("""
+            SELECT * FROM budget_change_log
+            WHERE account_id = %s AND customer_id = %s AND campaign_id = %s
+            AND created_at >= DATE_SUB(NOW(), INTERVAL %s HOUR)
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (account_id, customer_id, campaign_id, rollback_window_hours))
+
+        recent_change = cursor.fetchone()
+        cursor.close()
+
+        if not recent_change:
+            return None
+
+        # TODO: Get current ROAS and compare with historical
+        # This would require campaign performance data
+        # For now, return None - implement when performance tracking is available
+
+        return None
+
+    def execute_rollback(
+        self,
+        budget_change_log_id: int,
+        reason: str
+    ) -> bool:
+        """Execute a budget rollback."""
+        cursor = self.db.cursor(dictionary=True)
+
+        try:
+            # Get the original change
+            cursor.execute("SELECT * FROM budget_change_log WHERE id = %s", (budget_change_log_id,))
+            original_change = cursor.fetchone()
+
+            if not original_change:
+                cursor.close()
+                return False
+
+            # Log the rollback
+            cursor.execute("""
+                INSERT INTO budget_rollback_tracking (
+                    account_id, customer_id, campaign_id, campaign_name,
+                    budget_change_log_id, old_budget, new_budget, rollback_budget,
+                    trigger_reason, rollback_executed, executed_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+            """, (
+                original_change['account_id'],
+                original_change['customer_id'],
+                original_change['campaign_id'],
+                original_change['campaign_name'],
+                budget_change_log_id,
+                float(original_change['old_budget']),
+                float(original_change['new_budget']),
+                float(original_change['old_budget']),  # Rollback to old budget
+                reason,
+                True
+            ))
+
+            # Log the new budget change (rollback)
+            self.log_budget_change(
+                account_id=original_change['account_id'],
+                customer_id=original_change['customer_id'],
+                campaign_id=original_change['campaign_id'],
+                campaign_name=original_change['campaign_name'],
+                change_type='rollback',
+                old_budget=float(original_change['new_budget']),
+                new_budget=float(original_change['old_budget']),
+                reason=f"Automatic rollback: {reason}",
+                triggered_by='auto'
+            )
+
+            self.db.commit()
+            cursor.close()
+            return True
+
+        except Exception as e:
+            logger.error(f"Error executing rollback: {e}")
+            self.db.rollback()
+            cursor.close()
+            return False

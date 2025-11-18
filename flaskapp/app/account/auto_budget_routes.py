@@ -24,7 +24,44 @@ def dashboard():
     user = g.user
     account_id = user.account_id if user and hasattr(user, 'account_id') else None
 
-    return render_template("account/auto_budget_dashboard.html", user=user, account_id=account_id)
+    # Check if budget groups exist
+    budget_groups_count = 0
+    customer_id = None
+    if account_id:
+        try:
+            db = get_db_connection()
+            cursor = db.cursor(dictionary=True)
+
+            # Get customer_id from first campaign
+            cursor.execute(
+                "SELECT google_customer_id FROM ads_campaigns WHERE account_id = %s AND google_customer_id IS NOT NULL LIMIT 1",
+                (account_id,)
+            )
+            row = cursor.fetchone()
+            if row:
+                customer_id = row['google_customer_id']
+
+            # Count budget groups for this account/customer
+            if customer_id:
+                cursor.execute(
+                    "SELECT COUNT(*) as count FROM budget_groups WHERE account_id = %s AND customer_id = %s",
+                    (account_id, customer_id)
+                )
+                result = cursor.fetchone()
+                budget_groups_count = result['count'] if result else 0
+
+            cursor.close()
+            db.close()
+        except Exception as e:
+            logger.error(f"Error checking budget groups: {e}")
+
+    return render_template(
+        "account/auto_budget_dashboard.html",
+        user=user,
+        account_id=account_id,
+        customer_id=customer_id,
+        budget_groups_count=budget_groups_count
+    )
 
 
 @auto_budget_bp.route("/api/settings", methods=["GET"])
@@ -82,7 +119,17 @@ def save_settings():
             'performance_weight': float(data.get('performance_weight', 0.70)),
             'seasonality_weight': float(data.get('seasonality_weight', 0.20)),
             'capacity_weight': float(data.get('capacity_weight', 0.10)),
-            'send_notifications': data.get('send_notifications', True)
+            'send_notifications': data.get('send_notifications', True),
+            # Safeguard settings
+            'max_daily_change_pct': float(data.get('max_daily_change_pct', 20)),
+            'max_weekly_change_pct': float(data.get('max_weekly_change_pct', 40)),
+            'enable_gradual_ramp': data.get('enable_gradual_ramp', True),
+            'ramp_days': int(data.get('ramp_days', 3)),
+            'require_approval_threshold_pct': float(data.get('require_approval_threshold_pct', 30)),
+            'enable_rollback': data.get('enable_rollback', False),
+            'rollback_window_hours': int(data.get('rollback_window_hours', 24)),
+            'rollback_performance_drop_pct': float(data.get('rollback_performance_drop_pct', 20)),
+            'alert_threshold_pct': float(data.get('alert_threshold_pct', 15))
         }
 
         success = service.save_settings(account_id, customer_id, settings)
@@ -274,4 +321,95 @@ def create_notification():
 
     except Exception as e:
         logger.error(f"Error creating notification: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@auto_budget_bp.route("/api/pending-changes", methods=["GET"])
+@login_required
+def get_pending_changes():
+    """Get pending budget changes awaiting approval."""
+    user = g.user
+    account_id = user.account_id if user and hasattr(user, 'account_id') else None
+    customer_id = request.args.get('customer_id', '')
+    status = request.args.get('status', 'pending')
+
+    if not account_id or not customer_id:
+        return jsonify({"error": "Missing account_id or customer_id"}), 400
+
+    try:
+        db = get_db_connection()
+        service = AutoBudgetService(db)
+
+        pending_changes = service.get_pending_changes(account_id, customer_id, status)
+
+        # Convert datetime/Decimal to JSON-serializable
+        for change in pending_changes:
+            for date_field in ['created_at', 'updated_at', 'approved_at', 'rejected_at', 'expires_at']:
+                if date_field in change and isinstance(change[date_field], datetime):
+                    change[date_field] = change[date_field].isoformat()
+            for decimal_field in ['current_daily_budget', 'proposed_daily_budget', 'change_amount', 'change_pct']:
+                if decimal_field in change and hasattr(change[decimal_field], '__float__'):
+                    change[decimal_field] = float(change[decimal_field])
+
+        return jsonify({"success": True, "pending_changes": pending_changes})
+
+    except Exception as e:
+        logger.error(f"Error getting pending changes: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@auto_budget_bp.route("/api/pending-changes/<int:change_id>/approve", methods=["POST"])
+@login_required
+def approve_pending_change(change_id):
+    """Approve a pending budget change."""
+    user = g.user
+    account_id = user.account_id if user and hasattr(user, 'account_id') else None
+    user_id = user.id if user else None
+
+    if not account_id or not user_id:
+        return jsonify({"error": "Missing account_id or user_id"}), 400
+
+    try:
+        db = get_db_connection()
+        service = AutoBudgetService(db)
+
+        success = service.approve_pending_change(change_id, user_id, execute_immediately=True)
+
+        if success:
+            return jsonify({"success": True, "message": "Budget change approved and applied"})
+        else:
+            return jsonify({"error": "Failed to approve change (not found or already processed)"}), 400
+
+    except Exception as e:
+        logger.error(f"Error approving pending change: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@auto_budget_bp.route("/api/pending-changes/<int:change_id>/reject", methods=["POST"])
+@login_required
+def reject_pending_change(change_id):
+    """Reject a pending budget change."""
+    user = g.user
+    account_id = user.account_id if user and hasattr(user, 'account_id') else None
+    user_id = user.id if user else None
+
+    data = request.get_json() or {}
+    rejection_reason = data.get('rejection_reason', 'Manually rejected by user')
+
+    if not account_id or not user_id:
+        return jsonify({"error": "Missing account_id or user_id"}), 400
+
+    try:
+        db = get_db_connection()
+        service = AutoBudgetService(db)
+
+        success = service.reject_pending_change(change_id, user_id, rejection_reason)
+
+        if success:
+            return jsonify({"success": True, "message": "Budget change rejected"})
+        else:
+            return jsonify({"error": "Failed to reject change (not found or already processed)"}), 400
+
+    except Exception as e:
+        logger.error(f"Error rejecting pending change: {e}")
         return jsonify({"error": str(e)}), 500

@@ -23,7 +23,7 @@
                 </h3>
                 <p class="text-gray-700 mb-3">
                     You have <strong>{{ budget_groups_count }} budget group{{ 's' if budget_groups_count != 1 else '' }}</strong> configured.
-                    Each group manages its own budget settings independently.
+                    Each group manages its own budget settings independently. <strong>You can create additional groups</strong> for more granular control.
                 </p>
                 <div class="bg-white border border-amber-200 rounded-md p-4 mb-4">
                     <p class="text-sm text-gray-800 mb-2"><strong>How it works:</strong></p>
@@ -31,12 +31,13 @@
                         <li><i class="fa-solid fa-layer-group text-blue-600 mr-2"></i>Campaigns assigned to budget groups use <strong>group-specific settings</strong></li>
                         <li><i class="fa-solid fa-sliders text-purple-600 mr-2"></i>The settings below apply only to <strong>unassigned campaigns</strong></li>
                         <li><i class="fa-solid fa-arrows-split-up-and-left text-green-600 mr-2"></i>To change budgets for grouped campaigns, edit the budget group</li>
+                        <li><i class="fa-solid fa-plus text-green-600 mr-2"></i>Create additional groups to separate more service lines or campaigns</li>
                     </ul>
                 </div>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 flex-wrap">
                     <a href="/account/budget-groups" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md">
                         <i class="fa-solid fa-layer-group mr-2"></i>
-                        Manage Budget Groups
+                        View & Add Budget Groups
                     </a>
                     <span class="text-sm text-gray-600">or configure settings below for unassigned campaigns</span>
                 </div>

@@ -9,7 +9,7 @@ from flask import Blueprint, render_template, request, jsonify, g
 from app.auth.session_helpers import login_required
 from app.services.budget_groups_service import BudgetGroupsService
 from app.services.auto_budget_service import AutoBudgetService
-from app.db import get_db
+from app.db import get_db_connection
 from datetime import datetime, date
 import logging
 
@@ -25,22 +25,9 @@ def dashboard():
     user = g.user
     account_id = user.account_id if user and hasattr(user, 'account_id') else None
 
-    # Try to get customer_id from first campaign
+    # For now, set customer_id to None - will be retrieved from user's Google Ads connection
+    # TODO: Get from user's Google Ads account settings
     customer_id = None
-    if account_id:
-        try:
-            db = get_db()
-            cursor = db.cursor(dictionary=True)
-            cursor.execute(
-                "SELECT google_customer_id FROM ads_campaigns WHERE account_id = %s AND google_customer_id IS NOT NULL LIMIT 1",
-                (account_id,)
-            )
-            row = cursor.fetchone()
-            if row:
-                customer_id = row['google_customer_id']
-            cursor.close()
-        except Exception as e:
-            logger.error(f"Error getting customer_id: {e}")
 
     return render_template("account/budget_groups_dashboard.html", user=user, account_id=account_id, customer_id=customer_id)
 
@@ -60,7 +47,7 @@ def get_groups():
         return jsonify({"error": "Missing account_id or customer_id"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = BudgetGroupsService(db)
         groups = service.get_all_groups(account_id, customer_id, enabled_only)
 
@@ -82,7 +69,7 @@ def get_group(group_id):
         return jsonify({"error": "Missing account_id"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = BudgetGroupsService(db)
         group = service.get_group(group_id, account_id)
 
@@ -112,7 +99,7 @@ def create_group():
         return jsonify({"error": "Missing required fields"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = BudgetGroupsService(db)
 
         group_id = service.create_group(
@@ -156,7 +143,7 @@ def update_group(group_id):
     data = request.get_json()
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = BudgetGroupsService(db)
 
         # Convert numeric values
@@ -191,7 +178,7 @@ def delete_group(group_id):
         return jsonify({"error": "Missing account_id"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = BudgetGroupsService(db)
         success = service.delete_group(group_id, account_id)
 
@@ -218,7 +205,7 @@ def get_group_campaigns(group_id):
         return jsonify({"error": "Missing account_id"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = BudgetGroupsService(db)
         campaigns = service.get_group_campaigns(group_id, account_id)
 
@@ -245,7 +232,7 @@ def assign_campaign(group_id):
         return jsonify({"error": "Missing required fields"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = BudgetGroupsService(db)
 
         success = service.assign_campaign(
@@ -277,7 +264,7 @@ def unassign_campaign(group_id, campaign_id):
         return jsonify({"error": "Missing account_id"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = BudgetGroupsService(db)
         success = service.unassign_campaign(group_id, account_id, campaign_id)
 
@@ -306,7 +293,7 @@ def get_unassigned_campaigns():
         return jsonify({"error": "Missing required fields"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = BudgetGroupsService(db)
 
         unassigned = service.get_unassigned_campaigns(
@@ -341,7 +328,7 @@ def calculate_group_adjustments(group_id):
         return jsonify({"error": "Missing required fields"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         groups_service = BudgetGroupsService(db)
         auto_budget_service = AutoBudgetService(db)
 

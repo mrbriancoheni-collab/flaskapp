@@ -8,7 +8,7 @@ Provides UI and API endpoints for automatic budget management.
 from flask import Blueprint, render_template, request, jsonify, g
 from app.auth.session_helpers import login_required
 from app.services.auto_budget_service import AutoBudgetService
-from app.db import get_db
+from app.db import get_db_connection
 from datetime import datetime, timedelta, date
 import logging
 
@@ -39,7 +39,7 @@ def get_settings():
         return jsonify({"error": "Missing account_id or customer_id"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = AutoBudgetService(db)
         settings = service.get_settings(account_id, customer_id)
 
@@ -70,7 +70,7 @@ def save_settings():
         return jsonify({"error": "Missing account_id or customer_id"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = AutoBudgetService(db)
 
         settings = {
@@ -114,7 +114,7 @@ def calculate_adjustments():
         return jsonify({"error": "Missing account_id or customer_id"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = AutoBudgetService(db)
 
         adjustments = service.calculate_budget_adjustments(
@@ -145,7 +145,7 @@ def get_history():
         return jsonify({"error": "Missing account_id or customer_id"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = AutoBudgetService(db)
 
         changes = service.get_budget_change_history(account_id, customer_id, limit)
@@ -179,7 +179,7 @@ def log_change():
         return jsonify({"error": "Missing account_id"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = AutoBudgetService(db)
 
         success = service.log_budget_change(
@@ -220,7 +220,7 @@ def get_notifications():
         return jsonify({"error": "Missing account_id"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = AutoBudgetService(db)
 
         notifications = service.get_notifications(account_id, user_id, unread_only, limit)
@@ -251,7 +251,7 @@ def create_notification():
         return jsonify({"error": "Missing account_id"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = AutoBudgetService(db)
 
         success = service.create_notification(

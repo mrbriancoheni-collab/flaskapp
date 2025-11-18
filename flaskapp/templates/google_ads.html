@@ -1,6 +1,121 @@
 {% extends "base_public.html" %}
 {% set SECTION = 'products' %}
 {% block title %}Google Ads for Home Services — FieldSprout{% endblock %}
+
+{% block head_extra %}
+<!-- FAQ Schema for Google Ads Product Page -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How does an AI agent manage Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "FieldSprout's AI agents continuously monitor your Google Ads campaigns 24/7, analyzing search terms, budgets, bids, and performance patterns. They automatically make expert-level optimizations like adjusting bids, adding negative keywords, pausing underperforming ads, and reallocating budget to high-performing campaigns."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can AI reduce my cost per lead?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. FieldSprout reduces wasted spend by tightening keyword targeting, removing low-intent traffic, adjusting bids, and reallocating budget toward high-converting opportunities. Most home service accounts see a 20-40% CPL reduction within 30 days."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How is FieldSprout different from an agency?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Agencies rely on humans with limited time who check your account periodically. FieldSprout uses AI agents that optimize your account continuously, 24/7. You pay for outcomes, not hours, and you keep full control of your Google Ads account."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does FieldSprout work for HVAC, pest control, plumbing, etc.?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. FieldSprout was built specifically for home service businesses including HVAC, pest control, plumbing, roofing, electrical, lawn care, solar, restoration, and garage door repair."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does auto-optimization work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "FieldSprout's AI agents continuously analyze your campaigns and make optimizations automatically. 95% of low-risk changes (like blocking 'free' searches) happen without approval. High-risk decisions require your review before execution."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do I still need to write ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. FieldSprout's Ad Copy Agent automatically generates and tests new headlines, descriptions, assets, callouts, and sitelinks. It identifies winning patterns and pauses underperforming variations automatically."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- Product Schema for Google Ads Tool -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "FieldSprout Google Ads Optimizer",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "description": "Autonomous AI agents that optimize Google Ads campaigns 24/7 for home service businesses, automatically managing bids, keywords, budgets, and ad copy.",
+  "offers": {
+    "@type": "Offer",
+    "priceCurrency": "USD",
+    "price": "200",
+    "availability": "https://schema.org/InStock"
+  },
+  "featureList": [
+    "24/7 Autonomous Campaign Optimization",
+    "AI Budget Guardian",
+    "AI Keyword Optimizer",
+    "Negative Keyword Agent",
+    "Quality Score Agent",
+    "Ad Copy Agent",
+    "Landing Page Analyst",
+    "Strategic Director"
+  ],
+  "publisher": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  }
+}
+</script>
+
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Google Ads",
+      "item": "https://fieldsprout.io/products/google-ads"
+    }
+  ]
+}
+</script>
+{% endblock %}
+
 {% block content %}
 <section class="hero">
   <h1>Autonomous AI Agents Optimize Your Google Ads 24/7</h1>
@@ -182,6 +297,70 @@
     <article class="card"><h3>HVAC</h3><p>Seasonal offers (AC tune-ups, furnace checks), emergency vs. maintenance messaging, weather triggers.</p></article>
     <article class="card"><h3>Plumbing</h3><p>Emergency drain, leak, water heater — bid rules by urgency + margin.</p></article>
     <article class="card"><h3>Electrical</h3><p>Panel upgrade demand gen + high-intent repair keywords with strict negatives.</p></article>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section style="background: #f9fafb; padding: 4rem 1rem;">
+  <div style="max-width: 900px; margin: 0 auto;">
+    <h2 style="text-align: center; font-size: 2.5rem; margin-bottom: 1rem;">Frequently Asked Questions</h2>
+    <p style="text-align: center; color: #64748b; margin-bottom: 3rem;">Everything you need to know about FieldSprout's Google Ads AI</p>
+
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      <details style="background: white; border-radius: 0.75rem; padding: 1.5rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <summary style="cursor: pointer; font-weight: 600; font-size: 1.125rem; color: #1e293b; list-style: none;">
+          How does an AI agent manage Google Ads?
+        </summary>
+        <p style="margin-top: 1rem; color: #64748b; line-height: 1.6;">
+          FieldSprout's AI agents continuously monitor your Google Ads campaigns 24/7, analyzing search terms, budgets, bids, and performance patterns. They automatically make expert-level optimizations like adjusting bids, adding negative keywords, pausing underperforming ads, and reallocating budget to high-performing campaigns.
+        </p>
+      </details>
+
+      <details style="background: white; border-radius: 0.75rem; padding: 1.5rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <summary style="cursor: pointer; font-weight: 600; font-size: 1.125rem; color: #1e293b; list-style: none;">
+          Can AI reduce my cost per lead?
+        </summary>
+        <p style="margin-top: 1rem; color: #64748b; line-height: 1.6;">
+          Yes. FieldSprout reduces wasted spend by tightening keyword targeting, removing low-intent traffic, adjusting bids, and reallocating budget toward high-converting opportunities. Most home service accounts see a 20–40% CPL reduction within 30 days.
+        </p>
+      </details>
+
+      <details style="background: white; border-radius: 0.75rem; padding: 1.5rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <summary style="cursor: pointer; font-weight: 600; font-size: 1.125rem; color: #1e293b; list-style: none;">
+          How is FieldSprout different from an agency?
+        </summary>
+        <p style="margin-top: 1rem; color: #64748b; line-height: 1.6;">
+          Agencies rely on humans with limited time who check your account periodically. FieldSprout uses AI agents that optimize your account continuously, 24/7. You pay for outcomes, not hours, and you keep full control of your Google Ads account.
+        </p>
+      </details>
+
+      <details style="background: white; border-radius: 0.75rem; padding: 1.5rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <summary style="cursor: pointer; font-weight: 600; font-size: 1.125rem; color: #1e293b; list-style: none;">
+          Does FieldSprout work for HVAC, pest control, plumbing, etc.?
+        </summary>
+        <p style="margin-top: 1rem; color: #64748b; line-height: 1.6;">
+          Yes. FieldSprout was built specifically for home service businesses including HVAC, pest control, plumbing, roofing, electrical, lawn care, solar, restoration, and garage door repair.
+        </p>
+      </details>
+
+      <details style="background: white; border-radius: 0.75rem; padding: 1.5rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <summary style="cursor: pointer; font-weight: 600; font-size: 1.125rem; color: #1e293b; list-style: none;">
+          How does auto-optimization work?
+        </summary>
+        <p style="margin-top: 1rem; color: #64748b; line-height: 1.6;">
+          FieldSprout's AI agents continuously analyze your campaigns and make optimizations automatically. 95% of low-risk changes (like blocking "free" searches) happen without approval. High-risk decisions require your review before execution.
+        </p>
+      </details>
+
+      <details style="background: white; border-radius: 0.75rem; padding: 1.5rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <summary style="cursor: pointer; font-weight: 600; font-size: 1.125rem; color: #1e293b; list-style: none;">
+          Do I still need to write ads?
+        </summary>
+        <p style="margin-top: 1rem; color: #64748b; line-height: 1.6;">
+          No. FieldSprout's Ad Copy Agent automatically generates and tests new headlines, descriptions, assets, callouts, and sitelinks. It identifies winning patterns and pauses underperforming variations automatically.
+        </p>
+      </details>
+    </div>
   </div>
 </section>
 

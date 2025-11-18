@@ -2,6 +2,51 @@
 {% set SECTION = 'solutions' %}
 {% block title %}AI Campaign Optimization — Maximize ROI 24/7{% endblock %}
 
+{% block head_extra %}
+<!-- Service Schema for AI Optimization -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "AI Campaign Optimization",
+  "provider": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  },
+  "name": "AI Campaign Optimization",
+  "description": "24/7 AI-powered campaign optimization that monitors, adjusts bids, pauses underperformers, and reallocates budget to maximize ROI for home service businesses.",
+  "offers": {
+    "@type": "Offer",
+    "priceCurrency": "USD",
+    "price": "200",
+    "availability": "https://schema.org/InStock"
+  }
+}
+</script>
+
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "AI Optimization",
+      "item": "https://fieldsprout.io/solutions/ai-optimization"
+    }
+  ]
+}
+</script>
+{% endblock %}
+
 {% block content %}
 
 <!-- HERO -->

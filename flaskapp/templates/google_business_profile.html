@@ -2,6 +2,124 @@
 {% set SECTION = 'solutions' %}
 {% block title %}Google Business Profile Management — Dominate Local Search{% endblock %}
 
+{% block head_extra %}
+<!-- Product/Service Schema for GBP Management -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "Google Business Profile Management",
+  "provider": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  },
+  "name": "Google Business Profile Optimization",
+  "description": "Full-service Google Business Profile optimization to help home service businesses dominate local map pack results. Includes audit, optimization, and ongoing management.",
+  "offers": {
+    "@type": "Offer",
+    "priceCurrency": "USD",
+    "price": "200",
+    "availability": "https://schema.org/InStock"
+  },
+  "areaServed": {
+    "@type": "Country",
+    "name": "United States"
+  }
+}
+</script>
+
+<!-- HowTo Schema for GBP Optimization -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Optimize Your Google Business Profile for Local Search",
+  "description": "Full-service GBP optimization that helps you dominate the local map pack.",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Audit & Claim",
+      "text": "Audit your existing profile, claim it if needed, and fix critical errors holding back your visibility."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Optimize Everything",
+      "text": "Categories, attributes, services, photos, hours, description—all optimized to match high-intent local searches."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Ongoing Management",
+      "text": "Weekly posts, monthly photos, Q&A monitoring, and review responses to keep your profile fresh and engaging."
+    }
+  ]
+}
+</script>
+
+<!-- FAQ Schema for GBP Management -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How does Google Business Profile optimization work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "FieldSprout audits your existing profile, fixes critical errors, optimizes categories, attributes, services, photos, and description, then provides ongoing management with weekly posts and monthly photo updates."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How long does it take to see results from GBP optimization?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Most businesses see 3x more profile views within 30-60 days of optimization. Local map pack rankings typically improve within 2-4 weeks."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What's included in GBP management?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Weekly posts, monthly photos, Q&A monitoring, review response management, attribute updates, service list optimization, and ongoing performance tracking."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can you help if I don't have a Google Business Profile yet?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. FieldSprout will claim your profile if it exists, or create a new one from scratch with all the proper optimizations from day one."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Google Business Profile",
+      "item": "https://fieldsprout.io/solutions/google-business-profile"
+    }
+  ]
+}
+</script>
+{% endblock %}
+
 {% block content %}
 
 <!-- HERO -->

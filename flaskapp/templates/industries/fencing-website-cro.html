@@ -1,0 +1,586 @@
+{% extends 'base_public.html' %}
+{% block title %}Fencing Website CRO — FieldSprout{% endblock %}
+
+{% block head_extra %}
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Industries",
+      "item": "https://fieldsprout.io/industries"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Fencing Website CRO",
+      "item": "https://fieldsprout.io/industries/fencing-website-cro"
+    }
+  ]
+}
+</script>
+
+<!-- FAQ Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What's a good conversion rate for fencing websites?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Fencing websites should aim for 5-10% conversion rate for privacy fence inquiries and 7-14% for repair requests. Decorative/ornamental fence pages typically convert at 4-8% due to higher investment and longer decision cycles. FieldSprout's CRO AI continuously tests to improve these benchmarks."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What CTA works best for fencing websites?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Clear, fence-type-specific CTAs perform best: 'Get Free Estimate', 'Schedule Consultation', 'Request Quote'. Click-to-call buttons drive 50-70% of mobile conversions. FieldSprout tests CTA variations automatically and promotes winners."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Should fencing companies show pricing on their website?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Pricing transparency increases conversion rates by 35-50%. Show per-linear-foot pricing or project ranges: 'Privacy fences $18-25/ft' or 'Typical backyard fence $3,500-6,000'. This filters price shoppers early and attracts qualified leads. FieldSprout's AI tests pricing display variations."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How can fencing websites reduce bounce rate?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Fast page load (<3 seconds), mobile optimization, clear fence style galleries, and prominent before/after photos reduce bounce rate. Show real local fence projects with pricing transparency, not generic stock photos. FieldSprout's Page Speed Optimizer and Visual Hierarchy Agent automatically improve these factors."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- Service Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "Fencing Website Conversion Rate Optimization",
+  "provider": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  },
+  "description": "AI-powered website conversion optimization specifically for fencing contractors, automatically testing page layouts, CTAs, forms, fence style galleries, and pricing displays to increase estimate requests and project bookings.",
+  "areaServed": {
+    "@type": "Country",
+    "name": "United States"
+  }
+}
+</script>
+
+<!-- HowTo Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Optimize Fencing Websites for Conversions",
+  "description": "Step-by-step guide to improving fencing website conversion rates through page speed, mobile optimization, visual fence galleries, and pricing transparency.",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Optimize page speed for mobile users",
+      "text": "Compress fence photos (galleries, before/afters), enable browser caching, minimize JavaScript. Target <3 second load time on mobile. 50-65% of fencing traffic is mobile, and slow pages kill conversions. Use Google PageSpeed Insights to identify issues."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Display prominent fence style galleries",
+      "text": "Feature organized galleries by fence type: Privacy (wood/vinyl), Decorative/Ornamental, Chain Link. Show real completed fences with close-ups of materials and craftsmanship. Visual proof builds trust and helps customers choose styles."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Implement clear fence-type-specific CTAs",
+      "text": "Use action-oriented calls-to-action for each fence type: 'Get Privacy Fence Quote', 'Schedule Ornamental Consultation', 'Request Estimate'. Include click-to-call buttons prominently on mobile. Test CTA button colors and positioning."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Show pricing transparency",
+      "text": "Display per-linear-foot pricing or project ranges to filter qualified leads: 'Privacy fences $18-25/ft', 'Typical backyard fence $3,500-6,000', 'Chain link $12-18/ft'. Pricing transparency reduces tire-kickers and increases serious inquiries by 35-50%."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Add trust signals and local proof",
+      "text": "Include customer reviews with fence photos, contractor license badges, years in business, warranty information, and fence galleries from your service area. Mention specific neighborhoods served. Local proof increases trust for backyard improvement decisions."
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-12">
+  <div class="mb-8">
+    <span class="inline-block px-3 py-1 text-sm font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full mb-4">
+      <i class="fa-solid fa-border-all"></i> Fencing Industry
+    </span>
+    <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+      Website Conversion Optimization for Fencing Contractors
+    </h1>
+    <p class="text-xl text-gray-700 leading-relaxed">
+      Your fencing website gets traffic, but visitors aren't converting. FieldSprout's AI agents optimize your website 24/7—automatically testing page layouts, CTAs, fence style galleries, and pricing displays to turn more visitors into booked fence installations, repairs, and replacement projects.
+    </p>
+  </div>
+
+  <div class="bg-indigo-50 border-l-4 border-indigo-600 p-6 rounded-lg mb-12">
+    <div class="flex items-start">
+      <i class="fa-solid fa-chart-line text-indigo-600 text-2xl mr-4 mt-1"></i>
+      <div>
+        <h3 class="text-lg font-bold text-indigo-900 mb-2">Fencing Website CRO Benchmarks</h3>
+        <ul class="text-sm text-indigo-800 space-y-1">
+          <li>• <strong>+54% conversion rate</strong> with fence style galleries vs. generic stock photos</li>
+          <li>• <strong>−32% bounce rate</strong> after mobile speed optimization (<3 second load time)</li>
+          <li>• <strong>+40% form submissions</strong> with pricing transparency vs. "call for quote"</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose prose-lg max-w-none">
+    <h2>Why Fencing Website CRO Is Critical</h2>
+    <p>
+      Fencing contractors invest heavily in Google Ads, Meta Ads, and SEO to drive website traffic. But if your website doesn't convert visitors into estimate requests and project bookings, you're wasting ad budget. A 3% conversion rate vs. 9% conversion rate is the difference between struggling to fill your schedule and having a backlog of projects.
+    </p>
+    <p>
+      Fencing websites have unique conversion requirements. Visitors want to see fence style options (wood, vinyl, ornamental, chain link), understand pricing (at least ballpark ranges), and evaluate quality through project galleries. A $3,000-8,000 fence project is a significant backyard investment—homeowners need confidence before requesting an estimate. Generic web templates don't account for these fencing-specific conversion drivers.
+    </p>
+
+    <h2>The Fencing Website Conversion Problem</h2>
+    <p>
+      Most fencing websites suffer from the same conversion killers:
+    </p>
+    <ul>
+      <li><strong>Generic stock photos</strong> — fake commercial fencing images that don't represent residential work</li>
+      <li><strong>Slow mobile load times</strong> — 6+ seconds to load heavy fence gallery photos kills 50-70% of mobile visitors</li>
+      <li><strong>Hidden pricing</strong> — "call for quote" instead of transparent pricing ranges scares qualified leads away</li>
+      <li><strong>Weak CTAs</strong> — "Learn More" instead of "Get Free Estimate" or "Schedule Consultation"</li>
+      <li><strong>No fence style organization</strong> — missing organized galleries by fence type (privacy, decorative, chain link)</li>
+      <li><strong>Complicated forms</strong> — asking for too much information upfront (10+ fields)</li>
+      <li><strong>No mobile click-to-call</strong> — forcing mobile users to manually dial</li>
+    </ul>
+    <p>
+      These mistakes cost fencing contractors 50-75% of potential conversions. Visitors bounce, call competitors with better websites, or never follow up.
+    </p>
+
+    <h2>How FieldSprout's AI Optimizes Fencing Websites</h2>
+    <p>
+      FieldSprout's multi-agent CRO system is trained on fencing industry patterns. Our AI agents understand that visitors arriving from "privacy fence cost" searches want to see fence style options, pricing transparency, and local project examples—not a generic company history. They automatically test and optimize every conversion element.
+    </p>
+
+    <h3>1. Mobile Speed Optimization</h3>
+    <p>
+      <strong>50-65% of fencing website traffic is mobile.</strong> If your pages load slowly on phones (especially fence galleries with heavy images), you're losing half your potential conversions.
+    </p>
+    <p>
+      The <strong>Page Speed Optimizer</strong> agent automatically:
+    </p>
+    <ul>
+      <li>Compresses fence photos without quality loss (galleries, before/afters—largest bottleneck)</li>
+      <li>Enables lazy loading (images load as user scrolls through fence galleries)</li>
+      <li>Minimizes JavaScript and CSS files</li>
+      <li>Implements browser caching for repeat visitors</li>
+      <li>Uses modern image formats (WebP) for 40% smaller file sizes</li>
+    </ul>
+    <p>
+      Target: <strong><3 second load time on mobile</strong>. Every additional second of load time reduces conversions by 8-14% for fencing websites.
+    </p>
+
+    <h3>2. Visual Fence Gallery Hierarchy</h3>
+    <p>
+      Fencing is an extremely visual service. Your website must showcase fence style options clearly—privacy fences, decorative/ornamental, chain link, and material comparisons (wood vs. vinyl).
+    </p>
+    <p>
+      The <strong>Visual Hierarchy Agent</strong> tests:
+    </p>
+    <ul>
+      <li><strong>Organized galleries by type:</strong> Privacy, Decorative/Ornamental, Chain Link, Repairs (clear navigation)</li>
+      <li><strong>Material comparisons:</strong> Wood vs. vinyl side-by-side with pros/cons</li>
+      <li><strong>Before/after transformations:</strong> Old/no fence → beautiful new installation</li>
+      <li><strong>Close-up detail shots:</strong> Craftsmanship, material quality, hardware</li>
+      <li><strong>Customer project photos</strong> vs. stock imagery (real photos outperform 5:1)</li>
+    </ul>
+    <p>
+      <strong>Rule:</strong> Every fence type page should have 8-12 relevant project photos showing completed installations similar to what the visitor needs.
+    </p>
+
+    <h3>3. CTA Button Optimization</h3>
+    <p>
+      The <strong>CTA Optimizer</strong> agent tests call-to-action variations for each fence type:
+    </p>
+
+    <h4>Privacy Fences (Wood/Vinyl)</h4>
+    <ul>
+      <li>✅ "Get Free Estimate" (best performer)</li>
+      <li>✅ "Schedule Consultation"</li>
+      <li>❌ "Learn More" (vague, low conversion)</li>
+      <li>❌ "Contact Us" (generic, underperforms 50%)</li>
+    </ul>
+
+    <h4>Decorative/Ornamental Fences</h4>
+    <ul>
+      <li>✅ "See Design Options + Get Quote"</li>
+      <li>✅ "Schedule Design Consultation"</li>
+      <li>❌ "Request Information" (weak value proposition)</li>
+    </ul>
+
+    <h4>Fence Repairs</h4>
+    <ul>
+      <li>✅ "Call Now" or "Get Repair Quote" (urgent language)</li>
+      <li>✅ Click-to-call button with phone number visible</li>
+      <li>❌ "Submit Form" (too slow for repair urgency)</li>
+    </ul>
+
+    <h3>4. Form Length Optimization</h3>
+    <p>
+      Most fencing websites ask for too much information upfront. Long forms (10+ fields) reduce conversion rates by 40-60% compared to short forms.
+    </p>
+    <p>
+      The <strong>Form Optimizer</strong> tests:
+    </p>
+    <ul>
+      <li><strong>3-field form:</strong> Name, phone, fence type (highest conversion, 12-18%)</li>
+      <li><strong>5-field form:</strong> Add address and approximate linear feet (moderate conversion, 8-13%)</li>
+      <li><strong>10+ field form:</strong> Too much friction (low conversion, 3-6%)</li>
+    </ul>
+    <p>
+      <strong>Best practice:</strong> Use a short form to capture the lead, then gather detailed project specifications during the free estimate visit or phone consultation.
+    </p>
+
+    <h3>5. Pricing Transparency Testing</h3>
+    <p>
+      Fencing companies often hide pricing ("call for quote"), but pricing transparency actually <strong>increases conversion rates by 35-50%</strong> because it filters out unqualified price shoppers and attracts serious buyers with realistic budgets.
+    </p>
+    <p>
+      The <strong>Pricing Display Agent</strong> tests:
+    </p>
+    <ul>
+      <li><strong>Per-linear-foot pricing:</strong> "Privacy fences $18-25/ft" or "Chain link $12-18/ft"</li>
+      <li><strong>Project examples:</strong> "Typical 150 ft backyard privacy fence: $3,500-6,000" (very specific, high conversion)</li>
+      <li><strong>Starting prices:</strong> "Fences from $3,000" (transparency + flexibility)</li>
+      <li><strong>Hidden pricing:</strong> "Call for quote" (lowest conversion, attracts tire-kickers)</li>
+    </ul>
+    <p>
+      Transparent pricing doesn't mean locking yourself into fixed bids—it means giving visitors enough information to self-qualify their budget.
+    </p>
+
+    <h3>6. Trust Signal Optimization</h3>
+    <p>
+      A fence installation is a $3,000-8,000 investment that's visible to all neighbors. Trust signals dramatically impact conversion rates.
+    </p>
+    <p>
+      The <strong>Trust Signal Agent</strong> tests placement and prominence of:
+    </p>
+    <ul>
+      <li><strong>Customer reviews with fence photos:</strong> 5-star reviews showing actual completed fences</li>
+      <li><strong>Fence galleries by neighborhood:</strong> "Recent projects in [Subdivision Name]"</li>
+      <li><strong>Contractor license & insurance:</strong> License number, bonded, insured badges</li>
+      <li><strong>Years in business:</strong> "Installing fences since 2002" (longevity = expertise)</li>
+      <li><strong>Warranty information:</strong> "5-year workmanship warranty" or "Lifetime vinyl warranty"</li>
+    </ul>
+
+    <h3>7. Mobile Click-to-Call Optimization</h3>
+    <p>
+      <strong>50-65% of fencing website visitors are on mobile</strong>, and mobile users prefer calling over filling forms (especially for larger projects where they want to discuss fence types and options).
+    </p>
+    <p>
+      The <strong>Mobile UX Optimizer</strong> ensures:
+    </p>
+    <ul>
+      <li>Click-to-call button in header (always visible when scrolling)</li>
+      <li>Phone number prominently displayed and tappable</li>
+      <li>Floating CTA button on mobile (follows user through fence galleries)</li>
+      <li>SMS option for less urgent inquiries ("Text us at [number]")</li>
+    </ul>
+    <p>
+      Click-to-call conversions are often 2-3x higher than form fills on mobile for fencing projects.
+    </p>
+
+    <h2>Fencing Website Pages That Convert</h2>
+    <p>
+      Not all website pages have the same conversion goals. FieldSprout optimizes each page type differently:
+    </p>
+
+    <h3>Homepage: Visual Impact & Quick CTA</h3>
+    <ul>
+      <li><strong>Hero section:</strong> Beautiful privacy fence transformation + "Get Free Estimate" CTA</li>
+      <li><strong>Fence type cards:</strong> 3-4 primary types (Privacy, Decorative, Chain Link, Repairs) with photos</li>
+      <li><strong>Social proof:</strong> 5-star review carousel with customer fence photos</li>
+      <li><strong>Service area:</strong> "Serving [List of Cities/Neighborhoods]" with map</li>
+      <li><strong>Secondary CTA:</strong> "See Our Work" gallery link + estimate form at bottom</li>
+    </ul>
+
+    <h3>Privacy Fence Page: Style Options & Pricing</h3>
+    <ul>
+      <li><strong>Hero:</strong> "Beautiful Privacy Fences" + pricing "$18-25/ft"</li>
+      <li><strong>Material comparison:</strong> Wood vs. vinyl (durability, maintenance, cost, aesthetics)</li>
+      <li><strong>Gallery:</strong> 12-15 completed privacy fences (6ft, shadowbox, board-on-board styles)</li>
+      <li><strong>Pricing guide:</strong> "150 ft backyard privacy fence: $3,500-6,000"</li>
+      <li><strong>CTA:</strong> "Get Free Estimate"</li>
+    </ul>
+
+    <h3>Ornamental Fence Page: Design Options & Premium Positioning</h3>
+    <ul>
+      <li><strong>Hero:</strong> Stunning ornamental fence with "Elegant Design Options" CTA</li>
+      <li><strong>Style showcase:</strong> Grid of aluminum, wrought iron, custom designs</li>
+      <li><strong>Project gallery:</strong> 15-20 completed ornamental fences with style details</li>
+      <li><strong>Pricing:</strong> "$25-40/ft depending on design complexity"</li>
+      <li><strong>CTA:</strong> "Schedule Design Consultation"</li>
+    </ul>
+
+    <h3>Repair Page: Problem-Solving & Speed</h3>
+    <ul>
+      <li><strong>Hero:</strong> "Broken Fence? We Fix It Fast" + click-to-call button</li>
+      <li><strong>Common problems:</strong> Rotting posts, broken panels, leaning sections, storm damage</li>
+      <li><strong>Repair options:</strong> Panel replacement, post repair, full section replacement</li>
+      <li><strong>Before/after:</strong> 6-8 fence repair transformations</li>
+      <li><strong>Pricing:</strong> "Repairs from $500" or "Panel replacement $150-400"</li>
+      <li><strong>CTA:</strong> Prominent phone number + "Get Repair Quote"</li>
+    </ul>
+
+    <h2>Common Fencing Website CRO Questions</h2>
+
+    <h3>What's a good conversion rate for fencing websites?</h3>
+    <p>
+      <strong>Overall website conversion rate:</strong> 5-9% (all traffic to any conversion)
+      <br><strong>Privacy fence pages:</strong> 6-12%
+      <br><strong>Ornamental/decorative pages:</strong> 4-8% (longer decision cycle, higher investment)
+      <br><strong>Repair pages:</strong> 10-18% (higher urgency)
+    </p>
+    <p>
+      If you're below these benchmarks, you likely have page speed issues, weak CTAs, missing fence galleries, or no pricing transparency.
+    </p>
+
+    <h3>Should fencing companies use live chat on their website?</h3>
+    <p>
+      <strong>Yes, but only if staffed properly.</strong> Live chat increases conversions by 25-40% when you can respond within 2-3 minutes. But abandoned chats (waiting 10+ minutes) hurt conversion rates.
+    </p>
+    <p>
+      For fencing contractors, chatbot for after-hours FAQs works well: "What fence types do you install?" "Do you offer financing?" "What areas do you serve?"
+    </p>
+
+    <h3>How important is page speed for fencing websites?</h3>
+    <p>
+      <strong>Extremely important.</strong> Fencing websites typically have heavy fence gallery images, and 50-65% of traffic is mobile. For every 1 second delay:
+    </p>
+    <ul>
+      <li>Conversions drop 8-14%</li>
+      <li>Bounce rate increases 12-18%</li>
+      <li>Customer frustration increases significantly</li>
+    </ul>
+    <p>
+      FieldSprout's Page Speed Optimizer targets <3 seconds on mobile. Most fencing websites are 6-11 seconds, losing massive conversion potential.
+    </p>
+
+    <h3>Should fencing websites show crew/team photos?</h3>
+    <p>
+      <strong>Yes, absolutely.</strong> Fence installations are backyard projects. Showing photos of your actual crew (not stock photos) increases trust and conversion rates by 30-45%. Homeowners want to know who's coming to their property.
+    </p>
+    <p>
+      Include brief bios: "Tom, Lead Installer — 14 years fencing experience, specializes in ornamental work". Personal connection drives conversions.
+    </p>
+
+    <h2>Get Started with Fencing Website CRO</h2>
+    <p>
+      Stop losing 50-75% of your website visitors to poor conversion optimization. FieldSprout's AI agents test and optimize your website 24/7—page speed, fence galleries, CTAs, forms, pricing displays, and trust signals—to turn more visitors into booked fence installations and repairs.
+    </p>
+
+    <div class="mt-8 p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl">
+      <h3 class="text-xl font-bold text-gray-900 mb-3">Ready to increase your conversion rate?</h3>
+      <p class="text-gray-700 mb-4">
+        Connect your website and let our AI agents start optimizing in minutes. No coding required, cancel anytime.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <a href="/signup" class="btn btn-primary px-6 py-3">
+          Start Free Trial →
+        </a>
+        <a href="/pricing" class="btn btn-secondary px-6 py-3">
+          View Pricing
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- Related Pages Section -->
+<section class="bg-white border-t border-b border-gray-200 py-12 mt-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">More Fencing Marketing Solutions</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <a href="/industries/fencing-google-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Google Ads Optimization</h3>
+        <p class="text-sm text-gray-600">Reduce cost per lead with AI-powered campaign management</p>
+      </a>
+      <a href="/industries/fencing-local-service-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/industries/fencing-meta-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Build your pipeline with targeted social media campaigns</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Browse Industries Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-6xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Marketing Solutions by Industry</h2>
+    <p class="text-gray-600 text-center mb-8">Industry-specific strategies for home service businesses</p>
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <a href="/industries/hvac-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">❄️</div>
+        <div class="text-sm font-semibold text-gray-900">HVAC</div>
+      </a>
+      <a href="/industries/plumbing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔧</div>
+        <div class="text-sm font-semibold text-gray-900">Plumbing</div>
+      </a>
+      <a href="/industries/electrical-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">⚡</div>
+        <div class="text-sm font-semibold text-gray-900">Electrical</div>
+      </a>
+      <a href="/industries/roofing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏠</div>
+        <div class="text-sm font-semibold text-gray-900">Roofing</div>
+      </a>
+      <a href="/industries/pest-control-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🐛</div>
+        <div class="text-sm font-semibold text-gray-900">Pest Control</div>
+      </a>
+      <a href="/industries/lawn-care-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🌱</div>
+        <div class="text-sm font-semibold text-gray-900">Lawn Care</div>
+      </a>
+      <a href="/industries/garage-door-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🚪</div>
+        <div class="text-sm font-semibold text-gray-900">Garage Door</div>
+      </a>
+      <a href="/industries/pools-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏊</div>
+        <div class="text-sm font-semibold text-gray-900">Pools</div>
+      </a>
+      <a href="/industries/concrete-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏗️</div>
+        <div class="text-sm font-semibold text-gray-900">Concrete</div>
+      </a>
+      <a href="/industries/fencing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪵</div>
+        <div class="text-sm font-semibold text-gray-900">Fencing</div>
+      </a>
+      <a href="/industries/solar-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">☀️</div>
+        <div class="text-sm font-semibold text-gray-900">Solar</div>
+      </a>
+      <a href="/industries/windows-doors-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪟</div>
+        <div class="text-sm font-semibold text-gray-900">Windows & Doors</div>
+      </a>
+      <a href="/industries/irrigation-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">💧</div>
+        <div class="text-sm font-semibold text-gray-900">Irrigation</div>
+      </a>
+      <a href="/industries/restoration-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔨</div>
+        <div class="text-sm font-semibold text-gray-900">Restoration</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Products Section -->
+<section class="bg-white py-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Our Marketing Products</h2>
+    <p class="text-gray-600 text-center mb-8">AI-powered marketing automation for home service businesses</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <a href="/products/google-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">🎯</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Ads</h3>
+        <p class="text-sm text-gray-600">AI agents optimize your campaigns 24/7 to reduce cost per lead</p>
+      </a>
+      <a href="/products/facebook-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📱</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Targeted social campaigns that build your pipeline</p>
+      </a>
+      <a href="/products/local-services-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">✅</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/products/google-business-profile" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📍</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Business Profile</h3>
+        <p class="text-sm text-gray-600">Optimize your local presence and get more reviews</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-4xl mx-auto px-4">
+    <h2 class="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+
+    <div class="space-y-4">
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What's a good conversion rate for fencing websites?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Fencing websites should aim for 5-10% conversion rate for privacy fence inquiries and 7-14% for repair requests. Decorative/ornamental fence pages typically convert at 4-8% due to higher investment and longer decision cycles. FieldSprout's CRO AI continuously tests to improve these benchmarks.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What CTA works best for fencing websites?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Clear, fence-type-specific CTAs perform best: "Get Free Estimate", "Schedule Consultation", "Request Quote". Click-to-call buttons drive 50-70% of mobile conversions. FieldSprout tests CTA variations automatically and promotes winners.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          Should fencing companies show pricing on their website?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Pricing transparency increases conversion rates by 35-50%. Show per-linear-foot pricing or project ranges: "Privacy fences $18-25/ft" or "Typical backyard fence $3,500-6,000". This filters price shoppers early and attracts qualified leads. FieldSprout's AI tests pricing display variations.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          How can fencing websites reduce bounce rate?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Fast page load (<3 seconds), mobile optimization, clear fence style galleries, and prominent before/after photos reduce bounce rate. Show real local fence projects with pricing transparency, not generic stock photos. FieldSprout's Page Speed Optimizer and Visual Hierarchy Agent automatically improve these factors.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+{% endblock %}

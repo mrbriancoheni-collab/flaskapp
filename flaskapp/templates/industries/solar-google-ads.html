@@ -1,0 +1,567 @@
+{% extends 'base_public.html' %}
+{% block title %}Solar Google Ads Optimization — FieldSprout{% endblock %}
+
+{% block head_extra %}
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Industries",
+      "item": "https://fieldsprout.io/industries"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Solar Google Ads",
+      "item": "https://fieldsprout.io/industries/solar-google-ads"
+    }
+  ]
+}
+</script>
+
+<!-- FAQ Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What's the average cost per solar lead from Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Solar installation leads typically cost $50-150 from Google Ads, varying by market competitiveness and targeting. Residential solar leads are $60-120, while commercial solar leads range $150-400. FieldSprout's AI optimizes toward your target cost per qualified lead."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What keywords should solar companies bid on?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "High-converting solar keywords include 'solar panel installation near me', 'solar panel cost', 'solar companies near me', 'residential solar panels', and 'solar incentives [state]'. Avoid overly broad terms like 'solar energy' without qualifiers. FieldSprout's Keyword Optimizer refines targeting continuously."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How can solar companies reduce Google Ads waste?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Block DIY solar searchers, job seekers, solar news readers, and commercial searches (if you're residential-only). Use negative keywords like 'DIY', 'jobs', 'kit', 'portable', 'RV', 'news', 'stocks'. Geographic targeting prevents leads from outside your service territories."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Should solar companies use Google Ads year-round?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. While installation demand peaks spring-summer, solar research happens year-round. Many homeowners research in winter and book for spring installation. FieldSprout's AI adjusts budgets seasonally while maintaining presence for planning-phase prospects."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- Service Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "Solar Google Ads Optimization",
+  "provider": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  },
+  "description": "AI-powered Google Ads optimization for solar installation companies, automatically managing lead qualification, geographic targeting, incentive-based campaigns, and budget allocation for residential and commercial solar projects.",
+  "areaServed": {
+    "@type": "Country",
+    "name": "United States"
+  }
+}
+</script>
+
+<!-- HowTo Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Optimize Google Ads for Solar Companies",
+  "description": "Step-by-step guide to setting up and optimizing Google Ads campaigns for solar installation contractors to generate qualified residential and commercial solar leads.",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Structure campaigns by customer type",
+      "text": "Create separate campaigns for residential solar, commercial solar, and solar battery storage. Each has different qualification criteria, lead values, and sales cycles. This allows independent budget control and messaging optimization."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Target homeowner intent keywords",
+      "text": "Focus on 'solar panel installation', 'solar companies near me', 'solar panel cost', and 'solar incentives [state]'. Add location modifiers for cities you serve. Use phrase match to balance reach and precision."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Implement solar-specific negative keywords",
+      "text": "Block DIY solar, portable solar, RV solar, job seekers, and news searchers. Add negatives like 'DIY', 'kit', 'portable', 'jobs', 'RV', 'news', 'stock', 'company stock'. Review search terms weekly for new irrelevant queries."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Emphasize local incentives in ad copy",
+      "text": "Highlight federal tax credits (30% ITC), state rebates, and utility incentives in headlines. Solar buyers are motivated by financial returns, so lead with savings: 'Save $40K with Solar + $7,500 State Rebate'."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Qualify leads with strategic landing pages",
+      "text": "Use pre-qualification forms that capture roof ownership, electricity bills, and credit score range. This filters tire-kickers early and improves lead quality for your sales team."
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-12">
+  <div class="mb-8">
+    <span class="inline-block px-3 py-1 text-sm font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full mb-4">
+      <i class="fa-solid fa-solar-panel"></i> Solar Industry
+    </span>
+    <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+      Google Ads Optimization for Solar Installation Companies
+    </h1>
+    <p class="text-xl text-gray-700 leading-relaxed">
+      Stop wasting budget on DIY searchers and unqualified leads. FieldSprout's AI agents optimize your solar Google Ads campaigns 24/7—automatically managing lead qualification, blocking low-intent traffic, and emphasizing incentives that drive conversions.
+    </p>
+  </div>
+
+  <div class="bg-indigo-50 border-l-4 border-indigo-600 p-6 rounded-lg mb-12">
+    <div class="flex items-start">
+      <i class="fa-solid fa-chart-line text-indigo-600 text-2xl mr-4 mt-1"></i>
+      <div>
+        <h3 class="text-lg font-bold text-indigo-900 mb-2">Solar Google Ads Performance Benchmarks</h3>
+        <ul class="text-sm text-indigo-800 space-y-1">
+          <li>• <strong>−41% cost per qualified solar lead</strong> with negative keyword optimization (90 days)</li>
+          <li>• <strong>+56% conversion rate</strong> using incentive-focused ad copy and landing pages</li>
+          <li>• <strong>$900-1,600/month saved</strong> by blocking DIY solar and job seeker traffic</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose prose-lg max-w-none">
+    <h2>Why Solar Google Ads Require Specialized Strategy</h2>
+    <p>
+      Solar installation is one of the most competitive and complex categories in Google Ads. You're competing against national lead aggregators (Solar.com, EnergySage), well-funded national installers (Sunrun, Tesla Solar), and dozens of local competitors—all bidding on the same keywords in your market.
+    </p>
+    <p>
+      The average solar installation is worth $15,000-30,000, which justifies significant advertising spend. But this high customer lifetime value also means you're facing $8-25 cost-per-click on competitive keywords like "solar installation near me." A single wasted click costs as much as a lunch. Ten wasted clicks per day costs $1,800-4,500 per month.
+    </p>
+    <p>
+      Generic Google Ads strategies fail for solar companies because they don't account for lead qualification complexity. Not every homeowner who clicks your ad is a qualified solar prospect. Renters, people with shaded roofs, low credit scores, small electricity bills, and homes with unsuitable roof structures waste your budget without ever converting to installations.
+    </p>
+
+    <h2>The Solar Google Ads Challenge: Lead Quality vs. Lead Volume</h2>
+    <p>
+      Most solar companies optimize for lead volume, not lead quality. They generate 50-100 leads per month at $60-80 per lead, then discover that only 15-20% are actually qualified (own their home, suitable roof, adequate electricity usage, decent credit). The rest are tire-kickers, renters, or people who can't qualify for financing.
+    </p>
+    <p>
+      <strong>Common solar Google Ads mistakes:</strong>
+    </p>
+    <ul>
+      <li><strong>No lead pre-qualification:</strong> Accepting any form fill, even from renters and unsuitable properties</li>
+      <li><strong>Ignoring DIY solar traffic:</strong> Broad match keywords attracting people researching DIY solar kits</li>
+      <li><strong>Generic ad copy:</strong> Not emphasizing federal tax credits, state incentives, or financing options</li>
+      <li><strong>Targeting too broadly:</strong> Advertising in areas you don't serve or that lack profitable solar incentives</li>
+      <li><strong>No commercial/residential separation:</strong> Mixing B2C and B2B leads with different qualification needs</li>
+      <li><strong>Weak landing pages:</strong> No solar calculator, incentive information, or financing details</li>
+    </ul>
+
+    <h2>How FieldSprout Optimizes Solar Google Ads Campaigns</h2>
+    <p>
+      FieldSprout's multi-agent system is trained on solar industry economics. Our AI agents understand that solar leads have 3-6 month sales cycles, that federal tax credits drive urgency, and that lead quality matters more than lead quantity.
+    </p>
+
+    <h3>1. Lead Pre-Qualification Strategy</h3>
+    <p>
+      The <strong>Lead Qualification Agent</strong> helps structure landing pages and forms to filter unqualified prospects before they waste your sales team's time. Strategic qualification questions include:
+    </p>
+    <ul>
+      <li><strong>Homeownership:</strong> "Do you own your home?" (renters are disqualified immediately)</li>
+      <li><strong>Monthly electric bill:</strong> "$100-150", "$150-200", "$200+" (filters low-usage homes)</li>
+      <li><strong>Credit score range:</strong> "Excellent (720+)", "Good (660-719)", "Fair (600-659)" (qualification for $0 down financing)</li>
+      <li><strong>Roof age/condition:</strong> "Less than 15 years old" vs. "Needs replacement soon"</li>
+      <li><strong>Shading:</strong> "Mostly sunny" vs. "Heavily shaded"</li>
+    </ul>
+    <p>
+      Yes, longer forms reduce conversion rates. But a 6% conversion rate of highly qualified leads is far better than a 12% conversion rate where half are unqualified. Your sales team closes 30-40% of qualified leads versus 5-10% of unqualified leads.
+    </p>
+
+    <h3>2. Solar-Specific Negative Keyword Strategy</h3>
+    <p>
+      The <strong>Negative Keyword Agent</strong> automatically blocks non-buyer traffic that plagues solar advertisers:
+    </p>
+    <ul>
+      <li><strong>DIY solar searchers:</strong> "DIY", "kit", "do it yourself", "build your own"</li>
+      <li><strong>Portable/RV solar:</strong> "portable", "RV", "camping", "van", "trailer", "boat"</li>
+      <li><strong>Job seekers:</strong> "jobs", "careers", "hiring", "salary", "work for"</li>
+      <li><strong>Solar news/stocks:</strong> "news", "stock", "stocks", "TSLA", "investment"</li>
+      <li><strong>Educational/research:</strong> "how does solar work", "science project", "research paper"</li>
+      <li><strong>Repair/used:</strong> "repair", "used", "second hand", "refurbished"</li>
+    </ul>
+    <p>
+      These negative keywords typically save $900-1,600 per month for solar companies spending $5,000-8,000/month on Google Ads.
+    </p>
+
+    <h3>3. Incentive-Focused Ad Copy</h3>
+    <p>
+      Solar buyers are financially motivated. The <strong>Ad Copy Agent</strong> continuously tests messaging that emphasizes ROI and incentives:
+    </p>
+    <ul>
+      <li><strong>Federal tax credit:</strong> "30% Federal Tax Credit - Save $9,000+"</li>
+      <li><strong>State incentives:</strong> "CA Residents: $7,500 State Rebate Available"</li>
+      <li><strong>Utility incentives:</strong> "SCE Customers Get $500/kW Rebate"</li>
+      <li><strong>Financing:</strong> "$0 Down - Payments Start at $89/Month"</li>
+      <li><strong>Net metering:</strong> "Lock in Net Metering Before It's Gone"</li>
+      <li><strong>Electricity savings:</strong> "Eliminate Your $250/Month Electric Bill"</li>
+    </ul>
+    <p>
+      The AI tests 3-5 ad variations per ad group, automatically pausing underperformers (CTR <60% of group average) and promoting winners.
+    </p>
+
+    <h3>4. Geographic and Demographic Targeting</h3>
+    <p>
+      Not all areas are equally profitable for solar advertising. The <strong>Campaign Manager</strong> considers:
+    </p>
+    <ul>
+      <li><strong>Service territory boundaries:</strong> Only target cities/counties where you're licensed and operational</li>
+      <li><strong>Incentive availability:</strong> Increase bids in areas with strong state/utility incentives</li>
+      <li><strong>Electricity rates:</strong> Higher rates = better solar ROI = higher intent prospects</li>
+      <li><strong>Home values:</strong> Target ZIP codes with median home values $300K+ (creditworthy homeowners)</li>
+      <li><strong>Demographic targeting:</strong> Homeowners age 35-65 (decision-makers with stable income)</li>
+    </ul>
+
+    <h3>5. Residential vs. Commercial Campaign Structure</h3>
+    <p>
+      Most solar companies serve both residential and commercial customers, but these are completely different sales processes with different qualification criteria. FieldSprout structures campaigns separately:
+    </p>
+
+    <h4>Residential Solar Campaigns:</h4>
+    <ul>
+      <li><strong>Keywords:</strong> "solar panels for home", "residential solar installation", "solar panel cost"</li>
+      <li><strong>Ad messaging:</strong> Federal tax credit, $0 down financing, monthly savings</li>
+      <li><strong>Landing page:</strong> Solar calculator, financing options, homeowner testimonials</li>
+      <li><strong>Lead value:</strong> $15,000-30,000 average system</li>
+      <li><strong>Sales cycle:</strong> 3-6 months from lead to installation</li>
+    </ul>
+
+    <h4>Commercial Solar Campaigns:</h4>
+    <ul>
+      <li><strong>Keywords:</strong> "commercial solar installation", "solar for business", "solar tax benefits for businesses"</li>
+      <li><strong>Ad messaging:</strong> Accelerated depreciation, tax benefits, energy cost reduction</li>
+      <li><strong>Landing page:</strong> Commercial case studies, ROI calculator, tax benefit details</li>
+      <li><strong>Lead value:</strong> $50,000-500,000+ depending on facility size</li>
+      <li><strong>Sales cycle:</strong> 6-18 months (longer, more complex)</li>
+    </ul>
+
+    <h3>6. Solar Battery Storage Add-On Campaigns</h3>
+    <p>
+      Solar battery storage (Tesla Powerwall, LG Chem, Enphase) is a growing category with unique search demand. FieldSprout creates dedicated battery storage campaigns for:
+    </p>
+    <ul>
+      <li>Homeowners with existing solar looking to add storage</li>
+      <li>New solar prospects interested in backup power (areas with frequent outages)</li>
+      <li>Incentive-driven leads (California SGIP, other state storage rebates)</li>
+    </ul>
+    <p>
+      Battery storage keywords: "solar battery backup", "home battery storage", "powerwall installation", "solar + storage".
+    </p>
+
+    <h2>Solar Google Ads Campaign Structure</h2>
+    <p>
+      Here's how FieldSprout structures a typical solar Google Ads account:
+    </p>
+
+    <h3>Campaign 1: Residential Solar - High Intent</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "solar companies near me", "solar panel installation", "get solar panels"</li>
+      <li><strong>Match types:</strong> Phrase and exact match (tight control on high-cost keywords)</li>
+      <li><strong>Ad copy angle:</strong> Federal tax credit, $0 down financing, free quote</li>
+      <li><strong>Landing page:</strong> Solar calculator with pre-qualification questions</li>
+      <li><strong>Budget:</strong> 40-50% of total solar ad spend (highest intent, highest priority)</li>
+    </ul>
+
+    <h3>Campaign 2: Residential Solar - Cost/Savings Research</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "solar panel cost", "how much does solar cost", "solar savings calculator"</li>
+      <li><strong>Match types:</strong> Phrase match</li>
+      <li><strong>Ad copy angle:</strong> "See Your Exact Solar Savings - Free Custom Quote"</li>
+      <li><strong>Landing page:</strong> Interactive solar calculator, then capture contact info for quote</li>
+      <li><strong>Budget:</strong> 20-30% (research phase, longer sales cycle)</li>
+    </ul>
+
+    <h3>Campaign 3: Solar Incentives & Rebates</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "solar tax credit", "[state] solar incentives", "solar rebates", "ITC solar"</li>
+      <li><strong>Match types:</strong> Phrase match</li>
+      <li><strong>Ad copy angle:</strong> "2024 Solar Tax Credit: 30% Back on Installation"</li>
+      <li><strong>Landing page:</strong> Incentives guide with CTA to schedule consultation</li>
+      <li><strong>Budget:</strong> 15-20% (educational intent, can be nurtured to conversion)</li>
+    </ul>
+
+    <h3>Campaign 4: Commercial Solar</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "commercial solar installation", "solar for business", "business solar panels"</li>
+      <li><strong>Match types:</strong> Phrase match</li>
+      <li><strong>Ad copy angle:</strong> "Reduce Energy Costs 60% - Accelerated Depreciation Benefits"</li>
+      <li><strong>Landing page:</strong> Commercial solar page with case studies, ROI examples</li>
+      <li><strong>Budget:</strong> 10-15% (lower volume, higher value per lead)</li>
+    </ul>
+
+    <h3>Campaign 5: Solar Battery Storage</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "solar battery", "powerwall installation", "solar backup battery", "home energy storage"</li>
+      <li><strong>Match types:</strong> Phrase and exact match</li>
+      <li><strong>Ad copy angle:</strong> "Never Lose Power - Solar + Battery Backup"</li>
+      <li><strong>Landing page:</strong> Battery storage page with backup power benefits, incentives</li>
+      <li><strong>Budget:</strong> 5-10% (growing category, add-on opportunity)</li>
+    </ul>
+
+    <h2>Common Solar Google Ads Questions</h2>
+
+    <h3>How much should solar companies spend on Google Ads?</h3>
+    <p>
+      A typical solar installation company spends $4,000-12,000 per month on Google Ads, depending on market size and competition. At $80 per lead and 10% close rate, you need 10 leads to generate one $20,000 installation ($800 in ad spend per closed deal).
+    </p>
+    <p>
+      If your average installation is $20,000 at 25% margin ($5,000 profit), spending $800-1,200 in advertising per installation is profitable.
+    </p>
+
+    <h3>What's a good conversion rate for solar Google Ads?</h3>
+    <p>
+      <strong>Click-to-lead conversion rate:</strong>
+    </p>
+    <ul>
+      <li><strong>High-intent keywords</strong> ("solar companies near me"): 8-15%</li>
+      <li><strong>Research keywords</strong> ("solar panel cost"): 4-8%</li>
+      <li><strong>Incentive keywords</strong> ("solar tax credit"): 3-6%</li>
+    </ul>
+    <p>
+      <strong>Lead-to-consultation conversion:</strong> 40-60% (of qualified leads)
+    </p>
+    <p>
+      <strong>Consultation-to-installation conversion:</strong> 25-40%
+    </p>
+
+    <h3>Should solar companies use Google Local Services Ads?</h3>
+    <p>
+      Currently, Google Local Services Ads are limited to specific home services categories and don't widely include solar installation. However, if LSAs expand to solar in your market, they're worth testing for their pay-per-lead model and top-of-search placement.
+    </p>
+    <p>
+      In the meantime, traditional Google Ads remain the most effective paid search channel for solar companies.
+    </p>
+
+    <h3>How do you compete with national solar lead aggregators?</h3>
+    <p>
+      National lead aggregators (Solar.com, EnergySage, SolarReviews) have massive budgets and bid aggressively. To compete:
+    </p>
+    <ul>
+      <li><strong>Emphasize local presence:</strong> "Serving [City] Since 2015" beats generic national messaging</li>
+      <li><strong>Highlight direct relationship:</strong> "Work directly with us - not a middleman marketplace"</li>
+      <li><strong>Use location extensions:</strong> Show your local address and proximity to searcher</li>
+      <li><strong>Target long-tail keywords:</strong> "solar installation [specific neighborhood]" has less competition</li>
+      <li><strong>Focus on lead quality, not volume:</strong> Let aggregators waste money on unqualified clicks</li>
+    </ul>
+
+    <h2>Get Started with Solar-Optimized Google Ads</h2>
+    <p>
+      Stop competing on generic Google Ads strategies that don't account for solar industry lead quality challenges, incentive urgency, and qualification complexity. FieldSprout's AI agents optimize your campaigns 24/7 using solar-specific rules and benchmarks.
+    </p>
+
+    <div class="mt-8 p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl">
+      <h3 class="text-xl font-bold text-gray-900 mb-3">Ready to reduce your cost per qualified solar lead?</h3>
+      <p class="text-gray-700 mb-4">
+        Connect your Google Ads account and let our AI agents start optimizing in minutes. No contracts, cancel anytime.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <a href="/signup" class="btn btn-primary px-6 py-3">
+          Start Free Trial →
+        </a>
+        <a href="/pricing" class="btn btn-secondary px-6 py-3">
+          View Pricing
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- Related Pages Section -->
+<section class="bg-white border-t border-b border-gray-200 py-12 mt-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">More Solar Marketing Solutions</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <a href="/industries/solar-local-service-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/industries/solar-meta-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Build your pipeline with targeted social media campaigns</p>
+      </a>
+      <a href="/industries/solar-website-cro" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Website & Conversion Optimization</h3>
+        <p class="text-sm text-gray-600">Turn more website visitors into paying customers</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Browse Industries Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-6xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Marketing Solutions by Industry</h2>
+    <p class="text-gray-600 text-center mb-8">Industry-specific strategies for home service businesses</p>
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <a href="/industries/hvac-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">❄️</div>
+        <div class="text-sm font-semibold text-gray-900">HVAC</div>
+      </a>
+      <a href="/industries/plumbing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔧</div>
+        <div class="text-sm font-semibold text-gray-900">Plumbing</div>
+      </a>
+      <a href="/industries/electrical-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">⚡</div>
+        <div class="text-sm font-semibold text-gray-900">Electrical</div>
+      </a>
+      <a href="/industries/roofing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏠</div>
+        <div class="text-sm font-semibold text-gray-900">Roofing</div>
+      </a>
+      <a href="/industries/pest-control-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🐛</div>
+        <div class="text-sm font-semibold text-gray-900">Pest Control</div>
+      </a>
+      <a href="/industries/lawn-care-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🌱</div>
+        <div class="text-sm font-semibold text-gray-900">Lawn Care</div>
+      </a>
+      <a href="/industries/garage-door-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🚪</div>
+        <div class="text-sm font-semibold text-gray-900">Garage Door</div>
+      </a>
+      <a href="/industries/pools-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏊</div>
+        <div class="text-sm font-semibold text-gray-900">Pools</div>
+      </a>
+      <a href="/industries/concrete-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏗️</div>
+        <div class="text-sm font-semibold text-gray-900">Concrete</div>
+      </a>
+      <a href="/industries/fencing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪵</div>
+        <div class="text-sm font-semibold text-gray-900">Fencing</div>
+      </a>
+      <a href="/industries/solar-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">☀️</div>
+        <div class="text-sm font-semibold text-gray-900">Solar</div>
+      </a>
+      <a href="/industries/windows-doors-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪟</div>
+        <div class="text-sm font-semibold text-gray-900">Windows & Doors</div>
+      </a>
+      <a href="/industries/irrigation-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">💧</div>
+        <div class="text-sm font-semibold text-gray-900">Irrigation</div>
+      </a>
+      <a href="/industries/restoration-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔨</div>
+        <div class="text-sm font-semibold text-gray-900">Restoration</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Products Section -->
+<section class="bg-white py-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Our Marketing Products</h2>
+    <p class="text-gray-600 text-center mb-8">AI-powered marketing automation for home service businesses</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <a href="/products/google-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">🎯</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Ads</h3>
+        <p class="text-sm text-gray-600">AI agents optimize your campaigns 24/7 to reduce cost per lead</p>
+      </a>
+      <a href="/products/facebook-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📱</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Targeted social campaigns that build your pipeline</p>
+      </a>
+      <a href="/products/local-services-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">✅</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/products/google-business-profile" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📍</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Business Profile</h3>
+        <p class="text-sm text-gray-600">Optimize your local presence and get more reviews</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-4xl mx-auto px-4">
+    <h2 class="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+
+    <div class="space-y-4">
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What's the average cost per solar lead from Google Ads?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Solar installation leads typically cost $50-150 from Google Ads, varying by market competitiveness and targeting. Residential solar leads are $60-120, while commercial solar leads range $150-400. FieldSprout's AI optimizes toward your target cost per qualified lead.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What keywords should solar companies bid on?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          High-converting solar keywords include "solar panel installation near me", "solar panel cost", "solar companies near me", "residential solar panels", and "solar incentives [state]". Avoid overly broad terms like "solar energy" without qualifiers. FieldSprout's Keyword Optimizer refines targeting continuously.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          How can solar companies reduce Google Ads waste?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Block DIY solar searchers, job seekers, solar news readers, and commercial searches (if you're residential-only). Use negative keywords like "DIY", "jobs", "kit", "portable", "RV", "news", "stocks". Geographic targeting prevents leads from outside your service territories.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          Should solar companies use Google Ads year-round?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Yes. While installation demand peaks spring-summer, solar research happens year-round. Many homeowners research in winter and book for spring installation. FieldSprout's AI adjusts budgets seasonally while maintaining presence for planning-phase prospects.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+{% endblock %}

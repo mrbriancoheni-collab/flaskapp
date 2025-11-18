@@ -1,0 +1,529 @@
+{% extends 'base_public.html' %}
+{% block title %}Pool Google Ads Optimization — FieldSprout{% endblock %}
+
+{% block head_extra %}
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Industries",
+      "item": "https://fieldsprout.io/industries"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Pool Google Ads",
+      "item": "https://fieldsprout.io/industries/pools-google-ads"
+    }
+  ]
+}
+</script>
+
+<!-- FAQ Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What's the average cost per pool lead from Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Pool installation leads typically cost $60-150 from Google Ads, varying by market and pool type. Inground pool leads cost $80-180, above-ground pool leads $40-90, and pool service/maintenance leads $25-60. FieldSprout optimizes toward your target CPL."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What keywords should pool companies bid on?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "High-converting keywords include 'pool installation near me', 'inground pool cost', 'pool builders', 'fiberglass pool', and 'pool service near me'. Avoid DIY terms and above-ground pools (if you only install inground). FieldSprout's Keyword Optimizer refines targeting."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Should pool companies run Google Ads year-round?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, but with seasonal adjustments. Pool installation demand peaks spring-summer (March-August). Scale budgets 50-80% higher during peak season, maintain presence year-round as homeowners plan installations 6-12 months ahead."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How can pool companies reduce wasted Google Ads spend?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Block DIY pool searches, above-ground pools (if inground-only), pool toys/supplies, and commercial projects (if residential-only). Use negative keywords like 'DIY', 'above ground', 'inflatable', 'commercial', 'parts', 'toys', 'jobs'."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- Service Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "Pool Google Ads Optimization",
+  "provider": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  },
+  "description": "AI-powered Google Ads optimization for pool installation and service companies, automatically managing seasonal campaigns, pool type targeting, financing messaging, and lead qualification for residential and commercial pool projects.",
+  "areaServed": {
+    "@type": "Country",
+    "name": "United States"
+  }
+}
+</script>
+
+<!-- HowTo Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Optimize Google Ads for Pool Companies",
+  "description": "Step-by-step guide to setting up and optimizing Google Ads campaigns for pool installation and service contractors to generate qualified residential pool leads.",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Structure campaigns by service type",
+      "text": "Create separate campaigns for pool installation, pool service/maintenance, and pool renovation. Installation campaigns target high-value new pool projects, service campaigns capture recurring revenue, renovation targets existing pool owners."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Target pool type specific keywords",
+      "text": "Focus on 'inground pool installation', 'fiberglass pool', 'concrete pool', 'pool builders near me'. Add location modifiers and pool type qualifiers. If you specialize in specific pool types (fiberglass, gunite), create dedicated campaigns."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Block DIY and above-ground searches",
+      "text": "Add negative keywords for DIY installation, above-ground pools (if you only do inground), pool supplies/toys, and commercial projects (if residential-only). Block 'DIY', 'above ground', 'inflatable', 'intex', 'commercial', 'olympic', 'parts'."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Emphasize financing in ad copy",
+      "text": "Pool installation costs $30K-80K+, requiring financing for most customers. Lead with '$299/Month Pools', 'Financing Available', or 'Build Your Dream Pool - $0 Down'. Address cost concerns immediately to capture more prospects."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Use seasonal budget adjustments",
+      "text": "Scale budgets 50-80% higher during peak season (March-August). Maintain year-round presence as homeowners plan 6-12 months ahead. Adjust messaging seasonally: spring = planning/design, summer = installation, fall/winter = financing/planning."
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-12">
+  <div class="mb-8">
+    <span class="inline-block px-3 py-1 text-sm font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full mb-4">
+      <i class="fa-solid fa-water-ladder"></i> Pool Industry
+    </span>
+    <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+      Google Ads for Pool Installation & Service Companies
+    </h1>
+    <p class="text-xl text-gray-700 leading-relaxed">
+      Stop wasting budget on DIY pool searches and above-ground pool shoppers. FieldSprout's AI optimizes your pool Google Ads campaigns 24/7—automatically managing seasonal demand, pool type targeting, and financing messaging to maximize qualified inground pool leads.
+    </p>
+  </div>
+
+  <div class="bg-indigo-50 border-l-4 border-indigo-600 p-6 rounded-lg mb-12">
+    <div class="flex items-start">
+      <i class="fa-solid fa-chart-line text-indigo-600 text-2xl mr-4 mt-1"></i>
+      <div>
+        <h3 class="text-lg font-bold text-indigo-900 mb-2">Pool Google Ads Performance Benchmarks</h3>
+        <ul class="text-sm text-indigo-800 space-y-1">
+          <li>• <strong>−44% cost per qualified pool lead</strong> with seasonal optimization and negative keyword management (90 days)</li>
+          <li>• <strong>+62% conversion rate</strong> using financing-focused ad copy and pool type segmentation</li>
+          <li>• <strong>$900-1,700/month saved</strong> by blocking DIY and above-ground pool traffic</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose prose-lg max-w-none">
+    <h2>Why Pool Google Ads Require Specialized Strategy</h2>
+    <p>
+      Pool installation is one of the highest-value home improvement projects, with inground pools ranging from $30,000-$80,000+. This high ticket size makes Google Ads both extremely valuable (each lead could be worth $30K-80K) and extremely competitive (every pool builder in your market is bidding on the same keywords).
+    </p>
+    <p>
+      Pool companies face unique Google Ads challenges: extreme seasonality (spring/summer installation peaks), long sales cycles (6-12 months from research to installation), and diverse customer needs (fiberglass vs. concrete vs. vinyl liner pools, budget ranges from $30K to $150K+).
+    </p>
+    <p>
+      Generic Google Ads strategies fail for pool companies because they don't account for these industry-specific patterns. You need intelligent seasonal budget management, pool type segmentation, financing-first messaging, and aggressive filtering of DIY searchers and above-ground pool shoppers who will never convert to high-value inground installations.
+    </p>
+
+    <h2>Common Pool Google Ads Mistakes</h2>
+    <p>
+      Most pool companies waste significant budgets by making these critical mistakes:
+    </p>
+    <ul>
+      <li><strong>No seasonal budget adjustments:</strong> Running flat budgets year-round instead of scaling 50-80% during peak season</li>
+      <li><strong>Not separating pool types:</strong> Mixing fiberglass, concrete, and vinyl liner in same campaigns with different margins</li>
+      <li><strong>Ignoring DIY traffic:</strong> Broad match attracting "DIY pool installation" and "how to build a pool" searches</li>
+      <li><strong>Not blocking above-ground pools:</strong> Wasting budget on $500-2,000 above-ground shoppers when you install $30K+ inground pools</li>
+      <li><strong>No financing messaging:</strong> Failing to address $40K-80K price concern that dominates customer mindset</li>
+      <li><strong>Generic "pool builder" positioning:</strong> Not differentiating by specialty (fiberglass, custom concrete, etc.)</li>
+    </ul>
+
+    <h2>How FieldSprout Optimizes Pool Google Ads Campaigns</h2>
+    <p>
+      FieldSprout's AI agents understand pool industry economics, seasonal patterns, and customer psychology around high-ticket pool installations.
+    </p>
+
+    <h3>1. Service-Type Campaign Structure</h3>
+    <p>
+      The <strong>Campaign Manager</strong> separates campaigns by business line because each has different economics:
+    </p>
+
+    <h4>Pool Installation Campaigns:</h4>
+    <ul>
+      <li><strong>Keywords:</strong> "pool installation", "inground pool builders", "fiberglass pool", "concrete pool"</li>
+      <li><strong>Average project value:</strong> $30,000-80,000+</li>
+      <li><strong>Sales cycle:</strong> 3-12 months from lead to installation</li>
+      <li><strong>Seasonality:</strong> Extreme (80% of demand March-August)</li>
+      <li><strong>Competition:</strong> Very high</li>
+    </ul>
+
+    <h4>Pool Service & Maintenance Campaigns:</h4>
+    <ul>
+      <li><strong>Keywords:</strong> "pool service near me", "pool maintenance", "pool cleaning service"</li>
+      <li><strong>Average customer value:</strong> $100-200/month recurring</li>
+      <li><strong>Sales cycle:</strong> Days to weeks</li>
+      <li><strong>Seasonality:</strong> Moderate (year-round in warm climates)</li>
+      <li><strong>Competition:</strong> Moderate</li>
+    </ul>
+
+    <h4>Pool Renovation/Remodel Campaigns:</h4>
+    <ul>
+      <li><strong>Keywords:</strong> "pool renovation", "pool resurfacing", "pool remodel", "pool tile replacement"</li>
+      <li><strong>Average project value:</strong> $5,000-25,000</li>
+      <li><strong>Sales cycle:</strong> 1-6 months</li>
+      <li><strong>Seasonality:</strong> Spring peak (prepare for summer)</li>
+      <li><strong>Competition:</strong> Moderate</li>
+    </ul>
+
+    <h3>2. Pool Type Segmentation</h3>
+    <p>
+      If you specialize in specific pool types, create dedicated campaigns:
+    </p>
+    <ul>
+      <li><strong>Fiberglass pools:</strong> Faster installation, lower cost, keywords: "fiberglass pool", "fiberglass pool cost"</li>
+      <li><strong>Concrete/gunite pools:</strong> Custom designs, higher end, keywords: "custom pool builder", "gunite pool", "concrete pool"</li>
+      <li><strong>Vinyl liner pools:</strong> Budget-friendly option, keywords: "vinyl liner pool", "affordable inground pool"</li>
+    </ul>
+    <p>
+      Each pool type attracts different customer budgets and has different profit margins, justifying separate bid strategies.
+    </p>
+
+    <h3>3. Seasonal Budget Optimization</h3>
+    <p>
+      Pool installation has extreme seasonality. The <strong>Strategic Director</strong> agent automatically adjusts budgets:
+    </p>
+    <ul>
+      <li><strong>Spring peak (March-June):</strong> Increase budgets 60-80% (homeowners planning summer installations)</li>
+      <li><strong>Summer installation season (July-August):</strong> Maintain high budgets 40-60% above baseline</li>
+      <li><strong>Fall planning (September-November):</strong> Maintain baseline (homeowners planning for next year)</li>
+      <li><strong>Winter off-season (December-February):</strong> Reduce budgets 30-50% (warm climates maintain, cold climates reduce heavily)</li>
+    </ul>
+
+    <h3>4. Financing-First Ad Messaging</h3>
+    <p>
+      Pool installations cost $30K-80K+, requiring financing for 70-80% of customers. The <strong>Ad Copy Agent</strong> emphasizes financing:
+    </p>
+    <ul>
+      <li>"$299/Month - Build Your Dream Pool"</li>
+      <li>"Inground Pools from $39,995 - Financing Available"</li>
+      <li>"$0 Down Pool Installation - Easy Approval"</li>
+      <li>"Own a Pool for Less Than You Think - $250/Month"</li>
+    </ul>
+
+    <h3>5. Pool-Specific Negative Keywords</h3>
+    <p>
+      The <strong>Negative Keyword Agent</strong> blocks irrelevant and low-value traffic:
+    </p>
+    <ul>
+      <li><strong>DIY searches:</strong> "DIY", "build yourself", "DIY pool installation", "how to build a pool"</li>
+      <li><strong>Above-ground pools:</strong> "above ground", "intex", "inflatable", "portable pool"</li>
+      <li><strong>Pool supplies/toys:</strong> "pool toys", "pool floats", "pool chemicals", "pool pump"</li>
+      <li><strong>Commercial/public:</strong> "commercial pool", "olympic pool", "public pool", "hotel pool"</li>
+      <li><strong>Wrong service type:</strong> "pool removal", "pool demolition", "fill in pool"</li>
+      <li><strong>Job seekers:</strong> "pool jobs", "hiring", "careers", "work for pool company"</li>
+    </ul>
+    <p>
+      These negatives save $900-1,700/month for pool companies spending $5,000-8,000/month on Google Ads.
+    </p>
+
+    <h3>6. Geographic and Climate-Based Targeting</h3>
+    <p>
+      Pool installation profitability varies by geography:
+    </p>
+    <ul>
+      <li><strong>Warm climates (FL, TX, AZ, CA):</strong> Year-round demand, higher budgets justified</li>
+      <li><strong>Seasonal climates (Northeast, Midwest):</strong> Concentrated demand March-August, heavy seasonality</li>
+      <li><strong>Travel distance:</strong> Pool installation requires multiple site visits, limit service radius to 30-40 miles for profitability</li>
+    </ul>
+
+    <h2>Pool Google Ads Campaign Structure</h2>
+
+    <h3>Campaign 1: Inground Pool Installation - High Intent</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "pool installation near me", "inground pool builders", "pool contractors"</li>
+      <li><strong>Match types:</strong> Phrase and exact match</li>
+      <li><strong>Ad copy:</strong> Financing options, free design consultation, portfolio of builds</li>
+      <li><strong>Landing page:</strong> Pool gallery with quote form and financing details</li>
+      <li><strong>Budget:</strong> 50-60% of total (highest value)</li>
+    </ul>
+
+    <h3>Campaign 2: Pool Type Specific (Fiberglass, Concrete)</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "fiberglass pool cost", "gunite pool builders", "concrete pool installation"</li>
+      <li><strong>Match types:</strong> Phrase match</li>
+      <li><strong>Ad copy:</strong> Pool type benefits, installation timeline, pricing</li>
+      <li><strong>Landing page:</strong> Pool type-specific page with pros/cons, cost ranges</li>
+      <li><strong>Budget:</strong> 20-30%</li>
+    </ul>
+
+    <h3>Campaign 3: Pool Service & Maintenance</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "pool service near me", "pool maintenance", "weekly pool cleaning"</li>
+      <li><strong>Match types:</strong> Phrase match</li>
+      <li><strong>Ad copy:</strong> Weekly service from $X/month, free first cleaning</li>
+      <li><strong>Landing page:</strong> Service page with pricing tiers and service details</li>
+      <li><strong>Budget:</strong> 15-20% (recurring revenue focus)</li>
+    </ul>
+
+    <h3>Campaign 4: Research & Planning</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "inground pool cost", "how much does a pool cost", "pool financing"</li>
+      <li><strong>Match types:</strong> Phrase match</li>
+      <li><strong>Ad copy:</strong> "Free Pool Cost Calculator", "Pool Financing Guide"</li>
+      <li><strong>Landing page:</strong> Cost calculator, design guide, or financing info page</li>
+      <li><strong>Budget:</strong> 5-10% (long sales cycle, nurture leads)</li>
+    </ul>
+
+    <h2>Pool Google Ads Cost Benchmarks</h2>
+
+    <h3>Cost Per Lead:</h3>
+    <ul>
+      <li><strong>Inground pool installation:</strong> $80-180 per lead</li>
+      <li><strong>Above-ground pool (if you offer):</strong> $30-70 per lead</li>
+      <li><strong>Pool service/maintenance:</strong> $25-60 per lead</li>
+      <li><strong>Pool renovation:</strong> $50-110 per lead</li>
+    </ul>
+
+    <h3>Conversion Rates:</h3>
+    <ul>
+      <li><strong>Lead-to-consultation:</strong> 40-60%</li>
+      <li><strong>Consultation-to-proposal:</strong> 60-80%</li>
+      <li><strong>Proposal-to-sale:</strong> 20-35%</li>
+      <li><strong>Overall lead-to-sale:</strong> 5-16%</li>
+    </ul>
+
+    <h3>Recommended Monthly Budgets:</h3>
+    <ul>
+      <li><strong>Small builders (1-2 crews):</strong> $3,000-6,000/month peak, $1,500-3,000 off-season</li>
+      <li><strong>Medium builders (3-5 crews):</strong> $6,000-12,000/month peak, $3,000-6,000 off-season</li>
+      <li><strong>Large builders (6+ crews):</strong> $12,000-25,000/month peak, $6,000-12,000 off-season</li>
+    </ul>
+
+    <h2>Get Started with Pool Google Ads Optimization</h2>
+    <p>
+      Stop wasting budget on DIY searches, above-ground pool shoppers, and off-season overspending. FieldSprout's AI agents optimize your pool campaigns 24/7 using industry-specific seasonal patterns, pool type economics, and financing-first messaging.
+    </p>
+
+    <div class="mt-8 p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl">
+      <h3 class="text-xl font-bold text-gray-900 mb-3">Ready to reduce your cost per pool lead?</h3>
+      <p class="text-gray-700 mb-4">
+        Connect your Google Ads account and let our AI agents start optimizing seasonal budgets, pool type targeting, and financing messaging. No contracts, cancel anytime.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <a href="/signup" class="btn btn-primary px-6 py-3">
+          Start Free Trial →
+        </a>
+        <a href="/pricing" class="btn btn-secondary px-6 py-3">
+          View Pricing
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- Related Pages Section -->
+<section class="bg-white border-t border-b border-gray-200 py-12 mt-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">More Pools Marketing Solutions</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <a href="/industries/pools-local-service-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/industries/pools-meta-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Build your pipeline with targeted social media campaigns</p>
+      </a>
+      <a href="/industries/pools-website-cro" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Website & Conversion Optimization</h3>
+        <p class="text-sm text-gray-600">Turn more website visitors into paying customers</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Browse Industries Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-6xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Marketing Solutions by Industry</h2>
+    <p class="text-gray-600 text-center mb-8">Industry-specific strategies for home service businesses</p>
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <a href="/industries/hvac-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">❄️</div>
+        <div class="text-sm font-semibold text-gray-900">HVAC</div>
+      </a>
+      <a href="/industries/plumbing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔧</div>
+        <div class="text-sm font-semibold text-gray-900">Plumbing</div>
+      </a>
+      <a href="/industries/electrical-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">⚡</div>
+        <div class="text-sm font-semibold text-gray-900">Electrical</div>
+      </a>
+      <a href="/industries/roofing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏠</div>
+        <div class="text-sm font-semibold text-gray-900">Roofing</div>
+      </a>
+      <a href="/industries/pest-control-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🐛</div>
+        <div class="text-sm font-semibold text-gray-900">Pest Control</div>
+      </a>
+      <a href="/industries/lawn-care-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🌱</div>
+        <div class="text-sm font-semibold text-gray-900">Lawn Care</div>
+      </a>
+      <a href="/industries/garage-door-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🚪</div>
+        <div class="text-sm font-semibold text-gray-900">Garage Door</div>
+      </a>
+      <a href="/industries/pools-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏊</div>
+        <div class="text-sm font-semibold text-gray-900">Pools</div>
+      </a>
+      <a href="/industries/concrete-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏗️</div>
+        <div class="text-sm font-semibold text-gray-900">Concrete</div>
+      </a>
+      <a href="/industries/fencing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪵</div>
+        <div class="text-sm font-semibold text-gray-900">Fencing</div>
+      </a>
+      <a href="/industries/solar-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">☀️</div>
+        <div class="text-sm font-semibold text-gray-900">Solar</div>
+      </a>
+      <a href="/industries/windows-doors-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪟</div>
+        <div class="text-sm font-semibold text-gray-900">Windows & Doors</div>
+      </a>
+      <a href="/industries/irrigation-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">💧</div>
+        <div class="text-sm font-semibold text-gray-900">Irrigation</div>
+      </a>
+      <a href="/industries/restoration-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔨</div>
+        <div class="text-sm font-semibold text-gray-900">Restoration</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Products Section -->
+<section class="bg-white py-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Our Marketing Products</h2>
+    <p class="text-gray-600 text-center mb-8">AI-powered marketing automation for home service businesses</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <a href="/products/google-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">🎯</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Ads</h3>
+        <p class="text-sm text-gray-600">AI agents optimize your campaigns 24/7 to reduce cost per lead</p>
+      </a>
+      <a href="/products/facebook-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📱</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Targeted social campaigns that build your pipeline</p>
+      </a>
+      <a href="/products/local-services-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">✅</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/products/google-business-profile" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📍</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Business Profile</h3>
+        <p class="text-sm text-gray-600">Optimize your local presence and get more reviews</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-4xl mx-auto px-4">
+    <h2 class="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+
+    <div class="space-y-4">
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What's the average cost per pool lead from Google Ads?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Pool installation leads typically cost $60-150 from Google Ads, varying by market and pool type. Inground pool leads cost $80-180, above-ground pool leads $40-90, and pool service/maintenance leads $25-60. FieldSprout optimizes toward your target CPL.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What keywords should pool companies bid on?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          High-converting keywords include "pool installation near me", "inground pool cost", "pool builders", "fiberglass pool", and "pool service near me". Avoid DIY terms and above-ground pools (if you only install inground). FieldSprout's Keyword Optimizer refines targeting.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          Should pool companies run Google Ads year-round?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Yes, but with seasonal adjustments. Pool installation demand peaks spring-summer (March-August). Scale budgets 50-80% higher during peak season, maintain presence year-round as homeowners plan installations 6-12 months ahead.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          How can pool companies reduce wasted Google Ads spend?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Block DIY pool searches, above-ground pools (if inground-only), pool toys/supplies, and commercial projects (if residential-only). Use negative keywords like "DIY", "above ground", "inflatable", "commercial", "parts", "toys", "jobs".
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+{% endblock %}

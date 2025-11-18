@@ -97,16 +97,29 @@
 <script>
     const CUSTOMER_ID = 'demo-customer';  // TODO: Get from user context
 
+    console.log('Competitive Dashboard: Script loaded');
+
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('Competitive Dashboard: DOMContentLoaded fired');
+        console.log('Button element:', document.getElementById('btnAddCompetitor'));
+
         loadCompetitors();
         loadAlerts();
         setupEventListeners();
     });
 
     function setupEventListeners() {
+        console.log('Setting up event listeners...');
+
         const btnAdd = document.getElementById('btnAddCompetitor');
         if (btnAdd) {
-            btnAdd.addEventListener('click', openAddCompetitorModal);
+            console.log('Add Competitor button found, attaching listener');
+            btnAdd.addEventListener('click', function(e) {
+                console.log('Add Competitor button clicked!');
+                openAddCompetitorModal();
+            });
+        } else {
+            console.error('Add Competitor button NOT found');
         }
 
         const btnCancel = document.getElementById('btnCancelAddCompetitor');
@@ -121,10 +134,14 @@
     }
 
     function openAddCompetitorModal() {
+        console.log('openAddCompetitorModal called');
         document.getElementById('inputDomain').value = '';
         document.getElementById('inputCompanyName').value = '';
         document.getElementById('inputNotes').value = '';
-        document.getElementById('modalAddCompetitor').classList.remove('hidden');
+        const modal = document.getElementById('modalAddCompetitor');
+        console.log('Modal element:', modal);
+        modal.classList.remove('hidden');
+        console.log('Modal classes after remove hidden:', modal.classList);
     }
 
     function closeAddCompetitorModal() {

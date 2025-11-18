@@ -162,27 +162,40 @@
     });
 
     function setupEventListeners() {
+        console.log('Setting up event listeners for Budget Groups...');
+
         const btnCreate = document.getElementById('btnCreateGroup');
+        console.log('Create button element:', btnCreate);
+
         if (btnCreate) {
-            btnCreate.addEventListener('click', () => {
-                console.log('Create button clicked');
+            console.log('Create button found, attaching listener');
+            btnCreate.addEventListener('click', function(e) {
+                console.log('Create Budget Group button clicked!', e);
                 openGroupModal();
             });
+        } else {
+            console.error('Create button NOT found - ID: btnCreateGroup');
         }
 
         const btnCancel = document.getElementById('btnCancelModal');
         if (btnCancel) {
             btnCancel.addEventListener('click', closeGroupModal);
+        } else {
+            console.warn('Cancel button not found');
         }
 
         const btnSave = document.getElementById('btnSaveGroup');
         if (btnSave) {
             btnSave.addEventListener('click', saveGroup);
+        } else {
+            console.warn('Save button not found');
         }
 
         const btnCloseCampaigns = document.getElementById('btnCloseCampaignsModal');
         if (btnCloseCampaigns) {
             btnCloseCampaigns.addEventListener('click', closeCampaignsModal);
+        } else {
+            console.warn('Close campaigns button not found');
         }
     }
 
@@ -285,21 +298,28 @@
     }
 
     function openGroupModal(groupId = null) {
+        console.log('openGroupModal called with groupId:', groupId);
         currentGroupId = groupId;
 
         if (groupId) {
             // Edit mode - load group data
+            console.log('Edit mode');
             document.getElementById('modalTitle').textContent = 'Edit Budget Group';
             document.getElementById('btnSaveText').textContent = 'Save Changes';
             loadGroupData(groupId);
         } else {
             // Create mode - reset form
+            console.log('Create mode');
             document.getElementById('modalTitle').textContent = 'Create Budget Group';
             document.getElementById('btnSaveText').textContent = 'Create Budget Group';
             resetGroupForm();
         }
 
-        document.getElementById('modalGroup').classList.remove('hidden');
+        const modal = document.getElementById('modalGroup');
+        console.log('Modal element:', modal);
+        console.log('Modal classes before:', modal.classList.toString());
+        modal.classList.remove('hidden');
+        console.log('Modal classes after:', modal.classList.toString());
     }
 
     function closeGroupModal() {

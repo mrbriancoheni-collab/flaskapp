@@ -1,0 +1,434 @@
+{% extends 'base_public.html' %}
+{% block title %}HVAC Google Ads Optimization — FieldSprout{% endblock %}
+
+{% block head_extra %}
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Industries",
+      "item": "https://fieldsprout.io/industries"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "HVAC Google Ads",
+      "item": "https://fieldsprout.io/industries/hvac-google-ads"
+    }
+  ]
+}
+</script>
+
+<!-- FAQ Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What's the average cost per lead for HVAC Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "HVAC cost per lead varies by market and service type. Emergency AC repair typically costs $50-150 per lead, while preventive maintenance leads run $30-80. HVAC installation leads (higher ticket) range from $100-300. FieldSprout's AI optimizes toward your target CPL automatically."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Should HVAC companies run Google Ads year-round?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, but with seasonal budget adjustments. AC campaigns peak May-September, furnace campaigns peak October-March. FieldSprout's AI automatically adjusts budgets based on seasonal demand patterns and your booking capacity."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What keywords should HVAC companies bid on?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "High-intent keywords include 'AC repair near me', 'furnace not working', 'HVAC emergency service', and specific equipment brands. Avoid broad terms like 'HVAC' or 'air conditioning' without modifiers. FieldSprout's Keyword Optimizer continuously refines your keyword strategy."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How can HVAC companies reduce wasted Google Ads spend?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Block DIY searchers, job seekers, and out-of-service-area clicks. Use negative keywords like 'free', 'DIY', 'jobs', 'parts', and 'youtube'. Set geographic targeting to profitable ZIP codes only. FieldSprout's Negative Keyword Agent does this automatically 24/7."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- Service Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "HVAC Google Ads Optimization",
+  "provider": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  },
+  "description": "AI-powered Google Ads optimization specifically for HVAC contractors, automatically managing seasonal campaigns, emergency vs. maintenance messaging, and budget allocation across AC and heating services.",
+  "areaServed": {
+    "@type": "Country",
+    "name": "United States"
+  }
+}
+</script>
+
+<!-- HowTo Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Optimize Google Ads for HVAC Companies",
+  "description": "Step-by-step guide to setting up and optimizing Google Ads campaigns for HVAC contractors to reduce cost per lead and increase booked jobs.",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Set up seasonal campaign structure",
+      "text": "Create separate campaigns for AC services (cooling), furnace services (heating), and year-round services like maintenance and duct cleaning. This allows independent budget control and seasonal adjustments."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Target high-intent HVAC keywords",
+      "text": "Focus on emergency and problem-solving keywords like 'AC not cooling', 'furnace won't turn on', 'HVAC emergency repair'. Add location modifiers and service area cities. Use phrase and exact match to control costs."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Implement negative keyword strategy",
+      "text": "Block DIY searches, job seekers, parts shoppers, and competitor research. Add negatives like 'DIY', 'jobs', 'free', 'parts', 'YouTube', 'rental'. Review search term reports weekly to identify new negative keywords."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Create service-specific ad copy",
+      "text": "Write separate ad groups for AC repair, furnace repair, installation, maintenance, and emergency services. Include pricing signals, response time promises, and licensing/certification trust factors."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Optimize for seasonal demand",
+      "text": "Increase AC campaign budgets April-September and decrease October-March. Do the opposite for heating campaigns. Use weather triggers for extreme temperature days when emergency service demand spikes."
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-12">
+  <div class="mb-8">
+    <span class="inline-block px-3 py-1 text-sm font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full mb-4">
+      <i class="fa-solid fa-temperature-half"></i> HVAC Industry
+    </span>
+    <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+      Google Ads Optimization for HVAC Contractors
+    </h1>
+    <p class="text-xl text-gray-700 leading-relaxed">
+      Stop wasting budget on DIY searches and job seekers. FieldSprout's AI agents optimize your HVAC Google Ads campaigns 24/7—automatically managing seasonal budgets, blocking low-intent traffic, and scaling winners during peak AC and heating seasons.
+    </p>
+  </div>
+
+  <div class="bg-indigo-50 border-l-4 border-indigo-600 p-6 rounded-lg mb-12">
+    <div class="flex items-start">
+      <i class="fa-solid fa-chart-line text-indigo-600 text-2xl mr-4 mt-1"></i>
+      <div>
+        <h3 class="text-lg font-bold text-indigo-900 mb-2">HVAC Performance Benchmarks</h3>
+        <ul class="text-sm text-indigo-800 space-y-1">
+          <li>• <strong>−38% cost per booked job</strong> for emergency AC repair campaigns (60 days)</li>
+          <li>• <strong>+24% conversion rate</strong> with HVAC-specific landing pages</li>
+          <li>• <strong>$400-800/month saved</strong> by blocking DIY and job seeker traffic</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose prose-lg max-w-none">
+    <h2>Why HVAC Google Ads Are Different</h2>
+    <p>
+      HVAC contractors face unique Google Ads challenges that generic marketing agencies don't understand. Your business is seasonal—AC service peaks in summer, furnace work peaks in winter. Your customers search differently depending on whether they need emergency repairs or preventive maintenance. And your margins vary dramatically between a $150 repair call and a $12,000 system replacement.
+    </p>
+    <p>
+      Generic Google Ads strategies fail because they don't account for these HVAC-specific realities. You need intelligent budget allocation that shifts spend from heating to cooling (and back) based on the season. You need separate campaigns for emergency vs. scheduled work. And you need aggressive negative keyword strategies to block the tire-kickers who have no intention of calling a professional.
+    </p>
+
+    <h2>The HVAC Google Ads Problem: Seasonal Waste</h2>
+    <p>
+      Most HVAC companies overspend on Google Ads during shoulder seasons (spring and fall) when demand is low, then get outbid during peak seasons when demand is high. They run generic "HVAC services" campaigns that attract DIY searchers, competitors doing research, and people 3-6 months away from making a decision.
+    </p>
+    <p>
+      <strong>The most common HVAC Google Ads mistakes:</strong>
+    </p>
+    <ul>
+      <li><strong>Running flat budgets year-round</strong> instead of seasonal adjustments</li>
+      <li><strong>Mixing emergency and maintenance</strong> in the same campaigns</li>
+      <li><strong>Broad match keywords</strong> like "air conditioning" that attract DIYers</li>
+      <li><strong>No negative keywords</strong> for "DIY", "YouTube", "parts", "jobs"</li>
+      <li><strong>Generic ad copy</strong> that doesn't speak to emergency vs. planned work</li>
+      <li><strong>No ZIP-level targeting</strong> to protect margins on long-distance calls</li>
+    </ul>
+
+    <h2>How FieldSprout's AI Optimizes HVAC Campaigns</h2>
+    <p>
+      FieldSprout's multi-agent system is trained on HVAC industry patterns. Our AI agents understand that "AC not cooling" in July is a high-intent emergency search, while "HVAC maintenance" in April is a lower-urgency planning search. They automatically adjust bids, budgets, and ad scheduling based on these patterns.
+    </p>
+
+    <h3>1. Seasonal Budget Optimization</h3>
+    <p>
+      The <strong>Strategic Director</strong> agent monitors weather forecasts, historical seasonal patterns, and your booking capacity to automatically shift budgets between cooling and heating campaigns. When temperatures hit 90°F in your market, AC emergency budgets increase automatically. When winter storms hit, furnace campaign budgets scale up.
+    </p>
+    <p>
+      This isn't a simple calendar-based rule. Our AI considers:
+    </p>
+    <ul>
+      <li>Real-time weather patterns and forecasts</li>
+      <li>Historical performance data for your market</li>
+      <li>Your current booking capacity and technician availability</li>
+      <li>Competitor activity and auction dynamics</li>
+    </ul>
+
+    <h3>2. Emergency vs. Maintenance Campaign Structure</h3>
+    <p>
+      Most HVAC Google Ads accounts mix emergency and maintenance work in the same campaigns. This is a costly mistake because:
+    </p>
+    <ul>
+      <li>Emergency searches have higher intent and justify higher bids</li>
+      <li>Maintenance searches need different ad copy focused on value, not urgency</li>
+      <li>Conversion tracking is different (immediate booking vs. scheduled appointment)</li>
+    </ul>
+    <p>
+      FieldSprout automatically structures your campaigns into:
+    </p>
+    <ul>
+      <li><strong>Emergency AC Repair</strong> — "AC not working", "no cold air", "broken AC" (high bids, urgent messaging)</li>
+      <li><strong>Emergency Heating Repair</strong> — "furnace not working", "no heat", "heater broken" (high bids, urgent messaging)</li>
+      <li><strong>AC Maintenance & Tune-Ups</strong> — "AC tune-up", "AC service", "AC maintenance" (moderate bids, value messaging)</li>
+      <li><strong>Heating Maintenance</strong> — "furnace tune-up", "heating maintenance", "furnace inspection" (moderate bids, preventive messaging)</li>
+      <li><strong>HVAC Installation</strong> — "new AC unit", "furnace replacement", "HVAC installation" (highest bids, financing messaging)</li>
+    </ul>
+
+    <h3>3. HVAC-Specific Negative Keyword Strategy</h3>
+    <p>
+      The <strong>Negative Keyword Agent</strong> knows HVAC search patterns. It automatically blocks:
+    </p>
+    <ul>
+      <li><strong>DIY searches:</strong> "DIY", "how to fix", "YouTube", "tutorial", "myself"</li>
+      <li><strong>Parts shoppers:</strong> "parts", "capacitor", "compressor", "thermostat", "filter"</li>
+      <li><strong>Job seekers:</strong> "jobs", "careers", "hiring", "salary", "work for"</li>
+      <li><strong>Rental searches:</strong> "rental", "rent", "portable AC", "temporary"</li>
+      <li><strong>Commercial/industrial:</strong> "chiller", "boiler", "commercial HVAC" (unless you serve commercial)</li>
+      <li><strong>Informational:</strong> "cost", "prices", "reviews", "vs", "comparison"</li>
+    </ul>
+    <p>
+      These negative keywords typically save $400-800 per month in wasted spend for a typical HVAC Google Ads account running $3,000-5,000/month.
+    </p>
+
+    <h3>4. Geographic Targeting for Profitable Service Areas</h3>
+    <p>
+      Not all service calls are profitable. A 45-minute drive for a $150 diagnostic call loses money when you factor in drive time, fuel, and technician wages. FieldSprout's <strong>Campaign Manager</strong> uses ZIP-level targeting to:
+    </p>
+    <ul>
+      <li>Increase bids for ZIPs within 15 minutes of your location</li>
+      <li>Decrease bids for edge-of-service-area ZIPs</li>
+      <li>Block entirely if you're consistently unprofitable in certain areas</li>
+    </ul>
+
+    <h3>5. Ad Copy Optimization for HVAC Services</h3>
+    <p>
+      The <strong>Ad Copy Agent</strong> continuously tests HVAC-specific messaging patterns:
+    </p>
+    <ul>
+      <li><strong>Response time promises:</strong> "Same-Day AC Repair" vs. "24/7 Emergency Service"</li>
+      <li><strong>Pricing signals:</strong> "$99 AC Tune-Up" vs. "No Hidden Fees"</li>
+      <li><strong>Trust factors:</strong> "Licensed & Insured" vs. "20+ Years Experience"</li>
+      <li><strong>Seasonal offers:</strong> "Pre-Season AC Check" vs. "Winter Furnace Special"</li>
+      <li><strong>Financing options:</strong> "0% Financing Available" vs. "Easy Payment Plans"</li>
+    </ul>
+    <p>
+      The AI pauses underperforming ad variations (CTR <70% of group average) and promotes winners automatically.
+    </p>
+
+    <h3>6. Bid Optimization for HVAC Margin Targets</h3>
+    <p>
+      HVAC work has different margins:
+    </p>
+    <ul>
+      <li><strong>Diagnostic/repair calls:</strong> $150-500 average job, 40-60% margin</li>
+      <li><strong>Maintenance contracts:</strong> $200-400 per year, 60-70% margin, recurring revenue</li>
+      <li><strong>System replacements:</strong> $4,000-15,000, 30-40% margin, high LTV</li>
+    </ul>
+    <p>
+      FieldSprout's <strong>Keyword Optimizer</strong> adjusts bids based on the expected margin and lifetime value of each service type. Installation keywords justify higher cost-per-click because the job value is 10-20x higher than a repair call.
+    </p>
+
+    <h2>HVAC Google Ads Campaign Structure</h2>
+    <p>
+      Here's how FieldSprout structures a typical HVAC Google Ads account:
+    </p>
+
+    <h3>Campaign 1: Emergency AC Repair (Seasonal: May-September)</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "AC not working", "AC not cooling", "AC broken", "no cold air", "emergency AC repair"</li>
+      <li><strong>Match types:</strong> Phrase and exact match only (no broad match)</li>
+      <li><strong>Ad copy angle:</strong> Fast response time, same-day service, 24/7 availability</li>
+      <li><strong>Landing page:</strong> Emergency AC repair page with click-to-call button</li>
+      <li><strong>Budget:</strong> Auto-scales based on weather (increases when temps >85°F)</li>
+    </ul>
+
+    <h3>Campaign 2: Emergency Heating Repair (Seasonal: October-March)</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "furnace not working", "heater broken", "no heat", "furnace won't turn on"</li>
+      <li><strong>Match types:</strong> Phrase and exact match only</li>
+      <li><strong>Ad copy angle:</strong> Emergency service, same-day repairs, 24/7 availability</li>
+      <li><strong>Landing page:</strong> Emergency heating repair page with click-to-call button</li>
+      <li><strong>Budget:</strong> Auto-scales during cold snaps (increases when temps <35°F)</li>
+    </ul>
+
+    <h3>Campaign 3: AC Tune-Up & Maintenance (Seasonal: March-June)</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "AC tune-up", "AC maintenance", "AC service", "spring AC check"</li>
+      <li><strong>Match types:</strong> Phrase match</li>
+      <li><strong>Ad copy angle:</strong> Preventive maintenance, avoid breakdowns, special pricing</li>
+      <li><strong>Landing page:</strong> AC tune-up page with form (less urgent)</li>
+      <li><strong>Budget:</strong> Peaks in pre-season (April-May)</li>
+    </ul>
+
+    <h3>Campaign 4: Furnace Tune-Up & Maintenance (Seasonal: August-October)</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "furnace tune-up", "furnace maintenance", "heating system check"</li>
+      <li><strong>Match types:</strong> Phrase match</li>
+      <li><strong>Ad copy angle:</strong> Pre-winter preparation, prevent breakdowns, special pricing</li>
+      <li><strong>Landing page:</strong> Furnace maintenance page with form</li>
+      <li><strong>Budget:</strong> Peaks in pre-season (September-October)</li>
+    </ul>
+
+    <h3>Campaign 5: HVAC Installation & Replacement (Year-Round)</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "new AC unit", "AC replacement", "furnace replacement", "HVAC installation", "new heating system"</li>
+      <li><strong>Match types:</strong> Phrase and exact match</li>
+      <li><strong>Ad copy angle:</strong> Financing options, energy savings, rebates, free estimates</li>
+      <li><strong>Landing page:</strong> Installation/replacement page with financing details</li>
+      <li><strong>Budget:</strong> Consistent year-round (high-value conversions)</li>
+    </ul>
+
+    <h2>Common HVAC Google Ads Questions</h2>
+
+    <h3>Should I run Google Ads in the off-season?</h3>
+    <p>
+      Yes, but with lower budgets. Even in off-season months, there are emergency repairs and people planning ahead for system replacements. The key is adjusting budgets down (not pausing entirely) and focusing on high-intent keywords only.
+    </p>
+    <p>
+      FieldSprout automatically reduces budgets by 40-60% during shoulder seasons while maintaining presence for emergency and installation searches.
+    </p>
+
+    <h3>How much should HVAC companies spend on Google Ads?</h3>
+    <p>
+      A typical rule of thumb: <strong>$30-50 per lead</strong> target for emergency/repair work, <strong>$100-200 per lead</strong> for installations. If your average emergency repair generates $400 in revenue at 50% margin, you can afford $50-80 per lead and still be profitable.
+    </p>
+    <p>
+      Most HVAC companies spend $2,500-7,000 per month on Google Ads during peak season, scaling down to $1,000-3,000 during off-season.
+    </p>
+
+    <h3>What's a good conversion rate for HVAC Google Ads?</h3>
+    <p>
+      <strong>Emergency repair campaigns:</strong> 8-15% conversion rate (form fill or call)
+      <br><strong>Maintenance campaigns:</strong> 5-10% conversion rate
+      <br><strong>Installation campaigns:</strong> 3-7% conversion rate
+    </p>
+    <p>
+      If you're below these benchmarks, you likely have issues with:
+    </p>
+    <ul>
+      <li>Irrelevant traffic (poor keyword targeting or missing negative keywords)</li>
+      <li>Weak landing pages (slow load time, poor mobile experience, unclear CTA)</li>
+      <li>Misaligned ad copy (promise doesn't match landing page)</li>
+    </ul>
+
+    <h3>Should HVAC companies use Google Local Services Ads (LSAs)?</h3>
+    <p>
+      Yes. Google Local Services Ads (the "Google Guaranteed" listings at the very top) are extremely effective for HVAC contractors. They appear above regular Google Ads and you only pay per lead, not per click.
+    </p>
+    <p>
+      FieldSprout manages both Google Ads and Google Local Services Ads in a coordinated strategy. LSAs handle branded and high-intent searches, while Google Ads expand reach for competitive keywords and seasonal services.
+    </p>
+
+    <h2>Get Started with HVAC-Optimized Google Ads</h2>
+    <p>
+      Stop wasting budget on generic Google Ads strategies that don't understand HVAC seasonality, margins, and customer behavior. FieldSprout's AI agents optimize your campaigns 24/7 using HVAC-specific rules and industry benchmarks.
+    </p>
+
+    <div class="mt-8 p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl">
+      <h3 class="text-xl font-bold text-gray-900 mb-3">Ready to reduce your cost per job?</h3>
+      <p class="text-gray-700 mb-4">
+        Connect your Google Ads account and let our AI agents start optimizing in minutes. No contracts, cancel anytime.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <a href="/signup" class="btn btn-primary px-6 py-3">
+          Start Free Trial →
+        </a>
+        <a href="/pricing" class="btn btn-secondary px-6 py-3">
+          View Pricing
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-4xl mx-auto px-4">
+    <h2 class="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+
+    <div class="space-y-4">
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What's the average cost per lead for HVAC Google Ads?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          HVAC cost per lead varies by market and service type. Emergency AC repair typically costs $50-150 per lead, while preventive maintenance leads run $30-80. HVAC installation leads (higher ticket) range from $100-300. FieldSprout's AI optimizes toward your target CPL automatically.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          Should HVAC companies run Google Ads year-round?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Yes, but with seasonal budget adjustments. AC campaigns peak May-September, furnace campaigns peak October-March. FieldSprout's AI automatically adjusts budgets based on seasonal demand patterns and your booking capacity.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What keywords should HVAC companies bid on?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          High-intent keywords include "AC repair near me", "furnace not working", "HVAC emergency service", and specific equipment brands. Avoid broad terms like "HVAC" or "air conditioning" without modifiers. FieldSprout's Keyword Optimizer continuously refines your keyword strategy.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          How can HVAC companies reduce wasted Google Ads spend?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Block DIY searchers, job seekers, and out-of-service-area clicks. Use negative keywords like "free", "DIY", "jobs", "parts", and "youtube". Set geographic targeting to profitable ZIP codes only. FieldSprout's Negative Keyword Agent does this automatically 24/7.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+{% endblock %}

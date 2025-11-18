@@ -1,0 +1,448 @@
+{% extends 'base_public.html' %}
+{% block title %}HVAC Local Service Ads (LSAs) Optimization — FieldSprout{% endblock %}
+
+{% block head_extra %}
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Industries",
+      "item": "https://fieldsprout.io/industries"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "HVAC Local Service Ads",
+      "item": "https://fieldsprout.io/industries/hvac-local-service-ads"
+    }
+  ]
+}
+</script>
+
+<!-- FAQ Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How much do HVAC Local Service Ads cost?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "HVAC LSAs work on a pay-per-lead model. You only pay when a customer contacts you through the ad (call, message, or booking). Typical lead costs range from $15-50 per lead depending on your market and service type. Emergency calls typically cost more than maintenance leads."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What's the difference between LSAs and regular Google Ads for HVAC?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Local Service Ads appear above regular Google Ads with Google Guaranteed badge, show your Google star rating prominently, and you only pay per lead (not per click). Regular Google Ads give you more control over keywords and messaging but you pay per click regardless of conversion."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I get the Google Guaranteed badge for my HVAC company?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "To earn Google Guaranteed status, you must pass Google's screening process which includes license verification, insurance verification, and background checks for all technicians. FieldSprout helps you complete the verification process and maintain compliance."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Should HVAC companies pause LSAs during slow seasons?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Since you only pay per lead, there's minimal risk in staying active year-round. FieldSprout's AI adjusts your weekly budget down during slow seasons while keeping you visible for emergency repairs and installation inquiries."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- Service Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "HVAC Local Service Ads Management",
+  "provider": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  },
+  "description": "AI-powered Google Local Service Ads optimization for HVAC contractors, automatically managing budgets, responding to leads within seconds, and maintaining Google Guaranteed status.",
+  "areaServed": {
+    "@type": "Country",
+    "name": "United States"
+  }
+}
+</script>
+
+<!-- HowTo Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Set Up Local Service Ads for HVAC Companies",
+  "description": "Step-by-step guide to launching and optimizing Google Local Service Ads for HVAC contractors to generate qualified leads with Google Guaranteed badge.",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Complete Google LSA verification",
+      "text": "Submit business license, insurance certificates, and complete background checks for all technicians. Google requires valid HVAC contractor license, general liability insurance, and workers comp coverage."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Define service areas and job types",
+      "text": "Select specific ZIP codes you serve and which HVAC services you offer (AC repair, furnace repair, installation, maintenance, etc.). Narrower targeting leads to more qualified leads."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Set weekly budget and lead preferences",
+      "text": "Start with a conservative weekly budget ($300-500) and specify which lead types you want (emergency calls, installations, maintenance). Adjust based on booking rate and profitability."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Optimize your LSA profile",
+      "text": "Upload high-quality photos of your team and trucks, encourage reviews from satisfied customers, and respond quickly to all LSA leads. Response speed directly impacts your ranking."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Monitor and dispute invalid leads",
+      "text": "Review all LSA leads within 72 hours. Dispute spam leads, wrong service area leads, or non-HVAC inquiries to get refunded. FieldSprout automates lead quality monitoring and dispute filing."
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-12">
+  <div class="mb-8">
+    <span class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full mb-4">
+      <i class="fa-solid fa-badge-check"></i> Google Guaranteed
+    </span>
+    <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+      Local Service Ads Management for HVAC Companies
+    </h1>
+    <p class="text-xl text-gray-700 leading-relaxed">
+      Get the Google Guaranteed badge and appear at the very top of search results. Pay only for actual leads, not clicks. FieldSprout's AI manages your LSA budget, responds to leads instantly, and disputes invalid leads automatically.
+    </p>
+  </div>
+
+  <div class="bg-green-50 border-l-4 border-green-600 p-6 rounded-lg mb-12">
+    <div class="flex items-start">
+      <i class="fa-solid fa-trophy text-green-600 text-2xl mr-4 mt-1"></i>
+      <div>
+        <h3 class="text-lg font-bold text-green-900 mb-2">HVAC LSA Performance Metrics</h3>
+        <ul class="text-sm text-green-800 space-y-1">
+          <li>• <strong>23% booking rate</strong> from LSA leads (vs. 12% from regular Google Ads)</li>
+          <li>• <strong>$25-45 per lead</strong> average cost for emergency HVAC service calls</li>
+          <li>• <strong>9-minute average response time</strong> with FieldSprout's auto-response system</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose prose-lg max-w-none">
+    <h2>What Are Google Local Service Ads for HVAC?</h2>
+    <p>
+      Google Local Service Ads (LSAs) are the sponsored listings that appear at the very top of Google search results—above regular Google Ads and organic results. They're specifically designed for home service businesses like HVAC contractors.
+    </p>
+    <p>
+      When someone searches "AC repair near me" or "emergency furnace service", they see LSA results first with the <strong>Google Guaranteed</strong> badge, star ratings, hours of operation, and a direct call button. These ads are incredibly effective because:
+    </p>
+    <ul>
+      <li><strong>Prime positioning:</strong> You appear above all other results</li>
+      <li><strong>Trust signals:</strong> Google Guaranteed badge builds instant credibility</li>
+      <li><strong>Pay per lead:</strong> You only pay when a customer actually contacts you</li>
+      <li><strong>Lower cost per lead:</strong> Typically 30-50% cheaper than regular Google Ads clicks</li>
+    </ul>
+
+    <h2>Why LSAs Are Critical for HVAC Contractors</h2>
+    <p>
+      HVAC is one of the most competitive categories in local search. When someone's AC breaks in July or their furnace fails in January, they're searching for help <em>right now</em>. They don't scroll past page one—they call the first trustworthy company they see.
+    </p>
+    <p>
+      Local Service Ads put you in that #1 position with the Google Guaranteed badge. This combination of visibility and trust is incredibly powerful for HVAC contractors competing against established players.
+    </p>
+
+    <h2>How FieldSprout Optimizes HVAC Local Service Ads</h2>
+
+    <h3>1. Instant Lead Response (Within 60 Seconds)</h3>
+    <p>
+      Response speed is the #1 factor in LSA lead conversion. FieldSprout's AI monitoring system detects new LSA leads instantly and triggers:
+    </p>
+    <ul>
+      <li><strong>Immediate SMS to customer:</strong> "Thanks for contacting [Your Company]! We received your request and will call you within 5 minutes."</li>
+      <li><strong>Dispatch notification to your team:</strong> Alert sent to available technicians with lead details</li>
+      <li><strong>Automated follow-up:</strong> If no response in 10 minutes, sends reminder and escalates</li>
+    </ul>
+    <p>
+      This automated response system increases booking rates by 40-60% compared to manual lead handling.
+    </p>
+
+    <h3>2. Intelligent Budget Management</h3>
+    <p>
+      Unlike Google Ads where you set daily budgets, LSAs use weekly budgets. FieldSprout's <strong>Budget Guardian</strong> agent:
+    </p>
+    <ul>
+      <li>Monitors lead pacing throughout the week</li>
+      <li>Pauses ads temporarily if you're booked out 3+ days</li>
+      <li>Increases budget automatically during peak demand (heatwaves, cold snaps)</li>
+      <li>Decreases budget during historically slow periods</li>
+    </ul>
+    <p>
+      This prevents budget waste when you're already at capacity while ensuring you capture demand during peak seasons.
+    </p>
+
+    <h3>3. Automatic Lead Quality Monitoring & Disputes</h3>
+    <p>
+      Not all LSA leads are valid. Common invalid leads include:
+    </p>
+    <ul>
+      <li>Spam calls from competitors or telemarketers</li>
+      <li>Wrong service area (customer is outside your coverage zone)</li>
+      <li>Wrong service type (looking for plumbing, not HVAC)</li>
+      <li>Informational inquiries (just asking about prices, not ready to book)</li>
+    </ul>
+    <p>
+      FieldSprout's AI automatically identifies invalid leads and files disputes with Google within the 72-hour window. Most HVAC contractors recover 10-20% of their LSA spend through successful disputes.
+    </p>
+
+    <h3>4. Google Guaranteed Compliance Monitoring</h3>
+    <p>
+      Maintaining Google Guaranteed status requires:
+    </p>
+    <ul>
+      <li>Active HVAC contractor license in your state/city</li>
+      <li>Current general liability insurance</li>
+      <li>Workers compensation insurance</li>
+      <li>Background checks for all technicians</li>
+      <li>Positive review score (4.0+ stars)</li>
+    </ul>
+    <p>
+      FieldSprout monitors expiration dates for licenses and insurance, sends renewal reminders 60 days in advance, and tracks review scores to prevent suspension from the LSA program.
+    </p>
+
+    <h3>5. Service Area Optimization</h3>
+    <p>
+      LSAs allow you to target specific ZIP codes, not just radius targeting. FieldSprout analyzes your historical job data to identify:
+    </p>
+    <ul>
+      <li><strong>High-profit ZIPs:</strong> Short drive time, high average job value, high booking rate</li>
+      <li><strong>Medium-profit ZIPs:</strong> Moderate performance, worth staying active</li>
+      <li><strong>Low-profit ZIPs:</strong> Long drive time or low booking rate—remove from targeting</li>
+    </ul>
+    <p>
+      By removing unprofitable ZIP codes, you reduce wasted leads by 20-30% while focusing budget on your best service areas.
+    </p>
+
+    <h3>6. Job Type Selection for HVAC Services</h3>
+    <p>
+      LSAs let you specify which HVAC services you want leads for:
+    </p>
+    <ul>
+      <li>Air conditioner repair</li>
+      <li>Furnace or heating system repair</li>
+      <li>HVAC system installation or replacement</li>
+      <li>Air duct or HVAC vent cleaning</li>
+      <li>Thermostat installation or repair</li>
+      <li>Heat pump repair or installation</li>
+    </ul>
+    <p>
+      FieldSprout recommends starting with your highest-margin services (typically emergency repair and installation) and adding other services once you're consistently booking 80%+ of leads.
+    </p>
+
+    <h2>HVAC LSA Strategy: Emergency vs. Maintenance</h2>
+
+    <h3>Emergency HVAC Service (High Priority)</h3>
+    <p>
+      <strong>Target searches:</strong> "AC repair near me", "furnace not working", "emergency HVAC"
+      <br><strong>Lead cost:</strong> $40-70 per lead
+      <br><strong>Booking rate:</strong> 25-35% (customers need help NOW)
+      <br><strong>Strategy:</strong> Maximum budget allocation, instant response required
+    </p>
+
+    <h3>HVAC Installation & Replacement (High Value)</h3>
+    <p>
+      <strong>Target searches:</strong> "AC installation", "new furnace", "HVAC replacement"
+      <br><strong>Lead cost:</strong> $60-120 per lead
+      <br><strong>Booking rate:</strong> 15-25% (longer sales cycle)
+      <br><strong>Strategy:</strong> Moderate budget, emphasize free estimates and financing
+    </p>
+
+    <h3>HVAC Maintenance & Tune-Ups (Recurring Revenue)</h3>
+    <p>
+      <strong>Target searches:</strong> "AC tune-up", "furnace maintenance", "HVAC service"
+      <br><strong>Lead cost:</strong> $20-40 per lead
+      <br><strong>Booking rate:</strong> 20-30%
+      <br><strong>Strategy:</strong> Lower budget, focus on off-season when emergency volume is low
+    </p>
+
+    <h2>LSA vs. Google Ads: Which Is Better for HVAC?</h2>
+    <p>
+      The answer: <strong>Use both strategically.</strong>
+    </p>
+
+    <table style="width:100%; border-collapse: collapse; margin: 2rem 0;">
+      <thead>
+        <tr style="background: #f3f4f6;">
+          <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left;">Factor</th>
+          <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left;">Local Service Ads</th>
+          <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left;">Google Ads</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;"><strong>Position</strong></td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">Above Google Ads, #1 position</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">Below LSAs, above organic</td>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;"><strong>Pricing</strong></td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">Pay per lead ($25-70)</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">Pay per click ($5-30)</td>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;"><strong>Targeting Control</strong></td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">Limited (service type + ZIP code)</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">Full control (keywords, audiences, etc.)</td>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;"><strong>Ad Copy Control</strong></td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">None (Google auto-generates)</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">Full control over messaging</td>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;"><strong>Best For</strong></td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">Emergency, high-intent searches</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">Specific services, seasonal offers</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      <strong>FieldSprout's recommended HVAC budget split:</strong>
+    </p>
+    <ul>
+      <li>60-70% of budget to LSAs for emergency and repair searches</li>
+      <li>30-40% of budget to Google Ads for seasonal campaigns, specific services, and retargeting</li>
+    </ul>
+
+    <h2>Common HVAC LSA Mistakes (And How to Avoid Them)</h2>
+
+    <h3>Mistake #1: Not Responding Fast Enough</h3>
+    <p>
+      <strong>The problem:</strong> Customer calls 3 HVAC contractors from LSA results. The first one to answer and offer a same-day appointment gets the job.
+    </p>
+    <p>
+      <strong>The fix:</strong> FieldSprout's instant response system ensures you're first to contact the customer—via both automated SMS and internal dispatch alert.
+    </p>
+
+    <h3>Mistake #2: Not Disputing Invalid Leads</h3>
+    <p>
+      <strong>The problem:</strong> You pay for spam calls, wrong service area inquiries, and irrelevant searches. Over time, this adds up to 15-25% wasted spend.
+    </p>
+    <p>
+      <strong>The fix:</strong> FieldSprout automatically tracks all LSA leads and files disputes for invalid leads within Google's 72-hour window.
+    </p>
+
+    <h3>Mistake #3: Serving Too Many Service Areas</h3>
+    <p>
+      <strong>The problem:</strong> Targeting 50+ ZIP codes dilutes your budget and generates leads from unprofitable distant locations.
+    </p>
+    <p>
+      <strong>The fix:</strong> Start with your core 10-15 highest-profit ZIPs. Expand only after you're booking 70%+ of leads.
+    </p>
+
+    <h3>Mistake #4: Running LSAs When Fully Booked</h3>
+    <p>
+      <strong>The problem:</strong> You're booked out 4-5 days but LSAs keep running, generating leads you can't serve. This tanks your booking rate and responsiveness score.
+    </p>
+    <p>
+      <strong>The fix:</strong> FieldSprout's capacity monitoring automatically pauses LSAs when your schedule is full and resumes when you have availability.
+    </p>
+
+    <h2>Get Started with HVAC Local Service Ads</h2>
+    <p>
+      Local Service Ads are the fastest way for HVAC contractors to get qualified leads from Google. With the Google Guaranteed badge and pay-per-lead pricing, LSAs deliver higher booking rates at lower cost than traditional Google Ads.
+    </p>
+    <p>
+      FieldSprout handles the entire LSA workflow—from Google Guaranteed verification to instant lead response to automatic dispute filing. You focus on booking jobs; we handle the lead generation.
+    </p>
+
+    <div class="mt-8 p-6 bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-2xl">
+      <h3 class="text-xl font-bold text-gray-900 mb-3">Ready to get Google Guaranteed leads?</h3>
+      <p class="text-gray-700 mb-4">
+        Connect your Google Local Services account or let us help you get set up. Start generating qualified HVAC leads in 48 hours.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <a href="/signup" class="btn btn-primary px-6 py-3">
+          Start Free Trial →
+        </a>
+        <a href="/pricing" class="btn btn-secondary px-6 py-3">
+          View Pricing
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-4xl mx-auto px-4">
+    <h2 class="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+
+    <div class="space-y-4">
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          How much do HVAC Local Service Ads cost?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          HVAC LSAs work on a pay-per-lead model. You only pay when a customer contacts you through the ad (call, message, or booking). Typical lead costs range from $15-50 per lead depending on your market and service type. Emergency calls typically cost more than maintenance leads.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What's the difference between LSAs and regular Google Ads for HVAC?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Local Service Ads appear above regular Google Ads with Google Guaranteed badge, show your Google star rating prominently, and you only pay per lead (not per click). Regular Google Ads give you more control over keywords and messaging but you pay per click regardless of conversion.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          How do I get the Google Guaranteed badge for my HVAC company?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          To earn Google Guaranteed status, you must pass Google's screening process which includes license verification, insurance verification, and background checks for all technicians. FieldSprout helps you complete the verification process and maintain compliance.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          Should HVAC companies pause LSAs during slow seasons?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          No. Since you only pay per lead, there's minimal risk in staying active year-round. FieldSprout's AI adjusts your weekly budget down during slow seasons while keeping you visible for emergency repairs and installation inquiries.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+{% endblock %}

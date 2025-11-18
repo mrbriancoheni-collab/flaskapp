@@ -143,21 +143,60 @@
 </div>
 
 <script>
-    const CUSTOMER_ID = 'demo-customer';  // TODO: Get from user context
+    const ACCOUNT_ID = {{ account_id|tojson }};
+    const CUSTOMER_ID = {{ customer_id|tojson }};
     let currentGroupId = null;
     let allCampaigns = [];  // Mock data for now
 
     document.addEventListener('DOMContentLoaded', function() {
-        loadBudgetGroups();
+        console.log('Budget Groups Dashboard loaded', { ACCOUNT_ID, CUSTOMER_ID });
+
+        if (!CUSTOMER_ID) {
+            showNoCustomerIdMessage();
+        } else {
+            loadBudgetGroups();
+        }
+
         setupEventListeners();
         loadMockCampaigns();  // TODO: Replace with real Google Ads API call
     });
 
     function setupEventListeners() {
-        document.getElementById('btnCreateGroup').addEventListener('click', () => openGroupModal());
-        document.getElementById('btnCancelModal').addEventListener('click', closeGroupModal);
-        document.getElementById('btnSaveGroup').addEventListener('click', saveGroup);
-        document.getElementById('btnCloseCampaignsModal').addEventListener('click', closeCampaignsModal);
+        const btnCreate = document.getElementById('btnCreateGroup');
+        if (btnCreate) {
+            btnCreate.addEventListener('click', () => {
+                console.log('Create button clicked');
+                openGroupModal();
+            });
+        }
+
+        const btnCancel = document.getElementById('btnCancelModal');
+        if (btnCancel) {
+            btnCancel.addEventListener('click', closeGroupModal);
+        }
+
+        const btnSave = document.getElementById('btnSaveGroup');
+        if (btnSave) {
+            btnSave.addEventListener('click', saveGroup);
+        }
+
+        const btnCloseCampaigns = document.getElementById('btnCloseCampaignsModal');
+        if (btnCloseCampaigns) {
+            btnCloseCampaigns.addEventListener('click', closeCampaignsModal);
+        }
+    }
+
+    function showNoCustomerIdMessage() {
+        document.getElementById('groupsContainer').innerHTML = `
+            <div class="col-span-full text-center py-12">
+                <i class="fa-solid fa-exclamation-triangle text-6xl text-yellow-400 mb-4"></i>
+                <p class="text-gray-700 font-medium mb-2">No Google Ads Account Connected</p>
+                <p class="text-gray-600 mb-4">Please connect your Google Ads account first to use Budget Groups.</p>
+                <a href="/account/google" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md">
+                    <i class="fa-brands fa-google mr-2"></i>Connect Google Ads
+                </a>
+            </div>
+        `;
     }
 
     async function loadBudgetGroups() {

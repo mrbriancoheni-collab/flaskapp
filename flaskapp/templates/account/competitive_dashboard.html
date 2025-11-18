@@ -4,9 +4,14 @@
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">Competitive Intelligence</h1>
-        <p class="text-gray-600">Analyze your competitive landscape from Google Ads Auction Insights</p>
+    <div class="mb-8 flex justify-between items-start">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Competitive Intelligence</h1>
+            <p class="text-gray-600">Analyze your competitive landscape from Google Ads Auction Insights</p>
+        </div>
+        <button id="btnAddCompetitor" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded-md">
+            <i class="fa-solid fa-plus mr-2"></i>Add Competitor
+        </button>
     </div>
 
     <!-- Market Overview -->
@@ -46,11 +51,121 @@
     </div>
 </div>
 
+<!-- Add Competitor Modal -->
+<div id="modalAddCompetitor" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="p-6 border-b">
+            <h2 class="text-2xl font-bold text-gray-900">Add Competitor</h2>
+        </div>
+
+        <div class="p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Competitor Domain *</label>
+                <input type="text" id="inputDomain" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="competitor.com">
+                <p class="text-xs text-gray-500 mt-1">Enter the competitor's website domain</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
+                <input type="text" id="inputCompanyName" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Competitor Name (optional)">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                <textarea id="inputNotes" class="w-full px-3 py-2 border border-gray-300 rounded-md" rows="3" placeholder="Add any notes about this competitor..."></textarea>
+            </div>
+
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p class="text-sm text-blue-800">
+                    <i class="fa-solid fa-info-circle mr-1"></i>
+                    Once added, this competitor will be tracked in Google Ads Auction Insights reports.
+                </p>
+            </div>
+        </div>
+
+        <div class="p-6 border-t flex justify-end space-x-3">
+            <button id="btnCancelAddCompetitor" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                Cancel
+            </button>
+            <button id="btnSaveCompetitor" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md">
+                <i class="fa-solid fa-plus mr-2"></i>Add Competitor
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
+    const CUSTOMER_ID = 'demo-customer';  // TODO: Get from user context
+
     document.addEventListener('DOMContentLoaded', function() {
         loadCompetitors();
         loadAlerts();
+        setupEventListeners();
     });
+
+    function setupEventListeners() {
+        const btnAdd = document.getElementById('btnAddCompetitor');
+        if (btnAdd) {
+            btnAdd.addEventListener('click', openAddCompetitorModal);
+        }
+
+        const btnCancel = document.getElementById('btnCancelAddCompetitor');
+        if (btnCancel) {
+            btnCancel.addEventListener('click', closeAddCompetitorModal);
+        }
+
+        const btnSave = document.getElementById('btnSaveCompetitor');
+        if (btnSave) {
+            btnSave.addEventListener('click', saveCompetitor);
+        }
+    }
+
+    function openAddCompetitorModal() {
+        document.getElementById('inputDomain').value = '';
+        document.getElementById('inputCompanyName').value = '';
+        document.getElementById('inputNotes').value = '';
+        document.getElementById('modalAddCompetitor').classList.remove('hidden');
+    }
+
+    function closeAddCompetitorModal() {
+        document.getElementById('modalAddCompetitor').classList.add('hidden');
+    }
+
+    async function saveCompetitor() {
+        const domain = document.getElementById('inputDomain').value.trim();
+        if (!domain) {
+            alert('Please enter a competitor domain');
+            return;
+        }
+
+        const data = {
+            customer_id: CUSTOMER_ID,
+            competitor_domain: domain,
+            company_name: document.getElementById('inputCompanyName').value.trim(),
+            notes: document.getElementById('inputNotes').value.trim()
+        };
+
+        try {
+            const response = await fetch('/account/competitive/api/add-competitor', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                closeAddCompetitorModal();
+                loadCompetitors();  // Reload competitors list
+                alert('Competitor added successfully!');
+            } else {
+                alert('Error: ' + (result.error || 'Failed to add competitor'));
+            }
+        } catch (error) {
+            console.error('Error adding competitor:', error);
+            alert('Error adding competitor: ' + error.message);
+        }
+    }
 
     async function loadCompetitors() {
         const response = await fetch('/account/competitive/api/competitors?customer_id=demo-customer');

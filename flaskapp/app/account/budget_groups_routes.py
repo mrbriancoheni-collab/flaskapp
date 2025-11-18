@@ -25,7 +25,24 @@ def dashboard():
     user = g.user
     account_id = user.account_id if user and hasattr(user, 'account_id') else None
 
-    return render_template("account/budget_groups_dashboard.html", user=user, account_id=account_id)
+    # Try to get customer_id from first campaign
+    customer_id = None
+    if account_id:
+        try:
+            db = get_db()
+            cursor = db.cursor(dictionary=True)
+            cursor.execute(
+                "SELECT google_customer_id FROM ads_campaigns WHERE account_id = %s AND google_customer_id IS NOT NULL LIMIT 1",
+                (account_id,)
+            )
+            row = cursor.fetchone()
+            if row:
+                customer_id = row['google_customer_id']
+            cursor.close()
+        except Exception as e:
+            logger.error(f"Error getting customer_id: {e}")
+
+    return render_template("account/budget_groups_dashboard.html", user=user, account_id=account_id, customer_id=customer_id)
 
 
 # ==================== Budget Groups CRUD ====================

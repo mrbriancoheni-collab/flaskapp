@@ -8,8 +8,20 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True, pool_recycle
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db():
+    """Get database session (generator for dependency injection)."""
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+
+def get_db_connection():
+    """
+    Get raw MySQL connection with cursor() method.
+
+    Use this for services that need cursor-based database access.
+    Returns a connection-like object that has cursor(), commit(), rollback() methods.
+    """
+    # Get raw connection from SQLAlchemy engine
+    return engine.raw_connection()

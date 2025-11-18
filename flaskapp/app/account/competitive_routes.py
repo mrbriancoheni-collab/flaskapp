@@ -8,7 +8,7 @@ Provides UI and API endpoints for competitive analysis.
 from flask import Blueprint, render_template, request, jsonify, g
 from app.auth.session_helpers import login_required
 from app.services.competitive_intelligence_service import CompetitiveIntelligenceService
-from app.db import get_db
+from app.db import get_db_connection
 from datetime import datetime, timedelta, date
 import logging
 
@@ -41,7 +41,7 @@ def get_competitors():
         return jsonify({"error": "Missing account_id or customer_id"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = CompetitiveIntelligenceService(db)
 
         report_date = None
@@ -86,7 +86,7 @@ def save_insights():
     try:
         report_date = datetime.strptime(report_date_str, '%Y-%m-%d').date() if report_date_str else date.today()
 
-        db = get_db()
+        db = get_db_connection()
         service = CompetitiveIntelligenceService(db)
 
         success = service.save_auction_insights(
@@ -121,7 +121,7 @@ def get_alerts():
         return jsonify({"error": "Missing account_id or customer_id"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = CompetitiveIntelligenceService(db)
 
         alerts = service.get_alerts(account_id, customer_id, unaddressed_only, limit)
@@ -159,7 +159,7 @@ def get_market_share():
         return jsonify({"error": "Missing required parameters"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = CompetitiveIntelligenceService(db)
 
         analysis = service.get_market_share_analysis(
@@ -201,7 +201,7 @@ def mark_addressed(alert_id):
         return jsonify({"error": "Missing account_id"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         service = CompetitiveIntelligenceService(db)
 
         success = service.mark_alert_addressed(alert_id, account_id)
@@ -233,7 +233,7 @@ def add_competitor():
         return jsonify({"error": "Missing required parameters"}), 400
 
     try:
-        db = get_db()
+        db = get_db_connection()
         cursor = db.cursor()
 
         # Insert manually tracked competitor (we'll create a new table for this)

@@ -827,3 +827,190 @@ class BudgetAlert(db.Model):
 
     def __repr__(self) -> str:
         return f"<BudgetAlert id={self.id} tracker_id={self.budget_tracker_id} type={self.alert_type} severity={self.severity}>"
+
+
+# -------------------------
+# Email Workflow System
+# -------------------------
+class ContactGroup(db.Model):
+    """
+    Groups for organizing contacts (customers, leads, strangers, friends, associates, etc.)
+    Used to segment email campaigns and workflows.
+    """
+    __tablename__ = "contact_groups"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True, index=True)
+    description = db.Column(db.Text, nullable=True)
+
+    # Metadata
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    contacts = db.relationship("CRMContact", secondary="contact_group_members", backref="groups", lazy="dynamic")
+
+    def __repr__(self) -> str:
+        return f"<ContactGroup id={self.id} name={self.name!r}>"
+
+
+class ContactGroupMember(db.Model):
+    """
+    Junction table linking contacts to groups (many-to-many relationship)
+    """
+    __tablename__ = "contact_group_members"
+
+    id = db.Column(db.Integer, primary_key=True)
+    contact_id = db.Column(db.Integer, db.ForeignKey("crm_contacts.id"), nullable=False, index=True)
+    group_id = db.Column(db.Integer, db.ForeignKey("contact_groups.id"), nullable=False, index=True)
+
+    added_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    added_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint("contact_id", "group_id", name="uq_contact_group"),
+        db.Index("idx_contact_group_members_contact", "contact_id"),
+        db.Index("idx_contact_group_members_group", "group_id"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<ContactGroupMember contact_id={self.contact_id} group_id={self.group_id}>"
+
+
+class EmailTemplate(db.Model):
+    """
+    Reusable email templates for campaigns and workflows.
+    Supports variable substitution (e.g., {{first_name}}, {{company_name}}).
+    """
+    __tablename__ = "email_templates"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False, unique=True, index=True)
+    description = db.Column(db.Text, nullable=True)
+
+    # Email content
+    subject = db.Column(db.String(500), nullable=False)
+    body_html = db.Column(LONGTEXT, nullable=True)
+    body_text = db.Column(db.Text, nullable=True)
+
+    # Metadata
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Status
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    # Relationships
+    created_by = db.relationship("User", backref="email_templates_created")
+
+    def __repr__(self) -> str:
+        return f"<EmailTemplate id={self.id} name={self.name!r}>"
+
+
+class EmailWorkflow(db.Model):
+    """
+    Automated email workflow/sequence.
+    Contains multiple steps (emails) sent over time with delays.
+    """
+    __tablename__ = "email_workflows"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False, unique=True, index=True)
+    description = db.Column(db.Text, nullable=True)
+
+    # Target groups
+    target_groups = db.Column(JSONType, nullable=True)  # Array of group IDs this workflow targets
+
+    # Metadata
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Status
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    # Relationships
+    created_by = db.relationship("User", backref="email_workflows_created")
+    steps = db.relationship("WorkflowStep", backref="workflow", cascade="all, delete-orphan", order_by="WorkflowStep.step_order")
+    enrollments = db.relationship("WorkflowEnrollment", backref="workflow", cascade="all, delete-orphan", lazy="dynamic")
+
+    def __repr__(self) -> str:
+        return f"<EmailWorkflow id={self.id} name={self.name!r}>"
+
+
+class WorkflowStep(db.Model):
+    """
+    Individual step in an email workflow.
+    Each step sends an email template after a specified delay from the previous step.
+    """
+    __tablename__ = "workflow_steps"
+
+    id = db.Column(db.Integer, primary_key=True)
+    workflow_id = db.Column(db.Integer, db.ForeignKey("email_workflows.id"), nullable=False, index=True)
+    email_template_id = db.Column(db.Integer, db.ForeignKey("email_templates.id"), nullable=False, index=True)
+
+    # Step configuration
+    step_order = db.Column(db.Integer, nullable=False)  # 1, 2, 3, etc.
+    delay_days = db.Column(db.Integer, nullable=False, default=0)  # days to wait before sending (0 = immediate)
+    delay_hours = db.Column(db.Integer, nullable=False, default=0)  # additional hours to wait
+
+    # Metadata
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relationships
+    email_template = db.relationship("EmailTemplate", backref="workflow_steps")
+
+    __table_args__ = (
+        db.UniqueConstraint("workflow_id", "step_order", name="uq_workflow_step_order"),
+        db.Index("idx_workflow_steps_workflow", "workflow_id"),
+        db.Index("idx_workflow_steps_order", "workflow_id", "step_order"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<WorkflowStep id={self.id} workflow_id={self.workflow_id} order={self.step_order}>"
+
+
+class WorkflowEnrollment(db.Model):
+    """
+    Tracks which contacts are enrolled in which workflows.
+    Records progress through the workflow steps.
+    """
+    __tablename__ = "workflow_enrollments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    workflow_id = db.Column(db.Integer, db.ForeignKey("email_workflows.id"), nullable=False, index=True)
+    crm_contact_id = db.Column(db.Integer, db.ForeignKey("crm_contacts.id"), nullable=False, index=True)
+
+    # Progress tracking
+    current_step = db.Column(db.Integer, nullable=False, default=0)  # 0 = not started, 1 = first step sent, etc.
+    status = db.Column(
+        SAEnum("active", "paused", "completed", "unsubscribed", "bounced", name="workflow_enrollment_status_enum"),
+        nullable=False,
+        default="active",
+        index=True
+    )
+
+    # Timing
+    enrolled_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    last_email_sent_at = db.Column(db.DateTime, nullable=True)
+    next_email_scheduled_at = db.Column(db.DateTime, nullable=True, index=True)  # when to send next email
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+    # Metadata
+    enrolled_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+    # Relationships
+    crm_contact = db.relationship("CRMContact", backref="workflow_enrollments")
+    enrolled_by = db.relationship("User", backref="workflow_enrollments_created")
+
+    __table_args__ = (
+        db.UniqueConstraint("workflow_id", "crm_contact_id", name="uq_workflow_enrollment"),
+        db.Index("idx_workflow_enrollments_workflow", "workflow_id"),
+        db.Index("idx_workflow_enrollments_contact", "crm_contact_id"),
+        db.Index("idx_workflow_enrollments_status", "status"),
+        db.Index("idx_workflow_enrollments_next_send", "next_email_scheduled_at"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<WorkflowEnrollment id={self.id} workflow_id={self.workflow_id} contact_id={self.crm_contact_id} status={self.status}>"

@@ -256,26 +256,34 @@
 
     <script>
       // Handle video play button overlay
-      (function() {
+      document.addEventListener('DOMContentLoaded', function() {
         const video = document.getElementById('heroVideo');
         const overlay = document.getElementById('playOverlay');
 
         if (video && overlay) {
           // Click overlay to play video
-          overlay.addEventListener('click', function() {
-            video.play();
+          overlay.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            video.play().catch(function(error) {
+              console.log('Play error:', error);
+            });
           });
 
           // Hide overlay when video starts playing
           video.addEventListener('play', function() {
             overlay.style.opacity = '0';
-            overlay.style.pointerEvents = 'none';
+            setTimeout(function() {
+              overlay.style.pointerEvents = 'none';
+            }, 300);
           });
 
-          // Show overlay when video is paused
+          // Show overlay when video is paused (but not at the very beginning)
           video.addEventListener('pause', function() {
-            overlay.style.opacity = '1';
-            overlay.style.pointerEvents = 'auto';
+            if (video.currentTime > 0) {
+              overlay.style.opacity = '1';
+              overlay.style.pointerEvents = 'auto';
+            }
           });
 
           // Show overlay when video ends
@@ -283,8 +291,17 @@
             overlay.style.opacity = '1';
             overlay.style.pointerEvents = 'auto';
           });
+
+          // Also allow clicking the video itself to toggle play/pause
+          video.addEventListener('click', function() {
+            if (video.paused) {
+              video.play();
+            } else {
+              video.pause();
+            }
+          });
         }
-      })();
+      });
     </script>
 
     <!-- Social proof strip -->

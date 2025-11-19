@@ -254,7 +254,7 @@
       </div>
     </div>
 
-    <script>
+    <script nonce="{{ g.csp_nonce }}">
       // Handle video play button overlay
       document.addEventListener('DOMContentLoaded', function() {
         const video = document.getElementById('heroVideo');

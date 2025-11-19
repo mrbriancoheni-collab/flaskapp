@@ -223,6 +223,34 @@
       <span><strong>14 spots left</strong> at this price this month</span>
     </div>
 
+    <!-- Video Showcase -->
+    <div class="mt-12 max-w-4xl mx-auto animate-fade-in-up animation-delay-600">
+      <div class="bg-white rounded-2xl shadow-2xl p-2 border border-gray-200">
+        <div class="relative rounded-xl overflow-hidden bg-gray-900">
+          <video
+            class="w-full h-auto"
+            controls
+            preload="metadata"
+            poster=""
+            style="max-height: 600px;">
+            <source src="{{ url_for('static', filename='video/FieldSprout-GAds-Demo-Walkthru.mp4') }}" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+          <!-- Play button overlay (optional, shows before user clicks play) -->
+          <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 hover:opacity-100 transition-opacity duration-300" id="playOverlay">
+            <div class="bg-primary-600 rounded-full p-6 shadow-2xl">
+              <svg class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <p class="text-center text-sm text-gray-600 mt-3 font-medium">
+          🎥 Watch how FieldSprout's AI agents optimize your Google Ads campaigns
+        </p>
+      </div>
+    </div>
+
     <!-- Social proof strip -->
     <div class="mt-12 flex items-center justify-center gap-8 flex-wrap opacity-80">
       <div class="text-center">

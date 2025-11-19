@@ -226,8 +226,9 @@
     <!-- Video Showcase -->
     <div class="mt-12 max-w-4xl mx-auto animate-fade-in-up animation-delay-600">
       <div class="bg-white rounded-2xl shadow-2xl p-2 border border-gray-200">
-        <div class="relative rounded-xl overflow-hidden bg-gray-900">
+        <div class="relative rounded-xl overflow-hidden bg-gray-900" id="videoContainer">
           <video
+            id="heroVideo"
             class="w-full h-auto"
             controls
             preload="metadata"
@@ -236,12 +237,14 @@
             <source src="{{ url_for('static', filename='video/FieldSprout-GAds-Demo-Walkthru.mp4') }}" type="video/mp4">
             Your browser does not support the video tag.
           </video>
-          <!-- Play button overlay (optional, shows before user clicks play) -->
-          <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 hover:opacity-100 transition-opacity duration-300" id="playOverlay">
-            <div class="bg-primary-600 rounded-full p-6 shadow-2xl">
-              <svg class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/>
-              </svg>
+          <!-- Large play button overlay -->
+          <div class="absolute inset-0 flex items-center justify-center cursor-pointer transition-opacity duration-300 bg-black bg-opacity-30" id="playOverlay">
+            <div class="transform hover:scale-110 transition-transform duration-300">
+              <div class="bg-primary-600 rounded-full p-8 shadow-2xl hover:bg-primary-700 transition-colors duration-300">
+                <svg class="w-20 h-20 text-white ml-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/>
+                </svg>
+              </div>
             </div>
           </div>
         </div>
@@ -250,6 +253,39 @@
         </p>
       </div>
     </div>
+
+    <script>
+      // Handle video play button overlay
+      (function() {
+        const video = document.getElementById('heroVideo');
+        const overlay = document.getElementById('playOverlay');
+
+        if (video && overlay) {
+          // Click overlay to play video
+          overlay.addEventListener('click', function() {
+            video.play();
+          });
+
+          // Hide overlay when video starts playing
+          video.addEventListener('play', function() {
+            overlay.style.opacity = '0';
+            overlay.style.pointerEvents = 'none';
+          });
+
+          // Show overlay when video is paused
+          video.addEventListener('pause', function() {
+            overlay.style.opacity = '1';
+            overlay.style.pointerEvents = 'auto';
+          });
+
+          // Show overlay when video ends
+          video.addEventListener('ended', function() {
+            overlay.style.opacity = '1';
+            overlay.style.pointerEvents = 'auto';
+          });
+        }
+      })();
+    </script>
 
     <!-- Social proof strip -->
     <div class="mt-12 flex items-center justify-center gap-8 flex-wrap opacity-80">

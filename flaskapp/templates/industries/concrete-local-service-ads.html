@@ -1,0 +1,547 @@
+{% extends 'base_public.html' %}
+{% block title %}Concrete Local Service Ads — FieldSprout{% endblock %}
+
+{% block head_extra %}
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Industries",
+      "item": "https://fieldsprout.io/industries"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Concrete Local Service Ads",
+      "item": "https://fieldsprout.io/industries/concrete-local-service-ads"
+    }
+  ]
+}
+</script>
+
+<!-- FAQ Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What's the average cost per lead for concrete Local Service Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Concrete LSA cost per lead varies by market but typically ranges from $30-70 for driveway/patio leads and $70-140 for decorative concrete leads. Unlike Google Ads, you only pay for actual leads (phone calls or messages), not clicks. FieldSprout helps optimize your profile to increase lead volume at lower costs."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do concrete companies need Google Guaranteed for LSAs?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, Google Guaranteed status is required for Local Service Ads. This requires background checks, license verification, and insurance documentation. Google Guaranteed badge increases trust and conversion rates by 35-55% for concrete projects. FieldSprout guides you through the verification process."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do concrete companies improve LSA ranking?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "LSA ranking depends on review quality and quantity, response time, and proximity to the searcher. Maintain 4.5+ star rating with 25+ reviews featuring project photos, respond to leads within 2 minutes, and keep your service area accurately defined. FieldSprout's LSA Optimizer monitors these factors automatically."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Should concrete companies use LSAs and Google Ads together?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, absolutely. LSAs appear above Google Ads for high-intent local searches and work on a pay-per-lead model. Google Ads provide broader reach and control over messaging for specific project types. Most successful concrete companies run both. FieldSprout coordinates both channels for optimal performance."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- Service Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "Concrete Local Service Ads Optimization",
+  "provider": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  },
+  "description": "AI-powered Local Service Ads optimization specifically for concrete contractors, automatically managing profile optimization, review generation with project photos, response time tracking, and budget management to maximize Google Guaranteed lead volume.",
+  "areaServed": {
+    "@type": "Country",
+    "name": "United States"
+  }
+}
+</script>
+
+<!-- HowTo Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Optimize Local Service Ads for Concrete Companies",
+  "description": "Step-by-step guide to setting up and optimizing Google Local Service Ads for concrete contractors to increase lead volume and improve Google Guaranteed ranking.",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Complete Google Guaranteed verification",
+      "text": "Submit required documents: contractor license, liability insurance, workers' comp, background checks for all crew members. Verification typically takes 5-10 days. Google Guaranteed badge significantly increases trust for concrete projects (higher investment decisions)."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Set accurate service categories",
+      "text": "Select relevant categories: Concrete Driveway Installation, Concrete Patio Installation, Concrete Repair, Stamped Concrete, Concrete Resurfacing. Accurate categorization ensures you appear for the right project types and qualified leads."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Generate reviews with project photos",
+      "text": "Request reviews immediately after project completion. Encourage customers to include before/after photos of their driveway or patio. Visual reviews build massive trust and increase conversion rates. Aim for 25+ reviews with 4.5+ average star rating."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Optimize response time to under 2 minutes",
+      "text": "LSA ranking prioritizes fast response times. Enable notifications for all team members who can quote projects. Respond to leads within 2 minutes whenever possible. Slow response times (15+ minutes) hurt ranking and booking rates significantly."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Set appropriate weekly budget based on capacity",
+      "text": "Set weekly budget based on crew capacity and seasonal demand. Increase budgets March-October (peak season in cold climates), reduce November-February. Pause campaigns when fully booked to avoid wasting budget on leads you can't service."
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-12">
+  <div class="mb-8">
+    <span class="inline-block px-3 py-1 text-sm font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full mb-4">
+      <i class="fa-solid fa-trowel-bricks"></i> Concrete Industry
+    </span>
+    <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+      Local Service Ads for Concrete Contractors
+    </h1>
+    <p class="text-xl text-gray-700 leading-relaxed">
+      Get more high-intent concrete project leads at the top of Google search results. FieldSprout optimizes your Google Local Service Ads profile 24/7—managing review generation with project photos, response times, and budget allocation to maximize your Google Guaranteed lead volume while maintaining profitability.
+    </p>
+  </div>
+
+  <div class="bg-indigo-50 border-l-4 border-indigo-600 p-6 rounded-lg mb-12">
+    <div class="flex items-start">
+      <i class="fa-solid fa-chart-line text-indigo-600 text-2xl mr-4 mt-1"></i>
+      <div>
+        <h3 class="text-lg font-bold text-indigo-900 mb-2">Concrete LSA Performance Benchmarks</h3>
+        <ul class="text-sm text-indigo-800 space-y-1">
+          <li>• <strong>+72% lead volume</strong> after achieving Google Guaranteed status (90 days)</li>
+          <li>• <strong>−35% cost per lead</strong> with 4.5+ star rating and project photos vs. <4.0 stars</li>
+          <li>• <strong>+48% booking rate</strong> with <2 minute response time vs. >15 minutes</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose prose-lg max-w-none">
+    <h2>Why Local Service Ads Are Critical for Concrete Companies</h2>
+    <p>
+      Google Local Service Ads (LSAs) appear at the very top of search results—above regular Google Ads and organic listings. When someone searches "concrete driveway installer near me" or "stamped concrete [city]", LSAs are the first thing they see. And unlike Google Ads where you pay per click, LSAs charge per lead (actual phone call or message), making them extremely cost-effective.
+    </p>
+    <p>
+      The Google Guaranteed badge that comes with LSAs provides instant trust—critical for concrete projects where homeowners are making $4,000-20,000 investment decisions. Google has verified your business license, insurance, and background checks, giving nervous homeowners confidence to call you first.
+    </p>
+
+    <h2>The Concrete LSA Challenge: Visual Trust and Competition</h2>
+    <p>
+      LSAs show only 2-3 concrete contractors at the top of search results. If you're not in that top group, you're invisible. LSA ranking for concrete contractors is especially competitive because project values are high. Success depends on:
+    </p>
+    <ul>
+      <li><strong>Reviews with project photos</strong> — visual proof is critical for concrete (homeowners want to see your work)</li>
+      <li><strong>High review count</strong> — 25+ reviews needed to compete effectively</li>
+      <li><strong>Fast response times</strong> — responding to leads within 2 minutes improves ranking dramatically</li>
+      <li><strong>Google Guaranteed status</strong> — required for LSAs, increases trust for large projects</li>
+      <li><strong>Accurate service categories</strong> — appearing for the right project types (driveway vs. patio vs. stamped)</li>
+    </ul>
+
+    <h2>How FieldSprout Optimizes Concrete Local Service Ads</h2>
+    <p>
+      FieldSprout's LSA optimization system monitors your profile performance 24/7 and automatically makes adjustments to improve ranking, increase lead volume, and maintain profitability.
+    </p>
+
+    <h3>1. Google Guaranteed Verification Management</h3>
+    <p>
+      Getting Google Guaranteed status is required for LSAs but often challenging for concrete contractors. The verification process includes:
+    </p>
+    <ul>
+      <li><strong>Contractor license verification</strong> — current concrete contractor license (varies by state)</li>
+      <li><strong>Insurance documentation</strong> — general liability ($1M+ typically) and workers' comp certificates</li>
+      <li><strong>Background checks</strong> — for business owners and all crew members who visit job sites</li>
+      <li><strong>Service category selection</strong> — choosing the right concrete service types you offer</li>
+    </ul>
+    <p>
+      FieldSprout guides you through the entire verification process and monitors status to ensure you remain Google Guaranteed (re-verification required annually).
+    </p>
+
+    <h3>2. Review Generation with Project Photos</h3>
+    <p>
+      <strong>Visual reviews are gold for concrete contractors.</strong> A review with before/after photos of a driveway or stamped patio is 10x more valuable than a text-only review. Homeowners want to see your actual work, not just read testimonials.
+    </p>
+    <p>
+      The <strong>Review Generator</strong> agent:
+    </p>
+    <ul>
+      <li>Automatically sends review requests after project completion with photo upload instructions</li>
+      <li>Provides easy instructions for customers to add photos to their Google review</li>
+      <li>Tracks review response rates and optimizes timing/messaging</li>
+      <li>Monitors new reviews and alerts you to respond (especially negatives)</li>
+      <li>Provides review response templates specific to concrete projects</li>
+    </ul>
+    <p>
+      <strong>Target:</strong> 4.5+ star average with 25+ Google reviews, ideally 50%+ with project photos. Add 4-6 new reviews per month to maintain momentum and ranking.
+    </p>
+
+    <h3>3. Response Time Optimization</h3>
+    <p>
+      LSA ranking heavily weighs how quickly you respond to leads. <strong>Concrete contractors that respond within 2 minutes rank significantly higher</strong> and book more projects than those taking 15+ minutes.
+    </p>
+    <p>
+      The <strong>Response Time Monitor</strong> tracks:
+    </p>
+    <ul>
+      <li>Average response time to LSA leads (target: <2 minutes)</li>
+      <li>Response rates during business hours vs. after hours</li>
+      <li>Which team members respond fastest (estimator performance tracking)</li>
+      <li>Missed lead opportunities (leads that went to faster-responding competitors)</li>
+    </ul>
+    <p>
+      <strong>Best practice:</strong> Designate an estimator or office manager to handle LSA leads with push notifications enabled. Fast response = higher ranking + higher booking rate.
+    </p>
+
+    <h3>4. Service Area Geographic Optimization</h3>
+    <p>
+      LSAs allow ZIP code-level targeting. This is critical for concrete contractors because profitability varies dramatically by drive distance (you're moving equipment, materials, and crew).
+    </p>
+    <p>
+      The <strong>Service Area Optimizer</strong>:
+    </p>
+    <ul>
+      <li>Analyzes which ZIPs generate profitable projects vs. unprofitable long-distance jobs</li>
+      <li>Recommends adding or removing specific ZIP codes based on performance data</li>
+      <li>Targets higher-income neighborhoods for stamped/decorative concrete campaigns</li>
+      <li>Monitors competitor coverage to identify underserved profitable areas</li>
+    </ul>
+    <p>
+      <strong>Example:</strong> If you're based in suburban Dallas, focus on nearby suburbs where you can mobilize efficiently. Exclude far rural areas where drive time kills margins on mid-size projects.
+    </p>
+
+    <h3>5. Budget Management and Seasonal Pacing</h3>
+    <p>
+      LSAs use a weekly budget system. Concrete contractors need seasonal budget adjustments because demand and work capacity vary dramatically.
+    </p>
+    <p>
+      The <strong>Budget Optimizer</strong> automatically:
+    </p>
+    <ul>
+      <li>Adjusts weekly budget based on seasonal demand and crew capacity</li>
+      <li>Increases budget March-October (peak season in cold climates, ideal weather)</li>
+      <li>Decreases budget November-February (slow season, freezing temperatures prevent work)</li>
+      <li>Pauses campaigns when you're fully booked (prevents wasted spend)</li>
+      <li>Monitors budget pacing (ensures you don't run out early in the week)</li>
+    </ul>
+    <p>
+      In warm climates, budgets stay more consistent but still adjust for extreme heat (summer slowdowns in Arizona/Texas) and peak spring/fall seasons.
+    </p>
+
+    <h3>6. Job Type Category Optimization</h3>
+    <p>
+      LSAs allow you to select specific service categories. For concrete contractors, this typically includes:
+    </p>
+    <ul>
+      <li><strong>Concrete Driveway Installation</strong> — new driveway construction and replacement</li>
+      <li><strong>Concrete Patio Installation</strong> — backyard patios and outdoor living spaces</li>
+      <li><strong>Stamped Concrete</strong> — decorative/stamped concrete services (premium category)</li>
+      <li><strong>Concrete Repair</strong> — crack repair, leveling, resurfacing</li>
+      <li><strong>Concrete Resurfacing</strong> — overlay and refinishing services</li>
+    </ul>
+    <p>
+      The AI monitors which categories generate the most profitable leads and recommends adding/removing categories based on your service offerings and crew specialization.
+    </p>
+
+    <h2>Concrete LSA Best Practices</h2>
+
+    <h3>Profile Optimization Checklist</h3>
+    <ul>
+      <li>✅ <strong>Complete Google Guaranteed verification</strong> (license, insurance, background checks)</li>
+      <li>✅ <strong>25+ reviews with 4.5+ star average</strong> (ideally 50%+ with project photos)</li>
+      <li>✅ <strong>Accurate business hours</strong> (update for seasonal changes)</li>
+      <li>✅ <strong>Professional project photos</strong> (completed driveways, patios, stamped work)</li>
+      <li>✅ <strong>Detailed service area</strong> (ZIP codes within profitable drive distance)</li>
+      <li>✅ <strong>Relevant service categories</strong> (driveways, patios, stamped, repair)</li>
+      <li>✅ <strong>Appropriate weekly budget</strong> (adjusted seasonally for demand and capacity)</li>
+    </ul>
+
+    <h3>Lead Response Protocol</h3>
+    <ol>
+      <li><strong>Respond within 2 minutes</strong> — speed is critical for LSA ranking and booking rate</li>
+      <li><strong>Call back via phone</strong> — even if lead came via message, call them (higher booking rate)</li>
+      <li><strong>Qualify the project</strong> — location, project type (driveway/patio/stamped), timeline, budget</li>
+      <li><strong>Schedule site visit</strong> — give specific appointment time within 2-3 days if possible</li>
+      <li><strong>Send confirmation</strong> — text or email with estimator name, arrival time, contact info</li>
+    </ol>
+
+    <h3>Review Generation Best Practices</h3>
+    <ul>
+      <li>Request review 1-2 days after project completion (give concrete time to cure, customer to enjoy it)</li>
+      <li>Use SMS with direct Google review link (easier than email)</li>
+      <li><strong>Ask for photos:</strong> "Would you mind adding a photo of your new driveway to your review?"</li>
+      <li>Don't incentivize reviews (violates Google policies)</li>
+      <li>Respond to every review within 24 hours with project-specific details</li>
+    </ul>
+
+    <h2>Common Concrete LSA Questions</h2>
+
+    <h3>How much do concrete LSA leads cost?</h3>
+    <p>
+      <strong>Driveway/patio leads:</strong> $30-70 per lead (varies by market competitiveness)
+      <br><strong>Stamped/decorative leads:</strong> $70-140 per lead (higher project value = higher cost)
+      <br><strong>Repair leads:</strong> $20-45 per lead (lower project value)
+    </p>
+    <p>
+      Unlike Google Ads (pay per click), LSAs charge per actual lead—a phone call lasting 30+ seconds or a message conversation. This makes LSAs more cost-effective for concrete contractors because you're not paying for clicks from price shoppers.
+    </p>
+
+    <h3>Can I run LSAs and Google Ads simultaneously?</h3>
+    <p>
+      <strong>Yes, and you should.</strong> LSAs and Google Ads work together:
+    </p>
+    <ul>
+      <li><strong>LSAs:</strong> High-intent local searches, pay-per-lead, Google Guaranteed badge builds trust</li>
+      <li><strong>Google Ads:</strong> Broader reach, specific project type campaigns (stamped concrete, decorative), control over messaging</li>
+    </ul>
+    <p>
+      Most successful concrete contractors run both. LSAs capture the highest-intent local traffic, while Google Ads expand reach for premium projects and broader targeting.
+    </p>
+
+    <h3>How long does Google Guaranteed verification take?</h3>
+    <p>
+      <strong>Typical timeline: 5-10 days</strong> after submitting all required documents. The process includes:
+    </p>
+    <ul>
+      <li>Contractor license verification (2-3 days)</li>
+      <li>Insurance certificate review (1-2 days)</li>
+      <li>Background checks (3-7 days, sometimes instant)</li>
+    </ul>
+    <p>
+      Delays happen if licenses are expired, insurance doesn't meet minimums ($1M liability typically required), or documents don't match business name exactly.
+    </p>
+
+    <h3>What if I get a bad review on my LSA profile?</h3>
+    <p>
+      <strong>Respond professionally within 24 hours.</strong> For concrete projects, address the specific issue (cracking, color variation, timeline delays) and explain your resolution or perspective. A thoughtful response to a negative review can actually build trust.
+    </p>
+    <p>
+      <strong>Don't:</strong> Get defensive or argue. This makes you look unprofessional.
+    </p>
+    <p>
+      <strong>Do:</strong> Generate 8-12 new positive reviews with project photos to dilute the impact. One 2-star review among 60 five-star reviews with photos has minimal impact.
+    </p>
+
+    <h2>Get Started with Concrete-Optimized LSAs</h2>
+    <p>
+      Google Local Service Ads are the most cost-effective lead generation channel for concrete contractors—but only if optimized properly. FieldSprout's AI manages your LSA profile 24/7: review generation with project photos, response time tracking, budget management, and service area optimization.
+    </p>
+
+    <div class="mt-8 p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl">
+      <h3 class="text-xl font-bold text-gray-900 mb-3">Ready to dominate Local Service Ads?</h3>
+      <p class="text-gray-700 mb-4">
+        Connect your LSA account and let our AI start optimizing your profile. Get more leads at lower cost. No contracts, cancel anytime.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <a href="/signup" class="btn btn-primary px-6 py-3">
+          Start Free Trial →
+        </a>
+        <a href="/pricing" class="btn btn-secondary px-6 py-3">
+          View Pricing
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- Related Pages Section -->
+<section class="bg-white border-t border-b border-gray-200 py-12 mt-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">More Concrete Marketing Solutions</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <a href="/industries/concrete-google-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Google Ads Optimization</h3>
+        <p class="text-sm text-gray-600">Reduce cost per lead with AI-powered campaign management</p>
+      </a>
+      <a href="/industries/concrete-meta-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Build your pipeline with targeted social media campaigns</p>
+      </a>
+      <a href="/industries/concrete-website-cro" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Website & Conversion Optimization</h3>
+        <p class="text-sm text-gray-600">Turn more website visitors into paying customers</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Browse Industries Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-6xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Marketing Solutions by Industry</h2>
+    <p class="text-gray-600 text-center mb-8">Industry-specific strategies for home service businesses</p>
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <a href="/industries/hvac-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">❄️</div>
+        <div class="text-sm font-semibold text-gray-900">HVAC</div>
+      </a>
+      <a href="/industries/plumbing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔧</div>
+        <div class="text-sm font-semibold text-gray-900">Plumbing</div>
+      </a>
+      <a href="/industries/electrical-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">⚡</div>
+        <div class="text-sm font-semibold text-gray-900">Electrical</div>
+      </a>
+      <a href="/industries/roofing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏠</div>
+        <div class="text-sm font-semibold text-gray-900">Roofing</div>
+      </a>
+      <a href="/industries/pest-control-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🐛</div>
+        <div class="text-sm font-semibold text-gray-900">Pest Control</div>
+      </a>
+      <a href="/industries/lawn-care-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🌱</div>
+        <div class="text-sm font-semibold text-gray-900">Lawn Care</div>
+      </a>
+      <a href="/industries/garage-door-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🚪</div>
+        <div class="text-sm font-semibold text-gray-900">Garage Door</div>
+      </a>
+      <a href="/industries/pools-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏊</div>
+        <div class="text-sm font-semibold text-gray-900">Pools</div>
+      </a>
+      <a href="/industries/concrete-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏗️</div>
+        <div class="text-sm font-semibold text-gray-900">Concrete</div>
+      </a>
+      <a href="/industries/fencing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪵</div>
+        <div class="text-sm font-semibold text-gray-900">Fencing</div>
+      </a>
+      <a href="/industries/solar-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">☀️</div>
+        <div class="text-sm font-semibold text-gray-900">Solar</div>
+      </a>
+      <a href="/industries/windows-doors-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪟</div>
+        <div class="text-sm font-semibold text-gray-900">Windows & Doors</div>
+      </a>
+      <a href="/industries/irrigation-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">💧</div>
+        <div class="text-sm font-semibold text-gray-900">Irrigation</div>
+      </a>
+      <a href="/industries/restoration-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔨</div>
+        <div class="text-sm font-semibold text-gray-900">Restoration</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Products Section -->
+<section class="bg-white py-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Our Marketing Products</h2>
+    <p class="text-gray-600 text-center mb-8">AI-powered marketing automation for home service businesses</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <a href="/products/google-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">🎯</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Ads</h3>
+        <p class="text-sm text-gray-600">AI agents optimize your campaigns 24/7 to reduce cost per lead</p>
+      </a>
+      <a href="/products/facebook-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📱</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Targeted social campaigns that build your pipeline</p>
+      </a>
+      <a href="/products/local-services-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">✅</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/products/google-business-profile" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📍</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Business Profile</h3>
+        <p class="text-sm text-gray-600">Optimize your local presence and get more reviews</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-4xl mx-auto px-4">
+    <h2 class="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+
+    <div class="space-y-4">
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What's the average cost per lead for concrete Local Service Ads?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Concrete LSA cost per lead varies by market but typically ranges from $30-70 for driveway/patio leads and $70-140 for decorative concrete leads. Unlike Google Ads, you only pay for actual leads (phone calls or messages), not clicks. FieldSprout helps optimize your profile to increase lead volume at lower costs.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          Do concrete companies need Google Guaranteed for LSAs?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Yes, Google Guaranteed status is required for Local Service Ads. This requires background checks, license verification, and insurance documentation. Google Guaranteed badge increases trust and conversion rates by 35-55% for concrete projects. FieldSprout guides you through the verification process.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          How do concrete companies improve LSA ranking?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          LSA ranking depends on review quality and quantity, response time, and proximity to the searcher. Maintain 4.5+ star rating with 25+ reviews featuring project photos, respond to leads within 2 minutes, and keep your service area accurately defined. FieldSprout's LSA Optimizer monitors these factors automatically.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          Should concrete companies use LSAs and Google Ads together?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Yes, absolutely. LSAs appear above Google Ads for high-intent local searches and work on a pay-per-lead model. Google Ads provide broader reach and control over messaging for specific project types. Most successful concrete companies run both. FieldSprout coordinates both channels for optimal performance.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,612 @@
+{% extends 'base_public.html' %}
+{% block title %}Restoration Website Conversion Optimization — FieldSprout{% endblock %}
+
+{% block head_extra %}
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Industries",
+      "item": "https://fieldsprout.io/industries"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Restoration Website CRO",
+      "item": "https://fieldsprout.io/industries/restoration-website-cro"
+    }
+  ]
+}
+</script>
+
+<!-- FAQ Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What's a good conversion rate for restoration websites?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Emergency restoration pages should convert 15-25% of visitors into calls or form submissions. Mold inspection pages typically convert 8-15%, and general service pages convert 5-10%. Mobile conversion rates are often higher (18-30%) for emergency services."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why do restoration website visitors leave without calling?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Common issues: slow mobile load time (>3 seconds), unclear emergency availability, no visible phone number above the fold, lack of trust signals (licensing, insurance, certifications), and poor mobile experience with hard-to-tap buttons."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Should restoration companies use website chat features?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, but only if monitored 24/7. Emergency restoration customers expect immediate response. Unmanned chatbots hurt conversion by frustrating urgent visitors. Use SMS-based chat that routes to on-call staff, or stick with prominent click-to-call buttons."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How can restoration websites improve mobile conversion?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Use large, thumb-friendly click-to-call buttons, minimize form fields to name/phone/ZIP only, optimize images for fast mobile loading (<2 seconds), sticky call buttons that follow scroll, and remove navigation distractions on emergency landing pages."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- Service Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "Restoration Website Conversion Rate Optimization",
+  "provider": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  },
+  "description": "AI-powered conversion rate optimization for restoration contractor websites, specializing in emergency call generation, mobile optimization, trust-building, and lead capture for water damage, fire damage, and mold remediation services.",
+  "areaServed": {
+    "@type": "Country",
+    "name": "United States"
+  }
+}
+</script>
+
+<!-- HowTo Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Optimize Restoration Websites for More Leads",
+  "description": "Step-by-step guide to improving conversion rates on restoration contractor websites to generate more emergency water damage, fire damage, and mold remediation calls and bookings.",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Make emergency phone number prominent",
+      "text": "Display your phone number in the top-right header on all pages with click-to-call functionality on mobile. Use large, high-contrast buttons ('Call Now for Emergency Service') that are impossible to miss. Repeat the number in page content and footer."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Optimize for mobile-first experience",
+      "text": "80%+ of emergency restoration searches happen on mobile. Ensure your site loads in under 2 seconds on 4G, uses large tap-friendly buttons (minimum 44x44px), and eliminates horizontal scrolling. Test on actual mobile devices, not just desktop browser resizing."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Add trust signals above the fold",
+      "text": "Display licensing info, insurance badges, Google review rating, years in business, and 24/7 availability immediately visible without scrolling. Emergency restoration customers need instant credibility before they'll call a company they've never heard of."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Simplify emergency contact forms",
+      "text": "Limit forms to 3-4 fields maximum: Name, Phone, ZIP code, Service Type. Every additional form field reduces conversion 5-10%. For true emergencies, skip forms entirely—just promote calling with one-tap buttons."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Use service-specific landing pages",
+      "text": "Create dedicated pages for water damage restoration, fire damage restoration, and mold remediation. Each page should speak directly to that emergency with relevant photos, keywords, and urgency messaging. Avoid generic 'services' pages that dilute your message."
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-12">
+  <div class="mb-8">
+    <span class="inline-block px-3 py-1 text-sm font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full mb-4">
+      <i class="fa-solid fa-house-flood-water"></i> Restoration Industry
+    </span>
+    <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+      Website Conversion Optimization for Restoration Contractors
+    </h1>
+    <p class="text-xl text-gray-700 leading-relaxed">
+      Turn more website visitors into emergency calls and booked jobs. FieldSprout's AI identifies conversion barriers on your restoration website—slow mobile load times, hidden phone numbers, weak trust signals—and provides actionable fixes to maximize lead generation.
+    </p>
+  </div>
+
+  <div class="bg-indigo-50 border-l-4 border-indigo-600 p-6 rounded-lg mb-12">
+    <div class="flex items-start">
+      <i class="fa-solid fa-chart-line text-indigo-600 text-2xl mr-4 mt-1"></i>
+      <div>
+        <h3 class="text-lg font-bold text-indigo-900 mb-2">Restoration Website CRO Benchmarks</h3>
+        <ul class="text-sm text-indigo-800 space-y-1">
+          <li>• <strong>+127% emergency call volume</strong> from mobile optimization and click-to-call improvements</li>
+          <li>• <strong>−58% bounce rate</strong> with faster page load speeds and trust signal optimization</li>
+          <li>• <strong>+89% form completion rate</strong> by reducing form fields from 8 to 3</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose prose-lg max-w-none">
+    <h2>Why Restoration Website Conversion Optimization Is Critical</h2>
+    <p>
+      You're spending hundreds or thousands per month driving traffic to your restoration website through Google Ads, Local Service Ads, and SEO. But what happens when visitors land on your site? Do they immediately see your phone number? Is your mobile site fast enough for someone panicking about water damage? Can they tell you're licensed, insured, and available 24/7?
+    </p>
+    <p>
+      Most restoration websites are conversion nightmares. They're built to look pretty in desktop screenshots, not to convert mobile visitors experiencing emergencies. Slow load times, buried phone numbers, complex forms, and zero trust signals cause 60-80% of visitors to leave without calling.
+    </p>
+    <p>
+      Here's the reality: improving your website conversion rate from 8% to 16% <strong>doubles your leads</strong> without spending an extra dollar on advertising. If you're spending $3,000/month on Google Ads generating 60 leads, improving conversion from 8% to 16% would give you 120 leads from the same traffic and budget.
+    </p>
+
+    <h2>Common Restoration Website Conversion Killers</h2>
+    <p>
+      FieldSprout's AI audits hundreds of restoration websites and identifies these recurring conversion problems:
+    </p>
+
+    <h3>1. Slow Mobile Load Times</h3>
+    <p>
+      <strong>The problem:</strong> Your site takes 5-8 seconds to load on mobile. Visitors with flooded basements don't wait—they hit the back button and call the next company.
+    </p>
+    <p>
+      <strong>Data:</strong> 53% of mobile visitors abandon sites that take longer than 3 seconds to load. For emergency services, the threshold is even lower (2 seconds).
+    </p>
+    <p>
+      <strong>Common causes:</strong> Unoptimized images (multi-megabyte JPGs), excessive JavaScript, uncompressed files, slow hosting, too many third-party scripts (analytics, chat widgets, social feeds).
+    </p>
+    <p>
+      <strong>The fix:</strong> Compress all images to WebP format, use lazy loading for below-the-fold content, minimize JavaScript, upgrade to fast hosting (WP Engine, Kinsta, or dedicated server), and remove unnecessary widgets.
+    </p>
+
+    <h3>2. Hidden or Tiny Phone Numbers</h3>
+    <p>
+      <strong>The problem:</strong> Your phone number is in the footer, in 10pt font, or not click-to-call on mobile. Visitors can't find it or can't tap it easily.
+    </p>
+    <p>
+      <strong>Data:</strong> 70% of mobile searchers use click-to-call to contact businesses directly from search results or websites. If your number isn't prominent and tappable, you lose the majority of mobile leads.
+    </p>
+    <p>
+      <strong>The fix:</strong> Place your phone number in the top-right header on all pages in large, bold font (18-22pt minimum). Make it click-to-call using `<a href="tel:+1234567890">` format. Add a sticky call button that follows scroll on mobile. Repeat the number 2-3 times per page (header, content, footer).
+    </p>
+
+    <h3>3. Lack of Trust Signals Above the Fold</h3>
+    <p>
+      <strong>The problem:</strong> Visitors can't immediately tell if you're legitimate. No licensing info, no insurance badges, no Google reviews, no years in business. Why should someone trust you with their $8,000 water damage emergency?
+    </p>
+    <p>
+      <strong>The fix:</strong> Add trust signals in the header or hero section (visible without scrolling):
+    </p>
+    <ul>
+      <li>"Licensed & Insured" badge with license number</li>
+      <li>Google review rating and count ("4.9 Stars – 127 Reviews")</li>
+      <li>Years in business ("Serving [City] Since 2008")</li>
+      <li>24/7 availability badge ("24/7 Emergency Service")</li>
+      <li>Industry certifications (IICRC, RIA, contractor license)</li>
+      <li>Insurance logos (we work with State Farm, Allstate, etc.)</li>
+    </ul>
+
+    <h3>4. Complex Contact Forms</h3>
+    <p>
+      <strong>The problem:</strong> Your contact form has 8-12 fields (name, email, phone, address, city, state, ZIP, service type, describe problem, preferred date, preferred time, how did you hear about us). Nobody fills this out during an emergency.
+    </p>
+    <p>
+      <strong>Data:</strong> Every additional form field reduces conversion by 5-10%. An 8-field form converts at half the rate of a 3-field form.
+    </p>
+    <p>
+      <strong>The fix:</strong> Emergency forms should have 3 fields maximum:
+    </p>
+    <ul>
+      <li>Name</li>
+      <li>Phone</li>
+      <li>ZIP code (or auto-detect location)</li>
+    </ul>
+    <p>
+      For mold inspection requests (non-emergency), you can extend to 4-5 fields, but keep it minimal. Better yet, eliminate forms entirely for emergencies and just promote calling.
+    </p>
+
+    <h3>5. Generic, Non-Emergency Messaging</h3>
+    <p>
+      <strong>The problem:</strong> Your homepage says "Quality Restoration Services Since 1995" with a generic hero image. It doesn't speak to the panic someone feels when they discover water pouring from the ceiling.
+    </p>
+    <p>
+      <strong>The fix:</strong> Use emergency-focused messaging:
+    </p>
+    <ul>
+      <li>"Water Damage? We're On Our Way – Call Now for 30-Minute Response"</li>
+      <li>"24/7 Emergency Restoration – Available Now"</li>
+      <li>"Flooded Basement? Fire Damage? Mold Emergency? We Answer 24/7"</li>
+    </ul>
+    <p>
+      Pair messaging with relevant hero images: water-damaged room, restoration technicians in action, equipment in use (not stock photos of handshakes or clean office spaces).
+    </p>
+
+    <h3>6. Poor Mobile UX</h3>
+    <p>
+      <strong>The problem:</strong> Buttons are too small to tap, text is unreadable without zooming, forms don't resize properly, navigation menu covers content, horizontal scrolling is required.
+    </p>
+    <p>
+      <strong>Data:</strong> 80%+ of emergency restoration searches happen on mobile. If your mobile experience is broken, you lose 80% of your potential leads.
+    </p>
+    <p>
+      <strong>The fix:</strong>
+    </p>
+    <ul>
+      <li>Use large, thumb-friendly buttons (minimum 44x44 pixels tap target)</li>
+      <li>Font size 16pt minimum for body text (18-20pt for readability)</li>
+      <li>Single-column layouts (no side-by-side content that requires zooming)</li>
+      <li>Test on actual mobile devices, not just desktop browser resize</li>
+      <li>Sticky call button that floats at bottom of screen on mobile</li>
+    </ul>
+
+    <h2>How FieldSprout Optimizes Restoration Website Conversion</h2>
+    <p>
+      FieldSprout's <strong>Website Conversion Agent</strong> continuously monitors your site and identifies conversion barriers. Here's how it works:
+    </p>
+
+    <h3>1. Page Speed Monitoring</h3>
+    <p>
+      The AI tracks your mobile and desktop load times weekly using Google PageSpeed Insights and real-user monitoring. When load times exceed 2.5 seconds, you receive alerts with specific fixes:
+    </p>
+    <ul>
+      <li>Which images need compression (with file size and recommended format)</li>
+      <li>Which scripts are slowing the site (analytics, chat, social widgets)</li>
+      <li>Server response time issues (hosting upgrade recommendations)</li>
+    </ul>
+
+    <h3>2. Click Heatmap Analysis</h3>
+    <p>
+      Using integrated heatmap tracking, the AI identifies where visitors click (or try to click) and where they get stuck:
+    </p>
+    <ul>
+      <li>Are visitors clicking non-clickable elements? (Make them clickable or remove them)</li>
+      <li>Are important CTAs being ignored? (They need to be more prominent or higher on page)</li>
+      <li>Where do visitors abandon forms? (Which field causes drop-off?)</li>
+    </ul>
+
+    <h3>3. Mobile vs. Desktop Performance Tracking</h3>
+    <p>
+      The AI compares mobile and desktop conversion rates. If desktop converts at 12% but mobile only converts at 6%, there's a clear mobile UX problem. The agent provides specific mobile fixes:
+    </p>
+    <ul>
+      <li>Button sizes too small for thumb-tapping</li>
+      <li>Phone number not click-to-call enabled</li>
+      <li>Forms don't auto-focus or resize properly</li>
+      <li>Images push content below the fold on small screens</li>
+    </ul>
+
+    <h3>4. A/B Testing Automation</h3>
+    <p>
+      The <strong>Conversion Testing Agent</strong> automatically runs experiments on your highest-traffic pages:
+    </p>
+    <ul>
+      <li><strong>CTA button variations:</strong> "Call Now" vs. "Request Emergency Service" vs. "Get Help Now"</li>
+      <li><strong>Phone number placement:</strong> Top-right header vs. sticky button vs. both</li>
+      <li><strong>Hero messaging:</strong> Urgency-focused vs. trust-focused vs. combined</li>
+      <li><strong>Form length:</strong> 3 fields vs. 5 fields</li>
+      <li><strong>Trust signal placement:</strong> Above fold vs. below fold</li>
+    </ul>
+    <p>
+      Tests run automatically with statistical significance detection (95% confidence), and winning variations are implemented automatically.
+    </p>
+
+    <h3>5. Lead Capture Optimization</h3>
+    <p>
+      Not everyone is ready to call immediately. FieldSprout optimizes secondary conversion paths:
+    </p>
+    <ul>
+      <li><strong>SMS/text options:</strong> "Prefer to text? Send your info to [number]"</li>
+      <li><strong>Callback requests:</strong> "Can't talk now? Request a callback"</li>
+      <li><strong>Chatbot for off-hours:</strong> Capture name/phone when office is closed</li>
+      <li><strong>Email capture:</strong> Download "Water Damage Insurance Claim Guide" for follow-up nurturing</li>
+    </ul>
+
+    <h2>Service-Specific Landing Page Optimization</h2>
+    <p>
+      Generic "restoration services" pages don't convert as well as service-specific pages. FieldSprout recommends (and helps build) dedicated landing pages for:
+    </p>
+
+    <h3>Water Damage Restoration Landing Page</h3>
+    <ul>
+      <li><strong>Hero message:</strong> "Water Damage Emergency? 30-Minute Response Time – Call Now"</li>
+      <li><strong>Trust signals:</strong> 24/7 availability, licensed/insured, direct insurance billing</li>
+      <li><strong>Visual:</strong> Water extraction equipment in action, before/after flood damage</li>
+      <li><strong>Key points:</strong> Immediate water extraction, structural drying, mold prevention</li>
+      <li><strong>CTA:</strong> Large click-to-call button ("Call Emergency Hotline")</li>
+    </ul>
+
+    <h3>Fire Damage Restoration Landing Page</h3>
+    <ul>
+      <li><strong>Hero message:</strong> "Fire & Smoke Damage Restoration – Insurance Claim Experts"</li>
+      <li><strong>Trust signals:</strong> Insurance billing, board-up services, contents restoration</li>
+      <li><strong>Visual:</strong> Fire damage cleanup, smoke remediation equipment</li>
+      <li><strong>Key points:</strong> Emergency board-up, smoke odor removal, reconstruction services</li>
+      <li><strong>CTA:</strong> "Call for Free Damage Assessment"</li>
+    </ul>
+
+    <h3>Mold Remediation Landing Page</h3>
+    <ul>
+      <li><strong>Hero message:</strong> "Mold Problem? Free Inspection – IICRC Certified Remediation"</li>
+      <li><strong>Trust signals:</strong> Certified mold inspectors, safe removal process, prevention guarantee</li>
+      <li><strong>Visual:</strong> Mold remediation before/after, technician in protective gear</li>
+      <li><strong>Key points:</strong> Free inspection, safe removal, cause identification and prevention</li>
+      <li><strong>CTA:</strong> "Schedule Free Mold Inspection" (form or call)</li>
+    </ul>
+
+    <h2>Restoration Website Conversion Benchmarks</h2>
+    <p>
+      What should you expect from your restoration website? Here are industry benchmarks:
+    </p>
+
+    <h3>Conversion Rate (Visitor to Call/Form Fill):</h3>
+    <ul>
+      <li><strong>Emergency water damage pages:</strong> 15-25% (high urgency)</li>
+      <li><strong>Fire damage pages:</strong> 12-20%</li>
+      <li><strong>Mold inspection pages:</strong> 8-15%</li>
+      <li><strong>General services pages:</strong> 5-10%</li>
+      <li><strong>Homepage (mixed traffic):</strong> 6-12%</li>
+    </ul>
+
+    <h3>Mobile vs. Desktop Performance:</h3>
+    <ul>
+      <li><strong>Mobile conversion:</strong> Often higher (18-30%) for emergency services due to click-to-call</li>
+      <li><strong>Desktop conversion:</strong> 10-18% (form fills more common than calls)</li>
+    </ul>
+
+    <h3>Page Load Speed:</h3>
+    <ul>
+      <li><strong>Target mobile load time:</strong> Under 2 seconds</li>
+      <li><strong>Acceptable mobile load time:</strong> 2-3 seconds</li>
+      <li><strong>Poor mobile load time:</strong> 3+ seconds (expect 40-60% bounce rate)</li>
+    </ul>
+
+    <h3>Bounce Rate:</h3>
+    <ul>
+      <li><strong>Emergency landing pages:</strong> 30-45% (acceptable—many call immediately)</li>
+      <li><strong>General pages:</strong> 45-60%</li>
+      <li><strong>High bounce rate (problem):</strong> 70%+ indicates load speed or relevance issues</li>
+    </ul>
+
+    <h2>Quick Wins: 5 Changes That Immediately Improve Conversion</h2>
+    <p>
+      You don't need a complete website redesign to improve conversion. Start with these high-impact changes:
+    </p>
+
+    <h3>1. Add Click-to-Call Header Phone Number</h3>
+    <p>
+      Place your phone number in the top-right corner of every page in large, bold font (20-24pt). Make it click-to-call on mobile using proper HTML formatting. This alone can increase mobile conversions by 40-80%.
+    </p>
+
+    <h3>2. Compress All Images</h3>
+    <p>
+      Use TinyPNG, ImageOptim, or WebP conversion to reduce image file sizes by 60-80% without visible quality loss. Faster load times directly increase conversion and reduce bounce rate.
+    </p>
+
+    <h3>3. Add Trust Badges Above the Fold</h3>
+    <p>
+      Create a trust bar immediately below your header with: "Licensed & Insured | IICRC Certified | 24/7 Emergency Service | 4.9 Stars (127 Reviews)". Instant credibility increases call rates.
+    </p>
+
+    <h3>4. Simplify Your Contact Form</h3>
+    <p>
+      Reduce emergency forms to 3 fields: Name, Phone, ZIP. Remove "How did you hear about us?", "Describe your issue", "Preferred time", and other non-essential fields. Each field you remove increases completion by 5-10%.
+    </p>
+
+    <h3>5. Add a Sticky Mobile Call Button</h3>
+    <p>
+      Create a floating button at the bottom of mobile screens that says "Call Now" or "Emergency Service" with phone icon. This button should remain visible as users scroll, making it one-tap easy to call from anywhere on the page.
+    </p>
+
+    <h2>Get Started with Restoration Website CRO</h2>
+    <p>
+      Stop losing leads to slow pages, hidden phone numbers, and poor mobile experience. FieldSprout's AI audits your restoration website, identifies conversion barriers, and provides specific fixes to turn more visitors into booked jobs.
+    </p>
+
+    <div class="mt-8 p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl">
+      <h3 class="text-xl font-bold text-gray-900 mb-3">Ready to double your website conversion rate?</h3>
+      <p class="text-gray-700 mb-4">
+        Connect your website for a free AI-powered conversion audit. Get specific, actionable recommendations in minutes. No contracts, cancel anytime.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <a href="/signup" class="btn btn-primary px-6 py-3">
+          Start Free Trial →
+        </a>
+        <a href="/pricing" class="btn btn-secondary px-6 py-3">
+          View Pricing
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- Related Pages Section -->
+<section class="bg-white border-t border-b border-gray-200 py-12 mt-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">More Restoration Marketing Solutions</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <a href="/industries/restoration-google-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Google Ads Optimization</h3>
+        <p class="text-sm text-gray-600">Reduce cost per lead with AI-powered campaign management</p>
+      </a>
+      <a href="/industries/restoration-local-service-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/industries/restoration-meta-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Build your pipeline with targeted social media campaigns</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Browse Industries Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-6xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Marketing Solutions by Industry</h2>
+    <p class="text-gray-600 text-center mb-8">Industry-specific strategies for home service businesses</p>
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <a href="/industries/hvac-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">❄️</div>
+        <div class="text-sm font-semibold text-gray-900">HVAC</div>
+      </a>
+      <a href="/industries/plumbing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔧</div>
+        <div class="text-sm font-semibold text-gray-900">Plumbing</div>
+      </a>
+      <a href="/industries/electrical-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">⚡</div>
+        <div class="text-sm font-semibold text-gray-900">Electrical</div>
+      </a>
+      <a href="/industries/roofing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏠</div>
+        <div class="text-sm font-semibold text-gray-900">Roofing</div>
+      </a>
+      <a href="/industries/pest-control-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🐛</div>
+        <div class="text-sm font-semibold text-gray-900">Pest Control</div>
+      </a>
+      <a href="/industries/lawn-care-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🌱</div>
+        <div class="text-sm font-semibold text-gray-900">Lawn Care</div>
+      </a>
+      <a href="/industries/garage-door-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🚪</div>
+        <div class="text-sm font-semibold text-gray-900">Garage Door</div>
+      </a>
+      <a href="/industries/pools-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏊</div>
+        <div class="text-sm font-semibold text-gray-900">Pools</div>
+      </a>
+      <a href="/industries/concrete-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏗️</div>
+        <div class="text-sm font-semibold text-gray-900">Concrete</div>
+      </a>
+      <a href="/industries/fencing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪵</div>
+        <div class="text-sm font-semibold text-gray-900">Fencing</div>
+      </a>
+      <a href="/industries/solar-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">☀️</div>
+        <div class="text-sm font-semibold text-gray-900">Solar</div>
+      </a>
+      <a href="/industries/windows-doors-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪟</div>
+        <div class="text-sm font-semibold text-gray-900">Windows & Doors</div>
+      </a>
+      <a href="/industries/irrigation-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">💧</div>
+        <div class="text-sm font-semibold text-gray-900">Irrigation</div>
+      </a>
+      <a href="/industries/restoration-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔨</div>
+        <div class="text-sm font-semibold text-gray-900">Restoration</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Products Section -->
+<section class="bg-white py-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Our Marketing Products</h2>
+    <p class="text-gray-600 text-center mb-8">AI-powered marketing automation for home service businesses</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <a href="/products/google-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">🎯</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Ads</h3>
+        <p class="text-sm text-gray-600">AI agents optimize your campaigns 24/7 to reduce cost per lead</p>
+      </a>
+      <a href="/products/facebook-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📱</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Targeted social campaigns that build your pipeline</p>
+      </a>
+      <a href="/products/local-services-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">✅</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/products/google-business-profile" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📍</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Business Profile</h3>
+        <p class="text-sm text-gray-600">Optimize your local presence and get more reviews</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-4xl mx-auto px-4">
+    <h2 class="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+
+    <div class="space-y-4">
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What's a good conversion rate for restoration websites?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Emergency restoration pages should convert 15-25% of visitors into calls or form submissions. Mold inspection pages typically convert 8-15%, and general service pages convert 5-10%. Mobile conversion rates are often higher (18-30%) for emergency services.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          Why do restoration website visitors leave without calling?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Common issues: slow mobile load time (>3 seconds), unclear emergency availability, no visible phone number above the fold, lack of trust signals (licensing, insurance, certifications), and poor mobile experience with hard-to-tap buttons.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          Should restoration companies use website chat features?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Yes, but only if monitored 24/7. Emergency restoration customers expect immediate response. Unmanned chatbots hurt conversion by frustrating urgent visitors. Use SMS-based chat that routes to on-call staff, or stick with prominent click-to-call buttons.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          How can restoration websites improve mobile conversion?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Use large, thumb-friendly click-to-call buttons, minimize form fields to name/phone/ZIP only, optimize images for fast mobile loading (<2 seconds), sticky call buttons that follow scroll, and remove navigation distractions on emergency landing pages.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+{% endblock %}

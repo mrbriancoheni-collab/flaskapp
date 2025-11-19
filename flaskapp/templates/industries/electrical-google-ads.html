@@ -1,0 +1,550 @@
+{% extends 'base_public.html' %}
+{% block title %}Electrical Google Ads Optimization — FieldSprout{% endblock %}
+
+{% block head_extra %}
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Industries",
+      "item": "https://fieldsprout.io/industries"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Electrical Google Ads",
+      "item": "https://fieldsprout.io/industries/electrical-google-ads"
+    }
+  ]
+}
+</script>
+
+<!-- FAQ Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What's the average cost per lead for electrical Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Electrical cost per lead varies by service type and market. Emergency electrical repair leads typically cost $40-120 per lead, panel upgrades run $60-150, while EV charger installation leads range from $80-200. FieldSprout's AI optimizes toward your target CPL automatically."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What keywords should electricians bid on in Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "High-intent keywords include 'electrician near me', 'emergency electrician', 'electrical panel upgrade', 'outlet not working', and 'EV charger installation'. Avoid broad terms like 'electrical' without modifiers. FieldSprout's Keyword Optimizer continuously refines your keyword strategy."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Should electrical contractors run Google Ads for residential and commercial separately?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Residential and commercial electrical work have different margins, urgency levels, and customer behavior. Create separate campaigns to control budgets independently and tailor messaging. Most residential electricians should focus primarily on residential campaigns."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How can electricians reduce wasted Google Ads spend?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Block DIY searchers, job seekers, and parts shoppers. Use negative keywords like 'DIY', 'jobs', 'free', 'parts', 'how to', and 'YouTube'. Set geographic targeting to profitable service areas only. FieldSprout's Negative Keyword Agent does this automatically 24/7."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- Service Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "Electrical Google Ads Optimization",
+  "provider": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  },
+  "description": "AI-powered Google Ads optimization specifically for electrical contractors, automatically managing emergency vs. scheduled work campaigns, panel upgrade messaging, and EV charger installation advertising.",
+  "areaServed": {
+    "@type": "Country",
+    "name": "United States"
+  }
+}
+</script>
+
+<!-- HowTo Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Optimize Google Ads for Electrical Contractors",
+  "description": "Step-by-step guide to setting up and optimizing Google Ads campaigns for electricians to reduce cost per lead and increase booked jobs.",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Segment campaigns by service type",
+      "text": "Create separate campaigns for emergency electrical repairs, panel upgrades, EV charger installation, and general electrical work. This allows independent budget control and service-specific messaging."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Target high-intent electrical keywords",
+      "text": "Focus on problem-solving keywords like 'outlet not working', 'breaker keeps tripping', 'power outage', 'emergency electrician'. Add location modifiers and use phrase/exact match to control costs."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Implement comprehensive negative keyword list",
+      "text": "Block DIY searches, job seekers, parts shoppers, and educational queries. Add negatives like 'DIY', 'jobs', 'free', 'parts', 'YouTube', 'tutorial', 'school'. Review search terms weekly for new negatives."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Create service-specific ad copy",
+      "text": "Write separate ad groups for electrical repairs, panel upgrades, EV chargers, generator installation, and rewiring. Include pricing signals, response time promises, and licensing trust factors."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Optimize bids based on job value",
+      "text": "Emergency repairs justify moderate bids ($8-15/click), panel upgrades and EV chargers justify higher bids ($12-25/click) due to higher job values. Adjust bids based on actual booking rates and profit margins."
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-12">
+  <div class="mb-8">
+    <span class="inline-block px-3 py-1 text-sm font-semibold text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-full mb-4">
+      <i class="fa-solid fa-bolt"></i> Electrical Industry
+    </span>
+    <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+      Google Ads Optimization for Electrical Contractors
+    </h1>
+    <p class="text-xl text-gray-700 leading-relaxed">
+      Stop wasting budget on DIY searches and parts shoppers. FieldSprout's AI agents optimize your electrical Google Ads campaigns 24/7—automatically managing emergency repairs, panel upgrades, EV charger installations, and blocking low-intent traffic.
+    </p>
+  </div>
+
+  <div class="bg-yellow-50 border-l-4 border-yellow-600 p-6 rounded-lg mb-12">
+    <div class="flex items-start">
+      <i class="fa-solid fa-chart-line text-yellow-600 text-2xl mr-4 mt-1"></i>
+      <div>
+        <h3 class="text-lg font-bold text-yellow-900 mb-2">Electrical Performance Benchmarks</h3>
+        <ul class="text-sm text-yellow-800 space-y-1">
+          <li>• <strong>−42% cost per booked job</strong> for emergency electrical repair campaigns (60 days)</li>
+          <li>• <strong>+31% conversion rate</strong> with electrical-specific landing pages</li>
+          <li>• <strong>$350-700/month saved</strong> by blocking DIY and parts shopper traffic</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose prose-lg max-w-none">
+    <h2>Why Electrical Google Ads Are Different</h2>
+    <p>
+      Electrical contractors face unique Google Ads challenges that generic marketing agencies don't understand. Your customers search differently depending on whether they have a dangerous emergency (sparking outlet, burning smell), a planned upgrade (panel replacement, EV charger), or routine work (install ceiling fan, add outlets). Your margins vary dramatically between a $150 service call and a $3,500 panel upgrade.
+    </p>
+    <p>
+      Generic Google Ads strategies fail because they don't account for these electrical-specific realities. You need campaigns that separate true emergencies from scheduled work. You need aggressive negative keyword strategies to block the DIY crowd looking for YouTube tutorials. And you need smart geographic targeting to avoid unprofitable long-distance service calls.
+    </p>
+
+    <h2>The Electrical Google Ads Problem: Wasted Spend on DIY Traffic</h2>
+    <p>
+      Most electrical contractors overspend on Google Ads by attracting DIY searchers, people shopping for parts, and job seekers instead of customers ready to hire a licensed electrician. They run generic "electrical services" campaigns that waste 40-60% of ad spend on clicks that will never convert.
+    </p>
+    <p>
+      <strong>The most common electrical Google Ads mistakes:</strong>
+    </p>
+    <ul>
+      <li><strong>Mixing emergency and scheduled work</strong> in the same campaigns with same bids</li>
+      <li><strong>Broad match keywords</strong> like "electrical" that attract DIY searchers</li>
+      <li><strong>No negative keywords</strong> for "DIY", "YouTube", "parts", "jobs", "how to"</li>
+      <li><strong>Generic ad copy</strong> that doesn't speak to safety concerns or urgency</li>
+      <li><strong>No service area targeting</strong> leading to unprofitable distant calls</li>
+      <li><strong>Not separating residential from commercial</strong> (very different audiences)</li>
+    </ul>
+
+    <h2>How FieldSprout's AI Optimizes Electrical Campaigns</h2>
+    <p>
+      FieldSprout's multi-agent system is trained on electrical industry patterns. Our AI agents understand that "breaker keeps tripping" is a potential safety emergency, while "EV charger installation" is a planned upgrade with longer sales cycle. They automatically adjust bids, budgets, and messaging based on these patterns.
+    </p>
+
+    <h3>1. Service-Based Campaign Structure</h3>
+    <p>
+      The <strong>Strategic Director</strong> agent structures electrical campaigns by service type because each has different intent, urgency, and value:
+    </p>
+    <ul>
+      <li><strong>Emergency Electrical Repairs:</strong> High urgency, same-day service, safety-focused messaging</li>
+      <li><strong>Panel Upgrades & Replacements:</strong> Planned work, higher value, permit and inspection messaging</li>
+      <li><strong>EV Charger Installation:</strong> Specific audience, financing available, rebate messaging</li>
+      <li><strong>Generator Installation:</strong> Seasonal opportunity, backup power benefits, ROI focus</li>
+      <li><strong>General Electrical Work:</strong> Outlets, switches, lighting, ceiling fans—lower urgency</li>
+    </ul>
+
+    <h3>2. Emergency vs. Scheduled Campaign Strategy</h3>
+    <p>
+      Most electrical Google Ads accounts mix emergency and scheduled work in the same campaigns. This is a costly mistake because:
+    </p>
+    <ul>
+      <li>Emergency searches have higher intent and justify higher bids</li>
+      <li>Scheduled work needs different ad copy focused on quality and credentials, not speed</li>
+      <li>Conversion tracking is different (immediate dispatch vs. scheduled appointment)</li>
+    </ul>
+    <p>
+      FieldSprout automatically structures your campaigns into:
+    </p>
+    <ul>
+      <li><strong>Emergency Electrical Repair</strong> — "outlet sparking", "breaker won't reset", "power outage", "burning smell" (high bids, urgent messaging)</li>
+      <li><strong>Panel Upgrades</strong> — "electrical panel upgrade", "breaker box replacement", "200 amp service" (moderate-high bids, safety + compliance messaging)</li>
+      <li><strong>EV Charger Installation</strong> — "EV charger installation", "Tesla charger", "home charging station" (high bids, specialization messaging)</li>
+      <li><strong>Generator Installation</strong> — "whole house generator", "backup generator installation", "Generac installation" (high bids, reliability messaging)</li>
+      <li><strong>General Electrical Services</strong> — "install ceiling fan", "add outlet", "replace switch" (lower bids, quality messaging)</li>
+    </ul>
+
+    <h3>3. Electrical-Specific Negative Keyword Strategy</h3>
+    <p>
+      The <strong>Negative Keyword Agent</strong> knows electrical search patterns. It automatically blocks:
+    </p>
+    <ul>
+      <li><strong>DIY searches:</strong> "DIY", "how to", "YouTube", "tutorial", "myself", "fix myself"</li>
+      <li><strong>Parts shoppers:</strong> "parts", "breaker", "outlet", "wire", "panel" (without service intent)</li>
+      <li><strong>Job seekers:</strong> "jobs", "careers", "hiring", "salary", "apprentice", "electrician school"</li>
+      <li><strong>Educational:</strong> "cost", "prices", "how much", "reviews", "vs", "comparison"</li>
+      <li><strong>Wrong service type:</strong> "automotive electrical", "marine electrical" (unless you serve these)</li>
+      <li><strong>Commercial (if residential only):</strong> "commercial electrician", "industrial", "three phase"</li>
+    </ul>
+    <p>
+      These negative keywords typically save $350-700 per month in wasted spend for a typical electrical Google Ads account running $2,500-4,000/month.
+    </p>
+
+    <h3>4. Geographic Targeting for Profitable Service Areas</h3>
+    <p>
+      Not all service calls are profitable. A 40-minute drive for a $150 outlet repair loses money when you factor in drive time and labor. FieldSprout's <strong>Campaign Manager</strong> uses ZIP-level targeting to:
+    </p>
+    <ul>
+      <li>Increase bids for ZIPs within 15 minutes of your location</li>
+      <li>Decrease bids for edge-of-service-area ZIPs</li>
+      <li>Block entirely if you're consistently unprofitable in certain areas</li>
+      <li>Adjust for high-value services (willing to drive farther for panel upgrade than outlet repair)</li>
+    </ul>
+
+    <h3>5. Ad Copy Optimization for Electrical Services</h3>
+    <p>
+      The <strong>Ad Copy Agent</strong> continuously tests electrical-specific messaging patterns:
+    </p>
+    <ul>
+      <li><strong>Safety signals:</strong> "Licensed & Insured" vs. "Master Electrician" vs. "Safety First"</li>
+      <li><strong>Response time:</strong> "Same-Day Service" vs. "24/7 Emergency" vs. "Arrive Within 60 Minutes"</li>
+      <li><strong>Pricing signals:</strong> "$99 Service Call" vs. "No Hidden Fees" vs. "Upfront Pricing"</li>
+      <li><strong>Credentials:</strong> "Licensed Electrician" vs. "20+ Years Experience" vs. "Master Electrician"</li>
+      <li><strong>Guarantees:</strong> "Work Guaranteed" vs. "Satisfaction Guarantee" vs. "Warranty Included"</li>
+    </ul>
+    <p>
+      The AI pauses underperforming ad variations (CTR <70% of group average) and promotes winners automatically.
+    </p>
+
+    <h3>6. Bid Optimization for Electrical Job Values</h3>
+    <p>
+      Electrical work has different margins and job values:
+    </p>
+    <ul>
+      <li><strong>Service calls/repairs:</strong> $150-600 average job, 40-55% margin</li>
+      <li><strong>Panel upgrades:</strong> $1,500-4,000, 35-45% margin, higher complexity</li>
+      <li><strong>EV charger installation:</strong> $800-2,500, 40-50% margin, growing market</li>
+      <li><strong>Generator installation:</strong> $3,000-8,000, 30-40% margin, seasonal opportunity</li>
+      <li><strong>Rewiring projects:</strong> $3,000-12,000, 35-45% margin, longer sales cycle</li>
+    </ul>
+    <p>
+      FieldSprout's <strong>Keyword Optimizer</strong> adjusts bids based on the expected margin and job value of each service type. Panel upgrade and EV charger keywords justify higher cost-per-click because the job value is 5-15x higher than a basic repair call.
+    </p>
+
+    <h2>Electrical Google Ads Campaign Structure</h2>
+    <p>
+      Here's how FieldSprout structures a typical electrical contractor Google Ads account:
+    </p>
+
+    <h3>Campaign 1: Emergency Electrical Repairs</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "emergency electrician", "outlet sparking", "breaker won't reset", "power outage", "burning smell electrical"</li>
+      <li><strong>Match types:</strong> Phrase and exact match only (no broad match)</li>
+      <li><strong>Ad copy angle:</strong> Fast response, safety focus, 24/7 availability, licensed electrician</li>
+      <li><strong>Landing page:</strong> Emergency electrical page with click-to-call button</li>
+      <li><strong>Budget:</strong> Consistent year-round with slight increase during storm seasons</li>
+    </ul>
+
+    <h3>Campaign 2: Electrical Panel Upgrades</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "electrical panel upgrade", "breaker box replacement", "100 to 200 amp service", "fuse box replacement"</li>
+      <li><strong>Match types:</strong> Phrase and exact match</li>
+      <li><strong>Ad copy angle:</strong> Safety, code compliance, increased home value, financing available</li>
+      <li><strong>Landing page:</strong> Panel upgrade page with form + phone</li>
+      <li><strong>Budget:</strong> Year-round, moderate-high (valuable jobs)</li>
+    </ul>
+
+    <h3>Campaign 3: EV Charger Installation</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "EV charger installation", "Tesla charger install", "home charging station", "level 2 charger installation"</li>
+      <li><strong>Match types:</strong> Phrase and exact match</li>
+      <li><strong>Ad copy angle:</strong> Certified installer, rebates available, fast installation, smart charger options</li>
+      <li><strong>Landing page:</strong> EV charger page with rebate information and form</li>
+      <li><strong>Budget:</strong> Growing market, year-round, moderate-high allocation</li>
+    </ul>
+
+    <h3>Campaign 4: Generator Installation</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "whole house generator installation", "backup generator install", "Generac installation", "standby generator"</li>
+      <li><strong>Match types:</strong> Phrase and exact match</li>
+      <li><strong>Ad copy angle:</strong> Power outage protection, automatic backup, financing options, professional installation</li>
+      <li><strong>Landing page:</strong> Generator installation page with benefits and financing</li>
+      <li><strong>Budget:</strong> Seasonal boost after major storms/outages</li>
+    </ul>
+
+    <h3>Campaign 5: General Electrical Services</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "electrician near me", "install ceiling fan", "add outlet", "replace light switch", "electrical repair"</li>
+      <li><strong>Match types:</strong> Phrase match primarily</li>
+      <li><strong>Ad copy angle:</strong> Licensed electrician, quality work, reasonable rates, same-day service</li>
+      <li><strong>Landing page:</strong> General services page or homepage</li>
+      <li><strong>Budget:</strong> Lower priority, fills scheduling gaps</li>
+    </ul>
+
+    <h2>Common Electrical Google Ads Questions</h2>
+
+    <h3>Should I advertise residential and commercial electrical separately?</h3>
+    <p>
+      Yes. Commercial and residential electrical work are completely different businesses with different keywords, margins, decision-makers, and sales cycles. If you serve both, create separate campaigns. If you're residential-only (most small electrical contractors), add "commercial" as a negative keyword.
+    </p>
+
+    <h3>How much should electrical contractors spend on Google Ads?</h3>
+    <p>
+      A typical rule of thumb: <strong>$40-80 per lead</strong> target for emergency/repair work, <strong>$80-150 per lead</strong> for panel upgrades and EV chargers. If your average panel upgrade generates $2,500 in revenue at 40% margin, you can afford $80-120 per lead and still be profitable.
+    </p>
+    <p>
+      Most electrical contractors spend $2,000-5,000 per month on Google Ads, with some markets requiring more due to competition.
+    </p>
+
+    <h3>What's a good conversion rate for electrical Google Ads?</h3>
+    <p>
+      <strong>Emergency repair campaigns:</strong> 8-15% conversion rate (form fill or call)
+      <br><strong>Panel upgrade campaigns:</strong> 5-10% conversion rate
+      <br><strong>EV charger/generator campaigns:</strong> 4-8% conversion rate
+    </p>
+    <p>
+      If you're below these benchmarks, you likely have issues with:
+    </p>
+    <ul>
+      <li>Irrelevant traffic (poor keyword targeting or missing negative keywords)</li>
+      <li>Weak landing pages (slow load time, poor mobile experience, unclear CTA)</li>
+      <li>Misaligned ad copy (promise doesn't match landing page)</li>
+    </ul>
+
+    <h3>Should electrical contractors use Google Local Services Ads (LSAs)?</h3>
+    <p>
+      Absolutely. Google Local Services Ads (the "Google Guaranteed" listings) are extremely effective for electricians. They appear above regular Google Ads and you only pay per lead, not per click. LSAs work especially well for emergency electrical repairs and general electrical work.
+    </p>
+    <p>
+      FieldSprout manages both Google Ads and Google Local Services Ads in a coordinated strategy. LSAs handle branded and emergency searches, while Google Ads expand reach for specific services like panel upgrades and EV charger installation.
+    </p>
+
+    <h2>Get Started with Electrical-Optimized Google Ads</h2>
+    <p>
+      Stop wasting budget on generic Google Ads strategies that don't understand electrical contractor margins, safety concerns, and customer behavior. FieldSprout's AI agents optimize your campaigns 24/7 using electrical-specific rules and industry benchmarks.
+    </p>
+
+    <div class="mt-8 p-6 bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl">
+      <h3 class="text-xl font-bold text-gray-900 mb-3">Ready to reduce your cost per job?</h3>
+      <p class="text-gray-700 mb-4">
+        Connect your Google Ads account and let our AI agents start optimizing in minutes. No contracts, cancel anytime.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <a href="/signup" class="btn btn-primary px-6 py-3">
+          Start Free Trial →
+        </a>
+        <a href="/pricing" class="btn btn-secondary px-6 py-3">
+          View Pricing
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- Related Pages Section -->
+<section class="bg-white border-t border-b border-gray-200 py-12 mt-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">More Electrical Marketing Solutions</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <a href="/industries/electrical-local-service-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/industries/electrical-meta-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Build your pipeline with targeted social media campaigns</p>
+      </a>
+      <a href="/industries/electrical-website-cro" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Website & Conversion Optimization</h3>
+        <p class="text-sm text-gray-600">Turn more website visitors into paying customers</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Browse Industries Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-6xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Marketing Solutions by Industry</h2>
+    <p class="text-gray-600 text-center mb-8">Industry-specific strategies for home service businesses</p>
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <a href="/industries/hvac-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">❄️</div>
+        <div class="text-sm font-semibold text-gray-900">HVAC</div>
+      </a>
+      <a href="/industries/plumbing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔧</div>
+        <div class="text-sm font-semibold text-gray-900">Plumbing</div>
+      </a>
+      <a href="/industries/electrical-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">⚡</div>
+        <div class="text-sm font-semibold text-gray-900">Electrical</div>
+      </a>
+      <a href="/industries/roofing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏠</div>
+        <div class="text-sm font-semibold text-gray-900">Roofing</div>
+      </a>
+      <a href="/industries/pest-control-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🐛</div>
+        <div class="text-sm font-semibold text-gray-900">Pest Control</div>
+      </a>
+      <a href="/industries/lawn-care-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🌱</div>
+        <div class="text-sm font-semibold text-gray-900">Lawn Care</div>
+      </a>
+      <a href="/industries/garage-door-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🚪</div>
+        <div class="text-sm font-semibold text-gray-900">Garage Door</div>
+      </a>
+      <a href="/industries/pools-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏊</div>
+        <div class="text-sm font-semibold text-gray-900">Pools</div>
+      </a>
+      <a href="/industries/concrete-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏗️</div>
+        <div class="text-sm font-semibold text-gray-900">Concrete</div>
+      </a>
+      <a href="/industries/fencing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪵</div>
+        <div class="text-sm font-semibold text-gray-900">Fencing</div>
+      </a>
+      <a href="/industries/solar-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">☀️</div>
+        <div class="text-sm font-semibold text-gray-900">Solar</div>
+      </a>
+      <a href="/industries/windows-doors-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪟</div>
+        <div class="text-sm font-semibold text-gray-900">Windows & Doors</div>
+      </a>
+      <a href="/industries/irrigation-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">💧</div>
+        <div class="text-sm font-semibold text-gray-900">Irrigation</div>
+      </a>
+      <a href="/industries/restoration-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔨</div>
+        <div class="text-sm font-semibold text-gray-900">Restoration</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Products Section -->
+<section class="bg-white py-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Our Marketing Products</h2>
+    <p class="text-gray-600 text-center mb-8">AI-powered marketing automation for home service businesses</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <a href="/products/google-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">🎯</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Ads</h3>
+        <p class="text-sm text-gray-600">AI agents optimize your campaigns 24/7 to reduce cost per lead</p>
+      </a>
+      <a href="/products/facebook-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📱</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Targeted social campaigns that build your pipeline</p>
+      </a>
+      <a href="/products/local-services-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">✅</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/products/google-business-profile" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📍</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Business Profile</h3>
+        <p class="text-sm text-gray-600">Optimize your local presence and get more reviews</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-4xl mx-auto px-4">
+    <h2 class="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+
+    <div class="space-y-4">
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What's the average cost per lead for electrical Google Ads?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Electrical cost per lead varies by service type and market. Emergency electrical repair leads typically cost $40-120 per lead, panel upgrades run $60-150, while EV charger installation leads range from $80-200. FieldSprout's AI optimizes toward your target CPL automatically.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What keywords should electricians bid on in Google Ads?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          High-intent keywords include "electrician near me", "emergency electrician", "electrical panel upgrade", "outlet not working", and "EV charger installation". Avoid broad terms like "electrical" without modifiers. FieldSprout's Keyword Optimizer continuously refines your keyword strategy.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          Should electrical contractors run Google Ads for residential and commercial separately?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Yes. Residential and commercial electrical work have different margins, urgency levels, and customer behavior. Create separate campaigns to control budgets independently and tailor messaging. Most residential electricians should focus primarily on residential campaigns.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          How can electricians reduce wasted Google Ads spend?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Block DIY searchers, job seekers, and parts shoppers. Use negative keywords like "DIY", "jobs", "free", "parts", "how to", and "YouTube". Set geographic targeting to profitable service areas only. FieldSprout's Negative Keyword Agent does this automatically 24/7.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+{% endblock %}

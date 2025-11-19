@@ -654,6 +654,13 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register agent_config_bp")
 
+    try:
+        from app.admin.email_workflow_routes import email_workflow_bp
+        app.register_blueprint(email_workflow_bp)  # url_prefix=/admin/email-workflows
+        app.logger.info("email_workflow_bp registered at /admin/email-workflows")
+    except Exception:
+        app.logger.exception("Failed to register email_workflow_bp")
+
     # --- Email Tracking (public endpoints for pixel and click tracking) ----
     try:
         from app.email_tracking_routes import email_tracking_bp

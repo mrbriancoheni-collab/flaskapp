@@ -1,6 +1,45 @@
 {% extends 'base_public.html' %}
 {% block title %}About · {{ app_name }}{% endblock %}
 
+{% block head_extra %}
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "About",
+      "item": "https://fieldsprout.io/about"
+    }
+  ]
+}
+</script>
+
+<!-- AboutPage Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "AboutPage",
+  "name": "About FieldSprout",
+  "description": "Built for local service companies—plumbers, roofers, HVAC, cleaners, landscapers, and more. Marketing should be simple, fast, and actually work.",
+  "about": {
+    "@type": "Organization",
+    "name": "FieldSprout",
+    "description": "AI-powered marketing automation for local service businesses"
+  }
+}
+</script>
+{% endblock %}
+
 {% block content %}
 <section class="section">
   <div class="max-w-3xl mx-auto">

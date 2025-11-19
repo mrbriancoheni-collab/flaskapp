@@ -2,6 +2,158 @@
 {% extends "base_public.html" %}
 {% block title %}FieldSprout — Get Found. Book More Jobs with AI{% endblock %}
 
+{% block head_extra %}
+<!-- FAQ Schema for AI Search -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What does FieldSprout actually do?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "FieldSprout uses autonomous AI agents to optimize Google Ads campaigns 24/7. It analyzes search terms, budgets, bidding, and performance patterns and makes expert-level adjustments continuously."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does FieldSprout reduce my cost per lead?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "It reduces wasted spend by tightening targeting, removing low-intent traffic, adjusting bids, and reallocating budget toward high-converting opportunities. Most home service accounts see a 20-40% CPL reduction within 30 days."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How is FieldSprout different from an agency?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Agencies rely on humans with limited time. FieldSprout uses autonomous AI agents that optimize continuously, delivering better performance at lower cost."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does FieldSprout work for home services?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. FieldSprout is designed specifically for home service industries such as pest control, HVAC, plumbing, roofing, electrical, lawn care, solar, restoration, and garage door repair."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Will FieldSprout replace my agency?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "FieldSprout can replace your agency or augment it by delivering continuous AI-driven optimization."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does FieldSprout create ads automatically?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, FieldSprout's Ad Copy Agent generates and tests new headlines, descriptions, and assets automatically."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What makes FieldSprout better than Adalysis or Optmyzr?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Those tools rely on rules and manual workflows. FieldSprout uses autonomous AI agents that learn, adjust in real time, and self-diagnose issues automatically."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do I still have full control of my Google Ads account?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. We connect via Google's API but never take ownership. You can override any change at any time."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How long does it take to see results?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Most accounts see improvement within 7-14 days and significant gains within 30-45 days."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is FieldSprout safe and compliant?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Everything is fully compliant with Google Ads Terms and API policies."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- Product/SoftwareApplication Schema for AI Search -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "FieldSprout",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "description": "AI agents that autonomously optimize Google Ads for home service businesses, reducing wasted spend and lowering cost per lead.",
+  "offers": {
+    "@type": "Offer",
+    "priceCurrency": "USD",
+    "price": "200",
+    "priceSpecification": {
+      "@type": "UnitPriceSpecification",
+      "price": "200",
+      "priceCurrency": "USD",
+      "unitText": "MONTH"
+    },
+    "availability": "https://schema.org/InStock"
+  },
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "4.9",
+    "reviewCount": "150"
+  },
+  "featureList": [
+    "AI Budget Guardian",
+    "AI Keyword Optimizer",
+    "AI Negative Keyword Agent",
+    "AI Quality Score Agent",
+    "AI Landing Page Analyst",
+    "Home Services Targeting Models",
+    "Autonomous Campaign Optimization",
+    "24/7 Performance Monitoring"
+  ],
+  "screenshot": "https://fieldsprout.io/static/img/preview_workflow.png",
+  "publisher": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  }
+}
+</script>
+
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    }
+  ]
+}
+</script>
+{% endblock %}
+
 {% block content %}
 
 <!-- HERO - Conversion Optimized -->
@@ -810,6 +962,149 @@
     <!-- Trust badges below pricing -->
     <div class="mt-12 text-center">
       <p class="text-sm text-gray-500 mb-4">No contracts • Cancel anytime</p>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ SECTION -->
+<section id="faq" class="section bg-gray-50">
+  <div class="container-max max-w-4xl">
+    <div class="text-center mb-12">
+      <span class="badge">Frequently Asked Questions</span>
+      <h2 class="mt-4 text-3xl md:text-5xl font-extrabold">Everything you need to know</h2>
+      <p class="mt-4 text-lg text-gray-600">Get answers to common questions about FieldSprout</p>
+    </div>
+
+    <div class="space-y-4">
+      <!-- FAQ Item 1 -->
+      <details class="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all">
+        <summary class="cursor-pointer p-6 font-semibold text-lg flex items-center justify-between list-none">
+          <span>What does FieldSprout actually do?</span>
+          <svg class="w-5 h-5 text-primary-600 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </summary>
+        <div class="px-6 pb-6 text-gray-600">
+          FieldSprout uses autonomous AI agents to optimize your Google Ads campaigns 24/7. It analyzes search terms, budgets, bidding, and performance patterns—then makes the same adjustments an expert would make, but faster and continuously.
+        </div>
+      </details>
+
+      <!-- FAQ Item 2 -->
+      <details class="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all">
+        <summary class="cursor-pointer p-6 font-semibold text-lg flex items-center justify-between list-none">
+          <span>How does FieldSprout reduce my cost per lead?</span>
+          <svg class="w-5 h-5 text-primary-600 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </summary>
+        <div class="px-6 pb-6 text-gray-600">
+          The platform reduces wasted spend by tightening keyword targeting, removing low-intent traffic, adjusting bids, and reallocating budget toward high-converting opportunities. Most home service accounts see a 20–40% CPL reduction within 30 days.
+        </div>
+      </details>
+
+      <!-- FAQ Item 3 -->
+      <details class="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all">
+        <summary class="cursor-pointer p-6 font-semibold text-lg flex items-center justify-between list-none">
+          <span>How is FieldSprout different from an agency?</span>
+          <svg class="w-5 h-5 text-primary-600 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </summary>
+        <div class="px-6 pb-6 text-gray-600">
+          Agencies rely on humans with limited time. FieldSprout uses autonomous AI agents that optimize continuously, delivering better performance at lower cost. You pay for outcomes, not hours—and you keep full control of your Google Ads account.
+        </div>
+      </details>
+
+      <!-- FAQ Item 4 -->
+      <details class="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all">
+        <summary class="cursor-pointer p-6 font-semibold text-lg flex items-center justify-between list-none">
+          <span>Does FieldSprout work for home services?</span>
+          <svg class="w-5 h-5 text-primary-600 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </summary>
+        <div class="px-6 pb-6 text-gray-600">
+          Yes. FieldSprout was built specifically for home service industries such as pest control, HVAC, plumbing, roofing, electrical, lawn care, solar, restoration, and garage door repair.
+        </div>
+      </details>
+
+      <!-- FAQ Item 5 -->
+      <details class="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all">
+        <summary class="cursor-pointer p-6 font-semibold text-lg flex items-center justify-between list-none">
+          <span>Will FieldSprout replace my agency?</span>
+          <svg class="w-5 h-5 text-primary-600 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </summary>
+        <div class="px-6 pb-6 text-gray-600">
+          FieldSprout can replace your agency or augment it by delivering continuous AI-driven optimization. Many companies use FieldSprout to replace expensive retainers while improving performance.
+        </div>
+      </details>
+
+      <!-- FAQ Item 6 -->
+      <details class="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all">
+        <summary class="cursor-pointer p-6 font-semibold text-lg flex items-center justify-between list-none">
+          <span>Does FieldSprout create ads automatically?</span>
+          <svg class="w-5 h-5 text-primary-600 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </summary>
+        <div class="px-6 pb-6 text-gray-600">
+          Yes. FieldSprout's Ad Copy Agent generates and tests new headlines, descriptions, assets, callouts, sitelinks automatically—optimizing for the best performing variations.
+        </div>
+      </details>
+
+      <!-- FAQ Item 7 -->
+      <details class="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all">
+        <summary class="cursor-pointer p-6 font-semibold text-lg flex items-center justify-between list-none">
+          <span>What makes FieldSprout better than Adalysis or Optmyzr?</span>
+          <svg class="w-5 h-5 text-primary-600 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </summary>
+        <div class="px-6 pb-6 text-gray-600">
+          Those tools rely on rules, checklists, and manual workflows. FieldSprout uses autonomous AI agents that learn every day, adjust campaigns in real time, run multi-step optimizations, and self-diagnose issues. It's not a rules engine—it's a performance engine.
+        </div>
+      </details>
+
+      <!-- FAQ Item 8 -->
+      <details class="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all">
+        <summary class="cursor-pointer p-6 font-semibold text-lg flex items-center justify-between list-none">
+          <span>Do I still have full control of my Google Ads account?</span>
+          <svg class="w-5 h-5 text-primary-600 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </summary>
+        <div class="px-6 pb-6 text-gray-600">
+          Yes. We connect to your account via Google's API but never take ownership. You can override any change at any time and retain complete control over your account.
+        </div>
+      </details>
+
+      <!-- FAQ Item 9 -->
+      <details class="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all">
+        <summary class="cursor-pointer p-6 font-semibold text-lg flex items-center justify-between list-none">
+          <span>How long does it take to see results?</span>
+          <svg class="w-5 h-5 text-primary-600 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </summary>
+        <div class="px-6 pb-6 text-gray-600">
+          Most accounts see improvement within 7–14 days and significant gains within 30–45 days as the AI agents learn your account patterns and optimize performance.
+        </div>
+      </details>
+
+      <!-- FAQ Item 10 -->
+      <details class="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all">
+        <summary class="cursor-pointer p-6 font-semibold text-lg flex items-center justify-between list-none">
+          <span>Is FieldSprout safe and compliant?</span>
+          <svg class="w-5 h-5 text-primary-600 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </summary>
+        <div class="px-6 pb-6 text-gray-600">
+          Yes. Everything is fully compliant with Google Ads Terms and API policies. All optimization runs inside your account through official channels with complete transparency.
+        </div>
+      </details>
     </div>
   </div>
 </section>

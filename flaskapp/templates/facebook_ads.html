@@ -1,6 +1,61 @@
 {% extends "base_public.html" %}
 {% set SECTION = 'products' %}
 {% block title %}Facebook & Instagram Ads — FieldSprout{% endblock %}
+
+{% block head_extra %}
+<!-- Product Schema for Facebook/Instagram Ads Tool -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "FieldSprout Facebook & Instagram Ads",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "description": "AI-powered Facebook and Instagram ads automation for home service businesses. Smart targeting, creative testing, and lead generation optimized for local service pros.",
+  "offers": {
+    "@type": "Offer",
+    "priceCurrency": "USD",
+    "price": "200",
+    "availability": "https://schema.org/InStock"
+  },
+  "featureList": [
+    "Lookalike audiences from top 20% customers",
+    "Remarket unbooked estimates & no-shows",
+    "ZIP/Radius controls by margin & travel time",
+    "UGC prompts + policy checks",
+    "Offer testing and rotation by capacity",
+    "On-ad lead forms + speed-to-lead"
+  ],
+  "publisher": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  }
+}
+</script>
+
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Facebook & Instagram Ads",
+      "item": "https://fieldsprout.io/products/facebook-ads"
+    }
+  ]
+}
+</script>
+{% endblock %}
+
 {% block content %}
 
 <section class="hero">

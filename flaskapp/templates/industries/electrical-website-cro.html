@@ -1,0 +1,631 @@
+{% extends 'base_public.html' %}
+{% block title %}Electrical Website & Conversion Optimization — FieldSprout{% endblock %}
+
+{% block head_extra %}
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Industries",
+      "item": "https://fieldsprout.io/industries"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Electrical Website CRO",
+      "item": "https://fieldsprout.io/industries/electrical-website-cro"
+    }
+  ]
+}
+</script>
+
+<!-- FAQ Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What's a good conversion rate for an electrical contractor website?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Electrical websites should aim for 4-9% conversion rate for emergency service pages and 3-6% for panel upgrade/installation pages. Mobile conversion rates are typically 25-35% lower than desktop unless specifically optimized. FieldSprout's CRO tools help you reach the top quartile."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Should electrical contractors use click-to-call buttons or forms?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "For emergency electrical services, click-to-call buttons convert 2-3x better than forms. For planned services like panel upgrades or EV charger installations, use both—a prominent phone number and a simple 3-field form. FieldSprout's AI tests button placement and form fields to maximize conversions."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How important is website speed for electrical lead generation?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Critical. Every 1-second delay in page load time reduces conversions by 7%. Electrical emergency searchers have zero patience—if your site takes 5+ seconds to load on mobile, they'll hit back and call a competitor. Aim for under 2.5 seconds."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What trust signals should electrical contractor websites display?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Display electrical license number, master electrician certification, insurance badges, Google review stars and count, years in business, response time promises, and photos of licensed electricians with trucks. FieldSprout automatically updates review counts and star ratings daily."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- Service Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "Electrical Website Conversion Rate Optimization",
+  "provider": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  },
+  "description": "AI-powered website optimization for electrical contractors, automatically testing landing pages, forms, calls-to-action, and mobile experiences to maximize lead generation and booking rates.",
+  "areaServed": {
+    "@type": "Country",
+    "name": "United States"
+  }
+}
+</script>
+
+<!-- HowTo Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Optimize an Electrical Contractor Website for More Leads",
+  "description": "Step-by-step guide to improving electrical contractor website conversion rates through mobile optimization, faster load times, better CTAs, and trust-building elements.",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Optimize for mobile-first experience",
+      "text": "Over 70% of emergency electrical searches happen on mobile. Ensure click-to-call buttons are prominent, forms are short and easy to complete on small screens, and page load time is under 3 seconds on 4G connections."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Create service-specific landing pages",
+      "text": "Build dedicated pages for emergency electrical repair, panel upgrades, EV charger installation, and generator installation. Match ad messaging to landing page headlines. Include service-specific pricing, licensing info, and relevant FAQs."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Simplify lead capture forms",
+      "text": "For emergency services, use click-to-call only. For planned services, limit forms to 3-4 fields maximum: name, phone, ZIP, and service needed. Every additional field reduces conversion rate by 5-10%."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Display licensing and trust signals",
+      "text": "Add electrical license number and master electrician certification prominently, show Google review stars and count in header, display insurance badges, include photos of real licensed electricians, and feature response time promises."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Implement call tracking and analytics",
+      "text": "Use dynamic call tracking to attribute phone leads to specific campaigns and keywords. Track form submissions, calculate conversion rates by traffic source, and identify which pages drive the most booked electrical jobs."
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-12">
+  <div class="mb-8">
+    <span class="inline-block px-3 py-1 text-sm font-semibold text-purple-700 bg-purple-50 border border-purple-200 rounded-full mb-4">
+      <i class="fa-solid fa-chart-line"></i> Conversion Optimization
+    </span>
+    <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+      Website & Conversion Rate Optimization for Electrical Contractors
+    </h1>
+    <p class="text-xl text-gray-700 leading-relaxed">
+      Your website gets traffic but doesn't convert? FieldSprout's AI continuously optimizes your electrical landing pages, forms, and mobile experience—automatically testing variations to turn more visitors into booked jobs.
+    </p>
+  </div>
+
+  <div class="bg-purple-50 border-l-4 border-purple-600 p-6 rounded-lg mb-12">
+    <div class="flex items-start">
+      <i class="fa-solid fa-rocket text-purple-600 text-2xl mr-4 mt-1"></i>
+      <div>
+        <h3 class="text-lg font-bold text-purple-900 mb-2">Electrical Website Performance Gains</h3>
+        <ul class="text-sm text-purple-800 space-y-1">
+          <li>• <strong>+52% conversion rate</strong> with mobile-optimized emergency electrical pages</li>
+          <li>• <strong>−58% form abandonment</strong> by reducing fields from 9 to 3</li>
+          <li>• <strong>+41% phone calls</strong> with sticky click-to-call button on mobile</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose prose-lg max-w-none">
+    <h2>Why Electrical Website Optimization Matters</h2>
+    <p>
+      You're spending thousands per month on Google Ads and LSAs driving traffic to your website. But if your site doesn't convert that traffic into phone calls and form submissions, you're wasting 60-80% of your marketing budget.
+    </p>
+    <p>
+      Electrical website conversion rate optimization (CRO) is about removing friction from the customer journey. When someone has a sparking outlet or tripped breaker, they're searching on their phone, clicking through 3-4 electrician websites, and calling the first licensed professional who makes it easy to book service.
+    </p>
+    <p>
+      <strong>The typical electrical contractor website conversion funnel:</strong>
+    </p>
+    <ul>
+      <li>100 visitors land on your emergency electrical page</li>
+      <li>65 bounce immediately (slow load time, mobile unfriendly)</li>
+      <li>25 read your content but don't take action (no clear CTA, hidden phone number)</li>
+      <li>6 start filling out a form but abandon (too many fields)</li>
+      <li>4 complete a form or call</li>
+    </ul>
+    <p>
+      That's a 4% conversion rate. With proper optimization, you can get to 8-10%—doubling or tripling your electrical leads without increasing ad spend.
+    </p>
+
+    <h2>The Electrical Website Conversion Problem</h2>
+    <p>
+      Most electrical contractor websites are built by generic web design agencies that don't understand home service lead generation. They create beautiful sites that look great but don't convert because:
+    </p>
+    <ul>
+      <li><strong>Slow mobile load times:</strong> 5-8 seconds on 4G (visitors leave in 3 seconds)</li>
+      <li><strong>Generic homepage focus:</strong> Paid traffic goes to homepage, not service-specific pages</li>
+      <li><strong>Hidden phone numbers:</strong> Click-to-call not prominent on mobile</li>
+      <li><strong>Long forms:</strong> Asking for address, email, service details, preferred date, etc.</li>
+      <li><strong>No licensing displayed:</strong> Missing electrical license number, master electrician certification</li>
+      <li><strong>Desktop-first design:</strong> Not optimized for the 70% of traffic coming from mobile</li>
+    </ul>
+
+    <h2>How FieldSprout Optimizes Electrical Websites</h2>
+
+    <h3>1. Mobile-First Landing Page Optimization</h3>
+    <p>
+      Over 70% of emergency electrical searches happen on mobile devices. FieldSprout's AI ensures your mobile experience converts:
+    </p>
+    <ul>
+      <li><strong>Sticky click-to-call button:</strong> Always visible at top or bottom of screen</li>
+      <li><strong>Prominent phone number:</strong> Large, tappable, in brand color with license number nearby</li>
+      <li><strong>Above-fold CTA:</strong> No scrolling required to see call button or form</li>
+      <li><strong>Fast load time:</strong> Under 2.5 seconds on 4G through image optimization and code minification</li>
+      <li><strong>Large tap targets:</strong> Buttons and form fields sized for thumbs, not mouse clicks</li>
+      <li><strong>Minimal typing:</strong> Auto-fill ZIP from location, dropdown menus instead of text fields</li>
+    </ul>
+
+    <h3>2. Service-Specific Landing Pages</h3>
+    <p>
+      Sending all paid traffic to your homepage is a conversion killer. FieldSprout builds dedicated landing pages for each electrical service:
+    </p>
+
+    <h4>Emergency Electrical Repair Landing Page</h4>
+    <ul>
+      <li><strong>Headline:</strong> "Emergency Electrician in [City] – Licensed, Same-Day Service"</li>
+      <li><strong>Subheadline:</strong> "Sparking outlet? Breaker won't reset? We'll fix it today. Call now: (555) 123-4567"</li>
+      <li><strong>CTA:</strong> Prominent click-to-call button, no form (reduce friction)</li>
+      <li><strong>Trust signals:</strong> Electrical license #12345, 24/7 availability, master electrician, 400+ reviews</li>
+      <li><strong>Social proof:</strong> Recent customer reviews specific to emergency electrical repairs</li>
+      <li><strong>Process outline:</strong> "Call → Licensed electrician arrives in 60-90 min → Diagnose → Fix same day"</li>
+    </ul>
+
+    <h4>Panel Upgrade Landing Page</h4>
+    <ul>
+      <li><strong>Headline:</strong> "Electrical Panel Upgrade in [City] – Licensed Master Electrician"</li>
+      <li><strong>Subheadline:</strong> "Upgrade to 200-amp service from $1,899 – Financing available"</li>
+      <li><strong>CTA:</strong> "Schedule Free Inspection" form (3 fields only: name, phone, ZIP)</li>
+      <li><strong>Trust signals:</strong> Master electrician, licensed & insured, permit & inspection included</li>
+      <li><strong>Social proof:</strong> Before/after panel photos, upgrade testimonials</li>
+      <li><strong>Value props:</strong> Safety compliance, increased home value, support more appliances/EV charger</li>
+    </ul>
+
+    <h4>EV Charger Installation Landing Page</h4>
+    <ul>
+      <li><strong>Headline:</strong> "EV Charger Installation in [City] – Certified Electrician"</li>
+      <li><strong>Subheadline:</strong> "Level 2 charger installation from $499 – Federal tax credit available"</li>
+      <li><strong>CTA:</strong> "Get Free Quote" form or click-to-call</li>
+      <li><strong>Trust signals:</strong> Certified EV charger installer, licensed electrician, warranty included</li>
+      <li><strong>Social proof:</strong> Installation photos, happy customers with EVs</li>
+      <li><strong>Urgency:</strong> "Take advantage of federal tax credits before they expire"</li>
+    </ul>
+
+    <h3>3. Form Optimization for Electrical Lead Capture</h3>
+    <p>
+      Every form field reduces conversion rate by 5-10%. FieldSprout's AI tests and optimizes electrical lead forms:
+    </p>
+
+    <h4>Emergency Service Forms (Minimize Friction)</h4>
+    <p>
+      <strong>Best practice:</strong> Use click-to-call buttons instead of forms. If you must use a form:
+    </p>
+    <ul>
+      <li>Phone number (most important)</li>
+      <li>ZIP code (or auto-detect from location)</li>
+      <li>Name (optional—can get on the phone)</li>
+    </ul>
+    <p>
+      That's it. No email, no address, no "describe your problem" text area. You'll get those details on the phone.
+    </p>
+
+    <h4>Planned Service Forms (Panel Upgrades, EV Chargers, Generators)</h4>
+    <p>
+      <strong>Recommended fields:</strong>
+    </p>
+    <ul>
+      <li>Name</li>
+      <li>Phone number</li>
+      <li>Email (for quote/estimate)</li>
+      <li>ZIP code</li>
+      <li>Service needed (dropdown: Panel upgrade, EV charger, Generator, Inspection)</li>
+    </ul>
+    <p>
+      Optional: "When do you need service?" with options like "This week", "This month", "Just researching."
+    </p>
+
+    <h3>4. Call Tracking & Attribution</h3>
+    <p>
+      50-75% of electrical leads come via phone call, not forms. Without call tracking, you can't measure which campaigns drive calls. FieldSprout implements:
+    </p>
+    <ul>
+      <li><strong>Dynamic number insertion:</strong> Different phone numbers for Google Ads, LSAs, Facebook, and organic traffic</li>
+      <li><strong>Campaign-level tracking:</strong> Separate numbers for emergency vs. panel upgrade vs. EV charger campaigns</li>
+      <li><strong>Call recording:</strong> Review calls to train staff and identify common objections</li>
+      <li><strong>Conversion tracking:</strong> Mark calls as booked jobs vs. info requests vs. spam</li>
+    </ul>
+    <p>
+      This data feeds back into campaign optimization—pausing ads that drive calls but not bookings, and scaling ads that drive high-quality electrical leads.
+    </p>
+
+    <h3>5. Trust Signal Optimization</h3>
+    <p>
+      Electrical work requires licensing and safety expertise. Homeowners won't hire unlicensed electricians. FieldSprout ensures these trust signals are prominent:
+    </p>
+
+    <h4>Above-the-Fold Trust Elements</h4>
+    <ul>
+      <li><strong>Electrical license number:</strong> "Licensed Electrician #12345" or "Master Electrician License #MC-12345"</li>
+      <li><strong>Google review stars and count:</strong> "4.9 stars from 412 reviews"</li>
+      <li><strong>Years in business:</strong> "Serving [City] since 2008"</li>
+      <li><strong>Certifications:</strong> Master electrician, journeyman electrician, manufacturer certifications</li>
+      <li><strong>Response time promise:</strong> "Same-day service" or "Emergency electrician available 24/7"</li>
+    </ul>
+
+    <h4>Visual Trust Signals</h4>
+    <ul>
+      <li>Photos of licensed electricians in uniform (real team, not stock photos)</li>
+      <li>Branded service trucks with license number visible</li>
+      <li>Safety equipment and testing tools</li>
+      <li>Before/after panel upgrade photos, completed EV charger installations</li>
+      <li>Insurance badges (general liability, workers comp)</li>
+    </ul>
+
+    <h3>6. Speed Optimization for Mobile</h3>
+    <p>
+      Page speed directly impacts conversion rate. For every 1-second delay in load time, conversions drop 7%. FieldSprout's speed optimization:
+    </p>
+    <ul>
+      <li><strong>Image compression:</strong> WebP format, lazy loading, responsive sizing</li>
+      <li><strong>Code minification:</strong> Compress CSS, JavaScript, HTML</li>
+      <li><strong>Browser caching:</strong> Store static assets locally</li>
+      <li><strong>CDN delivery:</strong> Serve content from geographically close servers</li>
+      <li><strong>Critical CSS:</strong> Load above-fold content first</li>
+    </ul>
+    <p>
+      Target: Under 2.5 seconds on 4G mobile, under 1.5 seconds on desktop.
+    </p>
+
+    <h3>7. Continuous A/B Testing</h3>
+    <p>
+      FieldSprout's AI continuously tests variations to improve conversion rates:
+    </p>
+    <ul>
+      <li><strong>Headlines:</strong> "Emergency Electrician" vs. "Licensed Electrician – Same-Day Service"</li>
+      <li><strong>CTA buttons:</strong> "Call Now" vs. "Get Help Now" vs. "Book Licensed Electrician"</li>
+      <li><strong>Button color:</strong> Brand color vs. high-contrast (orange, green)</li>
+      <li><strong>Form vs. phone:</strong> Lead form vs. click-to-call only</li>
+      <li><strong>Social proof placement:</strong> Reviews and license number above vs. below fold</li>
+      <li><strong>Pricing display:</strong> "From $99" vs. "Starting at $99" vs. no price</li>
+    </ul>
+    <p>
+      The AI automatically allocates traffic to winning variations and pauses losers, improving conversion rates by 18-35% over 60 days.
+    </p>
+
+    <h2>Electrical Website Conversion Benchmarks</h2>
+
+    <table style="width:100%; border-collapse: collapse; margin: 2rem 0;">
+      <thead>
+        <tr style="background: #f3f4f6;">
+          <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left;">Page Type</th>
+          <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left;">Poor</th>
+          <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left;">Average</th>
+          <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left;">Excellent</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;"><strong>Emergency Electrical Repair</strong></td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">2-4%</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">5-7%</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">8-11%</td>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;"><strong>Panel Upgrade</strong></td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">1-3%</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">4-6%</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">7-9%</td>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;"><strong>EV Charger/Generator</strong></td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">1-2%</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">3-5%</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">6-8%</td>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;"><strong>Homepage (General)</strong></td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">0.5-1%</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">1-2%</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">2-4%</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      <strong>Key insight:</strong> Service-specific landing pages convert 2-3x better than sending traffic to your homepage.
+    </p>
+
+    <h2>Common Electrical Website Conversion Mistakes</h2>
+
+    <h3>Mistake #1: Sending Paid Traffic to Your Homepage</h3>
+    <p>
+      Your homepage tries to serve all audiences (emergency repairs, panel upgrades, commercial, residential). This lack of focus kills conversion rates.
+    </p>
+    <p>
+      <strong>Fix:</strong> Create dedicated landing pages for each service and campaign. Match ad messaging to landing page headlines exactly.
+    </p>
+
+    <h3>Mistake #2: No License Number Displayed</h3>
+    <p>
+      Many electrical sites say "licensed electrician" but don't show the actual license number. This creates doubt.
+    </p>
+    <p>
+      <strong>Fix:</strong> Display your electrical license number prominently in the header and footer. If you're a master electrician, showcase that credential.
+    </p>
+
+    <h3>Mistake #3: Long Forms on Mobile</h3>
+    <p>
+      Asking for 8-10 fields on a mobile form creates massive friction. Most users abandon before completion.
+    </p>
+    <p>
+      <strong>Fix:</strong> Limit forms to 3-4 fields maximum. For emergency services, use click-to-call buttons instead of forms.
+    </p>
+
+    <h3>Mistake #4: Hidden Phone Numbers</h3>
+    <p>
+      Phone numbers buried in footer or behind "Contact Us" page reduce calls by 40-60%.
+    </p>
+    <p>
+      <strong>Fix:</strong> Make phone number prominent in header, use click-to-call on mobile, implement sticky call button that follows scroll.
+    </p>
+
+    <h3>Mistake #5: No Call Tracking</h3>
+    <p>
+      Without tracking phone leads, you can't optimize campaigns or calculate true ROI.
+    </p>
+    <p>
+      <strong>Fix:</strong> Implement dynamic call tracking with campaign-level attribution and call recording.
+    </p>
+
+    <h2>FieldSprout's Website Optimization Workflow</h2>
+    <p>
+      Here's how FieldSprout continuously improves your electrical website conversion rate:
+    </p>
+
+    <ol>
+      <li><strong>Audit:</strong> Analyze current conversion rates, mobile experience, page speed, and traffic sources</li>
+      <li><strong>Prioritize:</strong> Identify highest-impact improvements (usually mobile optimization and service-specific landing pages)</li>
+      <li><strong>Implement:</strong> Build optimized landing pages, simplify forms, add licensing trust signals, implement call tracking</li>
+      <li><strong>Test:</strong> A/B test headlines, CTAs, form fields, button colors, trust signal placement</li>
+      <li><strong>Monitor:</strong> Track conversion rates by traffic source, device, and campaign</li>
+      <li><strong>Iterate:</strong> Continuously test new variations, pause losers, scale winners</li>
+    </ol>
+
+    <h2>Get Started with Electrical Website Optimization</h2>
+    <p>
+      You're already investing in Google Ads, LSAs, and Facebook Ads to drive traffic. Website optimization ensures you convert that traffic into booked electrical jobs instead of wasting 70% of your ad spend on visitors who bounce.
+    </p>
+    <p>
+      FieldSprout's AI handles the entire optimization workflow—building landing pages, testing variations, implementing call tracking, and continuously improving conversion rates month over month.
+    </p>
+
+    <div class="mt-8 p-6 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-2xl">
+      <h3 class="text-xl font-bold text-gray-900 mb-3">Ready to double your website conversion rate?</h3>
+      <p class="text-gray-700 mb-4">
+        Connect your website and analytics accounts. Our AI will audit your conversion funnel and start optimizing immediately.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <a href="/signup" class="btn btn-primary px-6 py-3">
+          Start Free Trial →
+        </a>
+        <a href="/pricing" class="btn btn-secondary px-6 py-3">
+          View Pricing
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- Related Pages Section -->
+<section class="bg-white border-t border-b border-gray-200 py-12 mt-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">More Electrical Marketing Solutions</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <a href="/industries/electrical-google-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Google Ads Optimization</h3>
+        <p class="text-sm text-gray-600">Reduce cost per lead with AI-powered campaign management</p>
+      </a>
+      <a href="/industries/electrical-local-service-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/industries/electrical-meta-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Build your pipeline with targeted social media campaigns</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Browse Industries Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-6xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Marketing Solutions by Industry</h2>
+    <p class="text-gray-600 text-center mb-8">Industry-specific strategies for home service businesses</p>
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <a href="/industries/hvac-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">❄️</div>
+        <div class="text-sm font-semibold text-gray-900">HVAC</div>
+      </a>
+      <a href="/industries/plumbing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔧</div>
+        <div class="text-sm font-semibold text-gray-900">Plumbing</div>
+      </a>
+      <a href="/industries/electrical-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">⚡</div>
+        <div class="text-sm font-semibold text-gray-900">Electrical</div>
+      </a>
+      <a href="/industries/roofing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏠</div>
+        <div class="text-sm font-semibold text-gray-900">Roofing</div>
+      </a>
+      <a href="/industries/pest-control-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🐛</div>
+        <div class="text-sm font-semibold text-gray-900">Pest Control</div>
+      </a>
+      <a href="/industries/lawn-care-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🌱</div>
+        <div class="text-sm font-semibold text-gray-900">Lawn Care</div>
+      </a>
+      <a href="/industries/garage-door-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🚪</div>
+        <div class="text-sm font-semibold text-gray-900">Garage Door</div>
+      </a>
+      <a href="/industries/pools-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏊</div>
+        <div class="text-sm font-semibold text-gray-900">Pools</div>
+      </a>
+      <a href="/industries/concrete-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏗️</div>
+        <div class="text-sm font-semibold text-gray-900">Concrete</div>
+      </a>
+      <a href="/industries/fencing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪵</div>
+        <div class="text-sm font-semibold text-gray-900">Fencing</div>
+      </a>
+      <a href="/industries/solar-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">☀️</div>
+        <div class="text-sm font-semibold text-gray-900">Solar</div>
+      </a>
+      <a href="/industries/windows-doors-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪟</div>
+        <div class="text-sm font-semibold text-gray-900">Windows & Doors</div>
+      </a>
+      <a href="/industries/irrigation-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">💧</div>
+        <div class="text-sm font-semibold text-gray-900">Irrigation</div>
+      </a>
+      <a href="/industries/restoration-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔨</div>
+        <div class="text-sm font-semibold text-gray-900">Restoration</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Products Section -->
+<section class="bg-white py-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Our Marketing Products</h2>
+    <p class="text-gray-600 text-center mb-8">AI-powered marketing automation for home service businesses</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <a href="/products/google-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">🎯</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Ads</h3>
+        <p class="text-sm text-gray-600">AI agents optimize your campaigns 24/7 to reduce cost per lead</p>
+      </a>
+      <a href="/products/facebook-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📱</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Targeted social campaigns that build your pipeline</p>
+      </a>
+      <a href="/products/local-services-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">✅</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/products/google-business-profile" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📍</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Business Profile</h3>
+        <p class="text-sm text-gray-600">Optimize your local presence and get more reviews</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-4xl mx-auto px-4">
+    <h2 class="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+
+    <div class="space-y-4">
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What's a good conversion rate for an electrical contractor website?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Electrical websites should aim for 4-9% conversion rate for emergency service pages and 3-6% for panel upgrade/installation pages. Mobile conversion rates are typically 25-35% lower than desktop unless specifically optimized. FieldSprout's CRO tools help you reach the top quartile.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          Should electrical contractors use click-to-call buttons or forms?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          For emergency electrical services, click-to-call buttons convert 2-3x better than forms. For planned services like panel upgrades or EV charger installations, use both—a prominent phone number and a simple 3-field form. FieldSprout's AI tests button placement and form fields to maximize conversions.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          How important is website speed for electrical lead generation?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Critical. Every 1-second delay in page load time reduces conversions by 7%. Electrical emergency searchers have zero patience—if your site takes 5+ seconds to load on mobile, they'll hit back and call a competitor. Aim for under 2.5 seconds.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What trust signals should electrical contractor websites display?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Display electrical license number, master electrician certification, insurance badges, Google review stars and count, years in business, response time promises, and photos of licensed electricians with trucks. FieldSprout automatically updates review counts and star ratings daily.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+{% endblock %}

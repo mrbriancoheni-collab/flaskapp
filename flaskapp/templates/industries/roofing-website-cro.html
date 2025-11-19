@@ -1,0 +1,602 @@
+{% extends 'base_public.html' %}
+{% block title %}Roofing Website & Conversion Optimization — FieldSprout{% endblock %}
+
+{% block head_extra %}
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Industries",
+      "item": "https://fieldsprout.io/industries"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Roofing Website CRO",
+      "item": "https://fieldsprout.io/industries/roofing-website-cro"
+    }
+  ]
+}
+</script>
+
+<!-- FAQ Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What's a good conversion rate for a roofing website?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Roofing websites should aim for 3-8% conversion rate for emergency leak repair pages and 2-5% for roof replacement pages. Mobile conversion rates are typically 25-35% lower than desktop unless specifically optimized. FieldSprout's CRO tools help you reach top-quartile performance."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Should roofing websites use forms or click-to-call?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "For emergency leaks, click-to-call converts 3-4x better than forms. For roof replacements and inspections, use both—a prominent phone number and a simple form with financing calculator. FieldSprout's AI tests which converts better for each service type and traffic source."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How important is website speed for roofing lead generation?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Critical. Every 1-second delay reduces conversions by 7%. Emergency roof leak searchers have zero patience—if your site takes 5+ seconds to load on mobile, they'll call a competitor. Aim for under 2.5 seconds, especially for emergency pages."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What trust signals should roofing websites display?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Display contractor license number, Google review stars and count, years in business, manufacturer certifications (GAF, Owens Corning), warranty details, insurance accepted, and before/after project photos. FieldSprout automatically updates review counts daily."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- Service Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "Roofing Website Conversion Rate Optimization",
+  "provider": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  },
+  "description": "AI-powered website optimization for roofing contractors, automatically testing landing pages, financing calculators, before/after galleries, and mobile experiences to maximize estimate bookings and roof replacement conversions.",
+  "areaServed": {
+    "@type": "Country",
+    "name": "United States"
+  }
+}
+</script>
+
+<!-- HowTo Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Optimize a Roofing Website for More Leads",
+  "description": "Step-by-step guide to improving roofing website conversion rates through mobile optimization, financing emphasis, trust signals, and service-specific landing pages.",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Create service-specific landing pages",
+      "text": "Build dedicated pages for emergency leak repair, roof replacement, storm damage, and roof inspections. Match ad messaging to landing page headlines. Include service-specific pricing, financing calculators, and relevant warranties."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Emphasize financing for roof replacements",
+      "text": "Prominently display monthly payment options and financing calculator on all replacement pages. Show $149/month instead of $15,000 total cost. Highlight 0% financing and no-payment periods to overcome price objections."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Optimize for emergency vs. planned services",
+      "text": "Emergency leak pages need click-to-call only with 24/7 availability. Roof replacement pages need financing calculator, material options, before/after gallery, and simple estimate request form (3-4 fields max)."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Display roofing-specific trust signals",
+      "text": "Show contractor license, manufacturer certifications (GAF Master Elite, Owens Corning Preferred), Google reviews with 4.5+ stars, warranty details (50-year materials, lifetime workmanship), and insurance partnerships."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Implement call tracking for roofing leads",
+      "text": "Use dynamic call tracking to attribute phone leads (70-85% of roofing conversions) to specific campaigns and service types. Track emergency vs. replacement calls separately to optimize budget allocation."
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-12">
+  <div class="mb-8">
+    <span class="inline-block px-3 py-1 text-sm font-semibold text-purple-700 bg-purple-50 border border-purple-200 rounded-full mb-4">
+      <i class="fa-solid fa-chart-line"></i> Conversion Optimization
+    </span>
+    <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+      Website & Conversion Rate Optimization for Roofing Contractors
+    </h1>
+    <p class="text-xl text-gray-700 leading-relaxed">
+      Your roofing website gets traffic but doesn't convert high-value replacement leads? FieldSprout's AI continuously optimizes your landing pages, financing messaging, and mobile experience—turning more visitors into booked estimates and roof replacement contracts.
+    </p>
+  </div>
+
+  <div class="bg-purple-50 border-l-4 border-purple-600 p-6 rounded-lg mb-12">
+    <div class="flex items-start">
+      <i class="fa-solid fa-rocket text-purple-600 text-2xl mr-4 mt-1"></i>
+      <div>
+        <h3 class="text-lg font-bold text-purple-900 mb-2">Roofing Website Performance Gains</h3>
+        <ul class="text-sm text-purple-800 space-y-1">
+          <li>• <strong>+56% conversion rate</strong> by prominently displaying financing calculator above fold</li>
+          <li>• <strong>+38% estimate requests</strong> with before/after roof replacement gallery</li>
+          <li>• <strong>−49% form abandonment</strong> by reducing fields from 8 to 4</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose prose-lg max-w-none">
+    <h2>Why Roofing Website Optimization Matters</h2>
+    <p>
+      You're spending thousands per month on Google Ads and LSAs driving traffic to your website. But if your site doesn't convert that traffic into high-value roof replacement estimates ($10,000-25,000 jobs), you're missing the biggest revenue opportunity in home services.
+    </p>
+    <p>
+      A $300 leak repair is nice. A $15,000 roof replacement is transformative. Website optimization for roofing is about converting visitors into high-ticket estimate requests by emphasizing financing, showcasing quality work, and building trust.
+    </p>
+    <p>
+      <strong>The typical roofing website conversion funnel:</strong>
+    </p>
+    <ul>
+      <li>100 visitors land on your roof replacement page</li>
+      <li>55 bounce immediately (slow load, no financing info visible, unclear pricing)</li>
+      <li>35 read content but don't take action (intimidated by cost, unclear next step)</li>
+      <li>7 start filling out a form but abandon (asking too many questions)</li>
+      <li>3 complete a form or call</li>
+    </ul>
+    <p>
+      That's a 3% conversion rate. With proper optimization emphasizing financing and trust, you can get to 6-9%—doubling or tripling your roof replacement leads.
+    </p>
+
+    <h2>The Roofing Website Conversion Problem</h2>
+    <p>
+      Most roofing contractor websites fail to convert because they:
+    </p>
+    <ul>
+      <li><strong>Hide financing:</strong> Buried in fine print or not mentioned until after estimate</li>
+      <li><strong>Show total cost first:</strong> "$15,000 Roof Replacement" scares people vs. "$149/Month"</li>
+      <li><strong>Generic pages:</strong> Not addressing specific needs (emergency leak vs. planned replacement vs. storm damage)</li>
+      <li><strong>No visual proof:</strong> Missing before/after photos, completed project galleries, drone footage</li>
+      <li><strong>Weak trust signals:</strong> No manufacturer certifications, vague warranties, limited reviews</li>
+      <li><strong>Long forms:</strong> Asking for property details, roof age, material preferences before establishing value</li>
+    </ul>
+
+    <h2>How FieldSprout Optimizes Roofing Websites</h2>
+
+    <h3>1. Financing Emphasis for Roof Replacement</h3>
+    <p>
+      The #1 conversion killer: showing total cost without financing. FieldSprout ensures every roof replacement page emphasizes monthly payments:
+    </p>
+    <ul>
+      <li><strong>Financing calculator above fold:</strong> Enter roof size, see monthly payment instantly</li>
+      <li><strong>Monthly payment headlines:</strong> "New Roof from $149/Month" not "$15,000 Replacement"</li>
+      <li><strong>Financing options prominent:</strong> "0% APR for 60 Months" or "No Payment for 12 Months"</li>
+      <li><strong>Comparison messaging:</strong> "$149/month is less than your cable bill for a new roof"</li>
+      <li><strong>Pre-approval links:</strong> "Get pre-approved in 60 seconds" (reduces friction)</li>
+    </ul>
+
+    <h3>2. Service-Specific Landing Page Optimization</h3>
+    <p>
+      Sending all traffic to a generic homepage kills conversions. FieldSprout builds dedicated landing pages:
+    </p>
+
+    <h4>Emergency Leak Repair Landing Page</h4>
+    <ul>
+      <li><strong>Headline:</strong> "Emergency Roof Leak Repair in [City] – Available 24/7"</li>
+      <li><strong>Subheadline:</strong> "Roof leaking? We stop leaks fast. Licensed roofers arrive same-day."</li>
+      <li><strong>CTA:</strong> Prominent click-to-call button only (no form for emergencies)</li>
+      <li><strong>Trust signals:</strong> 24/7 availability, same-day service, licensed & insured</li>
+      <li><strong>Social proof:</strong> Recent emergency repair reviews</li>
+      <li><strong>Process outline:</strong> "Call → We arrive in 2 hours → Stop leak → Provide repair quote"</li>
+    </ul>
+
+    <h4>Roof Replacement Landing Page</h4>
+    <ul>
+      <li><strong>Headline:</strong> "Roof Replacement in [City] – From $149/Month with 0% Financing"</li>
+      <li><strong>Subheadline:</strong> "Lifetime warranty. 50-year materials. Free estimate. Financing available."</li>
+      <li><strong>CTA:</strong> Prominent financing calculator + "Schedule Free Estimate" form</li>
+      <li><strong>Material options:</strong> Asphalt shingles, architectural shingles, metal roofing comparison</li>
+      <li><strong>Before/after gallery:</strong> Completed roof replacement projects</li>
+      <li><strong>Trust signals:</strong> GAF Master Elite, 30+ years, A+ BBB, 1,200+ reviews</li>
+      <li><strong>Warranty details:</strong> Lifetime workmanship, 50-year materials, transferable</li>
+    </ul>
+
+    <h4>Storm Damage Inspection Landing Page</h4>
+    <ul>
+      <li><strong>Headline:</strong> "Free Storm Damage Roof Inspection – We Work With All Insurance"</li>
+      <li><strong>Subheadline:</strong> "Hail or wind damage? Get a professional inspection. We handle insurance claims."</li>
+      <li><strong>CTA:</strong> "Schedule Free Inspection" form + click-to-call</li>
+      <li><strong>Insurance process:</strong> Step-by-step guide to filing roof damage claim</li>
+      <li><strong>Trust signals:</strong> Insurance claim specialists, licensed adjusters, 95% claim approval rate</li>
+      <li><strong>Urgency messaging:</strong> "Schedule within 72 hours to protect your insurance claim"</li>
+    </ul>
+
+    <h3>3. Form Optimization for Roofing</h3>
+    <p>
+      Every form field reduces conversion rate. FieldSprout's AI tests and optimizes:
+    </p>
+
+    <h4>Emergency Leak Repair Pages</h4>
+    <p>
+      <strong>Best practice:</strong> Click-to-call buttons only. No forms for emergencies.
+    </p>
+
+    <h4>Roof Replacement Estimate Forms</h4>
+    <p>
+      <strong>Recommended fields:</strong>
+    </p>
+    <ul>
+      <li>Name</li>
+      <li>Phone number</li>
+      <li>Email</li>
+      <li>Address (for estimate preparation)</li>
+    </ul>
+    <p>
+      Optional: "Approximate year home was built?" (helps prepare estimate)
+    </p>
+
+    <h4>Inspection Request Forms</h4>
+    <p>
+      <strong>Recommended fields:</strong>
+    </p>
+    <ul>
+      <li>Name</li>
+      <li>Phone number</li>
+      <li>ZIP code</li>
+      <li>Service needed (dropdown: Storm Damage, General Inspection, Leak Investigation)</li>
+    </ul>
+
+    <h3>4. Call Tracking & Attribution</h3>
+    <p>
+      70-85% of roofing leads come via phone call. FieldSprout implements:
+    </p>
+    <ul>
+      <li><strong>Dynamic number insertion:</strong> Different tracking numbers for Google Ads, LSAs, Facebook, organic</li>
+      <li><strong>Service-level tracking:</strong> Separate numbers for emergency leak vs. roof replacement vs. storm damage</li>
+      <li><strong>Source attribution:</strong> Know which campaigns drive high-value replacement leads vs. low-value repairs</li>
+      <li><strong>Call recording:</strong> Review calls to identify financing objections and train sales team</li>
+      <li><strong>Conversion tracking:</strong> Mark calls as estimate booked, replacement sold, or information-only</li>
+    </ul>
+
+    <h3>5. Trust Signal Optimization for High-Ticket Roofing</h3>
+    <p>
+      $15,000 roof replacement requires maximum trust. FieldSprout ensures:
+    </p>
+
+    <h4>Above-the-Fold Trust Elements</h4>
+    <ul>
+      <li><strong>Google review stars:</strong> "4.8 stars from 1,247 reviews"</li>
+      <li><strong>Years in business:</strong> "Roofing [City] since 1985"</li>
+      <li><strong>Manufacturer certifications:</strong> "GAF Master Elite Contractor" (top 3% of roofers)</li>
+      <li><strong>Contractor license:</strong> "Licensed Contractor #12345"</li>
+      <li><strong>Warranty:</strong> "Lifetime Workmanship + 50-Year Material Warranty"</li>
+      <li><strong>Insurance partnerships:</strong> "Approved by All Major Insurance Companies"</li>
+    </ul>
+
+    <h4>Visual Trust Signals</h4>
+    <ul>
+      <li>Before/after roof replacement photos (dramatic transformations)</li>
+      <li>Drone aerial footage of completed projects</li>
+      <li>Professional crew photos with branded trucks</li>
+      <li>Manufacturer certification badges (GAF, Owens Corning, CertainTeed)</li>
+      <li>Video testimonials from happy homeowners</li>
+    </ul>
+
+    <h3>6. Speed Optimization for Mobile</h3>
+    <p>
+      Over 60% of roofing searches happen on mobile. FieldSprout's speed optimization:
+    </p>
+    <ul>
+      <li><strong>Image optimization:</strong> WebP format, lazy loading, optimized before/after photos</li>
+      <li><strong>Code minification:</strong> Compress CSS, JavaScript, HTML</li>
+      <li><strong>Browser caching:</strong> Store static assets locally</li>
+      <li><strong>CDN delivery:</strong> Serve content from fast servers</li>
+      <li><strong>Critical CSS:</strong> Load phone button and financing calculator first</li>
+    </ul>
+    <p>
+      Target: Under 2.5 seconds on 4G mobile, under 1.5 seconds on desktop.
+    </p>
+
+    <h3>7. Continuous A/B Testing</h3>
+    <p>
+      FieldSprout's AI continuously tests variations:
+    </p>
+    <ul>
+      <li><strong>Financing position:</strong> Calculator above vs. below fold vs. sticky sidebar</li>
+      <li><strong>Headline focus:</strong> "$149/Month" vs. "0% Financing" vs. "Lifetime Warranty"</li>
+      <li><strong>CTA buttons:</strong> "Get Free Estimate" vs. "Schedule Inspection" vs. "See Your Payment"</li>
+      <li><strong>Gallery placement:</strong> Before/after photos above vs. below estimate form</li>
+      <li><strong>Pricing display:</strong> Monthly payment only vs. monthly + total cost comparison</li>
+    </ul>
+
+    <h2>Roofing Website Conversion Benchmarks</h2>
+
+    <table style="width:100%; border-collapse: collapse; margin: 2rem 0;">
+      <thead>
+        <tr style="background: #f3f4f6;">
+          <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left;">Page Type</th>
+          <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left;">Poor</th>
+          <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left;">Average</th>
+          <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left;">Excellent</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;"><strong>Emergency Leak Repair</strong></td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">2-4%</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">5-7%</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">8-12%</td>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;"><strong>Roof Replacement</strong></td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">1-2%</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">3-5%</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">6-9%</td>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;"><strong>Storm Damage Inspection</strong></td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">2-3%</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">4-6%</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">7-10%</td>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;"><strong>General Roofing Homepage</strong></td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">0.5-1%</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">1-2%</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">2-4%</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Common Roofing Website Conversion Mistakes</h2>
+
+    <h3>Mistake #1: Hiding Financing</h3>
+    <p>
+      Showing "$15,000 Roof Replacement" without financing scares away 60-70% of potential customers who could afford $149/month.
+    </p>
+    <p>
+      <strong>Fix:</strong> Prominently display financing calculator above fold on all replacement pages. Lead with monthly payment.
+    </p>
+
+    <h3>Mistake #2: Generic Roof Pages</h3>
+    <p>
+      Sending leak repair, replacement, and storm damage traffic to the same page reduces conversions by 40-60%.
+    </p>
+    <p>
+      <strong>Fix:</strong> Create service-specific landing pages with tailored messaging, pricing, and CTAs for each service type.
+    </p>
+
+    <h3>Mistake #3: No Visual Proof</h3>
+    <p>
+      Generic stock photos don't build trust for $15,000 decisions. Homeowners want to see your actual work.
+    </p>
+    <p>
+      <strong>Fix:</strong> Prominently display before/after galleries, drone footage, and completed project photos specific to your area.
+    </p>
+
+    <h3>Mistake #4: No Call Tracking</h3>
+    <p>
+      Without tracking phone leads (70-85% of roofing conversions), you can't optimize campaigns or measure true ROI by service type.
+    </p>
+    <p>
+      <strong>Fix:</strong> Implement dynamic call tracking with service-level and source attribution.
+    </p>
+
+    <h2>Get Started with Roofing Website Optimization</h2>
+    <p>
+      You're investing in Google Ads and LSAs to drive traffic. Website optimization ensures you convert that traffic into high-value roof replacement estimates instead of low-margin leak repairs—maximizing your marketing ROI.
+    </p>
+    <p>
+      FieldSprout's AI handles the entire optimization workflow—building service-specific landing pages, testing financing calculator positions, implementing call tracking, and continuously improving conversion rates.
+    </p>
+
+    <div class="mt-8 p-6 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-2xl">
+      <h3 class="text-xl font-bold text-gray-900 mb-3">Ready to double your roof replacement estimates?</h3>
+      <p class="text-gray-700 mb-4">
+        Connect your website and analytics accounts. Our AI will audit your conversion funnel and start optimizing immediately.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <a href="/signup" class="btn btn-primary px-6 py-3">
+          Start Free Trial →
+        </a>
+        <a href="/pricing" class="btn btn-secondary px-6 py-3">
+          View Pricing
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- Related Pages Section -->
+<section class="bg-white border-t border-b border-gray-200 py-12 mt-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">More Roofing Marketing Solutions</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <a href="/industries/roofing-google-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Google Ads Optimization</h3>
+        <p class="text-sm text-gray-600">Reduce cost per lead with AI-powered campaign management</p>
+      </a>
+      <a href="/industries/roofing-local-service-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/industries/roofing-meta-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Build your pipeline with targeted social media campaigns</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Browse Industries Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-6xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Marketing Solutions by Industry</h2>
+    <p class="text-gray-600 text-center mb-8">Industry-specific strategies for home service businesses</p>
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <a href="/industries/hvac-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">❄️</div>
+        <div class="text-sm font-semibold text-gray-900">HVAC</div>
+      </a>
+      <a href="/industries/plumbing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔧</div>
+        <div class="text-sm font-semibold text-gray-900">Plumbing</div>
+      </a>
+      <a href="/industries/electrical-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">⚡</div>
+        <div class="text-sm font-semibold text-gray-900">Electrical</div>
+      </a>
+      <a href="/industries/roofing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏠</div>
+        <div class="text-sm font-semibold text-gray-900">Roofing</div>
+      </a>
+      <a href="/industries/pest-control-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🐛</div>
+        <div class="text-sm font-semibold text-gray-900">Pest Control</div>
+      </a>
+      <a href="/industries/lawn-care-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🌱</div>
+        <div class="text-sm font-semibold text-gray-900">Lawn Care</div>
+      </a>
+      <a href="/industries/garage-door-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🚪</div>
+        <div class="text-sm font-semibold text-gray-900">Garage Door</div>
+      </a>
+      <a href="/industries/pools-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏊</div>
+        <div class="text-sm font-semibold text-gray-900">Pools</div>
+      </a>
+      <a href="/industries/concrete-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏗️</div>
+        <div class="text-sm font-semibold text-gray-900">Concrete</div>
+      </a>
+      <a href="/industries/fencing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪵</div>
+        <div class="text-sm font-semibold text-gray-900">Fencing</div>
+      </a>
+      <a href="/industries/solar-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">☀️</div>
+        <div class="text-sm font-semibold text-gray-900">Solar</div>
+      </a>
+      <a href="/industries/windows-doors-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪟</div>
+        <div class="text-sm font-semibold text-gray-900">Windows & Doors</div>
+      </a>
+      <a href="/industries/irrigation-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">💧</div>
+        <div class="text-sm font-semibold text-gray-900">Irrigation</div>
+      </a>
+      <a href="/industries/restoration-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔨</div>
+        <div class="text-sm font-semibold text-gray-900">Restoration</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Products Section -->
+<section class="bg-white py-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Our Marketing Products</h2>
+    <p class="text-gray-600 text-center mb-8">AI-powered marketing automation for home service businesses</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <a href="/products/google-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">🎯</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Ads</h3>
+        <p class="text-sm text-gray-600">AI agents optimize your campaigns 24/7 to reduce cost per lead</p>
+      </a>
+      <a href="/products/facebook-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📱</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Targeted social campaigns that build your pipeline</p>
+      </a>
+      <a href="/products/local-services-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">✅</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/products/google-business-profile" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📍</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Business Profile</h3>
+        <p class="text-sm text-gray-600">Optimize your local presence and get more reviews</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-4xl mx-auto px-4">
+    <h2 class="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+
+    <div class="space-y-4">
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What's a good conversion rate for a roofing website?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Roofing websites should aim for 3-8% conversion rate for emergency leak repair pages and 2-5% for roof replacement pages. Mobile conversion rates are typically 25-35% lower than desktop unless specifically optimized. FieldSprout's CRO tools help you reach top-quartile performance.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          Should roofing websites use forms or click-to-call?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          For emergency leaks, click-to-call converts 3-4x better than forms. For roof replacements and inspections, use both—a prominent phone number and a simple form with financing calculator. FieldSprout's AI tests which converts better for each service type and traffic source.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          How important is website speed for roofing lead generation?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Critical. Every 1-second delay reduces conversions by 7%. Emergency roof leak searchers have zero patience—if your site takes 5+ seconds to load on mobile, they'll call a competitor. Aim for under 2.5 seconds, especially for emergency pages.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What trust signals should roofing websites display?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Display contractor license number, Google review stars and count, years in business, manufacturer certifications (GAF, Owens Corning), warranty details, insurance accepted, and before/after project photos. FieldSprout automatically updates review counts daily.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+{% endblock %}

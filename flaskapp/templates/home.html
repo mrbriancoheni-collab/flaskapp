@@ -260,14 +260,24 @@
         const overlay = document.getElementById('playOverlay');
 
         if (video && overlay) {
-          // Click overlay to play video
-          overlay.addEventListener('click', function(e) {
+          // Toggle play/pause when clicking overlay or video
+          function toggleVideo(e) {
             e.preventDefault();
             e.stopPropagation();
-            video.play().catch(function(error) {
-              console.log('Play error:', error);
-            });
-          });
+            if (video.paused) {
+              video.play().catch(function(error) {
+                console.log('Play error:', error);
+              });
+            } else {
+              video.pause();
+            }
+          }
+
+          // Click overlay to toggle video
+          overlay.addEventListener('click', toggleVideo);
+
+          // Click video to toggle play/pause
+          video.addEventListener('click', toggleVideo);
 
           // Hide overlay when video starts playing
           video.addEventListener('play', function() {
@@ -289,15 +299,6 @@
           video.addEventListener('ended', function() {
             overlay.style.opacity = '1';
             overlay.style.pointerEvents = 'auto';
-          });
-
-          // Also allow clicking the video itself to toggle play/pause
-          video.addEventListener('click', function() {
-            if (video.paused) {
-              video.play();
-            } else {
-              video.pause();
-            }
           });
         }
       });

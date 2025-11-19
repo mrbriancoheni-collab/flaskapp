@@ -55,3 +55,10 @@ Thumbs.db
 .env.ads_grader
 .env
 /tmp/
+
+# Media files (videos are too large for git, managed on server)
+flaskapp/static/video/*.mp4
+flaskapp/static/video/*.mov
+flaskapp/static/video/*.avi
+flaskapp/static/video/*.webm
+!flaskapp/static/video/.gitkeep

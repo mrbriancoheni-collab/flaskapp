@@ -21,10 +21,33 @@ CREATE TABLE IF NOT EXISTS contact_group_members (
     UNIQUE KEY uq_contact_group (contact_id, group_id),
     INDEX idx_contact_group_members_contact (contact_id),
     INDEX idx_contact_group_members_group (group_id),
-    FOREIGN KEY (contact_id) REFERENCES crm_contacts(id) ON DELETE CASCADE,
-    FOREIGN KEY (group_id) REFERENCES contact_groups(id) ON DELETE CASCADE,
-    FOREIGN KEY (added_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+    INDEX idx_contact_group_members_user (added_by_user_id),
+    CONSTRAINT fk_contact_group_members_group FOREIGN KEY (group_id) REFERENCES contact_groups(id) ON DELETE CASCADE,
+    CONSTRAINT fk_contact_group_members_user FOREIGN KEY (added_by_user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Add foreign key to crm_contacts separately (in case crm_contacts table doesn't exist yet)
+-- This is optional - if it fails, the system will still work, you just won't have referential integrity
+-- You can add it manually later with:
+-- ALTER TABLE contact_group_members ADD CONSTRAINT fk_contact_group_members_contact FOREIGN KEY (contact_id) REFERENCES crm_contacts(id) ON DELETE CASCADE;
+
+SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='';
+SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
+
+-- Try to add the foreign key, ignore if it fails
+SET @s = (SELECT IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES
+     WHERE TABLE_SCHEMA = DATABASE()
+     AND TABLE_NAME = 'crm_contacts') > 0,
+    'ALTER TABLE contact_group_members ADD CONSTRAINT fk_contact_group_members_contact FOREIGN KEY (contact_id) REFERENCES crm_contacts(id) ON DELETE CASCADE',
+    'SELECT "Skipping crm_contacts FK - table does not exist" AS note'
+));
+PREPARE stmt FROM @s;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET SQL_MODE=@OLD_SQL_MODE;
+SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 
 -- Email Templates table
 CREATE TABLE IF NOT EXISTS email_templates (

@@ -158,7 +158,7 @@ function closePricingModal() {
   document.body.style.overflow = 'auto';
 }
 
-function upgradeToPlan(planType) {
+async function upgradeToPlan(planType) {
   // Get Stripe price IDs from the backend
   const priceIds = {
     'annual': '{{ config.STRIPE_YEARLY_PRICE_ID }}',
@@ -173,44 +173,68 @@ function upgradeToPlan(planType) {
   }
 
   // Show loading state
-  event.target.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading checkout...';
-  event.target.disabled = true;
+  const button = event.target;
+  const originalText = planType === 'annual' ? 'Start Annual Plan →' : 'Start Monthly Plan →';
+  button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading checkout...';
+  button.disabled = true;
 
-  // Create Stripe Checkout session
-  fetch('/billing/create-checkout-session', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
-    },
-    body: JSON.stringify({
-      price_id: priceId,
-      plan_type: planType,
-      success_url: window.location.origin + '/account/dashboard?upgrade=success',
-      cancel_url: window.location.href
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.error) {
-      alert('Error: ' + data.error);
-      event.target.disabled = false;
-      event.target.innerHTML = planType === 'annual' ? 'Start Annual Plan →' : 'Start Monthly Plan →';
-    } else if (data.checkout_url) {
-      // Redirect to Stripe Checkout
-      window.location.href = data.checkout_url;
-    } else {
-      alert('Unexpected response. Please try again.');
-      event.target.disabled = false;
-      event.target.innerHTML = planType === 'annual' ? 'Start Annual Plan →' : 'Start Monthly Plan →';
+  // Retry logic with exponential backoff
+  const maxRetries = 3;
+  const baseDelay = 1000; // 1 second
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch('/billing/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
+        },
+        body: JSON.stringify({
+          price_id: priceId,
+          plan_type: planType,
+          success_url: window.location.origin + '/account/dashboard?upgrade=success',
+          cancel_url: window.location.href
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        // Server returned an error - don't retry
+        alert('Error: ' + data.error);
+        button.disabled = false;
+        button.innerHTML = originalText;
+        return;
+      } else if (data.checkout_url) {
+        // Success - redirect to Stripe Checkout
+        window.location.href = data.checkout_url;
+        return;
+      } else {
+        alert('Unexpected response. Please try again.');
+        button.disabled = false;
+        button.innerHTML = originalText;
+        return;
+      }
+    } catch (error) {
+      console.error(`Attempt ${attempt + 1} failed:`, error);
+
+      // If this was the last attempt, show error
+      if (attempt === maxRetries - 1) {
+        alert('Network error after ' + maxRetries + ' attempts. Please check your connection and try again.');
+        button.disabled = false;
+        button.innerHTML = originalText;
+        return;
+      }
+
+      // Calculate exponential backoff delay: 1s, 2s, 4s
+      const delay = baseDelay * Math.pow(2, attempt);
+      button.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>Retrying (${attempt + 1}/${maxRetries})...`;
+
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('Network error. Please try again.');
-    event.target.disabled = false;
-    event.target.innerHTML = planType === 'annual' ? 'Start Annual Plan →' : 'Start Monthly Plan →';
-  });
+  }
 }
 
 // Auto-show modal on registration completion (if enabled)

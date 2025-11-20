@@ -354,7 +354,22 @@
           </a>
         </div>
       {% endif %}
-      
+
+      <!-- Upgrade CTA Card (Non-Paid Users) -->
+      {% if not is_paid and has_endpoint('pricing') %}
+        <div class="rounded-xl border-2 border-purple-500 bg-gradient-to-br from-purple-50 to-violet-50 p-4 shadow-md mb-4">
+          <div class="flex items-center gap-2 mb-2">
+            <i class="fa-solid fa-crown text-purple-600 text-xl"></i>
+            <div class="font-bold text-purple-900">Upgrade to Pro</div>
+          </div>
+          <p class="text-sm text-purple-700 mb-3">Unlock all features and maximize your marketing results.</p>
+          <a href="{{ url_for(ep('pricing')) }}" class="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white rounded-lg font-bold transition-all shadow-md hover:shadow-lg">
+            <span>View Plans</span>
+            <i class="fa-solid fa-arrow-right text-sm"></i>
+          </a>
+        </div>
+      {% endif %}
+
       <div class="sidebar-label">
         {% if g.user and g.user.is_admin %}
           <a href="{{ url_for('admin_bp.dashboard') }}" class="secondary-link mb-2" title="Admin Dashboard">

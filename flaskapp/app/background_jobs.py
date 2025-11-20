@@ -153,7 +153,17 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
-    app.logger.info("Registered 5 scheduled background jobs")
+    # Process email queue (every 1 minute)
+    scheduler.add_job(
+        func=process_email_queue,
+        trigger='interval',
+        minutes=1,
+        id='process_email_queue',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    app.logger.info("Registered 6 scheduled background jobs")
 
 
 # ===== Scheduled Job Functions =====
@@ -388,6 +398,79 @@ def generate_google_ads_insights_weekly(app: Flask):
 
         except Exception as e:
             current_app.logger.error(f"Error in weekly Google Ads insights job: {e}", exc_info=True)
+
+
+def process_email_queue(app: Flask):
+    """
+    Process pending emails in the queue.
+
+    Sends queued emails with retry logic (max 3 attempts).
+    """
+    with app.app_context():
+        from app.models_billing import EmailQueue
+        from app.services.email_service import send_email
+        from app import db
+
+        try:
+            # Get pending emails (oldest first, limit to 50 per run)
+            pending_emails = EmailQueue.query.filter_by(status='pending').filter(
+                EmailQueue.attempts < EmailQueue.max_attempts
+            ).order_by(EmailQueue.created_at).limit(50).all()
+
+            if not pending_emails:
+                return
+
+            sent_count = 0
+            failed_count = 0
+
+            for email_item in pending_emails:
+                try:
+                    # Attempt to send email
+                    send_email(
+                        to=email_item.to_email,
+                        subject=email_item.subject,
+                        html_body=email_item.html_body,
+                        text_body=email_item.text_body,
+                        use_bulk_credentials=email_item.use_bulk_credentials
+                    )
+
+                    # Mark as sent
+                    email_item.status = 'sent'
+                    email_item.sent_at = datetime.utcnow()
+                    sent_count += 1
+
+                    current_app.logger.info(
+                        f"Sent queued email {email_item.id} to {email_item.to_email}"
+                    )
+
+                except Exception as e:
+                    # Increment attempts
+                    email_item.attempts += 1
+                    email_item.error_message = str(e)[:1000]
+
+                    # Mark as failed if max attempts reached
+                    if email_item.attempts >= email_item.max_attempts:
+                        email_item.status = 'failed'
+                        failed_count += 1
+                        current_app.logger.error(
+                            f"Email {email_item.id} failed after {email_item.attempts} attempts: {e}"
+                        )
+                    else:
+                        current_app.logger.warning(
+                            f"Email {email_item.id} failed (attempt {email_item.attempts}): {e}"
+                        )
+
+                # Commit after each email to avoid losing progress
+                db.session.commit()
+
+            if sent_count > 0 or failed_count > 0:
+                current_app.logger.info(
+                    f"Email queue processed: sent={sent_count}, failed={failed_count}"
+                )
+
+        except Exception as e:
+            current_app.logger.error(f"Error processing email queue: {e}", exc_info=True)
+            db.session.rollback()
 
 
 def generate_google_ads_insights_daily(app: Flask):

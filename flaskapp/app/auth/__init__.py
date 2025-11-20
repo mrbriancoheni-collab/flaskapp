@@ -179,6 +179,8 @@ def _create_account_and_user(name: str, email: str, password: str):
     Assumes tables:
       accounts(id, name, created_at, ...)
       users(id, account_id, name, email, password_hash, role, email_verified, created_at, ...)
+
+    Note: Email verification is disabled - all accounts are created with email_verified=1
     """
     email_n = _normalize_email(email)
     pwd_hash = generate_password_hash(password)
@@ -202,7 +204,7 @@ def _create_account_and_user(name: str, email: str, password: str):
                 INSERT INTO users
                   (account_id, name, email, password_hash, role, email_verified, created_at)
                 VALUES
-                  (:aid, :n, :e, :ph, 'owner', 0, NOW())
+                  (:aid, :n, :e, :ph, 'owner', 1, NOW())
                 """
             ),
             {"aid": account_id, "n": name or email_n, "e": email_n, "ph": pwd_hash},
@@ -327,8 +329,8 @@ def login():
             else:
                 _set_login_session(row["id"], email)
 
-                if not row["email_verified"]:
-                    flash("Please verify your email. We can resend the link from the login page.", "warning")
+                # Email verification is disabled - all accounts have access
+                # (Legacy code removed: no more email verification warnings)
 
                 # Always prefer a safe ?next=, otherwise go to account dashboard
                 return redirect(_post_auth_target())
@@ -370,15 +372,8 @@ def register():
 
         _set_login_session(user_id, email)
 
-        # Best-effort: send verification email
-        try:
-            tok = _verification_token(user_id, email)
-            if _send_verification_email(email, tok):
-                flash("Verification email sent. Please check your inbox.", "success")
-            else:
-                flash("We could not send a verification email (mail not configured).", "warning")
-        except Exception:
-            current_app.logger.exception("Failed to send verification email")
+        # Welcome the user - no email verification needed
+        flash("Welcome to FieldSprout! Your account has been created.", "success")
 
         # After registration, land on dashboard (or safe ?next=)
         return redirect(_post_auth_target())

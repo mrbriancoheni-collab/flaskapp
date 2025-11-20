@@ -11,7 +11,7 @@
   {% if csrf_token %}<meta name="csrf-token" content="{{ csrf_token() }}">{% endif %}
   <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HZBKX56R65"></script>
-<script>
+<script nonce="{{ g.csp_nonce }}">
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
@@ -19,7 +19,7 @@
 </script>
   <!-- Tailwind via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
+  <script nonce="{{ g.csp_nonce }}">
     tailwind.config = {
       theme: {
         extend: {
@@ -341,7 +341,7 @@
   </script>
   <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17616998273"></script>
-<script>
+<script nonce="{{ g.csp_nonce }}">
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
@@ -353,7 +353,7 @@
   {% include 'includes/page_view_tracking.html' %}
 
   <!-- Mobile Menu Toggle Script -->
-  <script>
+  <script nonce="{{ g.csp_nonce }}">
     (function() {
       var openBtn = document.getElementById('openMenu');
       var mobileMenu = document.getElementById('mobileMenu');

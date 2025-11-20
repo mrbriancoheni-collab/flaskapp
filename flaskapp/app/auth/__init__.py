@@ -192,13 +192,21 @@ def _create_account_and_user(name: str, email: str, password: str):
         if exist:
             return None
 
-        acc_res = conn.execute(
+        # Insert account
+        conn.execute(
             text("INSERT INTO accounts (name, created_at) VALUES (:n, NOW())"),
             {"n": name or email_n},
         )
-        account_id = acc_res.lastrowid
 
-        user_res = conn.execute(
+        # Get the last inserted account ID using LAST_INSERT_ID()
+        account_id_result = conn.execute(text("SELECT LAST_INSERT_ID()")).scalar()
+        account_id = int(account_id_result) if account_id_result else None
+
+        if not account_id:
+            raise Exception("Failed to retrieve account ID after insert")
+
+        # Insert user
+        conn.execute(
             text(
                 """
                 INSERT INTO users
@@ -209,7 +217,15 @@ def _create_account_and_user(name: str, email: str, password: str):
             ),
             {"aid": account_id, "n": name or email_n, "e": email_n, "ph": pwd_hash},
         )
-        return user_res.lastrowid
+
+        # Get the last inserted user ID using LAST_INSERT_ID()
+        user_id_result = conn.execute(text("SELECT LAST_INSERT_ID()")).scalar()
+        user_id = int(user_id_result) if user_id_result else None
+
+        if not user_id:
+            raise Exception("Failed to retrieve user ID after insert")
+
+        return user_id
 
 
 def _create_user_and_account(name: str, email: str, password: Optional[str] = None, email_verified: bool = False):
@@ -234,15 +250,22 @@ def _create_user_and_account(name: str, email: str, password: Optional[str] = No
         if exist:
             return None, None
 
-        acc_res = conn.execute(
+        # Insert account
+        conn.execute(
             text("INSERT INTO accounts (name, created_at) VALUES (:n, NOW())"),
             {"n": name or email_n},
         )
-        account_id = acc_res.lastrowid
+
+        # Get the last inserted account ID using LAST_INSERT_ID()
+        account_id_result = conn.execute(text("SELECT LAST_INSERT_ID()")).scalar()
+        account_id = int(account_id_result) if account_id_result else None
+
+        if not account_id:
+            raise Exception("Failed to retrieve account ID after insert")
 
         # Set email_verified_at when email is verified (e.g., OAuth providers)
         if email_verified:
-            user_res = conn.execute(
+            conn.execute(
                 text(
                     """
                     INSERT INTO users
@@ -254,7 +277,7 @@ def _create_user_and_account(name: str, email: str, password: Optional[str] = No
                 {"aid": account_id, "n": name or email_n, "e": email_n, "ph": pwd_hash},
             )
         else:
-            user_res = conn.execute(
+            conn.execute(
                 text(
                     """
                     INSERT INTO users
@@ -265,7 +288,15 @@ def _create_user_and_account(name: str, email: str, password: Optional[str] = No
                 ),
                 {"aid": account_id, "n": name or email_n, "e": email_n, "ph": pwd_hash},
             )
-        return account_id, user_res.lastrowid
+
+        # Get the last inserted user ID using LAST_INSERT_ID()
+        user_id_result = conn.execute(text("SELECT LAST_INSERT_ID()")).scalar()
+        user_id = int(user_id_result) if user_id_result else None
+
+        if not user_id:
+            raise Exception("Failed to retrieve user ID after insert")
+
+        return account_id, user_id
 
 
 # ---- itsdangerous (email verification & password reset tokens) -------------

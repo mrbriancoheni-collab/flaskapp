@@ -661,6 +661,13 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register email_workflow_bp")
 
+    try:
+        from app.admin.servicetitan_routes import servicetitan_bp
+        app.register_blueprint(servicetitan_bp)  # url_prefix=/admin/servicetitan
+        app.logger.info("servicetitan_bp registered at /admin/servicetitan")
+    except Exception:
+        app.logger.exception("Failed to register servicetitan_bp")
+
     # --- Email Tracking (public endpoints for pixel and click tracking) ----
     try:
         from app.email_tracking_routes import email_tracking_bp

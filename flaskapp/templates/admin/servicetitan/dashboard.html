@@ -1,0 +1,241 @@
+{% extends "base_admin.html" %}
+{% block title %}ServiceTitan Integration – Dashboard{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold">ServiceTitan Integration</h1>
+  <div class="flex gap-2">
+    <a href="{{ url_for('servicetitan_bp.settings') }}" class="px-4 py-2 bg-gray-100 border rounded-lg hover:bg-gray-200 text-sm">
+      <i class="fa-solid fa-cog mr-1"></i> Settings
+    </a>
+  </div>
+</div>
+
+{% if not connection %}
+  <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
+    <h2 class="font-semibold text-lg mb-2"><i class="fa-solid fa-exclamation-triangle text-yellow-600 mr-2"></i> ServiceTitan Not Connected</h2>
+    <p class="text-gray-700 mb-4">Connect your ServiceTitan account to sync capacity, service, and sales data for Google Ads optimization.</p>
+    <a href="{{ url_for('servicetitan_bp.settings') }}" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+      <i class="fa-solid fa-plug mr-1"></i> Connect ServiceTitan
+    </a>
+  </div>
+{% else %}
+  <!-- Connection Status -->
+  <div class="bg-white border rounded-xl p-4 mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold">Connection Status</h2>
+      {% if connection.is_active %}
+        <span class="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full">
+          <i class="fa-solid fa-check-circle mr-1"></i> Active
+        </span>
+      {% else %}
+        <span class="px-3 py-1 bg-red-100 text-red-800 text-sm rounded-full">
+          <i class="fa-solid fa-times-circle mr-1"></i> Inactive
+        </span>
+      {% endif %}
+    </div>
+    <div class="grid md:grid-cols-3 gap-4 text-sm">
+      <div>
+        <div class="text-gray-500 mb-1">Tenant ID</div>
+        <div class="font-mono">{{ connection.tenant_id }}</div>
+      </div>
+      <div>
+        <div class="text-gray-500 mb-1">Last Sync</div>
+        <div>
+          {% if connection.last_sync_at %}
+            {{ connection.last_sync_at.strftime('%Y-%m-%d %H:%M') }}
+          {% else %}
+            Never
+          {% endif %}
+        </div>
+      </div>
+      <div>
+        <div class="text-gray-500 mb-1">Sync Frequency</div>
+        <div>Every {{ connection.sync_frequency_hours }} hours</div>
+      </div>
+    </div>
+    <div class="mt-4 pt-4 border-t">
+      <button onclick="testConnection()" class="px-4 py-2 bg-gray-100 border rounded-lg hover:bg-gray-200 text-sm">
+        <i class="fa-solid fa-vial mr-1"></i> Test Connection
+      </button>
+    </div>
+  </div>
+
+  <!-- Capacity & Budget Optimization -->
+  {% if capacity_score is not none %}
+  <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 mb-6">
+    <h2 class="text-lg font-semibold mb-4"><i class="fa-solid fa-chart-line mr-2"></i> Ads Optimization Insights</h2>
+    <div class="grid md:grid-cols-3 gap-6">
+      <div>
+        <div class="text-sm text-gray-600 mb-2">Capacity Score (7-day)</div>
+        <div class="text-4xl font-bold text-blue-600">{{ capacity_score }}</div>
+        <div class="text-xs text-gray-500 mt-1">Out of 100</div>
+      </div>
+      <div>
+        <div class="text-sm text-gray-600 mb-2">Recommended Budget Multiplier</div>
+        <div class="text-4xl font-bold {% if budget_multiplier > 1.2 %}text-green-600{% elif budget_multiplier < 0.8 %}text-red-600{% else %}text-gray-700{% endif %}">
+          {{ "%.2f"|format(budget_multiplier) }}x
+        </div>
+        <div class="text-xs text-gray-500 mt-1">
+          {% if budget_multiplier > 1.2 %}
+            Increase ad spend - High capacity
+          {% elif budget_multiplier < 0.8 %}
+            Decrease ad spend - Low capacity
+          {% else %}
+            Maintain current spend
+          {% endif %}
+        </div>
+      </div>
+      <div>
+        <div class="text-sm text-gray-600 mb-2">Quick Actions</div>
+        <a href="{{ url_for('servicetitan_bp.view_capacity') }}" class="block px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 text-sm text-center">
+          View Capacity Forecast
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Data Summary -->
+  <div class="grid md:grid-cols-3 gap-6 mb-6">
+    <div class="bg-white border rounded-xl p-4">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-gray-500 text-sm">Customers</div>
+        <i class="fa-solid fa-users text-blue-500 text-xl"></i>
+      </div>
+      <div class="text-3xl font-bold">{{ customer_count }}</div>
+      <a href="{{ url_for('servicetitan_bp.list_customers') }}" class="text-sm text-blue-600 hover:underline mt-2 inline-block">View all →</a>
+    </div>
+
+    <div class="bg-white border rounded-xl p-4">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-gray-500 text-sm">Jobs</div>
+        <i class="fa-solid fa-briefcase text-green-500 text-xl"></i>
+      </div>
+      <div class="text-3xl font-bold">{{ job_count }}</div>
+      <a href="{{ url_for('servicetitan_bp.list_jobs') }}" class="text-sm text-blue-600 hover:underline mt-2 inline-block">View all →</a>
+    </div>
+
+    <div class="bg-white border rounded-xl p-4">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-gray-500 text-sm">Capacity Days</div>
+        <i class="fa-solid fa-calendar-check text-purple-500 text-xl"></i>
+      </div>
+      <div class="text-3xl font-bold">{{ recent_capacity|length }}</div>
+      <a href="{{ url_for('servicetitan_bp.view_capacity') }}" class="text-sm text-blue-600 hover:underline mt-2 inline-block">View capacity →</a>
+    </div>
+  </div>
+
+  <!-- Manual Sync -->
+  <div class="bg-white border rounded-xl p-4 mb-6">
+    <h2 class="text-lg font-semibold mb-4">Manual Data Sync</h2>
+    <div class="grid md:grid-cols-3 gap-4">
+      <form method="post" action="{{ url_for('servicetitan_bp.sync_customers') }}" class="contents">
+        <div class="border rounded-lg p-4">
+          <div class="font-medium mb-2"><i class="fa-solid fa-users mr-2"></i> Sync Customers</div>
+          <div class="mb-3">
+            <label class="text-sm text-gray-600">Days back:</label>
+            <input type="number" name="days_back" value="30" class="w-full px-3 py-2 border rounded mt-1" min="1" max="365">
+          </div>
+          <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+            Sync Now
+          </button>
+        </div>
+      </form>
+
+      <form method="post" action="{{ url_for('servicetitan_bp.sync_jobs') }}" class="contents">
+        <div class="border rounded-lg p-4">
+          <div class="font-medium mb-2"><i class="fa-solid fa-briefcase mr-2"></i> Sync Jobs</div>
+          <div class="mb-3">
+            <label class="text-sm text-gray-600">Days back:</label>
+            <input type="number" name="days_back" value="30" class="w-full px-3 py-2 border rounded mt-1" min="1" max="365">
+          </div>
+          <button type="submit" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+            Sync Now
+          </button>
+        </div>
+      </form>
+
+      <form method="post" action="{{ url_for('servicetitan_bp.sync_capacity') }}" class="contents">
+        <div class="border rounded-lg p-4">
+          <div class="font-medium mb-2"><i class="fa-solid fa-chart-bar mr-2"></i> Calculate Capacity</div>
+          <div class="mb-3">
+            <label class="text-sm text-gray-600">Days ahead:</label>
+            <input type="number" name="days_ahead" value="14" class="w-full px-3 py-2 border rounded mt-1" min="1" max="90">
+          </div>
+          <button type="submit" class="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">
+            Calculate Now
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Recent Sync Logs -->
+  <div class="bg-white border rounded-xl p-4 mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold">Recent Syncs</h2>
+      <a href="{{ url_for('servicetitan_bp.sync_logs') }}" class="text-sm text-blue-600 hover:underline">View all →</a>
+    </div>
+    {% if recent_syncs %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b">
+            <tr>
+              <th class="px-3 py-2 text-left font-medium text-gray-700">Type</th>
+              <th class="px-3 py-2 text-left font-medium text-gray-700">Status</th>
+              <th class="px-3 py-2 text-left font-medium text-gray-700">Records</th>
+              <th class="px-3 py-2 text-left font-medium text-gray-700">Started</th>
+              <th class="px-3 py-2 text-left font-medium text-gray-700">Duration</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for log in recent_syncs %}
+            <tr class="border-b hover:bg-gray-50">
+              <td class="px-3 py-2">{{ log.sync_type }}</td>
+              <td class="px-3 py-2">
+                {% if log.status == 'success' %}
+                  <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Success</span>
+                {% elif log.status == 'error' %}
+                  <span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">Error</span>
+                {% else %}
+                  <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">{{ log.status }}</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2">{{ log.records_fetched or 0 }}</td>
+              <td class="px-3 py-2">{{ log.started_at.strftime('%Y-%m-%d %H:%M') if log.started_at else '-' }}</td>
+              <td class="px-3 py-2">{{ log.duration_seconds or '-' }}s</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-gray-500 text-sm">No sync operations yet.</p>
+    {% endif %}
+  </div>
+{% endif %}
+
+<script nonce="{{ g.csp_nonce }}">
+function testConnection() {
+  if (!confirm('Test connection to ServiceTitan API?')) return;
+
+  fetch('{{ url_for("servicetitan_bp.test_connection") }}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('✓ Connection successful!\n\n' + (data.message || ''));
+    } else {
+      alert('✗ Connection failed\n\n' + (data.error || 'Unknown error'));
+    }
+  })
+  .catch(error => {
+    alert('✗ Error testing connection: ' + error);
+  });
+}
+</script>
+{% endblock %}

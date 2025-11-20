@@ -122,6 +122,12 @@
         <i class="fa-solid fa-users"></i><span>Contact Groups</span>
       </a>
 
+      <div class="sidebar-label mt-4"><i class="fa-solid fa-wrench"></i>Integrations</div>
+
+      <a class="secondary-link {% if request.endpoint and 'servicetitan_bp' in request.endpoint %}active{% endif %}" href="{{ url_for('servicetitan_bp.dashboard') }}">
+        <i class="fa-solid fa-plug"></i><span>ServiceTitan</span>
+      </a>
+
       <div class="sidebar-label mt-4"><i class="fa-solid fa-chart-line"></i>Analytics</div>
 
       <a class="secondary-link {% if request.endpoint in ['admin_bp.marketing_success','admin_bp.customer_impact_detail'] %}active{% endif %}" href="{{ url_for('admin_bp.marketing_success') }}">

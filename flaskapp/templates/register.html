@@ -5,6 +5,19 @@
   <h1 class="text-2xl font-bold mb-1">Create your account</h1>
   <p class="text-gray-600 mt-1">You'll be done in under a minute.</p>
 
+  <!-- Flash Messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="mt-4 space-y-2">
+        {% for category, message in messages %}
+          <div class="p-3 rounded-lg text-sm {% if category == 'error' %}bg-red-50 text-red-800 border border-red-200{% elif category == 'success' %}bg-green-50 text-green-800 border border-green-200{% elif category == 'warning' %}bg-yellow-50 text-yellow-800 border border-yellow-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
   <!-- Google Sign-Up Button -->
   <div class="mt-6">
     <a href="{{ url_for('auth_bp.google_login', next=request.args.get('next', '')) }}"
@@ -78,7 +91,7 @@
         class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         placeholder="••••••••"
       >
-      <p class="text-xs text-gray-500 mt-1">At least 6 characters. You’ll get a verification email.</p>
+      <p class="text-xs text-gray-500 mt-1">At least 8 characters with mixed case, numbers, and symbols.</p>
     </div>
 
     <button

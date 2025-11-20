@@ -355,8 +355,8 @@ def register():
         elif not _is_valid_email(email):  # <-- server-side email sanity check
             errs.append("Enter a valid email address.")
 
-        # Strong password validation (server-side)
-        ok_pw, msg_pw = validate_strength(password, email)
+        # Strong password validation (server-side) - minimum 8 characters
+        ok_pw, msg_pw = validate_strength(password, email, min_length=8)
         if not ok_pw and msg_pw:
             errs.append(msg_pw)
 
@@ -502,8 +502,8 @@ def reset_password(token: str):
         pw2 = request.form.get("password2", "")
 
         errs = []
-        # Strong password validation on reset, too
-        ok_pw, msg_pw = validate_strength(pw1, email)
+        # Strong password validation on reset, too - minimum 8 characters
+        ok_pw, msg_pw = validate_strength(pw1, email, min_length=8)
         if not ok_pw and msg_pw:
             errs.append(msg_pw)
         if pw1 != pw2:

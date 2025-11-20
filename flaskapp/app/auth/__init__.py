@@ -202,9 +202,9 @@ def _create_account_and_user(name: str, email: str, password: str):
             text(
                 """
                 INSERT INTO users
-                  (account_id, name, email, password_hash, role, email_verified, created_at)
+                  (account_id, name, email, password_hash, role, email_verified, email_verified_at, created_at)
                 VALUES
-                  (:aid, :n, :e, :ph, 'owner', 1, NOW())
+                  (:aid, :n, :e, :ph, 'owner', 1, NOW(), NOW())
                 """
             ),
             {"aid": account_id, "n": name or email_n, "e": email_n, "ph": pwd_hash},
@@ -240,17 +240,31 @@ def _create_user_and_account(name: str, email: str, password: Optional[str] = No
         )
         account_id = acc_res.lastrowid
 
-        user_res = conn.execute(
-            text(
-                """
-                INSERT INTO users
-                  (account_id, name, email, password_hash, role, email_verified, created_at)
-                VALUES
-                  (:aid, :n, :e, :ph, 'owner', :ev, NOW())
-                """
-            ),
-            {"aid": account_id, "n": name or email_n, "e": email_n, "ph": pwd_hash, "ev": 1 if email_verified else 0},
-        )
+        # Set email_verified_at when email is verified (e.g., OAuth providers)
+        if email_verified:
+            user_res = conn.execute(
+                text(
+                    """
+                    INSERT INTO users
+                      (account_id, name, email, password_hash, role, email_verified, email_verified_at, created_at)
+                    VALUES
+                      (:aid, :n, :e, :ph, 'owner', 1, NOW(), NOW())
+                    """
+                ),
+                {"aid": account_id, "n": name or email_n, "e": email_n, "ph": pwd_hash},
+            )
+        else:
+            user_res = conn.execute(
+                text(
+                    """
+                    INSERT INTO users
+                      (account_id, name, email, password_hash, role, email_verified, created_at)
+                    VALUES
+                      (:aid, :n, :e, :ph, 'owner', 0, NOW())
+                    """
+                ),
+                {"aid": account_id, "n": name or email_n, "e": email_n, "ph": pwd_hash},
+            )
         return account_id, user_res.lastrowid
 
 

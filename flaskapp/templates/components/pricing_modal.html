@@ -159,15 +159,27 @@ function closePricingModal() {
 }
 
 async function upgradeToPlan(planType) {
-  // Get Stripe price IDs from the backend
+  // Get Stripe price IDs and direct payment links from the backend
   const priceIds = {
     'annual': '{{ config.STRIPE_YEARLY_PRICE_ID }}',
     'monthly': '{{ config.STRIPE_MONTHLY_PRICE_ID }}'
   };
 
-  const priceId = priceIds[planType];
+  // Direct Stripe payment links as fallback
+  const directLinks = {
+    'annual': '{{ config.STRIPE_YEARLY_LINK }}',
+    'monthly': '{{ config.STRIPE_MONTHLY_LINK }}'
+  };
 
+  const priceId = priceIds[planType];
+  const directLink = directLinks[planType];
+
+  // If no price ID configured, try direct link
   if (!priceId) {
+    if (directLink) {
+      window.location.href = directLink;
+      return;
+    }
     alert('Pricing configuration error. Please contact support.');
     return;
   }
@@ -219,8 +231,13 @@ async function upgradeToPlan(planType) {
     } catch (error) {
       console.error(`Attempt ${attempt + 1} failed:`, error);
 
-      // If this was the last attempt, show error
+      // If this was the last attempt, try direct link fallback
       if (attempt === maxRetries - 1) {
+        if (directLink) {
+          console.log('API failed, using direct Stripe link');
+          window.location.href = directLink;
+          return;
+        }
         alert('Network error after ' + maxRetries + ' attempts. Please check your connection and try again.');
         button.disabled = false;
         button.innerHTML = originalText;

@@ -617,6 +617,13 @@ def create_app():
         app.logger.exception("Failed to register legal_bp")
 
     try:
+        from app.billing.routes import billing_bp
+        app.register_blueprint(billing_bp)
+        app.logger.info("billing_bp registered at /billing")
+    except Exception:
+        app.logger.exception("Failed to register billing_bp")
+
+    try:
         from app.pages import pages_bp
         app.register_blueprint(pages_bp)
         app.logger.info("pages_bp registered (about, contact, security)")

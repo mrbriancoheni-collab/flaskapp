@@ -193,7 +193,9 @@ def create_subscription(
     price_id: str,
     email: str,
     name: Optional[str] = None,
-    trial_days: Optional[int] = None
+    trial_days: Optional[int] = None,
+    success_url: Optional[str] = None,
+    cancel_url: Optional[str] = None
 ) -> Tuple[Subscription, str]:
     """
     Create a new subscription for a user.
@@ -204,12 +206,22 @@ def create_subscription(
         email: Customer email
         name: Customer name
         trial_days: Number of trial days (optional)
+        success_url: Full URL to redirect after successful payment
+        cancel_url: Full URL to redirect if user cancels
 
     Returns:
         Tuple of (Subscription model, Stripe Checkout Session URL)
     """
+    from flask import url_for
+
     get_stripe_client()
     customer = get_or_create_stripe_customer(user_id, email, name)
+
+    # Use provided URLs or generate defaults
+    if not success_url:
+        success_url = url_for("account_bp.dashboard", payment="success", _external=True)
+    if not cancel_url:
+        cancel_url = url_for("main_bp.pricing", _external=True)
 
     # Create checkout session
     checkout_params = {
@@ -220,8 +232,8 @@ def create_subscription(
             "quantity": 1,
         }],
         "mode": "subscription",
-        "success_url": current_app.config.get("STRIPE_SUCCESS_URL", "/account/dashboard?payment=success"),
-        "cancel_url": current_app.config.get("STRIPE_CANCEL_URL", "/account/dashboard?payment=cancelled"),
+        "success_url": success_url,
+        "cancel_url": cancel_url,
         "metadata": {"user_id": user_id},
         "allow_promotion_codes": True
     }

@@ -392,9 +392,16 @@ def create_app():
     def ai_flags():
         try:
             from app.auth.utils import is_paid_account as _is_paid
-            return {"ai_enabled": _is_paid()}
+            is_paid = _is_paid()
+            return {
+                "ai_enabled": is_paid,
+                "is_paid": is_paid
+            }
         except Exception:
-            return {"ai_enabled": False}
+            return {
+                "ai_enabled": False,
+                "is_paid": False
+            }
 
     # ---- Security headers (nonce + CSP) ------------------------------------
     @app.before_request

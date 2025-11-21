@@ -9,6 +9,27 @@ if APP_ROOT not in sys.path:
 os.environ.pop("PYTHONHOME", None)
 os.environ.pop("PYTHONPATH", None)
 
+# Load environment variables from .env file
+def load_env_file(env_path):
+    """Load environment variables from .env file if it exists"""
+    if os.path.exists(env_path):
+        with open(env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                # Skip comments and empty lines
+                if line and not line.startswith('#'):
+                    # Split on first = only
+                    if '=' in line:
+                        key, value = line.split('=', 1)
+                        key = key.strip()
+                        value = value.strip()
+                        # Only set if not already in environment
+                        if key and not os.environ.get(key):
+                            os.environ[key] = value
+
+# Load .env file from same directory as this file
+env_file = os.path.join(APP_ROOT, '.env')
+load_env_file(env_file)
 
 os.environ.setdefault("GOOGLE_ADS_DEVELOPER_TOKEN", "BVH9TCTe66hciT3TrMrKxg")
 

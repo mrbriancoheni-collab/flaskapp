@@ -1,0 +1,291 @@
+{% extends "base_app.html" %}
+
+{% block title %}Competitive Intelligence{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-8 flex justify-between items-start">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Competitive Intelligence</h1>
+            <p class="text-gray-600">Analyze your competitive landscape from Google Ads Auction Insights</p>
+        </div>
+        <button id="btnAddCompetitor" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded-md">
+            <i class="fa-solid fa-plus mr-2"></i>Add Competitor
+        </button>
+    </div>
+
+    <!-- Market Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-sm font-medium text-gray-600">Your Market Share</h3>
+            <p id="yourShare" class="text-3xl font-bold text-blue-600 mt-2">--</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-sm font-medium text-gray-600">Active Competitors</h3>
+            <p id="numCompetitors" class="text-3xl font-bold text-gray-900 mt-2">--</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-sm font-medium text-gray-600">Critical Threats</h3>
+            <p id="numThreats" class="text-3xl font-bold text-red-600 mt-2">--</p>
+        </div>
+    </div>
+
+    <!-- Competitors Table -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Competitor Analysis</h2>
+
+        <div id="competitorsContainer">
+            <p class="text-gray-500">Loading competitor data...</p>
+        </div>
+    </div>
+
+    <!-- Competitive Alerts -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-4">Competitive Alerts</h2>
+
+        <div id="alertsContainer">
+            <p class="text-gray-500">Loading alerts...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Add Competitor Modal -->
+<div id="modalAddCompetitor" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="p-6 border-b">
+            <h2 class="text-2xl font-bold text-gray-900">Add Competitor</h2>
+        </div>
+
+        <div class="p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Competitor Domain *</label>
+                <input type="text" id="inputDomain" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="competitor.com">
+                <p class="text-xs text-gray-500 mt-1">Enter the competitor's website domain</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
+                <input type="text" id="inputCompanyName" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Competitor Name (optional)">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                <textarea id="inputNotes" class="w-full px-3 py-2 border border-gray-300 rounded-md" rows="3" placeholder="Add any notes about this competitor..."></textarea>
+            </div>
+
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p class="text-sm text-blue-800">
+                    <i class="fa-solid fa-info-circle mr-1"></i>
+                    Once added, this competitor will be tracked in Google Ads Auction Insights reports.
+                </p>
+            </div>
+        </div>
+
+        <div class="p-6 border-t flex justify-end space-x-3">
+            <button id="btnCancelAddCompetitor" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                Cancel
+            </button>
+            <button id="btnSaveCompetitor" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md">
+                <i class="fa-solid fa-plus mr-2"></i>Add Competitor
+            </button>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ g.csp_nonce }}">
+    const CUSTOMER_ID = 'demo-customer';  // TODO: Get from user context
+
+    console.log('Competitive Dashboard: Script loaded');
+
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Competitive Dashboard: DOMContentLoaded fired');
+        console.log('Button element:', document.getElementById('btnAddCompetitor'));
+
+        loadCompetitors();
+        loadAlerts();
+        setupEventListeners();
+    });
+
+    function setupEventListeners() {
+        console.log('Setting up event listeners...');
+
+        const btnAdd = document.getElementById('btnAddCompetitor');
+        if (btnAdd) {
+            console.log('Add Competitor button found, attaching listener');
+            btnAdd.addEventListener('click', function(e) {
+                console.log('Add Competitor button clicked!');
+                openAddCompetitorModal();
+            });
+        } else {
+            console.error('Add Competitor button NOT found');
+        }
+
+        const btnCancel = document.getElementById('btnCancelAddCompetitor');
+        if (btnCancel) {
+            btnCancel.addEventListener('click', closeAddCompetitorModal);
+        }
+
+        const btnSave = document.getElementById('btnSaveCompetitor');
+        if (btnSave) {
+            btnSave.addEventListener('click', saveCompetitor);
+        }
+    }
+
+    function openAddCompetitorModal() {
+        console.log('openAddCompetitorModal called');
+        document.getElementById('inputDomain').value = '';
+        document.getElementById('inputCompanyName').value = '';
+        document.getElementById('inputNotes').value = '';
+        const modal = document.getElementById('modalAddCompetitor');
+        console.log('Modal element:', modal);
+        modal.classList.remove('hidden');
+        console.log('Modal classes after remove hidden:', modal.classList);
+    }
+
+    function closeAddCompetitorModal() {
+        document.getElementById('modalAddCompetitor').classList.add('hidden');
+    }
+
+    async function saveCompetitor() {
+        const domain = document.getElementById('inputDomain').value.trim();
+        if (!domain) {
+            alert('Please enter a competitor domain');
+            return;
+        }
+
+        const data = {
+            customer_id: CUSTOMER_ID,
+            competitor_domain: domain,
+            company_name: document.getElementById('inputCompanyName').value.trim(),
+            notes: document.getElementById('inputNotes').value.trim()
+        };
+
+        try {
+            const response = await fetch('/account/competitive/api/add-competitor', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                closeAddCompetitorModal();
+                loadCompetitors();  // Reload competitors list
+                alert('Competitor added successfully!');
+            } else {
+                alert('Error: ' + (result.error || 'Failed to add competitor'));
+            }
+        } catch (error) {
+            console.error('Error adding competitor:', error);
+            alert('Error adding competitor: ' + error.message);
+        }
+    }
+
+    async function loadCompetitors() {
+        const response = await fetch('/account/competitive/api/competitors?customer_id=demo-customer');
+        const data = await response.json();
+
+        if (data.success && data.competitors.length > 0) {
+            // Update stats
+            document.getElementById('numCompetitors').textContent = data.competitors.length;
+
+            const threats = data.competitors.filter(c => c.threat_level === 'critical' || c.threat_level === 'high');
+            document.getElementById('numThreats').textContent = threats.length;
+
+            // Build table
+            let html = '<table class="min-w-full divide-y divide-gray-200">';
+            html += `<thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Competitor</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Impression Share</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Position Above Rate</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Overlap Rate</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Threat Level</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Recommendation</th>
+                </tr>
+            </thead><tbody class="bg-white divide-y divide-gray-200">`;
+
+            data.competitors.forEach(comp => {
+                const threatColors = {
+                    low: 'bg-green-100 text-green-800',
+                    medium: 'bg-yellow-100 text-yellow-800',
+                    high: 'bg-orange-100 text-orange-800',
+                    critical: 'bg-red-100 text-red-800'
+                };
+
+                html += `<tr>
+                    <td class="px-4 py-3 whitespace-nowrap font-medium">${comp.competitor_domain}</td>
+                    <td class="px-4 py-3">${comp.impression_share.toFixed(1)}%</td>
+                    <td class="px-4 py-3">${comp.position_above_rate.toFixed(1)}%</td>
+                    <td class="px-4 py-3">${comp.overlap_rate.toFixed(1)}%</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 text-xs font-medium rounded-full ${threatColors[comp.threat_level]}">
+                            ${comp.threat_level.toUpperCase()}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-600 max-w-md">${comp.budget_recommendation}</td>
+                </tr>`;
+            });
+
+            html += '</tbody></table>';
+            document.getElementById('competitorsContainer').innerHTML = html;
+        } else {
+            document.getElementById('competitorsContainer').innerHTML = '<p class="text-gray-500">No competitor data available yet. Run Auction Insights report from Google Ads.</p>';
+        }
+    }
+
+    async function loadAlerts() {
+        const response = await fetch('/account/competitive/api/alerts?customer_id=demo-customer&unaddressed_only=true');
+        const data = await response.json();
+
+        if (data.success && data.alerts.length > 0) {
+            let html = '<div class="space-y-3">';
+
+            data.alerts.forEach(alert => {
+                const severityColors = {
+                    info: 'bg-blue-50 border-blue-200',
+                    warning: 'bg-yellow-50 border-yellow-200',
+                    critical: 'bg-red-50 border-red-200'
+                };
+
+                html += `<div class="border-l-4 p-4 ${severityColors[alert.severity]}">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h3 class="font-semibold">${alert.competitor_domain} - ${alert.alert_type.replace(/_/g, ' ').toUpperCase()}</h3>
+                            <p class="text-sm text-gray-700 mt-1">${alert.description}</p>
+                            <p class="text-sm font-medium text-gray-900 mt-2">Recommendation: ${alert.recommended_action}</p>
+                            <p class="text-xs text-gray-500 mt-1">${new Date(alert.created_at).toLocaleString()}</p>
+                        </div>
+                        <button
+                            onclick="markAddressed(${alert.id})"
+                            class="ml-4 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md">
+                            Mark Addressed
+                        </button>
+                    </div>
+                </div>`;
+            });
+
+            html += '</div>';
+            document.getElementById('alertsContainer').innerHTML = html;
+        } else {
+            document.getElementById('alertsContainer').innerHTML = '<p class="text-gray-500">No active alerts.</p>';
+        }
+    }
+
+    async function markAddressed(alertId) {
+        const response = await fetch(`/account/competitive/api/mark-addressed/${alertId}`, {
+            method: 'POST'
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            loadAlerts();  // Reload alerts
+        } else {
+            alert('Error: ' + data.error);
+        }
+    }
+</script>
+{% endblock %}

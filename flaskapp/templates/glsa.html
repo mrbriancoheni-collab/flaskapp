@@ -1,6 +1,52 @@
 {% extends "base_public.html" %}
 {% set SECTION = 'products' %}
 {% block title %}Google Local Services Ads (GLSA) — FieldSprout{% endblock %}
+
+{% block head_extra %}
+<!-- Service Schema for GLSA Management -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "Google Local Services Ads Management",
+  "provider": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  },
+  "name": "Google Local Services Ads Management",
+  "description": "Maximize Google Guaranteed leads with automated lead routing, dispute management, and performance tracking by ZIP and trade.",
+  "offers": {
+    "@type": "Offer",
+    "priceCurrency": "USD",
+    "price": "200",
+    "availability": "https://schema.org/InStock"
+  }
+}
+</script>
+
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Google Local Services Ads",
+      "item": "https://fieldsprout.io/products/glsa"
+    }
+  ]
+}
+</script>
+{% endblock %}
+
 {% block content %}
 <section class="hero">
   <h1>Maximize Google Guaranteed leads</h1>

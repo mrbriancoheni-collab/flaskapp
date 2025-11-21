@@ -1,0 +1,564 @@
+{% extends 'base_public.html' %}
+{% block title %}Roofing Google Ads Optimization — FieldSprout{% endblock %}
+
+{% block head_extra %}
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Industries",
+      "item": "https://fieldsprout.io/industries"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Roofing Google Ads",
+      "item": "https://fieldsprout.io/industries/roofing-google-ads"
+    }
+  ]
+}
+</script>
+
+<!-- FAQ Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What's the average cost per lead for roofing Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Roofing cost per lead varies significantly. Emergency leak repairs run $40-90 per lead, roof inspections $30-70, and full roof replacement leads cost $80-200. FieldSprout's AI optimizes toward your target CPL based on job value (replacements average $8,000-25,000)."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Should roofers run Google Ads year-round?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, with seasonal and weather-based adjustments. Emergency leak repair campaigns run year-round, roof replacement campaigns peak spring/summer, and storm damage campaigns surge after severe weather. FieldSprout's AI automatically adjusts budgets based on weather patterns and seasonal demand."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What keywords should roofing companies bid on?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "High-intent keywords include 'roof leak repair', 'emergency roofer', 'roof replacement', 'storm damage roof', and 'roof inspection'. Avoid broad terms like 'roofing' without modifiers. FieldSprout's Keyword Optimizer continuously refines your keyword strategy based on job conversion rates."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How can roofers reduce wasted Google Ads spend?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Block DIY searchers, material shoppers, and job seekers. Use negative keywords like 'DIY', 'materials', 'shingles price', 'jobs', 'salary', 'how to'. Set geographic targeting to profitable service areas only. FieldSprout's Negative Keyword Agent does this automatically 24/7."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- Service Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "Roofing Google Ads Optimization",
+  "provider": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  },
+  "description": "AI-powered Google Ads optimization for roofing contractors, automatically managing emergency leak repair vs. roof replacement campaigns, storm damage surge responses, and budget allocation across repair and installation services.",
+  "areaServed": {
+    "@type": "Country",
+    "name": "United States"
+  }
+}
+</script>
+
+<!-- HowTo Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Optimize Google Ads for Roofing Companies",
+  "description": "Step-by-step guide to setting up and optimizing Google Ads campaigns for roofers to reduce cost per lead and increase both emergency repair and roof replacement bookings.",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Structure campaigns by urgency and job value",
+      "text": "Create separate campaigns for emergency leak repairs, roof inspections, storm damage, and full roof replacements. This allows different bidding strategies based on job value ($300 repairs vs. $15,000 replacements) and urgency levels."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Target high-intent roofing keywords",
+      "text": "Focus on problem-solving keywords like 'roof leak repair', 'emergency roofer', 'storm damage roof', 'roof replacement cost'. Add location modifiers and use phrase/exact match to control costs and avoid DIY searchers."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Implement roofing-specific negative keywords",
+      "text": "Block DIY searches, material shoppers, and educational queries. Add negatives like 'DIY', 'materials', 'shingles', 'how to', 'YouTube', 'jobs', 'salary'. Review search terms weekly to identify new negatives."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Create urgency and financing-focused ad copy",
+      "text": "For emergency leaks, emphasize same-day service and 24/7 availability. For roof replacements, highlight financing options, insurance claim assistance, and material warranties. Include trust signals like years in business and licensing."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Optimize for storm damage surges",
+      "text": "Monitor severe weather patterns and automatically increase bids and budgets after major storms (hail, high winds, hurricanes). Capture emergency demand spikes when homeowners discover roof damage."
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-12">
+  <div class="mb-8">
+    <span class="inline-block px-3 py-1 text-sm font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full mb-4">
+      <i class="fa-solid fa-house-chimney"></i> Roofing Industry
+    </span>
+    <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+      Google Ads Optimization for Roofing Contractors
+    </h1>
+    <p class="text-xl text-gray-700 leading-relaxed">
+      Stop wasting budget on DIY searchers and material shoppers. FieldSprout's AI agents optimize your roofing Google Ads campaigns 24/7—automatically managing storm damage surges, emergency leak budgets, and high-value roof replacement leads.
+    </p>
+  </div>
+
+  <div class="bg-indigo-50 border-l-4 border-indigo-600 p-6 rounded-lg mb-12">
+    <div class="flex items-start">
+      <i class="fa-solid fa-chart-line text-indigo-600 text-2xl mr-4 mt-1"></i>
+      <div>
+        <h3 class="text-lg font-bold text-indigo-900 mb-2">Roofing Performance Benchmarks</h3>
+        <ul class="text-sm text-indigo-800 space-y-1">
+          <li>• <strong>−41% cost per roof replacement lead</strong> with optimized campaigns (60 days)</li>
+          <li>• <strong>+34% conversion rate</strong> with roofing-specific landing pages and financing messaging</li>
+          <li>• <strong>$680-1,100/month saved</strong> by blocking DIY and materials shopper traffic</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose prose-lg max-w-none">
+    <h2>Why Roofing Google Ads Are Different</h2>
+    <p>
+      Roofing contractors face unique Google Ads challenges. Your business has extreme urgency variations—emergency leak repairs require same-day response, while roof replacements have weeks-long consideration periods. Your job values range dramatically from $300 leak repairs to $25,000 full replacements. And your demand spikes dramatically after severe weather events.
+    </p>
+    <p>
+      Generic Google Ads strategies fail for roofers because they don't account for storm damage surges, the insurance claim process, financing requirements for high-ticket jobs, and the massive difference between emergency repairs and planned replacements.
+    </p>
+
+    <h2>The Roofing Google Ads Problem: Material Shoppers</h2>
+    <p>
+      Most roofing companies waste 35-55% of their Google Ads budget on people who will never hire a professional roofer. They're DIYers looking for how-to videos, contractors researching material costs, homeowners pricing shingles at Home Depot, and job seekers researching roofing careers.
+    </p>
+    <p>
+      <strong>The most common roofing Google Ads mistakes:</strong>
+    </p>
+    <ul>
+      <li><strong>No negative keywords</strong> for "DIY", "materials", "shingles price", "how to", "jobs"</li>
+      <li><strong>Broad match keywords</strong> like "roofing" that attract material shoppers and DIYers</li>
+      <li><strong>Mixing leak repairs and replacements</strong> in the same campaigns</li>
+      <li><strong>No storm damage response plan</strong> to capitalize on demand surges</li>
+      <li><strong>Generic ad copy</strong> that doesn't emphasize financing for high-ticket replacements</li>
+      <li><strong>No insurance claim assistance messaging</strong> (major decision factor for homeowners)</li>
+    </ul>
+
+    <h2>How FieldSprout's AI Optimizes Roofing Campaigns</h2>
+    <p>
+      FieldSprout's multi-agent system is trained on roofing industry patterns. Our AI agents understand that "roof leak" in a thunderstorm is an extreme emergency, while "roof replacement cost" is early research. They automatically adjust bids, budgets, and messaging based on urgency and job value.
+    </p>
+
+    <h3>1. Emergency vs. Replacement Campaign Structure</h3>
+    <p>
+      The <strong>Strategic Director</strong> agent structures roofing campaigns by urgency and value:
+    </p>
+
+    <h4>Campaign 1: Emergency Leak Repairs (High Urgency, Lower Value)</h4>
+    <ul>
+      <li><strong>Keywords:</strong> "roof leak repair", "emergency roofer", "roof leaking", "ceiling leak"</li>
+      <li><strong>Messaging:</strong> "24/7 Emergency Service – We Stop Leaks Fast"</li>
+      <li><strong>Bidding:</strong> Moderate-high (urgency matters, but average job value $300-800)</li>
+      <li><strong>Landing page:</strong> Emergency leak repair page with click-to-call</li>
+    </ul>
+
+    <h4>Campaign 2: Storm Damage Inspections & Repairs (Weather-Triggered)</h4>
+    <ul>
+      <li><strong>Keywords:</strong> "storm damage roof", "hail damage roof", "wind damage roof", "roof inspection after storm"</li>
+      <li><strong>Messaging:</strong> "Free Storm Damage Inspection – We Work With Insurance"</li>
+      <li><strong>Bidding:</strong> Aggressive immediately after major storms, moderate baseline</li>
+      <li><strong>Landing page:</strong> Storm damage page with insurance claim assistance</li>
+    </ul>
+
+    <h4>Campaign 3: Roof Replacement (High Value, Longer Sales Cycle)</h4>
+    <ul>
+      <li><strong>Keywords:</strong> "roof replacement", "new roof cost", "roof replacement cost", "reroof"</li>
+      <li><strong>Messaging:</strong> "Roof Replacement from $149/Month – 0% Financing Available"</li>
+      <li><strong>Bidding:</strong> Very aggressive (average job value $8,000-25,000 justifies high CPL)</li>
+      <li><strong>Landing page:</strong> Roof replacement page with financing calculator and material options</li>
+    </ul>
+
+    <h4>Campaign 4: Roof Inspections (Lead Generation)</h4>
+    <ul>
+      <li><strong>Keywords:</strong> "roof inspection", "free roof inspection", "roof estimate"</li>
+      <li><strong>Messaging:</strong> "Free Roof Inspection – No Obligation Estimate"</li>
+      <li><strong>Bidding:</strong> Moderate (lower intent, but leads to repair/replacement opportunities)</li>
+      <li><strong>Landing page:</strong> Inspection page with online booking</li>
+    </ul>
+
+    <h3>2. Storm Damage Surge Response</h3>
+    <p>
+      Major storms create massive demand spikes for roofing services. FieldSprout's <strong>Weather Monitor</strong> agent:
+    </p>
+    <ul>
+      <li>Tracks severe weather alerts (hail, high winds, hurricanes, tornadoes)</li>
+      <li>Automatically increases storm damage campaign budgets by 100-300% within hours of major storms</li>
+      <li>Activates emergency storm damage ad variations emphasizing insurance claim assistance</li>
+      <li>Scales back to baseline budgets 2-3 weeks after storm (when demand normalizes)</li>
+    </ul>
+
+    <h3>3. Roofing-Specific Negative Keyword Strategy</h3>
+    <p>
+      The <strong>Negative Keyword Agent</strong> knows roofing search patterns and automatically blocks:
+    </p>
+    <ul>
+      <li><strong>DIY searches:</strong> "DIY", "how to", "YouTube", "install yourself", "repair myself"</li>
+      <li><strong>Material shoppers:</strong> "shingles price", "materials", "supply", "home depot", "lowes", "bundle"</li>
+      <li><strong>Job seekers:</strong> "jobs", "careers", "hiring", "salary", "apprentice", "work for"</li>
+      <li><strong>Educational queries:</strong> "types of roofing", "best roof material", "lifespan"</li>
+      <li><strong>Commercial (if residential-only):</strong> "commercial roofing", "flat roof" (unless you do flat roofing)</li>
+      <li><strong>Wrong services:</strong> "roof cleaning", "moss removal", "gutter" (unless you offer these)</li>
+    </ul>
+    <p>
+      These negative keywords typically save $680-1,100 per month in wasted spend for a roofing Google Ads account running $4,000-7,000/month.
+    </p>
+
+    <h3>4. Geographic Targeting for Service Area Profitability</h3>
+    <p>
+      Not all roofing jobs are profitable when you factor in drive time. FieldSprout's <strong>Campaign Manager</strong>:
+    </p>
+    <ul>
+      <li>Increases bids for ZIPs within 30 minutes of your location</li>
+      <li>Moderate bids for 30-45 minute drive ZIPs (acceptable for high-value replacements)</li>
+      <li>Lower bids or exclude distant ZIPs for leak repairs (not profitable with long drive times)</li>
+    </ul>
+
+    <h3>5. Ad Copy Optimization for Roofing Services</h3>
+    <p>
+      The <strong>Ad Copy Agent</strong> continuously tests roofing-specific messaging:
+    </p>
+    <ul>
+      <li><strong>Emergency repairs:</strong> "Same-Day Service" vs. "24/7 Emergency Response"</li>
+      <li><strong>Financing:</strong> "$149/Month" vs. "0% Financing Available" vs. "No Payment for 12 Months"</li>
+      <li><strong>Insurance:</strong> "We Work With All Insurance" vs. "Insurance Claim Specialists"</li>
+      <li><strong>Trust factors:</strong> "Licensed & Insured" vs. "30+ Years Experience" vs. "A+ BBB Rating"</li>
+      <li><strong>Warranties:</strong> "Lifetime Warranty" vs. "50-Year Shingle Warranty"</li>
+    </ul>
+
+    <h3>6. Bid Optimization for Roofing Job Value</h3>
+    <p>
+      Roofing work has drastically different values:
+    </p>
+    <ul>
+      <li><strong>Emergency leak repairs:</strong> $300-800 average job, justifies $40-80 CPL</li>
+      <li><strong>Storm damage repairs:</strong> $2,000-8,000, justifies $100-180 CPL</li>
+      <li><strong>Roof replacements:</strong> $8,000-25,000, justifies $120-250 CPL</li>
+      <li><strong>Inspections:</strong> Often free (lead gen), justifies $25-50 CPL</li>
+    </ul>
+    <p>
+      FieldSprout's <strong>Keyword Optimizer</strong> adjusts bids based on job value. Roof replacement keywords justify very high cost-per-click because job values are 15-40x higher than leak repairs.
+    </p>
+
+    <h2>Roofing Google Ads Campaign Structure</h2>
+
+    <h3>Campaign 1: Emergency Leak Repair (Year-Round)</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "roof leak repair", "emergency roofer", "roof leaking", "ceiling leak", "water coming through ceiling"</li>
+      <li><strong>Match types:</strong> Phrase and exact match</li>
+      <li><strong>Ad copy angle:</strong> Same-day service, 24/7 availability, fast response</li>
+      <li><strong>Landing page:</strong> Emergency leak repair with prominent call button</li>
+      <li><strong>Budget:</strong> Consistent year-round, increases during rainy seasons</li>
+    </ul>
+
+    <h3>Campaign 2: Storm Damage (Weather-Triggered)</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "storm damage roof", "hail damage roof", "wind damage", "roof inspection after storm"</li>
+      <li><strong>Match types:</strong> Phrase and exact match</li>
+      <li><strong>Ad copy angle:</strong> Free inspection, insurance claim assistance, emergency repairs</li>
+      <li><strong>Landing page:</strong> Storm damage page with insurance process outlined</li>
+      <li><strong>Budget:</strong> Surges 100-300% after major storms, minimal during calm weather</li>
+    </ul>
+
+    <h3>Campaign 3: Roof Replacement (High Value)</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "roof replacement", "new roof cost", "reroof", "roof replacement cost", "[city] roofers"</li>
+      <li><strong>Match types:</strong> Phrase and exact match</li>
+      <li><strong>Ad copy angle:</strong> Financing options, material choices, lifetime warranty, free estimate</li>
+      <li><strong>Landing page:</strong> Roof replacement page with financing calculator</li>
+      <li><strong>Budget:</strong> Highest allocation (best ROI), peaks spring/summer</li>
+    </ul>
+
+    <h3>Campaign 4: Roof Inspection & Maintenance</h3>
+    <ul>
+      <li><strong>Keywords:</strong> "roof inspection", "free roof inspection", "roof estimate", "roof maintenance"</li>
+      <li><strong>Match types:</strong> Phrase match</li>
+      <li><strong>Ad copy angle:</strong> Free inspection, no obligation, identify problems early</li>
+      <li><strong>Landing page:</strong> Inspection page with online scheduling</li>
+      <li><strong>Budget:</strong> Moderate (lead generation for future repair/replacement)</li>
+    </ul>
+
+    <h2>Seasonal Roofing Google Ads Strategies</h2>
+
+    <h3>Spring: Storm Season & Roof Replacement Peak</h3>
+    <p>
+      <strong>Peak months:</strong> March-June
+      <br><strong>Focus:</strong> Storm damage response, roof replacement projects
+      <br><strong>Budget allocation:</strong> 35-40% of annual budget (highest demand)
+    </p>
+
+    <h3>Summer: Roof Replacement & Repair Work</h3>
+    <p>
+      <strong>Peak months:</strong> June-August
+      <br><strong>Focus:</strong> Roof replacements, pre-winter repairs
+      <br><strong>Budget allocation:</strong> 30-35% of annual budget
+    </p>
+
+    <h3>Fall: Pre-Winter Inspections & Repairs</h3>
+    <p>
+      <strong>Peak months:</strong> September-November
+      <br><strong>Focus:</strong> Roof inspections, prepare for winter, minor repairs
+      <br><strong>Budget allocation:</strong> 20-25% of annual budget
+    </p>
+
+    <h3>Winter: Emergency Repairs & Planning</h3>
+    <p>
+      <strong>Peak months:</strong> December-February
+      <br><strong>Focus:</strong> Ice dam damage, emergency leak repairs, replacement planning for spring
+      <br><strong>Budget allocation:</strong> 10-15% of annual budget (lowest demand, weather-dependent work)
+    </p>
+
+    <h2>Common Roofing Google Ads Questions</h2>
+
+    <h3>Should roofers run ads during winter?</h3>
+    <p>
+      Yes, but with lower budgets focused on emergency leak repairs and spring replacement planning. Many homeowners research roofing options in winter for spring installation. Emergency leak campaigns should run year-round since roof damage doesn't stop in winter.
+    </p>
+
+    <h3>How much should roofing companies spend on Google Ads?</h3>
+    <p>
+      <strong>Target cost per lead:</strong> $40-80 for leak repairs, $80-150 for storm damage, $120-250 for roof replacements.
+    </p>
+    <p>
+      Most roofing companies spend $3,500-8,000 per month on Google Ads during peak season (spring/summer), scaling down to $1,500-3,000 during winter.
+    </p>
+
+    <h3>What's a good conversion rate for roofing Google Ads?</h3>
+    <p>
+      <strong>Emergency leak repairs:</strong> 8-15% conversion rate
+      <br><strong>Storm damage:</strong> 6-12% conversion rate
+      <br><strong>Roof replacement:</strong> 4-9% conversion rate (longer consideration period)
+      <br><strong>Inspections:</strong> 10-18% conversion rate (lower barrier)
+    </p>
+
+    <h2>Get Started with Roofing-Optimized Google Ads</h2>
+    <p>
+      Stop wasting budget on DIY searchers and material shoppers who will never hire a roofer. FieldSprout's AI agents optimize your campaigns 24/7 using roofing-specific rules, storm damage monitoring, and job value-based bidding.
+    </p>
+
+    <div class="mt-8 p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl">
+      <h3 class="text-xl font-bold text-gray-900 mb-3">Ready to reduce your cost per roofing job?</h3>
+      <p class="text-gray-700 mb-4">
+        Connect your Google Ads account and let our AI agents start optimizing in minutes. No contracts, cancel anytime.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <a href="/signup" class="btn btn-primary px-6 py-3">
+          Start Free Trial →
+        </a>
+        <a href="/pricing" class="btn btn-secondary px-6 py-3">
+          View Pricing
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- Related Pages Section -->
+<section class="bg-white border-t border-b border-gray-200 py-12 mt-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">More Roofing Marketing Solutions</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <a href="/industries/roofing-local-service-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/industries/roofing-meta-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Build your pipeline with targeted social media campaigns</p>
+      </a>
+      <a href="/industries/roofing-website-cro" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Website & Conversion Optimization</h3>
+        <p class="text-sm text-gray-600">Turn more website visitors into paying customers</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Browse Industries Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-6xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Marketing Solutions by Industry</h2>
+    <p class="text-gray-600 text-center mb-8">Industry-specific strategies for home service businesses</p>
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <a href="/industries/hvac-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">❄️</div>
+        <div class="text-sm font-semibold text-gray-900">HVAC</div>
+      </a>
+      <a href="/industries/plumbing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔧</div>
+        <div class="text-sm font-semibold text-gray-900">Plumbing</div>
+      </a>
+      <a href="/industries/electrical-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">⚡</div>
+        <div class="text-sm font-semibold text-gray-900">Electrical</div>
+      </a>
+      <a href="/industries/roofing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏠</div>
+        <div class="text-sm font-semibold text-gray-900">Roofing</div>
+      </a>
+      <a href="/industries/pest-control-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🐛</div>
+        <div class="text-sm font-semibold text-gray-900">Pest Control</div>
+      </a>
+      <a href="/industries/lawn-care-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🌱</div>
+        <div class="text-sm font-semibold text-gray-900">Lawn Care</div>
+      </a>
+      <a href="/industries/garage-door-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🚪</div>
+        <div class="text-sm font-semibold text-gray-900">Garage Door</div>
+      </a>
+      <a href="/industries/pools-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏊</div>
+        <div class="text-sm font-semibold text-gray-900">Pools</div>
+      </a>
+      <a href="/industries/concrete-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏗️</div>
+        <div class="text-sm font-semibold text-gray-900">Concrete</div>
+      </a>
+      <a href="/industries/fencing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪵</div>
+        <div class="text-sm font-semibold text-gray-900">Fencing</div>
+      </a>
+      <a href="/industries/solar-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">☀️</div>
+        <div class="text-sm font-semibold text-gray-900">Solar</div>
+      </a>
+      <a href="/industries/windows-doors-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪟</div>
+        <div class="text-sm font-semibold text-gray-900">Windows & Doors</div>
+      </a>
+      <a href="/industries/irrigation-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">💧</div>
+        <div class="text-sm font-semibold text-gray-900">Irrigation</div>
+      </a>
+      <a href="/industries/restoration-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔨</div>
+        <div class="text-sm font-semibold text-gray-900">Restoration</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Products Section -->
+<section class="bg-white py-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Our Marketing Products</h2>
+    <p class="text-gray-600 text-center mb-8">AI-powered marketing automation for home service businesses</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <a href="/products/google-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">🎯</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Ads</h3>
+        <p class="text-sm text-gray-600">AI agents optimize your campaigns 24/7 to reduce cost per lead</p>
+      </a>
+      <a href="/products/facebook-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📱</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Targeted social campaigns that build your pipeline</p>
+      </a>
+      <a href="/products/local-services-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">✅</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/products/google-business-profile" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📍</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Business Profile</h3>
+        <p class="text-sm text-gray-600">Optimize your local presence and get more reviews</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-4xl mx-auto px-4">
+    <h2 class="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+
+    <div class="space-y-4">
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What's the average cost per lead for roofing Google Ads?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Roofing cost per lead varies significantly. Emergency leak repairs run $40-90 per lead, roof inspections $30-70, and full roof replacement leads cost $80-200. FieldSprout's AI optimizes toward your target CPL based on job value (replacements average $8,000-25,000).
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          Should roofers run Google Ads year-round?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Yes, with seasonal and weather-based adjustments. Emergency leak repair campaigns run year-round, roof replacement campaigns peak spring/summer, and storm damage campaigns surge after severe weather. FieldSprout's AI automatically adjusts budgets based on weather patterns and seasonal demand.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What keywords should roofing companies bid on?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          High-intent keywords include "roof leak repair", "emergency roofer", "roof replacement", "storm damage roof", and "roof inspection". Avoid broad terms like "roofing" without modifiers. FieldSprout's Keyword Optimizer continuously refines your keyword strategy based on job conversion rates.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          How can roofers reduce wasted Google Ads spend?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Block DIY searchers, material shoppers, and job seekers. Use negative keywords like "DIY", "materials", "shingles price", "jobs", "salary", "how to". Set geographic targeting to profitable service areas only. FieldSprout's Negative Keyword Agent does this automatically 24/7.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+{% endblock %}

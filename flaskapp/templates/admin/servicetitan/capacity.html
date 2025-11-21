@@ -1,0 +1,133 @@
+{% extends "base_admin.html" %}
+{% block title %}ServiceTitan – Capacity Forecast{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold">Capacity Forecast & Ads Optimization</h1>
+  <a href="{{ url_for('servicetitan_bp.dashboard') }}" class="px-4 py-2 bg-gray-100 border rounded-lg hover:bg-gray-200 text-sm">
+    <i class="fa-solid fa-arrow-left mr-1"></i> Back to Dashboard
+  </a>
+</div>
+
+<!-- Budget Recommendation -->
+<div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 mb-6">
+  <div class="flex items-start justify-between">
+    <div>
+      <h2 class="text-lg font-semibold mb-2"><i class="fa-solid fa-lightbulb mr-2 text-yellow-500"></i> Ads Budget Recommendation</h2>
+      <p class="text-{{ recommendation_class }}-700 text-xl font-bold mb-2">{{ recommendation }}</p>
+      <p class="text-sm text-gray-600">
+        Based on your 7-day capacity forecast, we recommend adjusting your Google Ads budget by a multiplier of
+        <strong>{{ "%.2f"|format(budget_multiplier) }}x</strong>.
+      </p>
+    </div>
+    <div class="text-right">
+      <div class="text-sm text-gray-600 mb-1">Budget Multiplier</div>
+      <div class="text-5xl font-bold {% if budget_multiplier > 1.2 %}text-green-600{% elif budget_multiplier < 0.8 %}text-red-600{% else %}text-gray-700{% endif %}">
+        {{ "%.2f"|format(budget_multiplier) }}x
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Capacity Chart -->
+<div class="bg-white border rounded-xl p-6 mb-6">
+  <h2 class="text-lg font-semibold mb-4">Daily Capacity Overview (Next 30 Days)</h2>
+
+  {% if capacity_data %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b">
+          <tr>
+            <th class="px-3 py-2 text-left font-medium text-gray-700">Date</th>
+            <th class="px-3 py-2 text-center font-medium text-gray-700">Total Slots</th>
+            <th class="px-3 py-2 text-center font-medium text-gray-700">Booked</th>
+            <th class="px-3 py-2 text-center font-medium text-gray-700">Available</th>
+            <th class="px-3 py-2 text-center font-medium text-gray-700">Utilization</th>
+            <th class="px-3 py-2 text-center font-medium text-gray-700">Capacity Score</th>
+            <th class="px-3 py-2 text-right font-medium text-gray-700">Scheduled Revenue</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for day in capacity_data %}
+          <tr class="border-b hover:bg-gray-50">
+            <td class="px-3 py-2 font-medium">
+              {{ day.capacity_date.strftime('%a, %b %d') }}
+            </td>
+            <td class="px-3 py-2 text-center">{{ day.total_slots }}</td>
+            <td class="px-3 py-2 text-center">
+              <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                {{ day.booked_slots }}
+              </span>
+            </td>
+            <td class="px-3 py-2 text-center">
+              <span class="px-2 py-1 {% if day.available_slots > 5 %}bg-green-100 text-green-800{% elif day.available_slots > 2 %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %} rounded text-xs">
+                {{ day.available_slots }}
+              </span>
+            </td>
+            <td class="px-3 py-2 text-center">
+              {% set util = day.utilization_percent|float %}
+              <div class="flex items-center gap-2">
+                <div class="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                  <div
+                    class="h-full {% if util >= 90 %}bg-red-500{% elif util >= 70 %}bg-yellow-500{% else %}bg-green-500{% endif %}"
+                    style="width: {{ util|min(100) }}%">
+                  </div>
+                </div>
+                <span class="text-xs w-12">{{ "%.0f"|format(util) }}%</span>
+              </div>
+            </td>
+            <td class="px-3 py-2 text-center">
+              {% if day.capacity_score %}
+                <span class="font-semibold {% if day.capacity_score >= 60 %}text-green-600{% elif day.capacity_score >= 30 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                  {{ "%.0f"|format(day.capacity_score) }}
+                </span>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td class="px-3 py-2 text-right">
+              {% if day.scheduled_revenue %}
+                ${{ "{:,.2f}".format(day.scheduled_revenue|float) }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Legend -->
+    <div class="mt-4 pt-4 border-t text-xs text-gray-600">
+      <div class="font-semibold mb-2">Understanding the Capacity Score:</div>
+      <ul class="space-y-1">
+        <li><span class="inline-block w-3 h-3 bg-green-500 rounded mr-1"></span> <strong>60-100:</strong> High capacity - Increase ad spend to fill available slots</li>
+        <li><span class="inline-block w-3 h-3 bg-yellow-500 rounded mr-1"></span> <strong>30-59:</strong> Moderate capacity - Maintain current ad spend</li>
+        <li><span class="inline-block w-3 h-3 bg-red-500 rounded mr-1"></span> <strong>0-29:</strong> Low capacity - Reduce ad spend to avoid overbooking</li>
+      </ul>
+    </div>
+  {% else %}
+    <div class="text-center py-12">
+      <i class="fa-solid fa-calendar-times text-gray-300 text-5xl mb-4"></i>
+      <p class="text-gray-600 mb-4">No capacity data available yet.</p>
+      <form method="post" action="{{ url_for('servicetitan_bp.sync_capacity') }}" class="inline">
+        <input type="hidden" name="days_ahead" value="30">
+        <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <i class="fa-solid fa-calculator mr-2"></i> Calculate Capacity Now
+        </button>
+      </form>
+    </div>
+  {% endif %}
+</div>
+
+<!-- How It Works -->
+<div class="bg-gray-50 border rounded-xl p-6">
+  <h3 class="font-semibold mb-3"><i class="fa-solid fa-question-circle mr-2"></i> How Capacity-Based Ads Optimization Works</h3>
+  <div class="text-sm text-gray-700 space-y-2">
+    <p><strong>1. Data Collection:</strong> We sync your jobs, appointments, and technician availability from ServiceTitan.</p>
+    <p><strong>2. Capacity Calculation:</strong> We calculate daily capacity based on scheduled jobs vs. available technician slots.</p>
+    <p><strong>3. Budget Recommendation:</strong> When you have high capacity (low utilization), we recommend increasing ad spend to fill available slots. When capacity is low (high utilization), we recommend reducing spend to prevent overbooking.</p>
+    <p><strong>4. Automated Optimization:</strong> Our AI agents can automatically adjust your Google Ads budgets based on these capacity insights.</p>
+  </div>
+</div>
+{% endblock %}

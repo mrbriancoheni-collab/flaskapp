@@ -1,0 +1,569 @@
+{% extends 'base_public.html' %}
+{% block title %}Pest Control Local Service Ads (LSAs) Optimization — FieldSprout{% endblock %}
+
+{% block head_extra %}
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Industries",
+      "item": "https://fieldsprout.io/industries"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Pest Control Local Service Ads",
+      "item": "https://fieldsprout.io/industries/pest-control-local-service-ads"
+    }
+  ]
+}
+</script>
+
+<!-- FAQ Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How much do pest control Local Service Ads cost?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Pest control LSAs use pay-per-lead pricing. You only pay when a customer contacts you (call, message, or booking). Typical lead costs range from $10-40 per lead depending on your market and pest type. Termite and bed bug leads typically cost more than general pest control."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What's the difference between LSAs and regular Google Ads for pest control?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Local Service Ads appear above regular Google Ads with Google Guaranteed badge, show your Google star rating prominently, and you only pay per lead (not per click). Regular Google Ads give you more control over keywords and pest-specific messaging but you pay per click."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do pest control companies get the Google Guaranteed badge?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "To earn Google Guaranteed status, you must pass Google's screening which includes pest control license verification, insurance verification, and background checks for all technicians. FieldSprout helps you complete the verification process and maintain compliance."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Should pest control companies pause LSAs during slow seasons?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Since you only pay per lead, there's minimal risk staying active year-round. FieldSprout's AI adjusts your weekly budget down during winter (for mosquito services) while keeping you visible for termite, rodent, and general pest control inquiries."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- Service Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "Pest Control Local Service Ads Management",
+  "provider": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  },
+  "description": "AI-powered Google Local Service Ads optimization for pest control companies, automatically managing budgets, responding to leads within seconds, maintaining Google Guaranteed status, and disputing invalid leads.",
+  "areaServed": {
+    "@type": "Country",
+    "name": "United States"
+  }
+}
+</script>
+
+<!-- HowTo Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Set Up Local Service Ads for Pest Control Companies",
+  "description": "Step-by-step guide to launching and optimizing Google Local Service Ads for pest control businesses to generate qualified leads with Google Guaranteed badge.",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Complete Google LSA verification",
+      "text": "Submit pest control license, insurance certificates, and complete background checks for all technicians. Google requires valid state/city pest control license, general liability insurance, and workers comp coverage."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Define service areas and pest types",
+      "text": "Select specific ZIP codes you serve and which pest services you offer (general pest, termite, mosquito, rodent, bed bug, etc.). Narrower targeting leads to more qualified leads."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Set weekly budget and lead preferences",
+      "text": "Start with a conservative weekly budget ($300-500) and specify which lead types you want. Adjust based on booking rate, recurring service conversion, and seasonal demand."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Optimize your LSA profile",
+      "text": "Upload high-quality photos of your team and trucks, encourage reviews from satisfied customers, and respond quickly to all LSA leads. Response speed directly impacts your ranking."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Monitor and dispute invalid leads",
+      "text": "Review all LSA leads within 72 hours. Dispute spam leads, wrong service area leads, identification queries, or DIY questions to get refunded. FieldSprout automates lead quality monitoring and dispute filing."
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-12">
+  <div class="mb-8">
+    <span class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full mb-4">
+      <i class="fa-solid fa-badge-check"></i> Google Guaranteed
+    </span>
+    <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+      Local Service Ads Management for Pest Control Companies
+    </h1>
+    <p class="text-xl text-gray-700 leading-relaxed">
+      Get the Google Guaranteed badge and appear at the very top of pest control search results. Pay only for actual leads, not clicks. FieldSprout's AI manages your LSA budget, responds to leads instantly, and disputes invalid leads automatically.
+    </p>
+  </div>
+
+  <div class="bg-green-50 border-l-4 border-green-600 p-6 rounded-lg mb-12">
+    <div class="flex items-start">
+      <i class="fa-solid fa-trophy text-green-600 text-2xl mr-4 mt-1"></i>
+      <div>
+        <h3 class="text-lg font-bold text-green-900 mb-2">Pest Control LSA Performance Metrics</h3>
+        <ul class="text-sm text-green-800 space-y-1">
+          <li>• <strong>24% booking rate</strong> from LSA leads (vs. 11% from regular Google Ads)</li>
+          <li>• <strong>$15-38 per lead</strong> average cost for general pest control services</li>
+          <li>• <strong>11-minute average response time</strong> with FieldSprout's auto-response system</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose prose-lg max-w-none">
+    <h2>What Are Google Local Service Ads for Pest Control?</h2>
+    <p>
+      Google Local Service Ads (LSAs) are the sponsored listings that appear at the very top of Google search results—above regular Google Ads and organic results. They're specifically designed for home service businesses like pest control companies.
+    </p>
+    <p>
+      When someone searches "exterminator near me" or "termite inspection", they see LSA results first with the <strong>Google Guaranteed</strong> badge, star ratings, hours of operation, and a direct call button. These ads are incredibly effective for pest control because:
+    </p>
+    <ul>
+      <li><strong>Prime positioning:</strong> You appear above all other results</li>
+      <li><strong>Trust signals:</strong> Google Guaranteed badge builds instant credibility</li>
+      <li><strong>Pay per lead:</strong> You only pay when a customer actually contacts you</li>
+      <li><strong>Lower cost per lead:</strong> Typically 30-45% cheaper than regular Google Ads clicks</li>
+    </ul>
+
+    <h2>Why LSAs Are Critical for Pest Control Companies</h2>
+    <p>
+      Pest control is competitive in local search, especially during peak seasons (spring/summer). When homeowners discover ants in the kitchen, termite swarmers, or a bed bug infestation, they're searching for immediate solutions. They call the first trustworthy company they see.
+    </p>
+    <p>
+      Local Service Ads put you in that #1 position with the Google Guaranteed badge. This combination of visibility and trust is powerful when competing for pest control customers against established national brands and local competitors.
+    </p>
+
+    <h2>How FieldSprout Optimizes Pest Control Local Service Ads</h2>
+
+    <h3>1. Fast Lead Response (Within 60 Seconds)</h3>
+    <p>
+      Response speed matters for pest control LSA leads, especially high-urgency situations like bed bugs or termite swarms. FieldSprout's AI monitoring system:
+    </p>
+    <ul>
+      <li><strong>Immediate SMS to customer:</strong> "Thanks for contacting [Your Company]! We received your pest control request and will call you within 10 minutes."</li>
+      <li><strong>Dispatch notification to your team:</strong> Alert sent to available technician with lead details and pest type</li>
+      <li><strong>Automated follow-up:</strong> If no response in 15 minutes, sends reminder and escalates</li>
+    </ul>
+    <p>
+      This increases booking rates by 35-55% compared to manual lead handling—critical when competing against multiple pest control companies from the same LSA search.
+    </p>
+
+    <h3>2. Intelligent Budget Management for Seasonal Pests</h3>
+    <p>
+      Pest control demand varies dramatically by season. FieldSprout's <strong>Budget Guardian</strong> agent:
+    </p>
+    <ul>
+      <li>Monitors lead pacing throughout the week (LSAs use weekly budgets)</li>
+      <li>Pauses ads temporarily if you're booked out 4+ days</li>
+      <li>Increases budget automatically during peak pest seasons (spring mosquitoes, termite swarms)</li>
+      <li>Decreases budget during slow seasons (winter mosquito services, summer rodent work)</li>
+      <li>Maintains baseline budget for year-round services (general pest control, termites, bed bugs)</li>
+    </ul>
+
+    <h3>3. Automatic Lead Quality Monitoring & Disputes</h3>
+    <p>
+      Not all LSA leads are valid for pest control. Common invalid leads include:
+    </p>
+    <ul>
+      <li>Spam calls from competitors or telemarketers</li>
+      <li>Identification questions ("What kind of bug is this?")</li>
+      <li>DIY advice seekers ("How do I get rid of ants myself?")</li>
+      <li>Wrong service area (customer outside your coverage zone)</li>
+      <li>Commercial inquiries (if you only serve residential)</li>
+      <li>Informational inquiries ("How much does termite treatment cost?" with no intent)</li>
+    </ul>
+    <p>
+      FieldSprout's AI automatically identifies invalid leads and files disputes with Google within the 72-hour window. Most pest control companies recover 15-25% of their LSA spend through successful disputes.
+    </p>
+
+    <h3>4. Google Guaranteed Compliance Monitoring</h3>
+    <p>
+      Maintaining Google Guaranteed status requires:
+    </p>
+    <ul>
+      <li>Active pest control operator license in your state/city</li>
+      <li>Current general liability insurance ($1M+ coverage)</li>
+      <li>Workers compensation insurance</li>
+      <li>Background checks for all technicians</li>
+      <li>Positive review score (4.0+ stars)</li>
+    </ul>
+    <p>
+      FieldSprout monitors expiration dates for licenses and insurance, sends renewal reminders 60 days in advance, and tracks review scores to prevent suspension from the LSA program.
+    </p>
+
+    <h3>5. Service Area Optimization</h3>
+    <p>
+      LSAs allow ZIP-code-level targeting. FieldSprout analyzes your historical job data to identify:
+    </p>
+    <ul>
+      <li><strong>High-profit ZIPs:</strong> Short drive time, high recurring service conversion rate, low cancellation rate</li>
+      <li><strong>Medium-profit ZIPs:</strong> Moderate performance, worth staying active</li>
+      <li><strong>Low-profit ZIPs:</strong> Long drive time or high one-time-only rate—remove from targeting</li>
+    </ul>
+    <p>
+      Pest control profitability depends heavily on converting one-time treatments to recurring service contracts. Focus LSA budget on areas with highest recurring conversion rates.
+    </p>
+
+    <h3>6. Job Type Selection for Pest Services</h3>
+    <p>
+      LSAs let you specify which pest control services you want leads for:
+    </p>
+    <ul>
+      <li>General pest control (ants, roaches, spiders)</li>
+      <li>Termite inspection and treatment</li>
+      <li>Rodent control and exclusion</li>
+      <li>Bed bug treatment</li>
+      <li>Mosquito and tick control</li>
+      <li>Wildlife removal (if licensed)</li>
+    </ul>
+    <p>
+      FieldSprout recommends starting with your highest-margin and highest-volume services (typically general pest control and termites) and adding specialized services once you're consistently booking 70%+ of leads.
+    </p>
+
+    <h2>Pest Control LSA Strategy: Service Type Focus</h2>
+
+    <h3>General Pest Control (Highest Volume, Best for Recurring)</h3>
+    <p>
+      <strong>Target searches:</strong> "exterminator near me", "pest control service", "ant control"
+      <br><strong>Lead cost:</strong> $15-35 per lead
+      <br><strong>Booking rate:</strong> 25-35%
+      <br><strong>Strategy:</strong> Focus on recurring service conversion, offer monthly/quarterly plans
+    </p>
+
+    <h3>Termite Services (High Value, Seasonal Peaks)</h3>
+    <p>
+      <strong>Target searches:</strong> "termite inspection", "termite treatment", "termite swarm"
+      <br><strong>Lead cost:</strong> $25-55 per lead
+      <br><strong>Booking rate:</strong> 20-30% (higher during swarm season)
+      <br><strong>Strategy:</strong> Offer free inspections, emphasize guarantees and financing
+    </p>
+
+    <h3>Bed Bug Treatment (High Urgency, High Value)</h3>
+    <p>
+      <strong>Target searches:</strong> "bed bug exterminator", "bed bug treatment"
+      <br><strong>Lead cost:</strong> $30-65 per lead
+      <br><strong>Booking rate:</strong> 30-40% (extreme urgency)
+      <br><strong>Strategy:</strong> Emphasize fast response, guaranteed elimination, discreet service
+    </p>
+
+    <h3>Mosquito/Tick Control (Seasonal, Recurring Revenue)</h3>
+    <p>
+      <strong>Target searches:</strong> "mosquito control", "tick treatment", "mosquito spray"
+      <br><strong>Lead cost:</strong> $18-40 per lead
+      <br><strong>Booking rate:</strong> 20-30%
+      <br><strong>Strategy:</strong> Offer seasonal packages (May-September), recurring monthly treatments
+    </p>
+
+    <h2>LSA vs. Google Ads: Which Is Better for Pest Control?</h2>
+    <p>
+      The answer: <strong>Use both strategically.</strong>
+    </p>
+
+    <table style="width:100%; border-collapse: collapse; margin: 2rem 0;">
+      <thead>
+        <tr style="background: #f3f4f6;">
+          <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left;">Factor</th>
+          <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left;">Local Service Ads</th>
+          <th style="border: 1px solid #e5e7eb; padding: 12px; text-align: left;">Google Ads</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;"><strong>Position</strong></td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">Above Google Ads, #1 position</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">Below LSAs, above organic</td>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;"><strong>Pricing</strong></td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">Pay per lead ($15-55)</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">Pay per click ($3-18)</td>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;"><strong>Targeting Control</strong></td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">Limited (service type + ZIP code)</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">Full control (keywords, pest types, etc.)</td>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;"><strong>Best For</strong></td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">General pest control, high-intent searches</td>
+          <td style="border: 1px solid #e5e7eb; padding: 12px;">Specific pests, seasonal campaigns, recurring plans</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      <strong>FieldSprout's recommended pest control budget split:</strong>
+    </p>
+    <ul>
+      <li>55-65% of budget to LSAs for general pest control and high-intent searches</li>
+      <li>35-45% of budget to Google Ads for specific pest campaigns and recurring service promotion</li>
+    </ul>
+
+    <h2>Common Pest Control LSA Mistakes (And How to Avoid Them)</h2>
+
+    <h3>Mistake #1: Not Responding Fast Enough</h3>
+    <p>
+      <strong>The problem:</strong> Customer calls 3-4 pest control companies from LSA results. First to respond and offer same-day or next-day service gets the job.
+    </p>
+    <p>
+      <strong>The fix:</strong> FieldSprout's instant response system ensures you contact customers quickly—via SMS acknowledgment and internal dispatch alert.
+    </p>
+
+    <h3>Mistake #2: Not Disputing Invalid Leads</h3>
+    <p>
+      <strong>The problem:</strong> You pay for identification questions, DIY advice seekers, and spam calls. This wastes 20-30% of LSA spend.
+    </p>
+    <p>
+      <strong>The fix:</strong> FieldSprout automatically categorizes leads and files disputes for invalid ones within Google's 72-hour window.
+    </p>
+
+    <h3>Mistake #3: Not Converting to Recurring Service</h3>
+    <p>
+      <strong>The problem:</strong> You pay $25 for a lead, do a $150 one-time ant treatment, and never see the customer again. Lifetime value is too low.
+    </p>
+    <p>
+      <strong>The fix:</strong> Train technicians to offer recurring service plans. FieldSprout tracks recurring conversion rates by lead source to optimize accordingly.
+    </p>
+
+    <h3>Mistake #4: Serving Too Many ZIP Codes</h3>
+    <p>
+      <strong>The problem:</strong> Targeting 70+ ZIP codes dilutes budget and generates leads from distant areas with low recurring conversion.
+    </p>
+    <p>
+      <strong>The fix:</strong> Start with core 15-20 highest-profit ZIPs. Expand only after achieving 65%+ booking rate and 40%+ recurring conversion.
+    </p>
+
+    <h2>Get Started with Pest Control Local Service Ads</h2>
+    <p>
+      Local Service Ads are an efficient way for pest control companies to get qualified leads from Google. With the Google Guaranteed badge and pay-per-lead pricing, LSAs deliver consistent lead flow at predictable costs.
+    </p>
+    <p>
+      FieldSprout handles the entire LSA workflow—from Google Guaranteed verification to instant lead response to automatic dispute filing. You focus on delivering great service; we handle the lead generation.
+    </p>
+
+    <div class="mt-8 p-6 bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-2xl">
+      <h3 class="text-xl font-bold text-gray-900 mb-3">Ready to get Google Guaranteed pest control leads?</h3>
+      <p class="text-gray-700 mb-4">
+        Connect your Google Local Services account or let us help you get set up. Start generating qualified leads in 48 hours.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <a href="/signup" class="btn btn-primary px-6 py-3">
+          Start Free Trial →
+        </a>
+        <a href="/pricing" class="btn btn-secondary px-6 py-3">
+          View Pricing
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- Related Pages Section -->
+<section class="bg-white border-t border-b border-gray-200 py-12 mt-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">More Pest Control Marketing Solutions</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <a href="/industries/pest-control-google-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Google Ads Optimization</h3>
+        <p class="text-sm text-gray-600">Reduce cost per lead with AI-powered campaign management</p>
+      </a>
+      <a href="/industries/pest-control-meta-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Build your pipeline with targeted social media campaigns</p>
+      </a>
+      <a href="/industries/pest-control-website-cro" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Website & Conversion Optimization</h3>
+        <p class="text-sm text-gray-600">Turn more website visitors into paying customers</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Browse Industries Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-6xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Marketing Solutions by Industry</h2>
+    <p class="text-gray-600 text-center mb-8">Industry-specific strategies for home service businesses</p>
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <a href="/industries/hvac-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">❄️</div>
+        <div class="text-sm font-semibold text-gray-900">HVAC</div>
+      </a>
+      <a href="/industries/plumbing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔧</div>
+        <div class="text-sm font-semibold text-gray-900">Plumbing</div>
+      </a>
+      <a href="/industries/electrical-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">⚡</div>
+        <div class="text-sm font-semibold text-gray-900">Electrical</div>
+      </a>
+      <a href="/industries/roofing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏠</div>
+        <div class="text-sm font-semibold text-gray-900">Roofing</div>
+      </a>
+      <a href="/industries/pest-control-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🐛</div>
+        <div class="text-sm font-semibold text-gray-900">Pest Control</div>
+      </a>
+      <a href="/industries/lawn-care-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🌱</div>
+        <div class="text-sm font-semibold text-gray-900">Lawn Care</div>
+      </a>
+      <a href="/industries/garage-door-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🚪</div>
+        <div class="text-sm font-semibold text-gray-900">Garage Door</div>
+      </a>
+      <a href="/industries/pools-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏊</div>
+        <div class="text-sm font-semibold text-gray-900">Pools</div>
+      </a>
+      <a href="/industries/concrete-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏗️</div>
+        <div class="text-sm font-semibold text-gray-900">Concrete</div>
+      </a>
+      <a href="/industries/fencing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪵</div>
+        <div class="text-sm font-semibold text-gray-900">Fencing</div>
+      </a>
+      <a href="/industries/solar-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">☀️</div>
+        <div class="text-sm font-semibold text-gray-900">Solar</div>
+      </a>
+      <a href="/industries/windows-doors-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪟</div>
+        <div class="text-sm font-semibold text-gray-900">Windows & Doors</div>
+      </a>
+      <a href="/industries/irrigation-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">💧</div>
+        <div class="text-sm font-semibold text-gray-900">Irrigation</div>
+      </a>
+      <a href="/industries/restoration-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔨</div>
+        <div class="text-sm font-semibold text-gray-900">Restoration</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Products Section -->
+<section class="bg-white py-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Our Marketing Products</h2>
+    <p class="text-gray-600 text-center mb-8">AI-powered marketing automation for home service businesses</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <a href="/products/google-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">🎯</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Ads</h3>
+        <p class="text-sm text-gray-600">AI agents optimize your campaigns 24/7 to reduce cost per lead</p>
+      </a>
+      <a href="/products/facebook-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📱</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Targeted social campaigns that build your pipeline</p>
+      </a>
+      <a href="/products/local-services-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">✅</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/products/google-business-profile" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📍</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Business Profile</h3>
+        <p class="text-sm text-gray-600">Optimize your local presence and get more reviews</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-4xl mx-auto px-4">
+    <h2 class="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+
+    <div class="space-y-4">
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          How much do pest control Local Service Ads cost?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Pest control LSAs use pay-per-lead pricing. You only pay when a customer contacts you (call, message, or booking). Typical lead costs range from $10-40 per lead depending on your market and pest type. Termite and bed bug leads typically cost more than general pest control.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What's the difference between LSAs and regular Google Ads for pest control?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Local Service Ads appear above regular Google Ads with Google Guaranteed badge, show your Google star rating prominently, and you only pay per lead (not per click). Regular Google Ads give you more control over keywords and pest-specific messaging but you pay per click.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          How do pest control companies get the Google Guaranteed badge?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          To earn Google Guaranteed status, you must pass Google's screening which includes pest control license verification, insurance verification, and background checks for all technicians. FieldSprout helps you complete the verification process and maintain compliance.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          Should pest control companies pause LSAs during slow seasons?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          No. Since you only pay per lead, there's minimal risk staying active year-round. FieldSprout's AI adjusts your weekly budget down during winter (for mosquito services) while keeping you visible for termite, rodent, and general pest control inquiries.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+{% endblock %}

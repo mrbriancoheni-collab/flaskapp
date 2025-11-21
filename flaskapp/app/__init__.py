@@ -390,11 +390,30 @@ def create_app():
 
     @app.context_processor
     def ai_flags():
+        """
+        Provide AI and payment status flags to all templates.
+        Returns is_paid as False for non-logged-in users or any errors.
+        """
         try:
-            from app.auth.utils import is_paid_account as _is_paid
-            return {"ai_enabled": _is_paid()}
-        except Exception:
-            return {"ai_enabled": False}
+            from app.auth.utils import is_paid_account as _is_paid, is_logged_in
+
+            # Only check payment status if user is logged in
+            if is_logged_in():
+                is_paid = bool(_is_paid())
+            else:
+                is_paid = False
+
+            return {
+                "ai_enabled": is_paid,
+                "is_paid": is_paid
+            }
+        except Exception as e:
+            # Log the error but don't break the page
+            app.logger.warning(f"Error in ai_flags context processor: {e}")
+            return {
+                "ai_enabled": False,
+                "is_paid": False
+            }
 
     # ---- Security headers (nonce + CSP) ------------------------------------
     @app.before_request
@@ -452,6 +471,28 @@ def create_app():
             app.logger.warning(f"Could not exempt Stripe webhook from CSRF: {e}")
     except Exception:
         app.logger.exception("Failed to import account_bp")
+
+    # Budget Intelligence Features
+    try:
+        from app.account.auto_budget_routes import auto_budget_bp
+        app.register_blueprint(auto_budget_bp)
+        app.logger.info("auto_budget_bp registered at /account/auto-budget")
+    except Exception:
+        app.logger.exception("Failed to import/register auto_budget_bp")
+
+    try:
+        from app.account.competitive_routes import competitive_bp
+        app.register_blueprint(competitive_bp)
+        app.logger.info("competitive_bp registered at /account/competitive")
+    except Exception:
+        app.logger.exception("Failed to import/register competitive_bp")
+
+    try:
+        from app.account.budget_groups_routes import budget_groups_bp
+        app.register_blueprint(budget_groups_bp)
+        app.logger.info("budget_groups_bp registered at /account/budget-groups")
+    except Exception:
+        app.logger.exception("Failed to import/register budget_groups_bp")
 
     try:
         from app.onboarding_bp import onboarding_bp
@@ -666,6 +707,20 @@ def create_app():
         app.logger.info("agent_config_bp registered at /admin/agents")
     except Exception:
         app.logger.exception("Failed to register agent_config_bp")
+
+    try:
+        from app.admin.email_workflow_routes import email_workflow_bp
+        app.register_blueprint(email_workflow_bp)  # url_prefix=/admin/email-workflows
+        app.logger.info("email_workflow_bp registered at /admin/email-workflows")
+    except Exception:
+        app.logger.exception("Failed to register email_workflow_bp")
+
+    try:
+        from app.admin.servicetitan_routes import servicetitan_bp
+        app.register_blueprint(servicetitan_bp)  # url_prefix=/admin/servicetitan
+        app.logger.info("servicetitan_bp registered at /admin/servicetitan")
+    except Exception:
+        app.logger.exception("Failed to register servicetitan_bp")
 
     # --- Email Tracking (public endpoints for pixel and click tracking) ----
     try:

@@ -179,6 +179,8 @@ def _create_account_and_user(name: str, email: str, password: str):
     Assumes tables:
       accounts(id, name, created_at, ...)
       users(id, account_id, name, email, password_hash, role, email_verified, created_at, ...)
+
+    Note: Email verification is disabled - all accounts are created with email_verified=1
     """
     email_n = _normalize_email(email)
     pwd_hash = generate_password_hash(password)
@@ -190,24 +192,40 @@ def _create_account_and_user(name: str, email: str, password: str):
         if exist:
             return None
 
-        acc_res = conn.execute(
+        # Insert account
+        conn.execute(
             text("INSERT INTO accounts (name, created_at) VALUES (:n, NOW())"),
             {"n": name or email_n},
         )
-        account_id = acc_res.lastrowid
 
-        user_res = conn.execute(
+        # Get the last inserted account ID using LAST_INSERT_ID()
+        account_id_result = conn.execute(text("SELECT LAST_INSERT_ID()")).scalar()
+        account_id = int(account_id_result) if account_id_result else None
+
+        if not account_id:
+            raise Exception("Failed to retrieve account ID after insert")
+
+        # Insert user
+        conn.execute(
             text(
                 """
                 INSERT INTO users
-                  (account_id, name, email, password_hash, role, email_verified, created_at)
+                  (account_id, name, email, password_hash, role, email_verified, email_verified_at, created_at)
                 VALUES
-                  (:aid, :n, :e, :ph, 'owner', 0, NOW())
+                  (:aid, :n, :e, :ph, 'owner', 1, NOW(), NOW())
                 """
             ),
             {"aid": account_id, "n": name or email_n, "e": email_n, "ph": pwd_hash},
         )
-        return user_res.lastrowid
+
+        # Get the last inserted user ID using LAST_INSERT_ID()
+        user_id_result = conn.execute(text("SELECT LAST_INSERT_ID()")).scalar()
+        user_id = int(user_id_result) if user_id_result else None
+
+        if not user_id:
+            raise Exception("Failed to retrieve user ID after insert")
+
+        return user_id
 
 
 def _create_user_and_account(name: str, email: str, password: Optional[str] = None, email_verified: bool = False):
@@ -232,24 +250,53 @@ def _create_user_and_account(name: str, email: str, password: Optional[str] = No
         if exist:
             return None, None
 
-        acc_res = conn.execute(
+        # Insert account
+        conn.execute(
             text("INSERT INTO accounts (name, created_at) VALUES (:n, NOW())"),
             {"n": name or email_n},
         )
-        account_id = acc_res.lastrowid
 
-        user_res = conn.execute(
-            text(
-                """
-                INSERT INTO users
-                  (account_id, name, email, password_hash, role, email_verified, created_at)
-                VALUES
-                  (:aid, :n, :e, :ph, 'owner', :ev, NOW())
-                """
-            ),
-            {"aid": account_id, "n": name or email_n, "e": email_n, "ph": pwd_hash, "ev": 1 if email_verified else 0},
-        )
-        return account_id, user_res.lastrowid
+        # Get the last inserted account ID using LAST_INSERT_ID()
+        account_id_result = conn.execute(text("SELECT LAST_INSERT_ID()")).scalar()
+        account_id = int(account_id_result) if account_id_result else None
+
+        if not account_id:
+            raise Exception("Failed to retrieve account ID after insert")
+
+        # Set email_verified_at when email is verified (e.g., OAuth providers)
+        if email_verified:
+            conn.execute(
+                text(
+                    """
+                    INSERT INTO users
+                      (account_id, name, email, password_hash, role, email_verified, email_verified_at, created_at)
+                    VALUES
+                      (:aid, :n, :e, :ph, 'owner', 1, NOW(), NOW())
+                    """
+                ),
+                {"aid": account_id, "n": name or email_n, "e": email_n, "ph": pwd_hash},
+            )
+        else:
+            conn.execute(
+                text(
+                    """
+                    INSERT INTO users
+                      (account_id, name, email, password_hash, role, email_verified, created_at)
+                    VALUES
+                      (:aid, :n, :e, :ph, 'owner', 0, NOW())
+                    """
+                ),
+                {"aid": account_id, "n": name or email_n, "e": email_n, "ph": pwd_hash},
+            )
+
+        # Get the last inserted user ID using LAST_INSERT_ID()
+        user_id_result = conn.execute(text("SELECT LAST_INSERT_ID()")).scalar()
+        user_id = int(user_id_result) if user_id_result else None
+
+        if not user_id:
+            raise Exception("Failed to retrieve user ID after insert")
+
+        return account_id, user_id
 
 
 # ---- itsdangerous (email verification & password reset tokens) -------------
@@ -327,8 +374,8 @@ def login():
             else:
                 _set_login_session(row["id"], email)
 
-                if not row["email_verified"]:
-                    flash("Please verify your email. We can resend the link from the login page.", "warning")
+                # Email verification is disabled - all accounts have access
+                # (Legacy code removed: no more email verification warnings)
 
                 # Always prefer a safe ?next=, otherwise go to account dashboard
                 return redirect(_post_auth_target())
@@ -353,8 +400,8 @@ def register():
         elif not _is_valid_email(email):  # <-- server-side email sanity check
             errs.append("Enter a valid email address.")
 
-        # Strong password validation (server-side)
-        ok_pw, msg_pw = validate_strength(password, email)
+        # Strong password validation (server-side) - minimum 8 characters
+        ok_pw, msg_pw = validate_strength(password, email, min_length=8)
         if not ok_pw and msg_pw:
             errs.append(msg_pw)
 
@@ -370,15 +417,8 @@ def register():
 
         _set_login_session(user_id, email)
 
-        # Best-effort: send verification email
-        try:
-            tok = _verification_token(user_id, email)
-            if _send_verification_email(email, tok):
-                flash("Verification email sent. Please check your inbox.", "success")
-            else:
-                flash("We could not send a verification email (mail not configured).", "warning")
-        except Exception:
-            current_app.logger.exception("Failed to send verification email")
+        # Welcome the user - no email verification needed
+        flash("Welcome to FieldSprout! Your account has been created.", "success")
 
         # After registration, land on dashboard (or safe ?next=)
         return redirect(_post_auth_target())
@@ -507,8 +547,8 @@ def reset_password(token: str):
         pw2 = request.form.get("password2", "")
 
         errs = []
-        # Strong password validation on reset, too
-        ok_pw, msg_pw = validate_strength(pw1, email)
+        # Strong password validation on reset, too - minimum 8 characters
+        ok_pw, msg_pw = validate_strength(pw1, email, min_length=8)
         if not ok_pw and msg_pw:
             errs.append(msg_pw)
         if pw1 != pw2:

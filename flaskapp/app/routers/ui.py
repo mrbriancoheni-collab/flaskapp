@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from typing import Optional, List
 import json
 
-from app.db import get_db
+from app.db_utils import get_db
 from app.models import CompanyProfile, CampaignDraft
 from app.services.llm_service import generate_pain_service_campaign
 from app.services.export_service import draft_to_excel

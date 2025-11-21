@@ -1,0 +1,646 @@
+{% extends 'base_public.html' %}
+{% block title %}Solar Meta Ads (Facebook/Instagram) — FieldSprout{% endblock %}
+
+{% block head_extra %}
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Industries",
+      "item": "https://fieldsprout.io/industries"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Solar Meta Ads",
+      "item": "https://fieldsprout.io/industries/solar-meta-ads"
+    }
+  ]
+}
+</script>
+
+<!-- FAQ Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Do Facebook and Instagram ads work for solar companies?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, especially for building awareness and capturing early-stage interest. Meta ads work best for solar education, targeting homeowners with high electricity bills, showcasing installation visuals, and remarketing to website visitors. Use Google for high-intent search traffic."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What's the average cost per solar lead from Meta ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Solar leads from Facebook and Instagram typically cost $30-80, lower than Google Ads but often earlier in the buying journey. Qualified consultation-ready leads cost $50-100, while early-stage educational leads cost $20-50."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What content works best for solar Meta ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Installation time-lapse videos, before/after electricity bill comparisons, customer testimonials with savings data, solar incentive explainers, financing calculator tools, and educational content about federal tax credits and state rebates."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How should solar companies target Meta ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Target homeowners age 35-65 in your service area, income $75K+, interests in sustainability/environment, lookalike audiences of past customers, and retarget website visitors. Exclude renters and people in multi-family housing."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- Service Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "Solar Meta Ads Optimization",
+  "provider": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  },
+  "description": "AI-powered Facebook and Instagram advertising for solar installation companies, focusing on homeowner targeting, incentive-based campaigns, visual storytelling, and lead nurturing through the solar sales cycle.",
+  "areaServed": {
+    "@type": "Country",
+    "name": "United States"
+  }
+}
+</script>
+
+<!-- HowTo Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Run Effective Meta Ads for Solar Companies",
+  "description": "Step-by-step guide to creating and optimizing Facebook and Instagram advertising campaigns for solar installation contractors to generate qualified residential solar leads.",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Target qualified homeowner demographics",
+      "text": "Use geographic targeting for service area, age 35-65, household income $75K+, homeownership status, and exclude apartments/condos. Layer interest targeting for sustainability, home improvement, and environmentalism. Create lookalike audiences from past customers."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Emphasize financial incentives and savings",
+      "text": "Lead with federal tax credit (30% ITC), state rebates, and electricity bill savings. Solar buyers are financially motivated—show ROI prominently. Example: 'Save $40K Over 20 Years + $9,000 Federal Tax Credit'."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Use installation visuals and social proof",
+      "text": "Create carousel ads with installation photos, time-lapse installation videos, before/after electricity bills, and customer testimonials. Visual proof of completed installations builds trust and demonstrates your experience."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Offer solar calculators and educational content",
+      "text": "Provide value first: solar savings calculators, federal incentive guides, financing comparison tools. Capture emails for nurture campaigns since solar sales cycles are 3-6 months. Build trust before asking for commitment."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Implement remarketing for website visitors",
+      "text": "Install Meta pixel to track site visitors. Create remarketing campaigns targeting people who visited solar calculator, pricing pages, or contact forms but didn't convert. Show testimonials and limited-time incentives to drive action."
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-12">
+  <div class="mb-8">
+    <span class="inline-block px-3 py-1 text-sm font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full mb-4">
+      <i class="fa-solid fa-solar-panel"></i> Solar Industry
+    </span>
+    <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+      Meta Ads (Facebook & Instagram) for Solar Companies
+    </h1>
+    <p class="text-xl text-gray-700 leading-relaxed">
+      Build solar awareness and generate early-stage leads through strategic Facebook and Instagram advertising. FieldSprout's AI optimizes targeting, creative testing, and lead nurturing for solar contractors—capturing homeowners before they actively search Google.
+    </p>
+  </div>
+
+  <div class="bg-indigo-50 border-l-4 border-indigo-600 p-6 rounded-lg mb-12">
+    <div class="flex items-start">
+      <i class="fa-solid fa-chart-line text-indigo-600 text-2xl mr-4 mt-1"></i>
+      <div>
+        <h3 class="text-lg font-bold text-indigo-900 mb-2">Solar Meta Ads Performance Benchmarks</h3>
+        <ul class="text-sm text-indigo-800 space-y-1">
+          <li>• <strong>−44% cost per qualified solar lead</strong> with homeowner targeting and income filtering (90 days)</li>
+          <li>• <strong>+112% engagement rate</strong> on installation time-lapse videos vs. static images</li>
+          <li>• <strong>$800-1,500/month saved</strong> by excluding renters and low-income demographics</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose prose-lg max-w-none">
+    <h2>Why Meta Ads Are Valuable for Solar Companies</h2>
+    <p>
+      Solar installation has a long sales cycle (3-6 months from initial interest to signed contract). Most homeowners don't wake up one morning and decide to get solar—they research for weeks or months, compare options, calculate savings, and wait for the right incentive or financing offer.
+    </p>
+    <p>
+      This extended consideration phase is where Facebook and Instagram advertising excels. While Google captures homeowners actively searching "solar companies near me," Meta platforms capture homeowners earlier in their journey—when they're scrolling through their feed, seeing a neighbor's solar installation, or reading about electricity rate increases.
+    </p>
+    <p>
+      The key advantage: <strong>early engagement</strong>. By capturing homeowners' attention 2-4 months before they're ready to get quotes, you build brand awareness and trust. When they finally reach the decision stage, you're the company they remember and contact first.
+    </p>
+
+    <h2>The Solar Meta Ads Strategy: Education, Then Conversion</h2>
+    <p>
+      Unlike Google Ads where searchers have high intent ("solar installation near me"), Meta ad viewers are browsing socially. They're not looking for solar companies—you're interrupting their feed. This requires a different approach:
+    </p>
+
+    <h3>Phase 1: Awareness and Education (60-90 Days Out)</h3>
+    <p>
+      Capture attention with:
+    </p>
+    <ul>
+      <li>Educational content about solar savings and incentives</li>
+      <li>Interactive solar calculators</li>
+      <li>Before/after electricity bill comparisons</li>
+      <li>Customer testimonial videos</li>
+      <li>Installation time-lapse videos</li>
+    </ul>
+    <p>
+      Goal: Get them to visit your website, use your solar calculator, or download an incentives guide (capturing their email for nurturing).
+    </p>
+
+    <h3>Phase 2: Consideration and Comparison (30-60 Days Out)</h3>
+    <p>
+      Retarget website visitors and email subscribers with:
+    </p>
+    <ul>
+      <li>Financing options and $0 down offers</li>
+      <li>Company differentiation (why choose you vs. competitors)</li>
+      <li>Portfolio of installations in their neighborhood</li>
+      <li>Limited-time incentive deadlines</li>
+    </ul>
+
+    <h3>Phase 3: Decision and Action (Now)</h3>
+    <p>
+      Retarget highly engaged prospects with:
+    </p>
+    <ul>
+      <li>Free consultation offers</li>
+      <li>Limited-time promotions</li>
+      <li>Urgency messaging (incentive deadlines, rate increases)</li>
+      <li>Strong social proof (reviews, testimonials)</li>
+    </ul>
+
+    <h2>Common Solar Meta Ads Mistakes</h2>
+    <p>
+      Most solar companies waste budgets on Facebook and Instagram by treating them like Google search. Here are the critical mistakes:
+    </p>
+    <ul>
+      <li><strong>No targeting filters:</strong> Showing ads to renters, students, low-income demographics who can't afford/qualify for solar</li>
+      <li><strong>Asking for commitment too early:</strong> Demanding phone numbers before providing value</li>
+      <li><strong>Text-heavy ads:</strong> Long paragraphs instead of compelling visuals</li>
+      <li><strong>No remarketing strategy:</strong> Not tracking website visitors for follow-up</li>
+      <li><strong>Ignoring lead nurturing:</strong> Not following up with educational content for early-stage leads</li>
+      <li><strong>Generic messaging:</strong> Not emphasizing federal tax credit, state incentives, or financing</li>
+    </ul>
+
+    <h2>How FieldSprout Optimizes Solar Meta Campaigns</h2>
+    <p>
+      FieldSprout's AI agents understand that Meta advertising for solar requires patience, education, and multi-touch attribution. Our agents automatically structure campaigns around the solar buying journey.
+    </p>
+
+    <h3>1. Qualified Homeowner Targeting</h3>
+    <p>
+      The <strong>Targeting Optimization Agent</strong> builds precise audiences to filter out unqualified prospects:
+    </p>
+
+    <h4>Geographic Targeting:</h4>
+    <ul>
+      <li>15-25 mile radius around service area (tighter than Google to control costs)</li>
+      <li>Exclude areas with unfavorable solar policies or low sun exposure</li>
+      <li>Target ZIP codes with median home values $300K+ (homeowners likely to afford solar)</li>
+    </ul>
+
+    <h4>Demographic Targeting:</h4>
+    <ul>
+      <li><strong>Age:</strong> 35-65 (peak homeownership and decision-making age)</li>
+      <li><strong>Homeownership:</strong> Exclude likely renters (apartment complexes, college towns)</li>
+      <li><strong>Income:</strong> $75,000+ household income (can qualify for financing)</li>
+      <li><strong>Education:</strong> Some college+ (correlates with solar adoption)</li>
+    </ul>
+
+    <h4>Interest Targeting:</h4>
+    <ul>
+      <li>Sustainability and environmentalism</li>
+      <li>Home improvement and renovation</li>
+      <li>Energy efficiency</li>
+      <li>Homeownership (Meta interest category)</li>
+      <li>Tesla (correlates strongly with solar interest)</li>
+    </ul>
+
+    <h4>Lookalike Audiences:</h4>
+    <ul>
+      <li>Upload customer list of past solar installations</li>
+      <li>Create 3-5% lookalike audiences (similar demographics to your best customers)</li>
+      <li>Test lookalikes against interest-based targeting</li>
+    </ul>
+
+    <h3>2. Incentive-Focused Ad Creative</h3>
+    <p>
+      The <strong>Creative Testing Agent</strong> knows that solar buyers are financially motivated. Top-performing ad formats:
+    </p>
+
+    <h4>Financial Savings Headlines:</h4>
+    <ul>
+      <li>"Save $40,000 Over 20 Years with Solar + 30% Federal Tax Credit"</li>
+      <li>"Eliminate Your $200/Month Electric Bill with $0 Down Solar"</li>
+      <li>"California Homeowners: Get $7,500 State Rebate + 30% Federal Credit"</li>
+      <li>"Lock in Today's Electricity Rates Forever with Solar"</li>
+    </ul>
+
+    <h4>Visual Content That Converts:</h4>
+    <ul>
+      <li><strong>Installation time-lapses:</strong> 30-60 second videos showing full installation process</li>
+      <li><strong>Before/after bill comparisons:</strong> Side-by-side screenshots of $250/month → $0 bills</li>
+      <li><strong>Neighborhood installations:</strong> "Your neighbors on [Street Name] went solar—see their results"</li>
+      <li><strong>Customer testimonials:</strong> Homeowners explaining their savings and experience</li>
+      <li><strong>Financing calculators:</strong> Interactive tools showing monthly payment options</li>
+    </ul>
+
+    <h3>3. Lead Magnet Strategy for Early-Stage Prospects</h3>
+    <p>
+      Most Meta ad viewers aren't ready to request a quote. Capture them with educational offers:
+    </p>
+    <ul>
+      <li><strong>"Free Solar Savings Calculator":</strong> Interactive tool estimates their savings (captures email)</li>
+      <li><strong>"2024 Federal Solar Tax Credit Guide":</strong> PDF explaining 30% ITC (email download)</li>
+      <li><strong>"Solar Financing Options Comparison":</strong> Guide to loans, leases, PPAs (email download)</li>
+      <li><strong>"Is Your Roof Right for Solar?":</strong> Questionnaire that provides personalized assessment</li>
+    </ul>
+    <p>
+      These lead magnets cost $5-15 per email capture (much cheaper than $60-100 consultation requests), then nurture with email sequences until prospects are ready to get quotes.
+    </p>
+
+    <h3>4. Remarketing to Website Visitors</h3>
+    <p>
+      FieldSprout's <strong>Remarketing Agent</strong> automatically creates custom audiences for:
+    </p>
+    <ul>
+      <li><strong>Solar calculator users:</strong> Already demonstrated interest by calculating savings</li>
+      <li><strong>Pricing page visitors:</strong> Actively researching costs</li>
+      <li><strong>Blog readers:</strong> Engaged with educational content</li>
+      <li><strong>Form abandoners:</strong> Started quote request but didn't complete</li>
+    </ul>
+    <p>
+      Remarketing ads emphasize urgency and social proof:
+    </p>
+    <ul>
+      <li>"You calculated $38,000 in solar savings—ready to get started?"</li>
+      <li>"Federal tax credit ends soon—schedule free consultation now"</li>
+      <li>"Join 500+ homeowners in [City] who've gone solar with us"</li>
+    </ul>
+
+    <h3>5. Seasonal and Incentive-Based Campaign Timing</h3>
+    <p>
+      Solar demand has seasonal patterns and responds to incentive changes. The <strong>Campaign Manager</strong> adjusts budgets based on:
+    </p>
+    <ul>
+      <li><strong>Spring installation season:</strong> Increase budgets March-May (highest demand)</li>
+      <li><strong>Incentive deadlines:</strong> Ramp up when state rebates are ending or reducing</li>
+      <li><strong>Utility rate increases:</strong> Capitalize on news about electricity price hikes</li>
+      <li><strong>Federal tax season:</strong> Promote tax credit during January-April when people are tax-focused</li>
+    </ul>
+
+    <h3>6. Video Content Optimization</h3>
+    <p>
+      Video dramatically outperforms static images for solar advertising. The AI tracks which video formats drive the most engagement and conversions:
+    </p>
+    <ul>
+      <li><strong>Time-lapse installations:</strong> 30-60 seconds showing entire installation process</li>
+      <li><strong>Customer testimonial videos:</strong> 60-90 seconds with real customers discussing savings</li>
+      <li><strong>Drone footage:</strong> Aerial views of completed solar installations</li>
+      <li><strong>Explainer videos:</strong> "How Solar Works" or "Understanding the Federal Tax Credit"</li>
+      <li><strong>Behind-the-scenes:</strong> Team introductions, equipment tours, quality control</li>
+    </ul>
+    <p>
+      Best practices: Add captions (80% watch without sound), keep under 60 seconds, show before/after in first 3 seconds.
+    </p>
+
+    <h2>Solar Meta Ads Campaign Structure</h2>
+    <p>
+      Here's how FieldSprout structures a typical solar Meta advertising account:
+    </p>
+
+    <h3>Campaign 1: Cold Audience - Educational Content</h3>
+    <ul>
+      <li><strong>Objective:</strong> Traffic or engagement</li>
+      <li><strong>Targeting:</strong> Broad homeowner audience, interest targeting, lookalikes</li>
+      <li><strong>Creative:</strong> Solar calculator, incentive guides, installation videos</li>
+      <li><strong>Offer:</strong> "Free Solar Savings Calculator" or "Download Tax Credit Guide"</li>
+      <li><strong>Budget:</strong> 30-40% of total Meta budget</li>
+    </ul>
+
+    <h3>Campaign 2: Consultation Requests (Qualified Homeowners)</h3>
+    <ul>
+      <li><strong>Objective:</strong> Lead generation</li>
+      <li><strong>Targeting:</strong> Narrow homeowner targeting (income $75K+, age 40-65, homeowners)</li>
+      <li><strong>Creative:</strong> Before/after bills, customer testimonials, financing offers</li>
+      <li><strong>Offer:</strong> "Free No-Obligation Solar Consultation"</li>
+      <li><strong>Landing page:</strong> Short form with pre-qualification (homeownership, roof age, electricity bill)</li>
+      <li><strong>Budget:</strong> 30-40% of total Meta budget</li>
+    </ul>
+
+    <h3>Campaign 3: Website Visitor Remarketing</h3>
+    <ul>
+      <li><strong>Objective:</strong> Conversions (calls or form fills)</li>
+      <li><strong>Targeting:</strong> Custom audiences (calculator users, pricing page visitors, blog readers)</li>
+      <li><strong>Creative:</strong> Urgency messaging, testimonials, limited-time offers</li>
+      <li><strong>Offer:</strong> "$500 Off Installation" or "Free Battery Upgrade (Limited Time)"</li>
+      <li><strong>Frequency cap:</strong> Max 4 impressions per week (avoid ad fatigue)</li>
+      <li><strong>Budget:</strong> 20-30% of total Meta budget</li>
+    </ul>
+
+    <h3>Campaign 4: Lookalike Audience Expansion</h3>
+    <ul>
+      <li><strong>Objective:</strong> Lead generation</li>
+      <li><strong>Targeting:</strong> 3-5% lookalike audience based on past customers</li>
+      <li><strong>Creative:</strong> Social proof, neighborhood installations, community focus</li>
+      <li><strong>Offer:</strong> "Join 300+ [City] Homeowners Who've Gone Solar"</li>
+      <li><strong>Budget:</strong> 10-15% (test and scale if performs well)</li>
+    </ul>
+
+    <h2>Meta Ads vs. Google Ads for Solar: Strategic Allocation</h2>
+    <p>
+      The most successful solar companies use <strong>both</strong> platforms strategically:
+    </p>
+
+    <h3>Use Google Ads for:</h3>
+    <ul>
+      <li><strong>High-intent searchers:</strong> "solar companies near me", "get solar panels"</li>
+      <li><strong>Immediate lead generation:</strong> People ready to get quotes this week</li>
+      <li><strong>Bottom-of-funnel:</strong> Capturing decision-ready prospects</li>
+      <li><strong>Competitive defense:</strong> Don't let competitors capture searchers looking for you</li>
+    </ul>
+
+    <h3>Use Meta Ads for:</h3>
+    <ul>
+      <li><strong>Awareness building:</strong> Reach homeowners before they're actively searching</li>
+      <li><strong>Educational content:</strong> Build trust with calculators, guides, videos</li>
+      <li><strong>Remarketing:</strong> Re-engage website visitors who didn't convert</li>
+      <li><strong>Long sales cycle nurturing:</strong> Stay top-of-mind during 3-6 month consideration</li>
+    </ul>
+    <p>
+      <strong>Recommended budget allocation:</strong> 60-70% Google Ads (higher intent), 30-40% Meta ads (awareness and remarketing).
+    </p>
+
+    <h2>Solar Meta Ads Cost Benchmarks</h2>
+    <p>
+      Here's what solar companies typically spend and achieve on Meta platforms:
+    </p>
+
+    <h3>Cost Per Result:</h3>
+    <ul>
+      <li><strong>Email captures (lead magnets):</strong> $5-15 per email</li>
+      <li><strong>Website visits (traffic campaigns):</strong> $0.30-1.20 per click</li>
+      <li><strong>Consultation requests:</strong> $40-90 per lead (qualified homeowners)</li>
+      <li><strong>Video views:</strong> $0.02-0.06 per view (awareness)</li>
+    </ul>
+
+    <h3>Conversion Rates:</h3>
+    <ul>
+      <li><strong>Email to consultation:</strong> 15-25% (over 60-90 days of nurturing)</li>
+      <li><strong>Direct form fill to consultation:</strong> 50-70%</li>
+      <li><strong>Consultation to installation:</strong> 25-40%</li>
+    </ul>
+
+    <h3>Recommended Budgets:</h3>
+    <ul>
+      <li><strong>Small installers (1-2 crews):</strong> $1,500-3,000/month</li>
+      <li><strong>Medium installers (3-5 crews):</strong> $3,000-6,000/month</li>
+      <li><strong>Large installers (6+ crews):</strong> $6,000-12,000/month</li>
+    </ul>
+
+    <h2>Creative Best Practices for Solar Meta Ads</h2>
+
+    <h3>Visual Elements That Work:</h3>
+    <ul>
+      <li><strong>Installation time-lapses:</strong> Show entire process in 45-60 seconds</li>
+      <li><strong>Before/after bill screenshots:</strong> Real utility bills showing $0 vs. $200+</li>
+      <li><strong>Aerial drone shots:</strong> Showcase completed installations from above</li>
+      <li><strong>Customer selfie videos:</strong> Real homeowners (not actors) talking about savings</li>
+      <li><strong>Financing calculators:</strong> Interactive tools showing "$89/month payments"</li>
+    </ul>
+
+    <h3>Copy Elements That Convert:</h3>
+    <ul>
+      <li><strong>Lead with savings:</strong> "$40,000 saved over 20 years"</li>
+      <li><strong>Emphasize tax credit:</strong> "30% Federal Tax Credit = $9,000 Back"</li>
+      <li><strong>Clear CTA:</strong> "Calculate Your Savings" or "Schedule Free Consultation"</li>
+      <li><strong>Local social proof:</strong> "Join 300+ [City] Homeowners Who've Gone Solar"</li>
+      <li><strong>Urgency when relevant:</strong> "Incentive Deadline: December 31st"</li>
+    </ul>
+
+    <h2>Get Started with Solar Meta Advertising</h2>
+    <p>
+      Stop letting competitors capture solar-interested homeowners early in their journey. Build awareness, educate prospects, and nurture leads through the solar sales cycle with Meta ads optimized for the solar industry.
+    </p>
+
+    <div class="mt-8 p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl">
+      <h3 class="text-xl font-bold text-gray-900 mb-3">Ready to scale solar leads on Meta?</h3>
+      <p class="text-gray-700 mb-4">
+        Connect your Facebook and Instagram accounts and let our AI agents start optimizing targeting, creative, and bidding in minutes. No contracts, cancel anytime.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <a href="/signup" class="btn btn-primary px-6 py-3">
+          Start Free Trial →
+        </a>
+        <a href="/pricing" class="btn btn-secondary px-6 py-3">
+          View Pricing
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- Related Pages Section -->
+<section class="bg-white border-t border-b border-gray-200 py-12 mt-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">More Solar Marketing Solutions</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <a href="/industries/solar-google-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Google Ads Optimization</h3>
+        <p class="text-sm text-gray-600">Reduce cost per lead with AI-powered campaign management</p>
+      </a>
+      <a href="/industries/solar-local-service-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/industries/solar-website-cro" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Website & Conversion Optimization</h3>
+        <p class="text-sm text-gray-600">Turn more website visitors into paying customers</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Browse Industries Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-6xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Marketing Solutions by Industry</h2>
+    <p class="text-gray-600 text-center mb-8">Industry-specific strategies for home service businesses</p>
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <a href="/industries/hvac-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">❄️</div>
+        <div class="text-sm font-semibold text-gray-900">HVAC</div>
+      </a>
+      <a href="/industries/plumbing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔧</div>
+        <div class="text-sm font-semibold text-gray-900">Plumbing</div>
+      </a>
+      <a href="/industries/electrical-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">⚡</div>
+        <div class="text-sm font-semibold text-gray-900">Electrical</div>
+      </a>
+      <a href="/industries/roofing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏠</div>
+        <div class="text-sm font-semibold text-gray-900">Roofing</div>
+      </a>
+      <a href="/industries/pest-control-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🐛</div>
+        <div class="text-sm font-semibold text-gray-900">Pest Control</div>
+      </a>
+      <a href="/industries/lawn-care-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🌱</div>
+        <div class="text-sm font-semibold text-gray-900">Lawn Care</div>
+      </a>
+      <a href="/industries/garage-door-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🚪</div>
+        <div class="text-sm font-semibold text-gray-900">Garage Door</div>
+      </a>
+      <a href="/industries/pools-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏊</div>
+        <div class="text-sm font-semibold text-gray-900">Pools</div>
+      </a>
+      <a href="/industries/concrete-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏗️</div>
+        <div class="text-sm font-semibold text-gray-900">Concrete</div>
+      </a>
+      <a href="/industries/fencing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪵</div>
+        <div class="text-sm font-semibold text-gray-900">Fencing</div>
+      </a>
+      <a href="/industries/solar-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">☀️</div>
+        <div class="text-sm font-semibold text-gray-900">Solar</div>
+      </a>
+      <a href="/industries/windows-doors-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪟</div>
+        <div class="text-sm font-semibold text-gray-900">Windows & Doors</div>
+      </a>
+      <a href="/industries/irrigation-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">💧</div>
+        <div class="text-sm font-semibold text-gray-900">Irrigation</div>
+      </a>
+      <a href="/industries/restoration-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔨</div>
+        <div class="text-sm font-semibold text-gray-900">Restoration</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Products Section -->
+<section class="bg-white py-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Our Marketing Products</h2>
+    <p class="text-gray-600 text-center mb-8">AI-powered marketing automation for home service businesses</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <a href="/products/google-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">🎯</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Ads</h3>
+        <p class="text-sm text-gray-600">AI agents optimize your campaigns 24/7 to reduce cost per lead</p>
+      </a>
+      <a href="/products/facebook-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📱</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Targeted social campaigns that build your pipeline</p>
+      </a>
+      <a href="/products/local-services-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">✅</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/products/google-business-profile" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📍</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Business Profile</h3>
+        <p class="text-sm text-gray-600">Optimize your local presence and get more reviews</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-4xl mx-auto px-4">
+    <h2 class="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+
+    <div class="space-y-4">
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          Do Facebook and Instagram ads work for solar companies?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Yes, especially for building awareness and capturing early-stage interest. Meta ads work best for solar education, targeting homeowners with high electricity bills, showcasing installation visuals, and remarketing to website visitors. Use Google for high-intent search traffic.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What's the average cost per solar lead from Meta ads?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Solar leads from Facebook and Instagram typically cost $30-80, lower than Google Ads but often earlier in the buying journey. Qualified consultation-ready leads cost $50-100, while early-stage educational leads cost $20-50.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What content works best for solar Meta ads?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Installation time-lapse videos, before/after electricity bill comparisons, customer testimonials with savings data, solar incentive explainers, financing calculator tools, and educational content about federal tax credits and state rebates.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          How should solar companies target Meta ads?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Target homeowners age 35-65 in your service area, income $75K+, interests in sustainability/environment, lookalike audiences of past customers, and retarget website visitors. Exclude renters and people in multi-family housing.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -65,6 +65,9 @@
       <a href="{{ url_for('admin_bp.ai_prompts') }}" class="primary-btn {% if request.endpoint in ['admin_bp.ai_prompts','admin_bp.ai_prompt_edit'] %}active{% endif %}" title="AI Prompts">
         <i class="fa-solid fa-wand-magic-sparkles"></i>
       </a>
+      <a href="{{ url_for('agent_config_bp.configure_list') }}" class="primary-btn {% if request.endpoint in ['agent_config_bp.configure_list','agent_config_bp.configure_global','agent_config_bp.configure_account'] %}active{% endif %}" title="AI Agents">
+        <i class="fa-solid fa-robot"></i>
+      </a>
       <a href="{{ url_for('admin_bp.logs') }}" class="primary-btn {% if request.endpoint=='admin_bp.logs' %}active{% endif %}" title="Audit Logs">
         <i class="fa-solid fa-clipboard-list"></i>
       </a>
@@ -107,6 +110,24 @@
         <i class="fa-solid fa-address-book"></i><span>CRM</span>
       </a>
 
+      <div class="sidebar-label mt-4"><i class="fa-solid fa-envelope"></i>Email</div>
+
+      <a class="secondary-link {% if request.endpoint in ['email_workflow_bp.list_workflows','email_workflow_bp.create_workflow','email_workflow_bp.edit_workflow'] %}active{% endif %}" href="{{ url_for('email_workflow_bp.list_workflows') }}">
+        <i class="fa-solid fa-diagram-project"></i><span>Workflows</span>
+      </a>
+      <a class="secondary-link {% if request.endpoint in ['email_workflow_bp.list_templates','email_workflow_bp.create_template','email_workflow_bp.edit_template'] %}active{% endif %}" href="{{ url_for('email_workflow_bp.list_templates') }}">
+        <i class="fa-solid fa-file-lines"></i><span>Templates</span>
+      </a>
+      <a class="secondary-link {% if request.endpoint in ['email_workflow_bp.list_groups','email_workflow_bp.create_group','email_workflow_bp.edit_group'] %}active{% endif %}" href="{{ url_for('email_workflow_bp.list_groups') }}">
+        <i class="fa-solid fa-users"></i><span>Contact Groups</span>
+      </a>
+
+      <div class="sidebar-label mt-4"><i class="fa-solid fa-wrench"></i>Integrations</div>
+
+      <a class="secondary-link {% if request.endpoint and 'servicetitan_bp' in request.endpoint %}active{% endif %}" href="{{ url_for('servicetitan_bp.dashboard') }}">
+        <i class="fa-solid fa-plug"></i><span>ServiceTitan</span>
+      </a>
+
       <div class="sidebar-label mt-4"><i class="fa-solid fa-chart-line"></i>Analytics</div>
 
       <a class="secondary-link {% if request.endpoint in ['admin_bp.marketing_success','admin_bp.customer_impact_detail'] %}active{% endif %}" href="{{ url_for('admin_bp.marketing_success') }}">
@@ -123,6 +144,9 @@
 
       <a class="secondary-link {% if request.endpoint in ['admin_bp.ai_prompts','admin_bp.ai_prompt_edit'] %}active{% endif %}" href="{{ url_for('admin_bp.ai_prompts') }}">
         <i class="fa-solid fa-wand-magic-sparkles"></i><span>AI Prompts</span>
+      </a>
+      <a class="secondary-link {% if request.endpoint in ['agent_config_bp.configure_list','agent_config_bp.configure_global','agent_config_bp.configure_account'] %}active{% endif %}" href="{{ url_for('agent_config_bp.configure_list') }}">
+        <i class="fa-solid fa-robot"></i><span>AI Agents</span>
       </a>
       <a class="secondary-link {% if request.endpoint=='admin_bp.logs' %}active{% endif %}" href="{{ url_for('admin_bp.logs') }}">
         <i class="fa-solid fa-clipboard-list"></i><span>Audit Logs</span>

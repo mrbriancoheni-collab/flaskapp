@@ -1,0 +1,531 @@
+{% extends 'base_public.html' %}
+{% block title %}Concrete Google Ads Optimization — FieldSprout{% endblock %}
+
+{% block head_extra %}
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Industries",
+      "item": "https://fieldsprout.io/industries"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Concrete Google Ads",
+      "item": "https://fieldsprout.io/industries/concrete-google-ads"
+    }
+  ]
+}
+</script>
+
+<!-- FAQ Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What's the average cost per lead for concrete Google Ads?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Concrete cost per lead varies by market and service type. Driveway/patio leads typically cost $40-90, while decorative concrete leads run $60-120. Small repair leads cost $20-45. FieldSprout's AI optimizes toward your target CPL automatically based on project margins."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Should concrete companies run Google Ads year-round?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "It depends on your climate. In warm regions, run year-round with seasonal adjustments. In cold climates, reduce budgets November-February when concrete work slows due to freezing temperatures. FieldSprout's AI automatically adjusts budgets based on seasonal demand and weather patterns."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What keywords should concrete companies bid on?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "High-intent keywords include 'concrete driveway cost', 'pour concrete patio', 'stamped concrete installer', and 'concrete repair near me'. Avoid broad terms like 'concrete' without modifiers. FieldSprout's Keyword Optimizer continuously refines your keyword strategy."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How can concrete companies reduce wasted Google Ads spend?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Block DIY searchers, materials-only buyers, and commercial searches (if residential-focused). Use negative keywords like 'DIY', 'bags', 'price per yard', 'ready mix delivery', 'commercial'. Set geographic targeting to profitable service areas only. FieldSprout's Negative Keyword Agent does this automatically 24/7."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- Service Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "Concrete Google Ads Optimization",
+  "provider": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  },
+  "description": "AI-powered Google Ads optimization specifically for concrete contractors, automatically managing seasonal campaigns, residential vs. commercial targeting, and budget allocation across driveways, patios, decorative concrete, and repair services.",
+  "areaServed": {
+    "@type": "Country",
+    "name": "United States"
+  }
+}
+</script>
+
+<!-- HowTo Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Optimize Google Ads for Concrete Companies",
+  "description": "Step-by-step guide to setting up and optimizing Google Ads campaigns for concrete contractors to reduce cost per lead and increase booked driveways, patios, and decorative concrete projects.",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Set up project-type campaign structure",
+      "text": "Create separate campaigns for driveways, patios, decorative/stamped concrete, and repairs. This allows independent budget control and messaging tailored to different project types, budgets, and decision timelines."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Target high-intent concrete keywords",
+      "text": "Focus on project-specific keywords like 'concrete driveway installation', 'stamped concrete patio', 'concrete resurfacing', 'driveway repair'. Add location modifiers and use phrase/exact match to control costs and filter qualified leads."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Implement negative keyword strategy",
+      "text": "Block DIY searches, materials-only buyers, and unwanted project types. Add negatives like 'DIY', 'bags', 'ready mix', 'concrete delivery', 'price per yard', 'commercial' (if residential-focused). Review search terms weekly."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Create project-specific ad copy",
+      "text": "Write separate ad groups for driveways, patios, stamped concrete, and repairs. Include pricing signals where possible ('Driveways from $4,500'), warranty information, and portfolio mentions to build trust and filter qualified leads."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Optimize for seasonal weather patterns",
+      "text": "Increase budgets March-October in cold climates when concrete work is viable. Scale year-round in warm climates with budget adjustments for peak demand (spring/summer). Use weather-triggered bid adjustments during ideal pouring conditions."
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="max-w-5xl mx-auto px-4 py-12">
+  <div class="mb-8">
+    <span class="inline-block px-3 py-1 text-sm font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full mb-4">
+      <i class="fa-solid fa-trowel-bricks"></i> Concrete Industry
+    </span>
+    <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
+      Google Ads Optimization for Concrete Contractors
+    </h1>
+    <p class="text-xl text-gray-700 leading-relaxed">
+      Stop wasting budget on DIY concrete bag searchers and ready-mix delivery queries. FieldSprout's AI agents optimize your concrete Google Ads campaigns 24/7—automatically managing seasonal budgets, blocking low-intent traffic, and scaling winners during peak construction seasons.
+    </p>
+  </div>
+
+  <div class="bg-indigo-50 border-l-4 border-indigo-600 p-6 rounded-lg mb-12">
+    <div class="flex items-start">
+      <i class="fa-solid fa-chart-line text-indigo-600 text-2xl mr-4 mt-1"></i>
+      <div>
+        <h3 class="text-lg font-bold text-indigo-900 mb-2">Concrete Performance Benchmarks</h3>
+        <ul class="text-sm text-indigo-800 space-y-1">
+          <li>• <strong>−44% cost per driveway lead</strong> with project-type campaign optimization (90 days)</li>
+          <li>• <strong>+33% conversion rate</strong> with concrete-specific landing pages showing portfolios</li>
+          <li>• <strong>$400-700/month saved</strong> by blocking DIY and materials-only traffic</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose prose-lg max-w-none">
+    <h2>Why Concrete Google Ads Are Different</h2>
+    <p>
+      Concrete contractors face unique Google Ads challenges that generic marketing agencies don't understand. Your business is weather-dependent—you can't pour concrete in freezing temperatures, making winter slow in cold climates. Your customer intent varies dramatically between someone researching "concrete driveway cost" (early planning phase) versus "concrete contractor near me" (ready to book).
+    </p>
+    <p>
+      Different concrete services have vastly different margins and project values. A $500 crack repair versus a $15,000 stamped concrete patio require completely different bidding strategies, ad messaging, and landing pages. Generic Google Ads strategies fail because they treat all concrete searches the same.
+    </p>
+
+    <h2>The Concrete Google Ads Problem: Wrong Traffic Mix</h2>
+    <p>
+      Most concrete companies waste 35-55% of their Google Ads budget on irrelevant searches—DIYers looking for bags of concrete mix, homeowners pricing out ready-mix delivery for their own pours, commercial/industrial contractors (when you're residential-focused), and people just gathering rough pricing with no intention to hire yet.
+    </p>
+    <p>
+      <strong>The most common concrete Google Ads mistakes:</strong>
+    </p>
+    <ul>
+      <li><strong>Missing DIY negatives</strong> — wasting spend on "concrete bags", "how to pour concrete", "DIY driveway"</li>
+      <li><strong>Attracting materials buyers</strong> — broad match bringing in "ready mix concrete price", "concrete delivery"</li>
+      <li><strong>No project-type segmentation</strong> — driveways, patios, stamped concrete all in one campaign</li>
+      <li><strong>Ignoring weather patterns</strong> — running full budgets in winter when work stops (cold climates)</li>
+      <li><strong>Generic ad copy</strong> — "concrete services" instead of specific project messaging</li>
+      <li><strong>No visual proof</strong> — missing landing page galleries of completed driveways and patios</li>
+    </ul>
+
+    <h2>How FieldSprout's AI Optimizes Concrete Campaigns</h2>
+    <p>
+      FieldSprout's multi-agent system is trained on concrete industry patterns. Our AI agents understand that "stamped concrete patio cost" in April is peak-season planning (high value), while "concrete repair" is often a smaller, urgent project. They automatically adjust bids, budgets, and messaging based on these patterns.
+    </p>
+
+    <h3>1. Seasonal & Weather-Based Budget Optimization</h3>
+    <p>
+      The <strong>Strategic Director</strong> agent monitors weather forecasts, seasonal patterns, and your booking capacity to automatically shift budgets throughout the year.
+    </p>
+    <p>
+      <strong>Cold climate seasonal budget allocation:</strong>
+    </p>
+    <ul>
+      <li><strong>Spring (March-May):</strong> Peak budget—homeowners planning summer projects, ideal weather conditions</li>
+      <li><strong>Summer (June-August):</strong> Maintain high budget—active construction season, project execution</li>
+      <li><strong>Fall (September-October):</strong> Moderate budget—rush to complete before first freeze</li>
+      <li><strong>Winter (November-February):</strong> Minimal budget (20-30% of peak)—planning only, no active pours</li>
+    </ul>
+    <p>
+      <strong>Warm climate (Arizona, Texas, Florida, Southern California):</strong> More consistent year-round with summer budget reductions (too hot for comfortable work) and spring/fall peaks.
+    </p>
+
+    <h3>2. DIY and Materials-Only Filtering</h3>
+    <p>
+      One of the biggest concrete Google Ads wastes is attracting DIYers and people buying materials, not hiring contractors.
+    </p>
+    <p>
+      The <strong>Negative Keyword Agent</strong> automatically blocks:
+    </p>
+    <ul>
+      <li><strong>DIY terms:</strong> "DIY", "how to", "yourself", "tutorial", "YouTube"</li>
+      <li><strong>Materials only:</strong> "bags", "price per yard", "ready mix", "concrete delivery", "bulk concrete"</li>
+      <li><strong>Tools/equipment:</strong> "concrete mixer", "forms", "tools", "rental", "equipment"</li>
+      <li><strong>Unwanted project types:</strong> "commercial", "industrial", "sidewalk" (if not offering)</li>
+      <li><strong>Job seekers:</strong> "concrete jobs", "hiring", "careers", "salary"</li>
+    </ul>
+    <p>
+      These negatives typically save $400-700 per month for concrete contractors running $3,000-6,000/month budgets.
+    </p>
+
+    <h3>3. Project-Type Campaign Structure</h3>
+    <p>
+      Not all concrete work has the same margins, urgency, or customer timeline. FieldSprout structures campaigns by project type:
+    </p>
+
+    <h4>Campaign 1: Concrete Driveways (High Volume, Mid-High Value)</h4>
+    <ul>
+      <li><strong>Keywords:</strong> "concrete driveway", "pour concrete driveway", "driveway replacement", "concrete driveway cost"</li>
+      <li><strong>Match types:</strong> Phrase and exact match (control costs, filter qualified)</li>
+      <li><strong>Ad copy angle:</strong> Durability, pricing transparency, portfolio of completed driveways</li>
+      <li><strong>Landing page:</strong> Driveway gallery with pricing guide ($4-8/sq ft typical range)</li>
+      <li><strong>Average project value:</strong> $4,000-12,000</li>
+    </ul>
+
+    <h4>Campaign 2: Patios & Outdoor Living (High Value, Design-Focused)</h4>
+    <ul>
+      <li><strong>Keywords:</strong> "concrete patio", "backyard patio concrete", "patio installation", "outdoor concrete patio"</li>
+      <li><strong>Match types:</strong> Phrase match</li>
+      <li><strong>Ad copy angle:</strong> Outdoor living transformation, design consultation, entertainment space</li>
+      <li><strong>Landing page:</strong> Patio portfolio with design options and lifestyle imagery</li>
+      <li><strong>Average project value:</strong> $3,000-10,000</li>
+    </ul>
+
+    <h4>Campaign 3: Stamped/Decorative Concrete (Premium, High Margin)</h4>
+    <ul>
+      <li><strong>Keywords:</strong> "stamped concrete", "decorative concrete", "colored concrete", "concrete resurfacing"</li>
+      <li><strong>Match types:</strong> Phrase and exact match</li>
+      <li><strong>Ad copy angle:</strong> Custom designs, pattern options, luxury aesthetic, long-lasting beauty</li>
+      <li><strong>Landing page:</strong> Stamped concrete gallery showcasing patterns, colors, completed projects</li>
+      <li><strong>Average project value:</strong> $6,000-20,000 (higher margin justifies higher CPL)</li>
+    </ul>
+
+    <h4>Campaign 4: Concrete Repair (Lower Value, High Urgency)</h4>
+    <ul>
+      <li><strong>Keywords:</strong> "concrete repair", "driveway crack repair", "concrete leveling", "sunken concrete"</li>
+      <li><strong>Match types:</strong> Phrase match for problem-focused keywords</li>
+      <li><strong>Ad copy angle:</strong> Fast service, prevent further damage, cost-effective solution</li>
+      <li><strong>Landing page:</strong> Repair services page with before/after examples and quick quote form</li>
+      <li><strong>Average project value:</strong> $500-3,000</li>
+    </ul>
+
+    <h3>4. Geographic Targeting for Service Areas</h3>
+    <p>
+      Concrete work requires travel with equipment, materials, and crew. Not all service areas are profitable.
+    </p>
+    <p>
+      The <strong>Campaign Manager</strong> uses ZIP-level targeting to:
+    </p>
+    <ul>
+      <li>Increase bids for ZIPs within 30 minutes of your location (crew efficiency)</li>
+      <li>Target higher-income neighborhoods for stamped/decorative concrete campaigns</li>
+      <li>Decrease bids for edge-of-service-area ZIPs (travel time eats margins)</li>
+      <li>Analyze which areas convert to profitable projects vs. price shoppers</li>
+    </ul>
+
+    <h3>5. Ad Copy Optimization for Concrete Services</h3>
+    <p>
+      The <strong>Ad Copy Agent</strong> continuously tests concrete-specific messaging:
+    </p>
+    <ul>
+      <li><strong>Pricing signals:</strong> "Driveways from $4,500" vs. "Free Estimates" vs. "$4-8 per square foot"</li>
+      <li><strong>Warranty/guarantee:</strong> "5-Year Warranty" vs. "Lifetime Craftsmanship Guarantee"</li>
+      <li><strong>Experience:</strong> "25+ Years Pouring Concrete" vs. "Family-Owned Since 1995"</li>
+      <li><strong>Visual proof:</strong> "See Our Portfolio" vs. "100+ Completed Driveways"</li>
+      <li><strong>Urgency (seasonal):</strong> "Book Now for Spring Installation" vs. "Limited Summer Slots"</li>
+    </ul>
+
+    <h3>6. Bid Optimization for Project Margins</h3>
+    <p>
+      Concrete projects have different margins and customer acquisition costs:
+    </p>
+    <ul>
+      <li><strong>Small repairs:</strong> $500-2,000 average, 50-60% margin, target CPL $20-40</li>
+      <li><strong>Standard driveways:</strong> $4,000-8,000 average, 40-50% margin, target CPL $40-80</li>
+      <li><strong>Decorative/stamped:</strong> $8,000-20,000 average, 45-55% margin, target CPL $80-150</li>
+    </ul>
+    <p>
+      FieldSprout's <strong>Keyword Optimizer</strong> adjusts bids based on expected project value. Stamped concrete keywords justify 2-3x higher CPCs than basic repair keywords.
+    </p>
+
+    <h2>Common Concrete Google Ads Questions</h2>
+
+    <h3>Should concrete companies run Google Ads in winter?</h3>
+    <p>
+      <strong>In cold climates:</strong> Reduce budgets by 70-80% but don't pause entirely. Focus on planning/design consultations for spring projects and indoor/garage floor work (less weather-dependent).
+    </p>
+    <p>
+      <strong>In warm climates:</strong> Run year-round with minor seasonal adjustments. Some areas actually prefer winter concrete work (cooler temperatures, better curing conditions).
+    </p>
+
+    <h3>How much should concrete companies spend on Google Ads?</h3>
+    <p>
+      A typical starting budget is <strong>$2,500-5,000/month</strong> during peak season. With average project values of $4,000-10,000 and 40-50% margins, you can afford $60-120 per lead and remain profitable.
+    </p>
+    <p>
+      Target CPL by project type:
+    </p>
+    <ul>
+      <li><strong>Repairs:</strong> $20-40 per lead</li>
+      <li><strong>Standard driveways/patios:</strong> $40-80 per lead</li>
+      <li><strong>Stamped/decorative:</strong> $80-150 per lead</li>
+    </ul>
+
+    <h3>What's a good conversion rate for concrete Google Ads?</h3>
+    <p>
+      <strong>Repair campaigns:</strong> 8-15% conversion rate (form fill or call)
+      <br><strong>Driveway/patio campaigns:</strong> 5-10% conversion rate
+      <br><strong>Stamped/decorative campaigns:</strong> 4-8% conversion rate (longer decision timeline)
+    </p>
+    <p>
+      If you're below these benchmarks, likely issues:
+    </p>
+    <ul>
+      <li>Irrelevant traffic (missing negative keywords for DIY, materials)</li>
+      <li>Weak landing pages (no portfolio images, unclear pricing)</li>
+      <li>Generic messaging (not speaking to specific project types)</li>
+    </ul>
+
+    <h3>Should concrete companies use Google Local Services Ads?</h3>
+    <p>
+      <strong>Yes, especially for repairs and smaller projects.</strong> Google Local Services Ads work well for concrete contractors because they appear above regular ads and charge per lead (not per click). Best for repair services and quick-turnaround projects. Less effective for large custom projects where design consultation is needed.
+    </p>
+
+    <h2>Get Started with Concrete-Optimized Google Ads</h2>
+    <p>
+      Stop wasting budget on DIY searchers, materials buyers, and wrong project types. FieldSprout's AI agents optimize your campaigns 24/7 using concrete-specific rules, seasonal weather patterns, and project-type segmentation.
+    </p>
+
+    <div class="mt-8 p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl">
+      <h3 class="text-xl font-bold text-gray-900 mb-3">Ready to reduce your cost per project?</h3>
+      <p class="text-gray-700 mb-4">
+        Connect your Google Ads account and let our AI agents start optimizing in minutes. No contracts, cancel anytime.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <a href="/signup" class="btn btn-primary px-6 py-3">
+          Start Free Trial →
+        </a>
+        <a href="/pricing" class="btn btn-secondary px-6 py-3">
+          View Pricing
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- Related Pages Section -->
+<section class="bg-white border-t border-b border-gray-200 py-12 mt-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">More Concrete Marketing Solutions</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <a href="/industries/concrete-local-service-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/industries/concrete-meta-ads" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Build your pipeline with targeted social media campaigns</p>
+      </a>
+      <a href="/industries/concrete-website-cro" class="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition">
+        <h3 class="font-semibold text-indigo-600 mb-2">Website & Conversion Optimization</h3>
+        <p class="text-sm text-gray-600">Turn more website visitors into paying customers</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Browse Industries Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-6xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Marketing Solutions by Industry</h2>
+    <p class="text-gray-600 text-center mb-8">Industry-specific strategies for home service businesses</p>
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <a href="/industries/hvac-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">❄️</div>
+        <div class="text-sm font-semibold text-gray-900">HVAC</div>
+      </a>
+      <a href="/industries/plumbing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔧</div>
+        <div class="text-sm font-semibold text-gray-900">Plumbing</div>
+      </a>
+      <a href="/industries/electrical-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">⚡</div>
+        <div class="text-sm font-semibold text-gray-900">Electrical</div>
+      </a>
+      <a href="/industries/roofing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏠</div>
+        <div class="text-sm font-semibold text-gray-900">Roofing</div>
+      </a>
+      <a href="/industries/pest-control-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🐛</div>
+        <div class="text-sm font-semibold text-gray-900">Pest Control</div>
+      </a>
+      <a href="/industries/lawn-care-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🌱</div>
+        <div class="text-sm font-semibold text-gray-900">Lawn Care</div>
+      </a>
+      <a href="/industries/garage-door-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🚪</div>
+        <div class="text-sm font-semibold text-gray-900">Garage Door</div>
+      </a>
+      <a href="/industries/pools-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏊</div>
+        <div class="text-sm font-semibold text-gray-900">Pools</div>
+      </a>
+      <a href="/industries/concrete-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🏗️</div>
+        <div class="text-sm font-semibold text-gray-900">Concrete</div>
+      </a>
+      <a href="/industries/fencing-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪵</div>
+        <div class="text-sm font-semibold text-gray-900">Fencing</div>
+      </a>
+      <a href="/industries/solar-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">☀️</div>
+        <div class="text-sm font-semibold text-gray-900">Solar</div>
+      </a>
+      <a href="/industries/windows-doors-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🪟</div>
+        <div class="text-sm font-semibold text-gray-900">Windows & Doors</div>
+      </a>
+      <a href="/industries/irrigation-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">💧</div>
+        <div class="text-sm font-semibold text-gray-900">Irrigation</div>
+      </a>
+      <a href="/industries/restoration-google-ads" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition text-center">
+        <div class="text-2xl mb-1">🔨</div>
+        <div class="text-sm font-semibold text-gray-900">Restoration</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Products Section -->
+<section class="bg-white py-12">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Our Marketing Products</h2>
+    <p class="text-gray-600 text-center mb-8">AI-powered marketing automation for home service businesses</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <a href="/products/google-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">🎯</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Ads</h3>
+        <p class="text-sm text-gray-600">AI agents optimize your campaigns 24/7 to reduce cost per lead</p>
+      </a>
+      <a href="/products/facebook-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📱</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Facebook & Instagram Ads</h3>
+        <p class="text-sm text-gray-600">Targeted social campaigns that build your pipeline</p>
+      </a>
+      <a href="/products/local-services-ads" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">✅</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Local Service Ads</h3>
+        <p class="text-sm text-gray-600">Get Google Guaranteed leads with pay-per-lead pricing</p>
+      </a>
+      <a href="/products/google-business-profile" class="block p-6 border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-lg transition">
+        <div class="text-3xl mb-3">📍</div>
+        <h3 class="font-bold text-lg text-gray-900 mb-2">Google Business Profile</h3>
+        <p class="text-sm text-gray-600">Optimize your local presence and get more reviews</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="bg-gray-50 py-12">
+  <div class="max-w-4xl mx-auto px-4">
+    <h2 class="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+
+    <div class="space-y-4">
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What's the average cost per lead for concrete Google Ads?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Concrete cost per lead varies by market and service type. Driveway/patio leads typically cost $40-90, while decorative concrete leads run $60-120. Small repair leads cost $20-45. FieldSprout's AI optimizes toward your target CPL automatically based on project margins.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          Should concrete companies run Google Ads year-round?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          It depends on your climate. In warm regions, run year-round with seasonal adjustments. In cold climates, reduce budgets November-February when concrete work slows due to freezing temperatures. FieldSprout's AI automatically adjusts budgets based on seasonal demand and weather patterns.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          What keywords should concrete companies bid on?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          High-intent keywords include "concrete driveway cost", "pour concrete patio", "stamped concrete installer", and "concrete repair near me". Avoid broad terms like "concrete" without modifiers. FieldSprout's Keyword Optimizer continuously refines your keyword strategy.
+        </p>
+      </details>
+
+      <details class="bg-white border rounded-xl p-6 shadow-sm">
+        <summary class="cursor-pointer font-semibold text-lg text-gray-900">
+          How can concrete companies reduce wasted Google Ads spend?
+        </summary>
+        <p class="mt-3 text-gray-700 leading-relaxed">
+          Block DIY searchers, materials-only buyers, and commercial searches (if residential-focused). Use negative keywords like "DIY", "bags", "price per yard", "ready mix delivery", "commercial". Set geographic targeting to profitable service areas only. FieldSprout's Negative Keyword Agent does this automatically 24/7.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+{% endblock %}

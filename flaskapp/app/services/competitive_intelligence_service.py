@@ -2,465 +2,503 @@
 """
 Competitive Intelligence Service
 
-Collects and analyzes competitive data from:
-1. Google Ads Auction Insights (official API)
-2. Search term reports (competitor ad triggers)
-3. Ad position/impression share data
-4. Competitive CPCs from keyword planner
+Analyzes competitive landscape from Google Ads Auction Insights API.
+
+Features:
+- Competitor impression share tracking
+- Position above rate (how often they outrank you)
+- Overlap rate (how often you compete)
+- Threat level detection
+- Budget recommendations based on competition
+- Competitor budget estimation
 """
 
 from typing import Dict, List, Any, Optional
-from datetime import datetime, date, timedelta
-from sqlalchemy import text
-from app import db
+from datetime import datetime, timedelta, date
+from decimal import Decimal
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-def fetch_auction_insights(
-    refresh_token: str,
-    customer_id: str,
-    campaign_id: str,
-    start_date: date,
-    end_date: date
-) -> Dict[str, Any]:
-    """
-    Fetch Auction Insights data from Google Ads API.
+class CompetitiveIntelligenceService:
+    """Service for competitive intelligence and auction insights."""
 
-    Shows:
-    - Competitors in the same auctions
-    - Impression share vs competitors
-    - Position above rate
-    - Top of page rate
-    - Overlap rate
-
-    Args:
-        refresh_token: Google Ads refresh token
-        customer_id: Google Ads customer ID
-        campaign_id: Campaign ID
-        start_date: Start date
-        end_date: End date
-
-    Returns:
-        Auction insights data
-    """
-    try:
-        from app.services.google_ads_alerts_service import get_google_ads_client
-        from google.ads.googleads.client import GoogleAdsClient
-
-        client = get_google_ads_client(refresh_token, customer_id)
-        ga_service = client.get_service("GoogleAdsService")
-
-        # Query auction insights
-        query = f"""
-            SELECT
-                auction_insight_search_term_view.domain,
-                metrics.search_impression_share,
-                metrics.search_absolute_top_impression_share,
-                metrics.search_rank_lost_impression_share,
-                metrics.search_overlap_rate,
-                metrics.search_position_above_rate,
-                metrics.search_outranking_share
-            FROM auction_insight_search_term_view
-            WHERE segments.date >= '{start_date.strftime('%Y-%m-%d')}'
-              AND segments.date <= '{end_date.strftime('%Y-%m-%d')}'
-              AND campaign.id = {campaign_id}
-            ORDER BY metrics.search_impression_share DESC
-            LIMIT 20
+    def __init__(self, db_connection):
         """
+        Initialize the service.
 
-        response = ga_service.search(customer_id=customer_id.replace('-', ''), query=query)
-
-        competitors = []
-        for row in response:
-            competitors.append({
-                'domain': row.auction_insight_search_term_view.domain,
-                'impression_share': row.metrics.search_impression_share,
-                'top_of_page_rate': row.metrics.search_absolute_top_impression_share,
-                'rank_lost_share': row.metrics.search_rank_lost_impression_share,
-                'overlap_rate': row.metrics.search_overlap_rate,
-                'position_above_rate': row.metrics.search_position_above_rate,
-                'outranking_share': row.metrics.search_outranking_share
-            })
-
-        # Store in database
-        store_auction_insights(customer_id, campaign_id, start_date, end_date, competitors)
-
-        return {
-            "success": True,
-            "competitors": competitors,
-            "data_range": {
-                "start": start_date.isoformat(),
-                "end": end_date.isoformat()
-            }
-        }
-
-    except Exception as e:
-        print(f"Error fetching auction insights: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
-
-
-def store_auction_insights(
-    customer_id: str,
-    campaign_id: str,
-    start_date: date,
-    end_date: date,
-    competitors: List[Dict[str, Any]]
-) -> None:
-    """Store auction insights in database."""
-    # Delete old data for this period
-    delete_query = text("""
-        DELETE FROM competitive_auction_insights
-        WHERE customer_id = :customer_id
-          AND campaign_id = :campaign_id
-          AND data_date BETWEEN :start_date AND :end_date
-    """)
-
-    with db.engine.begin() as conn:
-        conn.execute(delete_query, {
-            "customer_id": customer_id,
-            "campaign_id": campaign_id,
-            "start_date": start_date,
-            "end_date": end_date
-        })
-
-        # Insert new data
-        for competitor in competitors:
-            insert_query = text("""
-                INSERT INTO competitive_auction_insights
-                    (customer_id, campaign_id, data_date, competitor_domain,
-                     impression_share, top_of_page_rate, rank_lost_share,
-                     overlap_rate, position_above_rate, outranking_share,
-                     created_at)
-                VALUES
-                    (:customer_id, :campaign_id, :data_date, :domain,
-                     :impression_share, :top_rate, :rank_lost,
-                     :overlap, :position_above, :outranking,
-                     NOW())
-            """)
-
-            conn.execute(insert_query, {
-                "customer_id": customer_id,
-                "campaign_id": campaign_id,
-                "data_date": end_date,  # Use end date as snapshot date
-                "domain": competitor['domain'],
-                "impression_share": competitor['impression_share'],
-                "top_rate": competitor['top_of_page_rate'],
-                "rank_lost": competitor['rank_lost_share'],
-                "overlap": competitor['overlap_rate'],
-                "position_above": competitor['position_above_rate'],
-                "outranking": competitor['outranking_share']
-            })
-
-
-def analyze_competitive_landscape(
-    account_id: int,
-    campaign_id: int,
-    lookback_days: int = 30
-) -> Dict[str, Any]:
-    """
-    Analyze competitive landscape and provide insights.
-
-    Args:
-        account_id: Account ID
-        campaign_id: Campaign ID
-        lookback_days: Days of data to analyze
-
-    Returns:
-        Competitive analysis
-    """
-    end_date = date.today()
-    start_date = end_date - timedelta(days=lookback_days)
-
-    # Get auction insights from database
-    query = text("""
-        SELECT
-            competitor_domain,
-            AVG(impression_share) as avg_impression_share,
-            AVG(top_of_page_rate) as avg_top_rate,
-            AVG(position_above_rate) as avg_position_above,
-            AVG(outranking_share) as avg_outranking_share,
-            COUNT(*) as data_points
-        FROM competitive_auction_insights cai
-        JOIN ads_campaigns ac ON ac.google_campaign_id = cai.campaign_id
-        WHERE ac.id = :campaign_id
-          AND ac.account_id = :account_id
-          AND cai.data_date BETWEEN :start_date AND :end_date
-        GROUP BY competitor_domain
-        ORDER BY avg_impression_share DESC
-    """)
-
-    with db.engine.connect() as conn:
-        result = conn.execute(query, {
-            "account_id": account_id,
-            "campaign_id": campaign_id,
-            "start_date": start_date,
-            "end_date": end_date
-        })
-
-        competitors = [dict(row._mapping) for row in result]
-
-    if not competitors:
-        return {
-            "success": True,
-            "message": "No competitive data available. Fetch auction insights first.",
-            "competitors": []
-        }
-
-    # Analyze competitive threats
-    threats = []
-    opportunities = []
-
-    for comp in competitors:
-        # High threat: competitor outranks you significantly
-        if comp['avg_position_above'] > 0.5:  # Above you 50%+ of time
-            threats.append({
-                "competitor": comp['competitor_domain'],
-                "threat_level": "high",
-                "reason": f"Outranks you {comp['avg_position_above']*100:.0f}% of the time",
-                "recommendation": "Increase bids or improve Quality Score to compete"
-            })
-
-        # Opportunity: you outrank them
-        if comp['avg_outranking_share'] > 0.6:  # You outrank them 60%+ of time
-            opportunities.append({
-                "competitor": comp['competitor_domain'],
-                "opportunity": "Dominant position",
-                "recommendation": "Maintain current strategy - you're winning"
-            })
-
-        # High overlap: competing for same searches
-        if comp['avg_impression_share'] > 0.4:  # They get 40%+ impression share
-            threats.append({
-                "competitor": comp['competitor_domain'],
-                "threat_level": "medium",
-                "reason": f"High overlap - they capture {comp['avg_impression_share']*100:.0f}% impression share",
-                "recommendation": "Consider increasing budget to capture more market share"
-            })
-
-    return {
-        "success": True,
-        "period": f"{start_date.isoformat()} to {end_date.isoformat()}",
-        "total_competitors": len(competitors),
-        "top_competitors": competitors[:5],
-        "threats": threats,
-        "opportunities": opportunities,
-        "budget_recommendation": get_competitive_budget_recommendation(competitors, threats)
-    }
-
-
-def get_competitive_budget_recommendation(
-    competitors: List[Dict[str, Any]],
-    threats: List[Dict[str, Any]]
-) -> str:
-    """Generate budget recommendation based on competitive landscape."""
-    if not competitors:
-        return "No competitive data available"
-
-    high_competition = len([c for c in competitors if c['avg_impression_share'] > 0.3])
-    high_threats = len([t for t in threats if t['threat_level'] == 'high'])
-
-    if high_threats >= 2:
-        return "HIGH COMPETITION: Increase budget by 30-50% to maintain visibility"
-    elif high_competition >= 3:
-        return "MODERATE COMPETITION: Consider 15-30% budget increase"
-    elif len(competitors) <= 2:
-        return "LOW COMPETITION: Maintain current budget - you have good market position"
-    else:
-        return "BALANCED MARKET: Monitor competitors and adjust as needed"
-
-
-def track_competitor_position_changes(
-    account_id: int,
-    campaign_id: int,
-    competitor_domain: str,
-    days: int = 30
-) -> Dict[str, Any]:
-    """
-    Track how a specific competitor's position has changed over time.
-
-    Args:
-        account_id: Account ID
-        campaign_id: Campaign ID
-        competitor_domain: Competitor domain to track
-        days: Days to analyze
-
-    Returns:
-        Position change analysis
-    """
-    end_date = date.today()
-    start_date = end_date - timedelta(days=days)
-
-    query = text("""
-        SELECT
-            cai.data_date,
-            cai.impression_share,
-            cai.position_above_rate,
-            cai.outranking_share,
-            cai.top_of_page_rate
-        FROM competitive_auction_insights cai
-        JOIN ads_campaigns ac ON ac.google_campaign_id = cai.campaign_id
-        WHERE ac.id = :campaign_id
-          AND ac.account_id = :account_id
-          AND cai.competitor_domain = :domain
-          AND cai.data_date BETWEEN :start_date AND :end_date
-        ORDER BY cai.data_date ASC
-    """)
-
-    with db.engine.connect() as conn:
-        result = conn.execute(query, {
-            "account_id": account_id,
-            "campaign_id": campaign_id,
-            "domain": competitor_domain,
-            "start_date": start_date,
-            "end_date": end_date
-        })
-
-        history = [dict(row._mapping) for row in result]
-
-    if len(history) < 2:
-        return {
-            "success": True,
-            "message": "Insufficient data for trend analysis",
-            "history": history
-        }
-
-    # Calculate trends
-    first_week = history[:7] if len(history) >= 7 else history[:len(history)//2]
-    last_week = history[-7:] if len(history) >= 7 else history[len(history)//2:]
-
-    avg_position_above_first = sum(h['position_above_rate'] for h in first_week) / len(first_week)
-    avg_position_above_last = sum(h['position_above_rate'] for h in last_week) / len(last_week)
-
-    position_change = (avg_position_above_last - avg_position_above_first) * 100
-
-    trend = "improving" if position_change < -5 else "worsening" if position_change > 5 else "stable"
-
-    alert = None
-    if position_change > 10:
-        alert = f"⚠️ ALERT: {competitor_domain} is increasingly outranking you ({position_change:+.0f}% change)"
-
-    return {
-        "success": True,
-        "competitor": competitor_domain,
-        "trend": trend,
-        "position_change_pct": round(position_change, 1),
-        "history": history,
-        "alert": alert
-    }
-
-
-def get_search_term_competitors(
-    refresh_token: str,
-    customer_id: str,
-    campaign_id: str,
-    start_date: date,
-    end_date: date
-) -> Dict[str, Any]:
-    """
-    Analyze search terms to find which competitors trigger ads.
-
-    This helps identify:
-    - Competitor brand terms you're bidding on
-    - Terms where competitors appear frequently
-
-    Args:
-        refresh_token: Google Ads refresh token
-        customer_id: Customer ID
-        campaign_id: Campaign ID
-        start_date: Start date
-        end_date: End date
-
-    Returns:
-        Search term competitive analysis
-    """
-    try:
-        from app.services.google_ads_alerts_service import get_google_ads_client
-
-        client = get_google_ads_client(refresh_token, customer_id)
-        ga_service = client.get_service("GoogleAdsService")
-
-        # Get search terms with impression share data
-        query = f"""
-            SELECT
-                search_term_view.search_term,
-                metrics.impressions,
-                metrics.clicks,
-                metrics.conversions,
-                metrics.search_impression_share,
-                metrics.search_rank_lost_impression_share
-            FROM search_term_view
-            WHERE segments.date >= '{start_date.strftime('%Y-%m-%d')}'
-              AND segments.date <= '{end_date.strftime('%Y-%m-%d')}'
-              AND campaign.id = {campaign_id}
-              AND metrics.impressions > 10
-            ORDER BY metrics.impressions DESC
-            LIMIT 100
+        Args:
+            db_connection: Database connection object
         """
+        self.db = db_connection
 
-        response = ga_service.search(customer_id=customer_id.replace('-', ''), query=query)
+    def save_auction_insights(
+        self,
+        account_id: int,
+        customer_id: str,
+        campaign_id: str,
+        report_date: date,
+        competitors: List[Dict[str, Any]]
+    ) -> bool:
+        """
+        Save auction insights data for competitors.
 
-        search_terms = []
-        for row in response:
-            search_term = row.search_term_view.search_term
+        Args:
+            account_id: Account ID
+            customer_id: Google Ads customer ID
+            campaign_id: Campaign ID
+            report_date: Date of the report
+            competitors: List of competitor data dicts
 
-            # Flag potential competitor terms
-            is_competitor_term = any(word in search_term.lower() for word in ['vs', 'versus', 'compared', 'alternative'])
+        Returns:
+            True if successful
+        """
+        cursor = self.db.cursor()
 
-            search_terms.append({
-                'search_term': search_term,
-                'impressions': row.metrics.impressions,
-                'clicks': row.metrics.clicks,
-                'conversions': row.metrics.conversions,
-                'impression_share': row.metrics.search_impression_share,
-                'rank_lost_share': row.metrics.search_rank_lost_impression_share,
-                'is_competitor_term': is_competitor_term,
-                'lost_opportunity': row.metrics.search_rank_lost_impression_share > 0.2  # Losing 20%+ to rank
-            })
+        try:
+            for comp in competitors:
+                # Calculate threat level and budget recommendation
+                threat_level = self._calculate_threat_level(comp)
+                budget_rec = self._get_budget_recommendation(comp, threat_level)
 
-        # Identify high-opportunity terms (low impression share)
-        opportunities = [st for st in search_terms if st['impression_share'] < 0.5 and st['conversions'] > 0]
+                # Estimate competitor budget
+                estimated_budget = self._estimate_competitor_budget(comp)
 
-        return {
-            "success": True,
-            "search_terms": search_terms,
-            "competitor_terms": [st for st in search_terms if st['is_competitor_term']],
-            "lost_opportunities": [st for st in search_terms if st['lost_opportunity']],
-            "high_opportunity_terms": opportunities
+                cursor.execute("""
+                    INSERT INTO competitive_auction_insights (
+                        account_id, customer_id, campaign_id, report_date,
+                        competitor_domain, impression_share, overlap_rate,
+                        position_above_rate, outranking_share, top_of_page_rate,
+                        absolute_top_of_page_rate, estimated_daily_budget,
+                        threat_level, budget_recommendation
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                        impression_share = VALUES(impression_share),
+                        overlap_rate = VALUES(overlap_rate),
+                        position_above_rate = VALUES(position_above_rate),
+                        outranking_share = VALUES(outranking_share),
+                        top_of_page_rate = VALUES(top_of_page_rate),
+                        absolute_top_of_page_rate = VALUES(absolute_top_of_page_rate),
+                        estimated_daily_budget = VALUES(estimated_daily_budget),
+                        threat_level = VALUES(threat_level),
+                        budget_recommendation = VALUES(budget_recommendation),
+                        updated_at = CURRENT_TIMESTAMP
+                """, (
+                    account_id,
+                    customer_id,
+                    campaign_id,
+                    report_date,
+                    comp.get('domain', ''),
+                    comp.get('impression_share', 0),
+                    comp.get('overlap_rate', 0),
+                    comp.get('position_above_rate', 0),
+                    comp.get('outranking_share', 0),
+                    comp.get('top_of_page_rate', 0),
+                    comp.get('absolute_top_of_page_rate', 0),
+                    estimated_budget,
+                    threat_level,
+                    budget_rec
+                ))
+
+            self.db.commit()
+            cursor.close()
+
+            # Check for significant changes and create alerts
+            self._check_for_alerts(account_id, customer_id, campaign_id, report_date, competitors)
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Error saving auction insights: {e}")
+            self.db.rollback()
+            cursor.close()
+            return False
+
+    def _calculate_threat_level(self, competitor: Dict[str, Any]) -> str:
+        """
+        Calculate threat level based on competitive metrics.
+
+        Args:
+            competitor: Competitor data dict
+
+        Returns:
+            Threat level: low, medium, high, critical
+        """
+        position_above = competitor.get('position_above_rate', 0)
+        impression_share = competitor.get('impression_share', 0)
+        overlap = competitor.get('overlap_rate', 0)
+
+        # Critical threat: Outranking you >70% of time with high overlap
+        if position_above >= 70 and overlap >= 50:
+            return 'critical'
+
+        # High threat: Outranking you >50% with moderate overlap
+        if position_above >= 50 and overlap >= 30:
+            return 'high'
+
+        # Medium threat: Outranking you 30-50%
+        if position_above >= 30:
+            return 'medium'
+
+        # Low threat: Minimal competitive pressure
+        return 'low'
+
+    def _get_budget_recommendation(self, competitor: Dict[str, Any], threat_level: str) -> str:
+        """
+        Get budget recommendation based on competitive position.
+
+        Args:
+            competitor: Competitor data
+            threat_level: Calculated threat level
+
+        Returns:
+            Budget recommendation string
+        """
+        position_above = competitor.get('position_above_rate', 0)
+        outranking_share = competitor.get('outranking_share', 0)
+        domain = competitor.get('domain', 'competitor')
+
+        if threat_level == 'critical':
+            return f"HIGH PRIORITY: {domain} outranks you {position_above:.0f}% of the time. Increase budget 40-50% and improve Quality Scores."
+
+        elif threat_level == 'high':
+            return f"MODERATE THREAT: {domain} outranks you {position_above:.0f}% of the time. Consider increasing budget 30-40%."
+
+        elif threat_level == 'medium':
+            if outranking_share >= 60:
+                return f"OPPORTUNITY: You outrank {domain} {outranking_share:.0f}% of the time. Maintain current strategy."
+            else:
+                return f"MONITOR: {domain} outranks you {position_above:.0f}% of the time. Consider increasing budget 15-25%."
+
+        else:
+            return f"LOW THREAT: You're competitive with {domain}. Maintain current budget."
+
+    def _estimate_competitor_budget(self, competitor: Dict[str, Any]) -> float:
+        """
+        Estimate competitor's daily budget based on impression share.
+
+        This is a rough estimate assuming:
+        - Impression share correlates with budget
+        - Market has finite daily search volume
+        - Competitor bids are similar to yours
+
+        Args:
+            competitor: Competitor data
+
+        Returns:
+            Estimated daily budget
+        """
+        impression_share = competitor.get('impression_share', 0)
+
+        # Rough estimation: If they have 50% impression share, they're spending
+        # roughly proportional to that in the market
+        # This is very approximate and would need tuning per market
+
+        # Baseline: Assume $100/day per 10% impression share
+        estimated_daily = (impression_share / 10) * 100
+
+        return round(estimated_daily, 2)
+
+    def _check_for_alerts(
+        self,
+        account_id: int,
+        customer_id: str,
+        campaign_id: str,
+        report_date: date,
+        competitors: List[Dict[str, Any]]
+    ) -> None:
+        """
+        Check for significant competitive changes and create alerts.
+
+        Args:
+            account_id: Account ID
+            customer_id: Google Ads customer ID
+            campaign_id: Campaign ID
+            report_date: Current report date
+            competitors: List of current competitor data
+        """
+        # Get previous report (7 days ago)
+        prev_date = report_date - timedelta(days=7)
+
+        cursor = self.db.cursor(dictionary=True)
+
+        for comp in competitors:
+            domain = comp.get('domain', '')
+
+            # Get previous data
+            cursor.execute("""
+                SELECT * FROM competitive_auction_insights
+                WHERE account_id = %s
+                AND customer_id = %s
+                AND campaign_id = %s
+                AND competitor_domain = %s
+                AND report_date = %s
+            """, (account_id, customer_id, campaign_id, domain, prev_date))
+
+            prev_data = cursor.fetchone()
+
+            if not prev_data:
+                # New competitor detected
+                if comp.get('impression_share', 0) >= 10:  # Only alert if significant
+                    self._create_alert(
+                        account_id, customer_id, campaign_id, domain,
+                        'new_competitor', 'warning',
+                        'impression_share', 0, comp.get('impression_share', 0),
+                        f"New competitor {domain} detected with {comp.get('impression_share', 0):.0f}% impression share",
+                        "Monitor this competitor closely"
+                    )
+                continue
+
+            # Check for significant changes
+            self._check_metric_change(
+                account_id, customer_id, campaign_id, domain,
+                'impression_share',
+                prev_data.get('impression_share', 0),
+                comp.get('impression_share', 0),
+                threshold=10,  # Alert if >10 point change
+                alert_type='increased_aggression' if comp.get('impression_share', 0) > prev_data.get('impression_share', 0) else 'decreased_presence'
+            )
+
+            self._check_metric_change(
+                account_id, customer_id, campaign_id, domain,
+                'position_above_rate',
+                prev_data.get('position_above_rate', 0),
+                comp.get('position_above_rate', 0),
+                threshold=15,  # Alert if >15 point change
+                alert_type='lost_position'
+            )
+
+        cursor.close()
+
+    def _check_metric_change(
+        self,
+        account_id: int,
+        customer_id: str,
+        campaign_id: str,
+        domain: str,
+        metric_name: str,
+        old_value: float,
+        new_value: float,
+        threshold: float,
+        alert_type: str
+    ) -> None:
+        """Check if metric change exceeds threshold and create alert."""
+
+        change = abs(new_value - old_value)
+        change_pct = (change / old_value * 100) if old_value > 0 else 0
+
+        if change >= threshold:
+            severity = 'critical' if change >= threshold * 2 else 'warning'
+
+            description = f"{domain}'s {metric_name.replace('_', ' ')} changed from {old_value:.1f}% to {new_value:.1f}% ({change:+.1f} points)"
+
+            if metric_name == 'impression_share' and new_value > old_value:
+                recommendation = f"Competitor increased budget. Consider increasing your budget by {change:.0f}% to maintain position."
+            elif metric_name == 'position_above_rate' and new_value > old_value:
+                recommendation = "Competitor improved their position. Review your bids and Quality Scores."
+            else:
+                recommendation = "Monitor this trend over the next week."
+
+            self._create_alert(
+                account_id, customer_id, campaign_id, domain,
+                alert_type, severity, metric_name,
+                old_value, new_value,
+                description, recommendation
+            )
+
+    def _create_alert(
+        self,
+        account_id: int,
+        customer_id: str,
+        campaign_id: str,
+        competitor_domain: str,
+        alert_type: str,
+        severity: str,
+        metric_name: str,
+        old_value: float,
+        new_value: float,
+        description: str,
+        recommended_action: str
+    ) -> bool:
+        """Create a competitive alert."""
+
+        cursor = self.db.cursor()
+
+        try:
+            change_pct = ((new_value - old_value) / old_value * 100) if old_value > 0 else 0
+
+            cursor.execute("""
+                INSERT INTO competitive_alerts (
+                    account_id, customer_id, campaign_id, competitor_domain,
+                    alert_type, severity, metric_name, old_value, new_value,
+                    change_pct, description, recommended_action
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                account_id, customer_id, campaign_id, competitor_domain,
+                alert_type, severity, metric_name, old_value, new_value,
+                change_pct, description, recommended_action
+            ))
+
+            self.db.commit()
+            cursor.close()
+            return True
+
+        except Exception as e:
+            logger.error(f"Error creating competitive alert: {e}")
+            self.db.rollback()
+            cursor.close()
+            return False
+
+    def get_competitors(
+        self,
+        account_id: int,
+        customer_id: str,
+        campaign_id: Optional[str] = None,
+        report_date: Optional[date] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Get competitor data.
+
+        Args:
+            account_id: Account ID
+            customer_id: Google Ads customer ID
+            campaign_id: Optional campaign filter
+            report_date: Optional specific date (defaults to latest)
+
+        Returns:
+            List of competitors
+        """
+        cursor = self.db.cursor(dictionary=True)
+
+        query = """
+            SELECT * FROM competitive_auction_insights
+            WHERE account_id = %s AND customer_id = %s
+        """
+        params = [account_id, customer_id]
+
+        if campaign_id:
+            query += " AND campaign_id = %s"
+            params.append(campaign_id)
+
+        if report_date:
+            query += " AND report_date = %s"
+            params.append(report_date)
+        else:
+            # Get latest date
+            query += " AND report_date = (SELECT MAX(report_date) FROM competitive_auction_insights WHERE account_id = %s AND customer_id = %s)"
+            params.extend([account_id, customer_id])
+
+        query += " ORDER BY impression_share DESC"
+
+        cursor.execute(query, params)
+        competitors = cursor.fetchall()
+        cursor.close()
+
+        return competitors
+
+    def get_alerts(
+        self,
+        account_id: int,
+        customer_id: str,
+        unaddressed_only: bool = True,
+        limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """
+        Get competitive alerts.
+
+        Args:
+            account_id: Account ID
+            customer_id: Google Ads customer ID
+            unaddressed_only: Only return unaddressed alerts
+            limit: Max number of records
+
+        Returns:
+            List of alerts
+        """
+        cursor = self.db.cursor(dictionary=True)
+
+        query = """
+            SELECT * FROM competitive_alerts
+            WHERE account_id = %s AND customer_id = %s
+        """
+        params = [account_id, customer_id]
+
+        if unaddressed_only:
+            query += " AND is_addressed = FALSE"
+
+        query += " ORDER BY created_at DESC LIMIT %s"
+        params.append(limit)
+
+        cursor.execute(query, params)
+        alerts = cursor.fetchall()
+        cursor.close()
+
+        return alerts
+
+    def get_market_share_analysis(
+        self,
+        account_id: int,
+        customer_id: str,
+        campaign_id: str,
+        your_impression_share: float
+    ) -> Dict[str, Any]:
+        """
+        Calculate your market share vs competitors.
+
+        Args:
+            account_id: Account ID
+            customer_id: Google Ads customer ID
+            campaign_id: Campaign ID
+            your_impression_share: Your current impression share
+
+        Returns:
+            Market share analysis
+        """
+        competitors = self.get_competitors(account_id, customer_id, campaign_id)
+
+        total_competitive_share = sum(c.get('impression_share', 0) for c in competitors)
+        total_market = your_impression_share + total_competitive_share
+
+        analysis = {
+            'your_share': your_impression_share,
+            'competitive_share': total_competitive_share,
+            'total_market': total_market,
+            'your_pct_of_market': (your_impression_share / total_market * 100) if total_market > 0 else 0,
+            'num_competitors': len(competitors),
+            'top_competitor': competitors[0] if competitors else None,
+            'threats': [c for c in competitors if c.get('threat_level') in ['high', 'critical']],
+            'opportunities': [c for c in competitors if c.get('outranking_share', 0) >= 60]
         }
 
-    except Exception as e:
-        print(f"Error fetching search terms: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        return analysis
 
+    def mark_alert_addressed(self, alert_id: int, account_id: int) -> bool:
+        """
+        Mark an alert as addressed.
 
-def estimate_competitor_budget(
-    competitor_impression_share: float,
-    your_daily_budget: float,
-    your_impression_share: float
-) -> float:
-    """
-    Estimate competitor's daily budget based on impression share.
+        Args:
+            alert_id: Alert ID
+            account_id: Account ID (for security)
 
-    Rough estimation: If they have 40% impression share and you have 30%,
-    and you spend $100/day, they likely spend ~$133/day.
+        Returns:
+            True if successful
+        """
+        cursor = self.db.cursor()
 
-    Args:
-        competitor_impression_share: Competitor's impression share (0-1)
-        your_daily_budget: Your daily budget
-        your_impression_share: Your impression share (0-1)
+        try:
+            cursor.execute("""
+                UPDATE competitive_alerts
+                SET is_addressed = TRUE, addressed_at = CURRENT_TIMESTAMP
+                WHERE id = %s AND account_id = %s
+            """, (alert_id, account_id))
 
-    Returns:
-        Estimated competitor daily budget
-    """
-    if your_impression_share == 0:
-        return 0
+            self.db.commit()
+            cursor.close()
+            return True
 
-    # Rough estimation (assumes similar CPCs)
-    estimated_budget = (competitor_impression_share / your_impression_share) * your_daily_budget
-
-    return round(estimated_budget, 2)
+        except Exception as e:
+            logger.error(f"Error marking alert as addressed: {e}")
+            self.db.rollback()
+            cursor.close()
+            return False

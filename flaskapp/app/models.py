@@ -827,3 +827,532 @@ class BudgetAlert(db.Model):
 
     def __repr__(self) -> str:
         return f"<BudgetAlert id={self.id} tracker_id={self.budget_tracker_id} type={self.alert_type} severity={self.severity}>"
+
+
+# -------------------------
+# Email Workflow System
+# -------------------------
+class ContactGroup(db.Model):
+    """
+    Groups for organizing contacts (customers, leads, strangers, friends, associates, etc.)
+    Used to segment email campaigns and workflows.
+    """
+    __tablename__ = "contact_groups"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True, index=True)
+    description = db.Column(db.Text, nullable=True)
+
+    # Metadata
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    contacts = db.relationship("CRMContact", secondary="contact_group_members", backref="groups", lazy="dynamic")
+
+    def __repr__(self) -> str:
+        return f"<ContactGroup id={self.id} name={self.name!r}>"
+
+
+class ContactGroupMember(db.Model):
+    """
+    Junction table linking contacts to groups (many-to-many relationship)
+    """
+    __tablename__ = "contact_group_members"
+
+    id = db.Column(db.Integer, primary_key=True)
+    contact_id = db.Column(db.Integer, db.ForeignKey("crm_contacts.id"), nullable=False, index=True)
+    group_id = db.Column(db.Integer, db.ForeignKey("contact_groups.id"), nullable=False, index=True)
+
+    added_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    added_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint("contact_id", "group_id", name="uq_contact_group"),
+        db.Index("idx_contact_group_members_contact", "contact_id"),
+        db.Index("idx_contact_group_members_group", "group_id"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<ContactGroupMember contact_id={self.contact_id} group_id={self.group_id}>"
+
+
+class EmailTemplate(db.Model):
+    """
+    Reusable email templates for campaigns and workflows.
+    Supports variable substitution (e.g., {{first_name}}, {{company_name}}).
+    """
+    __tablename__ = "email_templates"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False, unique=True, index=True)
+    description = db.Column(db.Text, nullable=True)
+
+    # Email content
+    subject = db.Column(db.String(500), nullable=False)
+    body_html = db.Column(LONGTEXT, nullable=True)
+    body_text = db.Column(db.Text, nullable=True)
+
+    # Metadata
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Status
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    # Relationships
+    created_by = db.relationship("User", backref="email_templates_created")
+
+    def __repr__(self) -> str:
+        return f"<EmailTemplate id={self.id} name={self.name!r}>"
+
+
+class EmailWorkflow(db.Model):
+    """
+    Automated email workflow/sequence.
+    Contains multiple steps (emails) sent over time with delays.
+    """
+    __tablename__ = "email_workflows"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False, unique=True, index=True)
+    description = db.Column(db.Text, nullable=True)
+
+    # Target groups
+    target_groups = db.Column(JSONType, nullable=True)  # Array of group IDs this workflow targets
+
+    # Metadata
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Status
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    # Relationships
+    created_by = db.relationship("User", backref="email_workflows_created")
+    steps = db.relationship("WorkflowStep", backref="workflow", cascade="all, delete-orphan", order_by="WorkflowStep.step_order")
+    enrollments = db.relationship("WorkflowEnrollment", backref="workflow", cascade="all, delete-orphan", lazy="dynamic")
+
+    def __repr__(self) -> str:
+        return f"<EmailWorkflow id={self.id} name={self.name!r}>"
+
+
+class WorkflowStep(db.Model):
+    """
+    Individual step in an email workflow.
+    Each step sends an email template after a specified delay from the previous step.
+    """
+    __tablename__ = "workflow_steps"
+
+    id = db.Column(db.Integer, primary_key=True)
+    workflow_id = db.Column(db.Integer, db.ForeignKey("email_workflows.id"), nullable=False, index=True)
+    email_template_id = db.Column(db.Integer, db.ForeignKey("email_templates.id"), nullable=False, index=True)
+
+    # Step configuration
+    step_order = db.Column(db.Integer, nullable=False)  # 1, 2, 3, etc.
+    delay_days = db.Column(db.Integer, nullable=False, default=0)  # days to wait before sending (0 = immediate)
+    delay_hours = db.Column(db.Integer, nullable=False, default=0)  # additional hours to wait
+
+    # Metadata
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relationships
+    email_template = db.relationship("EmailTemplate", backref="workflow_steps")
+
+    __table_args__ = (
+        db.UniqueConstraint("workflow_id", "step_order", name="uq_workflow_step_order"),
+        db.Index("idx_workflow_steps_workflow", "workflow_id"),
+        db.Index("idx_workflow_steps_order", "workflow_id", "step_order"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<WorkflowStep id={self.id} workflow_id={self.workflow_id} order={self.step_order}>"
+
+
+class WorkflowEnrollment(db.Model):
+    """
+    Tracks which contacts are enrolled in which workflows.
+    Records progress through the workflow steps.
+    """
+    __tablename__ = "workflow_enrollments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    workflow_id = db.Column(db.Integer, db.ForeignKey("email_workflows.id"), nullable=False, index=True)
+    crm_contact_id = db.Column(db.Integer, db.ForeignKey("crm_contacts.id"), nullable=False, index=True)
+
+    # Progress tracking
+    current_step = db.Column(db.Integer, nullable=False, default=0)  # 0 = not started, 1 = first step sent, etc.
+    status = db.Column(
+        SAEnum("active", "paused", "completed", "unsubscribed", "bounced", name="workflow_enrollment_status_enum"),
+        nullable=False,
+        default="active",
+        index=True
+    )
+
+    # Timing
+    enrolled_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    last_email_sent_at = db.Column(db.DateTime, nullable=True)
+    next_email_scheduled_at = db.Column(db.DateTime, nullable=True, index=True)  # when to send next email
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+    # Metadata
+    enrolled_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+    # Relationships
+    crm_contact = db.relationship("CRMContact", backref="workflow_enrollments")
+    enrolled_by = db.relationship("User", backref="workflow_enrollments_created")
+
+    __table_args__ = (
+        db.UniqueConstraint("workflow_id", "crm_contact_id", name="uq_workflow_enrollment"),
+        db.Index("idx_workflow_enrollments_workflow", "workflow_id"),
+        db.Index("idx_workflow_enrollments_contact", "crm_contact_id"),
+        db.Index("idx_workflow_enrollments_status", "status"),
+        db.Index("idx_workflow_enrollments_next_send", "next_email_scheduled_at"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<WorkflowEnrollment id={self.id} workflow_id={self.workflow_id} contact_id={self.crm_contact_id} status={self.status}>"
+
+
+# -------------------------
+# ServiceTitan Integration
+# -------------------------
+class ServiceTitanConnection(db.Model):
+    """
+    Stores ServiceTitan API connection settings per account.
+    Each account can have one ServiceTitan connection.
+    """
+    __tablename__ = "servicetitan_connections"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False, unique=True, index=True)
+
+    # API credentials (should be encrypted in production)
+    tenant_id = db.Column(db.String(100), nullable=False)  # ServiceTitan tenant ID
+    client_id = db.Column(db.String(255), nullable=False)  # OAuth client ID
+    client_secret = db.Column(db.String(255), nullable=False)  # OAuth client secret (encrypt this!)
+
+    # OAuth tokens
+    access_token = db.Column(db.Text, nullable=True)  # Current access token
+    refresh_token = db.Column(db.Text, nullable=True)  # Refresh token
+    token_expires_at = db.Column(db.DateTime, nullable=True)  # When access token expires
+
+    # Connection settings
+    app_key = db.Column(db.String(255), nullable=True)  # ServiceTitan app key
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    # Sync settings
+    sync_enabled = db.Column(db.Boolean, nullable=False, default=True)
+    sync_frequency_hours = db.Column(db.Integer, nullable=False, default=4)  # How often to sync
+    last_sync_at = db.Column(db.DateTime, nullable=True)
+    next_sync_at = db.Column(db.DateTime, nullable=True)
+
+    # Metadata
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+    # Relationships
+    account = db.relationship("Account", backref="servicetitan_connection")
+    created_by = db.relationship("User", backref="servicetitan_connections_created")
+
+    def __repr__(self) -> str:
+        return f"<ServiceTitanConnection id={self.id} account_id={self.account_id} tenant_id={self.tenant_id}>"
+
+
+class ServiceTitanCustomer(db.Model):
+    """
+    Stores customer data synced from ServiceTitan.
+    Linked to account for multi-tenant support.
+    """
+    __tablename__ = "servicetitan_customers"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False, index=True)
+
+    # ServiceTitan IDs
+    st_customer_id = db.Column(db.BigInteger, nullable=False, index=True)  # ServiceTitan customer ID
+
+    # Customer details
+    name = db.Column(db.String(255), nullable=True)
+    first_name = db.Column(db.String(100), nullable=True)
+    last_name = db.Column(db.String(100), nullable=True)
+    email = db.Column(db.String(255), nullable=True, index=True)
+    phone = db.Column(db.String(50), nullable=True)
+
+    # Address
+    address = db.Column(db.String(255), nullable=True)
+    city = db.Column(db.String(100), nullable=True)
+    state = db.Column(db.String(50), nullable=True)
+    zip_code = db.Column(db.String(20), nullable=True)
+
+    # Customer metrics
+    customer_type = db.Column(db.String(50), nullable=True)  # Residential, Commercial, etc.
+    lifetime_value = db.Column(db.Numeric(12, 2), nullable=True)  # Total revenue from this customer
+    job_count = db.Column(db.Integer, nullable=False, default=0)  # Number of jobs
+
+    # ServiceTitan metadata
+    st_data = db.Column(JSONType, nullable=True)  # Full ServiceTitan customer object
+
+    # Timestamps
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    st_created_at = db.Column(db.DateTime, nullable=True)  # When created in ServiceTitan
+    st_modified_at = db.Column(db.DateTime, nullable=True)  # When last modified in ServiceTitan
+
+    # Relationships
+    account = db.relationship("Account", backref="servicetitan_customers")
+
+    __table_args__ = (
+        db.UniqueConstraint("account_id", "st_customer_id", name="uq_st_customer_per_account"),
+        db.Index("idx_st_customers_account", "account_id"),
+        db.Index("idx_st_customers_st_id", "st_customer_id"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<ServiceTitanCustomer id={self.id} st_id={self.st_customer_id} name={self.name}>"
+
+
+class ServiceTitanJobType(db.Model):
+    """
+    Stores job type/category data from ServiceTitan.
+    Used to analyze revenue and performance by service type.
+    """
+    __tablename__ = "servicetitan_job_types"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False, index=True)
+
+    # ServiceTitan IDs
+    st_job_type_id = db.Column(db.BigInteger, nullable=False, index=True)
+
+    # Job type details
+    name = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+
+    # Metrics (calculated from jobs)
+    avg_revenue = db.Column(db.Numeric(12, 2), nullable=True)
+    total_jobs = db.Column(db.Integer, nullable=False, default=0)
+    total_revenue = db.Column(db.Numeric(12, 2), nullable=True)
+
+    # ServiceTitan metadata
+    st_data = db.Column(JSONType, nullable=True)
+
+    # Timestamps
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    account = db.relationship("Account", backref="servicetitan_job_types")
+
+    __table_args__ = (
+        db.UniqueConstraint("account_id", "st_job_type_id", name="uq_st_job_type_per_account"),
+        db.Index("idx_st_job_types_account", "account_id"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<ServiceTitanJobType id={self.id} name={self.name}>"
+
+
+class ServiceTitanJob(db.Model):
+    """
+    Stores job/appointment data from ServiceTitan.
+    Used for revenue tracking and conversion optimization.
+    """
+    __tablename__ = "servicetitan_jobs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False, index=True)
+
+    # ServiceTitan IDs
+    st_job_id = db.Column(db.BigInteger, nullable=False, index=True)
+    st_customer_id = db.Column(db.BigInteger, nullable=True, index=True)
+    st_job_type_id = db.Column(db.BigInteger, nullable=True, index=True)
+    st_business_unit_id = db.Column(db.BigInteger, nullable=True)
+
+    # Job details
+    job_number = db.Column(db.String(50), nullable=True, index=True)
+    job_status = db.Column(db.String(50), nullable=True, index=True)  # Scheduled, In Progress, Completed, Canceled
+    job_type_name = db.Column(db.String(255), nullable=True)
+
+    # Financial data
+    total_amount = db.Column(db.Numeric(12, 2), nullable=True)  # Total job value
+    outstanding_balance = db.Column(db.Numeric(12, 2), nullable=True)
+    invoice_amount = db.Column(db.Numeric(12, 2), nullable=True)
+
+    # Dates
+    scheduled_date = db.Column(db.DateTime, nullable=True, index=True)
+    completed_date = db.Column(db.DateTime, nullable=True, index=True)
+    start_date = db.Column(db.DateTime, nullable=True)
+
+    # Lead source tracking (for ads attribution)
+    lead_source = db.Column(db.String(255), nullable=True, index=True)  # Where the lead came from
+    campaign_name = db.Column(db.String(255), nullable=True)  # Marketing campaign
+
+    # ServiceTitan metadata
+    st_data = db.Column(JSONType, nullable=True)  # Full job object
+
+    # Timestamps
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    st_created_at = db.Column(db.DateTime, nullable=True)
+    st_modified_at = db.Column(db.DateTime, nullable=True)
+
+    # Relationships
+    account = db.relationship("Account", backref="servicetitan_jobs")
+    customer = db.relationship(
+        "ServiceTitanCustomer",
+        foreign_keys=[account_id, st_customer_id],
+        primaryjoin="and_(ServiceTitanJob.account_id==ServiceTitanCustomer.account_id, ServiceTitanJob.st_customer_id==ServiceTitanCustomer.st_customer_id)",
+        backref="jobs",
+        uselist=False
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint("account_id", "st_job_id", name="uq_st_job_per_account"),
+        db.Index("idx_st_jobs_account", "account_id"),
+        db.Index("idx_st_jobs_st_id", "st_job_id"),
+        db.Index("idx_st_jobs_customer", "st_customer_id"),
+        db.Index("idx_st_jobs_status", "job_status"),
+        db.Index("idx_st_jobs_scheduled", "scheduled_date"),
+        db.Index("idx_st_jobs_lead_source", "lead_source"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<ServiceTitanJob id={self.id} job_number={self.job_number} status={self.job_status}>"
+
+
+class ServiceTitanTechnician(db.Model):
+    """
+    Stores technician data from ServiceTitan.
+    Used for capacity planning and scheduling optimization.
+    """
+    __tablename__ = "servicetitan_technicians"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False, index=True)
+
+    # ServiceTitan IDs
+    st_technician_id = db.Column(db.BigInteger, nullable=False, index=True)
+    st_business_unit_id = db.Column(db.BigInteger, nullable=True)
+
+    # Technician details
+    name = db.Column(db.String(255), nullable=True)
+    email = db.Column(db.String(255), nullable=True)
+    phone = db.Column(db.String(50), nullable=True)
+
+    # Status
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    # ServiceTitan metadata
+    st_data = db.Column(JSONType, nullable=True)
+
+    # Timestamps
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    account = db.relationship("Account", backref="servicetitan_technicians")
+
+    __table_args__ = (
+        db.UniqueConstraint("account_id", "st_technician_id", name="uq_st_technician_per_account"),
+        db.Index("idx_st_technicians_account", "account_id"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<ServiceTitanTechnician id={self.id} name={self.name}>"
+
+
+class ServiceTitanCapacity(db.Model):
+    """
+    Stores daily capacity metrics from ServiceTitan.
+    Used to optimize ad spend based on available capacity.
+    """
+    __tablename__ = "servicetitan_capacity"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False, index=True)
+
+    # Date and business unit
+    capacity_date = db.Column(db.Date, nullable=False, index=True)
+    st_business_unit_id = db.Column(db.BigInteger, nullable=True)
+    business_unit_name = db.Column(db.String(255), nullable=True)
+
+    # Capacity metrics
+    total_slots = db.Column(db.Integer, nullable=False, default=0)  # Total available appointment slots
+    booked_slots = db.Column(db.Integer, nullable=False, default=0)  # Number of booked slots
+    available_slots = db.Column(db.Integer, nullable=False, default=0)  # Remaining available slots
+    utilization_percent = db.Column(db.Numeric(5, 2), nullable=True)  # Capacity utilization %
+
+    # Technician availability
+    total_technicians = db.Column(db.Integer, nullable=False, default=0)
+    available_technicians = db.Column(db.Integer, nullable=False, default=0)
+
+    # Revenue metrics for the day
+    scheduled_revenue = db.Column(db.Numeric(12, 2), nullable=True)  # Expected revenue from scheduled jobs
+
+    # Calculated field for ads optimization
+    capacity_score = db.Column(db.Numeric(5, 2), nullable=True)  # 0-100 score for ad budget adjustment
+
+    # Timestamps
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    account = db.relationship("Account", backref="servicetitan_capacity")
+
+    __table_args__ = (
+        db.UniqueConstraint("account_id", "capacity_date", "st_business_unit_id", name="uq_st_capacity_per_day"),
+        db.Index("idx_st_capacity_account", "account_id"),
+        db.Index("idx_st_capacity_date", "capacity_date"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<ServiceTitanCapacity id={self.id} date={self.capacity_date} utilization={self.utilization_percent}%>"
+
+
+class ServiceTitanSyncLog(db.Model):
+    """
+    Logs all ServiceTitan API sync operations.
+    Used for debugging and monitoring data synchronization.
+    """
+    __tablename__ = "servicetitan_sync_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False, index=True)
+
+    # Sync details
+    sync_type = db.Column(db.String(50), nullable=False, index=True)  # customers, jobs, capacity, etc.
+    status = db.Column(db.String(50), nullable=False, index=True)  # success, error, partial
+
+    # Timing
+    started_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    duration_seconds = db.Column(db.Integer, nullable=True)
+
+    # Results
+    records_fetched = db.Column(db.Integer, nullable=True)
+    records_created = db.Column(db.Integer, nullable=True)
+    records_updated = db.Column(db.Integer, nullable=True)
+    records_failed = db.Column(db.Integer, nullable=True)
+
+    # Error details
+    error_message = db.Column(db.Text, nullable=True)
+    error_details = db.Column(JSONType, nullable=True)
+
+    # API response metadata
+    api_calls_made = db.Column(db.Integer, nullable=True)
+
+    # Relationships
+    account = db.relationship("Account", backref="servicetitan_sync_logs")
+
+    __table_args__ = (
+        db.Index("idx_st_sync_logs_account", "account_id"),
+        db.Index("idx_st_sync_logs_type", "sync_type"),
+        db.Index("idx_st_sync_logs_started", "started_at"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<ServiceTitanSyncLog id={self.id} type={self.sync_type} status={self.status}>"

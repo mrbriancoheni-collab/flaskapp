@@ -11,7 +11,7 @@
   {% if csrf_token %}<meta name="csrf-token" content="{{ csrf_token() }}">{% endif %}
   <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HZBKX56R65"></script>
-<script>
+<script nonce="{{ g.csp_nonce }}">
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
@@ -19,7 +19,7 @@
 </script>
   <!-- Tailwind via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
+  <script nonce="{{ g.csp_nonce }}">
     tailwind.config = {
       theme: {
         extend: {
@@ -72,6 +72,28 @@
     .logo-pill{display:inline-flex;align-items:center;padding:.5rem 1rem;border-radius:999px;font-size:.875rem;font-weight:600;background:#fff;border:1px solid rgba(0,0,0,.08);box-shadow:0 2px 8px rgba(0,0,0,.04)}
     .logo-dot{display:inline-block;width:8px;height:8px;border-radius:50%}
   </style>
+
+  <!-- Organization Schema for AI Search & Entity Recognition -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "FieldSprout",
+    "url": "https://fieldsprout.io",
+    "logo": "https://fieldsprout.io/static/brand/logos/fieldsprout-wordmark.svg",
+    "description": "AI agents that autonomously optimize Google Ads, Facebook Ads, and local marketing for home service businesses.",
+    "sameAs": [
+      "https://www.linkedin.com/company/fieldsprout",
+      "https://twitter.com/fieldsprout"
+    ],
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "Customer Service",
+      "email": "support@fieldsprout.io"
+    }
+  }
+  </script>
+
   {% block head_extra %}{% endblock %}
 </head>
 
@@ -319,7 +341,7 @@
   </script>
   <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17616998273"></script>
-<script>
+<script nonce="{{ g.csp_nonce }}">
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
@@ -331,7 +353,7 @@
   {% include 'includes/page_view_tracking.html' %}
 
   <!-- Mobile Menu Toggle Script -->
-  <script>
+  <script nonce="{{ g.csp_nonce }}">
     (function() {
       var openBtn = document.getElementById('openMenu');
       var mobileMenu = document.getElementById('mobileMenu');

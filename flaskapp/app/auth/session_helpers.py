@@ -42,7 +42,8 @@ def login_required(view: Callable) -> Callable:
             wants_json = (request.accept_mimetypes.best == "application/json") or request.is_json
             if wants_json:
                 return jsonify({"ok": False, "error": "auth_required"}), 401
-            return redirect(url_for("auth_bp.login", next=_next_param()))
+            # Redirect to login, passing the current URL so we can return here after login
+            return redirect(url_for("auth_bp.login", next=request.url))
         return view(*args, **kwargs)
     return wrapped
 
@@ -52,13 +53,23 @@ def require_admin(view: Callable) -> Callable:
     @wraps(view)
     def wrapped(*args, **kwargs):
         user = getattr(g, "user", None)
-        if not user or not getattr(user, "is_admin", False):
-            # Same JSON/browser behavior as login_required
+
+        # Not logged in at all - redirect to login with next parameter
+        if not user:
+            wants_json = (request.accept_mimetypes.best == "application/json") or request.is_json
+            if wants_json:
+                return jsonify({"ok": False, "error": "auth_required"}), 401
+            # Redirect to login, passing the current URL so we can return here after login
+            return redirect(url_for("auth_bp.login", next=request.url))
+
+        # Logged in but not admin - redirect to their dashboard (forbidden)
+        if not getattr(user, "is_admin", False):
             wants_json = (request.accept_mimetypes.best == "application/json") or request.is_json
             if wants_json:
                 return jsonify({"ok": False, "error": "forbidden"}), 403
-            # Send non-admins to home (or your 403 page)
+            # Send non-admins to their account dashboard
             return redirect(url_for("account_bp.dashboard"))
+
         return view(*args, **kwargs)
     return wrapped
 

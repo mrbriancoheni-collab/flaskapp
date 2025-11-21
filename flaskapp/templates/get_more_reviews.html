@@ -2,6 +2,134 @@
 {% set SECTION = 'solutions' %}
 {% block title %}Get More Reviews — Automate 5-Star Growth{% endblock %}
 
+{% block head_extra %}
+<!-- Product/Service Schema for Review Automation -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "FieldSprout Review Automation",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "description": "Automated review request system for home service businesses. Turn happy customers into 5-star reviews with compliant, branded SMS and email automation.",
+  "offers": {
+    "@type": "Offer",
+    "priceCurrency": "USD",
+    "price": "200",
+    "availability": "https://schema.org/InStock"
+  },
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "4.8",
+    "reviewCount": "2400"
+  },
+  "featureList": [
+    "Automated review requests via SMS & email",
+    "Perfect timing - 2-4 hours after job completion",
+    "Negative feedback deflection",
+    "AI-powered response automation",
+    "100% platform compliant",
+    "Multi-platform support (Google, Yelp, Facebook)"
+  ],
+  "publisher": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  }
+}
+</script>
+
+<!-- HowTo Schema for Review Automation Process -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Automate Review Generation for Home Service Businesses",
+  "description": "Simple 3-step automation that builds social proof while you focus on delivering great service.",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "name": "Perfect Timing",
+      "text": "Automatically send review requests 2-4 hours after job completion—when satisfaction is highest and memories are fresh."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Branded Outreach",
+      "text": "Send clean SMS & email templates with one-click links to Google, Yelp, or Facebook. No friction, high conversion."
+    },
+    {
+      "@type": "HowToStep",
+      "name": "Smart Follow-Up",
+      "text": "Auto-send polite reminders if no review after 3 days. Deflect negative feedback to private channels before it goes public."
+    }
+  ]
+}
+</script>
+
+<!-- FAQ Schema for Review Automation -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How does review automation work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "FieldSprout automatically sends review requests 2-4 hours after job completion via SMS and email. Customers get one-click links to leave reviews on Google, Yelp, or Facebook. The system sends polite reminders after 3 days if no review is received."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is automated review collection compliant with Google's policies?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. FieldSprout is 100% compliant with Google's review policies, TCPA regulations, and messaging opt-out rules. We never incentivize reviews or violate platform terms of service."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does negative feedback deflection work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Before customers post publicly, they're screened through a sentiment check. Low ratings are routed to private feedback forms where you can resolve issues directly, turning potential detractors into promoters."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How many reviews can I expect to get?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Most home service businesses see a 4.2x increase in Google reviews within 90 days, with an 89% response rate on review requests."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Get More Reviews",
+      "item": "https://fieldsprout.io/solutions/get-more-reviews"
+    }
+  ]
+}
+</script>
+{% endblock %}
+
 {% block content %}
 
 <!-- HERO -->

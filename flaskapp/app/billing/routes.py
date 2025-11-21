@@ -28,57 +28,59 @@ def create_checkout_session():
     """
     Create a Stripe Checkout session for upgrading to a paid plan.
     Called from pricing modal.
+
+    Optimization: Uses centralized stripe_service instead of duplicating logic.
     """
     try:
         data = request.get_json()
         price_id = data.get("price_id")
         plan_type = data.get("plan_type")  # 'monthly' or 'annual'
-        success_url = data.get("success_url", f"{request.host_url}account/dashboard?upgrade=success")
-        cancel_url = data.get("cancel_url", f"{request.host_url}pricing")
 
         if not price_id:
             return jsonify({"error": "price_id is required"}), 400
 
-        # Initialize Stripe with secret key
-        stripe_secret = current_app.config.get("STRIPE_SECRET_KEY") or os.getenv("STRIPE_SECRET_KEY")
-        if not stripe_secret:
-            return jsonify({"error": "Stripe not configured"}), 500
+        # Check authentication
+        if not current_user or not current_user.is_authenticated:
+            return jsonify({"error": "Authentication required"}), 401
 
-        stripe.api_key = stripe_secret
+        # Use centralized service (includes circuit breaker, monitoring, etc.)
+        from app.services.stripe_service import create_subscription
 
-        # Get customer email
-        customer_email = None
-        if current_user and current_user.is_authenticated:
-            customer_email = current_user.email
+        # Override success/cancel URLs if provided
+        if data.get("success_url"):
+            original_url = current_app.config.get("STRIPE_SUCCESS_URL")
+            current_app.config["STRIPE_SUCCESS_URL"] = data.get("success_url")
 
-        # Create Stripe Checkout Session
-        checkout_session = stripe.checkout.Session.create(
-            payment_method_types=["card"],
-            line_items=[{
-                "price": price_id,
-                "quantity": 1,
-            }],
-            mode="subscription",
-            success_url=success_url,
-            cancel_url=cancel_url,
-            customer_email=customer_email,
-            metadata={
-                "user_id": current_user.id if current_user and current_user.is_authenticated else None,
-                "account_id": current_user.account_id if current_user and current_user.is_authenticated else None,
-                "plan_type": plan_type,
-            },
-            allow_promotion_codes=True,
-        )
+        if data.get("cancel_url"):
+            original_cancel = current_app.config.get("STRIPE_CANCEL_URL")
+            current_app.config["STRIPE_CANCEL_URL"] = data.get("cancel_url")
+
+        try:
+            _, checkout_url = create_subscription(
+                user_id=str(current_user.id),
+                price_id=price_id,
+                email=current_user.email,
+                name=current_user.name if hasattr(current_user, 'name') else None
+            )
+        finally:
+            # Restore original URLs
+            if data.get("success_url"):
+                current_app.config["STRIPE_SUCCESS_URL"] = original_url
+            if data.get("cancel_url"):
+                current_app.config["STRIPE_CANCEL_URL"] = original_cancel
 
         return jsonify({
-            "checkout_url": checkout_session.url,
-            "session_id": checkout_session.id
+            "checkout_url": checkout_url,
+            "session_id": None  # Not needed for redirect
         })
 
+    except ValueError as e:
+        current_app.logger.error(f"Configuration error: {e}")
+        return jsonify({"error": "Stripe not configured properly"}), 500
     except stripe.error.StripeError as e:
         current_app.logger.error(f"Stripe error: {e}")
         return jsonify({"error": str(e)}), 400
     except Exception as e:
-        current_app.logger.error(f"Error creating checkout session: {e}")
+        current_app.logger.error(f"Error creating checkout session: {e}", exc_info=True)
         return jsonify({"error": "Failed to create checkout session"}), 500
 

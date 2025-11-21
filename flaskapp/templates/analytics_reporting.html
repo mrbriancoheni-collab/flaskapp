@@ -2,6 +2,51 @@
 {% set SECTION = 'solutions' %}
 {% block title %}Analytics & Reporting — Track What Actually Matters{% endblock %}
 
+{% block head_extra %}
+<!-- Service Schema for Analytics & Reporting -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "serviceType": "Marketing Analytics and Reporting",
+  "provider": {
+    "@type": "Organization",
+    "name": "FieldSprout"
+  },
+  "name": "Marketing Analytics & Reporting",
+  "description": "Real-time marketing analytics that track cost per booked job, revenue attribution, and true ROI for home service businesses. No more vanity metrics.",
+  "offers": {
+    "@type": "Offer",
+    "priceCurrency": "USD",
+    "price": "200",
+    "availability": "https://schema.org/InStock"
+  }
+}
+</script>
+
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://fieldsprout.io"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Analytics & Reporting",
+      "item": "https://fieldsprout.io/solutions/analytics-reporting"
+    }
+  ]
+}
+</script>
+{% endblock %}
+
 {% block content %}
 
 <!-- HERO -->

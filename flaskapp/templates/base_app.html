@@ -163,6 +163,12 @@
         <img src="{{ url_for('static', filename='brand/logos/fieldsprout-wordmark.svg') }}" alt="FieldSprout" style="height:40px;width:auto;">
       </a>
       <div class="flex items-center gap-2">
+        {% if not is_paid and has_endpoint('pricing') %}
+          <a href="{{ url_for(ep('pricing')) }}" class="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-sm transition-all shadow-md">
+            <i class="fa-solid fa-crown text-yellow-300"></i>
+            <span>Upgrade</span>
+          </a>
+        {% endif %}
         <button id="mobile-menu-btn" class="p-3 rounded hover:bg-gray-100 min-w-12 min-h-12" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
           <i class="fa-solid fa-bars text-lg"></i>
         </button>
@@ -300,11 +306,11 @@
         <img src="{{ url_for('static', filename='brand/icons/fieldsprout-icon-32.png') }}" alt="FS" class="w-8 h-8">
       </a>
 
-      <!-- <a href="{{ url_for('strategy_bp.index') }}" class="primary-btn {% if SECTION=='strategy' %}active{% endif %}" title="Strategy"><i class="fa-solid fa-lightbulb"></i></a> -->
+      {# <a href="{{ url_for('strategy_bp.index') }}" class="primary-btn {% if SECTION=='strategy' %}active{% endif %}" title="Strategy"><i class="fa-solid fa-lightbulb"></i></a> #}
       <a href="{{ url_for('google_bp.index') }}" class="primary-btn {% if SECTION=='google' %}active{% endif %}" title="Google"><i class="fa-brands fa-google"></i></a>
       <a href="{{ url_for('glsa_bp.index') }}" class="primary-btn {% if SECTION=='glsa' %}active{% endif %}" title="Local Services Ads"><i class="fa-solid fa-bullhorn"></i></a>
-      <!-- <a href="{{ url_for('fbads_bp.index') }}" class="primary-btn {% if SECTION=='fbads' %}active{% endif %}" title="Facebook Ads"><i class="fa-brands fa-facebook-f"></i></a> -->
-      <!-- <a href="{{ url_for('yelp_bp.index') }}" class="primary-btn {% if SECTION=='yelp' %}active{% endif %}" title="Yelp"><i class="fa-brands fa-yelp"></i></a> -->
+      {# <a href="{{ url_for('fbads_bp.index') }}" class="primary-btn {% if SECTION=='fbads' %}active{% endif %}" title="Facebook Ads"><i class="fa-brands fa-facebook-f"></i></a> #}
+      {# <a href="{{ url_for('yelp_bp.index') }}" class="primary-btn {% if SECTION=='yelp' %}active{% endif %}" title="Yelp"><i class="fa-brands fa-yelp"></i></a> #}
       <a href="{{ url_for('gmb_bp.index') }}" class="primary-btn {% if SECTION=='gmb' %}active{% endif %}" title="Google Business"><i class="fa-brands fa-google"></i></a>
       {% if has_endpoint('linkedin_bp.index') %}
         <a href="{{ url_for('linkedin_bp.index') }}" class="primary-btn {% if SECTION=='linkedin' %}active{% endif %}" title="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
@@ -348,7 +354,22 @@
           </a>
         </div>
       {% endif %}
-      
+
+      <!-- Upgrade CTA Card (Non-Paid Users) -->
+      {% if not is_paid and has_endpoint('pricing') %}
+        <div class="rounded-xl border-2 border-purple-500 bg-gradient-to-br from-purple-50 to-violet-50 p-4 shadow-md mb-4">
+          <div class="flex items-center gap-2 mb-2">
+            <i class="fa-solid fa-crown text-purple-600 text-xl"></i>
+            <div class="font-bold text-purple-900">Upgrade to Pro</div>
+          </div>
+          <p class="text-sm text-purple-700 mb-3">Unlock all features and maximize your marketing results.</p>
+          <a href="{{ url_for(ep('pricing')) }}" class="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white rounded-lg font-bold transition-all shadow-md hover:shadow-lg">
+            <span>View Plans</span>
+            <i class="fa-solid fa-arrow-right text-sm"></i>
+          </a>
+        </div>
+      {% endif %}
+
       <div class="sidebar-label">
         {% if g.user and g.user.is_admin %}
           <a href="{{ url_for('admin_bp.dashboard') }}" class="secondary-link mb-2" title="Admin Dashboard">
@@ -434,7 +455,14 @@
           <a class="secondary-link" href="{{ url_for(ep('account_profile')) }}"><i class="fa-regular fa-id-card"></i><span>Account Settings</span></a>
         {% endif %}
         {% if has_endpoint('pricing') %}
-          <a class="secondary-link" href="{{ url_for(ep('pricing')) }}"><i class="fa-solid fa-tags"></i><span>Upgrade</span></a>
+          {% if not is_paid %}
+            <a class="secondary-link bg-gradient-to-r from-purple-50 to-violet-50 border-2 border-purple-500 hover:from-purple-100 hover:to-violet-100 font-bold" href="{{ url_for(ep('pricing')) }}">
+              <i class="fa-solid fa-crown text-purple-600"></i>
+              <span class="text-purple-700">Upgrade Plan</span>
+            </a>
+          {% else %}
+            <a class="secondary-link" href="{{ url_for(ep('pricing')) }}"><i class="fa-solid fa-tags"></i><span>Manage Plan</span></a>
+          {% endif %}
         {% endif %}
         {% if has_endpoint('logout') %}
           <a class="secondary-link" href="{{ url_for(ep('logout')) }}"><i class="fa-solid fa-right-from-bracket"></i><span>Logout</span></a>
@@ -451,7 +479,18 @@
     </aside>
 
     <!-- MAIN CONTENT -->
-    <main class="flex-1 p-8 overflow-y-auto">
+    <main class="flex-1 p-8 overflow-y-auto relative">
+        <!-- Floating Upgrade Button (Desktop Only, Non-Paid Users) -->
+        {% if not is_paid and has_endpoint('pricing') %}
+        <div class="hidden md:block fixed top-6 right-6 z-40">
+          <a href="{{ url_for(ep('pricing')) }}" class="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white rounded-xl font-bold text-base transition-all shadow-lg hover:shadow-xl transform hover:scale-105">
+            <i class="fa-solid fa-crown text-yellow-300 text-lg"></i>
+            <span>Upgrade Plan</span>
+            <i class="fa-solid fa-arrow-right text-sm"></i>
+          </a>
+        </div>
+        {% endif %}
+
         {% if session.get('impersonated_user_id') and session.get('impersonator_user_id') %}
         <div class="bg-yellow-100 border-b border-yellow-200 text-yellow-900 text-sm px-4 py-2 flex items-center justify-between">
           <div>⚠️ You are impersonating a user (ID {{ session.get('impersonated_user_id') }}). Actions will be performed as them.</div>

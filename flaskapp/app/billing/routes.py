@@ -1,7 +1,8 @@
 # app/billing/routes.py
 from __future__ import annotations
 from flask import Blueprint, render_template, request, jsonify, current_app
-from app.auth.session_helpers import login_required, current_user
+from flask_login import current_user
+from app.auth.session_helpers import login_required
 import stripe
 import os
 

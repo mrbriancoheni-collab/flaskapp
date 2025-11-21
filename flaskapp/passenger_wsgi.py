@@ -33,13 +33,16 @@ load_env_file(env_file)
 
 os.environ.setdefault("GOOGLE_ADS_DEVELOPER_TOKEN", "BVH9TCTe66hciT3TrMrKxg")
 
-# Stripe Configuration - Set these values manually on production
+# Stripe Configuration
+# Direct payment links (public URLs, safe to commit)
+os.environ.setdefault("STRIPE_MONTHLY_LINK", "https://buy.stripe.com/cNifZagasf3v9Rx4f10ZW02")
+os.environ.setdefault("STRIPE_YEARLY_LINK", "https://buy.stripe.com/4gM8wI1fy6wZgfVcLx0ZW01")
+
+# Price IDs and secret keys should be set in .env file or hosting environment variables
 # os.environ.setdefault("STRIPE_SECRET_KEY", "")
 # os.environ.setdefault("STRIPE_PUBLIC_KEY", "")
 # os.environ.setdefault("STRIPE_MONTHLY_PRICE_ID", "")
 # os.environ.setdefault("STRIPE_YEARLY_PRICE_ID", "")
-# os.environ.setdefault("STRIPE_MONTHLY_LINK", "")
-# os.environ.setdefault("STRIPE_YEARLY_LINK", "")
 
 # Use the factory defined in app/__init__.py
 from app import application  # create_app() already called in app/__init__.py

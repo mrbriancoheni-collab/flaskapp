@@ -7,11 +7,16 @@ class Config:
 
     # Stripe keys
     STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
-    STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
+    STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY") or os.environ.get("STRIPE_PUBLIC_KEY", "")
+    STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
-    # Use the new env var names
+    # Price IDs for checkout sessions
     STRIPE_MONTHLY_PRICE_ID = os.environ.get("STRIPE_MONTHLY_PRICE_ID", "")
     STRIPE_YEARLY_PRICE_ID = os.environ.get("STRIPE_YEARLY_PRICE_ID", "")
+
+    # Payment Links (alternative to checkout sessions)
+    STRIPE_MONTHLY_LINK = os.environ.get("STRIPE_MONTHLY_LINK", "")
+    STRIPE_YEARLY_LINK = os.environ.get("STRIPE_YEARLY_LINK", "")
 
     # Backward-compat fallback if you still had the old names set
     if not STRIPE_MONTHLY_PRICE_ID:

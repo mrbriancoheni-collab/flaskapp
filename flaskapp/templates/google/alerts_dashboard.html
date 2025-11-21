@@ -1,0 +1,304 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'google' %}
+{% block title %}Google Ads Alerts — FieldSprout{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Header -->
+  <div class="mb-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">
+          <i class="fas fa-bell text-indigo-600 mr-2"></i>
+          Google Ads Alerts & Recommendations
+        </h1>
+        <p class="mt-2 text-sm text-gray-600">
+          View recommendations and alerts from Google Ads directly on our platform.
+          {% if fetched_at %}
+            <span class="text-gray-400">Last updated: {{ fetched_at }}</span>
+          {% endif %}
+        </p>
+      </div>
+      <button onclick="refreshAlerts()" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+        <i class="fas fa-sync-alt mr-2"></i>
+        Refresh Alerts
+      </button>
+    </div>
+  </div>
+
+  {% if error %}
+  <!-- Error State -->
+  <div class="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
+    <div class="flex items-start">
+      <i class="fas fa-exclamation-circle text-red-600 mt-1 mr-3"></i>
+      <div>
+        <h3 class="text-sm font-medium text-red-800 mb-2">Error Fetching Alerts</h3>
+        <p class="text-sm text-red-700">{{ error }}</p>
+        {% if error_details %}
+        <div class="mt-4">
+          <p class="text-xs font-medium text-red-800 mb-2">Details:</p>
+          <ul class="text-xs text-red-600 space-y-1">
+            {% for detail in error_details %}
+            <li>{{ detail.message }} {% if detail.trigger %}({{ detail.trigger }}){% endif %}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Account Alerts -->
+  {% if account_alerts %}
+  <div class="mb-8">
+    <h2 class="text-xl font-bold text-gray-900 mb-4">Account Alerts</h2>
+    <div class="space-y-4">
+      {% for alert in account_alerts %}
+      <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div class="flex items-start">
+          <i class="fas fa-exclamation-triangle text-yellow-600 mt-1 mr-3"></i>
+          <div class="flex-1">
+            <h4 class="text-sm font-semibold text-yellow-900">{{ alert.title }}</h4>
+            <p class="text-sm text-yellow-800 mt-1">{{ alert.description }}</p>
+            {% if alert.account_name %}
+            <p class="text-xs text-yellow-600 mt-2">Account: {{ alert.account_name }}</p>
+            {% endif %}
+          </div>
+          <span class="px-2 py-1 text-xs font-medium rounded-full
+            {% if alert.severity == 'HIGH' %}bg-red-100 text-red-800
+            {% elif alert.severity == 'MEDIUM' %}bg-yellow-100 text-yellow-800
+            {% else %}bg-blue-100 text-blue-800{% endif %}">
+            {{ alert.severity }}
+          </span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Google Ads Recommendations -->
+  <div class="mb-8">
+    <h2 class="text-xl font-bold text-gray-900 mb-4">
+      Google Ads Recommendations
+      {% if recommendations %}
+      <span class="text-sm font-normal text-gray-500">({{ recommendations|length }})</span>
+      {% endif %}
+    </h2>
+
+    {% if recommendations %}
+    <div class="space-y-4">
+      {% for rec in recommendations %}
+      <div class="bg-white shadow rounded-lg border border-gray-200 p-6">
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <!-- Recommendation Type -->
+            <div class="flex items-center space-x-3 mb-2">
+              <span class="px-3 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
+                {{ rec.type.replace('_', ' ').title() }}
+              </span>
+              {% if rec.campaign %}
+              <span class="text-xs text-gray-500">
+                <i class="fas fa-bullhorn mr-1"></i>
+                Campaign
+              </span>
+              {% endif %}
+            </div>
+
+            <!-- Recommendation Details -->
+            <div class="mt-3">
+              {% if rec.keyword %}
+              <p class="text-sm text-gray-900">
+                <strong>Recommended Keyword:</strong> "{{ rec.keyword }}"
+              </p>
+              {% elif rec.ad %}
+              <p class="text-sm text-gray-900">{{ rec.ad }}</p>
+              {% elif rec.target_cpa %}
+              <p class="text-sm text-gray-900">
+                <strong>Target CPA Optimization:</strong> ${{ (rec.target_cpa / 1000000)|round(2) }}
+              </p>
+              {% else %}
+              <p class="text-sm text-gray-900">Optimization available for this {{ rec.type.replace('_', ' ').lower() }}</p>
+              {% endif %}
+            </div>
+
+            <!-- Impact Metrics -->
+            {% if rec.impact %}
+            <div class="mt-4 grid grid-cols-4 gap-4">
+              <div>
+                <p class="text-xs text-gray-500">Est. Clicks</p>
+                <p class="text-sm font-semibold text-gray-900">+{{ rec.impact.clicks|round(0) }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">Est. Impressions</p>
+                <p class="text-sm font-semibold text-gray-900">+{{ rec.impact.impressions|round(0) }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">Est. Conversions</p>
+                <p class="text-sm font-semibold text-gray-900">+{{ rec.impact.conversions|round(1) }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500">Est. Cost</p>
+                <p class="text-sm font-semibold text-gray-900">${{ (rec.impact.cost_micros / 1000000)|round(2) }}</p>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center space-x-2 ml-4">
+            <button onclick="applyRecommendation('{{ rec.resource_name }}')"
+                    class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700">
+              <i class="fas fa-check mr-1"></i>
+              Apply
+            </button>
+            <button onclick="dismissRecommendation('{{ rec.resource_name }}')"
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+              <i class="fas fa-times mr-1"></i>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white shadow rounded-lg border border-gray-200 px-6 py-12 text-center">
+      <i class="fas fa-check-circle text-6xl text-green-300 mb-4"></i>
+      <h3 class="text-lg font-medium text-gray-900 mb-2">No Active Recommendations</h3>
+      <p class="text-gray-500">Google Ads hasn't identified any optimization opportunities at this time.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Change History -->
+  {% if change_history %}
+  <div class="mb-8">
+    <h2 class="text-xl font-bold text-gray-900 mb-4">Recent Changes</h2>
+    <div class="bg-white shadow rounded-lg border border-gray-200 overflow-hidden">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resource</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operation</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Changed By</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fields</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          {% for change in change_history %}
+          <tr>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              {{ change.change_date }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              {{ change.resource_type.replace('_', ' ').title() }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="px-2 py-1 text-xs font-medium rounded-full
+                {% if change.operation == 'CREATE' %}bg-green-100 text-green-800
+                {% elif change.operation == 'UPDATE' %}bg-blue-100 text-blue-800
+                {% elif change.operation == 'REMOVE' %}bg-red-100 text-red-800
+                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                {{ change.operation }}
+              </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              {{ change.user_email }}
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-500">
+              {% if change.changed_fields %}
+                {{ change.changed_fields|join(', ') }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+async function applyRecommendation(resourceName) {
+  if (!confirm('Are you sure you want to apply this recommendation?')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/account/google/ads/alerts/api/recommendations/${encodeURIComponent(resourceName)}/apply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      alert('Recommendation applied successfully!');
+      location.reload();
+    } else {
+      alert('Error applying recommendation: ' + (result.error || 'Unknown error'));
+    }
+  } catch (error) {
+    alert('Error applying recommendation: ' + error.message);
+  }
+}
+
+async function dismissRecommendation(resourceName) {
+  if (!confirm('Are you sure you want to dismiss this recommendation?')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/account/google/ads/alerts/api/recommendations/${encodeURIComponent(resourceName)}/dismiss`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      alert('Recommendation dismissed successfully!');
+      location.reload();
+    } else {
+      alert('Error dismissing recommendation: ' + (result.error || 'Unknown error'));
+    }
+  } catch (error) {
+    alert('Error dismissing recommendation: ' + error.message);
+  }
+}
+
+async function refreshAlerts() {
+  const btn = event.target.closest('button');
+  const originalHTML = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Refreshing...';
+  btn.disabled = true;
+
+  try {
+    const response = await fetch('/account/google/ads/alerts/api/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const result = await response.json();
+
+    if (result.success !== false) {
+      location.reload();
+    } else {
+      alert('Error refreshing alerts: ' + (result.error || 'Unknown error'));
+      btn.innerHTML = originalHTML;
+      btn.disabled = false;
+    }
+  } catch (error) {
+    alert('Error refreshing alerts: ' + error.message);
+    btn.innerHTML = originalHTML;
+    btn.disabled = false;
+  }
+}
+</script>
+{% endblock %}

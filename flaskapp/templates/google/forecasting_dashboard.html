@@ -1,0 +1,440 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'google' %}
+{% block title %}Budget Forecasting — FieldSprout{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Header -->
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">
+      <i class="fas fa-chart-line text-indigo-600 mr-2"></i>
+      Budget Forecasting & Analysis
+    </h1>
+    <p class="mt-2 text-sm text-gray-600">
+      AI-powered budget forecasts using historical data, seasonality curves, weather patterns, and capacity constraints.
+    </p>
+  </div>
+
+  <!-- Campaign Selector -->
+  <div class="bg-white shadow rounded-lg border border-gray-200 p-6 mb-8">
+    <div class="grid grid-cols-3 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Campaign</label>
+        <select id="campaignSelect" class="block w-full rounded-md border-gray-300 shadow-sm">
+          <option value="">Select campaign...</option>
+          {% for campaign in campaigns %}
+          <option value="{{ campaign.id }}">{{ campaign.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Service Type</label>
+        <select id="serviceTypeSelect" class="block w-full rounded-md border-gray-300 shadow-sm">
+          <option value="hvac_ac">HVAC - Air Conditioning</option>
+          <option value="hvac_heat">HVAC - Heating</option>
+          <option value="plumbing">Plumbing</option>
+          <option value="electrical">Electrical</option>
+          <option value="roofing">Roofing</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">ZIP Code</label>
+        <input type="text" id="zipCodeInput" value="10001" class="block w-full rounded-md border-gray-300 shadow-sm">
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Stats -->
+  <div id="quickStats" class="hidden grid grid-cols-4 gap-6 mb-8">
+    <div class="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-lg p-6 text-white">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-blue-100 text-sm mb-1">Avg CPL (90d)</p>
+          <p class="text-4xl font-bold" id="avgCpl">$0</p>
+        </div>
+        <i class="fas fa-dollar-sign text-white opacity-20 text-5xl"></i>
+      </div>
+    </div>
+
+    <div class="bg-gradient-to-br from-green-500 to-teal-600 rounded-lg shadow-lg p-6 text-white">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-green-100 text-sm mb-1">Avg Leads/Day</p>
+          <p class="text-4xl font-bold" id="avgLeads">0</p>
+        </div>
+        <i class="fas fa-users text-white opacity-20 text-5xl"></i>
+      </div>
+    </div>
+
+    <div class="bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg shadow-lg p-6 text-white">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-purple-100 text-sm mb-1">ROAS</p>
+          <p class="text-4xl font-bold" id="avgRoas">0x</p>
+        </div>
+        <i class="fas fa-chart-area text-white opacity-20 text-5xl"></i>
+      </div>
+    </div>
+
+    <div class="bg-gradient-to-br from-orange-500 to-red-600 rounded-lg shadow-lg p-6 text-white">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-orange-100 text-sm mb-1">YoY Growth</p>
+          <p class="text-4xl font-bold" id="yoyGrowth">0%</p>
+        </div>
+        <i class="fas fa-trending-up text-white opacity-20 text-5xl"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Anomaly Alerts -->
+  <div id="anomalyAlerts" class="hidden mb-8"></div>
+
+  <!-- Weather Impact -->
+  <div id="weatherImpact" class="hidden mb-8">
+    <h2 class="text-xl font-bold text-gray-900 mb-4">Current Weather Impact</h2>
+    <div class="bg-white shadow rounded-lg border border-gray-200 p-6">
+      <div class="grid grid-cols-3 gap-6">
+        <div>
+          <p class="text-sm text-gray-500">Current Conditions</p>
+          <p class="text-2xl font-semibold" id="weatherCondition">--</p>
+          <p class="text-sm text-gray-600 mt-1" id="weatherTemp">--°F</p>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">Demand Impact</p>
+          <p class="text-2xl font-semibold" id="demandMultiplier">--</p>
+          <p class="text-sm text-gray-600 mt-1">vs baseline</p>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">Recommendation</p>
+          <p class="text-sm font-medium" id="weatherRecommendation">--</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7-Day Weather Forecast -->
+  <div id="weatherForecast" class="hidden mb-8">
+    <h2 class="text-xl font-bold text-gray-900 mb-4">7-Day Demand Forecast</h2>
+    <div class="bg-white shadow rounded-lg border border-gray-200 overflow-hidden">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Weather</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Temp</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Demand Impact</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recommended Action</th>
+          </tr>
+        </thead>
+        <tbody id="forecastTableBody" class="bg-white divide-y divide-gray-200">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Monthly Forecast -->
+  <div id="monthlyForecast" class="hidden mb-8">
+    <h2 class="text-xl font-bold text-gray-900 mb-4">Next Month Forecast</h2>
+    <div class="bg-white shadow rounded-lg border border-gray-200 p-6">
+      <div class="grid grid-cols-4 gap-6">
+        <div>
+          <p class="text-sm text-gray-500">Projected Spend</p>
+          <p class="text-2xl font-semibold" id="projectedSpend">$0</p>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">Projected Leads</p>
+          <p class="text-2xl font-semibold" id="projectedLeads">0</p>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">Projected CPL</p>
+          <p class="text-2xl font-semibold" id="projectedCpl">$0</p>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">Confidence</p>
+          <p class="text-2xl font-semibold" id="forecastConfidence">0%</p>
+        </div>
+      </div>
+
+      <div class="mt-6 pt-6 border-t border-gray-200">
+        <p class="text-sm font-medium text-gray-700 mb-3">Forecast Factors:</p>
+        <div class="grid grid-cols-4 gap-4 text-sm">
+          <div>
+            <span class="text-gray-600">Seasonality:</span>
+            <span class="font-semibold ml-2" id="seasonalityFactor">--</span>
+          </div>
+          <div>
+            <span class="text-gray-600">Weather:</span>
+            <span class="font-semibold ml-2" id="weatherFactor">--</span>
+          </div>
+          <div>
+            <span class="text-gray-600">Historical:</span>
+            <span class="font-semibold ml-2" id="historicalFactor">--</span>
+          </div>
+          <div>
+            <span class="text-gray-600">Combined:</span>
+            <span class="font-semibold ml-2" id="combinedFactor">--</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 12-Month Seasonal Recommendations -->
+  <div id="seasonalRecommendations" class="hidden mb-8">
+    <h2 class="text-xl font-bold text-gray-900 mb-4">12-Month Budget Plan</h2>
+    <div class="bg-white shadow rounded-lg border border-gray-200 overflow-hidden">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Month</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Current Budget</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recommended</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Change</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Projected Leads</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Seasonality</th>
+          </tr>
+        </thead>
+        <tbody id="seasonalTableBody" class="bg-white divide-y divide-gray-200">
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+let selectedCampaignId = null;
+let selectedServiceType = 'hvac_ac';
+let selectedZipCode = '10001';
+
+document.getElementById('campaignSelect').addEventListener('change', function() {
+  selectedCampaignId = this.value;
+  if (selectedCampaignId) {
+    loadForecastData();
+  }
+});
+
+document.getElementById('serviceTypeSelect').addEventListener('change', function() {
+  selectedServiceType = this.value;
+  if (selectedCampaignId) {
+    loadForecastData();
+  }
+});
+
+document.getElementById('zipCodeInput').addEventListener('change', function() {
+  selectedZipCode = this.value;
+  if (selectedCampaignId) {
+    loadForecastData();
+  }
+});
+
+async function loadForecastData() {
+  // Show sections
+  document.getElementById('quickStats').classList.remove('hidden');
+  document.getElementById('weatherImpact').classList.remove('hidden');
+  document.getElementById('weatherForecast').classList.remove('hidden');
+  document.getElementById('monthlyForecast').classList.remove('hidden');
+  document.getElementById('seasonalRecommendations').classList.remove('hidden');
+
+  // Load all data in parallel
+  await Promise.all([
+    loadBaseline(),
+    loadAnomalies(),
+    loadWeatherImpact(),
+    loadWeatherForecast(),
+    loadMonthlyForecast(),
+    loadSeasonalRecommendations()
+  ]);
+}
+
+async function loadBaseline() {
+  try {
+    const response = await fetch(`/account/google/ads/forecasting/api/baseline/${selectedCampaignId}`);
+    const data = await response.json();
+
+    if (data.success) {
+      document.getElementById('avgCpl').textContent = '$' + (data.baseline.avg_cpl_cents / 100).toFixed(2);
+      document.getElementById('avgLeads').textContent = data.baseline.avg_daily_conversions.toFixed(1);
+      document.getElementById('avgRoas').textContent = data.baseline.avg_roas.toFixed(1) + 'x';
+
+      if (data.year_over_year && data.year_over_year.yoy_change) {
+        const yoy = data.year_over_year.yoy_change.conversions_pct;
+        document.getElementById('yoyGrowth').textContent = (yoy > 0 ? '+' : '') + yoy.toFixed(1) + '%';
+      }
+    }
+  } catch (error) {
+    console.error('Error loading baseline:', error);
+  }
+}
+
+async function loadAnomalies() {
+  try {
+    const response = await fetch(`/account/google/ads/forecasting/api/anomalies/${selectedCampaignId}`);
+    const data = await response.json();
+
+    if (data.success && data.anomalies.length > 0) {
+      const container = document.getElementById('anomalyAlerts');
+      container.classList.remove('hidden');
+
+      let html = '<div class="space-y-3">';
+      for (const anomaly of data.anomalies) {
+        const severity = anomaly.severity === 'high' ? 'red' : 'yellow';
+        html += `
+          <div class="bg-${severity}-50 border border-${severity}-200 rounded-lg p-4">
+            <div class="flex items-start">
+              <i class="fas fa-exclamation-triangle text-${severity}-600 mt-1 mr-3"></i>
+              <div>
+                <h4 class="text-sm font-semibold text-${severity}-900">${anomaly.anomaly_type.replace('_', ' ').toUpperCase()}</h4>
+                <p class="text-sm text-${severity}-800 mt-1">
+                  ${anomaly.metric_name}: $${anomaly.actual_value.toFixed(2)} (baseline: $${anomaly.baseline_value.toFixed(2)})
+                  - ${anomaly.deviation_pct > 0 ? '+' : ''}${anomaly.deviation_pct.toFixed(1)}% deviation
+                </p>
+                <p class="text-xs text-${severity}-600 mt-1">Date: ${anomaly.date} | Confidence: ${(anomaly.confidence_score * 100).toFixed(0)}%</p>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      html += '</div>';
+      container.innerHTML = html;
+    }
+  } catch (error) {
+    console.error('Error loading anomalies:', error);
+  }
+}
+
+async function loadWeatherImpact() {
+  try {
+    const response = await fetch('/account/google/ads/forecasting/api/weather/current', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({zip_code: selectedZipCode, service_type: selectedServiceType})
+    });
+    const data = await response.json();
+
+    if (data.success) {
+      document.getElementById('weatherCondition').textContent = data.weather.condition;
+      document.getElementById('weatherTemp').textContent = `${data.weather.temp_high}°F / ${data.weather.temp_low}°F`;
+      document.getElementById('demandMultiplier').textContent = data.impact_multiplier.toFixed(2) + 'x';
+      document.getElementById('weatherRecommendation').textContent = data.recommendation;
+    }
+  } catch (error) {
+    console.error('Error loading weather impact:', error);
+  }
+}
+
+async function loadWeatherForecast() {
+  try {
+    const response = await fetch('/account/google/ads/forecasting/api/weather/forecast', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({zip_code: selectedZipCode, service_type: selectedServiceType})
+    });
+    const data = await response.json();
+
+    if (data.success) {
+      const tbody = document.getElementById('forecastTableBody');
+      tbody.innerHTML = '';
+
+      for (const day of data.forecast) {
+        const row = document.createElement('tr');
+        const action = day.impact_multiplier >= 1.5 ? 'Increase budget' :
+                       day.impact_multiplier >= 1.2 ? 'Slight increase' :
+                       day.impact_multiplier <= 0.8 ? 'Reduce budget' : 'Maintain';
+
+        row.innerHTML = `
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${day.date}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${day.condition}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${day.temp_high}° / ${day.temp_low}°</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold ${day.impact_multiplier >= 1.5 ? 'text-red-600' : day.impact_multiplier >= 1.2 ? 'text-orange-600' : 'text-gray-900'}">
+            ${day.impact_multiplier.toFixed(2)}x
+          </td>
+          <td class="px-6 py-4 text-sm text-gray-600">${action}</td>
+        `;
+        tbody.appendChild(row);
+      }
+    }
+  } catch (error) {
+    console.error('Error loading weather forecast:', error);
+  }
+}
+
+async function loadMonthlyForecast() {
+  const today = new Date();
+  const nextMonth = today.getMonth() + 2; // +2 because months are 0-indexed
+  const year = nextMonth > 12 ? today.getFullYear() + 1 : today.getFullYear();
+  const month = nextMonth > 12 ? 1 : nextMonth;
+
+  try {
+    const response = await fetch('/account/google/ads/forecasting/api/forecast/monthly', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        campaign_id: selectedCampaignId,
+        service_type: selectedServiceType,
+        month: month,
+        year: year
+      })
+    });
+    const data = await response.json();
+
+    if (data.success) {
+      const forecast = data.forecast;
+      document.getElementById('projectedSpend').textContent = '$' + forecast.projected_spend.toFixed(0);
+      document.getElementById('projectedLeads').textContent = forecast.projected_leads;
+      document.getElementById('projectedCpl').textContent = '$' + forecast.projected_cpl.toFixed(2);
+      document.getElementById('forecastConfidence').textContent = (forecast.confidence_score * 100).toFixed(0) + '%';
+
+      const factors = data.factors;
+      document.getElementById('seasonalityFactor').textContent = factors.seasonality_multiplier.toFixed(2) + 'x';
+      document.getElementById('weatherFactor').textContent = factors.weather_multiplier.toFixed(2) + 'x';
+      document.getElementById('historicalFactor').textContent = factors.baseline_daily_conversions.toFixed(1) + ' leads/day';
+      document.getElementById('combinedFactor').textContent = factors.combined_multiplier.toFixed(2) + 'x';
+    }
+  } catch (error) {
+    console.error('Error loading monthly forecast:', error);
+  }
+}
+
+async function loadSeasonalRecommendations() {
+  try {
+    const response = await fetch('/account/google/ads/forecasting/api/forecast/seasonal', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        campaign_id: selectedCampaignId,
+        service_type: selectedServiceType,
+        current_monthly_budget: 5000
+      })
+    });
+    const data = await response.json();
+
+    if (data.success) {
+      const tbody = document.getElementById('seasonalTableBody');
+      tbody.innerHTML = '';
+
+      for (const rec of data.recommendations) {
+        const row = document.createElement('tr');
+        const changeClass = rec.budget_change_pct >= 20 ? 'text-red-600' :
+                           rec.budget_change_pct >= 10 ? 'text-orange-600' :
+                           rec.budget_change_pct <= -10 ? 'text-green-600' : 'text-gray-900';
+
+        row.innerHTML = `
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${rec.month} ${rec.year}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$${rec.current_budget.toFixed(0)}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">$${rec.recommended_budget.toFixed(0)}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold ${changeClass}">
+            ${rec.budget_change_pct > 0 ? '+' : ''}${rec.budget_change_pct.toFixed(1)}%
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${rec.projected_leads}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${rec.seasonality_factor.toFixed(2)}x</td>
+        `;
+        tbody.appendChild(row);
+      }
+    }
+  } catch (error) {
+    console.error('Error loading seasonal recommendations:', error);
+  }
+}
+</script>
+{% endblock %}

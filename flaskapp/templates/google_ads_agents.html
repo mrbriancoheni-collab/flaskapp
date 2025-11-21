@@ -1,0 +1,479 @@
+{% extends "base_public.html" %}
+{% set SECTION = 'products' %}
+{% block title %}AI Agents for Google Ads — FieldSprout{% endblock %}
+{% block content %}
+
+<!-- Hero Section -->
+<section class="hero" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 5rem 1rem; text-align: center;">
+  <div style="max-width: 900px; margin: 0 auto;">
+    <h1 style="font-size: 3rem; font-weight: 800; margin-bottom: 1.5rem; color: white;">8 AI Agents Optimize Your Google Ads 24/7</h1>
+    <p style="font-size: 1.5rem; margin-bottom: 2rem; color: rgba(255,255,255,0.95);">
+      Not just recommendations. <strong>Autonomous execution.</strong><br/>
+      While competitors show you what to fix, our agents do the work.
+    </p>
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+      <a class="btn btn-primary" href="/account/google/ads/opportunities/demo" style="background: white; color: #667eea; padding: 1rem 2rem; font-size: 1.125rem; font-weight: 700; border-radius: 0.5rem; text-decoration: none;">
+        See Agents in Action →
+      </a>
+      <a class="btn btn-secondary" href="/signup" style="background: rgba(255,255,255,0.2); color: white; padding: 1rem 2rem; font-size: 1.125rem; font-weight: 700; border-radius: 0.5rem; text-decoration: none; border: 2px solid white;">
+        Start Free Trial
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Stats Bar -->
+<section style="background: #1e293b; color: white; padding: 2rem 1rem;">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; text-align: center;">
+      <div>
+        <div style="font-size: 2.5rem; font-weight: 800; color: #10b981;">95%</div>
+        <div style="color: #94a3b8;">Optimizations Auto-Executed</div>
+      </div>
+      <div>
+        <div style="font-size: 2.5rem; font-weight: 800; color: #10b981;">8</div>
+        <div style="color: #94a3b8;">Specialized AI Agents</div>
+      </div>
+      <div>
+        <div style="font-size: 2.5rem; font-weight: 800; color: #10b981;">$300-$800</div>
+        <div style="color: #94a3b8;">Avg. Monthly Savings (wasted spend)</div>
+      </div>
+      <div>
+        <div style="font-size: 2.5rem; font-weight: 800; color: #10b981;">24/7</div>
+        <div style="color: #94a3b8;">Continuous Monitoring</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works -->
+<section style="padding: 4rem 1rem; background: white;">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <h2 style="text-align: center; font-size: 2.5rem; font-weight: 800; margin-bottom: 1rem;">How Multi-Agent AI Works</h2>
+    <p style="text-align: center; color: #64748b; max-width: 800px; margin: 0 auto 3rem; font-size: 1.125rem;">
+      Unlike single-AI tools, our multi-agent system mirrors how expert PPC teams work: strategic planning, daily operations, and tactical execution—all working in harmony.
+    </p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-bottom: 3rem;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2rem; border-radius: 1rem; color: white;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">🎯</div>
+        <h3 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem;">Strategic Layer</h3>
+        <p>Like your CMO, the Strategic Director sets goals, allocates budgets, and identifies scaling opportunities based on business objectives.</p>
+      </div>
+
+      <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 2rem; border-radius: 1rem; color: white;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">⚙️</div>
+        <h3 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem;">Operational Layer</h3>
+        <p>Campaign Manager, Budget Guardian, and Quality Score Agent handle daily management, prevent overspend, and optimize for relevance.</p>
+      </div>
+
+      <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 2rem; border-radius: 1rem; color: white;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">⚡</div>
+        <h3 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem;">Tactical Layer</h3>
+        <p>Keyword, Negative Keyword, Ad Copy, and Landing Page agents execute specific optimizations: bids, blocking waste, testing ads, improving conversions.</p>
+      </div>
+    </div>
+
+    <div style="background: #f1f5f9; padding: 2rem; border-radius: 1rem; border-left: 4px solid #6366f1;">
+      <p style="font-size: 1.125rem; color: #1e293b;">
+        <strong>🤖 Agent Collaboration:</strong> Agents communicate via an event bus. When the Keyword Optimizer pauses a keyword, the Strategic Director reallocates that budget. When Quality Score Agent finds misalignment, Landing Page Analyst provides fix recommendations. <strong>They work as a team, not in silos.</strong>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- Strategic Layer -->
+<section id="strategic-layer" style="padding: 4rem 1rem; background: linear-gradient(to bottom, #f8f9fc, #eef2ff);">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div style="text-align: center; margin-bottom: 3rem;">
+      <div style="display: inline-block; background: #6366f1; color: white; padding: 0.5rem 1.5rem; border-radius: 2rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.875rem; margin-bottom: 1rem;">
+        Strategic Layer
+      </div>
+      <h2 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 1rem;">Strategic Director</h2>
+      <p style="color: #64748b; font-size: 1.25rem; max-width: 700px; margin: 0 auto;">Your CMO for Google Ads — Sets goals, allocates budgets, identifies opportunities</p>
+    </div>
+
+    <div style="background: white; border-radius: 1rem; padding: 3rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-left: 6px solid #6366f1;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3rem;">
+        <div>
+          <h3 style="font-size: 1.5rem; font-weight: 700; color: #6366f1; margin-bottom: 1.5rem;">What It Does</h3>
+          <ul style="list-style: none; padding: 0; space-y: 1rem;">
+            <li style="padding: 1rem; background: #f8fafc; border-radius: 0.5rem; margin-bottom: 1rem;">
+              <strong style="color: #1e293b;">📊 Budget Reallocation:</strong> Shifts spend from underperformers (ROAS <2.0) to high-performers (ROAS >4.0)
+            </li>
+            <li style="padding: 1rem; background: #f8fafc; border-radius: 0.5rem; margin-bottom: 1rem;">
+              <strong style="color: #1e293b;">🎯 Scaling Opportunities:</strong> Identifies campaigns with high ROAS + low impression share (room to grow)
+            </li>
+            <li style="padding: 1rem; background: #f8fafc; border-radius: 0.5rem; margin-bottom: 1rem;">
+              <strong style="color: #1e293b;">⏸️ Strategic Pauses:</strong> Recommends pausing consistently underperforming campaigns (30+ days poor ROAS)
+            </li>
+            <li style="padding: 1rem; background: #f8fafc; border-radius: 0.5rem; margin-bottom: 1rem;">
+              <strong style="color: #1e293b;">📈 Goal Setting:</strong> Sets KPI targets and coordinates other agents toward business objectives
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 style="font-size: 1.5rem; font-weight: 700; color: #6366f1; margin-bottom: 1.5rem;">Example Decisions</h3>
+          <div style="background: #eff6ff; border: 2px solid #6366f1; border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 1rem;">
+            <div style="font-weight: 700; color: #6366f1; margin-bottom: 0.5rem;">✅ Auto-Executed (Low Risk)</div>
+            <p style="color: #1e293b; margin-bottom: 0;">Increase budget for "Emergency HVAC" campaign by 20% (current ROAS: 5.2x, impression share: 45%)</p>
+          </div>
+          <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 0.75rem; padding: 1.5rem;">
+            <div style="font-weight: 700; color: #f59e0b; margin-bottom: 0.5rem;">⚠️ Requires Approval (High Risk)</div>
+            <p style="color: #1e293b; margin-bottom: 0;">Pause "General Plumbing" campaign - $1,200 spend, 2 conversions, ROAS 0.8x over 45 days</p>
+          </div>
+
+          <div style="background: #f1f5f9; padding: 1.5rem; border-radius: 0.75rem; margin-top: 1.5rem;">
+            <strong style="color: #1e293b;">Auto-Execute Threshold:</strong> 85%<br/>
+            <strong style="color: #1e293b;">Operates:</strong> Weekly strategic reviews
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Operational Layer -->
+<section id="operational-layer" style="padding: 4rem 1rem; background: white;">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div style="text-align: center; margin-bottom: 3rem;">
+      <div style="display: inline-block; background: #3b82f6; color: white; padding: 0.5rem 1.5rem; border-radius: 2rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.875rem; margin-bottom: 1rem;">
+        Operational Layer
+      </div>
+      <h2 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 1rem;">Daily Operations Team</h2>
+      <p style="color: #64748b; font-size: 1.25rem; max-width: 700px; margin: 0 auto;">Campaign Manager, Budget Guardian, Quality Score Agent</p>
+    </div>
+
+    <div style="display: grid; gap: 2rem;">
+      <!-- Campaign Manager -->
+      <div style="background: #f8fafc; border-radius: 1rem; padding: 2.5rem; border-left: 6px solid #3b82f6;">
+        <h3 style="font-size: 1.75rem; font-weight: 700; color: #3b82f6; margin-bottom: 1rem;">⚙️ Campaign Manager</h3>
+        <p style="font-size: 1.125rem; color: #64748b; margin-bottom: 2rem;">Daily campaign optimization & coordination</p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+          <div>
+            <h4 style="font-weight: 700; color: #1e293b; margin-bottom: 1rem;">Responsibilities:</h4>
+            <ul style="color: #64748b;">
+              <li>Monitors campaign performance vs. targets daily</li>
+              <li>Adjusts bids based on ROAS and conversion data</li>
+              <li>Manages campaign scheduling and pacing</li>
+              <li>Coordinates tactical agent actions</li>
+              <li>Ensures campaigns stay within daily budgets</li>
+            </ul>
+          </div>
+          <div>
+            <h4 style="font-weight: 700; color: #1e293b; margin-bottom: 1rem;">Example Optimization:</h4>
+            <div style="background: white; padding: 1rem; border-radius: 0.5rem; border: 2px solid #3b82f6;">
+              <p style="margin: 0; color: #1e293b;"><strong>Detection:</strong> Campaign 25% over target CPA ($120 vs $90 target)</p>
+              <p style="margin: 0.5rem 0 0 0; color: #1e293b;"><strong>Action:</strong> Reduce max CPC by 15%, coordinate with Keyword Optimizer to pause high-CPA keywords</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Budget Guardian -->
+      <div style="background: #f8fafc; border-radius: 1rem; padding: 2.5rem; border-left: 6px solid #3b82f6;">
+        <h3 style="font-size: 1.75rem; font-weight: 700; color: #3b82f6; margin-bottom: 1rem;">🛡️ Budget Guardian</h3>
+        <p style="font-size: 1.125rem; color: #64748b; margin-bottom: 2rem;">Stops wasted spend before it happens</p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+          <div>
+            <h4 style="font-weight: 700; color: #1e293b; margin-bottom: 1rem;">Protection Mechanisms:</h4>
+            <ul style="color: #64748b;">
+              <li><strong>Emergency Pause:</strong> Auto-pauses campaigns at 3x normal daily spend (runaway detection)</li>
+              <li><strong>Budget Alerts:</strong> Warns at 80% daily budget consumed</li>
+              <li><strong>Spend Pacing:</strong> Monitors hourly spend patterns</li>
+              <li><strong>Prevents Overruns:</strong> Blocks budget increases that exceed monthly limits</li>
+            </ul>
+          </div>
+          <div>
+            <h4 style="font-weight: 700; color: #1e293b; margin-bottom: 1rem;">Real Scenario:</h4>
+            <div style="background: #fee2e2; padding: 1rem; border-radius: 0.5rem; border: 2px solid #ef4444; margin-bottom: 1rem;">
+              <p style="margin: 0; color: #1e293b;"><strong>🚨 Alert:</strong> Campaign spent $300 in 2 hours (normal: $50/day)</p>
+              <p style="margin: 0.5rem 0 0 0; color: #1e293b;"><strong>Auto-Action:</strong> Emergency pause + email alert</p>
+            </div>
+            <div style="background: white; padding: 1rem; border-radius: 0.5rem;">
+              <p style="margin: 0; color: #64748b; font-size: 0.875rem;"><strong>Saved:</strong> $400-$700 in wasted spend (based on average runaway scenarios)</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quality Score Agent -->
+      <div style="background: #f8fafc; border-radius: 1rem; padding: 2.5rem; border-left: 6px solid #3b82f6;">
+        <h3 style="font-size: 1.75rem; font-weight: 700; color: #3b82f6; margin-bottom: 1rem;">⭐ Quality Score Agent</h3>
+        <p style="font-size: 1.125rem; color: #64748b; margin-bottom: 2rem;">Maximizes ad relevance to reduce CPCs</p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+          <div>
+            <h4 style="font-weight: 700; color: #1e293b; margin-bottom: 1rem;">Optimization Areas:</h4>
+            <ul style="color: #64748b;">
+              <li><strong>Identifies Low QS:</strong> Flags keywords with Quality Score <6</li>
+              <li><strong>Keyword-Ad Alignment:</strong> Ensures keywords appear in ad copy</li>
+              <li><strong>Landing Page Match:</strong> Verifies keywords appear on landing page</li>
+              <li><strong>CTR Improvement:</strong> Suggests ad copy changes for better relevance</li>
+            </ul>
+          </div>
+          <div>
+            <h4 style="font-weight: 700; color: #1e293b; margin-bottom: 1rem;">Impact:</h4>
+            <div style="background: #d1fae5; padding: 1rem; border-radius: 0.5rem; border: 2px solid #10b981;">
+              <p style="margin: 0; color: #1e293b;"><strong>Quality Score 4 → 7:</strong></p>
+              <p style="margin: 0.5rem 0 0 0; color: #1e293b;">CPC reduces by ~30% (Google rewards relevance)</p>
+              <p style="margin: 0.5rem 0 0 0; color: #64748b; font-size: 0.875rem;">Example: $5.00 CPC → $3.50 CPC = $450/mo savings on $3k spend</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Tactical Layer -->
+<section id="tactical-layer" style="padding: 4rem 1rem; background: linear-gradient(to bottom, #ecfdf5, #d1fae5);">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div style="text-align: center; margin-bottom: 3rem;">
+      <div style="display: inline-block; background: #10b981; color: white; padding: 0.5rem 1.5rem; border-radius: 2rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.875rem; margin-bottom: 1rem;">
+        Tactical Layer
+      </div>
+      <h2 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 1rem;">Specialized Execution Team</h2>
+      <p style="color: #64748b; font-size: 1.25rem; max-width: 700px; margin: 0 auto;">4 agents handling specific optimizations</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 2rem;">
+      <!-- Keyword Optimizer -->
+      <div style="background: white; border-radius: 1rem; padding: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-top: 6px solid #10b981;">
+        <h3 style="font-size: 1.5rem; font-weight: 700; color: #10b981; margin-bottom: 0.5rem;">🔑 Keyword Optimizer</h3>
+        <p style="color: #64748b; margin-bottom: 1.5rem;">Bid management & keyword additions</p>
+
+        <h4 style="font-weight: 700; color: #1e293b; margin-bottom: 1rem; font-size: 1.125rem;">Core Functions:</h4>
+        <ul style="color: #64748b; margin-bottom: 1.5rem;">
+          <li><strong>Smart Bidding:</strong> Adjusts bids at keyword level to hit target CPA</li>
+          <li><strong>Pauses Waste:</strong> Auto-pauses keywords with $200+ spend, 0 conversions</li>
+          <li><strong>Adds Winners:</strong> Promotes high-performing search terms to keywords</li>
+          <li><strong>Match Type Optimization:</strong> Shifts from broad to exact/phrase based on data</li>
+        </ul>
+
+        <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 1rem; margin-bottom: 1rem;">
+          <strong style="color: #1e293b;">Example Decision:</strong><br/>
+          <span style="color: #64748b;">Keyword "emergency plumber" has CPA $65 (target: $90). Increase bid by 20% to capture more traffic.</span>
+        </div>
+
+        <div style="display: flex; gap: 1rem; font-size: 0.875rem; color: #64748b;">
+          <div><strong>Auto-Execute:</strong> 92%</div>
+          <div><strong>Cycle:</strong> Daily</div>
+        </div>
+      </div>
+
+      <!-- Negative Keyword Agent -->
+      <div style="background: white; border-radius: 1rem; padding: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-top: 6px solid #10b981;">
+        <h3 style="font-size: 1.5rem; font-weight: 700; color: #10b981; margin-bottom: 0.5rem;">🚫 Negative Keyword Agent</h3>
+        <p style="color: #64748b; margin-bottom: 1.5rem;">Your search term detective</p>
+
+        <h4 style="font-weight: 700; color: #1e293b; margin-bottom: 1rem; font-size: 1.125rem;">Waste Elimination:</h4>
+        <ul style="color: #64748b; margin-bottom: 1.5rem;">
+          <li><strong>Auto-Blocks Waste:</strong> "free", "DIY", "jobs", "salary", "training" searches</li>
+          <li><strong>Daily Monitoring:</strong> Reviews search term reports every 24 hours</li>
+          <li><strong>Smart Detection:</strong> Identifies irrelevant patterns (e.g., "plumber salary")</li>
+          <li><strong>95% Auto-Exec:</strong> High-confidence blocks happen automatically</li>
+        </ul>
+
+        <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 1rem; margin-bottom: 1rem;">
+          <strong style="color: #1e293b;">Wasted Spend Example:</strong><br/>
+          <span style="color: #64748b;">"free plumber estimates" - 42 clicks, $127 spent, 0 conversions → Auto-blocked</span>
+        </div>
+
+        <div style="background: #d1fae5; padding: 1rem; border-radius: 0.5rem;">
+          <strong style="color: #1e293b;">Average Savings:</strong> $300-$800/month in prevented waste
+        </div>
+      </div>
+
+      <!-- Ad Copy Agent -->
+      <div style="background: white; border-radius: 1rem; padding: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-top: 6px solid #10b981;">
+        <h3 style="font-size: 1.5rem; font-weight: 700; color: #10b981; margin-bottom: 0.5rem;">✍️ Ad Copy Agent</h3>
+        <p style="color: #64748b; margin-bottom: 1.5rem;">A/B tests while you sleep</p>
+
+        <h4 style="font-weight: 700; color: #1e293b; margin-bottom: 1rem; font-size: 1.125rem;">Testing & Optimization:</h4>
+        <ul style="color: #64748b; margin-bottom: 1.5rem;">
+          <li><strong>Creates Variations:</strong> Generates new ad copy variants automatically</li>
+          <li><strong>Pauses Losers:</strong> Removes ads with CTR <70% of group average</li>
+          <li><strong>Identifies Patterns:</strong> Finds winning headlines, CTAs, descriptions</li>
+          <li><strong>Ensures Testing:</strong> Maintains 3+ ads per group for statistical significance</li>
+        </ul>
+
+        <div style="background: #dbeafe; border-left: 4px solid #3b82f6; padding: 1rem; margin-bottom: 1rem;">
+          <strong style="color: #1e293b;">Performance Example:</strong><br/>
+          <span style="color: #64748b;">Ad A: 2.1% CTR (1,200 impressions)<br/>Ad B: 4.8% CTR (1,200 impressions)<br/><strong>Action:</strong> Pause Ad A, create 2 new variations</span>
+        </div>
+
+        <div style="display: flex; gap: 1rem; font-size: 0.875rem; color: #64748b;">
+          <div><strong>Auto-Execute:</strong> 90%</div>
+          <div><strong>Cycle:</strong> Weekly</div>
+        </div>
+      </div>
+
+      <!-- Landing Page Analyst -->
+      <div style="background: white; border-radius: 1rem; padding: 2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-top: 6px solid #f59e0b;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <h3 style="font-size: 1.5rem; font-weight: 700; color: #f59e0b; margin: 0;">📊 Landing Page Analyst</h3>
+          <span style="background: #f59e0b; color: white; padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.75rem; font-weight: 700;">NEW</span>
+        </div>
+        <p style="color: #64748b; margin-bottom: 1.5rem;">CRO expert for conversion optimization</p>
+
+        <h4 style="font-weight: 700; color: #1e293b; margin-bottom: 1rem; font-size: 1.125rem;">Conversion Rate Optimization:</h4>
+        <ul style="color: #64748b; margin-bottom: 1.5rem;">
+          <li><strong>Message Match:</strong> Ensures ad headlines appear in page H1/title</li>
+          <li><strong>Keyword Relevance:</strong> Verifies top keywords exist on page (Quality Score boost)</li>
+          <li><strong>Page Speed:</strong> Identifies slow pages (>3s = conversion killer)</li>
+          <li><strong>Form Friction:</strong> Flags forms with >5 fields (each field = -11% CVR)</li>
+          <li><strong>Trust Signals:</strong> Checks for reviews, badges, guarantees</li>
+          <li><strong>Mobile UX:</strong> Detects mobile vs desktop conversion gaps</li>
+          <li><strong>CTA Optimization:</strong> Ensures CTAs are above fold + strategically placed</li>
+        </ul>
+
+        <div style="background: #fff7ed; border-left: 4px solid #f59e0b; padding: 1rem; margin-bottom: 1rem;">
+          <strong style="color: #1e293b;">CRO Impact Example:</strong><br/>
+          <span style="color: #64748b;"><strong>Issue:</strong> Ad says "24/7 Emergency HVAC" but page title says "HVAC Services"<br/><strong>Fix:</strong> Match page H1 to ad headline<br/><strong>Result:</strong> +15% conversion rate improvement</span>
+        </div>
+
+        <div style="background: #fef3c7; padding: 1rem; border-radius: 0.5rem;">
+          <strong style="color: #1e293b;">⚠️ Note:</strong> Recommendations require manual implementation (can't auto-change your website)
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Comparison vs Competitors -->
+<section style="padding: 4rem 1rem; background: #1e293b; color: white;">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <h2 style="text-align: center; font-size: 2.5rem; font-weight: 800; margin-bottom: 3rem;">FieldSprout vs. Traditional Tools</h2>
+
+    <div style="overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 1rem; overflow: hidden;">
+        <thead>
+          <tr style="background: #334155;">
+            <th style="padding: 1.5rem; text-align: left; color: white; font-weight: 700;">Feature</th>
+            <th style="padding: 1.5rem; text-align: center; color: white; font-weight: 700;">WordStream</th>
+            <th style="padding: 1.5rem; text-align: center; color: white; font-weight: 700;">Optmyzr</th>
+            <th style="padding: 1.5rem; text-align: center; color: #10b981; font-weight: 700; background: #064e3b;">FieldSprout</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="background: #f8fafc;">
+            <td style="padding: 1rem; color: #1e293b; font-weight: 600;">Autonomous Execution</td>
+            <td style="padding: 1rem; text-align: center; color: #ef4444;">❌ Manual only</td>
+            <td style="padding: 1rem; text-align: center; color: #f59e0b;">⚠️ Limited</td>
+            <td style="padding: 1rem; text-align: center; color: #10b981; font-weight: 700;">✅ 95% auto-executed</td>
+          </tr>
+          <tr style="background: white;">
+            <td style="padding: 1rem; color: #1e293b; font-weight: 600;">Multi-Agent System</td>
+            <td style="padding: 1rem; text-align: center; color: #ef4444;">❌ Single AI</td>
+            <td style="padding: 1rem; text-align: center; color: #ef4444;">❌ Single AI</td>
+            <td style="padding: 1rem; text-align: center; color: #10b981; font-weight: 700;">✅ 8 specialized agents</td>
+          </tr>
+          <tr style="background: #f8fafc;">
+            <td style="padding: 1rem; color: #1e293b; font-weight: 600;">Budget Protection</td>
+            <td style="padding: 1rem; text-align: center; color: #f59e0b;">⚠️ Alerts only</td>
+            <td style="padding: 1rem; text-align: center; color: #f59e0b;">⚠️ Alerts only</td>
+            <td style="padding: 1rem; text-align: center; color: #10b981; font-weight: 700;">✅ Auto-pause runaways</td>
+          </tr>
+          <tr style="background: white;">
+            <td style="padding: 1rem; color: #1e293b; font-weight: 600;">Landing Page CRO</td>
+            <td style="padding: 1rem; text-align: center; color: #ef4444;">❌</td>
+            <td style="padding: 1rem; text-align: center; color: #ef4444;">❌</td>
+            <td style="padding: 1rem; text-align: center; color: #10b981; font-weight: 700;">✅ Landing Page Analyst</td>
+          </tr>
+          <tr style="background: #f8fafc;">
+            <td style="padding: 1rem; color: #1e293b; font-weight: 600;">Strategic Planning</td>
+            <td style="padding: 1rem; text-align: center; color: #ef4444;">❌</td>
+            <td style="padding: 1rem; text-align: center; color: #f59e0b;">⚠️ Basic</td>
+            <td style="padding: 1rem; text-align: center; color: #10b981; font-weight: 700;">✅ Strategic Director</td>
+          </tr>
+          <tr style="background: white;">
+            <td style="padding: 1rem; color: #1e293b; font-weight: 600;">Home Services Focus</td>
+            <td style="padding: 1rem; text-align: center; color: #ef4444;">❌ Generic</td>
+            <td style="padding: 1rem; text-align: center; color: #ef4444;">❌ Generic</td>
+            <td style="padding: 1rem; text-align: center; color: #10b981; font-weight: 700;">✅ HVAC/Plumbing/Electrical optimized</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- How to Get Started -->
+<section style="padding: 4rem 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center;">
+  <div style="max-width: 900px; margin: 0 auto;">
+    <h2 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 1.5rem;">Ready to Let AI Agents Optimize Your Google Ads?</h2>
+    <p style="font-size: 1.25rem; margin-bottom: 2rem; opacity: 0.95;">
+      See all 8 agents in action with our interactive demo. No credit card required.
+    </p>
+
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2rem;">
+      <a href="/account/google/ads/opportunities/demo" style="background: white; color: #667eea; padding: 1.25rem 2.5rem; font-size: 1.125rem; font-weight: 700; border-radius: 0.5rem; text-decoration: none; display: inline-block;">
+        👉 See Demo (2 min)
+      </a>
+      <a href="/signup" style="background: rgba(255,255,255,0.2); color: white; padding: 1.25rem 2.5rem; font-size: 1.125rem; font-weight: 700; border-radius: 0.5rem; text-decoration: none; border: 2px solid white; display: inline-block;">
+        Start Free Trial
+      </a>
+    </div>
+
+    <div style="background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 1rem; backdrop-filter: blur(10px);">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; text-align: center;">
+        <div>
+          <div style="font-size: 1.5rem; font-weight: 700;">Step 1</div>
+          <div style="opacity: 0.9;">Connect Google Ads</div>
+        </div>
+        <div>
+          <div style="font-size: 1.5rem; font-weight: 700;">Step 2</div>
+          <div style="opacity: 0.9;">Agents analyze your account</div>
+        </div>
+        <div>
+          <div style="font-size: 1.5rem; font-weight: 700;">Step 3</div>
+          <div style="opacity: 0.9;">Approve recommendations</div>
+        </div>
+        <div>
+          <div style="font-size: 1.5rem; font-weight: 700;">Step 4</div>
+          <div style="opacity: 0.9;">Watch results improve</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQs -->
+<section style="padding: 4rem 1rem; background: white;">
+  <div style="max-width: 800px; margin: 0 auto;">
+    <h2 style="text-align: center; font-size: 2.5rem; font-weight: 800; margin-bottom: 3rem;">Frequently Asked Questions</h2>
+
+    <div style="space-y: 2rem;">
+      <details style="background: #f8fafc; padding: 1.5rem; border-radius: 0.75rem; border-left: 4px solid #6366f1; margin-bottom: 1rem;">
+        <summary style="font-weight: 700; color: #1e293b; cursor: pointer; font-size: 1.125rem;">How are agents different from regular AI tools?</summary>
+        <p style="margin-top: 1rem; color: #64748b;">Traditional tools use a single AI to analyze everything. Our multi-agent system mirrors how expert PPC teams work: specialists for strategy, operations, and tactics working together. Each agent has specific expertise and they coordinate via an event bus.</p>
+      </details>
+
+      <details style="background: #f8fafc; padding: 1.5rem; border-radius: 0.75rem; border-left: 4px solid #6366f1; margin-bottom: 1rem;">
+        <summary style="font-weight: 700; color: #1e293b; cursor: pointer; font-size: 1.125rem;">What does "95% auto-executed" mean?</summary>
+        <p style="margin-top: 1rem; color: #64748b;">Low-risk, high-confidence decisions (like blocking "free plumber" searches) happen automatically. High-risk decisions (like pausing campaigns or major budget changes) require your approval. You stay in control of big decisions while agents handle the tedious daily work.</p>
+      </details>
+
+      <details style="background: #f8fafc; padding: 1.5rem; border-radius: 0.75rem; border-left: 4px solid #6366f1; margin-bottom: 1rem;">
+        <summary style="font-weight: 700; color: #1e293b; cursor: pointer; font-size: 1.125rem;">Can I customize agent behavior?</summary>
+        <p style="margin-top: 1rem; color: #64748b;">Yes! Via the Admin → AI Agents panel, you can: adjust auto-execute thresholds, add custom business prompts (e.g., "seasonal HVAC company"), override risk levels, and create IF/THEN business rules for each agent.</p>
+      </details>
+
+      <details style="background: #f8fafc; padding: 1.5rem; border-radius: 0.75rem; border-left: 4px solid #6366f1; margin-bottom: 1rem;">
+        <summary style="font-weight: 700; color: #1e293b; cursor: pointer; font-size: 1.125rem;">Which agents run most frequently?</summary>
+        <p style="margin-top: 1rem; color: #64748b;">Negative Keyword Agent and Keyword Optimizer run daily. Ad Copy Agent runs weekly. Strategic Director runs weekly for strategic reviews. Budget Guardian monitors 24/7 for emergency situations. You can adjust frequencies in the admin panel.</p>
+      </details>
+
+      <details style="background: #f8fafc; padding: 1.5rem; border-radius: 0.75rem; border-left: 4px solid #6366f1; margin-bottom: 1rem;">
+        <summary style="font-weight: 700; color: #1e293b; cursor: pointer; font-size: 1.125rem;">How much does this cost?</summary>
+        <p style="margin-top: 1rem; color: #64748b;">FieldSprout AI agents are included in all plans. Start with a 14-day free trial. <a href="/pricing" style="color: #6366f1; font-weight: 600;">View pricing →</a></p>
+      </details>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

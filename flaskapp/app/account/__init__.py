@@ -440,6 +440,12 @@ def billing_checkout_plan(plan: str):
     from flask import g
     from app.services.stripe_service import create_subscription
 
+    # Verify user is loaded
+    if not hasattr(g, 'user') or not g.user:
+        current_app.logger.error("g.user not available in billing_checkout_plan")
+        flash("Authentication error. Please log in again.", "error")
+        return redirect(url_for("auth_bp.login"))
+
     if plan not in ['monthly', 'yearly']:
         flash("Invalid plan selected.", "error")
         return redirect(url_for("main_bp.pricing"))
@@ -457,23 +463,27 @@ def billing_checkout_plan(plan: str):
 
     try:
         # Create checkout session using optimized stripe service
+        current_app.logger.info(f"Creating checkout session for user {g.user.id}, plan {plan}")
+
         _, checkout_url = create_subscription(
             user_id=str(g.user.id),
             price_id=price_id,
             email=g.user.email,
-            name=g.user.name if hasattr(g.user, 'name') else None
+            name=getattr(g.user, 'name', None)
         )
+
+        current_app.logger.info(f"Checkout session created successfully, redirecting to: {checkout_url}")
 
         # Redirect to Stripe checkout
         return redirect(checkout_url)
 
     except ValueError as e:
         flash("Payment configuration error. Please contact support.", "error")
-        current_app.logger.error(f"Stripe configuration error: {e}")
+        current_app.logger.error(f"Stripe configuration error: {e}", exc_info=True)
         return redirect(url_for("main_bp.pricing"))
     except stripe.error.StripeError as e:
         flash("Payment processing error. Please try again.", "error")
-        current_app.logger.error(f"Stripe error during checkout: {e}")
+        current_app.logger.error(f"Stripe error during checkout: {e}", exc_info=True)
         return redirect(url_for("main_bp.pricing"))
     except Exception as e:
         flash("An unexpected error occurred. Please try again.", "error")
@@ -490,6 +500,12 @@ def billing_portal():
     import stripe
     from flask import g
 
+    # Verify user is loaded
+    if not hasattr(g, 'user') or not g.user:
+        current_app.logger.error("g.user not available in billing_portal")
+        flash("Authentication error. Please log in again.", "error")
+        return redirect(url_for("auth_bp.login"))
+
     # Initialize Stripe
     stripe.api_key = current_app.config.get("STRIPE_SECRET_KEY")
 
@@ -505,7 +521,7 @@ def billing_portal():
         customer = get_or_create_stripe_customer(
             user_id=str(g.user.id),
             email=g.user.email,
-            name=g.user.name if hasattr(g.user, 'name') else None
+            name=getattr(g.user, 'name', None)
         )
 
         # Create portal session

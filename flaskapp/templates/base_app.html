@@ -340,6 +340,7 @@
         <img src="{{ url_for('static', filename='brand/logos/fieldsprout-wordmark.svg') }}" alt="FieldSprout" style="height:32px;width:auto;">
       </a>
 
+      {# Finish Setup Section - Commented out, will bring back later
       {% if not (current_user_profile and current_user_profile.is_complete()) %}
         <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm mb-4">
           <div class="flex items-center justify-between">
@@ -353,6 +354,15 @@
             <span class="fs-chip ml-2 inline-flex items-center rounded-full bg-white/20 px-2 py-0.5 text-xs">5–7 mins</span>
           </a>
         </div>
+      {% endif %}
+      #}
+
+      <!-- Upgrade Button -->
+      {% if not is_paid and has_endpoint('pricing') %}
+        <a href="{{ url_for(ep('pricing')) }}" class="flex items-center justify-center gap-2 w-full px-4 py-3 mb-4 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white rounded-xl font-bold transition-all shadow-md hover:shadow-lg">
+          <i class="fa-solid fa-crown"></i>
+          <span>Upgrade</span>
+        </a>
       {% endif %}
 
       <!-- Upgrade CTA Card (Non-Paid Users) -->

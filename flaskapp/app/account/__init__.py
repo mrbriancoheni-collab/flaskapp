@@ -453,10 +453,16 @@ def billing_checkout_plan(plan: str):
     # Get the price ID from config
     if plan == 'monthly':
         price_id = current_app.config.get("STRIPE_MONTHLY_PRICE_ID")
+        direct_link = current_app.config.get("STRIPE_MONTHLY_LINK")
     else:
         price_id = current_app.config.get("STRIPE_YEARLY_PRICE_ID")
+        direct_link = current_app.config.get("STRIPE_YEARLY_LINK")
 
+    # If no price ID, fall back to direct Stripe payment link
     if not price_id:
+        if direct_link:
+            current_app.logger.info(f"Using direct Stripe link for {plan} plan")
+            return redirect(direct_link)
         flash(f"Stripe {plan} plan is not configured. Please contact support.", "error")
         current_app.logger.error(f"Stripe {plan} price ID not configured")
         return redirect(url_for("main_bp.pricing"))
@@ -478,16 +484,28 @@ def billing_checkout_plan(plan: str):
         return redirect(checkout_url)
 
     except ValueError as e:
-        flash("Payment configuration error. Please contact support.", "error")
         current_app.logger.error(f"Stripe configuration error: {e}", exc_info=True)
+        # Fall back to direct link if available
+        if direct_link:
+            current_app.logger.info(f"Falling back to direct Stripe link for {plan}")
+            return redirect(direct_link)
+        flash("Payment configuration error. Please contact support.", "error")
         return redirect(url_for("main_bp.pricing"))
     except stripe.error.StripeError as e:
-        flash("Payment processing error. Please try again.", "error")
         current_app.logger.error(f"Stripe error during checkout: {e}", exc_info=True)
+        # Fall back to direct link if available
+        if direct_link:
+            current_app.logger.info(f"Falling back to direct Stripe link for {plan}")
+            return redirect(direct_link)
+        flash("Payment processing error. Please try again.", "error")
         return redirect(url_for("main_bp.pricing"))
     except Exception as e:
-        flash("An unexpected error occurred. Please try again.", "error")
         current_app.logger.error(f"Error creating checkout session: {e}", exc_info=True)
+        # Fall back to direct link if available
+        if direct_link:
+            current_app.logger.info(f"Falling back to direct Stripe link for {plan}")
+            return redirect(direct_link)
+        flash("An unexpected error occurred. Please try again.", "error")
         return redirect(url_for("main_bp.pricing"))
 
 

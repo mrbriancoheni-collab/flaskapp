@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from urllib.parse import urlencode
 
-from app.db import get_db
+from app.db_utils import get_db
 from app.models import GoogleAdsAuth, CampaignDraft, CampaignUpload
 from app.services.crypto import encrypt, decrypt
 from app.services.google_ads_service import (

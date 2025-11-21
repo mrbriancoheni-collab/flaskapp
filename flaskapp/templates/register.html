@@ -18,7 +18,7 @@
     {% endif %}
   {% endwith %}
 
-  <!-- Google Sign-Up Button -->
+  {# Google Sign-Up Button - Temporarily disabled
   <div class="mt-6">
     <a href="{{ url_for('auth_bp.google_login', next=request.args.get('next', '')) }}"
        class="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition font-medium text-gray-700">
@@ -33,7 +33,6 @@
     </a>
   </div>
 
-  <!-- Divider -->
   <div class="relative my-6">
     <div class="absolute inset-0 flex items-center">
       <div class="w-full border-t border-gray-300"></div>
@@ -42,6 +41,7 @@
       <span class="px-2 bg-white text-gray-500">Or continue with email</span>
     </div>
   </div>
+  #}
 
   <form method="post" class="space-y-4" novalidate id="register-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

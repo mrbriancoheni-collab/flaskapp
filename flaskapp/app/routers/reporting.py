@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from datetime import date, timedelta
 
-from app.db import get_db
+from app.db_utils import get_db
 from app.models import PerformanceSnapshot, Suggestions, GoogleAdsAuth
 from app.services.google_ads_service import client_from_refresh, fetch_kpis, apply_suggestion
 from app.services.crypto import decrypt

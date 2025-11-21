@@ -9,7 +9,7 @@ from flask import Blueprint, render_template, request, jsonify, g
 from app.auth.session_helpers import login_required
 from app.services.budget_groups_service import BudgetGroupsService
 from app.services.auto_budget_service import AutoBudgetService
-from app.db import get_db_connection
+from app.db_utils import get_db_connection
 from datetime import datetime, date
 import logging
 

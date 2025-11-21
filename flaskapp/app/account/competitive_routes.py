@@ -8,7 +8,7 @@ Provides UI and API endpoints for competitive analysis.
 from flask import Blueprint, render_template, request, jsonify, g
 from app.auth.session_helpers import login_required
 from app.services.competitive_intelligence_service import CompetitiveIntelligenceService
-from app.db import get_db_connection
+from app.db_utils import get_db_connection
 from datetime import datetime, timedelta, date
 import logging
 

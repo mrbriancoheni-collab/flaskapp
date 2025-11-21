@@ -68,7 +68,7 @@ except Exception as e:
     limiter = None
 
 # --- DB session per request ---
-from app.db import SessionLocal
+from app.db_utils import SessionLocal
 
 @app.before_request
 def _open_db_session():

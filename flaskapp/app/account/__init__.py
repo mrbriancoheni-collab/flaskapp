@@ -437,8 +437,8 @@ def billing_checkout_plan(plan: str):
     Create a Stripe checkout session for a subscription plan.
     """
     import stripe
+    from flask import g
     from app.services.stripe_service import create_subscription
-    from app.auth.session_helpers import current_user
 
     if plan not in ['monthly', 'yearly']:
         flash("Invalid plan selected.", "error")
@@ -458,10 +458,10 @@ def billing_checkout_plan(plan: str):
     try:
         # Create checkout session using optimized stripe service
         _, checkout_url = create_subscription(
-            user_id=str(current_user.id),
+            user_id=str(g.user.id),
             price_id=price_id,
-            email=current_user.email,
-            name=current_user.name if hasattr(current_user, 'name') else None
+            email=g.user.email,
+            name=g.user.name if hasattr(g.user, 'name') else None
         )
 
         # Redirect to Stripe checkout
@@ -488,7 +488,7 @@ def billing_portal():
     Redirect to Stripe Customer Portal for managing subscriptions.
     """
     import stripe
-    from app.auth.session_helpers import current_user
+    from flask import g
 
     # Initialize Stripe
     stripe.api_key = current_app.config.get("STRIPE_SECRET_KEY")
@@ -503,9 +503,9 @@ def billing_portal():
         from app.services.stripe_service import get_or_create_stripe_customer
 
         customer = get_or_create_stripe_customer(
-            user_id=str(current_user.id),
-            email=current_user.email,
-            name=current_user.name if hasattr(current_user, 'name') else None
+            user_id=str(g.user.id),
+            email=g.user.email,
+            name=g.user.name if hasattr(g.user, 'name') else None
         )
 
         # Create portal session

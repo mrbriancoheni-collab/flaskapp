@@ -428,3 +428,96 @@ def stripe_webhook():
     except Exception as e:
         current_app.logger.error(f"Error processing webhook: {e}", exc_info=True)
         return jsonify({"error": "Processing failed"}), 500
+
+
+@account_bp.route("/billing/checkout/<plan>", methods=["POST"], endpoint="billing_checkout_plan")
+@login_required
+def billing_checkout_plan(plan: str):
+    """
+    Create a Stripe checkout session for a subscription plan.
+    """
+    import stripe
+    from app.services.stripe_service import create_subscription
+    from app.auth.session_helpers import current_user
+
+    if plan not in ['monthly', 'yearly']:
+        flash("Invalid plan selected.", "error")
+        return redirect(url_for("main_bp.pricing"))
+
+    # Get the price ID from config
+    if plan == 'monthly':
+        price_id = current_app.config.get("STRIPE_MONTHLY_PRICE_ID")
+    else:
+        price_id = current_app.config.get("STRIPE_YEARLY_PRICE_ID")
+
+    if not price_id:
+        flash(f"Stripe {plan} plan is not configured. Please contact support.", "error")
+        current_app.logger.error(f"Stripe {plan} price ID not configured")
+        return redirect(url_for("main_bp.pricing"))
+
+    try:
+        # Create checkout session using optimized stripe service
+        _, checkout_url = create_subscription(
+            user_id=str(current_user.id),
+            price_id=price_id,
+            email=current_user.email,
+            name=current_user.name if hasattr(current_user, 'name') else None
+        )
+
+        # Redirect to Stripe checkout
+        return redirect(checkout_url)
+
+    except ValueError as e:
+        flash("Payment configuration error. Please contact support.", "error")
+        current_app.logger.error(f"Stripe configuration error: {e}")
+        return redirect(url_for("main_bp.pricing"))
+    except stripe.error.StripeError as e:
+        flash("Payment processing error. Please try again.", "error")
+        current_app.logger.error(f"Stripe error during checkout: {e}")
+        return redirect(url_for("main_bp.pricing"))
+    except Exception as e:
+        flash("An unexpected error occurred. Please try again.", "error")
+        current_app.logger.error(f"Error creating checkout session: {e}", exc_info=True)
+        return redirect(url_for("main_bp.pricing"))
+
+
+@account_bp.route("/billing/portal", methods=["GET", "POST"], endpoint="billing_portal")
+@login_required
+def billing_portal():
+    """
+    Redirect to Stripe Customer Portal for managing subscriptions.
+    """
+    import stripe
+    from app.auth.session_helpers import current_user
+
+    # Initialize Stripe
+    stripe.api_key = current_app.config.get("STRIPE_SECRET_KEY")
+
+    if not stripe.api_key:
+        flash("Payment system not configured. Please contact support.", "error")
+        current_app.logger.error("STRIPE_SECRET_KEY not configured")
+        return redirect(url_for("account_bp.dashboard"))
+
+    try:
+        # Get or create Stripe customer
+        from app.services.stripe_service import get_or_create_stripe_customer
+
+        customer = get_or_create_stripe_customer(
+            user_id=str(current_user.id),
+            email=current_user.email,
+            name=current_user.name if hasattr(current_user, 'name') else None
+        )
+
+        # Create portal session
+        return_url = url_for("account_bp.dashboard", _external=True)
+        portal_session = stripe.billing_portal.Session.create(
+            customer=customer.stripe_customer_id,
+            return_url=return_url
+        )
+
+        return redirect(portal_session.url)
+
+    except Exception as e:
+        flash("Unable to access billing portal. Please try again.", "error")
+        current_app.logger.error(f"Error creating portal session: {e}", exc_info=True)
+        return redirect(url_for("account_bp.dashboard"))

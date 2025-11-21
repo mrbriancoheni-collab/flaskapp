@@ -502,3 +502,219 @@ class CompetitiveIntelligenceService:
             self.db.rollback()
             cursor.close()
             return False
+
+
+# -----------------------------------------------------------------------------
+# Module-level wrapper functions for backward compatibility with routes
+# These use Flask-SQLAlchemy's db.engine for database access
+# -----------------------------------------------------------------------------
+
+def fetch_auction_insights(
+    account_id: int,
+    campaign_id: Optional[int] = None,
+    date_range_days: int = 30
+) -> List[Dict[str, Any]]:
+    """Fetch auction insights data (wrapper function)."""
+    from app import db
+    from sqlalchemy import text
+    from datetime import datetime, timedelta
+
+    start_date = datetime.now().date() - timedelta(days=date_range_days)
+
+    try:
+        query = text("""
+            SELECT
+                competitor_domain,
+                AVG(impression_share) as avg_impression_share,
+                AVG(overlap_rate) as avg_overlap_rate,
+                AVG(outranking_share) as avg_outranking_share,
+                AVG(position_above_rate) as avg_position_above,
+                COUNT(*) as data_points
+            FROM competitive_auction_insights
+            WHERE account_id = :account_id
+            AND insight_date >= :start_date
+            AND (:campaign_id IS NULL OR campaign_id = :campaign_id)
+            GROUP BY competitor_domain
+            ORDER BY avg_impression_share DESC
+            LIMIT 20
+        """)
+
+        result = db.session.execute(query, {
+            "account_id": account_id,
+            "start_date": start_date,
+            "campaign_id": campaign_id
+        })
+
+        insights = []
+        for row in result:
+            insights.append({
+                "competitor_domain": row.competitor_domain,
+                "impression_share": float(row.avg_impression_share or 0),
+                "overlap_rate": float(row.avg_overlap_rate or 0),
+                "outranking_share": float(row.avg_outranking_share or 0),
+                "position_above_rate": float(row.avg_position_above or 0),
+                "data_points": row.data_points
+            })
+
+        return insights
+    except Exception as e:
+        logger.error(f"Error fetching auction insights: {e}")
+        return []
+
+
+def analyze_competitive_landscape(account_id: int) -> Dict[str, Any]:
+    """Analyze competitive landscape (wrapper function)."""
+    insights = fetch_auction_insights(account_id)
+
+    if not insights:
+        return {
+            "status": "no_data",
+            "message": "No competitive data available",
+            "competitors": [],
+            "threats": [],
+            "opportunities": []
+        }
+
+    threats = [c for c in insights if c.get('impression_share', 0) > 30]
+    opportunities = [c for c in insights if c.get('outranking_share', 0) < 40]
+
+    return {
+        "status": "success",
+        "total_competitors": len(insights),
+        "competitors": insights[:10],
+        "threats": threats[:5],
+        "opportunities": opportunities[:5],
+        "your_avg_impression_share": sum(c.get('impression_share', 0) for c in insights) / len(insights) if insights else 0
+    }
+
+
+def track_competitor_position_changes(
+    account_id: int,
+    days: int = 7
+) -> List[Dict[str, Any]]:
+    """Track competitor position changes over time (wrapper function)."""
+    from app import db
+    from sqlalchemy import text
+    from datetime import datetime, timedelta
+
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=days)
+
+    try:
+        query = text("""
+            SELECT
+                competitor_domain,
+                MIN(insight_date) as first_date,
+                MAX(insight_date) as last_date,
+                AVG(CASE WHEN insight_date <= :mid_date THEN impression_share END) as early_share,
+                AVG(CASE WHEN insight_date > :mid_date THEN impression_share END) as late_share
+            FROM competitive_auction_insights
+            WHERE account_id = :account_id
+            AND insight_date BETWEEN :start_date AND :end_date
+            GROUP BY competitor_domain
+            HAVING COUNT(*) >= 2
+        """)
+
+        mid_date = start_date + timedelta(days=days // 2)
+        result = db.session.execute(query, {
+            "account_id": account_id,
+            "start_date": start_date,
+            "end_date": end_date,
+            "mid_date": mid_date
+        })
+
+        changes = []
+        for row in result:
+            early = float(row.early_share or 0)
+            late = float(row.late_share or 0)
+            change = late - early
+
+            changes.append({
+                "competitor_domain": row.competitor_domain,
+                "early_share": early,
+                "late_share": late,
+                "change": change,
+                "trend": "rising" if change > 2 else ("falling" if change < -2 else "stable")
+            })
+
+        return sorted(changes, key=lambda x: abs(x['change']), reverse=True)
+    except Exception as e:
+        logger.error(f"Error tracking competitor changes: {e}")
+        return []
+
+
+def get_search_term_competitors(
+    account_id: int,
+    search_term: str
+) -> List[Dict[str, Any]]:
+    """Get competitors for a specific search term (wrapper function)."""
+    from app import db
+    from sqlalchemy import text
+
+    try:
+        query = text("""
+            SELECT
+                competitor_domain,
+                AVG(impression_share) as impression_share,
+                AVG(overlap_rate) as overlap_rate,
+                COUNT(*) as occurrences
+            FROM competitive_auction_insights
+            WHERE account_id = :account_id
+            AND search_term LIKE :search_pattern
+            GROUP BY competitor_domain
+            ORDER BY impression_share DESC
+            LIMIT 10
+        """)
+
+        result = db.session.execute(query, {
+            "account_id": account_id,
+            "search_pattern": f"%{search_term}%"
+        })
+
+        competitors = []
+        for row in result:
+            competitors.append({
+                "competitor_domain": row.competitor_domain,
+                "impression_share": float(row.impression_share or 0),
+                "overlap_rate": float(row.overlap_rate or 0),
+                "occurrences": row.occurrences
+            })
+
+        return competitors
+    except Exception as e:
+        logger.error(f"Error getting search term competitors: {e}")
+        return []
+
+
+def estimate_competitor_budget(
+    account_id: int,
+    competitor_domain: str,
+    your_daily_budget: float
+) -> Dict[str, Any]:
+    """Estimate competitor's budget based on impression share (wrapper function)."""
+    insights = fetch_auction_insights(account_id)
+
+    competitor = next((c for c in insights if c['competitor_domain'] == competitor_domain), None)
+
+    if not competitor:
+        return {
+            "error": "Competitor not found",
+            "competitor_domain": competitor_domain
+        }
+
+    your_share = 100 - sum(c.get('impression_share', 0) for c in insights)
+    competitor_share = competitor.get('impression_share', 0)
+
+    if your_share > 0:
+        estimated_budget = (competitor_share / your_share) * your_daily_budget
+    else:
+        estimated_budget = your_daily_budget
+
+    return {
+        "competitor_domain": competitor_domain,
+        "competitor_impression_share": competitor_share,
+        "your_impression_share": your_share,
+        "your_daily_budget": your_daily_budget,
+        "estimated_competitor_budget": round(estimated_budget, 2),
+        "confidence": "medium" if competitor.get('data_points', 0) >= 7 else "low"
+    }

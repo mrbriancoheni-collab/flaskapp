@@ -445,3 +445,196 @@ class CapacityTrackingService:
         breakdown = cursor.fetchall()
         cursor.close()
         return breakdown
+
+
+# -----------------------------------------------------------------------------
+# Module-level wrapper functions for backward compatibility with routes
+# These use Flask-SQLAlchemy's db.engine for database access
+# -----------------------------------------------------------------------------
+
+def _get_service():
+    """Get a CapacityTrackingService instance using Flask-SQLAlchemy."""
+    from app import db
+    return db.engine.raw_connection()
+
+
+def update_daily_capacity(
+    account_id: int,
+    tracking_date: date,
+    num_technicians: int,
+    slots_per_tech: int,
+    notes: Optional[str] = None
+) -> bool:
+    """Update daily capacity for a date (wrapper function)."""
+    from app import db
+    from sqlalchemy import text
+
+    total_capacity = num_technicians * slots_per_tech
+
+    try:
+        # Check if record exists
+        result = db.session.execute(
+            text("SELECT id FROM capacity_tracking WHERE account_id = :account_id AND tracking_date = :tracking_date"),
+            {"account_id": account_id, "tracking_date": tracking_date}
+        ).fetchone()
+
+        if result:
+            db.session.execute(
+                text("""
+                    UPDATE capacity_tracking
+                    SET num_technicians = :num_technicians,
+                        slots_per_tech = :slots_per_tech,
+                        total_capacity = :total_capacity,
+                        notes = :notes,
+                        updated_at = NOW()
+                    WHERE account_id = :account_id AND tracking_date = :tracking_date
+                """),
+                {
+                    "account_id": account_id,
+                    "tracking_date": tracking_date,
+                    "num_technicians": num_technicians,
+                    "slots_per_tech": slots_per_tech,
+                    "total_capacity": total_capacity,
+                    "notes": notes
+                }
+            )
+        else:
+            db.session.execute(
+                text("""
+                    INSERT INTO capacity_tracking
+                    (account_id, tracking_date, num_technicians, slots_per_tech, total_capacity, notes)
+                    VALUES (:account_id, :tracking_date, :num_technicians, :slots_per_tech, :total_capacity, :notes)
+                """),
+                {
+                    "account_id": account_id,
+                    "tracking_date": tracking_date,
+                    "num_technicians": num_technicians,
+                    "slots_per_tech": slots_per_tech,
+                    "total_capacity": total_capacity,
+                    "notes": notes
+                }
+            )
+
+        db.session.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Error updating daily capacity: {e}")
+        db.session.rollback()
+        return False
+
+
+def log_booking(
+    account_id: int,
+    booking_date: date,
+    lead_source: str = "google_ads",
+    status: str = "booked",
+    notes: Optional[str] = None
+) -> bool:
+    """Log a new booking (wrapper function)."""
+    from app import db
+    from sqlalchemy import text
+
+    try:
+        db.session.execute(
+            text("""
+                INSERT INTO capacity_bookings
+                (account_id, booking_date, lead_source, status, notes)
+                VALUES (:account_id, :booking_date, :lead_source, :status, :notes)
+            """),
+            {
+                "account_id": account_id,
+                "booking_date": booking_date,
+                "lead_source": lead_source,
+                "status": status,
+                "notes": notes
+            }
+        )
+        db.session.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Error logging booking: {e}")
+        db.session.rollback()
+        return False
+
+
+def get_capacity_status(account_id: int, target_date: Optional[date] = None) -> Dict[str, Any]:
+    """Get capacity status for a date (wrapper function)."""
+    from app import db
+    from sqlalchemy import text
+
+    if target_date is None:
+        target_date = datetime.now().date()
+
+    try:
+        result = db.session.execute(
+            text("""
+                SELECT ct.*,
+                    (SELECT COUNT(*) FROM capacity_bookings cb
+                     WHERE cb.account_id = ct.account_id
+                     AND cb.booking_date = ct.tracking_date
+                     AND cb.status IN ('booked', 'completed')) as booked_slots
+                FROM capacity_tracking ct
+                WHERE ct.account_id = :account_id AND ct.tracking_date = :tracking_date
+            """),
+            {"account_id": account_id, "tracking_date": target_date}
+        ).fetchone()
+
+        if result:
+            row = result._mapping
+            total_capacity = row.get('total_capacity', 0) or 0
+            booked = row.get('booked_slots', 0) or 0
+            utilization = (booked / total_capacity * 100) if total_capacity > 0 else 0
+
+            return {
+                "date": target_date.isoformat(),
+                "total_capacity": total_capacity,
+                "booked_slots": booked,
+                "available_slots": total_capacity - booked,
+                "utilization_pct": round(utilization, 1),
+                "num_technicians": row.get('num_technicians', 0),
+                "slots_per_tech": row.get('slots_per_tech', 0)
+            }
+
+        return {
+            "date": target_date.isoformat(),
+            "total_capacity": 0,
+            "booked_slots": 0,
+            "available_slots": 0,
+            "utilization_pct": 0,
+            "num_technicians": 0,
+            "slots_per_tech": 0
+        }
+    except Exception as e:
+        logger.error(f"Error getting capacity status: {e}")
+        return {}
+
+
+def get_capacity_recommendations(account_id: int) -> Dict[str, Any]:
+    """Get capacity-based budget recommendations (wrapper function)."""
+    status = get_capacity_status(account_id)
+    utilization = status.get('utilization_pct', 0)
+
+    if utilization >= 90:
+        recommendation = "reduce"
+        message = "Near full capacity. Consider reducing ad spend to avoid overbooking."
+        budget_multiplier = 0.5
+    elif utilization >= 75:
+        recommendation = "maintain"
+        message = "Good utilization. Maintain current ad spend."
+        budget_multiplier = 1.0
+    elif utilization >= 50:
+        recommendation = "increase_slight"
+        message = "Moderate capacity available. Consider slight budget increase."
+        budget_multiplier = 1.2
+    else:
+        recommendation = "increase"
+        message = "Low utilization. Increase ad spend to fill capacity."
+        budget_multiplier = 1.5
+
+    return {
+        "utilization_pct": utilization,
+        "recommendation": recommendation,
+        "message": message,
+        "budget_multiplier": budget_multiplier,
+        "capacity_status": status
+    }

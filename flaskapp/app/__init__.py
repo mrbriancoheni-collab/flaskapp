@@ -390,14 +390,26 @@ def create_app():
 
     @app.context_processor
     def ai_flags():
+        """
+        Provide AI and payment status flags to all templates.
+        Returns is_paid as False for non-logged-in users or any errors.
+        """
         try:
-            from app.auth.utils import is_paid_account as _is_paid
-            is_paid = _is_paid()
+            from app.auth.utils import is_paid_account as _is_paid, is_logged_in
+
+            # Only check payment status if user is logged in
+            if is_logged_in():
+                is_paid = bool(_is_paid())
+            else:
+                is_paid = False
+
             return {
                 "ai_enabled": is_paid,
                 "is_paid": is_paid
             }
-        except Exception:
+        except Exception as e:
+            # Log the error but don't break the page
+            app.logger.warning(f"Error in ai_flags context processor: {e}")
             return {
                 "ai_enabled": False,
                 "is_paid": False

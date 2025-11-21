@@ -33,5 +33,13 @@ load_env_file(env_file)
 
 os.environ.setdefault("GOOGLE_ADS_DEVELOPER_TOKEN", "BVH9TCTe66hciT3TrMrKxg")
 
+# Stripe Configuration - Set these values manually on production
+# os.environ.setdefault("STRIPE_SECRET_KEY", "")
+# os.environ.setdefault("STRIPE_PUBLIC_KEY", "")
+# os.environ.setdefault("STRIPE_MONTHLY_PRICE_ID", "")
+# os.environ.setdefault("STRIPE_YEARLY_PRICE_ID", "")
+# os.environ.setdefault("STRIPE_MONTHLY_LINK", "")
+# os.environ.setdefault("STRIPE_YEARLY_LINK", "")
+
 # Use the factory defined in app/__init__.py
 from app import application  # create_app() already called in app/__init__.py

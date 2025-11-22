@@ -130,6 +130,7 @@
     <h2 class="text-lg font-semibold mb-4">Manual Data Sync</h2>
     <div class="grid md:grid-cols-3 gap-4">
       <form method="post" action="{{ url_for('servicetitan_bp.sync_customers') }}" class="contents">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="border rounded-lg p-4">
           <div class="font-medium mb-2"><i class="fa-solid fa-users mr-2"></i> Sync Customers</div>
           <div class="mb-3">
@@ -143,6 +144,7 @@
       </form>
 
       <form method="post" action="{{ url_for('servicetitan_bp.sync_jobs') }}" class="contents">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="border rounded-lg p-4">
           <div class="font-medium mb-2"><i class="fa-solid fa-briefcase mr-2"></i> Sync Jobs</div>
           <div class="mb-3">
@@ -156,6 +158,7 @@
       </form>
 
       <form method="post" action="{{ url_for('servicetitan_bp.sync_capacity') }}" class="contents">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="border rounded-lg p-4">
           <div class="font-medium mb-2"><i class="fa-solid fa-chart-bar mr-2"></i> Calculate Capacity</div>
           <div class="mb-3">
@@ -223,6 +226,7 @@ function testConnection() {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token() }}'
     }
   })
   .then(response => response.json())

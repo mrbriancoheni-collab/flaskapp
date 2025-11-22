@@ -10,6 +10,7 @@
 
   {% if customers %}
   <form method="POST" action="{{ url_for('fb_ads_grader_bp.select_account') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="space-y-3">
       {% for customer in customers %}
       <label class="block">

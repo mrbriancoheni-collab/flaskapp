@@ -59,6 +59,7 @@
           </td>
           <td class="px-4 py-3">
             <form method="post" action="{{ url_for('fbads_bp.update_lead_status') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="lead_id" value="{{ l.id }}"/>
               <select name="status" class="rounded-md border-gray-300 text-xs" onchange="this.form.submit()">
                 {% for s in ['New','Contacted','Qualified','Won','Lost'] %}
@@ -69,6 +70,7 @@
           </td>
           <td class="px-4 py-3">
             <form method="post" action="{{ url_for('fbads_bp.update_lead_notes') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="lead_id" value="{{ l.id }}"/>
               <input name="notes" value="{{ l.notes }}" class="w-56 rounded-md border-gray-300 text-sm" placeholder="Add note..."/>
             </form>

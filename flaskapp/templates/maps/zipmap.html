@@ -4,6 +4,7 @@
 <h1 class="text-xl font-semibold mb-4">Zipcode Coverage</h1>
 
 <form method="post" class="mb-4 space-y-2">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <label class="block text-sm text-gray-700">Service ZIPs (comma, space, or newline separated)</label>
   <textarea name="zips" rows="4" class="w-full border rounded p-2">{{ zips|join(', ') }}</textarea>
   <div class="flex gap-2">

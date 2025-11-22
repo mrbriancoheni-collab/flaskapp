@@ -5,6 +5,7 @@
 
 <!-- Top AI: Full Strategy -->
 <form method="post" action="{{ url_for('strategy_bp.ai_new') }}" class="border rounded p-3 space-y-3 mb-4" data-spinner>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="font-medium">AI: Complete Strategy (fills the entire form)</div>
   <div class="grid md:grid-cols-3 gap-4">
     <div>
@@ -52,6 +53,7 @@
 
 <!-- Main form users will save to create the strategy -->
 <form method="post" action="{{ url_for('strategy_bp.create') }}" class="space-y-6" data-spinner>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
   <!-- Basics -->
   <div class="border rounded p-3 space-y-3">

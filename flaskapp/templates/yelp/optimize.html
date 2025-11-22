@@ -17,6 +17,7 @@
         <div class="flex items-center justify-between mb-2">
           <h2 class="font-semibold">{{ p.business_name or 'Profile' }}</h2>
           <form method="post" action="{{ url_for('yelp_bp.optimize_suggest') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="profile_id" value="{{ p.profile_id }}">
             <select name="objective" class="border rounded px-2 py-1">
               <option>Lead Generation</option>
@@ -39,6 +40,7 @@
 
           <div class="space-y-2">
             <form method="post" action="{{ url_for('yelp_bp.optimize_apply') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="profile_id" value="{{ p.profile_id }}">
               <label class="block text-sm text-gray-600">Approved description</label>
               <textarea name="approved_description" rows="3" class="w-full border rounded px-3 py-2" placeholder="Enter or paste the improved description">{{ (sugg.description if sugg else '') }}</textarea>

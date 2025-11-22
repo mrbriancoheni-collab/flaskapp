@@ -159,24 +159,44 @@ function closePricingModal() {
 }
 
 async function upgradeToPlan(planType) {
+  console.log('upgradeToPlan called with:', planType);
+
   // Get Stripe price IDs and direct payment links from the backend
   const priceIds = {
-    'annual': '{{ config.STRIPE_YEARLY_PRICE_ID }}',
-    'monthly': '{{ config.STRIPE_MONTHLY_PRICE_ID }}'
+    'annual': '{{ config.STRIPE_YEARLY_PRICE_ID | default("", true) }}',
+    'monthly': '{{ config.STRIPE_MONTHLY_PRICE_ID | default("", true) }}'
   };
 
-  // Direct Stripe payment links as fallback
-  const directLinks = {
-    'annual': '{{ config.STRIPE_YEARLY_LINK }}',
-    'monthly': '{{ config.STRIPE_MONTHLY_LINK }}'
+  // Direct Stripe payment links as fallback (with user metadata for webhook identification)
+  const userEmail = '{{ current_user.email | default("", true) if current_user and current_user.is_authenticated else "" }}';
+  const userId = '{{ current_user.id | default("", true) if current_user and current_user.is_authenticated else "" }}';
+
+  const baseLinks = {
+    'annual': '{{ config.STRIPE_YEARLY_LINK | default("", true) }}',
+    'monthly': '{{ config.STRIPE_MONTHLY_LINK | default("", true) }}'
   };
+
+  // Build direct link with user metadata for webhook identification
+  function buildDirectLink(baseLink) {
+    if (!baseLink) return '';
+    const params = new URLSearchParams();
+    if (userId) params.set('client_reference_id', userId);
+    if (userEmail) params.set('prefilled_email', userEmail);
+    const paramStr = params.toString();
+    return paramStr ? `${baseLink}?${paramStr}` : baseLink;
+  }
 
   const priceId = priceIds[planType];
-  const directLink = directLinks[planType];
+  const directLink = buildDirectLink(baseLinks[planType]);
+
+  console.log('priceId:', priceId);
+  console.log('directLink:', directLink);
 
   // If no price ID configured, try direct link
   if (!priceId) {
+    console.log('No priceId, trying direct link');
     if (directLink) {
+      console.log('Redirecting to direct link:', directLink);
       window.location.href = directLink;
       return;
     }
@@ -184,8 +204,8 @@ async function upgradeToPlan(planType) {
     return;
   }
 
-  // Show loading state
-  const button = event.target;
+  // Show loading state - use currentTarget to always get the button, not child elements
+  const button = event.currentTarget || event.target.closest('button');
   const originalText = planType === 'annual' ? 'Start Annual Plan →' : 'Start Monthly Plan →';
   button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading checkout...';
   button.disabled = true;
@@ -196,11 +216,12 @@ async function upgradeToPlan(planType) {
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
+      console.log(`Attempt ${attempt + 1}: fetching checkout session`);
       const response = await fetch('/billing/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': '{{ csrf_token() if csrf_token else "" }}'
+          'X-CSRFToken': '{{ csrf_token() }}'
         },
         body: JSON.stringify({
           price_id: priceId,
@@ -212,11 +233,13 @@ async function upgradeToPlan(planType) {
 
       const data = await response.json();
 
+      console.log('Response received:', response.status, data);
+
       if (data.error) {
         // Server returned an error - try direct link fallback
         console.error('Server error:', data.error);
         if (directLink) {
-          console.log('Server error, falling back to direct Stripe link');
+          console.log('Server error, falling back to direct Stripe link:', directLink);
           window.location.href = directLink;
           return;
         }
@@ -226,9 +249,11 @@ async function upgradeToPlan(planType) {
         return;
       } else if (data.checkout_url) {
         // Success - redirect to Stripe Checkout
+        console.log('Success! Redirecting to checkout:', data.checkout_url);
         window.location.href = data.checkout_url;
         return;
       } else {
+        console.error('Unexpected response format:', data);
         alert('Unexpected response. Please try again.');
         button.disabled = false;
         button.innerHTML = originalText;
@@ -240,7 +265,7 @@ async function upgradeToPlan(planType) {
       // If this was the last attempt, try direct link fallback
       if (attempt === maxRetries - 1) {
         if (directLink) {
-          console.log('API failed, using direct Stripe link');
+          console.log('API failed, using direct Stripe link:', directLink);
           window.location.href = directLink;
           return;
         }

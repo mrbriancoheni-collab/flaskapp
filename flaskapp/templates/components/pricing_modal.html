@@ -213,7 +213,13 @@ async function upgradeToPlan(planType) {
       const data = await response.json();
 
       if (data.error) {
-        // Server returned an error - don't retry
+        // Server returned an error - try direct link fallback
+        console.error('Server error:', data.error);
+        if (directLink) {
+          console.log('Server error, falling back to direct Stripe link');
+          window.location.href = directLink;
+          return;
+        }
         alert('Error: ' + data.error);
         button.disabled = false;
         button.innerHTML = originalText;

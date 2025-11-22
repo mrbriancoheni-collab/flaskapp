@@ -39,7 +39,7 @@
               Save $191 vs monthly ($41/month)
             </p>
 
-            <button onclick="upgradeToPlan('annual')" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-4 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg mb-4">
+            <button onclick="upgradeToPlan('annual', this)" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-4 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg mb-4">
               Start Annual Plan →
             </button>
 
@@ -92,7 +92,7 @@
               Billed monthly • Cancel anytime
             </p>
 
-            <button onclick="upgradeToPlan('monthly')" class="w-full bg-gray-900 text-white font-bold py-4 rounded-lg hover:bg-gray-800 transition-all mb-4">
+            <button onclick="upgradeToPlan('monthly', this)" class="w-full bg-gray-900 text-white font-bold py-4 rounded-lg hover:bg-gray-800 transition-all mb-4">
               Start Monthly Plan →
             </button>
 
@@ -158,7 +158,7 @@ function closePricingModal() {
   document.body.style.overflow = 'auto';
 }
 
-async function upgradeToPlan(planType) {
+async function upgradeToPlan(planType, buttonElement) {
   console.log('upgradeToPlan called with:', planType);
 
   // Get Stripe price IDs and direct payment links from the backend
@@ -204,8 +204,8 @@ async function upgradeToPlan(planType) {
     return;
   }
 
-  // Show loading state - use currentTarget to always get the button, not child elements
-  const button = event.currentTarget || event.target.closest('button');
+  // Show loading state - buttonElement is passed directly from onclick
+  const button = buttonElement;
   const originalText = planType === 'annual' ? 'Start Annual Plan →' : 'Start Monthly Plan →';
   button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading checkout...';
   button.disabled = true;

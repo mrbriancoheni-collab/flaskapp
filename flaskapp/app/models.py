@@ -1201,13 +1201,14 @@ class ServiceTitanJob(db.Model):
     st_modified_at = db.Column(db.DateTime, nullable=True)
 
     # Relationships
-    account = db.relationship("Account", backref="servicetitan_jobs")
+    account = db.relationship("Account", backref=db.backref("servicetitan_jobs", overlaps="customer,jobs"))
     customer = db.relationship(
         "ServiceTitanCustomer",
         foreign_keys=[account_id, st_customer_id],
         primaryjoin="and_(ServiceTitanJob.account_id==ServiceTitanCustomer.account_id, ServiceTitanJob.st_customer_id==ServiceTitanCustomer.st_customer_id)",
-        backref="jobs",
-        uselist=False
+        backref=db.backref("jobs", overlaps="account,servicetitan_jobs"),
+        uselist=False,
+        overlaps="account,servicetitan_jobs"
     )
 
     __table_args__ = (

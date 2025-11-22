@@ -132,6 +132,16 @@ def create_app():
             app.logger.info(f"Loaded config from APP_CONFIG_FILE={cfg_env}")
             return True
 
+        # Try to load from Config class in app/config.py
+        try:
+            from app.config import Config
+            app.config.from_object(Config)
+            app.logger.info("Loaded config from app.config.Config")
+            return True
+        except ImportError:
+            pass
+
+        # Fallback to file-based config
         candidates = [
             Path(__file__).resolve().parent.parent / "config.py",
             Path(__file__).resolve().parent / "config.py",

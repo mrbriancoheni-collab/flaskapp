@@ -293,7 +293,25 @@ def list_accessible_customers(access_token: str, login_customer_id: str | None =
         return customer_ids
 
     except Exception as e:
+        error_str = str(e)
         current_app.logger.error(f"list_accessible_customers failed: {type(e).__name__}: {e}")
+
+        # Check for NOT_ADS_USER error - Google account isn't linked to any Ads accounts
+        if "NOT_ADS_USER" in error_str or "not associated with any Ads accounts" in error_str:
+            raise ValueError(
+                "This Google account is not associated with any Google Ads accounts. "
+                "Please either:\n"
+                "1. Sign in with a different Google account that has access to Google Ads, or\n"
+                "2. Add this Google account as a user to an existing Google Ads account, or\n"
+                "3. Create a new Google Ads account at ads.google.com"
+            ) from e
+
+        # Check for UNAUTHENTICATED error - token issues
+        if "UNAUTHENTICATED" in error_str:
+            raise ValueError(
+                "Authentication failed. Please try disconnecting and reconnecting your Google Ads account."
+            ) from e
+
         raise
 
 

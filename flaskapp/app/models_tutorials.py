@@ -33,33 +33,26 @@ class TutorialPopup(db.Model):
 
     id = db.Column(Integer, primary_key=True)
 
-    # Identification
-    key = db.Column(String(100), unique=True, nullable=False, index=True)  # Unique identifier (e.g., "demo-bulk-selection")
-    title = db.Column(String(200), nullable=False)  # Popup title
-    content = db.Column(Text, nullable=False)  # HTML content for popup body
+    # Content
+    title = db.Column(String(200), nullable=True)  # Popup title
+    content = db.Column(Text, nullable=True)  # HTML content for popup body
 
     # Positioning
-    page_path = db.Column(String(500), nullable=False, index=True)  # URL path where popup appears (e.g., "/account/google/ads/opportunities")
-    target_selector = db.Column(String(500), nullable=True)  # CSS selector for element to attach to (null = modal center)
-    position = db.Column(String(20), default="bottom")  # Popup position: top, bottom, left, right, center
-
-    # Display rules
-    sequence_order = db.Column(Integer, default=0, index=True)  # Order in sequence (0 = first, 1 = second, etc.)
-    trigger_type = db.Column(String(50), default="page_load")  # Trigger: page_load, click, hover, scroll, delay
-    trigger_value = db.Column(String(200), nullable=True)  # Trigger value (e.g., selector for click, ms for delay)
-
-    # Behavior
-    dismissible = db.Column(Boolean, default=True)  # Can user dismiss/close?
-    auto_dismiss_seconds = db.Column(Integer, nullable=True)  # Auto-dismiss after N seconds (null = manual only)
-    show_once = db.Column(Boolean, default=True)  # Show only once per user?
+    page_path = db.Column(String(500), nullable=False, index=True)  # URL path where popup appears
+    page_element = db.Column(String(500), nullable=True)  # CSS selector to highlight
+    position_x = db.Column(Integer, nullable=True)  # X position
+    position_y = db.Column(Integer, nullable=True)  # Y position
 
     # Styling
+    icon = db.Column(String(100), nullable=True)  # Font Awesome icon class
     theme = db.Column(String(50), default="default")  # Theme: default, success, warning, info, primary
-    width = db.Column(String(20), default="320px")  # Popup width (e.g., "320px", "auto")
+    width_px = db.Column(Integer, nullable=True)  # Popup width in pixels
 
-    # CTA (Call to Action)
-    cta_text = db.Column(String(100), nullable=True)  # Button text (e.g., "Got it", "Next")
-    cta_link = db.Column(String(500), nullable=True)  # Optional link when CTA clicked
+    # Display rules
+    sequence_order = db.Column(Integer, default=0, index=True)  # Order in sequence
+
+    # Behavior
+    show_once = db.Column(Boolean, default=True)  # Show only once per user?
 
     # Status
     is_active = db.Column(Boolean, default=True, index=True)  # Active/inactive
@@ -67,31 +60,25 @@ class TutorialPopup(db.Model):
     # Metadata
     created_at = db.Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = db.Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
-    created_by = db.Column(Integer, ForeignKey("users.id"), nullable=True)  # Admin who created it
 
     def __repr__(self):
-        return f"<TutorialPopup key={self.key!r} title={self.title!r} active={self.is_active}>"
+        return f"<TutorialPopup id={self.id} title={self.title!r} active={self.is_active}>"
 
     def to_dict(self):
         """Convert to dictionary for JSON serialization."""
         return {
             "id": self.id,
-            "key": self.key,
             "title": self.title,
             "content": self.content,
             "page_path": self.page_path,
-            "target_selector": self.target_selector,
-            "position": self.position,
-            "sequence_order": self.sequence_order,
-            "trigger_type": self.trigger_type,
-            "trigger_value": self.trigger_value,
-            "dismissible": self.dismissible,
-            "auto_dismiss_seconds": self.auto_dismiss_seconds,
-            "show_once": self.show_once,
+            "page_element": self.page_element,
+            "position_x": self.position_x,
+            "position_y": self.position_y,
+            "icon": self.icon,
             "theme": self.theme,
-            "width": self.width,
-            "cta_text": self.cta_text,
-            "cta_link": self.cta_link,
+            "width_px": self.width_px,
+            "sequence_order": self.sequence_order,
+            "show_once": self.show_once,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

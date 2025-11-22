@@ -1785,20 +1785,26 @@ def ads_debug_config():
 @google_bp.route("/ads", methods=["GET"], endpoint="ads_ui")
 @login_required
 def ads_ui():
+    """
+    Google Ads main page - Uses the Opportunities Dashboard layout with real user data.
+    Same layout as the demo page but shows actual connected account data.
+    """
     aid = current_account_id()
     connected = _is_connected(aid, "ads")
-    ai = _ai_enabled()
+
+    # Get ads data
     ads_data = _get_ads_state(aid)
-    sugg_key = f"ads_suggestions_{aid}"
-    suggestions = session.get(sugg_key) or {}
-    _ = _get_ads_custom_prompt(aid)
+
+    # Generate comprehensive analysis using the opportunities analyzer
+    analysis = _analyze_ads_opportunities(aid, ads_data)
+
     return render_template(
-        "google/ads.html",
+        "google/ads_opportunities.html",
         connected=connected,
-        ai_connected=ai,
         ads_data=ads_data,
-        suggestions=suggestions,
+        analysis=analysis,
         epn=request.endpoint,
+        is_demo=False,
     )
 
 # ------------------------- GA JSON data (AJAX) -------------------------

@@ -1499,6 +1499,22 @@ if (typeof TutorialPopups !== 'undefined') {
   const msg = document.getElementById('adsCustomerMsg');
   if (!sel || !saveBtn) return;
 
+  // Helper to handle session expiration
+  function handleSessionExpired(json) {
+    if (json.error === 'session_expired' && json.login_url) {
+      // Show a message to the user before redirecting
+      if (msg) {
+        msg.textContent = 'Session expired. Redirecting to login...';
+        msg.className = 'text-sm text-yellow-600';
+      }
+      setTimeout(() => {
+        window.location.href = json.login_url;
+      }, 1000);
+      return true;
+    }
+    return false;
+  }
+
   // Load accessible customers on page load
   async function loadCustomers() {
     try {
@@ -1506,6 +1522,11 @@ if (typeof TutorialPopups !== 'undefined') {
         credentials: 'same-origin'
       });
       const json = await res.json();
+
+      // Check for session expiration
+      if (res.status === 401 && handleSessionExpired(json)) {
+        return;
+      }
 
       if (json.ok && json.customers) {
         sel.innerHTML = '';
@@ -1518,6 +1539,10 @@ if (typeof TutorialPopups !== 'undefined') {
         });
       } else {
         sel.innerHTML = '<option value="">Error loading accounts</option>';
+        if (msg) {
+          msg.textContent = json.error || 'Failed to load accounts';
+          msg.className = 'text-sm text-red-600';
+        }
       }
     } catch (e) {
       console.error('Failed to load Google Ads customers:', e);
@@ -1541,6 +1566,11 @@ if (typeof TutorialPopups !== 'undefined') {
         credentials: 'same-origin'
       });
       const json = await res.json();
+
+      // Check for session expiration
+      if (res.status === 401 && handleSessionExpired(json)) {
+        return;
+      }
 
       if (json.ok) {
         msg.textContent = 'Saved! Refreshing...';

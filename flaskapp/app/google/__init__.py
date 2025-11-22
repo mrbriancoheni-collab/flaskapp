@@ -22,7 +22,7 @@ from flask import (
 from sqlalchemy import text
 
 from app import db
-from app.auth.utils import login_required, current_account_id
+from app.auth.utils import login_required, ajax_login_required, current_account_id
 from app.google.utils_ads import (
     pick_and_save_customer_id_after_oauth,
     save_customer_id,
@@ -1928,7 +1928,7 @@ def ga_diag():
 # ------------------------- Ads actions -------------------------
 
 @google_bp.route("/ads/list-customers", methods=["GET"], endpoint="ads_list_customers")
-@login_required
+@ajax_login_required
 def ads_list_customers():
     """AJAX endpoint to fetch accessible Google Ads customer IDs."""
     aid = current_account_id()
@@ -1971,7 +1971,7 @@ def ads_list_customers():
 
 
 @google_bp.route("/ads/select-customer", methods=["POST", "GET"], endpoint="ads_select_customer")
-@login_required
+@ajax_login_required
 def ads_select_customer():
     """AJAX endpoint to save selected Google Ads customer ID and fetch initial data."""
     aid = current_account_id()

@@ -1927,23 +1927,15 @@ def ads_list_customers():
     """AJAX endpoint to fetch accessible Google Ads customer IDs."""
     aid = current_account_id()
     try:
-        # Get access token
-        with db.engine.connect() as conn:
-            row = conn.execute(
-                text("""
-                    SELECT access_token
-                    FROM google_oauth_tokens
-                    WHERE account_id=:aid AND product='ads'
-                    ORDER BY updated_at DESC LIMIT 1
-                """),
-                {"aid": aid}
-            ).mappings().first()
-
-        if not row or not row['access_token']:
-            return jsonify({"ok": False, "error": "Not connected"}), 400
+        # Get fresh access token (with auto-refresh if expired)
+        from app.google.token_utils import ensure_access_token
+        try:
+            access_token, _ = ensure_access_token(aid, ("ads", "lsa"))
+        except RuntimeError as e:
+            return jsonify({"ok": False, "error": str(e)}), 400
 
         from app.google.utils_ads import list_accessible_customers
-        customer_ids = list_accessible_customers(row['access_token'])
+        customer_ids = list_accessible_customers(access_token)
 
         # Get current default customer ID
         with db.engine.connect() as conn:

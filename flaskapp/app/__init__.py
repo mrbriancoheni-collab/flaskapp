@@ -779,6 +779,8 @@ def create_app():
             "gmb_bp.update_profile",
             "gmb_bp.reviews_ai_draft",
             "gmb_bp.optimize_profile_json",
+            "google_bp.ads_select_customer",  # AJAX endpoint for selecting Google Ads customer
+            "google_bp.ads_list_customers",   # AJAX endpoint for listing Google Ads customers
         ):
             fn = app.view_functions.get(ep)
             if fn:

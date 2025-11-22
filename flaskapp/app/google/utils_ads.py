@@ -249,9 +249,20 @@ def list_accessible_customers(access_token: str, login_customer_id: str | None =
     List accessible Google Ads customers.
     Implements auto-version detection: tries multiple API versions if the current one fails.
     """
+    dev_token = _dev_token()
+
+    # Debug logging (safe - only shows token lengths and partial values)
+    current_app.logger.info(
+        "list_accessible_customers: access_token_len=%d, dev_token_len=%d, dev_token_prefix=%s, login_cid=%s",
+        len(access_token) if access_token else 0,
+        len(dev_token) if dev_token else 0,
+        dev_token[:6] + "..." if dev_token and len(dev_token) > 6 else "MISSING",
+        login_customer_id or "None"
+    )
+
     headers = {
         "Authorization": f"Bearer {access_token}",
-        "developer-token": _dev_token(),
+        "developer-token": dev_token,
         "Content-Type": "application/json",
     }
     if login_customer_id:

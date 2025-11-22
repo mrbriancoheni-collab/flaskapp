@@ -28,13 +28,15 @@ class GoogleAdsGraderClient:
     Client for fetching Google Ads data for the grader tool.
     """
 
-    def __init__(self, refresh_token: str, customer_id: str):
+    def __init__(self, refresh_token: str, customer_id: str, login_customer_id: Optional[str] = None):
         """
         Initialize the Google Ads client.
 
         Args:
             refresh_token: OAuth refresh token for the user
             customer_id: Google Ads customer ID (format: 123-456-7890)
+            login_customer_id: Manager account (MCC) ID for accessing sub-accounts.
+                               Required with Basic API access when accessing client accounts.
         """
         self.customer_id = customer_id.replace("-", "")  # API requires no dashes
 
@@ -46,6 +48,10 @@ class GoogleAdsGraderClient:
             "refresh_token": refresh_token,
             "use_proto_plus": True,
         }
+
+        # Add login_customer_id if provided (required for MCC/manager account access with Basic API access)
+        if login_customer_id:
+            credentials["login_customer_id"] = login_customer_id.replace("-", "")
 
         try:
             self.client = GoogleAdsClient.load_from_dict(credentials)

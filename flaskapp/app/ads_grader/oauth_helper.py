@@ -175,12 +175,13 @@ class GoogleAdsOAuthHelper:
             return None
 
     @staticmethod
-    def get_customer_ids(access_token: str) -> List[Dict[str, str]]:
+    def get_customer_ids(refresh_token: str) -> List[Dict[str, str]]:
         """
         Fetch all Google Ads customer IDs accessible with this token.
 
         Args:
-            access_token: Valid OAuth access token
+            refresh_token: OAuth refresh token (not access token - the Google Ads
+                           client uses refresh tokens to obtain access tokens internally)
 
         Returns:
             List of dictionaries with customer_id and name
@@ -192,7 +193,7 @@ class GoogleAdsOAuthHelper:
                 "developer_token": _get_config("GOOGLE_ADS_DEVELOPER_TOKEN"),
                 "client_id": _get_config("GOOGLE_ADS_CLIENT_ID"),
                 "client_secret": _get_config("GOOGLE_ADS_CLIENT_SECRET"),
-                "refresh_token": access_token,
+                "refresh_token": refresh_token,
                 "use_proto_plus": True,
             }
 

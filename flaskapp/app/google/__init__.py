@@ -1927,23 +1927,23 @@ def ads_list_customers():
     """AJAX endpoint to fetch accessible Google Ads customer IDs."""
     aid = current_account_id()
     try:
-        # Get access token
+        # Get refresh token from database (the official Google Ads library needs refresh_token)
         with db.engine.connect() as conn:
             row = conn.execute(
                 text("""
-                    SELECT access_token
+                    SELECT refresh_token
                     FROM google_oauth_tokens
-                    WHERE account_id=:aid AND product='ads'
+                    WHERE account_id=:aid AND LOWER(product) IN ('ads', 'lsa')
                     ORDER BY updated_at DESC LIMIT 1
                 """),
                 {"aid": aid}
             ).mappings().first()
 
-        if not row or not row['access_token']:
-            return jsonify({"ok": False, "error": "Not connected"}), 400
+        if not row or not row['refresh_token']:
+            return jsonify({"ok": False, "error": "Not connected - no refresh token"}), 400
 
         from app.google.utils_ads import list_accessible_customers
-        customer_ids = list_accessible_customers(row['access_token'])
+        customer_ids = list_accessible_customers(row['refresh_token'])
 
         # Get current default customer ID
         with db.engine.connect() as conn:
@@ -3501,9 +3501,10 @@ def oauth_callback():
 
     if product in ("ads", "lsa"):
         try:
-            at = token_json.get("access_token")
-            access_token = at.strip() if isinstance(at, str) else at
-            ids = pick_and_save_customer_id_after_oauth(aid, access_token) if access_token else []
+            # Use refresh_token for the official Google Ads library (it handles access tokens internally)
+            rt = token_json.get("refresh_token")
+            refresh_token = rt.strip() if isinstance(rt, str) else rt
+            ids = pick_and_save_customer_id_after_oauth(aid, refresh_token) if refresh_token else []
             if len(ids) == 0:
                 flash("No Google Ads accounts found for this Google login. Ensure you have admin access.", "warning")
             elif len(ids) > 1:

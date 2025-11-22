@@ -112,6 +112,7 @@
   </form>
 
   <form method="post" action="#" class="rounded-xl border bg-white">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="p-3 border-b flex flex-wrap items-center gap-3">
       <div class="text-sm text-gray-700">Bulk actions:</div>
       <select name="bulk_action" class="rounded-md border-gray-300 text-sm">
@@ -159,6 +160,7 @@
             </td>
             <td class="px-4 py-3">
               <form method="post" action="#">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="lead_id" value="{{ l.id }}"/>
                 <select name="status" class="rounded-md border-gray-300 text-xs" onchange="this.form.submit()">
                   {% for s in ['New','Contacted','Qualified','Won','Lost'] %}

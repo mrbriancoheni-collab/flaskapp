@@ -11,6 +11,7 @@
         {% for b in p.benefits %}<li>{{ b }}</li>{% endfor %}
       </ul>
       <form method="post" action="#">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="button" disabled>Continue (wire to Stripe)</button>
       </form>
     </div>

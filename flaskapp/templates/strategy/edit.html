@@ -82,6 +82,7 @@
       <div class="card">
         <h2>Strategy Details</h2>
         <form method="post" action="{{ url_for('strategy_bp.save', strategy_id=ms.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="row">
             <div>
               <label for="name">Name</label>
@@ -253,6 +254,7 @@
         <div class="card" style="margin-top:16px;">
           <h2>AI Assist</h2>
           <form method="post" action="{{ url_for('strategy_bp.generate', strategy_id=ms.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="row">
               <div>
                 <label for="ai_objective">Objective</label>

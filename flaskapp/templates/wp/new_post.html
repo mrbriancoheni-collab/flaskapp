@@ -9,6 +9,7 @@
   <div class="bg-white border rounded p-4">
     <div class="font-semibold mb-3">Write it yourself</div>
     <form method="post" action="{{ url_for('wp_bp.compose_submit') }}" class="space-y-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="mode" value="manual">
       <input type="text" name="title" placeholder="Post title" class="w-full border rounded px-3 py-2" required>
       <textarea name="content" rows="10" class="w-full border rounded px-3 py-2" placeholder="Write your post…"></textarea>
@@ -20,6 +21,7 @@
   <div class="bg-white border rounded p-4">
     <div class="font-semibold mb-3">Let AI draft it</div>
     <form method="post" action="{{ url_for('wp_bp.compose') }}" class="space-y-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="mode" value="ai">
 
       <label class="block text-sm font-medium">Primary keyword</label>

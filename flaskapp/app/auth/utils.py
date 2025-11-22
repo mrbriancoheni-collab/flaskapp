@@ -256,6 +256,36 @@ def login_required(view_func):
         return view_func(*args, **kwargs)
     return wrapper
 
+
+def ajax_login_required(view_func):
+    """
+    Like login_required but returns JSON for AJAX requests instead of redirecting.
+    Use this for API/AJAX endpoints that need to handle session timeout gracefully.
+    Returns: {"ok": false, "error": "session_expired", "login_url": "..."} with status 401
+    """
+    from flask import jsonify
+
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        if not is_logged_in():
+            login_url = url_for("auth_bp.login", next=request.url)
+            return jsonify({
+                "ok": False,
+                "error": "session_expired",
+                "message": "Your session has expired. Please log in again.",
+                "login_url": login_url
+            }), 401
+
+        # Optional global gate
+        if current_app.config.get("REQUIRE_VERIFIED_EMAIL_FOR_LOGIN", False) and not email_is_verified():
+            return jsonify({
+                "ok": False,
+                "error": "email_not_verified",
+                "message": "Please verify your email address to continue."
+            }), 403
+        return view_func(*args, **kwargs)
+    return wrapper
+
 def verified_email_required(view_func):
     """
     Per-route email verification gate (use when global gate is off or for extra safety).

@@ -167,6 +167,20 @@
           {% endif %}
         </li>
 
+        {% if is_logged_in() %}
+        <li>
+          <a class="btn btn-outline" href="{{ url_for('account_bp.dashboard') }}">Dashboard</a>
+        </li>
+        <li>
+          {% if has_endpoint('auth_bp.logout') %}
+            <a class="btn btn-primary" href="{{ url_for('auth_bp.logout') }}">Sign out</a>
+          {% elif has_endpoint('logout') %}
+            <a class="btn btn-primary" href="{{ url_for(ep('logout')) }}">Sign out</a>
+          {% else %}
+            <a class="btn btn-primary" href="/logout">Sign out</a>
+          {% endif %}
+        </li>
+        {% else %}
         <li>
           {% if has_endpoint('auth_bp.login') %}
             <a class="btn btn-outline" href="{{ url_for('auth_bp.login') }}">Sign in</a>
@@ -187,6 +201,7 @@
             <a class="btn btn-primary" href="/signup">Start Saving Now</a>
           {% endif %}
         </li>
+        {% endif %}
       </ul>
     </nav>
 
@@ -240,21 +255,32 @@
         {% endif %}
 
         <div class="flex gap-3 pt-3">
-          {% if has_endpoint('auth_bp.login') %}
-            <a class="btn btn-outline flex-1 text-center" href="{{ url_for('auth_bp.login') }}">Sign in</a>
-          {% elif has_endpoint('login') %}
-            <a class="btn btn-outline flex-1 text-center" href="{{ url_for(ep('login')) }}">Sign in</a>
+          {% if is_logged_in() %}
+            <a class="btn btn-outline flex-1 text-center" href="{{ url_for('account_bp.dashboard') }}">Dashboard</a>
+            {% if has_endpoint('auth_bp.logout') %}
+              <a class="btn btn-primary flex-1 text-center" href="{{ url_for('auth_bp.logout') }}">Sign out</a>
+            {% elif has_endpoint('logout') %}
+              <a class="btn btn-primary flex-1 text-center" href="{{ url_for(ep('logout')) }}">Sign out</a>
+            {% else %}
+              <a class="btn btn-primary flex-1 text-center" href="/logout">Sign out</a>
+            {% endif %}
           {% else %}
-            <a class="btn btn-outline flex-1 text-center" href="/login">Sign in</a>
-          {% endif %}
-          {% if has_endpoint('auth_bp.register') %}
-            <a class="btn btn-primary flex-1 text-center" href="{{ url_for('auth_bp.register') }}">Start Saving Now</a>
-          {% elif has_endpoint('signup') %}
-            <a class="btn btn-primary flex-1 text-center" href="{{ url_for(ep('signup')) }}">Start Saving Now</a>
-          {% elif has_endpoint('register') %}
-            <a class="btn btn-primary flex-1 text-center" href="{{ url_for(ep('register')) }}">Start Saving Now</a>
-          {% else %}
-            <a class="btn btn-primary flex-1 text-center" href="/signup">Start Saving Now</a>
+            {% if has_endpoint('auth_bp.login') %}
+              <a class="btn btn-outline flex-1 text-center" href="{{ url_for('auth_bp.login') }}">Sign in</a>
+            {% elif has_endpoint('login') %}
+              <a class="btn btn-outline flex-1 text-center" href="{{ url_for(ep('login')) }}">Sign in</a>
+            {% else %}
+              <a class="btn btn-outline flex-1 text-center" href="/login">Sign in</a>
+            {% endif %}
+            {% if has_endpoint('auth_bp.register') %}
+              <a class="btn btn-primary flex-1 text-center" href="{{ url_for('auth_bp.register') }}">Start Saving Now</a>
+            {% elif has_endpoint('signup') %}
+              <a class="btn btn-primary flex-1 text-center" href="{{ url_for(ep('signup')) }}">Start Saving Now</a>
+            {% elif has_endpoint('register') %}
+              <a class="btn btn-primary flex-1 text-center" href="{{ url_for(ep('register')) }}">Start Saving Now</a>
+            {% else %}
+              <a class="btn btn-primary flex-1 text-center" href="/signup">Start Saving Now</a>
+            {% endif %}
           {% endif %}
         </div>
       </div>

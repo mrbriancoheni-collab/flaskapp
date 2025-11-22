@@ -2191,6 +2191,7 @@ def ads_opportunities():
         ads_data=ads_data,
         analysis=analysis,
         epn=request.endpoint,
+        is_demo=False,
     )
 
 

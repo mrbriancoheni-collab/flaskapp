@@ -246,70 +246,55 @@ def get_stored_access_token(aid: int, products: Sequence[str] = ("ads", "lsa")) 
 
 def list_accessible_customers(access_token: str, login_customer_id: str | None = None) -> List[str]:
     """
-    List accessible Google Ads customers.
-    Implements auto-version detection: tries multiple API versions if the current one fails.
+    List accessible Google Ads customers using the official Google Ads library.
+
+    Note: Despite the parameter name, this function works best with a refresh_token
+    since the official library handles access token refresh internally.
+    For backward compatibility, if an access_token is passed, we attempt to use it,
+    but the recommended approach is to pass a refresh_token.
     """
+    from google.ads.googleads.client import GoogleAdsClient
+
     dev_token = _dev_token()
+    client_id = current_app.config.get("GOOGLE_ADS_CLIENT_ID") or os.getenv("GOOGLE_ADS_CLIENT_ID")
+    client_secret = current_app.config.get("GOOGLE_ADS_CLIENT_SECRET") or os.getenv("GOOGLE_ADS_CLIENT_SECRET")
 
     # Debug logging (safe - only shows token lengths and partial values)
     current_app.logger.info(
-        "list_accessible_customers: access_token_len=%d, dev_token_len=%d, dev_token_prefix=%s, login_cid=%s",
+        "list_accessible_customers: token_len=%d, dev_token_len=%d, dev_token_prefix=%s, login_cid=%s",
         len(access_token) if access_token else 0,
         len(dev_token) if dev_token else 0,
         dev_token[:6] + "..." if dev_token and len(dev_token) > 6 else "MISSING",
         login_customer_id or "None"
     )
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "developer-token": dev_token,
-        "Content-Type": "application/json",
+    # Build config for the official library
+    # The token passed could be either access_token or refresh_token
+    # The library expects refresh_token, so we'll try that approach
+    config = {
+        "developer_token": dev_token,
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "refresh_token": access_token,  # May be refresh or access token
+        "use_proto_plus": True,
     }
+
     if login_customer_id:
-        headers["login-customer-id"] = _digits_only(login_customer_id)
+        config["login_customer_id"] = _digits_only(login_customer_id)
 
-    # If env is explicitly set to a specific version, use only that
-    if _ENV_VERSION != "auto" and _ENV_VERSION.startswith("v"):
-        versions_to_try = [_ENV_VERSION]
-    else:
-        # Auto mode: try all supported versions, starting with cached working version
-        versions_to_try = SUPPORTED_ADS_VERSIONS.copy()
-        if _working_version and _working_version in versions_to_try:
-            # Move working version to front
-            versions_to_try.remove(_working_version)
-            versions_to_try.insert(0, _working_version)
+    try:
+        client = GoogleAdsClient.load_from_dict(config)
+        customer_service = client.get_service("CustomerService")
+        response = customer_service.list_accessible_customers()
 
-    last_error = None
-    for version in versions_to_try:
-        url = f"https://googleads.googleapis.com/{version}/customers:listAccessibleCustomers"
+        # Extract customer IDs from resource names (format: "customers/1234567890")
+        customer_ids = [name.split("/")[-1] for name in response.resource_names]
+        current_app.logger.info(f"Google Ads API: found {len(customer_ids)} accessible customers")
+        return customer_ids
 
-        try:
-            r = requests.get(url, headers=headers, timeout=15)
-            r.raise_for_status()
-
-            # Success! Cache this version
-            _set_working_version(version)
-            current_app.logger.info(f"Google Ads API {version} working, cached as default")
-
-            j = r.json() or {}
-            return [rn.split("/", 1)[-1] for rn in j.get("resourceNames", [])]
-
-        except requests.HTTPError as e:
-            last_error = e
-            if r.status_code == 404:
-                # Version deprecated, try next
-                current_app.logger.warning(f"Google Ads API {version} returned 404 (deprecated), trying next version")
-                continue
-            else:
-                # Other error (auth, permission, etc.) - don't try other versions
-                current_app.logger.error("Ads listAccessibleCustomers failed (%s): %s", r.status_code, r.text)
-                raise
-
-    # All versions failed
-    current_app.logger.error("All Google Ads API versions failed. Tried: %s", versions_to_try)
-    if last_error:
-        raise last_error
-    raise RuntimeError(f"No working Google Ads API version found (tried: {versions_to_try})")
+    except Exception as e:
+        current_app.logger.error(f"list_accessible_customers failed: {type(e).__name__}: {e}")
+        raise
 
 
 def pick_and_save_customer_id_after_oauth(aid: int, access_token: str) -> List[str]:

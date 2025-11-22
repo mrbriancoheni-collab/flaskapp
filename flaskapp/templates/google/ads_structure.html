@@ -1,0 +1,271 @@
+{# templates/google/ads_structure.html #}
+{% extends "base_app.html" %}
+{% set SECTION = 'google' %}
+{% block title %}Account Structure - Google Ads{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <a href="{{ url_for('google_bp.ads_ui') }}" class="text-sm text-indigo-600 hover:text-indigo-800 mb-2 inline-block">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Back to Opportunities Dashboard
+      </a>
+      <h1 class="text-3xl font-bold">Account Structure</h1>
+      <p class="text-gray-600 mt-1">{{ ads_data.account_name or 'Google Ads Account' }}</p>
+    </div>
+    {% if connected %}
+    <form action="{{ url_for('google_bp.ads_pull_live') }}" method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
+        <i class="fa-solid fa-sync"></i> Refresh Data
+      </button>
+    </form>
+    {% else %}
+    <a href="{{ url_for('google_bp.connect_ads') }}"
+       class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
+      <i class="fa-brands fa-google"></i> Connect Google Ads
+    </a>
+    {% endif %}
+  </div>
+
+  {% if not connected %}
+  <!-- Not Connected State -->
+  <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center">
+    <i class="fa-solid fa-plug text-4xl text-yellow-500 mb-4"></i>
+    <h2 class="text-xl font-semibold text-yellow-800 mb-2">Connect Your Google Ads Account</h2>
+    <p class="text-yellow-700 mb-4">Connect your Google Ads account to view your complete account structure.</p>
+    <a href="{{ url_for('google_bp.connect_ads') }}" class="inline-flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700">
+      <i class="fa-brands fa-google"></i> Connect Now
+    </a>
+  </div>
+  {% else %}
+
+  <!-- Summary Stats -->
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+    <div class="bg-white rounded-xl shadow p-4 text-center">
+      <div class="text-3xl font-bold text-indigo-600">{{ ads_data.campaigns|length }}</div>
+      <div class="text-sm text-gray-600">Campaigns</div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4 text-center">
+      <div class="text-3xl font-bold text-purple-600">{{ ads_data.ad_groups|length }}</div>
+      <div class="text-sm text-gray-600">Ad Groups</div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4 text-center">
+      <div class="text-3xl font-bold text-blue-600">{{ ads_data.keywords|length }}</div>
+      <div class="text-sm text-gray-600">Keywords</div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4 text-center">
+      <div class="text-3xl font-bold text-green-600">{{ ads_data.ads|length }}</div>
+      <div class="text-sm text-gray-600">Ads</div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4 text-center">
+      <div class="text-3xl font-bold text-orange-600">{{ ads_data.extensions|length }}</div>
+      <div class="text-sm text-gray-600">Extensions</div>
+    </div>
+  </div>
+
+  <!-- Account Tree Structure -->
+  <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+      <h2 class="text-xl font-bold text-white">
+        <i class="fa-solid fa-sitemap mr-2"></i> Account Hierarchy
+      </h2>
+    </div>
+
+    <div class="p-6">
+      {% if ads_data.campaigns %}
+      <div class="space-y-4">
+        {% for campaign in ads_data.campaigns %}
+        <div class="border rounded-lg overflow-hidden" x-data="{ open: false }">
+          <!-- Campaign Header -->
+          <div class="bg-gray-50 px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-100"
+               @click="open = !open">
+            <div class="flex items-center gap-3">
+              <i class="fa-solid fa-chevron-right transition-transform" :class="{ 'rotate-90': open }"></i>
+              <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-indigo-100 text-indigo-600">
+                <i class="fa-solid fa-bullhorn text-sm"></i>
+              </span>
+              <div>
+                <span class="font-semibold text-gray-900">{{ campaign.name }}</span>
+                <span class="ml-2 text-xs px-2 py-0.5 rounded-full
+                  {% if campaign.status|lower == 'enabled' %}bg-green-100 text-green-700
+                  {% elif campaign.status|lower == 'paused' %}bg-yellow-100 text-yellow-700
+                  {% else %}bg-gray-100 text-gray-600{% endif %}">
+                  {{ campaign.status }}
+                </span>
+              </div>
+            </div>
+            <div class="flex items-center gap-4 text-sm text-gray-500">
+              <span><i class="fa-solid fa-layer-group mr-1"></i> {{ ads_data.ad_groups|selectattr('campaign_id', 'equalto', campaign.id)|list|length }} groups</span>
+              <span class="text-xs bg-gray-100 px-2 py-1 rounded">{{ campaign.type }}</span>
+              <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">{{ campaign.bidding }}</span>
+            </div>
+          </div>
+
+          <!-- Ad Groups (nested) -->
+          <div x-show="open" x-collapse class="border-t">
+            {% set campaign_groups = ads_data.ad_groups|selectattr('campaign_id', 'equalto', campaign.id)|list %}
+            {% if campaign_groups %}
+            <div class="ml-8 border-l-2 border-indigo-100">
+              {% for ad_group in campaign_groups %}
+              <div class="border-b last:border-b-0" x-data="{ groupOpen: false }">
+                <!-- Ad Group Header -->
+                <div class="px-4 py-2 flex items-center justify-between cursor-pointer hover:bg-gray-50"
+                     @click="groupOpen = !groupOpen">
+                  <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-chevron-right text-xs transition-transform" :class="{ 'rotate-90': groupOpen }"></i>
+                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-100 text-purple-600">
+                      <i class="fa-solid fa-layer-group text-xs"></i>
+                    </span>
+                    <span class="text-gray-800">{{ ad_group.name }}</span>
+                    <span class="text-xs px-2 py-0.5 rounded-full
+                      {% if ad_group.status|lower == 'enabled' %}bg-green-100 text-green-700
+                      {% elif ad_group.status|lower == 'paused' %}bg-yellow-100 text-yellow-700
+                      {% else %}bg-gray-100 text-gray-600{% endif %}">
+                      {{ ad_group.status }}
+                    </span>
+                  </div>
+                  <div class="text-sm text-gray-500">
+                    <span><i class="fa-solid fa-key mr-1"></i> {{ ads_data.keywords|selectattr('ad_group_id', 'equalto', ad_group.id)|list|length }} keywords</span>
+                  </div>
+                </div>
+
+                <!-- Keywords (nested) -->
+                <div x-show="groupOpen" x-collapse class="ml-8 border-l-2 border-purple-100 bg-gray-50">
+                  {% set group_keywords = ads_data.keywords|selectattr('ad_group_id', 'equalto', ad_group.id)|list %}
+                  {% if group_keywords %}
+                  <div class="py-2 px-4">
+                    <table class="w-full text-sm">
+                      <thead>
+                        <tr class="text-left text-gray-500 text-xs uppercase">
+                          <th class="py-1 px-2">Keyword</th>
+                          <th class="py-1 px-2">Match Type</th>
+                          <th class="py-1 px-2">Status</th>
+                          {% if group_keywords[0].cpc is not none %}
+                          <th class="py-1 px-2">CPC</th>
+                          {% endif %}
+                          {% if group_keywords[0].conv is not none %}
+                          <th class="py-1 px-2">Conv</th>
+                          {% endif %}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for kw in group_keywords %}
+                        <tr class="border-t border-gray-200 hover:bg-gray-100">
+                          <td class="py-1 px-2">
+                            <i class="fa-solid fa-key text-blue-400 mr-1 text-xs"></i>
+                            {{ kw.text }}
+                          </td>
+                          <td class="py-1 px-2">
+                            <span class="text-xs px-2 py-0.5 rounded
+                              {% if kw.match|lower == 'exact' %}bg-blue-100 text-blue-700
+                              {% elif kw.match|lower == 'phrase' %}bg-purple-100 text-purple-700
+                              {% else %}bg-gray-100 text-gray-600{% endif %}">
+                              {{ kw.match }}
+                            </span>
+                          </td>
+                          <td class="py-1 px-2">
+                            <span class="text-xs px-2 py-0.5 rounded-full
+                              {% if kw.status|lower == 'enabled' %}bg-green-100 text-green-700
+                              {% elif kw.status|lower == 'paused' %}bg-yellow-100 text-yellow-700
+                              {% else %}bg-gray-100 text-gray-600{% endif %}">
+                              {{ kw.status }}
+                            </span>
+                          </td>
+                          {% if kw.cpc is not none %}
+                          <td class="py-1 px-2">${{ '%.2f'|format(kw.cpc) }}</td>
+                          {% endif %}
+                          {% if kw.conv is not none %}
+                          <td class="py-1 px-2">{{ kw.conv }}</td>
+                          {% endif %}
+                        </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                  {% else %}
+                  <div class="py-3 px-4 text-gray-500 text-sm italic">No keywords in this ad group</div>
+                  {% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <div class="py-3 px-4 ml-8 text-gray-500 text-sm italic">No ad groups in this campaign</div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-12 text-gray-500">
+        <i class="fa-solid fa-folder-open text-4xl mb-4"></i>
+        <p>No campaigns found in this account.</p>
+        <p class="text-sm mt-2">Try refreshing your data or check your Google Ads account.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Negative Keywords Section -->
+  {% if ads_data.negatives %}
+  <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+    <div class="bg-gradient-to-r from-red-500 to-orange-500 px-6 py-4">
+      <h2 class="text-xl font-bold text-white">
+        <i class="fa-solid fa-ban mr-2"></i> Negative Keywords ({{ ads_data.negatives|length }})
+      </h2>
+    </div>
+    <div class="p-6">
+      <div class="flex flex-wrap gap-2">
+        {% for neg in ads_data.negatives %}
+        <span class="inline-flex items-center gap-1 px-3 py-1 bg-red-50 text-red-700 rounded-full text-sm">
+          <i class="fa-solid fa-ban text-xs"></i> {{ neg.keyword or neg.text or neg }}
+        </span>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Extensions Section -->
+  {% if ads_data.extensions %}
+  <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+    <div class="bg-gradient-to-r from-green-500 to-teal-500 px-6 py-4">
+      <h2 class="text-xl font-bold text-white">
+        <i class="fa-solid fa-puzzle-piece mr-2"></i> Extensions ({{ ads_data.extensions|length }})
+      </h2>
+    </div>
+    <div class="p-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for ext in ads_data.extensions %}
+        <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+          <div class="flex items-center gap-2 mb-2">
+            {% if ext.type|lower == 'call' %}
+            <i class="fa-solid fa-phone text-green-500"></i>
+            {% elif ext.type|lower == 'sitelink' %}
+            <i class="fa-solid fa-link text-blue-500"></i>
+            {% elif ext.type|lower == 'callout' %}
+            <i class="fa-solid fa-comment text-purple-500"></i>
+            {% elif ext.type|lower == 'location' %}
+            <i class="fa-solid fa-map-marker-alt text-red-500"></i>
+            {% else %}
+            <i class="fa-solid fa-puzzle-piece text-gray-500"></i>
+            {% endif %}
+            <span class="font-semibold capitalize">{{ ext.type }}</span>
+          </div>
+          <div class="text-sm text-gray-600">
+            {% if ext.phone %}{{ ext.phone }}{% endif %}
+            {% if ext.text %}{{ ext.text }}{% endif %}
+            {% if ext.url %}{{ ext.url }}{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% endif %}
+</div>
+{% endblock %}

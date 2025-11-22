@@ -1785,20 +1785,26 @@ def ads_debug_config():
 @google_bp.route("/ads", methods=["GET"], endpoint="ads_ui")
 @login_required
 def ads_ui():
+    """
+    Google Ads main page - Uses the Opportunities Dashboard layout with real user data.
+    Same layout as the demo page but shows actual connected account data.
+    """
     aid = current_account_id()
     connected = _is_connected(aid, "ads")
-    ai = _ai_enabled()
+
+    # Get ads data
     ads_data = _get_ads_state(aid)
-    sugg_key = f"ads_suggestions_{aid}"
-    suggestions = session.get(sugg_key) or {}
-    _ = _get_ads_custom_prompt(aid)
+
+    # Generate comprehensive analysis using the opportunities analyzer
+    analysis = _analyze_ads_opportunities(aid, ads_data)
+
     return render_template(
-        "google/ads.html",
+        "google/ads_opportunities.html",
         connected=connected,
-        ai_connected=ai,
         ads_data=ads_data,
-        suggestions=suggestions,
+        analysis=analysis,
         epn=request.endpoint,
+        is_demo=False,
     )
 
 # ------------------------- GA JSON data (AJAX) -------------------------
@@ -1967,7 +1973,7 @@ def ads_list_customers():
 @google_bp.route("/ads/select-customer", methods=["POST", "GET"], endpoint="ads_select_customer")
 @login_required
 def ads_select_customer():
-    """AJAX endpoint to save selected Google Ads customer ID."""
+    """AJAX endpoint to save selected Google Ads customer ID and fetch initial data."""
     aid = current_account_id()
     customer_id = (request.values.get("customer_id") or "").strip()
 
@@ -1977,6 +1983,17 @@ def ads_select_customer():
     try:
         from app.google.utils_ads import save_customer_id
         save_customer_id(aid, customer_id)
+
+        # Automatically fetch and analyze ads data after saving customer ID
+        try:
+            current_app.logger.info(f"Auto-fetching Google Ads data for account {aid} after customer selection")
+            snapshot = _fetch_ads_snapshot_from_google(aid)
+            _save_ads_state(aid, snapshot)
+            current_app.logger.info(f"Successfully fetched and saved Google Ads data for account {aid}")
+        except Exception as fetch_err:
+            # Log but don't fail the save - data can be fetched later
+            current_app.logger.warning(f"Could not auto-fetch ads data after save: {fetch_err}")
+
         return jsonify({"ok": True, "customer_id": customer_id})
     except Exception as e:
         current_app.logger.exception("Failed to save Google Ads customer ID")
@@ -2173,6 +2190,27 @@ def ads_opportunities():
         connected=connected,
         ads_data=ads_data,
         analysis=analysis,
+        epn=request.endpoint,
+    )
+
+
+@google_bp.route("/ads/structure", methods=["GET"], endpoint="ads_structure")
+@login_required
+def ads_structure():
+    """
+    Account Structure page - Shows the full hierarchy of the Google Ads account.
+    Displays campaigns, ad groups, keywords, ads, and extensions in a navigable tree view.
+    """
+    aid = current_account_id()
+    connected = _is_connected(aid, "ads")
+
+    # Get ads data
+    ads_data = _get_ads_state(aid)
+
+    return render_template(
+        "google/ads_structure.html",
+        connected=connected,
+        ads_data=ads_data,
         epn=request.endpoint,
     )
 

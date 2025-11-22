@@ -293,11 +293,21 @@ def list_accessible_customers(access_token: str, login_customer_id: str | None =
         return customer_ids
 
     except Exception as e:
+        # Convert exception to string, handling GoogleAdsException specially
         error_str = str(e)
-        current_app.logger.error(f"list_accessible_customers failed: {type(e).__name__}: {e}")
+
+        # GoogleAdsException has failure property with detailed error info
+        if hasattr(e, 'failure') and e.failure:
+            try:
+                for error in e.failure.errors:
+                    error_str += f" {error.error_code} {error.message}"
+            except Exception:
+                pass
+
+        current_app.logger.error(f"list_accessible_customers failed: {type(e).__name__}: {error_str}")
 
         # Check for NOT_ADS_USER error - Google account isn't linked to any Ads accounts
-        if "NOT_ADS_USER" in error_str or "not associated with any Ads accounts" in error_str:
+        if "NOT_ADS_USER" in error_str or "not associated with any Ads accounts" in error_str or "authentication_error" in error_str.lower():
             raise ValueError(
                 "This Google account is not associated with any Google Ads accounts. "
                 "Please either:\n"

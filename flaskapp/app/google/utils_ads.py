@@ -11,9 +11,52 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app import db
 
-# Version can be overridden via env; defaults to v16 (stable for REST)
-GOOGLE_ADS_VERSION = os.getenv("GOOGLE_ADS_API_VERSION", "v18").strip() or "v18"
-ADS_API_BASE = f"https://googleads.googleapis.com/{GOOGLE_ADS_VERSION}"
+# Google Ads API version management
+# Supported versions in order of preference (newest first)
+# Google typically supports ~3 versions at a time, deprecating oldest every ~12 months
+SUPPORTED_ADS_VERSIONS = ["v19", "v18", "v17"]
+
+# Version can be overridden via env; if "auto", will try versions until one works
+_ENV_VERSION = os.getenv("GOOGLE_ADS_API_VERSION", "auto").strip() or "auto"
+
+# Cache for the detected working version
+_working_version: Optional[str] = None
+
+
+def _get_ads_api_version() -> str:
+    """
+    Get the Google Ads API version to use.
+    If env is set to a specific version (e.g., "v18"), use that.
+    If env is "auto" or not set, use the cached working version or default to newest.
+    """
+    global _working_version
+
+    # If explicitly set to a specific version, use it
+    if _ENV_VERSION != "auto" and _ENV_VERSION.startswith("v"):
+        return _ENV_VERSION
+
+    # Return cached working version if available
+    if _working_version:
+        return _working_version
+
+    # Default to newest supported version
+    return SUPPORTED_ADS_VERSIONS[0]
+
+
+def _set_working_version(version: str) -> None:
+    """Cache a version that's confirmed to work."""
+    global _working_version
+    _working_version = version
+
+
+def _get_ads_api_base() -> str:
+    """Get the base URL for Google Ads API."""
+    return f"https://googleads.googleapis.com/{_get_ads_api_version()}"
+
+
+# For backward compatibility
+GOOGLE_ADS_VERSION = _get_ads_api_version()
+ADS_API_BASE = _get_ads_api_base()
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -202,7 +245,10 @@ def get_stored_access_token(aid: int, products: Sequence[str] = ("ads", "lsa")) 
 # ────────────────────────────────────────────────────────────────────────────
 
 def list_accessible_customers(access_token: str, login_customer_id: str | None = None) -> List[str]:
-    url = f"https://googleads.googleapis.com/{GOOGLE_ADS_VERSION}/customers:listAccessibleCustomers"
+    """
+    List accessible Google Ads customers.
+    Implements auto-version detection: tries multiple API versions if the current one fails.
+    """
     headers = {
         "Authorization": f"Bearer {access_token}",
         "developer-token": _dev_token(),
@@ -211,17 +257,48 @@ def list_accessible_customers(access_token: str, login_customer_id: str | None =
     if login_customer_id:
         headers["login-customer-id"] = _digits_only(login_customer_id)
 
-    # MUST be GET with no body
-    r = requests.get(url, headers=headers, timeout=15)
-    try:
-        r.raise_for_status()
-    except requests.HTTPError:
-        current_app.logger.error("Ads listAccessibleCustomers failed (%s): %s", r.status_code, r.text)
-        raise
+    # If env is explicitly set to a specific version, use only that
+    if _ENV_VERSION != "auto" and _ENV_VERSION.startswith("v"):
+        versions_to_try = [_ENV_VERSION]
+    else:
+        # Auto mode: try all supported versions, starting with cached working version
+        versions_to_try = SUPPORTED_ADS_VERSIONS.copy()
+        if _working_version and _working_version in versions_to_try:
+            # Move working version to front
+            versions_to_try.remove(_working_version)
+            versions_to_try.insert(0, _working_version)
 
-    j = r.json() or {}
-    # returns { "resourceNames": ["customers/1234567890", ...] }
-    return [rn.split("/", 1)[-1] for rn in j.get("resourceNames", [])]
+    last_error = None
+    for version in versions_to_try:
+        url = f"https://googleads.googleapis.com/{version}/customers:listAccessibleCustomers"
+
+        try:
+            r = requests.get(url, headers=headers, timeout=15)
+            r.raise_for_status()
+
+            # Success! Cache this version
+            _set_working_version(version)
+            current_app.logger.info(f"Google Ads API {version} working, cached as default")
+
+            j = r.json() or {}
+            return [rn.split("/", 1)[-1] for rn in j.get("resourceNames", [])]
+
+        except requests.HTTPError as e:
+            last_error = e
+            if r.status_code == 404:
+                # Version deprecated, try next
+                current_app.logger.warning(f"Google Ads API {version} returned 404 (deprecated), trying next version")
+                continue
+            else:
+                # Other error (auth, permission, etc.) - don't try other versions
+                current_app.logger.error("Ads listAccessibleCustomers failed (%s): %s", r.status_code, r.text)
+                raise
+
+    # All versions failed
+    current_app.logger.error("All Google Ads API versions failed. Tried: %s", versions_to_try)
+    if last_error:
+        raise last_error
+    raise RuntimeError(f"No working Google Ads API version found (tried: {versions_to_try})")
 
 
 def pick_and_save_customer_id_after_oauth(aid: int, access_token: str) -> List[str]:
@@ -278,7 +355,7 @@ def google_ads_search(
     results: List[dict] = []
 
     if stream:
-        url = f"{ADS_API_BASE}/customers/{cid}/googleAds:searchStream"
+        url = f"{_get_ads_api_base()}/customers/{cid}/googleAds:searchStream"
         r = requests.post(url, headers=headers, json={"query": query}, timeout=60)
         r.raise_for_status()
         # searchStream returns an array of "results" batches
@@ -289,7 +366,7 @@ def google_ads_search(
         return results
 
     # Non-streaming (handles pagination internally)
-    url = f"{ADS_API_BASE}/customers/{cid}/googleAds:search"
+    url = f"{_get_ads_api_base()}/customers/{cid}/googleAds:search"
     page_token = None
     while True:
         body = {"query": query}

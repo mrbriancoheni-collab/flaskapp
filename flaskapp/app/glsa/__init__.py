@@ -100,16 +100,8 @@ def _ads_ctx(aid: int) -> dict:
 @glsa_bp.route("/", methods=["GET"], endpoint="index")
 @login_required
 def index():
-    aid = current_account_id()
-    connected = _has_any_google_token(aid, ("lsa", "ads"))
-    ctx = _ads_ctx(aid)
-    return render_template(
-        "glsa/index.html",
-        connected=connected,
-        ctx=ctx,
-        epn=request.endpoint,
-        SECTION="glsa",
-    )
+    """Redirect to main dashboard."""
+    return redirect(url_for("glsa_bp.dashboard"))
 
 
 @glsa_bp.get("/connect", endpoint="connect")
@@ -333,3 +325,225 @@ def leads_api():
         return jsonify({"ok": False, "error": f"glsa_api_error: {e}"}), 502
 
     return jsonify({"ok": True, "source_product": used_product, "params": params, "data": data})
+
+
+# ───────────────────────── Dashboard Data ─────────────────────────
+
+@glsa_bp.route("/dashboard", methods=["GET"], endpoint="dashboard")
+@login_required
+def dashboard():
+    """Main LSA dashboard with performance metrics."""
+    aid = current_account_id()
+    connected = _has_any_google_token(aid, ("lsa", "ads"))
+    ctx = _ads_ctx(aid)
+
+    # Fetch metrics (real or demo)
+    metrics = _get_lsa_metrics(aid, connected)
+    opportunities = _get_lsa_opportunities(aid)
+
+    return render_template(
+        "glsa/dashboard.html",
+        connected=connected,
+        ctx=ctx,
+        metrics=metrics,
+        opportunities=opportunities,
+        epn=request.endpoint,
+        SECTION="glsa",
+    )
+
+
+@glsa_bp.route("/api/metrics", methods=["GET"], endpoint="api_metrics")
+@login_required
+def api_metrics():
+    """API endpoint for LSA performance metrics."""
+    aid = current_account_id()
+    connected = _has_any_google_token(aid, ("lsa", "ads"))
+    metrics = _get_lsa_metrics(aid, connected)
+    return jsonify({"ok": True, "metrics": metrics})
+
+
+def _get_lsa_metrics(aid: int, connected: bool) -> dict:
+    """
+    Fetch LSA performance metrics for the dashboard.
+    Returns real data if connected, demo data otherwise.
+    """
+    if not connected:
+        # Demo data for unconnected accounts
+        return {
+            "is_demo": True,
+            "period": "Last 30 days",
+            "leads": {
+                "total": 47,
+                "calls": 32,
+                "messages": 15,
+                "booked": 28,
+                "booking_rate": 59.6,
+            },
+            "spend": {
+                "total": 1840.00,
+                "cost_per_lead": 39.15,
+                "cost_per_booked": 65.71,
+                "weekly_budget": 500.00,
+                "budget_utilization": 92,
+            },
+            "performance": {
+                "grade": "B",
+                "grade_color": "green",
+                "score": 72,
+                "response_time_avg": "8 min",
+                "response_time_score": 85,
+                "review_rating": 4.6,
+                "review_count": 112,
+                "review_score": 78,
+            },
+            "trends": {
+                "leads_change": 12,
+                "cpl_change": -8,
+                "booking_rate_change": 5,
+            },
+            "lead_types": [
+                {"type": "Emergency", "count": 18, "pct": 38, "cpl": 52.00},
+                {"type": "Scheduled", "count": 21, "pct": 45, "cpl": 31.00},
+                {"type": "Quote Request", "count": 8, "pct": 17, "cpl": 35.00},
+            ],
+            "top_services": [
+                {"name": "Water Heater Install", "leads": 14, "booked": 9, "revenue": 4200},
+                {"name": "Drain Clearing", "leads": 12, "booked": 8, "revenue": 1600},
+                {"name": "Leak Repair", "leads": 11, "booked": 7, "revenue": 2100},
+                {"name": "Pipe Repair", "leads": 10, "booked": 4, "revenue": 1800},
+            ],
+            "issues": [
+                {"type": "warning", "title": "Response Time Opportunity", "desc": "6 leads had >15min response time. Faster responses convert 40% better."},
+                {"type": "info", "title": "Review Volume", "desc": "You have 112 reviews. Top competitors average 180+ reviews."},
+                {"type": "success", "title": "Budget Efficiency", "desc": "Your CPL is 18% below industry average. Good budget management."},
+            ],
+        }
+
+    # Connected - fetch real data from API or database
+    try:
+        # Try to get leads from database first
+        from app.models_glsa import GLSALead, GLSAProfile
+        from datetime import datetime, timedelta
+
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+
+        leads = GLSALead.query.filter(
+            GLSALead.account_id == aid,
+            GLSALead.lead_ts >= thirty_days_ago
+        ).all()
+
+        profile = GLSAProfile.query.filter(
+            GLSAProfile.account_id == aid
+        ).order_by(GLSAProfile.updated_at.desc()).first()
+
+        total_leads = len(leads)
+        # Estimate calls vs messages (typically 70/30 split for LSA)
+        calls = int(total_leads * 0.7)
+        messages = total_leads - calls
+
+        # Calculate booked (estimate from status if available)
+        booked = sum(1 for l in leads if l.notes and isinstance(l.notes, dict) and l.notes.get('status') == 'booked')
+        if booked == 0:
+            booked = int(total_leads * 0.6)  # Default estimate
+
+        booking_rate = (booked / total_leads * 100) if total_leads > 0 else 0
+
+        # Get spend data from notes/charges
+        total_spend = sum(
+            float(l.notes.get('charged_price', {}).get('units', 0))
+            for l in leads
+            if l.notes and isinstance(l.notes, dict) and l.notes.get('charged_price')
+        )
+        if total_spend == 0:
+            total_spend = total_leads * 45  # Default estimate
+
+        cpl = total_spend / total_leads if total_leads > 0 else 0
+        cpb = total_spend / booked if booked > 0 else 0
+
+        weekly_budget = profile.suggestions.get('weekly_budget', 500) if profile and profile.suggestions else 500
+
+        # Calculate grade
+        score = 50
+        if booking_rate >= 60:
+            score += 20
+        elif booking_rate >= 40:
+            score += 10
+        if cpl <= 40:
+            score += 15
+        elif cpl <= 60:
+            score += 8
+        if profile and profile.rating and profile.rating >= 4.5:
+            score += 15
+        elif profile and profile.rating and profile.rating >= 4.0:
+            score += 8
+
+        grade = "A" if score >= 85 else "B" if score >= 70 else "C" if score >= 55 else "D"
+        grade_color = "green" if grade in ("A", "B") else "yellow" if grade == "C" else "red"
+
+        return {
+            "is_demo": False,
+            "period": "Last 30 days",
+            "leads": {
+                "total": total_leads,
+                "calls": calls,
+                "messages": messages,
+                "booked": booked,
+                "booking_rate": round(booking_rate, 1),
+            },
+            "spend": {
+                "total": round(total_spend, 2),
+                "cost_per_lead": round(cpl, 2),
+                "cost_per_booked": round(cpb, 2),
+                "weekly_budget": weekly_budget,
+                "budget_utilization": min(100, int((total_spend / 4) / weekly_budget * 100)) if weekly_budget else 0,
+            },
+            "performance": {
+                "grade": grade,
+                "grade_color": grade_color,
+                "score": score,
+                "response_time_avg": "N/A",
+                "response_time_score": 70,
+                "review_rating": profile.rating if profile else 0,
+                "review_count": profile.review_count if profile else 0,
+                "review_score": int((profile.rating / 5 * 100)) if profile and profile.rating else 0,
+            },
+            "trends": {
+                "leads_change": 0,
+                "cpl_change": 0,
+                "booking_rate_change": 0,
+            },
+            "lead_types": [],
+            "top_services": [],
+            "issues": [],
+        }
+    except Exception as e:
+        current_app.logger.exception(f"Error fetching LSA metrics: {e}")
+        return _get_lsa_metrics(aid, False)  # Fall back to demo data
+
+
+def _get_lsa_opportunities(aid: int) -> list:
+    """Fetch optimization opportunities for the account."""
+    try:
+        from app.models_ads import OptimizerRecommendation
+
+        recommendations = OptimizerRecommendation.query.filter(
+            OptimizerRecommendation.account_id == aid,
+            OptimizerRecommendation.source_type == 'glsa',
+            OptimizerRecommendation.status == 'open'
+        ).order_by(
+            OptimizerRecommendation.severity.asc()
+        ).limit(5).all()
+
+        return [
+            {
+                "id": r.id,
+                "title": r.title,
+                "description": r.description,
+                "category": r.category,
+                "severity": r.severity,
+                "impact": r.expected_impact,
+            }
+            for r in recommendations
+        ]
+    except Exception:
+        return []

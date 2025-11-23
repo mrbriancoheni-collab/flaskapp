@@ -313,7 +313,7 @@
   // Helpers (ES5)
   function $(sel, el){ return (el||document).querySelector(sel); }
   function $all(sel, el){ return Array.prototype.slice.call((el||document).querySelectorAll(sel)); }
-  function safe(fn){ try{ fn(); }catch(e){ if(window.console){ console.warn(e); } } }
+  function safe(fn){ try{ fn(); }catch(e){ if(window.console){ console.warn('optimize.html error:', e); } } }
   function toast(msg, type){
     var t=document.createElement('div');
     t.textContent=msg;
@@ -357,18 +357,31 @@
   }
 
   function switchTab(tab){
-    safe(function(){
-      $all('.tab-link').forEach(function(x){
-        var active = (x.getAttribute('data-tab') === tab);
-        if(active){ x.classList.add('active'); x.setAttribute('aria-selected','true'); }
-        else { x.classList.remove('active'); x.setAttribute('aria-selected','false'); }
-      });
-      $all('.tab-panel').forEach(function(p){
-        p.classList.add('hidden'); p.setAttribute('hidden','');
-      });
-      var tgt = $('#tab-'+tab);
-      if(tgt){ tgt.classList.remove('hidden'); tgt.removeAttribute('hidden'); }
-    });
+    // Update tab button states
+    var tabLinks = document.querySelectorAll('.tab-link');
+    for(var i = 0; i < tabLinks.length; i++){
+      var btn = tabLinks[i];
+      var isActive = btn.getAttribute('data-tab') === tab;
+      if(isActive){
+        btn.classList.add('active');
+        btn.setAttribute('aria-selected', 'true');
+      } else {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-selected', 'false');
+      }
+    }
+    // Hide all tab panels
+    var panels = document.querySelectorAll('.tab-panel');
+    for(var j = 0; j < panels.length; j++){
+      panels[j].classList.add('hidden');
+      panels[j].style.display = 'none';
+    }
+    // Show target panel
+    var target = document.getElementById('tab-' + tab);
+    if(target){
+      target.classList.remove('hidden');
+      target.style.display = '';
+    }
   }
 
   document.addEventListener('DOMContentLoaded', function(){
@@ -376,15 +389,21 @@
     var root = document.getElementById('glsa-optimize');
     if(root && root.getAttribute('data-connected') !== '1'){ switchTab('optimizer'); }
 
-    // Tabs (buttons)
-    $all('.tab-link').forEach(function(btn){
-      btn.addEventListener('click', function(){
-        var tab = btn.getAttribute('data-tab'); if(tab){ switchTab(tab); }
-      });
-    });
+    // Tabs (buttons) - attach click handlers directly
+    var tabBtns = document.querySelectorAll('.tab-link');
+    for(var i = 0; i < tabBtns.length; i++){
+      (function(btn){
+        btn.addEventListener('click', function(e){
+          e.preventDefault();
+          var tab = btn.getAttribute('data-tab');
+          if(tab){ switchTab(tab); }
+        });
+      })(tabBtns[i]);
+    }
+
     var openOptBtn = document.getElementById('btn-open-optimizer');
     if(openOptBtn){
-      openOptBtn.addEventListener('click', function(){ switchTab('optimizer'); });
+      openOptBtn.addEventListener('click', function(e){ e.preventDefault(); switchTab('optimizer'); });
     }
 
     // Initialize read views from JSON for Optimizer panel

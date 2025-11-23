@@ -308,7 +308,7 @@
   } | tojson }}
 </script>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
 (function(){
   // Helpers (ES5)
   function $(sel, el){ return (el||document).querySelector(sel); }

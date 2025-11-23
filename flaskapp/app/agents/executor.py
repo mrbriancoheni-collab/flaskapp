@@ -38,18 +38,38 @@ class GoogleAdsAgentExecutor:
     def get_client(self) -> GoogleAdsClient:
         """Get or create Google Ads API client."""
         if self.client is None:
+            import os
+            from flask import current_app
+
+            # Get credentials from Flask config or environment variables
+            client_id = (
+                current_app.config.get("GOOGLE_ADS_CLIENT_ID") or
+                os.getenv("GOOGLE_ADS_CLIENT_ID")
+            )
+            client_secret = (
+                current_app.config.get("GOOGLE_ADS_CLIENT_SECRET") or
+                os.getenv("GOOGLE_ADS_CLIENT_SECRET")
+            )
+            login_customer_id = (
+                current_app.config.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID") or
+                os.getenv("GOOGLE_ADS_LOGIN_CUSTOMER_ID") or
+                ""
+            ).replace("-", "")
+
+            if not client_id or not client_secret:
+                raise ValueError("GOOGLE_ADS_CLIENT_ID and GOOGLE_ADS_CLIENT_SECRET must be configured")
+
             # Configuration for Google Ads API
             config = {
                 "developer_token": self.developer_token,
                 "refresh_token": self.refresh_token,
-                "client_id": "YOUR_CLIENT_ID",  # From OAuth setup
-                "client_secret": "YOUR_CLIENT_SECRET",  # From OAuth setup
-                "login_customer_id": self.client_customer_id,
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "login_customer_id": login_customer_id or self.client_customer_id,
                 "use_proto_plus": True
             }
 
             try:
-                from google.ads.googleads.client import GoogleAdsClient
                 self.client = GoogleAdsClient.load_from_dict(config)
             except Exception as e:
                 logger.error(f"Failed to create Google Ads client: {e}")

@@ -674,6 +674,144 @@ def categorize_recommendations(recommendations: List[Dict]) -> Dict[str, List[Di
     return categories
 
 
+def _execute_recommendation_action(account_id: int, action: dict) -> dict:
+    """
+    Execute a recommendation action via Google Ads API.
+
+    Args:
+        account_id: Account ID
+        action: Action dictionary with type and parameters
+
+    Returns:
+        dict with 'success' key and either 'result' or 'error'
+    """
+    from sqlalchemy import text
+
+    action_type = action.get('type', 'unknown')
+
+    # Get Google Ads credentials for this account
+    try:
+        with db.engine.connect() as conn:
+            result = conn.execute(
+                text("""
+                    SELECT customer_id, credentials_json
+                    FROM google_oauth_tokens
+                    WHERE account_id = :account_id AND product = 'ads'
+                    ORDER BY id DESC LIMIT 1
+                """),
+                {"account_id": account_id}
+            )
+            row = result.mappings().first()
+
+        if not row:
+            return {'success': False, 'error': 'No Google Ads credentials found for account'}
+
+        customer_id = row['customer_id']
+        creds = json.loads(row['credentials_json']) if isinstance(row['credentials_json'], str) else row['credentials_json']
+        refresh_token = creds.get('refresh_token')
+
+        if not refresh_token:
+            return {'success': False, 'error': 'No refresh token found in credentials'}
+
+        # Initialize executor
+        from app.agents.executor import GoogleAdsAgentExecutor
+
+        developer_token = current_app.config.get('GOOGLE_ADS_DEVELOPER_TOKEN')
+        if not developer_token:
+            return {'success': False, 'error': 'GOOGLE_ADS_DEVELOPER_TOKEN not configured'}
+
+        executor = GoogleAdsAgentExecutor(
+            refresh_token=refresh_token,
+            developer_token=developer_token,
+            client_customer_id=customer_id
+        )
+
+        # Execute based on action type
+        if action_type == 'add_negative_keyword':
+            campaign_id = action.get('campaign_id')
+            keyword_text = action.get('keyword_text')
+            match_type = action.get('match_type', 'PHRASE')
+
+            if not campaign_id or not keyword_text:
+                return {'success': False, 'error': 'Missing campaign_id or keyword_text'}
+
+            result = executor.add_negative_keyword(campaign_id, keyword_text, match_type)
+            return result
+
+        elif action_type == 'pause_keyword':
+            ad_group_id = action.get('ad_group_id')
+            keyword_id = action.get('keyword_id')
+
+            if not ad_group_id or not keyword_id:
+                return {'success': False, 'error': 'Missing ad_group_id or keyword_id'}
+
+            result = executor.pause_keyword(ad_group_id, keyword_id)
+            return result
+
+        elif action_type == 'adjust_keyword_bid':
+            ad_group_id = action.get('ad_group_id')
+            keyword_id = action.get('keyword_id')
+            bid_change_pct = action.get('bid_change_pct', 0)
+
+            if not ad_group_id or not keyword_id:
+                return {'success': False, 'error': 'Missing ad_group_id or keyword_id'}
+
+            result = executor.adjust_keyword_bid(ad_group_id, keyword_id, bid_change_pct)
+            return result
+
+        elif action_type == 'adjust_campaign_bids':
+            campaign_id = action.get('campaign_id')
+            bid_change_pct = action.get('bid_change_pct', 0)
+
+            if not campaign_id:
+                return {'success': False, 'error': 'Missing campaign_id'}
+
+            result = executor.adjust_campaign_bids(campaign_id, bid_change_pct)
+            return result
+
+        elif action_type == 'adjust_daily_budget':
+            campaign_id = action.get('campaign_id')
+            new_budget = action.get('new_budget')
+
+            if not campaign_id or new_budget is None:
+                return {'success': False, 'error': 'Missing campaign_id or new_budget'}
+
+            result = executor.adjust_daily_budget(campaign_id, new_budget)
+            return result
+
+        elif action_type == 'pause_campaign':
+            campaign_id = action.get('campaign_id')
+
+            if not campaign_id:
+                return {'success': False, 'error': 'Missing campaign_id'}
+
+            result = executor.pause_campaign(campaign_id)
+            return result
+
+        elif action_type == 'reallocate_budget':
+            from_campaigns = action.get('from_campaigns', [])
+            to_campaigns = action.get('to_campaigns', [])
+            amount = action.get('amount', 0)
+
+            if not from_campaigns or not to_campaigns or not amount:
+                return {'success': False, 'error': 'Missing from_campaigns, to_campaigns, or amount'}
+
+            result = executor.reallocate_budget(from_campaigns, to_campaigns, amount)
+            return result
+
+        elif action_type in ('review_keywords', 'review_budgets', 'add_negatives'):
+            # These are manual review actions - mark as acknowledged
+            return {'success': True, 'result': 'Manual review action acknowledged', 'manual': True}
+
+        else:
+            return {'success': False, 'error': f'Unknown action type: {action_type}'}
+
+    except Exception as e:
+        current_app.logger.error(f"Failed to execute recommendation action: {e}", exc_info=True)
+        capture_exception(e, extra_context={"account_id": account_id, "action": action})
+        return {'success': False, 'error': str(e)}
+
+
 def apply_recommendation(recommendation_id: int, user_id: int) -> Tuple[bool, str]:
     """
     Apply a recommendation and track the action.
@@ -718,10 +856,20 @@ def apply_recommendation(recommendation_id: int, user_id: int) -> Tuple[bool, st
             data={"recommendation_id": recommendation_id, "action_type": action_type}
         )
 
-        # TODO: Actually apply the changes via Google Ads API
-        # For now, just mark as applied
+        # Execute the recommendation via Google Ads API
+        execution_result = _execute_recommendation_action(rec.account_id, action)
 
-        return True, f"Recommendation applied successfully: {rec.title}"
+        if execution_result.get('success'):
+            optimizer_action.status = "executed"
+            optimizer_action.result_json = json.dumps(execution_result)
+            db.session.commit()
+            return True, f"Recommendation applied successfully: {rec.title}"
+        else:
+            # Mark as failed but keep the record
+            optimizer_action.status = "failed"
+            optimizer_action.result_json = json.dumps(execution_result)
+            db.session.commit()
+            return False, f"Failed to execute recommendation: {execution_result.get('error', 'Unknown error')}"
 
     except Exception as e:
         db.session.rollback()

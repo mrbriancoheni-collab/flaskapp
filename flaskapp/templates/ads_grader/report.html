@@ -197,7 +197,7 @@
         </a>
         {% else %}
         <a href="{{ url_for('auth_bp.register') }}" class="inline-block px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-lg">
-          Get Started - Free Account →
+          Get More Leads - Free Account →
         </a>
         {% endif %}
       </div>
@@ -207,7 +207,7 @@
           <strong>Flat pricing:</strong> $200/month ($2,400/year) for full Google Ads management and optimization.
         </p>
         <a href="{{ url_for('auth_bp.register') if not current_user.is_authenticated else url_for('account_bp.dashboard') }}" class="inline-block px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-lg">
-          {{ 'Get Started' if not current_user.is_authenticated else 'Go to Dashboard' }} →
+          {{ 'Get More Leads' if not current_user.is_authenticated else 'Go to Dashboard' }} →
         </a>
       </div>
       {% endif %}

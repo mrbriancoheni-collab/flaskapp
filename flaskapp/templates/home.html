@@ -449,11 +449,11 @@
 
       <div class="mt-8 flex gap-3">
         {% if has_endpoint('signup') %}
-          <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary">Get Started</a>
+          <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary">Start Saving Now</a>
         {% elif has_endpoint('register') %}
-          <a href="{{ url_for(ep('register')) }}" class="btn btn-primary">Get Started</a>
+          <a href="{{ url_for(ep('register')) }}" class="btn btn-primary">Start Saving Now</a>
         {% else %}
-          <a href="/signup" class="btn btn-primary">Get Started</a>
+          <a href="/signup" class="btn btn-primary">Start Saving Now</a>
         {% endif %}
         <a href="#pricing" class="btn btn-outline">See Pricing</a>
       </div>
@@ -839,11 +839,11 @@
 
     <div class="mt-12 text-center">
       {% if has_endpoint('signup') %}
-        <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary btn-lg">Get Started</a>
+        <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary btn-lg">Start Saving Now</a>
       {% elif has_endpoint('register') %}
-        <a href="{{ url_for(ep('register')) }}" class="btn btn-primary btn-lg">Get Started</a>
+        <a href="{{ url_for(ep('register')) }}" class="btn btn-primary btn-lg">Start Saving Now</a>
       {% else %}
-        <a href="/signup" class="btn btn-primary btn-lg">Get Started</a>
+        <a href="/signup" class="btn btn-primary btn-lg">Start Saving Now</a>
       {% endif %}
     </div>
   </div>

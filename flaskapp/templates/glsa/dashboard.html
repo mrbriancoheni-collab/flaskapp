@@ -15,6 +15,11 @@
       <p class="text-gray-500">
         {% if _connected %}
           Managing your Google Guaranteed leads.
+          {% if m.is_demo %}
+            <span class="inline-flex items-center rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200 px-2 py-0.5 text-[11px] ml-2">Sync Required</span>
+          {% else %}
+            <span class="inline-flex items-center rounded-full bg-green-100 text-green-800 border border-green-200 px-2 py-0.5 text-[11px] ml-2">Live Data</span>
+          {% endif %}
         {% else %}
           <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 text-[11px] mr-2">Demo Mode</span>
           Connect your account to see live data.
@@ -22,6 +27,12 @@
       </p>
     </div>
     <div class="flex items-center gap-2">
+      {% if _connected %}
+        <button id="syncBtn" onclick="syncLSAData()"
+           class="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 font-medium">
+          <i class="fa-solid fa-rotate" id="syncIcon"></i> <span id="syncText">Sync Data</span>
+        </button>
+      {% endif %}
       <a href="{{ url_for('glsa_bp.leads_page') }}"
          class="inline-flex items-center gap-2 rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700 font-medium">
         <i class="fa-solid fa-list"></i> View Leads
@@ -45,6 +56,33 @@
       {% endif %}
     </div>
   </div>
+
+  <!-- Sync Status Banner (shown when connected but no synced data) -->
+  {% if _connected and m.is_demo %}
+  <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+          <i class="fa-solid fa-cloud-arrow-down text-blue-600"></i>
+        </div>
+        <div>
+          <div class="font-semibold text-blue-900">Sync your LSA data</div>
+          <div class="text-sm text-blue-700">Pull the last 12 months of leads from Google to enable live analytics.</div>
+        </div>
+      </div>
+      <button onclick="syncLSAData()" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+        <i class="fa-solid fa-rotate"></i> Sync Now
+      </button>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Last Sync Info -->
+  {% if m.last_sync %}
+  <div class="text-xs text-gray-500 text-right">
+    Last synced: {{ m.last_sync }}
+  </div>
+  {% endif %}
 
   <!-- Performance Summary Header -->
   <div class="bg-gradient-to-r from-emerald-700 to-teal-900 rounded-xl shadow-lg p-6">
@@ -430,4 +468,126 @@
     </div>
   </div>
 </div>
+
+<!-- Sync Data JavaScript -->
+<script>
+async function syncLSAData() {
+  const syncBtn = document.getElementById('syncBtn');
+  const syncIcon = document.getElementById('syncIcon');
+  const syncText = document.getElementById('syncText');
+
+  if (!syncBtn) return;
+
+  // Disable button and show loading state
+  syncBtn.disabled = true;
+  syncBtn.classList.add('opacity-75');
+  syncIcon.classList.add('animate-spin');
+  syncText.textContent = 'Syncing...';
+
+  try {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ||
+                      document.querySelector('input[name="csrf_token"]')?.value || '';
+
+    const response = await fetch('{{ url_for("glsa_bp.sync_data") }}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+      body: JSON.stringify({
+        months: 12,  // Pull 12 months of data
+        force_full: false
+      }),
+      credentials: 'same-origin'
+    });
+
+    const data = await response.json();
+
+    if (data.ok) {
+      // Success - show results
+      const message = `Synced ${data.total_fetched} leads (${data.new_leads} new, ${data.updated_leads} updated)`;
+      showToast(message, 'success');
+
+      // Reload page to show updated data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } else {
+      // Error
+      showToast('Sync failed: ' + (data.error || 'Unknown error'), 'error');
+      console.error('Sync error:', data);
+    }
+  } catch (err) {
+    showToast('Network error during sync', 'error');
+    console.error('Sync network error:', err);
+  } finally {
+    // Reset button state
+    syncBtn.disabled = false;
+    syncBtn.classList.remove('opacity-75');
+    syncIcon.classList.remove('animate-spin');
+    syncText.textContent = 'Sync Data';
+  }
+}
+
+function showToast(message, type) {
+  const toast = document.createElement('div');
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 9999;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+    background: ${type === 'success' ? '#059669' : type === 'error' ? '#dc2626' : '#2563eb'};
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  `;
+  document.body.appendChild(toast);
+
+  // Animate in
+  setTimeout(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+  }, 10);
+
+  // Remove after delay
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
+// Run analysis after sync
+async function runAnalysis() {
+  try {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+    const response = await fetch('{{ url_for("glsa_bp.analyze") }}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+      body: JSON.stringify({ regenerate: true }),
+      credentials: 'same-origin'
+    });
+
+    const data = await response.json();
+
+    if (data.ok && data.has_data) {
+      console.log('Analysis complete:', data);
+      // Could update UI with new insights here
+    }
+  } catch (err) {
+    console.error('Analysis error:', err);
+  }
+}
+</script>
 {% endblock %}

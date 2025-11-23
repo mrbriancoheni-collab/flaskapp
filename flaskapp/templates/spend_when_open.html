@@ -242,11 +242,11 @@
     <p class="mt-4 text-lg text-primary-100 max-w-2xl mx-auto">Join 1,200+ pros who only pay for leads when they have capacity to serve them.</p>
     <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
       {% if has_endpoint('signup') %}
-        <a href="{{ url_for(ep('signup')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Get Started</a>
+        <a href="{{ url_for(ep('signup')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Get More Leads</a>
       {% elif has_endpoint('register') %}
-        <a href="{{ url_for(ep('register')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Get Started</a>
+        <a href="{{ url_for(ep('register')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Get More Leads</a>
       {% else %}
-        <a href="/signup" class="btn bg-white text-primary-700 hover:bg-gray-100">Get Started</a>
+        <a href="/signup" class="btn bg-white text-primary-700 hover:bg-gray-100">Get More Leads</a>
       {% endif %}
       <a href="/connect/calendar" class="btn btn-outline border-white text-white hover:bg-white/10">Sync Calendar Now</a>
     </div>

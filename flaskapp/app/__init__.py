@@ -1249,6 +1249,18 @@ def create_app():
         .btn:hover {
             transform: translateY(-2px);
         }
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            margin-left: 0.5rem;
+        }
+        .buttons {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
     </style>
 </head>
 <body>
@@ -1257,7 +1269,10 @@ def create_app():
         <h2>Page Not Found</h2>
         <p>The page you're looking for doesn't exist or has been moved.</p>
         <div class="path">{{ path }}</div>
-        <a href="/" class="btn">Return Home</a>
+        <div class="buttons">
+            <a href="/" class="btn">Return Home</a>
+            <a href="/auth/login" class="btn btn-secondary">Sign In</a>
+        </div>
     </div>
 </body>
 </html>
@@ -1442,6 +1457,9 @@ def create_app():
         <div>
             <a href="/" class="btn">
                 <i class="fa-solid fa-home"></i> Return Home
+            </a>
+            <a href="/auth/login" class="btn btn-secondary">
+                <i class="fa-solid fa-right-to-bracket"></i> Sign In
             </a>
             <a href="javascript:location.reload()" class="btn btn-secondary">
                 <i class="fa-solid fa-rotate-right"></i> Try Again

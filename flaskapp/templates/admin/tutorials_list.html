@@ -75,13 +75,13 @@
           </button>
         </td>
         <td class="px-4 py-3">
-          <code class="text-xs bg-gray-100 px-2 py-1 rounded">{{ popup.key }}</code>
+          <code class="text-xs bg-gray-100 px-2 py-1 rounded">#{{ popup.id }}</code>
         </td>
         <td class="px-4 py-3">
-          <div class="font-medium">{{ popup.title }}</div>
-          {% if popup.target_selector %}
+          <div class="font-medium">{{ popup.title or '(No title)' }}</div>
+          {% if popup.page_element %}
           <div class="text-xs text-gray-500 mt-1">
-            Target: <code>{{ popup.target_selector }}</code>
+            Target: <code>{{ popup.page_element }}</code>
           </div>
           {% else %}
           <div class="text-xs text-gray-500 mt-1">Modal (centered)</div>

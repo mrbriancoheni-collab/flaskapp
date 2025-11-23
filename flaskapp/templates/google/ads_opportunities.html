@@ -1530,18 +1530,31 @@ if (typeof TutorialPopups !== 'undefined') {
 
       if (json.ok && json.customers) {
         sel.innerHTML = '';
-        json.customers.forEach(cid => {
-          const opt = document.createElement('option');
-          opt.value = cid;
-          opt.textContent = cid + (cid === json.current ? ' (Current)' : '');
-          if (cid === json.current) opt.selected = true;
-          sel.appendChild(opt);
-        });
+        if (json.customers.length === 0) {
+          sel.innerHTML = '<option value="">No accounts found</option>';
+          if (msg) {
+            msg.textContent = 'No Google Ads accounts found for this Google account.';
+            msg.className = 'text-sm text-yellow-600';
+          }
+        } else {
+          json.customers.forEach(cid => {
+            const opt = document.createElement('option');
+            opt.value = cid;
+            opt.textContent = cid + (cid === json.current ? ' (Current)' : '');
+            if (cid === json.current) opt.selected = true;
+            sel.appendChild(opt);
+          });
+        }
       } else {
         sel.innerHTML = '<option value="">Error loading accounts</option>';
         if (msg) {
-          msg.textContent = json.error || 'Failed to load accounts';
-          msg.className = 'text-sm text-red-600';
+          // Show a more helpful error message for access issues
+          if (json.error_type === 'access_issue') {
+            msg.innerHTML = '<span class="text-red-600 whitespace-pre-line">' + (json.error || 'Access issue') + '</span>';
+          } else {
+            msg.textContent = json.error || 'Failed to load accounts';
+            msg.className = 'text-sm text-red-600';
+          }
         }
       }
     } catch (e) {

@@ -1965,6 +1965,10 @@ def ads_list_customers():
             "customers": customer_ids,
             "current": current_id
         })
+    except ValueError as e:
+        # ValueError contains user-friendly messages (NOT_ADS_USER, UNAUTHENTICATED, etc.)
+        current_app.logger.warning(f"Google Ads access issue: {e}")
+        return jsonify({"ok": False, "error": str(e), "error_type": "access_issue"}), 400
     except Exception as e:
         current_app.logger.exception("Failed to list Google Ads customers")
         return jsonify({"ok": False, "error": str(e)}), 500

@@ -35,8 +35,8 @@
       {% set completion_rate = (row.total_dismissals / row.total_views * 100) if row.total_views > 0 else 0 %}
       <tr class="border-b hover:bg-gray-50">
         <td class="px-4 py-3">
-          <div class="font-medium">{{ row.title }}</div>
-          <code class="text-xs text-gray-500">{{ row.key }}</code>
+          <div class="font-medium">{{ row.title or '(No title)' }}</div>
+          <code class="text-xs text-gray-500">#{{ row.id }}</code>
         </td>
         <td class="px-4 py-3">
           <div class="text-xs text-gray-600">{{ row.page_path }}</div>

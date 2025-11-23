@@ -1964,31 +1964,25 @@ def tutorials_create():
 
     try:
         popup = TutorialPopup(
-            key=request.form.get("key"),
-            title=request.form.get("title"),
-            content=request.form.get("content"),
+            title=request.form.get("title") or None,
+            content=request.form.get("content") or None,
             page_path=request.form.get("page_path"),
-            target_selector=request.form.get("target_selector") or None,
-            position=request.form.get("position", "bottom"),
-            sequence_order=int(request.form.get("sequence_order", 0)),
-            trigger_type=request.form.get("trigger_type", "page_load"),
-            trigger_value=request.form.get("trigger_value") or None,
-            dismissible=request.form.get("dismissible") == "on",
-            auto_dismiss_seconds=int(request.form.get("auto_dismiss_seconds")) if request.form.get("auto_dismiss_seconds") else None,
-            show_once=request.form.get("show_once") == "on",
+            page_element=request.form.get("page_element") or None,
+            position_x=int(request.form.get("position_x")) if request.form.get("position_x") else None,
+            position_y=int(request.form.get("position_y")) if request.form.get("position_y") else None,
+            icon=request.form.get("icon") or None,
             theme=request.form.get("theme", "default"),
-            width=request.form.get("width", "320px"),
-            cta_text=request.form.get("cta_text") or None,
-            cta_link=request.form.get("cta_link") or None,
+            width_px=int(request.form.get("width_px")) if request.form.get("width_px") else None,
+            sequence_order=int(request.form.get("sequence_order", 0)),
+            show_once=request.form.get("show_once") == "on",
             is_active=request.form.get("is_active") == "on",
-            created_by=g.user.id if hasattr(g, "user") else None
         )
 
         db.session.add(popup)
         db.session.commit()
 
-        _audit("tutorial_created", note=f"Created tutorial popup: {popup.key}")
-        flash(f"Tutorial popup '{popup.title}' created successfully!", "success")
+        _audit("tutorial_created", note=f"Created tutorial popup: #{popup.id}")
+        flash(f"Tutorial popup '{popup.title or 'Untitled'}' created successfully!", "success")
         return redirect(url_for("admin_bp.tutorials_list"))
 
     except Exception as e:
@@ -2017,28 +2011,23 @@ def tutorials_update(popup_id):
     try:
         popup = TutorialPopup.query.get_or_404(popup_id)
 
-        popup.key = request.form.get("key")
-        popup.title = request.form.get("title")
-        popup.content = request.form.get("content")
+        popup.title = request.form.get("title") or None
+        popup.content = request.form.get("content") or None
         popup.page_path = request.form.get("page_path")
-        popup.target_selector = request.form.get("target_selector") or None
-        popup.position = request.form.get("position", "bottom")
-        popup.sequence_order = int(request.form.get("sequence_order", 0))
-        popup.trigger_type = request.form.get("trigger_type", "page_load")
-        popup.trigger_value = request.form.get("trigger_value") or None
-        popup.dismissible = request.form.get("dismissible") == "on"
-        popup.auto_dismiss_seconds = int(request.form.get("auto_dismiss_seconds")) if request.form.get("auto_dismiss_seconds") else None
-        popup.show_once = request.form.get("show_once") == "on"
+        popup.page_element = request.form.get("page_element") or None
+        popup.position_x = int(request.form.get("position_x")) if request.form.get("position_x") else None
+        popup.position_y = int(request.form.get("position_y")) if request.form.get("position_y") else None
+        popup.icon = request.form.get("icon") or None
         popup.theme = request.form.get("theme", "default")
-        popup.width = request.form.get("width", "320px")
-        popup.cta_text = request.form.get("cta_text") or None
-        popup.cta_link = request.form.get("cta_link") or None
+        popup.width_px = int(request.form.get("width_px")) if request.form.get("width_px") else None
+        popup.sequence_order = int(request.form.get("sequence_order", 0))
+        popup.show_once = request.form.get("show_once") == "on"
         popup.is_active = request.form.get("is_active") == "on"
 
         db.session.commit()
 
-        _audit("tutorial_updated", note=f"Updated tutorial popup: {popup.key}")
-        flash(f"Tutorial popup '{popup.title}' updated successfully!", "success")
+        _audit("tutorial_updated", note=f"Updated tutorial popup: #{popup.id}")
+        flash(f"Tutorial popup '{popup.title or 'Untitled'}' updated successfully!", "success")
         return redirect(url_for("admin_bp.tutorials_list"))
 
     except Exception as e:
@@ -2056,13 +2045,13 @@ def tutorials_delete(popup_id):
 
     try:
         popup = TutorialPopup.query.get_or_404(popup_id)
-        popup_key = popup.key
+        popup_title = popup.title or f"#{popup.id}"
 
         db.session.delete(popup)
         db.session.commit()
 
-        _audit("tutorial_deleted", note=f"Deleted tutorial popup: {popup_key}")
-        flash(f"Tutorial popup '{popup_key}' deleted successfully!", "success")
+        _audit("tutorial_deleted", note=f"Deleted tutorial popup: {popup_title}")
+        flash(f"Tutorial popup '{popup_title}' deleted successfully!", "success")
 
     except Exception as e:
         db.session.rollback()
@@ -2111,7 +2100,6 @@ def tutorials_analytics():
     # Get view counts per popup
     analytics = db.session.query(
         TutorialPopup.id,
-        TutorialPopup.key,
         TutorialPopup.title,
         TutorialPopup.page_path,
         func.count(TutorialUserProgress.id).label('total_views'),
@@ -2122,7 +2110,6 @@ def tutorials_analytics():
         TutorialPopup.id == TutorialUserProgress.popup_id
     ).group_by(
         TutorialPopup.id,
-        TutorialPopup.key,
         TutorialPopup.title,
         TutorialPopup.page_path
     ).order_by(

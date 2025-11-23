@@ -1238,21 +1238,35 @@ def _fetch_ads_snapshot_from_google(aid: int) -> dict:
     campaigns = []
     for r in _gaql("""
         SELECT campaign.id, campaign.name, campaign.status,
-               campaign.advertising_channel_type, campaign.bidding_strategy_type
+               campaign.advertising_channel_type, campaign.bidding_strategy_type,
+               campaign_budget.amount_micros,
+               metrics.cost_micros, metrics.conversions, metrics.clicks, metrics.impressions
         FROM campaign
         WHERE campaign.status != 'REMOVED'
-        ORDER BY campaign.id
+          AND segments.date DURING LAST_30_DAYS
+        ORDER BY metrics.cost_micros DESC
         LIMIT 50
     """):
         c = r.campaign
+        metrics = r.metrics
+        budget_micros = r.campaign_budget.amount_micros if hasattr(r, 'campaign_budget') and r.campaign_budget else None
+        daily_budget = (budget_micros / 1_000_000) if budget_micros else None
+        cost = (metrics.cost_micros or 0) / 1_000_000
+        conversions = metrics.conversions or 0
+
         campaigns.append({
             "id": str(c.id),
             "name": c.name,
             "type": str(c.advertising_channel_type).split(".")[-1],
             "status": str(c.status).split(".")[-1],
-            "daily_budget": None,
+            "daily_budget": daily_budget,
             "bidding": str(c.bidding_strategy_type).split(".")[-1],
             "target": None,
+            "cost_30d": cost,
+            "conversions": conversions,
+            "clicks": metrics.clicks or 0,
+            "impressions": metrics.impressions or 0,
+            "cpa": (cost / conversions) if conversions > 0 else None,
         })
 
     ad_groups = []
@@ -1275,34 +1289,119 @@ def _fetch_ads_snapshot_from_google(aid: int) -> dict:
     for r in _gaql("""
         SELECT ad_group_criterion.criterion_id, ad_group_criterion.status,
                ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type,
-               ad_group_criterion.ad_group
+               ad_group_criterion.ad_group,
+               metrics.cost_micros, metrics.conversions, metrics.clicks
         FROM ad_group_criterion
         WHERE ad_group_criterion.type = KEYWORD
           AND ad_group_criterion.status != 'REMOVED'
-        ORDER BY ad_group_criterion.criterion_id
+          AND segments.date DURING LAST_30_DAYS
+        ORDER BY metrics.cost_micros DESC
         LIMIT 100
     """):
         kw = r.ad_group_criterion
+        metrics = r.metrics
+        cost = (metrics.cost_micros or 0) / 1_000_000
+        conversions = metrics.conversions or 0
         keywords.append({
             "id": str(kw.criterion_id),
             "ad_group_id": str(kw.ad_group.split("/")[-1]),
             "match": str(kw.keyword.match_type).split(".")[-1].title(),
             "text": kw.keyword.text,
             "status": str(kw.status).split(".")[-1],
-            "cpc": None,
-            "conv": None,
-            "cpa": None,
+            "cpc": (cost / max(1, metrics.clicks or 1)) if cost > 0 else None,
+            "conv": conversions,
+            "cpa": (cost / conversions) if conversions > 0 else None,
         })
+
+    # Fetch negative keywords (campaign-level)
+    negatives = []
+    try:
+        for r in _gaql("""
+            SELECT campaign_criterion.criterion_id, campaign_criterion.keyword.text,
+                   campaign_criterion.keyword.match_type, campaign_criterion.campaign
+            FROM campaign_criterion
+            WHERE campaign_criterion.type = KEYWORD
+              AND campaign_criterion.negative = TRUE
+            LIMIT 200
+        """):
+            neg = r.campaign_criterion
+            negatives.append({
+                "id": str(neg.criterion_id),
+                "campaign_id": str(neg.campaign.split("/")[-1]),
+                "text": neg.keyword.text,
+                "match": str(neg.keyword.match_type).split(".")[-1].title(),
+            })
+    except Exception as e:
+        current_app.logger.warning(f"Failed to fetch negative keywords: {e}")
+
+    # Fetch ads (RSA - Responsive Search Ads)
+    ads = []
+    try:
+        for r in _gaql("""
+            SELECT ad_group_ad.ad.id, ad_group_ad.status, ad_group_ad.ad_group,
+                   ad_group_ad.ad.responsive_search_ad.headlines,
+                   ad_group_ad.ad.responsive_search_ad.descriptions,
+                   ad_group_ad.ad.final_urls
+            FROM ad_group_ad
+            WHERE ad_group_ad.ad.type = RESPONSIVE_SEARCH_AD
+              AND ad_group_ad.status != 'REMOVED'
+            LIMIT 50
+        """):
+            ad = r.ad_group_ad
+            headlines = [h.text for h in ad.ad.responsive_search_ad.headlines] if ad.ad.responsive_search_ad.headlines else []
+            descriptions = [d.text for d in ad.ad.responsive_search_ad.descriptions] if ad.ad.responsive_search_ad.descriptions else []
+            ads.append({
+                "id": str(ad.ad.id),
+                "ad_group_id": str(ad.ad_group.split("/")[-1]),
+                "status": str(ad.status).split(".")[-1],
+                "headlines": headlines[:3],  # First 3 headlines
+                "descriptions": descriptions[:2],  # First 2 descriptions
+                "final_url": ad.ad.final_urls[0] if ad.ad.final_urls else None,
+            })
+    except Exception as e:
+        current_app.logger.warning(f"Failed to fetch ads: {e}")
+
+    # Fetch extensions
+    extensions = []
+    try:
+        # Call extensions
+        for r in _gaql("""
+            SELECT campaign_extension_setting.extension_type,
+                   campaign_extension_setting.campaign
+            FROM campaign_extension_setting
+            WHERE campaign_extension_setting.extension_type IN (
+                'CALL', 'SITELINK', 'CALLOUT', 'LOCATION', 'STRUCTURED_SNIPPET', 'PROMOTION'
+            )
+        """):
+            ext = r.campaign_extension_setting
+            ext_type = str(ext.extension_type).split(".")[-1].lower()
+            # Dedupe by type
+            if not any(e["type"] == ext_type for e in extensions):
+                extensions.append({
+                    "type": ext_type,
+                    "campaign_id": str(ext.campaign.split("/")[-1]),
+                })
+    except Exception as e:
+        current_app.logger.warning(f"Failed to fetch extensions: {e}")
+
+    # Fetch landing pages from ads
+    landing_pages = []
+    seen_urls = set()
+    for ad in ads:
+        url = ad.get("final_url")
+        if url and url not in seen_urls:
+            landing_pages.append({"url": url})
+            seen_urls.add(url)
 
     return {
         "account_name": customer_id,
         "campaigns": campaigns,
         "ad_groups": ad_groups,
         "keywords": keywords,
-        "negatives": [],
-        "ads": [],
-        "extensions": [],
-        "landing_pages": [],
+        "negatives": negatives,
+        "ads": ads,
+        "extensions": extensions,
+        "landing_pages": landing_pages,
         "__source": "live",
     }
 

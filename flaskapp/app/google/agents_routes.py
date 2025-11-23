@@ -12,6 +12,281 @@ from app.auth.utils import login_required, current_account_id
 agents_bp = Blueprint("agents_bp", __name__, url_prefix="/account/google/ads/agents")
 
 
+def _get_account_ads_settings(account_id: int) -> dict:
+    """
+    Get account-specific Google Ads settings (customer value, goals, etc.).
+    Falls back to sensible defaults if not configured.
+    """
+    try:
+        # Try to get from account_settings table if it exists
+        settings_query = text("""
+            SELECT setting_key, setting_value
+            FROM account_settings
+            WHERE account_id = :account_id
+              AND setting_key IN ('ads_customer_value', 'ads_target_roas', 'ads_target_cpl')
+        """)
+
+        with db.engine.connect() as conn:
+            result = conn.execute(settings_query, {"account_id": account_id})
+            settings = {row.setting_key: row.setting_value for row in result}
+
+        return {
+            'customer_value': float(settings.get('ads_customer_value', 500)),
+            'target_roas': float(settings.get('ads_target_roas', 3.0)),
+            'target_cpl': float(settings.get('ads_target_cpl', 80))
+        }
+    except Exception:
+        # Table might not exist or other error - return defaults
+        return {
+            'customer_value': 500,
+            'target_roas': 3.0,
+            'target_cpl': 80
+        }
+
+
+def _fetch_impression_share(refresh_token: str, customer_id: str) -> dict:
+    """
+    Fetch impression share metrics from Google Ads API.
+    Returns dict with campaign_id -> metrics mapping.
+    """
+    import os
+    from flask import current_app
+
+    try:
+        from google.ads.googleads.client import GoogleAdsClient
+
+        client_id = current_app.config.get("GOOGLE_ADS_CLIENT_ID") or os.getenv("GOOGLE_ADS_CLIENT_ID")
+        client_secret = current_app.config.get("GOOGLE_ADS_CLIENT_SECRET") or os.getenv("GOOGLE_ADS_CLIENT_SECRET")
+        developer_token = current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN") or os.getenv("GOOGLE_ADS_DEVELOPER_TOKEN")
+        login_customer_id = (
+            current_app.config.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID") or
+            os.getenv("GOOGLE_ADS_LOGIN_CUSTOMER_ID") or ""
+        ).replace("-", "")
+
+        cfg = {
+            "developer_token": developer_token,
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "login_customer_id": login_customer_id,
+            "use_proto_plus": True
+        }
+
+        client = GoogleAdsClient.load_from_dict(cfg)
+        ga_service = client.get_service("GoogleAdsService")
+
+        # Query for campaign-level impression share (last 30 days)
+        query = """
+            SELECT
+                campaign.id,
+                campaign.name,
+                metrics.search_impression_share,
+                metrics.search_top_impression_share,
+                metrics.search_absolute_top_impression_share,
+                metrics.search_budget_lost_impression_share,
+                metrics.search_rank_lost_impression_share
+            FROM campaign
+            WHERE segments.date DURING LAST_30_DAYS
+              AND campaign.status = 'ENABLED'
+        """
+
+        result = {}
+        total_impressions = 0
+        weighted_impression_share = 0
+
+        response = ga_service.search(customer_id=customer_id, query=query)
+        for row in response:
+            campaign_id = str(row.campaign.id)
+            # Impression share is returned as a fraction (0.0 - 1.0)
+            search_is = row.metrics.search_impression_share
+            if search_is is not None and search_is > 0:
+                result[campaign_id] = {
+                    'name': row.campaign.name,
+                    'search_impression_share': round(search_is * 100, 1),  # Convert to percentage
+                    'search_top_impression_share': round((row.metrics.search_top_impression_share or 0) * 100, 1),
+                    'search_absolute_top_impression_share': round((row.metrics.search_absolute_top_impression_share or 0) * 100, 1),
+                    'budget_lost_impression_share': round((row.metrics.search_budget_lost_impression_share or 0) * 100, 1),
+                    'rank_lost_impression_share': round((row.metrics.search_rank_lost_impression_share or 0) * 100, 1)
+                }
+                # For account-level, we'd need impressions to weight properly
+                # For now, simple average
+                weighted_impression_share += search_is
+                total_impressions += 1
+
+        # Calculate account-level average
+        if total_impressions > 0:
+            result['account'] = {
+                'search_impression_share': round((weighted_impression_share / total_impressions) * 100, 1)
+            }
+
+        return result
+
+    except Exception as e:
+        current_app.logger.warning(f"Failed to fetch impression share: {e}")
+        return {}  # Return empty - agents will handle None values
+
+
+def _execute_agent_decision(account_id: int, decision_row) -> dict:
+    """
+    Execute an agent decision via the Google Ads API.
+
+    Args:
+        account_id: Account ID
+        decision_row: Database row with decision details
+
+    Returns:
+        dict with 'success' key and either 'result' or 'error'
+    """
+    import json
+    import os
+    from flask import current_app
+
+    decision_type = decision_row['decision_type']
+    action_data = decision_row.get('action_data')
+
+    # Parse action_data if it's JSON
+    if action_data and isinstance(action_data, str):
+        try:
+            action_data = json.loads(action_data)
+        except json.JSONDecodeError:
+            action_data = {}
+    elif not action_data:
+        action_data = {}
+
+    # Get Google Ads credentials
+    try:
+        creds_query = text("""
+            SELECT customer_id, credentials_json
+            FROM google_oauth_tokens
+            WHERE account_id = :account_id AND product = 'ads'
+            ORDER BY id DESC LIMIT 1
+        """)
+
+        with db.engine.connect() as conn:
+            result = conn.execute(creds_query, {"account_id": account_id})
+            creds_row = result.mappings().first()
+
+        if not creds_row:
+            return {'success': False, 'error': 'No Google Ads credentials found'}
+
+        customer_id = creds_row['customer_id']
+        creds = json.loads(creds_row['credentials_json']) if isinstance(creds_row['credentials_json'], str) else creds_row['credentials_json']
+        refresh_token = creds.get('refresh_token')
+
+        if not refresh_token:
+            return {'success': False, 'error': 'No refresh token found'}
+
+        # Initialize executor
+        from app.agents.executor import GoogleAdsAgentExecutor
+
+        developer_token = current_app.config.get('GOOGLE_ADS_DEVELOPER_TOKEN') or os.getenv('GOOGLE_ADS_DEVELOPER_TOKEN')
+        if not developer_token:
+            return {'success': False, 'error': 'GOOGLE_ADS_DEVELOPER_TOKEN not configured'}
+
+        executor = GoogleAdsAgentExecutor(
+            refresh_token=refresh_token,
+            developer_token=developer_token,
+            client_customer_id=customer_id
+        )
+
+        # Execute based on decision type
+        if decision_type == 'add_negative_keyword':
+            campaign_id = decision_row.get('campaign_id') or action_data.get('campaign_id')
+            keyword_text = action_data.get('keyword_text')
+            match_type = action_data.get('match_type', 'PHRASE')
+
+            if not campaign_id or not keyword_text:
+                return {'success': False, 'error': 'Missing campaign_id or keyword_text'}
+
+            return executor.add_negative_keyword(str(campaign_id), keyword_text, match_type)
+
+        elif decision_type == 'pause_keyword':
+            ad_group_id = decision_row.get('ad_group_id') or action_data.get('ad_group_id')
+            keyword_id = decision_row.get('keyword_id') or action_data.get('keyword_id')
+
+            if not ad_group_id or not keyword_id:
+                return {'success': False, 'error': 'Missing ad_group_id or keyword_id'}
+
+            return executor.pause_keyword(str(ad_group_id), str(keyword_id))
+
+        elif decision_type == 'adjust_keyword_bid':
+            ad_group_id = decision_row.get('ad_group_id') or action_data.get('ad_group_id')
+            keyword_id = decision_row.get('keyword_id') or action_data.get('keyword_id')
+            bid_change_pct = action_data.get('bid_change_pct', 0)
+
+            if not ad_group_id or not keyword_id:
+                return {'success': False, 'error': 'Missing ad_group_id or keyword_id'}
+
+            return executor.adjust_keyword_bid(str(ad_group_id), str(keyword_id), bid_change_pct)
+
+        elif decision_type == 'adjust_campaign_bids':
+            campaign_id = decision_row.get('campaign_id') or action_data.get('campaign_id')
+            bid_change_pct = action_data.get('bid_change_pct', 0)
+
+            if not campaign_id:
+                return {'success': False, 'error': 'Missing campaign_id'}
+
+            return executor.adjust_campaign_bids(str(campaign_id), bid_change_pct)
+
+        elif decision_type == 'adjust_daily_budget':
+            campaign_id = decision_row.get('campaign_id') or action_data.get('campaign_id')
+            new_budget = action_data.get('new_budget')
+
+            if not campaign_id or new_budget is None:
+                return {'success': False, 'error': 'Missing campaign_id or new_budget'}
+
+            return executor.adjust_daily_budget(str(campaign_id), float(new_budget))
+
+        elif decision_type == 'pause_campaign':
+            campaign_id = decision_row.get('campaign_id') or action_data.get('campaign_id')
+
+            if not campaign_id:
+                return {'success': False, 'error': 'Missing campaign_id'}
+
+            return executor.pause_campaign(str(campaign_id))
+
+        elif decision_type == 'scale_campaign_budget':
+            campaign_id = decision_row.get('campaign_id') or action_data.get('campaign_id')
+            new_budget = action_data.get('new_budget')
+
+            if not campaign_id or new_budget is None:
+                return {'success': False, 'error': 'Missing campaign_id or new_budget'}
+
+            return executor.scale_campaign_budget(str(campaign_id), float(new_budget))
+
+        elif decision_type == 'reallocate_budget':
+            from_campaigns = action_data.get('from_campaigns', [])
+            to_campaigns = action_data.get('to_campaigns', [])
+            amount = action_data.get('amount', 0)
+
+            if not from_campaigns or not to_campaigns:
+                return {'success': False, 'error': 'Missing from_campaigns or to_campaigns'}
+
+            return executor.reallocate_budget(from_campaigns, to_campaigns, float(amount))
+
+        elif decision_type == 'add_keyword':
+            ad_group_id = decision_row.get('ad_group_id') or action_data.get('ad_group_id')
+            keyword_text = action_data.get('keyword_text')
+            match_type = action_data.get('match_type', 'PHRASE')
+
+            if not ad_group_id or not keyword_text:
+                return {'success': False, 'error': 'Missing ad_group_id or keyword_text'}
+
+            return executor.add_keyword(str(ad_group_id), keyword_text, match_type)
+
+        else:
+            # For unhandled decision types, return as manual action
+            return {
+                'success': True,
+                'result': f'Decision type "{decision_type}" acknowledged (manual action required)',
+                'manual': True
+            }
+
+    except Exception as e:
+        current_app.logger.error(f"Failed to execute agent decision: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
 @agents_bp.route("/approvals")
 @login_required
 def approval_queue():
@@ -148,27 +423,74 @@ def dashboard():
 @agents_bp.route("/api/decisions/<int:decision_id>/approve", methods=["POST"])
 @login_required
 def approve_decision(decision_id):
-    """Approve a pending agent decision."""
+    """Approve a pending agent decision and execute it."""
+    from flask import current_app
+    import json
+
     account_id = current_account_id()
 
-    query = text("""
-        UPDATE agent_decisions
-        SET status = 'approved',
-            updated_at = NOW()
+    # First, get the decision details
+    get_query = text("""
+        SELECT id, decision_type, action_data, campaign_id, ad_group_id, keyword_id
+        FROM agent_decisions
         WHERE id = :decision_id
           AND account_id = :account_id
           AND status = 'pending'
     """)
 
+    with db.engine.connect() as conn:
+        decision_row = conn.execute(get_query, {"decision_id": decision_id, "account_id": account_id}).mappings().first()
+
+    if not decision_row:
+        return jsonify({"success": False, "error": "Decision not found or already processed"}), 404
+
+    # Mark as approved first
+    approve_query = text("""
+        UPDATE agent_decisions
+        SET status = 'approved',
+            updated_at = NOW()
+        WHERE id = :decision_id
+          AND account_id = :account_id
+    """)
+
     with db.engine.begin() as conn:
-        result = conn.execute(query, {"decision_id": decision_id, "account_id": account_id})
+        conn.execute(approve_query, {"decision_id": decision_id, "account_id": account_id})
 
-        if result.rowcount == 0:
-            return jsonify({"success": False, "error": "Decision not found or already processed"}), 404
+    # Execute the decision via the executor
+    execution_result = _execute_agent_decision(account_id, decision_row)
 
-    # TODO: Trigger execution via agent executor
+    # Update decision with execution result
+    if execution_result.get('success'):
+        final_query = text("""
+            UPDATE agent_decisions
+            SET status = 'executed',
+                executed_at = NOW(),
+                execution_result = :result,
+                updated_at = NOW()
+            WHERE id = :decision_id
+        """)
+        status_msg = "Decision approved and executed successfully"
+    else:
+        final_query = text("""
+            UPDATE agent_decisions
+            SET status = 'execution_failed',
+                execution_result = :result,
+                updated_at = NOW()
+            WHERE id = :decision_id
+        """)
+        status_msg = f"Decision approved but execution failed: {execution_result.get('error', 'Unknown error')}"
 
-    return jsonify({"success": True, "message": "Decision approved"})
+    with db.engine.begin() as conn:
+        conn.execute(final_query, {
+            "decision_id": decision_id,
+            "result": json.dumps(execution_result)
+        })
+
+    return jsonify({
+        "success": execution_result.get('success', False),
+        "message": status_msg,
+        "execution_result": execution_result
+    })
 
 
 @agents_bp.route("/api/decisions/<int:decision_id>/reject", methods=["POST"])
@@ -314,21 +636,34 @@ def run_agents():
 
         perf_data = get_account_performance_data(account_id, days=90)
 
+        # Get account-specific settings (conversion value, goals) from database
+        account_settings = _get_account_ads_settings(account_id)
+        customer_value = account_settings.get('customer_value', 500)  # Default $500 if not set
+        target_roas = account_settings.get('target_roas', 3.0)
+        target_cpl = account_settings.get('target_cpl', 80)
+
+        # Fetch impression share from Google Ads API
+        impression_share_data = _fetch_impression_share(refresh_token, customer_id)
+
         # Extract campaigns and calculate ROAS
         campaigns = []
         for c in perf_data.get('campaigns', []):
             spend = c.get('spend', 0)
             conversions = c.get('conversions', 0)
 
-            # Calculate ROAS (assuming $500 customer value)
-            conversion_value = conversions * 500
+            # Calculate ROAS using account's actual customer value
+            conversion_value = conversions * customer_value
             roas = conversion_value / spend if spend > 0 else 0
 
+            # Get campaign-specific impression share if available
+            campaign_id = str(c.get('id', ''))
+            campaign_impression_share = impression_share_data.get(campaign_id, {}).get('search_impression_share')
+
             campaigns.append({
-                'id': str(c.get('id', '')),
+                'id': campaign_id,
                 'name': c.get('name', ''),
                 'roas': roas,
-                'impression_share': 70,  # TODO: Fetch from API
+                'impression_share': campaign_impression_share,  # Real data or None
                 'monthly_spend': spend / 3,  # 90 days / 3 = monthly
                 'spend_90d': spend,
                 'conversions': conversions,
@@ -339,26 +674,32 @@ def run_agents():
         total_spend = summary.get('total_spend', 0)
         total_conversions = summary.get('total_conversions', 0)
 
-        # Calculate overall ROAS
-        conversion_value = total_conversions * 500
-        overall_roas = conversion_value / total_spend if total_spend > 0 else 0
+        # Calculate overall ROAS using real customer value
+        total_conversion_value = total_conversions * customer_value
+        overall_roas = total_conversion_value / total_spend if total_spend > 0 else 0
+
+        # Get account-level impression share
+        account_impression_share = impression_share_data.get('account', {}).get('search_impression_share')
 
         context = {
             'account_id': account_id,
             'customer_id': customer_id,
+            'customer_value': customer_value,  # Include for transparency
             'performance_90d': {
                 'roas': overall_roas,
                 'spend': total_spend,
                 'conversions': total_conversions,
-                'cost_per_conversion': summary.get('avg_cpa', 0)
+                'cost_per_conversion': summary.get('avg_cpa', 0),
+                'impression_share': account_impression_share
             },
             'campaigns': campaigns,
             'keywords': perf_data.get('keywords', []),
             'search_terms': perf_data.get('search_terms', []),
             'total_budget': total_spend / 3,  # Monthly budget estimate
             'business_goals': {
-                'target_roas': 3.0,
-                'target_cpl': 80
+                'target_roas': target_roas,
+                'target_cpl': target_cpl,
+                'customer_value': customer_value
             }
         }
 

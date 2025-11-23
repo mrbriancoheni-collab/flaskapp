@@ -1,0 +1,593 @@
+{# templates/glsa/dashboard.html #}
+{% extends "base_app.html" %}
+{% set SECTION = 'glsa' %}
+{% block title %}Local Services Ads{% endblock %}
+
+{% block content %}
+{% set m = metrics %}
+{% set _connected = connected %}
+
+<div class="max-w-7xl mx-auto space-y-6">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold">Local Services Ads</h1>
+      <p class="text-gray-500">
+        {% if _connected %}
+          Managing your Google Guaranteed leads.
+          {% if m.is_demo %}
+            <span class="inline-flex items-center rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200 px-2 py-0.5 text-[11px] ml-2">Sync Required</span>
+          {% else %}
+            <span class="inline-flex items-center rounded-full bg-green-100 text-green-800 border border-green-200 px-2 py-0.5 text-[11px] ml-2">Live Data</span>
+          {% endif %}
+        {% else %}
+          <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 text-[11px] mr-2">Demo Mode</span>
+          Connect your account to see live data.
+        {% endif %}
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      {% if _connected %}
+        <button id="syncBtn" onclick="syncLSAData()"
+           class="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 font-medium">
+          <i class="fa-solid fa-rotate" id="syncIcon"></i> <span id="syncText">Sync Data</span>
+        </button>
+      {% endif %}
+      <a href="{{ url_for('glsa_bp.leads_page') }}"
+         class="inline-flex items-center gap-2 rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700 font-medium">
+        <i class="fa-solid fa-list"></i> View Leads
+      </a>
+      <a href="{{ url_for('glsa_bp.optimize') }}"
+         class="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2 text-white hover:from-purple-700 hover:to-indigo-700 shadow-md font-medium">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Optimize Profile
+      </a>
+      {% if _connected %}
+        <form method="post" action="{{ url_for('google_bp.disconnect', product='lsa') if has_endpoint('google_bp.disconnect') else '#' }}">
+          {% if csrf_token is defined %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
+          <button class="rounded-md border px-3 py-2 hover:bg-gray-50" type="submit">
+            <i class="fa-solid fa-plug-circle-xmark mr-2"></i>Disconnect
+          </button>
+        </form>
+      {% else %}
+        <a href="{{ url_for('glsa_bp.connect') }}"
+           class="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700">
+          <i class="fa-solid fa-link"></i> Connect LSA
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Sync Status Banner (shown when connected but no synced data) -->
+  {% if _connected and m.is_demo %}
+  <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+          <i class="fa-solid fa-cloud-arrow-down text-blue-600"></i>
+        </div>
+        <div>
+          <div class="font-semibold text-blue-900">Sync your LSA data</div>
+          <div class="text-sm text-blue-700">Pull the last 12 months of leads from Google to enable live analytics.</div>
+        </div>
+      </div>
+      <button onclick="syncLSAData()" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+        <i class="fa-solid fa-rotate"></i> Sync Now
+      </button>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Last Sync Info -->
+  {% if m.last_sync %}
+  <div class="text-xs text-gray-500 text-right">
+    Last synced: {{ m.last_sync }}
+  </div>
+  {% endif %}
+
+  <!-- Performance Summary Header -->
+  <div class="bg-gradient-to-r from-emerald-700 to-teal-900 rounded-xl shadow-lg p-6">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+      <!-- Grade -->
+      <div class="text-center md:w-1/4">
+        <div class="text-sm text-emerald-100 uppercase font-semibold mb-2">LSA Performance</div>
+        {% set grade_colors = {'A': 'text-green-300', 'B': 'text-green-400', 'C': 'text-yellow-400', 'D': 'text-orange-400', 'F': 'text-red-400'} %}
+        <div class="text-5xl font-black {{ grade_colors.get(m.performance.grade, 'text-yellow-400') }} mb-1">{{ m.performance.grade }}</div>
+        <div class="text-sm text-emerald-200">{{ m.performance.score }}/100 score</div>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="flex-1 grid md:grid-cols-3 gap-3">
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xl"><i class="fa-solid fa-phone text-emerald-300"></i></span>
+            <span class="text-sm font-semibold text-white">Leads ({{ m.period }})</span>
+          </div>
+          <div class="text-2xl font-bold text-white">{{ m.leads.total }}</div>
+          <div class="text-xs text-emerald-200">{{ m.leads.calls }} calls, {{ m.leads.messages }} messages</div>
+          {% if m.trends.leads_change %}
+            <div class="text-xs mt-1 {{ 'text-green-300' if m.trends.leads_change > 0 else 'text-red-300' }}">
+              {{ '+' if m.trends.leads_change > 0 else '' }}{{ m.trends.leads_change }}% vs prior period
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xl"><i class="fa-solid fa-dollar-sign text-emerald-300"></i></span>
+            <span class="text-sm font-semibold text-white">Cost per Lead</span>
+          </div>
+          <div class="text-2xl font-bold text-white">${{ '%.2f'|format(m.spend.cost_per_lead) }}</div>
+          <div class="text-xs text-emerald-200">${{ '%.2f'|format(m.spend.cost_per_booked) }} per booked job</div>
+          {% if m.trends.cpl_change %}
+            <div class="text-xs mt-1 {{ 'text-green-300' if m.trends.cpl_change < 0 else 'text-red-300' }}">
+              {{ '+' if m.trends.cpl_change > 0 else '' }}{{ m.trends.cpl_change }}% vs prior period
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xl"><i class="fa-solid fa-calendar-check text-emerald-300"></i></span>
+            <span class="text-sm font-semibold text-white">Booking Rate</span>
+          </div>
+          <div class="text-2xl font-bold text-white">{{ m.leads.booking_rate }}%</div>
+          <div class="text-xs text-emerald-200">{{ m.leads.booked }} of {{ m.leads.total }} leads booked</div>
+          {% if m.trends.booking_rate_change %}
+            <div class="text-xs mt-1 {{ 'text-green-300' if m.trends.booking_rate_change > 0 else 'text-red-300' }}">
+              {{ '+' if m.trends.booking_rate_change > 0 else '' }}{{ m.trends.booking_rate_change }}% vs prior period
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="text-center md:w-1/5">
+        <a href="{{ url_for('glsa_bp.optimize') }}"
+           class="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-50 text-emerald-700 font-bold rounded-lg transition shadow-lg">
+          <i class="fa-solid fa-lightbulb"></i>
+          Get Recommendations
+        </a>
+        <p class="text-emerald-200 text-xs mt-2">AI-powered suggestions</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Metrics Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Total Spend -->
+    <div class="bg-white rounded-xl border shadow-sm p-5">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-xs uppercase text-gray-500 font-medium">Total Spend</div>
+        <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+          <i class="fa-solid fa-credit-card text-blue-600"></i>
+        </div>
+      </div>
+      <div class="text-2xl font-bold text-gray-900">${{ '%.0f'|format(m.spend.total) }}</div>
+      <div class="text-xs text-gray-500 mt-1">{{ m.period }}</div>
+      <div class="mt-3">
+        <div class="flex justify-between text-xs mb-1">
+          <span class="text-gray-500">Budget utilization</span>
+          <span class="font-medium">{{ m.spend.budget_utilization }}%</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+          <div class="bg-blue-600 h-2 rounded-full" style="width: {{ m.spend.budget_utilization }}%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Response Time -->
+    <div class="bg-white rounded-xl border shadow-sm p-5">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-xs uppercase text-gray-500 font-medium">Avg Response Time</div>
+        <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+          <i class="fa-solid fa-clock text-purple-600"></i>
+        </div>
+      </div>
+      <div class="text-2xl font-bold text-gray-900">{{ m.performance.response_time_avg }}</div>
+      <div class="text-xs text-gray-500 mt-1">Target: &lt;5 min for best results</div>
+      <div class="mt-3">
+        <div class="flex justify-between text-xs mb-1">
+          <span class="text-gray-500">Response score</span>
+          <span class="font-medium">{{ m.performance.response_time_score }}/100</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+          <div class="bg-purple-600 h-2 rounded-full" style="width: {{ m.performance.response_time_score }}%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reviews -->
+    <div class="bg-white rounded-xl border shadow-sm p-5">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-xs uppercase text-gray-500 font-medium">Review Score</div>
+        <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+          <i class="fa-solid fa-star text-yellow-600"></i>
+        </div>
+      </div>
+      <div class="text-2xl font-bold text-gray-900">{{ m.performance.review_rating }}</div>
+      <div class="text-xs text-gray-500 mt-1">{{ m.performance.review_count }} reviews</div>
+      <div class="mt-3">
+        <div class="flex justify-between text-xs mb-1">
+          <span class="text-gray-500">vs. 4.5 target</span>
+          <span class="font-medium {{ 'text-green-600' if m.performance.review_rating >= 4.5 else 'text-yellow-600' }}">
+            {{ 'Above' if m.performance.review_rating >= 4.5 else 'Below' }} target
+          </span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+          <div class="bg-yellow-500 h-2 rounded-full" style="width: {{ (m.performance.review_rating / 5 * 100)|int }}%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Weekly Budget -->
+    <div class="bg-white rounded-xl border shadow-sm p-5">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-xs uppercase text-gray-500 font-medium">Weekly Budget</div>
+        <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+          <i class="fa-solid fa-wallet text-green-600"></i>
+        </div>
+      </div>
+      <div class="text-2xl font-bold text-gray-900">${{ '%.0f'|format(m.spend.weekly_budget) }}</div>
+      <div class="text-xs text-gray-500 mt-1">${{ '%.0f'|format(m.spend.total / 4) }} spent this week (est)</div>
+      <div class="mt-3">
+        <a href="{{ url_for('glsa_bp.optimize') }}" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+          Adjust budget settings <i class="fa-solid fa-arrow-right ml-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Left Column: Lead Breakdown & Services -->
+    <div class="lg:col-span-2 space-y-6">
+      <!-- Lead Type Breakdown -->
+      {% if m.lead_types %}
+      <div class="bg-white rounded-xl border shadow-sm">
+        <div class="p-5 border-b">
+          <h2 class="text-lg font-semibold">Lead Breakdown by Type</h2>
+          <p class="text-sm text-gray-500">Cost and volume by lead category</p>
+        </div>
+        <div class="p-5">
+          <div class="space-y-4">
+            {% for lt in m.lead_types %}
+            <div class="flex items-center gap-4">
+              <div class="w-28 text-sm font-medium text-gray-700">{{ lt.type }}</div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 bg-gray-200 rounded-full h-4">
+                    <div class="bg-emerald-500 h-4 rounded-full flex items-center justify-end pr-2"
+                         style="width: {{ lt.pct }}%">
+                      {% if lt.pct > 15 %}
+                      <span class="text-[10px] text-white font-medium">{{ lt.count }}</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <span class="text-sm text-gray-600 w-12">{{ lt.pct }}%</span>
+                </div>
+              </div>
+              <div class="w-20 text-right">
+                <span class="text-sm font-medium">${{ '%.0f'|format(lt.cpl) }}</span>
+                <span class="text-xs text-gray-500">/lead</span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Top Services -->
+      {% if m.top_services %}
+      <div class="bg-white rounded-xl border shadow-sm">
+        <div class="p-5 border-b">
+          <h2 class="text-lg font-semibold">Top Services</h2>
+          <p class="text-sm text-gray-500">Performance by service category</p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+              <tr>
+                <th class="px-5 py-3 text-left">Service</th>
+                <th class="px-5 py-3 text-center">Leads</th>
+                <th class="px-5 py-3 text-center">Booked</th>
+                <th class="px-5 py-3 text-center">Rate</th>
+                <th class="px-5 py-3 text-right">Est. Revenue</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y">
+              {% for svc in m.top_services %}
+              <tr class="hover:bg-gray-50">
+                <td class="px-5 py-4 font-medium">{{ svc.name }}</td>
+                <td class="px-5 py-4 text-center">{{ svc.leads }}</td>
+                <td class="px-5 py-4 text-center">{{ svc.booked }}</td>
+                <td class="px-5 py-4 text-center">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ 'bg-green-100 text-green-800' if (svc.booked / svc.leads * 100) >= 60 else 'bg-yellow-100 text-yellow-800' }}">
+                    {{ ((svc.booked / svc.leads * 100)|round)|int }}%
+                  </span>
+                </td>
+                <td class="px-5 py-4 text-right font-medium">${{ '{:,.0f}'.format(svc.revenue) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Recent Leads Preview -->
+      <div class="bg-white rounded-xl border shadow-sm">
+        <div class="p-5 border-b flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-semibold">Recent Leads</h2>
+            <p class="text-sm text-gray-500">Quick overview of latest activity</p>
+          </div>
+          <a href="{{ url_for('glsa_bp.leads_page') }}" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+            View all <i class="fa-solid fa-arrow-right ml-1"></i>
+          </a>
+        </div>
+        <div class="p-5">
+          {% if m.is_demo %}
+          <div class="space-y-3">
+            {% set sample_leads = [
+              {"name": "Jane Alvarez", "service": "Water Heater Install", "time": "2 hours ago", "type": "call", "status": "New"},
+              {"name": "Marcus Lee", "service": "Drain Clearing", "time": "5 hours ago", "type": "message", "status": "Contacted"},
+              {"name": "Priya Patel", "service": "Leak Repair", "time": "Yesterday", "type": "call", "status": "Booked"},
+            ] %}
+            {% for lead in sample_leads %}
+            <div class="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50">
+              <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                <i class="fa-solid fa-{{ 'phone' if lead.type == 'call' else 'message' }} text-emerald-600"></i>
+              </div>
+              <div class="flex-1">
+                <div class="font-medium">{{ lead.name }}</div>
+                <div class="text-sm text-gray-500">{{ lead.service }}</div>
+              </div>
+              <div class="text-right">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ 'bg-blue-100 text-blue-800' if lead.status == 'New' else 'bg-yellow-100 text-yellow-800' if lead.status == 'Contacted' else 'bg-green-100 text-green-800' }}">
+                  {{ lead.status }}
+                </span>
+                <div class="text-xs text-gray-400 mt-1">{{ lead.time }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-sm text-gray-500 text-center py-8">Connect your account to see recent leads.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Issues & Quick Actions -->
+    <div class="space-y-6">
+      <!-- Issues & Alerts -->
+      {% if m.issues %}
+      <div class="bg-white rounded-xl border shadow-sm">
+        <div class="p-5 border-b">
+          <h2 class="text-lg font-semibold">Alerts & Insights</h2>
+        </div>
+        <div class="p-4 space-y-3">
+          {% for issue in m.issues %}
+          <div class="p-3 rounded-lg {{ 'bg-red-50 border border-red-200' if issue.type == 'error' else 'bg-yellow-50 border border-yellow-200' if issue.type == 'warning' else 'bg-blue-50 border border-blue-200' if issue.type == 'info' else 'bg-green-50 border border-green-200' }}">
+            <div class="flex items-start gap-2">
+              <i class="fa-solid fa-{{ 'circle-exclamation' if issue.type == 'error' else 'triangle-exclamation' if issue.type == 'warning' else 'circle-info' if issue.type == 'info' else 'circle-check' }} mt-0.5 {{ 'text-red-600' if issue.type == 'error' else 'text-yellow-600' if issue.type == 'warning' else 'text-blue-600' if issue.type == 'info' else 'text-green-600' }}"></i>
+              <div>
+                <div class="font-medium text-sm {{ 'text-red-900' if issue.type == 'error' else 'text-yellow-900' if issue.type == 'warning' else 'text-blue-900' if issue.type == 'info' else 'text-green-900' }}">{{ issue.title }}</div>
+                <div class="text-xs mt-1 {{ 'text-red-700' if issue.type == 'error' else 'text-yellow-700' if issue.type == 'warning' else 'text-blue-700' if issue.type == 'info' else 'text-green-700' }}">{{ issue.desc }}</div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Quick Actions -->
+      <div class="bg-white rounded-xl border shadow-sm">
+        <div class="p-5 border-b">
+          <h2 class="text-lg font-semibold">Quick Actions</h2>
+        </div>
+        <div class="p-4 space-y-2">
+          <a href="{{ url_for('glsa_bp.leads_page') }}" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 group">
+            <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition">
+              <i class="fa-solid fa-list text-blue-600"></i>
+            </div>
+            <div class="flex-1">
+              <div class="font-medium">Review Leads</div>
+              <div class="text-xs text-gray-500">Manage and track lead status</div>
+            </div>
+            <i class="fa-solid fa-chevron-right text-gray-400"></i>
+          </a>
+
+          <a href="{{ url_for('glsa_bp.optimize') }}" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 group">
+            <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition">
+              <i class="fa-solid fa-sliders text-purple-600"></i>
+            </div>
+            <div class="flex-1">
+              <div class="font-medium">Optimize Profile</div>
+              <div class="text-xs text-gray-500">AI-powered recommendations</div>
+            </div>
+            <i class="fa-solid fa-chevron-right text-gray-400"></i>
+          </a>
+
+          <a href="#" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 group">
+            <div class="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center group-hover:bg-yellow-200 transition">
+              <i class="fa-solid fa-star text-yellow-600"></i>
+            </div>
+            <div class="flex-1">
+              <div class="font-medium">Request Reviews</div>
+              <div class="text-xs text-gray-500">Boost your review count</div>
+            </div>
+            <i class="fa-solid fa-chevron-right text-gray-400"></i>
+          </a>
+
+          <a href="#" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 group">
+            <div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center group-hover:bg-red-200 transition">
+              <i class="fa-solid fa-flag text-red-600"></i>
+            </div>
+            <div class="flex-1">
+              <div class="font-medium">Dispute Leads</div>
+              <div class="text-xs text-gray-500">Challenge invalid charges</div>
+            </div>
+            <i class="fa-solid fa-chevron-right text-gray-400"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- LSA Tips -->
+      <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg p-5 text-white">
+        <div class="flex items-center gap-2 mb-3">
+          <i class="fa-solid fa-lightbulb text-yellow-300"></i>
+          <h3 class="font-semibold">LSA Pro Tip</h3>
+        </div>
+        <p class="text-sm text-indigo-100 mb-4">
+          Businesses that respond to leads within 5 minutes are <strong>4x more likely</strong> to book the job. Set up instant notifications!
+        </p>
+        <a href="{{ url_for('glsa_bp.optimize') }}" class="inline-flex items-center text-sm font-medium text-white hover:text-indigo-200">
+          Learn more <i class="fa-solid fa-arrow-right ml-2"></i>
+        </a>
+      </div>
+
+      <!-- Google Guaranteed Badge -->
+      <div class="bg-white rounded-xl border shadow-sm p-5">
+        <div class="flex items-center gap-3 mb-3">
+          <img src="https://www.gstatic.com/localservices/common/images/google-guaranteed-en.svg" alt="Google Guaranteed" class="h-8" onerror="this.style.display='none'">
+          <div>
+            <div class="font-semibold">Google Guaranteed</div>
+            <div class="text-xs text-gray-500">Badge Status</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 text-sm">
+          <i class="fa-solid fa-circle-check text-green-500"></i>
+          <span class="text-gray-700">Active & Verified</span>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">
+          Your Google Guaranteed badge helps build trust with potential customers searching for local services.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sync Data JavaScript -->
+<script>
+async function syncLSAData() {
+  const syncBtn = document.getElementById('syncBtn');
+  const syncIcon = document.getElementById('syncIcon');
+  const syncText = document.getElementById('syncText');
+
+  if (!syncBtn) return;
+
+  // Disable button and show loading state
+  syncBtn.disabled = true;
+  syncBtn.classList.add('opacity-75');
+  syncIcon.classList.add('animate-spin');
+  syncText.textContent = 'Syncing...';
+
+  try {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ||
+                      document.querySelector('input[name="csrf_token"]')?.value || '';
+
+    const response = await fetch('{{ url_for("glsa_bp.sync_data") }}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+      body: JSON.stringify({
+        months: 12,  // Pull 12 months of data
+        force_full: false
+      }),
+      credentials: 'same-origin'
+    });
+
+    const data = await response.json();
+
+    if (data.ok) {
+      // Success - show results
+      const message = `Synced ${data.total_fetched} leads (${data.new_leads} new, ${data.updated_leads} updated)`;
+      showToast(message, 'success');
+
+      // Reload page to show updated data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } else {
+      // Error
+      showToast('Sync failed: ' + (data.error || 'Unknown error'), 'error');
+      console.error('Sync error:', data);
+    }
+  } catch (err) {
+    showToast('Network error during sync', 'error');
+    console.error('Sync network error:', err);
+  } finally {
+    // Reset button state
+    syncBtn.disabled = false;
+    syncBtn.classList.remove('opacity-75');
+    syncIcon.classList.remove('animate-spin');
+    syncText.textContent = 'Sync Data';
+  }
+}
+
+function showToast(message, type) {
+  const toast = document.createElement('div');
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 9999;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+    background: ${type === 'success' ? '#059669' : type === 'error' ? '#dc2626' : '#2563eb'};
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  `;
+  document.body.appendChild(toast);
+
+  // Animate in
+  setTimeout(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+  }, 10);
+
+  // Remove after delay
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
+// Run analysis after sync
+async function runAnalysis() {
+  try {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+    const response = await fetch('{{ url_for("glsa_bp.analyze") }}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+      body: JSON.stringify({ regenerate: true }),
+      credentials: 'same-origin'
+    });
+
+    const data = await response.json();
+
+    if (data.ok && data.has_data) {
+      console.log('Analysis complete:', data);
+      // Could update UI with new insights here
+    }
+  } catch (err) {
+    console.error('Analysis error:', err);
+  }
+}
+</script>
+{% endblock %}

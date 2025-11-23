@@ -193,17 +193,17 @@
     <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-400">
       {% if has_endpoint('signup') %}
         <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
-          <span class="relative z-10">Start Saving Now – $2,400/year</span>
+          <span class="relative z-10">Get More Leads →</span>
           <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
         </a>
       {% elif has_endpoint('register') %}
         <a href="{{ url_for(ep('register')) }}?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
-          <span class="relative z-10">Start Saving Now – $2,400/year</span>
+          <span class="relative z-10">Get More Leads →</span>
           <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
         </a>
       {% else %}
         <a href="/signup?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
-          <span class="relative z-10">Start Saving Now – $2,400/year</span>
+          <span class="relative z-10">Get More Leads →</span>
           <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
         </a>
       {% endif %}
@@ -383,11 +383,11 @@
                 <span class="absolute inset-0 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left" style="background: linear-gradient(to right, #6d28d9, #d946ef);"></span>
               </a>
               {% if has_endpoint('signup') %}
-                <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn btn-outline btn-lg">Start Saving Now</a>
+                <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn btn-outline btn-lg">Get Your AI Assistant</a>
               {% elif has_endpoint('register') %}
-                <a href="{{ url_for(ep('register')) }}?plan=annual" class="btn btn-outline btn-lg">Start Saving Now</a>
+                <a href="{{ url_for(ep('register')) }}?plan=annual" class="btn btn-outline btn-lg">Get Your AI Assistant</a>
               {% else %}
-                <a href="/signup?plan=annual" class="btn btn-outline btn-lg">Start Saving Now</a>
+                <a href="/signup?plan=annual" class="btn btn-outline btn-lg">Get Your AI Assistant</a>
               {% endif %}
             </div>
 
@@ -449,11 +449,11 @@
 
       <div class="mt-8 flex gap-3">
         {% if has_endpoint('signup') %}
-          <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary">Start Saving Now</a>
+          <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary">Get More Leads</a>
         {% elif has_endpoint('register') %}
-          <a href="{{ url_for(ep('register')) }}" class="btn btn-primary">Start Saving Now</a>
+          <a href="{{ url_for(ep('register')) }}" class="btn btn-primary">Get More Leads</a>
         {% else %}
-          <a href="/signup" class="btn btn-primary">Start Saving Now</a>
+          <a href="/signup" class="btn btn-primary">Get More Leads</a>
         {% endif %}
         <a href="#pricing" class="btn btn-outline">See Pricing</a>
       </div>
@@ -839,11 +839,11 @@
 
     <div class="mt-12 text-center">
       {% if has_endpoint('signup') %}
-        <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary btn-lg">Start Saving Now</a>
+        <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary btn-lg">Get Your AI Assistant</a>
       {% elif has_endpoint('register') %}
-        <a href="{{ url_for(ep('register')) }}" class="btn btn-primary btn-lg">Start Saving Now</a>
+        <a href="{{ url_for(ep('register')) }}" class="btn btn-primary btn-lg">Get Your AI Assistant</a>
       {% else %}
-        <a href="/signup" class="btn btn-primary btn-lg">Start Saving Now</a>
+        <a href="/signup" class="btn btn-primary btn-lg">Get Your AI Assistant</a>
       {% endif %}
     </div>
   </div>
@@ -1026,15 +1026,15 @@
 
         {% if has_endpoint('signup') %}
           <a href="{{ url_for(ep('signup')) }}?plan=annual" class="mt-8 w-full bg-white hover:bg-gray-50 font-semibold py-3 px-6 rounded-lg text-center block transition-colors" style="color: #6d28d9;">
-            Start Saving Now – $2,400/year
+            Get More Leads – $200/mo
           </a>
         {% elif has_endpoint('register') %}
           <a href="{{ url_for(ep('register')) }}?plan=annual" class="mt-8 w-full bg-white hover:bg-gray-50 font-semibold py-3 px-6 rounded-lg text-center block transition-colors" style="color: #6d28d9;">
-            Start Saving Now – $2,400/year
+            Get More Leads – $200/mo
           </a>
         {% else %}
           <a href="/signup?plan=annual" class="mt-8 w-full bg-white hover:bg-gray-50 font-semibold py-3 px-6 rounded-lg text-center block transition-colors" style="color: #6d28d9;">
-            Start Saving Now – $2,400/year
+            Get More Leads – $200/mo
           </a>
         {% endif %}
       </div>
@@ -1203,15 +1203,15 @@
     <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
       {% if has_endpoint('signup') %}
         <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn bg-white hover:bg-gray-50 font-semibold px-8 py-4 text-lg" style="color: #6d28d9;">
-          Start Saving Now – $2,400/year
+          Get Your AI Assistant – $2,400/year
         </a>
       {% elif has_endpoint('register') %}
         <a href="{{ url_for(ep('register')) }}?plan=annual" class="btn bg-white hover:bg-gray-50 font-semibold px-8 py-4 text-lg" style="color: #6d28d9;">
-          Start Saving Now – $2,400/year
+          Get Your AI Assistant – $2,400/year
         </a>
       {% else %}
         <a href="/signup?plan=annual" class="btn bg-white hover:bg-gray-50 font-semibold px-8 py-4 text-lg" style="color: #6d28d9;">
-          Start Saving Now – $2,400/year
+          Get Your AI Assistant – $2,400/year
         </a>
       {% endif %}
       <a href="/ads-grader/calculator-demo" class="btn border-2 border-white text-white hover:bg-white/10 font-semibold px-8 py-4 text-lg">

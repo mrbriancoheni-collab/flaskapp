@@ -13,11 +13,13 @@
   <!-- Tabs -->
   <div class="tabs mb16" role="tablist" aria-label="Optimize Sections">
     <button type="button" role="tab" aria-selected="true" aria-controls="tab-overview"
-            class="tab-link active" data-tab="overview" id="tabbtn-overview">
+            class="tab-link active" data-tab="overview" id="tabbtn-overview"
+            onclick="window.glsaSwitchTab && window.glsaSwitchTab('overview')">
       Overview
     </button>
     <button type="button" role="tab" aria-selected="false" aria-controls="tab-optimizer"
-            class="tab-link" data-tab="optimizer" id="tabbtn-optimizer">
+            class="tab-link" data-tab="optimizer" id="tabbtn-optimizer"
+            onclick="window.glsaSwitchTab && window.glsaSwitchTab('optimizer')">
       Optimizer (Profile Audit)
     </button>
   </div>
@@ -383,6 +385,8 @@
       target.style.display = '';
     }
   }
+  // Expose globally for inline onclick handlers
+  window.glsaSwitchTab = switchTab;
 
   document.addEventListener('DOMContentLoaded', function(){
     // Default: if not connected, open Optimizer so users see the working area immediately

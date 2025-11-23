@@ -2389,24 +2389,46 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
     ads = ads_data.get("ads", [])
     extensions = ads_data.get("extensions", [])
 
-    # Calculate performance metrics
+    # Calculate performance metrics from REAL campaign data
     enabled_campaigns = [c for c in campaigns if c.get("status", "").lower() in ("enabled", "active")]
-    daily_spend = sum(c.get("daily_budget", 0) for c in enabled_campaigns)
-    monthly_spend = daily_spend * 30
 
-    # Calculate conversions from campaigns or keywords
-    total_conversions = sum(c.get("conversions", 0) for c in campaigns)
+    # Use real metrics from campaigns if available (fetched from Google Ads API)
+    total_cost = sum(c.get("cost_30d", 0) or 0 for c in campaigns)
+    total_clicks = sum(c.get("clicks", 0) or 0 for c in campaigns)
+    total_impressions = sum(c.get("impressions", 0) or 0 for c in campaigns)
+    total_conversions = sum(c.get("conversions", 0) or 0 for c in campaigns)
+
+    # Fall back to keyword-level data if campaign data is missing
     if total_conversions == 0:
-        total_conversions = sum(k.get("conv", 0) for k in keywords)
+        total_conversions = sum(k.get("conv", 0) or 0 for k in keywords)
 
-    # Estimate impressions and clicks based on spend and industry benchmarks
-    # Home services avg: $3-5 CPC, 3-5% CTR, impressions = clicks / CTR
-    avg_cpc = 4.0  # Average for home services
-    estimated_clicks = int(monthly_spend / avg_cpc) if monthly_spend > 0 else 0
-    avg_ctr = 0.04  # 4% CTR
-    estimated_impressions = int(estimated_clicks / avg_ctr) if estimated_clicks > 0 else 0
+    # Calculate daily/monthly spend from real data or budgets
+    if total_cost > 0:
+        monthly_spend = total_cost  # Already 30-day data
+        daily_spend = total_cost / 30
+    else:
+        daily_spend = sum(c.get("daily_budget", 0) or 0 for c in enabled_campaigns)
+        monthly_spend = daily_spend * 30
+
+    # Use REAL metrics when available, fall back to industry benchmarks for new accounts
+    has_historical_data = total_clicks > 0 and total_impressions > 0
+
+    if has_historical_data:
+        # Calculate from actual data
+        avg_cpc = total_cost / total_clicks if total_clicks > 0 else 4.0
+        avg_ctr = total_clicks / total_impressions if total_impressions > 0 else 0.04
+        estimated_clicks = total_clicks
+        estimated_impressions = total_impressions
+    else:
+        # NEW ACCOUNT or no data - use industry best practice benchmarks
+        # Home services industry averages (based on Google Ads benchmarks 2024)
+        avg_cpc = 4.50  # Home services avg CPC
+        avg_ctr = 0.035  # 3.5% CTR industry average
+        estimated_clicks = int(monthly_spend / avg_cpc) if monthly_spend > 0 else 0
+        estimated_impressions = int(estimated_clicks / avg_ctr) if estimated_clicks > 0 else 0
 
     cost_per_conversion = (monthly_spend / total_conversions) if total_conversions > 0 else 0
+    conversion_rate = (total_conversions / total_clicks) if total_clicks > 0 else 0.03  # 3% industry avg
 
     performance = {
         "monthly_spend": monthly_spend,
@@ -2416,6 +2438,8 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
         "ctr": avg_ctr,
         "conversions": total_conversions,
         "cost_per_conversion": cost_per_conversion,
+        "conversion_rate": conversion_rate,
+        "has_historical_data": has_historical_data,
     }
 
     # Calculate health scores (0-100)
@@ -2429,75 +2453,150 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
         "extensions": 0,
     }
 
-    # Calculate individual scores
-    # Wasted Spend Score (based on negative keyword coverage)
-    # LOWER score = more wasted spend = more opportunity
-    # Target: 2-3 negatives per keyword for good coverage
+    # ========== WASTED SPEND SCORE ==========
+    # Based on negative keyword coverage AND search term analysis
     if len(keywords) > 0:
         neg_ratio = len(negatives) / max(len(keywords), 1)
         # Perfect = 2.5 negatives per keyword (ratio of 2.5)
-        # Current demo: 2/5 = 0.4 ratio = 16% score (poor coverage)
-        scores["wasted_spend"] = min(100, int((neg_ratio / 2.5) * 100))
-    else:
-        scores["wasted_spend"] = 50
+        base_score = min(100, int((neg_ratio / 2.5) * 100))
 
-    # Quality Score (estimate based on keyword performance and realistic QS)
-    # For demo: we know we have QS 3-7 keywords (from opportunities data)
-    # Average QS of ~5 = 50% score (needs improvement)
-    total_keywords = len(keywords)
-    if total_keywords > 0:
-        # In demo mode, estimate based on CPA (higher CPA = lower QS)
-        avg_cpa = sum(k.get("cpa", 0) or 0 for k in keywords if k.get("conv", 0) > 0) / max(1, sum(1 for k in keywords if k.get("conv", 0) > 0))
-        # CPA of $48 avg suggests QS ~5, which = 50% score
-        # Target CPA ~$30 = QS 8+ = 80%+ score
-        scores["quality_score"] = max(30, min(100, int(100 - (avg_cpa * 1.2))))
-    else:
-        scores["quality_score"] = 50
+        # Bonus points if they have good negative keyword lists
+        if neg_ratio >= 2.0:
+            base_score = min(100, base_score + 10)
 
-    # CTR Score (estimate from demo data)
-    # Based on total conversions as proxy for traffic volume
-    total_conversions = sum(k.get("conv", 0) or 0 for k in keywords)
-    # With 63 conversions and good traffic, but room for CTR improvement
-    if total_conversions > 50:
-        scores["ctr"] = 58  # Moderate - could use ad copy improvements
-    elif total_conversions > 20:
-        scores["ctr"] = 48
+        scores["wasted_spend"] = base_score
     else:
-        scores["ctr"] = 35
+        # No keywords = new account, give benefit of doubt but flag for setup
+        scores["wasted_spend"] = 40  # Needs attention
 
-    # Account Structure Score
-    enabled_campaigns = sum(1 for c in campaigns if c.get("status", "").lower() == "enabled")
+    # ========== QUALITY SCORE ==========
+    # Use real CPA data if available, otherwise estimate based on industry benchmarks
+    if has_historical_data and total_conversions > 0:
+        # Calculate from actual keyword performance
+        keywords_with_conversions = [k for k in keywords if (k.get("conv", 0) or 0) > 0]
+        if keywords_with_conversions:
+            avg_keyword_cpa = sum(k.get("cpa", 0) or 0 for k in keywords_with_conversions) / len(keywords_with_conversions)
+            # Industry benchmark: $50-80 CPA for home services is average
+            # Lower CPA = higher QS, Higher CPA = lower QS
+            if avg_keyword_cpa <= 40:
+                scores["quality_score"] = 85  # Excellent
+            elif avg_keyword_cpa <= 60:
+                scores["quality_score"] = 70  # Good
+            elif avg_keyword_cpa <= 80:
+                scores["quality_score"] = 55  # Average
+            elif avg_keyword_cpa <= 100:
+                scores["quality_score"] = 40  # Below average
+            else:
+                scores["quality_score"] = 30  # Poor
+        else:
+            scores["quality_score"] = 50  # No conversion data
+    else:
+        # NEW ACCOUNT - score based on account structure (proxy for QS potential)
+        if len(keywords) > 0 and len(ads) > 0:
+            scores["quality_score"] = 60  # Has basics set up
+        elif len(keywords) > 0:
+            scores["quality_score"] = 45  # Keywords but needs ads
+        else:
+            scores["quality_score"] = 35  # Needs full setup
+
+    # ========== CTR SCORE ==========
+    # Use REAL CTR data when available
+    if has_historical_data and avg_ctr > 0:
+        # Industry benchmark CTR by vertical (home services: 3.5-5% is good)
+        if avg_ctr >= 0.06:
+            scores["ctr"] = 90  # Excellent (6%+)
+        elif avg_ctr >= 0.05:
+            scores["ctr"] = 80  # Very good (5-6%)
+        elif avg_ctr >= 0.04:
+            scores["ctr"] = 70  # Good (4-5%)
+        elif avg_ctr >= 0.03:
+            scores["ctr"] = 55  # Average (3-4%)
+        elif avg_ctr >= 0.02:
+            scores["ctr"] = 40  # Below average (2-3%)
+        else:
+            scores["ctr"] = 25  # Poor (<2%)
+    else:
+        # NEW ACCOUNT - score based on ad copy quality indicators
+        if len(ads) >= 3:
+            scores["ctr"] = 60  # Multiple ads for testing
+        elif len(ads) >= 1:
+            scores["ctr"] = 45  # Has ads
+        else:
+            scores["ctr"] = 30  # Needs ads
+
+    # ========== ACCOUNT STRUCTURE SCORE ==========
+    enabled_campaigns_count = sum(1 for c in campaigns if c.get("status", "").lower() == "enabled")
     ads_per_group = len(ads) / max(1, len(ad_groups))
     keywords_per_group = len(keywords) / max(1, len(ad_groups))
 
-    structure_score = 50
-    if enabled_campaigns >= 2:
-        structure_score += 15
-    if 2 <= ads_per_group <= 4:
-        structure_score += 10  # Reduced - demo has 0.6 ads/group (low)
+    structure_score = 40  # Base score
+    # Campaign organization
+    if 2 <= enabled_campaigns_count <= 10:
+        structure_score += 15  # Good campaign structure
+    elif enabled_campaigns_count == 1:
+        structure_score += 5   # Single campaign is ok for small accounts
+
+    # Ads per ad group (best practice: 3-5 RSAs)
+    if 3 <= ads_per_group <= 5:
+        structure_score += 20  # Optimal
+    elif 2 <= ads_per_group < 3:
+        structure_score += 10  # Acceptable
+    elif ads_per_group >= 1:
+        structure_score += 5   # Needs more ads
+
+    # Keywords per ad group (best practice: 5-20)
     if 5 <= keywords_per_group <= 20:
-        structure_score += 5   # Reduced - demo has 1 kw/group (too low)
+        structure_score += 20  # Optimal tight themes
+    elif 3 <= keywords_per_group < 5:
+        structure_score += 10  # Acceptable
+    elif keywords_per_group > 20:
+        structure_score += 0   # Too broad - needs restructuring
+    elif keywords_per_group >= 1:
+        structure_score += 5   # Sparse but exists
+
     scores["account_structure"] = min(100, structure_score)
 
-    # Mobile Score - Demo account has NO mobile optimization
-    # No mobile bid adjustments, no mobile-preferred ads
-    scores["mobile"] = 42  # Poor - needs mobile optimization
+    # ========== MOBILE SCORE ==========
+    # Check for mobile bid adjustments and mobile-specific setup
+    # Since we can't directly fetch device data yet, score based on best practice indicators
+    has_mobile_indicators = False
 
-    # Extensions Score - Critical for service business
-    # Target: 4-5 extensions for optimal performance
-    # Demo has only 1 (call) = poor coverage
-    if len(extensions) >= 5:
-        scores["extensions"] = 95
-    elif len(extensions) >= 4:
-        scores["extensions"] = 85
-    elif len(extensions) >= 3:
-        scores["extensions"] = 70
-    elif len(extensions) >= 2:
-        scores["extensions"] = 50
-    elif len(extensions) >= 1:
-        scores["extensions"] = 28  # Poor - only 1 extension
+    # Check if any campaign has mobile-specific settings (from campaign data)
+    for campaign in campaigns:
+        # Look for mobile bid adjustments in campaign data
+        if campaign.get("mobile_bid_adjustment"):
+            has_mobile_indicators = True
+            break
+
+    if has_mobile_indicators:
+        scores["mobile"] = 75  # Has mobile optimization
     else:
-        scores["extensions"] = 10  # Critical - no extensions
+        # Check ad count as proxy (more ads = likely has mobile variations)
+        if ads_per_group >= 3:
+            scores["mobile"] = 55  # Multiple ads may include mobile-optimized
+        elif len(extensions) >= 2 and any(e.get("type") == "call" for e in extensions):
+            scores["mobile"] = 50  # Has call extension (mobile-friendly)
+        else:
+            scores["mobile"] = 35  # Needs mobile optimization
+
+    # ========== EXTENSIONS SCORE ==========
+    # Score based on number and types of extensions (critical for service businesses)
+    extension_types = set(e.get("type", "").lower() for e in extensions)
+    critical_extensions = {"call", "sitelink", "callout", "location"}
+    has_critical = len(extension_types & critical_extensions)
+
+    if len(extensions) >= 5 and has_critical >= 3:
+        scores["extensions"] = 95  # Excellent
+    elif len(extensions) >= 4 and has_critical >= 2:
+        scores["extensions"] = 80  # Very good
+    elif len(extensions) >= 3:
+        scores["extensions"] = 65  # Good
+    elif len(extensions) >= 2:
+        scores["extensions"] = 50  # Acceptable
+    elif len(extensions) >= 1:
+        scores["extensions"] = 35  # Needs more
+    else:
+        scores["extensions"] = 15  # Critical - no extensions
 
     # Calculate overall score (weighted average)
     scores["overall"] = int(
@@ -2917,36 +3016,172 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
             },
         })
 
+    # ========== NEW ACCOUNT / NO DATA RECOMMENDATIONS ==========
+    # Add Google Ads best practice recommendations for accounts without historical data
+    if not has_historical_data:
+        # These recommendations are based on industry expertise and Google Ads best practices
+        new_account_recommendations = [
+            {
+                "title": "Set up conversion tracking",
+                "description": "Essential foundation: Without conversion tracking, you can't optimize for what matters. Set up phone calls, form submissions, and purchases as conversions.",
+                "priority": "high",
+                "impact_score": 100,
+                "category": "setup",
+                "icon": "fa-chart-line",
+                "color": "red",
+                "action": "Install Google Ads conversion tag and set up conversion actions for calls, forms, and purchases",
+                "estimated_time": "30 min",
+                "quick_win": True,
+                "confidence_score": 100,
+                "risk_level": "low",
+                "benefit_explanation": "**Why This is Critical:** Without conversion tracking, Google's AI can't optimize your bids for actual customers. You're essentially flying blind, paying for clicks that may never convert.",
+                "optimization_type": "setup",
+                "best_practice": True,
+            },
+            {
+                "title": "Build keyword foundation (15-30 keywords per ad group)",
+                "description": "Start with 3-5 tightly themed ad groups, each with 15-30 closely related keywords. Mix match types: 60% phrase, 30% exact, 10% broad.",
+                "priority": "high",
+                "impact_score": 95,
+                "category": "setup",
+                "icon": "fa-key",
+                "color": "blue",
+                "action": "Create themed ad groups with related keywords (e.g., 'emergency plumber', 'emergency plumbing', '24 hour plumber')",
+                "estimated_time": "2 hours",
+                "quick_win": False,
+                "confidence_score": 95,
+                "risk_level": "low",
+                "benefit_explanation": "**Why This Matters:** Tightly themed ad groups allow you to write highly specific ads that match search intent → higher CTR → lower CPCs → better ROI.",
+                "optimization_type": "setup",
+                "best_practice": True,
+            },
+            {
+                "title": "Create 3+ RSA ads per ad group",
+                "description": "Google's best practice: 3-5 Responsive Search Ads per ad group with diverse headlines and descriptions. This enables proper A/B testing.",
+                "priority": "high",
+                "impact_score": 90,
+                "category": "setup",
+                "icon": "fa-ad",
+                "color": "purple",
+                "action": "Write 15 headlines and 4 descriptions per ad group. Include keywords, benefits, and CTAs.",
+                "estimated_time": "1 hour",
+                "quick_win": False,
+                "confidence_score": 90,
+                "risk_level": "low",
+                "benefit_explanation": "**Why Multiple Ads:** Google tests different combinations to find what works. More variety = more testing = faster optimization. Single ads limit Google's ability to optimize.",
+                "optimization_type": "setup",
+                "best_practice": True,
+            },
+            {
+                "title": "Add starter negative keywords",
+                "description": "Block obvious non-converting terms before you spend: jobs, careers, DIY, how to, free, salary, training, reviews, complaints",
+                "priority": "high",
+                "impact_score": 85,
+                "category": "negative_keyword",
+                "icon": "fa-ban",
+                "color": "red",
+                "action": "Add these negatives to all campaigns: jobs, careers, DIY, how to, free, cheap, salary, training, reviews, complaints, lawsuit",
+                "estimated_time": "15 min",
+                "quick_win": True,
+                "confidence_score": 95,
+                "risk_level": "low",
+                "benefit_explanation": "**Prevent Wasted Spend:** These terms attract job seekers, DIYers, and researchers - not paying customers. Block them before they drain your budget.",
+                "optimization_type": "negative_keyword",
+                "best_practice": True,
+            },
+            {
+                "title": "Enable all 4 critical ad extensions",
+                "description": "Must-have extensions for service businesses: Call, Sitelinks, Callouts, Location. These increase ad size and CTR by 15-30%.",
+                "priority": "high",
+                "impact_score": 80,
+                "category": "extension",
+                "icon": "fa-puzzle-piece",
+                "color": "green",
+                "action": "Set up: Call extension with your phone number, 4-6 Sitelinks, 4 Callouts, Location extension",
+                "estimated_time": "45 min",
+                "quick_win": True,
+                "confidence_score": 95,
+                "risk_level": "low",
+                "benefit_explanation": "**Bigger Ads = More Clicks:** Extensions make your ad larger, pushing competitors down. Call extensions are especially critical for service businesses - mobile users expect tap-to-call.",
+                "optimization_type": "extension",
+                "best_practice": True,
+            },
+        ]
+
+        # Add these as high-priority opportunities for new accounts
+        for rec in new_account_recommendations:
+            opportunities.append(rec)
+
     # Sort opportunities by priority and impact
     priority_order = {"high": 0, "medium": 1, "low": 2}
-    opportunities.sort(key=lambda x: (priority_order.get(x["priority"], 3), -x["impact_score"]))
+    opportunities.sort(key=lambda x: (priority_order.get(x["priority"], 3), -x.get("impact_score", 0)))
 
     # Generate detailed recommendations by category
     recommendations = _generate_detailed_recommendations(aid, ads_data, scores)
 
-    # Add campaign-level breakdown
+    # Add campaign-level breakdown using REAL data
     campaign_breakdown = []
     for i, campaign in enumerate(campaigns[:5]):  # Top 5 campaigns
+        campaign_cost = campaign.get("cost_30d", 0) or (campaign.get("daily_budget", 0) * 25)
+        campaign_conversions = campaign.get("conversions", 0)
+        campaign_clicks = campaign.get("clicks", 0)
+
+        # Calculate health score based on real metrics
+        if campaign_conversions > 0 and campaign_cost > 0:
+            cpa = campaign_cost / campaign_conversions
+            # Compare to account average
+            avg_cpa = cost_per_conversion if cost_per_conversion > 0 else 80
+            if cpa <= avg_cpa * 0.8:
+                health = 85  # 20% better than average
+            elif cpa <= avg_cpa:
+                health = 70  # At or below average
+            elif cpa <= avg_cpa * 1.2:
+                health = 55  # 20% worse than average
+            else:
+                health = 40  # Needs attention
+        elif campaign_clicks > 0:
+            health = 50  # Has traffic but no conversions yet
+        else:
+            health = 35  # No data
+
         campaign_breakdown.append({
             "name": campaign.get("name", f"Campaign {i+1}"),
             "status": campaign.get("status", "enabled"),
             "budget": campaign.get("daily_budget", 0),
-            "spend": campaign.get("daily_budget", 0) * 25,  # Estimate monthly
-            "conversions": campaign.get("conversions", 0),
-            "health_score": min(100, max(30, 50 + (i * 10))),  # Mock score
+            "spend": campaign_cost,
+            "conversions": campaign_conversions,
+            "clicks": campaign_clicks,
+            "cpa": (campaign_cost / campaign_conversions) if campaign_conversions > 0 else None,
+            "health_score": health,
         })
 
-    # Add competitive insights - realistic for plumbing/HVAC industry
+    # Add competitive insights using REAL account data
+    your_cpc = avg_cpc if has_historical_data else 4.50
+    industry_avg_cpc = 4.50  # Home services industry average
+
     competitive_insights = {
-        "avg_cpc_vs_industry": {"yours": 10.80, "industry": 8.20, "diff_pct": 32},
-        "impression_share_lost_to_budget": 35,
-        "impression_share_lost_to_rank": 25,
+        "avg_cpc_vs_industry": {
+            "yours": round(your_cpc, 2),
+            "industry": industry_avg_cpc,
+            "diff_pct": round(((your_cpc - industry_avg_cpc) / industry_avg_cpc) * 100, 0) if industry_avg_cpc > 0 else 0
+        },
+        "your_ctr": round(avg_ctr * 100, 2) if has_historical_data else None,
+        "industry_avg_ctr": 3.5,  # Industry benchmark
+        "has_historical_data": has_historical_data,
         "top_competitor_tactics": [
-            "Using 'Same Day Service' or '24/7' in 85% of ads",
+            "Using 'Same Day Service' or '24/7' in 85% of ads (urgency converts)",
             "Average 4-5 ad extensions per ad (especially call extensions)",
             "Mobile bid adjustments +20-30% (mobile-first strategy)",
-            "Quality Score 8+ on top keywords (lower CPCs)",
+            "Quality Score 8+ on top keywords (lower CPCs through relevance)",
+            "Negative keyword lists with 50+ terms (blocks wasted spend)",
         ],
+        "industry_benchmarks": {
+            "avg_ctr": "3.5-5%",
+            "avg_cpa": "$50-80",
+            "avg_conversion_rate": "3-5%",
+            "recommended_extensions": "4-5 types minimum",
+            "keywords_per_ad_group": "5-20 tightly themed",
+        }
     }
 
     # Add quick wins (optimizations < 30 min)

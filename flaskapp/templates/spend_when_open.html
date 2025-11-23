@@ -242,15 +242,15 @@
     <p class="mt-4 text-lg text-primary-100 max-w-2xl mx-auto">Join 1,200+ pros who only pay for leads when they have capacity to serve them.</p>
     <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
       {% if has_endpoint('signup') %}
-        <a href="{{ url_for(ep('signup')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Start Free Trial</a>
+        <a href="{{ url_for(ep('signup')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Get Started</a>
       {% elif has_endpoint('register') %}
-        <a href="{{ url_for(ep('register')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Start Free Trial</a>
+        <a href="{{ url_for(ep('register')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100">Get Started</a>
       {% else %}
-        <a href="/signup" class="btn bg-white text-primary-700 hover:bg-gray-100">Start Free Trial</a>
+        <a href="/signup" class="btn bg-white text-primary-700 hover:bg-gray-100">Get Started</a>
       {% endif %}
       <a href="/connect/calendar" class="btn btn-outline border-white text-white hover:bg-white/10">Sync Calendar Now</a>
     </div>
-    <p class="mt-4 text-sm text-primary-200">No credit card required • 14-day free trial • Cancel anytime</p>
+    <p class="mt-4 text-sm text-primary-200">No credit card required • Try it free • Cancel anytime</p>
   </div>
 </section>
 

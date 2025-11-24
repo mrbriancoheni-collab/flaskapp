@@ -46,7 +46,7 @@ class AuditLog(db.Model):
     # ID of the affected resource
 
     # Additional context (JSON)
-    metadata = db.Column(db.JSON, nullable=True)
+    context_data = db.Column(db.JSON, nullable=True)
     # Flexible field for action-specific data
 
     # IP address and user agent (for security auditing)
@@ -74,7 +74,7 @@ class AuditLog(db.Model):
         user_id: Optional[int] = None,
         resource_type: Optional[str] = None,
         resource_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        context_data: Optional[Dict[str, Any]] = None,
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None
     ) -> "AuditLog":
@@ -87,7 +87,7 @@ class AuditLog(db.Model):
             user_id: User who performed the action (None for system actions)
             resource_type: Type of resource affected
             resource_id: ID of affected resource
-            metadata: Additional context as dict
+            context_data: Additional context as dict
             ip_address: IP address of user
             user_agent: User agent string
 
@@ -100,7 +100,7 @@ class AuditLog(db.Model):
             user_id=user_id,
             resource_type=resource_type,
             resource_id=resource_id,
-            metadata=metadata,
+            context_data=context_data,
             ip_address=ip_address,
             user_agent=user_agent
         )
@@ -119,7 +119,7 @@ class AuditLog(db.Model):
             'action': self.action,
             'resource_type': self.resource_type,
             'resource_id': self.resource_id,
-            'metadata': self.metadata,
+            'context_data': self.context_data,
             'ip_address': self.ip_address,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
@@ -173,7 +173,7 @@ def ensure_audit_tables():
             action VARCHAR(64) NOT NULL,
             resource_type VARCHAR(64) NULL,
             resource_id VARCHAR(64) NULL,
-            metadata JSON NULL,
+            context_data JSON NULL,
             ip_address VARCHAR(45) NULL,
             user_agent VARCHAR(255) NULL,
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -197,9 +197,9 @@ def log_team_action(action: str, account_id: int, actor_id: int, target_user_id:
     """Log a team-related action."""
     from flask import request
 
-    metadata = kwargs.copy()
+    context = kwargs.copy()
     if target_user_id:
-        metadata['target_user_id'] = target_user_id
+        context['target_user_id'] = target_user_id
 
     return AuditLog.log(
         action=action,
@@ -207,7 +207,7 @@ def log_team_action(action: str, account_id: int, actor_id: int, target_user_id:
         user_id=actor_id,
         resource_type='user',
         resource_id=str(target_user_id) if target_user_id else None,
-        metadata=metadata,
+        context_data=context,
         ip_address=request.remote_addr if request else None,
         user_agent=request.headers.get('User-Agent') if request else None
     )
@@ -223,7 +223,7 @@ def log_subscription_action(action: str, account_id: int, user_id: int, subscrip
         user_id=user_id,
         resource_type='subscription',
         resource_id=subscription_id,
-        metadata=kwargs,
+        context_data=kwargs,
         ip_address=request.remote_addr if request else None,
         user_agent=request.headers.get('User-Agent') if request else None
     )

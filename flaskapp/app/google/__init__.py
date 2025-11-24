@@ -2517,10 +2517,14 @@ def approve_optimizations():
 
         opt_titles = [opt.get("title", f"Optimization {opt.get('id')}") for opt in optimizations]
         AuditLog.log(
-            aid=aid,
+            account_id=aid,
             user_id=current_user.id,
             action="google_ads_approve_optimizations",
-            note=f"Approved {len(optimizations)} optimizations: {', '.join(opt_titles)}",
+            context_data={
+                "note": f"Approved {len(optimizations)} optimizations: {', '.join(opt_titles)}",
+                "optimization_count": len(optimizations),
+                "optimization_titles": opt_titles
+            }
         )
 
         # Apply each optimization via Google Ads API

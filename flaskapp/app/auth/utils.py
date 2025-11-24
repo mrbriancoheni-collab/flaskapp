@@ -84,10 +84,24 @@ def _fetch_user_row(uid: Optional[str], email: Optional[str]) -> Optional[Mappin
     return None
 
 def _user_row_cached() -> Optional[Mapping]:
-    """Cache the current user row on flask.g for the request lifetime."""
+    """
+    Cache the current user row on flask.g for the request lifetime.
+
+    When impersonating, returns the impersonated user's data instead of the admin's.
+    This ensures current_account_id() and related helpers return the impersonated user's data.
+    """
     if hasattr(g, "_user_row"):
         return g._user_row  # type: ignore[attr-defined]
-    row = _fetch_user_row(_session_user_id(), _session_email())
+
+    # Check for impersonation - if impersonating, use the impersonated user's ID
+    impersonated_user_id = session.get("impersonated_user_id")
+    if impersonated_user_id:
+        # We're impersonating - fetch the impersonated user's row
+        row = _fetch_user_row(str(impersonated_user_id), None)
+    else:
+        # Normal operation - fetch the session user's row
+        row = _fetch_user_row(_session_user_id(), _session_email())
+
     g._user_row = row  # type: ignore[attr-defined]
     return row
 
@@ -152,6 +166,7 @@ def is_paid_account() -> bool:
     All names are configurable in app config.
 
     Admins (users with is_admin = True) bypass this check and are treated as paid.
+    When an admin is impersonating, they also bypass paid checks for support/debugging.
     """
     # Check if current user is an admin (bypass plan check)
     try:
@@ -159,6 +174,10 @@ def is_paid_account() -> bool:
         user = getattr(g, 'user', None)
         if user and getattr(user, 'is_admin', False):
             # Admins have access to all paid features
+            return True
+        # Check if an admin is impersonating this user (bypass for support)
+        if session.get("impersonator_user_id") and session.get("impersonated_user_id"):
+            # Admin impersonating - bypass paid check to allow full access for support
             return True
     except Exception:
         pass  # Continue with normal plan check

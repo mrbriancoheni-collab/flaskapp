@@ -2342,7 +2342,7 @@ def approve_optimizations():
         aid = current_account_id()
 
         # Log the approval action
-        from app.models import AuditLog
+        from app.models_audit import AuditLog
         from app import db
 
         opt_titles = [opt.get("title", f"Optimization {opt.get('id')}") for opt in optimizations]

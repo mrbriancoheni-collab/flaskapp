@@ -182,6 +182,9 @@ def impersonate(user_id: int):
     session["impersonator_user_id"] = g.user.id
     session["impersonated_user_id"] = user.id
     session.modified = True
+    # Clear cached user row to force reload with impersonated user's data
+    if hasattr(g, "_user_row"):
+        delattr(g, "_user_row")
     _audit("impersonate_start", target_user_id=user.id, target_account_id=user.account_id)
     flash(f"You are now impersonating {user.email}.", "success")
     return redirect(url_for("account_bp.dashboard"))
@@ -194,6 +197,9 @@ def stop_impersonation():
     session.pop("impersonated_user_id", None)
     session.pop("impersonator_user_id", None)
     session.modified = True
+    # Clear cached user row to force reload with admin's data
+    if hasattr(g, "_user_row"):
+        delattr(g, "_user_row")
     flash("Stopped impersonating.", "success")
     return redirect(url_for("admin_bp.dashboard"))
 

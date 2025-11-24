@@ -46,8 +46,42 @@ class GoogleOAuthToken(db.Model):
             return None
 
 
+class AppliedOptimization(db.Model):
+    """Track Google Ads optimizations that were applied to confirm changes were pushed."""
+    __tablename__ = "applied_optimizations"
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    account_id = db.Column(db.Integer, index=True, nullable=False)
+    user_id = db.Column(db.Integer, nullable=True)
+
+    # Google Ads identifiers
+    customer_id = db.Column(db.String(64), index=True, nullable=True)
+    campaign_id = db.Column(db.String(128), nullable=True)
+
+    # Optimization details
+    optimization_type = db.Column(db.String(64), index=True, nullable=False)  # e.g., "negative_keyword", "mobile_bid"
+    optimization_title = db.Column(db.String(512), nullable=True)
+    optimization_data = db.Column(db.JSON, nullable=True)  # Original optimization data
+
+    # Application status
+    status = db.Column(db.String(32), index=True, default='pending')  # pending, applied, failed, reverted
+    error_message = db.Column(db.Text, nullable=True)
+
+    # Google Ads API response
+    resource_name = db.Column(db.String(512), nullable=True)  # Resource name returned by API
+    api_response = db.Column(db.JSON, nullable=True)  # Full API response for verification
+
+    # Timestamps
+    applied_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f'<AppliedOptimization {self.id} {self.optimization_type} status={self.status}>'
+
+
 def ensure_google_tables():
-    """Call this once after deploy if you’re not running Alembic migrations."""
+    """Call this once after deploy if you're not running Alembic migrations."""
     with db.engine.begin() as conn:
         conn.execute(db.text("""
         CREATE TABLE IF NOT EXISTS google_oauth_tokens (
@@ -62,5 +96,29 @@ def ensure_google_tables():
           updated_at DATETIME NOT NULL,
           INDEX idx_google_token_account (account_id),
           INDEX idx_google_token_product (product)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        """))
+
+        conn.execute(db.text("""
+        CREATE TABLE IF NOT EXISTS applied_optimizations (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+          account_id INT NOT NULL,
+          user_id INT NULL,
+          customer_id VARCHAR(64) NULL,
+          campaign_id VARCHAR(128) NULL,
+          optimization_type VARCHAR(64) NOT NULL,
+          optimization_title VARCHAR(512) NULL,
+          optimization_data JSON NULL,
+          status VARCHAR(32) DEFAULT 'pending',
+          error_message TEXT NULL,
+          resource_name VARCHAR(512) NULL,
+          api_response JSON NULL,
+          applied_at DATETIME NULL,
+          created_at DATETIME NOT NULL,
+          updated_at DATETIME NOT NULL,
+          INDEX idx_applied_opt_account (account_id),
+          INDEX idx_applied_opt_customer (customer_id),
+          INDEX idx_applied_opt_type (optimization_type),
+          INDEX idx_applied_opt_status (status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         """))

@@ -83,15 +83,59 @@ def _has_any_google_token(aid: int, prods: Sequence[str]) -> bool:
         return False
 
 
-def _ads_ctx(aid: int) -> dict:
+def _ads_ctx(aid: int, include_profile: bool = False) -> dict:
     """Resolve Ads context (customer_id + optional login_customer_id). Include a template-safe profile key."""
     try:
         ctx = resolve_ads_context(aid) or {"customer_id": None, "login_customer_id": None}
     except Exception as e:
         current_app.logger.warning("resolve_ads_context error: %s", e)
         ctx = {"customer_id": None, "login_customer_id": None}
-    # ensure template-safe keys (optimize.html reads ctx.profile.*)
-    ctx.setdefault("profile", {})
+
+    # Load profile from database if requested
+    profile_data = {}
+    if include_profile:
+        try:
+            from app.models_glsa import GLSAProfile
+            profile = GLSAProfile.query.filter_by(account_id=aid).order_by(GLSAProfile.updated_at.desc()).first()
+            if profile:
+                # Map database fields to template expected fields
+                categories = profile.categories or []
+                primary_cat = categories[0] if categories else ""
+                other_cats = categories[1:] if len(categories) > 1 else []
+
+                # Parse service_areas - could be list of dicts or strings
+                service_areas_raw = profile.service_areas or []
+                service_areas = []
+                for sa in service_areas_raw:
+                    if isinstance(sa, dict):
+                        service_areas.append(sa.get("zip") or sa.get("city") or str(sa))
+                    else:
+                        service_areas.append(str(sa))
+
+                # Parse hours - could be dict or string
+                hours_raw = profile.hours
+                if isinstance(hours_raw, dict):
+                    hours = "; ".join([f"{k} {v}" for k, v in hours_raw.items()])
+                else:
+                    hours = hours_raw or ""
+
+                profile_data = {
+                    "name": profile.business_name,
+                    "primary_category": primary_cat,
+                    "categories": other_cats,
+                    "service_areas": service_areas,
+                    "hours": hours,
+                    "phone": profile.phone,
+                    "website": profile.website,
+                    "rating": profile.rating,
+                    "reviews_count": profile.review_count,
+                    "weekly_budget": None,  # Not stored in profile model yet
+                    "last_synced_at": profile.last_synced_at.isoformat() if profile.last_synced_at else None,
+                }
+        except Exception as e:
+            current_app.logger.warning("Error loading GLSA profile: %s", e)
+
+    ctx["profile"] = profile_data
     return ctx
 
 
@@ -117,7 +161,7 @@ def connect():
 def optimize():
     aid = current_account_id()
     connected = _has_any_google_token(aid, ("lsa", "ads"))
-    ctx = _ads_ctx(aid)
+    ctx = _ads_ctx(aid, include_profile=True)
     return render_template(
         "glsa/optimize.html",
         connected=connected,
@@ -377,6 +421,87 @@ def sync_data():
     return jsonify(result)
 
 
+def _update_profile_from_leads(aid: int, glsa_account_id: int) -> bool:
+    """
+    Build/update a GLSAProfile from the synced leads data.
+    Extracts categories (job types), service areas (cities), and phone from leads.
+    """
+    from app.models_glsa import GLSALead, GLSAProfile
+    from datetime import datetime
+    from sqlalchemy import func
+
+    try:
+        # Get unique job types (categories) from leads
+        job_types = db.session.query(GLSALead.job_type)\
+            .filter(GLSALead.glsa_account_id == glsa_account_id)\
+            .filter(GLSALead.job_type.isnot(None))\
+            .filter(GLSALead.job_type != "")\
+            .distinct().all()
+        categories = [jt[0] for jt in job_types if jt[0]]
+
+        # Get unique cities (service areas) from leads
+        cities = db.session.query(GLSALead.city)\
+            .filter(GLSALead.glsa_account_id == glsa_account_id)\
+            .filter(GLSALead.city.isnot(None))\
+            .filter(GLSALead.city != "")\
+            .distinct().all()
+        service_areas = [c[0] for c in cities if c[0]]
+
+        # Get phone from the most recent lead with notes containing ad_phone_number
+        recent_lead = GLSALead.query\
+            .filter(GLSALead.glsa_account_id == glsa_account_id)\
+            .filter(GLSALead.notes.isnot(None))\
+            .order_by(GLSALead.lead_ts.desc())\
+            .first()
+
+        phone = None
+        if recent_lead and recent_lead.notes:
+            phone = recent_lead.notes.get("ad_phone_number")
+
+        # Get lead count for review count approximation
+        lead_count = GLSALead.query\
+            .filter(GLSALead.glsa_account_id == glsa_account_id)\
+            .count()
+
+        # Get or create profile
+        profile = GLSAProfile.query.filter_by(account_id=aid).first()
+        if not profile:
+            profile = GLSAProfile(
+                account_id=aid,
+                glsa_account_id=glsa_account_id
+            )
+            db.session.add(profile)
+
+        # Update profile with extracted data (don't overwrite user-edited fields)
+        if categories and not profile.categories:
+            profile.categories = categories
+        elif categories:
+            # Merge new categories
+            existing = set(profile.categories or [])
+            profile.categories = list(existing.union(set(categories)))
+
+        if service_areas and not profile.service_areas:
+            profile.service_areas = service_areas
+        elif service_areas:
+            # Merge new service areas
+            existing = set(profile.service_areas or [])
+            profile.service_areas = list(existing.union(set(service_areas)))
+
+        if phone and not profile.phone:
+            profile.phone = phone
+
+        profile.last_synced_at = datetime.utcnow()
+        db.session.commit()
+
+        current_app.logger.info(f"GLSA profile updated for account {aid}: {len(categories)} categories, {len(service_areas)} areas")
+        return True
+
+    except Exception as e:
+        current_app.logger.exception(f"Error updating profile from leads: {e}")
+        db.session.rollback()
+        return False
+
+
 def _sync_leads_from_api(
     aid: int,
     access_token: str,
@@ -536,6 +661,9 @@ def _sync_leads_from_api(
     glsa_account.updated_at = datetime.utcnow()
     db.session.commit()
 
+    # Build/update profile from leads data
+    profile_updated = _update_profile_from_leads(aid, glsa_account.id)
+
     return {
         "ok": len(errors) == 0,
         "total_fetched": total_fetched,
@@ -544,6 +672,7 @@ def _sync_leads_from_api(
         "pages_processed": page_count + 1,
         "errors": errors,
         "period": f"{start_date.isoformat()} to {end_date.isoformat()}",
+        "profile_updated": profile_updated,
     }
 
 

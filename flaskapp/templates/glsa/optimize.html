@@ -2,7 +2,12 @@
 {% extends "base_app.html" %}
 
 {% block content %}
-<div class="app-section" id="glsa-optimize" data-connected="{{ '1' if connected else '0' }}">
+<div class="app-section" id="glsa-optimize" data-connected="{{ '1' if connected else '0' }}" data-needs-sync="{{ '1' if needs_sync else '0' }}">
+  <!-- Auto-sync banner -->
+  <div id="sync-banner" class="hidden" style="background:#eef2ff;border:1px solid #c7d2fe;color:#1e40af;padding:.75rem 1rem;border-radius:8px;margin-bottom:1rem;display:flex;align-items:center;gap:.75rem;">
+    <i class="fa-solid fa-sync fa-spin"></i>
+    <span id="sync-banner-text">Syncing your LSA data...</span>
+  </div>
   <div class="page-header">
     <h1 class="page-title">Local Services Ads — Optimize</h1>
     <p class="page-subtitle">
@@ -384,10 +389,65 @@
     }
   }
 
+  // Auto-sync function
+  function autoSync(){
+    var root = document.getElementById('glsa-optimize');
+    if(!root) return;
+    var needsSync = root.getAttribute('data-needs-sync') === '1';
+    var connected = root.getAttribute('data-connected') === '1';
+    if(!needsSync || !connected) return;
+
+    var banner = document.getElementById('sync-banner');
+    var bannerText = document.getElementById('sync-banner-text');
+    if(banner){
+      banner.classList.remove('hidden');
+      banner.style.display = 'flex';
+    }
+
+    var headers = { "Content-Type": "application/json" };
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    if(csrfMeta && csrfMeta.content){ headers["X-CSRFToken"] = csrfMeta.content; }
+
+    fetch("{{ url_for('glsa_bp.sync_data') }}", {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({ months: 12 }),
+      credentials: 'same-origin'
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(banner && bannerText){
+        if(data.ok){
+          bannerText.innerHTML = '<i class="fa-solid fa-check" style="color:#059669;"></i> Synced ' + (data.total_fetched || 0) + ' leads. Refreshing...';
+          // Mark as synced so we don't sync again
+          root.setAttribute('data-needs-sync', '0');
+          // Reload to show updated profile
+          setTimeout(function(){ window.location.reload(); }, 1500);
+        } else {
+          bannerText.innerHTML = '<i class="fa-solid fa-exclamation-triangle" style="color:#dc2626;"></i> Sync error: ' + (data.error || 'unknown');
+          banner.style.background = '#fef2f2';
+          banner.style.borderColor = '#fecaca';
+          banner.style.color = '#991b1b';
+        }
+      }
+    })
+    .catch(function(err){
+      if(banner && bannerText){
+        bannerText.innerHTML = '<i class="fa-solid fa-exclamation-triangle" style="color:#dc2626;"></i> Sync failed: ' + err;
+        banner.style.background = '#fef2f2';
+        banner.style.borderColor = '#fecaca';
+        banner.style.color = '#991b1b';
+      }
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function(){
     // Default: if not connected, open Optimizer so users see the working area immediately
     var root = document.getElementById('glsa-optimize');
     if(root && root.getAttribute('data-connected') !== '1'){ switchTab('optimizer'); }
+
+    // Auto-sync if needed (first load or stale data > 7 days)
+    autoSync();
 
     // Tabs (buttons) - attach click handlers directly
     var tabBtns = document.querySelectorAll('.tab-link');

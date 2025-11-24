@@ -162,10 +162,23 @@ def optimize():
     aid = current_account_id()
     connected = _has_any_google_token(aid, ("lsa", "ads"))
     ctx = _ads_ctx(aid, include_profile=True)
+
+    # Check if sync is needed (no data or stale > 7 days)
+    needs_sync = False
+    if connected:
+        from app.models_glsa import GLSAProfile
+        from datetime import datetime, timedelta
+        profile = GLSAProfile.query.filter_by(account_id=aid).first()
+        if not profile or not profile.last_synced_at:
+            needs_sync = True
+        elif profile.last_synced_at < datetime.utcnow() - timedelta(days=7):
+            needs_sync = True
+
     return render_template(
         "glsa/optimize.html",
         connected=connected,
         ctx=ctx,
+        needs_sync=needs_sync,
         epn=request.endpoint,
         SECTION="glsa",
     )

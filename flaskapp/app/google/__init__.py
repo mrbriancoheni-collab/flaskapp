@@ -2319,6 +2319,173 @@ def ads_structure():
     )
 
 
+def _apply_optimization(aid: int, customer_id: str, opt_type: str, opt_data: dict, opt_title: str) -> dict:
+    """
+    Apply a single optimization to Google Ads via API.
+
+    Returns dict with: {"success": bool, "resource_name": str, "api_response": dict, "message": str, "error": str}
+    """
+    try:
+        # Get Google Ads API client
+        try:
+            service, access_token = ensure_ads_api_service(aid, "GoogleAdsService")
+        except Exception as e:
+            return {"success": False, "error": f"API authentication failed: {str(e)}"}
+
+        # Apply based on optimization type
+        if opt_type == "negative_keyword":
+            return _apply_negative_keyword(aid, customer_id, opt_data, access_token)
+
+        elif opt_type == "mobile_bid":
+            return _apply_mobile_bid_adjustment(aid, customer_id, opt_data, access_token)
+
+        elif opt_type == "extension":
+            return _apply_extension(aid, customer_id, opt_data, access_token)
+
+        else:
+            # Unsupported optimization type - log but don't fail
+            current_app.logger.warning(f"Unsupported optimization type: {opt_type}")
+            return {
+                "success": False,
+                "error": f"Optimization type '{opt_type}' not yet supported for automatic application"
+            }
+
+    except Exception as e:
+        current_app.logger.exception(f"Error applying optimization {opt_title}")
+        return {"success": False, "error": str(e)}
+
+
+def _apply_negative_keyword(aid: int, customer_id: str, opt_data: dict, access_token: str) -> dict:
+    """Add negative keyword to campaign."""
+    try:
+        from google.ads.googleads.client import GoogleAdsClient
+        from google.ads.googleads.errors import GoogleAdsException
+
+        term = opt_data.get("term", "")
+        if not term:
+            return {"success": False, "error": "No keyword term provided"}
+
+        # Get campaign ID from optimization data or use account-level
+        campaign_id = opt_data.get("campaign_id")
+
+        # Create Google Ads client
+        credentials = {
+            "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
+            "client_id": current_app.config.get("GOOGLE_CLIENT_ID"),
+            "client_secret": current_app.config.get("GOOGLE_CLIENT_SECRET"),
+            "refresh_token": access_token,
+            "use_proto_plus": True
+        }
+
+        client = GoogleAdsClient.load_from_dict(credentials)
+        campaign_criterion_service = client.get_service("CampaignCriterionService")
+
+        # Build campaign criterion operation
+        campaign_criterion_operation = client.get_type("CampaignCriterionOperation")
+        campaign_criterion = campaign_criterion_operation.create
+        campaign_criterion.campaign = client.get_service("GoogleAdsService").campaign_path(
+            customer_id, campaign_id
+        ) if campaign_id else None
+        campaign_criterion.negative = True
+        campaign_criterion.keyword.text = term
+        campaign_criterion.keyword.match_type = client.enums.KeywordMatchTypeEnum.BROAD
+
+        # Execute
+        response = campaign_criterion_service.mutate_campaign_criteria(
+            customer_id=customer_id,
+            operations=[campaign_criterion_operation]
+        )
+
+        resource_name = response.results[0].resource_name if response.results else None
+
+        return {
+            "success": True,
+            "resource_name": resource_name,
+            "api_response": {"results": [{"resource_name": resource_name}]},
+            "message": f"Added negative keyword: {term}"
+        }
+
+    except GoogleAdsException as ex:
+        error_msg = f"Google Ads API error: {ex.error.code().name}"
+        for error in ex.failure.errors:
+            error_msg += f" - {error.message}"
+        return {"success": False, "error": error_msg}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def _apply_mobile_bid_adjustment(aid: int, customer_id: str, opt_data: dict, access_token: str) -> dict:
+    """Apply mobile bid adjustment to campaign."""
+    try:
+        from google.ads.googleads.client import GoogleAdsClient
+        from google.ads.googleads.errors import GoogleAdsException
+
+        bid_adjustment = opt_data.get("bid_adjustment", 20)  # Default 20%
+        campaign_id = opt_data.get("campaign_id")
+
+        if not campaign_id:
+            return {"success": False, "error": "No campaign ID provided"}
+
+        # Create Google Ads client
+        credentials = {
+            "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
+            "client_id": current_app.config.get("GOOGLE_CLIENT_ID"),
+            "client_secret": current_app.config.get("GOOGLE_CLIENT_SECRET"),
+            "refresh_token": access_token,
+            "use_proto_plus": True
+        }
+
+        client = GoogleAdsClient.load_from_dict(credentials)
+        campaign_criterion_service = client.get_service("CampaignCriterionService")
+
+        # Build mobile device criterion operation
+        campaign_criterion_operation = client.get_type("CampaignCriterionOperation")
+        campaign_criterion = campaign_criterion_operation.update
+        campaign_criterion.campaign = client.get_service("GoogleAdsService").campaign_path(
+            customer_id, campaign_id
+        )
+        campaign_criterion.criterion_id = 30001  # Mobile devices
+        campaign_criterion.bid_modifier = 1.0 + (bid_adjustment / 100.0)  # Convert percentage to multiplier
+
+        # Set update mask
+        client.copy_from(
+            campaign_criterion_operation.update_mask,
+            client.get_type("FieldMask", version="v16")(paths=["bid_modifier"])
+        )
+
+        # Execute
+        response = campaign_criterion_service.mutate_campaign_criteria(
+            customer_id=customer_id,
+            operations=[campaign_criterion_operation]
+        )
+
+        resource_name = response.results[0].resource_name if response.results else None
+
+        return {
+            "success": True,
+            "resource_name": resource_name,
+            "api_response": {"results": [{"resource_name": resource_name}]},
+            "message": f"Set mobile bid adjustment to +{bid_adjustment}%"
+        }
+
+    except GoogleAdsException as ex:
+        error_msg = f"Google Ads API error: {ex.error.code().name}"
+        for error in ex.failure.errors:
+            error_msg += f" - {error.message}"
+        return {"success": False, "error": error_msg}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def _apply_extension(aid: int, customer_id: str, opt_data: dict, access_token: str) -> dict:
+    """Apply ad extension (callout, sitelink, etc.)."""
+    # Extensions require more complex setup - implement based on specific needs
+    return {
+        "success": False,
+        "error": "Extension creation not yet fully implemented. Please add extensions manually in Google Ads UI."
+    }
+
+
 @google_bp.route("/ads/approve-optimizations", methods=["POST"], endpoint="approve_optimizations")
 @login_required
 def approve_optimizations():
@@ -2342,7 +2509,8 @@ def approve_optimizations():
         aid = current_account_id()
 
         # Log the approval action
-        from app.models import AuditLog
+        from app.models_audit import AuditLog
+        from app.models_google import AppliedOptimization
         from app import db
 
         opt_titles = [opt.get("title", f"Optimization {opt.get('id')}") for opt in optimizations]
@@ -2353,24 +2521,155 @@ def approve_optimizations():
             note=f"Approved {len(optimizations)} optimizations: {', '.join(opt_titles)}",
         )
 
-        # TODO: Implement actual Google Ads API calls to apply optimizations
-        # For now, we'll simulate success and return a response
-        # In production, you would:
-        # 1. Call Google Ads API to apply each optimization
-        # 2. Handle errors for individual optimizations
-        # 3. Return detailed success/failure status for each
+        # Apply each optimization via Google Ads API
+        results = []
+        applied_count = 0
+        failed_count = 0
 
-        current_app.logger.info(f"Account {aid} approved {len(optimizations)} optimizations: {opt_titles}")
+        for opt in optimizations:
+            opt_type = opt.get("optimization_type", "")
+            opt_title = opt.get("title", "")
+            opt_data = opt.get("optimization_data", {})
+
+            # Create tracking record
+            applied_opt = AppliedOptimization(
+                account_id=aid,
+                user_id=current_user.id,
+                customer_id=account_id,
+                optimization_type=opt_type,
+                optimization_title=opt_title,
+                optimization_data=opt_data,
+                status='pending'
+            )
+            db.session.add(applied_opt)
+            db.session.flush()  # Get ID
+
+            try:
+                # Apply the optimization based on type
+                result = _apply_optimization(aid, account_id, opt_type, opt_data, opt_title)
+
+                if result.get("success"):
+                    applied_opt.status = 'applied'
+                    applied_opt.resource_name = result.get("resource_name")
+                    applied_opt.api_response = result.get("api_response")
+                    applied_opt.applied_at = datetime.utcnow()
+                    applied_count += 1
+                    results.append({
+                        "optimization": opt_title,
+                        "type": opt_type,
+                        "status": "applied",
+                        "resource_name": result.get("resource_name"),
+                        "message": result.get("message", "Successfully applied")
+                    })
+                else:
+                    applied_opt.status = 'failed'
+                    applied_opt.error_message = result.get("error", "Unknown error")
+                    failed_count += 1
+                    results.append({
+                        "optimization": opt_title,
+                        "type": opt_type,
+                        "status": "failed",
+                        "error": result.get("error")
+                    })
+
+            except Exception as e:
+                applied_opt.status = 'failed'
+                applied_opt.error_message = str(e)
+                failed_count += 1
+                results.append({
+                    "optimization": opt_title,
+                    "type": opt_type,
+                    "status": "failed",
+                    "error": str(e)
+                })
+                current_app.logger.exception(f"Error applying optimization: {opt_title}")
+
+        db.session.commit()
+
+        current_app.logger.info(
+            f"Account {aid} applied {applied_count}/{len(optimizations)} optimizations. {failed_count} failed."
+        )
 
         return jsonify({
-            "success": True,
-            "message": f"Successfully approved {len(optimizations)} optimization(s)",
-            "applied_count": len(optimizations),
-            "optimizations": optimizations
+            "success": failed_count == 0,
+            "message": f"Applied {applied_count}/{len(optimizations)} optimization(s). {failed_count} failed.",
+            "applied_count": applied_count,
+            "failed_count": failed_count,
+            "results": results
         })
 
     except Exception as e:
         current_app.logger.exception("Error approving optimizations")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@google_bp.route("/ads/applied-optimizations", methods=["GET"], endpoint="applied_optimizations")
+@login_required
+def get_applied_optimizations():
+    """
+    Get history of applied optimizations for confirmation.
+    Allows user to verify what changes were pushed to Google Ads.
+    """
+    try:
+        from flask import jsonify
+        from app.models_google import AppliedOptimization
+
+        aid = current_account_id()
+        customer_id = request.args.get("customer_id")
+        status_filter = request.args.get("status")  # applied, failed, pending
+
+        # Build query
+        query = AppliedOptimization.query.filter_by(account_id=aid)
+
+        if customer_id:
+            query = query.filter_by(customer_id=customer_id)
+
+        if status_filter:
+            query = query.filter_by(status=status_filter)
+
+        # Get recent optimizations (last 30 days)
+        from datetime import datetime, timedelta
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        query = query.filter(AppliedOptimization.created_at >= thirty_days_ago)
+
+        # Order by most recent first
+        optimizations = query.order_by(AppliedOptimization.created_at.desc()).limit(100).all()
+
+        # Format response
+        results = []
+        for opt in optimizations:
+            results.append({
+                "id": opt.id,
+                "customer_id": opt.customer_id,
+                "campaign_id": opt.campaign_id,
+                "type": opt.optimization_type,
+                "title": opt.optimization_title,
+                "status": opt.status,
+                "resource_name": opt.resource_name,
+                "error": opt.error_message,
+                "applied_at": opt.applied_at.isoformat() if opt.applied_at else None,
+                "created_at": opt.created_at.isoformat(),
+            })
+
+        # Summary stats
+        stats = {
+            "total": len(results),
+            "applied": sum(1 for r in results if r["status"] == "applied"),
+            "failed": sum(1 for r in results if r["status"] == "failed"),
+            "pending": sum(1 for r in results if r["status"] == "pending"),
+        }
+
+        return jsonify({
+            "success": True,
+            "optimizations": results,
+            "stats": stats
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Error fetching applied optimizations")
         return jsonify({
             "success": False,
             "error": str(e)

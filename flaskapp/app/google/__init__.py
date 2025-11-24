@@ -2365,10 +2365,12 @@ def _apply_negative_keyword(aid: int, customer_id: str, opt_data: dict, access_t
         if not term:
             return {"success": False, "error": "No keyword term provided"}
 
-        # Get campaign ID from optimization data or use account-level
+        # Get campaign ID from optimization data
         campaign_id = opt_data.get("campaign_id")
+        if not campaign_id:
+            return {"success": False, "error": "No campaign ID provided"}
 
-        # Create Google Ads client
+        # Create Google Ads client (isolated from SQLAlchemy)
         credentials = {
             "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
             "client_id": current_app.config.get("GOOGLE_CLIENT_ID"),
@@ -2383,9 +2385,9 @@ def _apply_negative_keyword(aid: int, customer_id: str, opt_data: dict, access_t
         # Build campaign criterion operation
         campaign_criterion_operation = client.get_type("CampaignCriterionOperation")
         campaign_criterion = campaign_criterion_operation.create
-        campaign_criterion.campaign = client.get_service("GoogleAdsService").campaign_path(
-            customer_id, campaign_id
-        ) if campaign_id else None
+
+        # Set campaign resource name
+        campaign_criterion.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
         campaign_criterion.negative = True
         campaign_criterion.keyword.text = term
         campaign_criterion.keyword.match_type = client.enums.KeywordMatchTypeEnum.BROAD
@@ -2426,7 +2428,7 @@ def _apply_mobile_bid_adjustment(aid: int, customer_id: str, opt_data: dict, acc
         if not campaign_id:
             return {"success": False, "error": "No campaign ID provided"}
 
-        # Create Google Ads client
+        # Create Google Ads client (isolated from SQLAlchemy)
         credentials = {
             "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
             "client_id": current_app.config.get("GOOGLE_CLIENT_ID"),
@@ -2441,9 +2443,9 @@ def _apply_mobile_bid_adjustment(aid: int, customer_id: str, opt_data: dict, acc
         # Build mobile device criterion operation
         campaign_criterion_operation = client.get_type("CampaignCriterionOperation")
         campaign_criterion = campaign_criterion_operation.update
-        campaign_criterion.campaign = client.get_service("GoogleAdsService").campaign_path(
-            customer_id, campaign_id
-        )
+
+        # Set campaign resource name
+        campaign_criterion.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
         campaign_criterion.criterion_id = 30001  # Mobile devices
         campaign_criterion.bid_modifier = 1.0 + (bid_adjustment / 100.0)  # Convert percentage to multiplier
 
@@ -2515,10 +2517,14 @@ def approve_optimizations():
 
         opt_titles = [opt.get("title", f"Optimization {opt.get('id')}") for opt in optimizations]
         AuditLog.log(
-            aid=aid,
+            account_id=aid,
             user_id=current_user.id,
             action="google_ads_approve_optimizations",
-            note=f"Approved {len(optimizations)} optimizations: {', '.join(opt_titles)}",
+            context_data={
+                "note": f"Approved {len(optimizations)} optimizations: {', '.join(opt_titles)}",
+                "optimization_count": len(optimizations),
+                "optimization_titles": opt_titles
+            }
         )
 
         # Apply each optimization via Google Ads API

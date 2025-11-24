@@ -625,6 +625,9 @@ def handle_customer_subscription_created(event_data: Dict[str, Any]):
             extra={"metric": "stripe.subscription.created", "user_id": user_id}
         )
 
+        # Sync status to accounts table
+        _sync_subscription_status_to_account(user_id, stripe_sub["status"])
+
 
 def handle_customer_subscription_updated(event_data: Dict[str, Any]):
     """
@@ -666,6 +669,9 @@ def handle_customer_subscription_deleted(event_data: Dict[str, Any]):
             f"Subscription {stripe_sub['id']} deleted/canceled",
             extra={"metric": "stripe.subscription.deleted", "subscription_id": stripe_sub['id']}
         )
+
+        # Sync canceled status to accounts table
+        _sync_subscription_status_to_account(sub.user_id, "canceled")
 
 
 def handle_invoice_paid(event_data: Dict[str, Any]):
@@ -771,6 +777,67 @@ def _update_subscription_from_stripe(sub: Subscription, stripe_sub: Dict[str, An
         f"Updated subscription {stripe_sub['id']}, status={stripe_sub['status']}",
         extra={"metric": "stripe.subscription.updated", "subscription_id": stripe_sub['id']}
     )
+
+    # Sync status to accounts table
+    _sync_subscription_status_to_account(sub.user_id, stripe_sub["status"])
+
+
+def _sync_subscription_status_to_account(user_id: str, stripe_status: str):
+    """
+    Update the accounts table stripe_status field based on subscription status.
+    This ensures is_paid_account() properly recognizes paid users.
+    """
+    try:
+        from sqlalchemy import text
+
+        # Get account_id from user_id (look up from users table)
+        with db.engine.connect() as conn:
+            result = conn.execute(
+                text("SELECT account_id FROM users WHERE id = :user_id LIMIT 1"),
+                {"user_id": user_id}
+            ).first()
+
+            if not result:
+                current_app.logger.warning(
+                    f"User {user_id} not found, cannot sync stripe_status to account",
+                    extra={"metric": "account.stripe_status.user_not_found", "user_id": user_id}
+                )
+                return
+
+            account_id = result[0]
+            if not account_id:
+                current_app.logger.warning(
+                    f"User {user_id} has no account_id, cannot sync stripe_status",
+                    extra={"metric": "account.stripe_status.no_account", "user_id": user_id}
+                )
+                return
+
+            # Get table/field names from config
+            table_name = current_app.config.get("ACCOUNT_TABLE_NAME", "accounts")
+            stripe_field = current_app.config.get("ACCOUNT_STRIPE_FIELD", "stripe_status")
+
+            # Update accounts table
+            conn.execute(
+                text(f"UPDATE {table_name} SET {stripe_field} = :status WHERE id = :id"),
+                {"status": stripe_status, "id": account_id}
+            )
+            conn.commit()
+
+            current_app.logger.info(
+                f"Updated account {account_id} stripe_status to {stripe_status} (user {user_id})",
+                extra={
+                    "metric": "account.stripe_status.updated",
+                    "account_id": account_id,
+                    "user_id": user_id,
+                    "status": stripe_status
+                }
+            )
+    except Exception as e:
+        current_app.logger.error(
+            f"Error syncing subscription status to account: {e}",
+            exc_info=True,
+            extra={"metric": "account.stripe_status.error", "user_id": user_id}
+        )
 
 
 # Event handler mapping

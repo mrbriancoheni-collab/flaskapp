@@ -2973,6 +2973,9 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
 
             estimated_clicks_wasted = int(estimated_waste / avg_cpc)
             campaign_names = [c.get("name", "Campaign") for c in campaigns[:2]] if campaigns else ["All Campaigns"]
+            # Get first enabled campaign ID for applying the optimization
+            first_campaign_id = next((c.get("id") for c in campaigns if c.get("status", "").lower() in ("enabled", "active")),
+                                    campaigns[0].get("id") if campaigns else None)
 
             opportunities.append({
                 "title": f"Add negative keyword: \"{neg['term']}\"",
@@ -2993,7 +2996,13 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
                 "after_state": f"'{neg['term']}' blocked, saving ${estimated_waste:.0f}/mo to reinvest in converting traffic",
                 "success_metrics": [f"Block {estimated_clicks_wasted} irrelevant clicks", f"Save ${estimated_waste:.0f}/month", "Improve conversion rate"],
                 "optimization_type": "negative_keyword",
-                "optimization_data": {"term": neg["term"], "estimated_waste": estimated_waste, "clicks": estimated_clicks_wasted, "cpc": avg_cpc},
+                "optimization_data": {
+                    "term": neg["term"],
+                    "estimated_waste": estimated_waste,
+                    "clicks": estimated_clicks_wasted,
+                    "cpc": avg_cpc,
+                    "campaign_id": first_campaign_id
+                },
             })
 
     # Ad Extensions - Create individual line item for each extension type
@@ -3187,6 +3196,10 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
         additional_mobile_leads = max(1, int(additional_mobile_clicks * conversion_rate))
         lead_value = cost_per_conversion if cost_per_conversion > 0 else 100
 
+        # Get first enabled campaign ID for applying the optimization
+        first_campaign_id = next((c.get("id") for c in campaigns if c.get("status", "").lower() in ("enabled", "active")),
+                                campaigns[0].get("id") if campaigns else None)
+
         # Mobile bid adjustment - Do this FIRST
         opportunities.append({
             "title": "Add +20% mobile bid adjustment",
@@ -3209,7 +3222,11 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
             "success_metrics": [f"+{additional_mobile_clicks} mobile clicks/mo", f"+{additional_mobile_leads} leads/mo", f"~${additional_mobile_leads * lead_value:.0f}/mo value"],
             "benefit_explanation": "60% of local service searches happen on mobile. Higher bids = better ad position = more calls. Mobile users have higher purchase intent.",
             "optimization_type": "mobile_bid",
-            "optimization_data": {"bid_adjustment": 20, "estimated_mobile_clicks": estimated_mobile_clicks},
+            "optimization_data": {
+                "bid_adjustment": 20,
+                "estimated_mobile_clicks": estimated_mobile_clicks,
+                "campaign_id": first_campaign_id
+            },
         })
 
         # Mobile-preferred ads - Compounds with bid adjustment

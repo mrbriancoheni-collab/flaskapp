@@ -3358,6 +3358,7 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
                 "risk_level": "low",
                 "benefit_explanation": "**Why This is Critical:** Without conversion tracking, Google's AI can't optimize your bids for actual customers. You're essentially flying blind, paying for clicks that may never convert.",
                 "optimization_type": "setup",
+                "optimization_data": {},
                 "best_practice": True,
             },
             {
@@ -3375,6 +3376,7 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
                 "risk_level": "low",
                 "benefit_explanation": "**Why This Matters:** Tightly themed ad groups allow you to write highly specific ads that match search intent → higher CTR → lower CPCs → better ROI.",
                 "optimization_type": "setup",
+                "optimization_data": {},
                 "best_practice": True,
             },
             {
@@ -3392,6 +3394,7 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
                 "risk_level": "low",
                 "benefit_explanation": "**Why Multiple Ads:** Google tests different combinations to find what works. More variety = more testing = faster optimization. Single ads limit Google's ability to optimize.",
                 "optimization_type": "setup",
+                "optimization_data": {},
                 "best_practice": True,
             },
             {
@@ -3409,6 +3412,7 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
                 "risk_level": "low",
                 "benefit_explanation": "**Prevent Wasted Spend:** These terms attract job seekers, DIYers, and researchers - not paying customers. Block them before they drain your budget.",
                 "optimization_type": "negative_keyword",
+                "optimization_data": {},
                 "best_practice": True,
             },
             {
@@ -3426,6 +3430,7 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
                 "risk_level": "low",
                 "benefit_explanation": "**Bigger Ads = More Clicks:** Extensions make your ad larger, pushing competitors down. Call extensions are especially critical for service businesses - mobile users expect tap-to-call.",
                 "optimization_type": "extension",
+                "optimization_data": {},
                 "best_practice": True,
             },
         ]

@@ -863,65 +863,77 @@ function approveOptimizations() {
     return response.json();
   })
   .then(data => {
-    if (data.success) {
-      closeOptimizationsModal();
+    closeOptimizationsModal();
 
-      // Show detailed results
-      let resultHTML = '';
-      if (data.results && data.results.length > 0) {
-        resultHTML = '<div class="mt-2 space-y-1">';
-        data.results.forEach(result => {
-          const icon = result.success ? '<i class="fa-solid fa-check text-green-600"></i>' : '<i class="fa-solid fa-times text-red-600"></i>';
-          const msg = result.success ? 'Applied' : `Failed: ${result.error || 'Unknown error'}`;
-          resultHTML += `<div class="text-xs">${icon} ${result.title}: ${msg}</div>`;
-        });
-        resultHTML += '</div>';
-      }
+    // Build detailed results HTML
+    let resultHTML = '';
+    if (data.results && data.results.length > 0) {
+      resultHTML = '<div class="mt-2 space-y-1 max-h-64 overflow-y-auto">';
+      data.results.forEach(result => {
+        const isSuccess = result.status === 'applied';
+        const icon = isSuccess ? '<i class="fa-solid fa-check text-green-600"></i>' : '<i class="fa-solid fa-times text-red-600"></i>';
+        const msg = isSuccess ? 'Applied' : `Failed: ${result.error || 'Unknown error'}`;
+        resultHTML += `<div class="text-xs">${icon} ${result.optimization}: ${msg}</div>`;
+      });
+      resultHTML += '</div>';
+    }
 
-      const notification = document.createElement('div');
-      notification.className = 'fixed top-4 right-4 bg-green-50 border-2 border-green-500 text-green-900 px-6 py-4 rounded-lg shadow-xl z-50 max-w-md';
-      notification.innerHTML = `
-        <div class="flex items-start gap-3">
-          <i class="fa-solid fa-check-circle text-green-600 text-2xl"></i>
-          <div class="flex-1">
-            <div class="font-bold text-lg mb-1">Optimizations Processed!</div>
-            <div class="text-sm">
-              ${selectedOptimizations.length} optimization${selectedOptimizations.length > 1 ? 's' : ''} submitted.
-              ${resultHTML}
-            </div>
+    // Determine notification style based on results
+    const hasFailures = data.failed_count > 0;
+    const notificationClass = hasFailures
+      ? 'fixed top-4 right-4 bg-yellow-50 border-2 border-yellow-500 text-yellow-900 px-6 py-4 rounded-lg shadow-xl z-50 max-w-md'
+      : 'fixed top-4 right-4 bg-green-50 border-2 border-green-500 text-green-900 px-6 py-4 rounded-lg shadow-xl z-50 max-w-md';
+
+    const iconColor = hasFailures ? 'yellow' : 'green';
+    const iconClass = hasFailures ? 'fa-exclamation-triangle' : 'fa-check-circle';
+    const title = hasFailures ? 'Optimizations Partially Applied' : 'Optimizations Applied Successfully!';
+
+    const notification = document.createElement('div');
+    notification.className = notificationClass;
+    notification.innerHTML = `
+      <div class="flex items-start gap-3">
+        <i class="fa-solid ${iconClass} text-${iconColor}-600 text-2xl"></i>
+        <div class="flex-1">
+          <div class="font-bold text-lg mb-1">${title}</div>
+          <div class="text-sm mb-1">
+            ${data.message || `${data.applied_count} applied, ${data.failed_count} failed`}
           </div>
-          <button class="notification-close text-green-600 hover:text-green-800">
-            <i class="fa-solid fa-times"></i>
-          </button>
+          ${resultHTML}
         </div>
-      `;
-      document.body.appendChild(notification);
+        <button class="notification-close text-${iconColor}-600 hover:text-${iconColor}-800">
+          <i class="fa-solid fa-times"></i>
+        </button>
+      </div>
+    `;
+    document.body.appendChild(notification);
 
-      const closeBtn = notification.querySelector('.notification-close');
-      if (closeBtn) closeBtn.addEventListener('click', () => notification.remove());
+    const closeBtn = notification.querySelector('.notification-close');
+    if (closeBtn) closeBtn.addEventListener('click', () => notification.remove());
 
-      setTimeout(() => notification.remove(), 8000);
+    setTimeout(() => notification.remove(), hasFailures ? 15000 : 8000);
+
+    // Only reload if all succeeded
+    if (!hasFailures) {
       setTimeout(() => location.reload(), 3000);
-    } else {
-      throw new Error(data.error || 'Failed to approve optimizations');
     }
   })
   .catch(error => {
-    console.error('Error:', error);
+    console.error('Error approving optimizations:', error);
+    closeOptimizationsModal();
 
-    // Show detailed error notification
+    // Show detailed error notification with actual error message
     const notification = document.createElement('div');
     notification.className = 'fixed top-4 right-4 bg-red-50 border-2 border-red-500 text-red-900 px-6 py-4 rounded-lg shadow-xl z-50 max-w-md';
     notification.innerHTML = `
       <div class="flex items-start gap-3">
         <i class="fa-solid fa-exclamation-circle text-red-600 text-2xl"></i>
         <div class="flex-1">
-          <div class="font-bold text-lg mb-1">Error Approving Optimizations</div>
-          <div class="text-sm mb-2">
-            ${error.message}
+          <div class="font-bold text-lg mb-1">Error Submitting Optimizations</div>
+          <div class="text-sm mb-2 font-mono text-xs bg-red-100 p-2 rounded">
+            ${error.message || 'Unknown error occurred'}
           </div>
           <div class="text-xs text-red-700">
-            Please try again or contact support if the problem persists.
+            This is a system error. Check the browser console for more details, or contact support.
           </div>
         </div>
         <button class="notification-close text-red-600 hover:text-red-800">
@@ -934,7 +946,7 @@ function approveOptimizations() {
     const closeBtn = notification.querySelector('.notification-close');
     if (closeBtn) closeBtn.addEventListener('click', () => notification.remove());
 
-    setTimeout(() => notification.remove(), 10000);
+    setTimeout(() => notification.remove(), 15000);
 
     button.innerHTML = originalText;
     button.disabled = false;

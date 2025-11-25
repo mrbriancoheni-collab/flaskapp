@@ -1458,7 +1458,7 @@ def create_app():
             <a href="/" class="btn">
                 <i class="fa-solid fa-home"></i> Return Home
             </a>
-            <a href="/auth/login" class="btn btn-secondary">
+            <a href="/login" class="btn btn-secondary">
                 <i class="fa-solid fa-right-to-bracket"></i> Sign In
             </a>
             <a href="javascript:location.reload()" class="btn btn-secondary">

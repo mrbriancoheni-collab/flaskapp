@@ -588,7 +588,9 @@
                  data-opp-id="{{ loop.index }}"
                  data-title="{{ opp.title }}"
                  data-savings="{{ opp.monthly_savings or 0 }}"
-                 data-leads="{{ opp.monthly_leads or 0 }}">
+                 data-leads="{{ opp.monthly_leads or 0 }}"
+                 data-optimization-type="{{ opp.optimization_type }}"
+                 data-optimization-data='{{ opp.optimization_data | tojson }}'>
 
           <!-- Icon -->
           <div class="flex-shrink-0 w-8 h-8 rounded-full bg-{{ opp.color }}-100 flex items-center justify-center">
@@ -919,7 +921,9 @@
                      data-title="{{ opp.title }}"
                      data-savings="{{ opp.monthly_savings|default(0) }}"
                      data-leads="{{ opp.monthly_leads|default(0) }}"
-                     data-lead-value="{{ opp.lead_value|default(0) }}">
+                     data-lead-value="{{ opp.lead_value|default(0) }}"
+                     data-optimization-type="{{ opp.optimization_type }}"
+                     data-optimization-data='{{ opp.optimization_data | tojson }}'>
 
               <!-- Content -->
               <div class="flex-1">
@@ -1371,7 +1375,9 @@ function approveOptimizations() {
       seenIds.add(oppId);
       selectedOptimizations.push({
         id: oppId,
-        title: checkbox.dataset.title
+        title: checkbox.dataset.title,
+        optimization_type: checkbox.dataset.optimizationType,
+        optimization_data: JSON.parse(checkbox.dataset.optimizationData || '{}')
       });
     }
   });

@@ -1052,7 +1052,8 @@ function toggleAccordion(contentId, chevronId) {
 
 // Update selected count display and sticky footer
 function updateSelectedCount() {
-  const checkboxes = document.querySelectorAll('.optimization-checkbox:checked');
+  // Only use main list checkboxes to avoid duplicates
+  const checkboxes = document.querySelectorAll('#opportunitiesList .optimization-checkbox:checked');
   const count = checkboxes.length;
 
   console.log(`${count} optimizations selected`);
@@ -1118,13 +1119,23 @@ document.addEventListener('DOMContentLoaded', function() {
   // Event delegation for all checkboxes (CSP compliance)
   document.body.addEventListener('change', function(e) {
     if (e.target.classList.contains('optimization-checkbox')) {
-      // Check if we're in the modal or main list
+      // Synchronize checkbox state between main list and modal
+      const oppId = e.target.dataset.oppId;
+      const isChecked = e.target.checked;
+
+      // Update all checkboxes with the same oppId
+      document.querySelectorAll(`.optimization-checkbox[data-opp-id="${oppId}"]`).forEach(cb => {
+        if (cb !== e.target) {
+          cb.checked = isChecked;
+        }
+      });
+
+      // Update UI
       const modal = document.getElementById('optimizationsModal');
       if (modal && !modal.classList.contains('hidden')) {
         updateTotals();
-      } else {
-        updateSelectedCount();
       }
+      updateSelectedCount();
     }
   });
 
@@ -1256,9 +1267,13 @@ function closeOptimizationsModal() {
 }
 
 function selectAllOptimizations(checked) {
-  const checkboxes = document.querySelectorAll('.optimization-checkbox');
+  // Update main list checkboxes - synchronization will handle modal checkboxes
+  const checkboxes = document.querySelectorAll('#opportunitiesList .optimization-checkbox');
   checkboxes.forEach(checkbox => {
     checkbox.checked = checked;
+    // Manually trigger synchronization for each checkbox
+    const event = new Event('change', { bubbles: true });
+    checkbox.dispatchEvent(event);
   });
   updateTotals();
   updateSelectedCount();
@@ -1270,6 +1285,9 @@ function selectByPriority(priority) {
     const checkbox = item.querySelector('.optimization-checkbox');
     if (checkbox) {
       checkbox.checked = (item.dataset.priority === priority);
+      // Trigger synchronization
+      const event = new Event('change', { bubbles: true });
+      checkbox.dispatchEvent(event);
     }
   });
   updateSelectedCount();
@@ -1283,13 +1301,17 @@ function selectQuickWinsOnly() {
       // Check if this optimization is marked as a quick win
       const isQuickWin = item.textContent.includes('QUICK') || item.querySelector('.fa-bolt');
       checkbox.checked = isQuickWin;
+      // Trigger synchronization
+      const event = new Event('change', { bubbles: true });
+      checkbox.dispatchEvent(event);
     }
   });
   updateSelectedCount();
 }
 
 function updateTotals() {
-  const checkboxes = document.querySelectorAll('.optimization-checkbox:checked');
+  // Only use main list checkboxes to avoid duplicates
+  const checkboxes = document.querySelectorAll('#opportunitiesList .optimization-checkbox:checked');
   const button = document.getElementById('approveButton');
   const buttonText = document.getElementById('approveButtonText');
   const count = checkboxes.length;
@@ -1332,20 +1354,26 @@ function updateTotals() {
 }
 
 function approveOptimizations() {
-  const checkboxes = document.querySelectorAll('.optimization-checkbox:checked');
+  // Only collect checkboxes from the MAIN list (not modal duplicates)
+  const checkboxes = document.querySelectorAll('#opportunitiesList .optimization-checkbox:checked');
 
   if (checkboxes.length === 0) {
     alert('Please select at least one optimization to approve.');
     return;
   }
 
-  // Collect selected optimization IDs and titles
+  // Collect selected optimization IDs and titles (removing duplicates)
   const selectedOptimizations = [];
+  const seenIds = new Set();
   checkboxes.forEach(checkbox => {
-    selectedOptimizations.push({
-      id: checkbox.dataset.oppId,
-      title: checkbox.dataset.title
-    });
+    const oppId = checkbox.dataset.oppId;
+    if (!seenIds.has(oppId)) {
+      seenIds.add(oppId);
+      selectedOptimizations.push({
+        id: oppId,
+        title: checkbox.dataset.title
+      });
+    }
   });
 
   {% if is_demo %}

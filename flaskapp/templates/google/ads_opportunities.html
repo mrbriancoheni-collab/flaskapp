@@ -1,4 +1,4 @@
-{# templates/google/ads_opportunities.html #}
+{# templates/google/ads_opportunities.html - Simplified Version #}
 {% extends "base_app.html" %}
 {% set SECTION = 'google' %}
 {% block title %}{% if is_demo %}Opportunities Dashboard - Google Ads{% else %}Google Ads{% endif %}{% endblock %}
@@ -53,128 +53,64 @@
     </select>
     <button id="adsCustomerSave" class="px-3 py-1 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 text-sm">Save</button>
     <span id="adsCustomerMsg" class="text-sm text-gray-500"></span>
-
-    <!-- Help tooltip -->
-    <div class="relative group">
-      <button type="button" class="inline-flex items-center justify-center w-5 h-5 text-xs text-gray-400 hover:text-gray-600 border border-gray-300 rounded-full">
-        ?
-      </button>
-      <div class="absolute left-0 top-6 z-10 hidden group-hover:block w-80 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
-        <div class="font-semibold mb-1">Manage multiple accounts?</div>
-        <p class="mb-2">If you have access to multiple Google Ads accounts, use this dropdown to switch between them.</p>
-        <p class="text-gray-300">Data will refresh automatically when you change accounts.</p>
-        <div class="absolute -top-1 left-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
-      </div>
-    </div>
   </div>
   {% endif %}
 
-  <!-- AI Agents Banner -->
+  <!-- Unified Info Banner -->
   <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-xl shadow-lg p-6 text-white">
     <div class="flex items-center gap-4">
       <div class="flex-shrink-0">
         <i class="fa-solid fa-robot text-4xl"></i>
       </div>
       <div class="flex-1">
-        <h2 class="text-2xl font-bold mb-1">🤖 Your 24/7 AI Agent Team</h2>
-        <p class="text-indigo-100">These opportunities were identified by your AI agents. <strong>95% auto-execute</strong> (low-risk changes like blocking "free" searches). High-risk decisions require your approval.</p>
+        <h2 class="text-2xl font-bold mb-1">
+          {% if is_demo %}🤖 Demo: AI-Powered Optimization Analysis{% else %}🤖 Your 24/7 AI Agent Team{% endif %}
+        </h2>
+        <p class="text-indigo-100">
+          {% if is_demo %}
+            This demonstration uses sample data from a fictional plumbing & HVAC company. In the live version, you'll see real data from your connected Google Ads account with actionable optimizations.
+          {% else %}
+            AI agents identified {{ analysis.opportunities|length }} optimization opportunities. <strong>95% auto-execute</strong> (low-risk changes). High-risk decisions require your approval.
+          {% endif %}
+        </p>
       </div>
       {% if not is_demo %}
-      <div class="flex-shrink-0 flex flex-col gap-2">
-        <a href="{{ url_for('agents_bp.dashboard') }}" class="inline-flex items-center gap-2 bg-white text-indigo-600 px-6 py-3 rounded-lg font-bold hover:bg-blue-50 transition shadow-lg">
-          <i class="fa-solid fa-chart-line"></i>
-          Agent Dashboard
+      <div class="flex-shrink-0 flex gap-2">
+        <a href="{{ url_for('agents_bp.dashboard') }}" class="inline-flex items-center gap-2 bg-white text-indigo-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-50 transition text-sm">
+          <i class="fa-solid fa-chart-line"></i> Dashboard
         </a>
-        <a href="{{ url_for('agents_bp.approval_queue') }}" class="inline-flex items-center gap-2 bg-indigo-800 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-900 transition shadow-lg">
-          <i class="fa-solid fa-clipboard-check"></i>
-          Approval Queue
-        </a>
-        <a href="{{ url_for('budget_bp.budget_groups') }}" class="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 transition shadow-lg">
-          <i class="fa-solid fa-dollar-sign"></i>
-          Budget Groups
-        </a>
-        <a href="{{ url_for('forecasting_bp.forecasting_dashboard') }}" class="inline-flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-purple-700 transition shadow-lg">
-          <i class="fa-solid fa-crystal-ball"></i>
-          Budget Forecasting
-        </a>
-        <a href="{{ url_for('alerts_bp.alerts_dashboard') }}" class="inline-flex items-center gap-2 bg-yellow-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-yellow-700 transition shadow-lg">
-          <i class="fa-solid fa-bell"></i>
-          Google Ads Alerts
-        </a>
-        <a href="{{ url_for('google_bp.ads_structure') }}" class="inline-flex items-center gap-2 bg-gray-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-gray-700 transition shadow-lg">
-          <i class="fa-solid fa-sitemap"></i>
-          Account Structure
+        <a href="{{ url_for('agents_bp.approval_queue') }}" class="inline-flex items-center gap-2 bg-indigo-800 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-900 transition text-sm">
+          <i class="fa-solid fa-clipboard-check"></i> Queue
         </a>
       </div>
       {% else %}
       <div class="flex-shrink-0">
         <a href="{{ url_for('auth_bp.signup') }}" class="inline-flex items-center gap-2 bg-white text-indigo-600 px-6 py-3 rounded-lg font-bold hover:bg-blue-50 transition shadow-lg">
-          <i class="fa-solid fa-rocket mr-1"></i>
-          Get More Leads
+          <i class="fa-solid fa-rocket"></i> Get Started
         </a>
       </div>
       {% endif %}
     </div>
   </div>
 
-  {% if is_demo %}
-  <!-- Demo Mode Banner -->
-  <div class="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg p-6 text-white">
-    <div class="flex items-center gap-4">
-      <div class="flex-shrink-0">
-        <i class="fa-solid fa-flask text-4xl"></i>
-      </div>
-      <div class="flex-1">
-        <h2 class="text-2xl font-bold mb-1">Demo Mode</h2>
-        <p class="text-blue-100">This is a demonstration using sample data from a fictional plumbing & HVAC company. In the live version, you'll see real data from your connected Google Ads account with actionable optimizations you can approve and implement.</p>
-      </div>
-      <div class="flex-shrink-0">
-        <a href="{{ url_for('auth_bp.signup') }}" class="inline-flex items-center gap-2 bg-white text-indigo-600 px-6 py-3 rounded-lg font-bold hover:bg-blue-50 transition shadow-lg">
-          <i class="fa-solid fa-rocket"></i>
-          Get More Leads
-        </a>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  {% if is_demo %}
-  <!-- Credibility Bar -->
-  <div class="bg-white border-2 border-indigo-200 rounded-xl py-4 shadow-md">
-    <div class="px-6">
-      <div class="flex items-center justify-center gap-8 flex-wrap text-sm text-gray-600">
-        <div class="flex items-center gap-2">
-          <i class="fa-solid fa-chart-line text-indigo-600 text-lg"></i>
-          <span><strong class="text-gray-900">1,000+</strong> accounts analyzed</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <i class="fa-solid fa-building text-indigo-600 text-lg"></i>
-          <span><strong class="text-gray-900">Home service</strong> industry benchmarks</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <i class="fa-solid fa-robot text-indigo-600 text-lg"></i>
-          <span><strong class="text-gray-900">AI-powered</strong> analysis</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <i class="fa-solid fa-clock text-green-600 text-lg"></i>
-          <span><strong class="text-gray-900">30-60 days</strong> to results</span>
-        </div>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- Campaign Summary -->
-  <div id="campaignSummary" class="bg-white rounded-xl shadow-lg p-6">
+  <!-- Performance Dashboard -->
+  <div class="bg-white rounded-xl shadow-lg p-6">
     <h2 class="text-xl font-bold text-gray-900 mb-4">
       <i class="fa-solid fa-chart-bar text-indigo-600 mr-2"></i>
-      Campaign Overview
+      Performance Overview
     </h2>
-    <div class="grid md:grid-cols-4 gap-4">
+    <div class="grid md:grid-cols-5 gap-4 mb-6">
+      <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Health Score</div>
+        <div class="text-3xl font-bold {% if analysis.scores.overall >= 80 %}text-green-600{% elif analysis.scores.overall >= 60 %}text-yellow-600{% else %}text-red-600{% endif %}">
+          {{ analysis.scores.overall }}
+        </div>
+        <div class="text-xs text-gray-500 mt-1">Grade: {{ analysis.grade }}</div>
+      </div>
       <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
         <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Monthly Spend</div>
         <div class="text-2xl font-bold text-gray-900">${{ "{:,.0f}".format(analysis.performance.monthly_spend) }}</div>
-        <div class="text-xs text-gray-500 mt-1">Avg. ${{ "{:,.0f}".format(analysis.performance.daily_spend) }}/day</div>
+        <div class="text-xs text-gray-500 mt-1">${{ "{:,.0f}".format(analysis.performance.daily_spend) }}/day</div>
       </div>
       <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
         <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Impressions</div>
@@ -192,77 +128,43 @@
         <div class="text-xs text-gray-500 mt-1">${{ "{:,.0f}".format(analysis.performance.cost_per_conversion) }}/lead</div>
       </div>
     </div>
-  </div>
 
-  <!-- Overall Health Score Card -->
-  <div id="healthScoreCard" class="bg-white rounded-xl shadow-lg p-8">
-    <div class="flex flex-col md:flex-row items-center justify-between gap-8">
-      <!-- Score Circle -->
-      <div class="text-center">
-        <div class="inline-block relative">
-          {% set score_pct = (analysis.scores.overall / 100) * 502.4 %}
-          {% set offset = 502.4 - score_pct %}
-          <svg class="w-48 h-48 transform -rotate-90">
-            <circle cx="96" cy="96" r="80" stroke="#e5e7eb" stroke-width="12" fill="none"/>
-            <circle cx="96" cy="96" r="80"
-                    {% if analysis.scores.overall >= 80 %}stroke="#10b981"
-                    {% elif analysis.scores.overall >= 60 %}stroke="#f59e0b"
-                    {% else %}stroke="#ef4444"{% endif %}
-                    stroke-width="12" fill="none"
-                    stroke-dasharray="502.4" stroke-dashoffset="{{ offset }}" stroke-linecap="round"/>
-          </svg>
-          <div class="absolute inset-0 flex flex-col items-center justify-center">
-            <div class="text-5xl font-bold
-                        {% if analysis.scores.overall >= 80 %}text-green-600
-                        {% elif analysis.scores.overall >= 60 %}text-yellow-600
-                        {% else %}text-red-600{% endif %}">
-              {{ analysis.scores.overall }}
-            </div>
-            <div class="text-sm text-gray-500">Health Score</div>
-          </div>
+    <!-- Key Scores -->
+    <div class="grid md:grid-cols-3 gap-4">
+      <div class="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-lg p-4">
+        <div class="text-sm text-gray-600 mb-1">💸 Wasted Spend Prevention</div>
+        <div class="text-3xl font-bold text-red-700">{{ analysis.scores.wasted_spend|int }}%</div>
+        <div class="text-xs text-red-600 mt-1 font-semibold">
+          {% if analysis.scores.wasted_spend < 30 %}Critical - High waste detected
+          {% elif analysis.scores.wasted_spend < 60 %}Needs improvement
+          {% elif analysis.scores.wasted_spend < 80 %}Good coverage
+          {% else %}Excellent{% endif %}
         </div>
-        <div class="mt-4 text-3xl font-bold text-gray-700">Grade: {{ analysis.grade }}</div>
       </div>
-
-      <!-- Key Scores with Financial Context -->
-      <div class="flex-1 grid md:grid-cols-3 gap-4">
-        <div class="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-lg p-4">
-          <div class="text-sm text-gray-600 mb-1">💸 Wasted Spend Prevention</div>
-          <div class="text-3xl font-bold text-red-700">{{ analysis.scores.wasted_spend|int }}%</div>
-          <div class="text-xs text-red-600 mt-1 font-semibold">
-            {% if analysis.scores.wasted_spend < 30 %}Critical - High waste detected
-            {% elif analysis.scores.wasted_spend < 60 %}Needs improvement
-            {% elif analysis.scores.wasted_spend < 80 %}Good coverage
-            {% else %}Excellent{% endif %}
-          </div>
+      <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-4">
+        <div class="text-sm text-gray-600 mb-1">⭐ Quality Score Health</div>
+        <div class="text-3xl font-bold text-yellow-700">{{ analysis.scores.quality_score|int }}%</div>
+        <div class="text-xs text-yellow-700 mt-1 font-semibold">
+          {% if analysis.scores.quality_score < 40 %}Poor QS - High CPCs
+          {% elif analysis.scores.quality_score < 65 %}Below average
+          {% elif analysis.scores.quality_score < 80 %}Good
+          {% else %}Excellent{% endif %}
         </div>
-
-        <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-4">
-          <div class="text-sm text-gray-600 mb-1">⭐ Quality Score Health</div>
-          <div class="text-3xl font-bold text-yellow-700">{{ analysis.scores.quality_score|int }}%</div>
-          <div class="text-xs text-yellow-700 mt-1 font-semibold">
-            {% if analysis.scores.quality_score < 40 %}Poor QS - High CPCs
-            {% elif analysis.scores.quality_score < 65 %}Below average
-            {% elif analysis.scores.quality_score < 80 %}Good
-            {% else %}Excellent{% endif %}
-          </div>
-        </div>
-
-        <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
-          <div class="text-sm text-gray-600 mb-1">🧩 Ad Extensions</div>
-          <div class="text-3xl font-bold text-blue-700">{{ analysis.scores.extensions|int }}%</div>
-          <div class="text-xs text-blue-600 mt-1 font-semibold">
-            {% if analysis.scores.extensions < 40 %}Critical - Missing key extensions
-            {% elif analysis.scores.extensions < 70 %}Needs more extensions
-            {% elif analysis.scores.extensions < 85 %}Good coverage
-            {% else %}Excellent{% endif %}
-          </div>
+      </div>
+      <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
+        <div class="text-sm text-gray-600 mb-1">🧩 Ad Extensions</div>
+        <div class="text-3xl font-bold text-blue-700">{{ analysis.scores.extensions|int }}%</div>
+        <div class="text-xs text-blue-600 mt-1 font-semibold">
+          {% if analysis.scores.extensions < 40 %}Critical - Missing key extensions
+          {% elif analysis.scores.extensions < 70 %}Needs more extensions
+          {% elif analysis.scores.extensions < 85 %}Good coverage
+          {% else %}Excellent{% endif %}
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Total Potential Value -->
+  <!-- Financial Impact Summary -->
   {% set ns = namespace(total_monthly_savings=0, total_monthly_leads=0, total_lead_value=0) %}
   {% for opp in analysis.opportunities %}
     {% if opp.monthly_savings %}
@@ -270,573 +172,201 @@
     {% endif %}
     {% if opp.monthly_leads %}
       {% set ns.total_monthly_leads = ns.total_monthly_leads + opp.monthly_leads %}
-      {# 20% win rate (1 in 5 leads convert) × $500 customer value = $100 per lead #}
       {% set ns.total_lead_value = ns.total_lead_value + (opp.monthly_leads * 100) %}
     {% endif %}
   {% endfor %}
   {% set ns.total_combined_value = ns.total_monthly_savings + ns.total_lead_value %}
 
-  {% if is_demo %}
-  <!-- Problem Identification Section -->
-  <div class="bg-gradient-to-br from-red-50 to-orange-50 border-2 border-red-300 rounded-xl shadow-lg p-8">
-    <h2 class="text-3xl font-bold text-gray-900 text-center mb-2">
-      🚨 Top Issues Costing You Money
-    </h2>
-    <p class="text-center text-gray-600 mb-6">Based on analysis of your campaigns</p>
-
-    <div class="space-y-3 mb-6">
-      <div class="flex items-start gap-3 p-4 bg-white rounded-lg border-2 border-red-300">
-        <div class="text-3xl">🔴</div>
-        <div class="flex-1">
-          <div class="font-bold text-gray-900 mb-1">1. High wasted spend ({{ analysis.wasted_spend_pct|default(22)|int }}%)</div>
-          <div class="text-sm text-gray-700 mb-1">You're wasting approximately ${{ "{:,.0f}".format(analysis.performance.monthly_spend * 0.22) }}/month on ads that don't convert</div>
-          <div class="text-xs text-gray-500 italic">Industry average for home services: 15-20%</div>
-        </div>
-      </div>
-
-      <div class="flex items-start gap-3 p-4 bg-white rounded-lg border-2 border-yellow-300">
-        <div class="text-3xl">🟡</div>
-        <div class="flex-1">
-          <div class="font-bold text-gray-900 mb-1">2. Low quality scores (avg {{ analysis.avg_quality_score|default(5.8)|round(1) }}/10)</div>
-          <div class="text-sm text-gray-700 mb-1">You're paying 25-40% more per click than competitors with better quality scores</div>
-          <div class="text-xs text-gray-500 italic">Target: 7+ (Top advertisers average 8-9)</div>
-        </div>
-      </div>
-
-      <div class="flex items-start gap-3 p-4 bg-white rounded-lg border-2 border-yellow-300">
-        <div class="text-3xl">🟡</div>
-        <div class="flex-1">
-          <div class="font-bold text-gray-900 mb-1">3. Missing ad extensions ({{ analysis.scores.extensions|int }}% coverage)</div>
-          <div class="text-sm text-gray-700 mb-1">Missing extensions means lower ad rank and fewer clicks at the same cost</div>
-          <div class="text-xs text-gray-500 italic">Typical: All 6-8 extension types active</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Opportunity Cost -->
-    <div class="bg-white border-4 border-orange-400 rounded-xl p-6">
-      <div class="text-center">
-        <div class="text-sm text-gray-600 uppercase font-semibold mb-2">⏰ Cost of Waiting</div>
-        <div class="text-2xl font-bold text-gray-900 mb-1">
-          Every Month You Wait Costs You: <span class="text-red-600">${{ "{:,.0f}".format(ns.total_combined_value|default(2400)) }}</span>
-        </div>
-        <div class="text-lg text-gray-700">
-          💰 By This Time Next Year: <span class="text-red-600 font-bold">${{ "{:,.0f}".format((ns.total_combined_value|default(2400)) * 12) }}</span> left on the table
-        </div>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
   {% if ns.total_monthly_savings > 0 or ns.total_monthly_leads > 0 %}
-  <div id="financialImpact" class="bg-gradient-to-br from-emerald-50 to-green-100 border-2 border-emerald-300 rounded-xl shadow-xl p-8">
-    <div class="text-center mb-6">
-      <h2 class="text-3xl font-extrabold text-gray-900 mb-2">
-        💰 Total Financial Impact
-      </h2>
-      <p class="text-gray-700 font-medium">
-        Implementing these {{ analysis.opportunities|length }} optimizations will deliver:
-      </p>
+  <div class="bg-gradient-to-br from-emerald-50 to-green-100 border-2 border-emerald-300 rounded-xl shadow-xl p-6">
+    <div class="text-center mb-4">
+      <h2 class="text-2xl font-extrabold text-gray-900 mb-1">💰 Total Potential Value</h2>
+      <p class="text-gray-700 text-sm">Implementing these {{ analysis.opportunities|length }} optimizations</p>
     </div>
 
-    <div class="grid md:grid-cols-3 gap-6">
+    <div class="grid md:grid-cols-3 gap-4">
       {% if ns.total_monthly_savings > 0 %}
-      <div class="bg-white rounded-xl p-6 shadow-md border-2 border-green-300">
-        <div class="flex items-center justify-center mb-3">
-          <span class="text-5xl">💵</span>
-        </div>
-        <div class="text-center">
-          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Cost Savings</div>
-          <div class="text-4xl font-black text-green-600 mb-1">
-            ${{ "%.0f"|format(ns.total_monthly_savings) }}
-          </div>
-          <div class="text-xs text-gray-500 mb-2">/month</div>
-          <div class="text-xs bg-green-50 text-green-700 px-2 py-1 rounded font-semibold">
-            ${{ "%.0f"|format(ns.total_monthly_savings * 12) }}/year saved
-          </div>
-          <div class="text-xs text-gray-600 mt-2 italic">
-            From stopping wasted clicks & reducing CPC
-          </div>
-        </div>
+      <div class="bg-white rounded-lg p-4 shadow-md border-2 border-green-300 text-center">
+        <div class="text-4xl mb-1">💵</div>
+        <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Cost Savings</div>
+        <div class="text-3xl font-black text-green-600">${{ "%.0f"|format(ns.total_monthly_savings) }}</div>
+        <div class="text-xs text-gray-500">/month</div>
       </div>
       {% endif %}
 
       {% if ns.total_monthly_leads > 0 %}
-      <div class="bg-white rounded-xl p-6 shadow-md border-2 border-blue-300">
-        <div class="flex items-center justify-center mb-3">
-          <span class="text-5xl">📈</span>
-        </div>
-        <div class="text-center">
-          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Revenue Growth</div>
-          <div class="text-4xl font-black text-blue-600 mb-1">
-            ${{ "%.0f"|format(ns.total_lead_value) }}
-          </div>
-          <div class="text-xs text-gray-500 mb-2">/month</div>
-          <div class="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded font-semibold">
-            +{{ ns.total_monthly_leads|int }} new leads/month
-          </div>
-          <div class="text-xs text-gray-600 mt-2 italic">
-            Based on 20% win rate × $500 customer value (${{ "%.0f"|format(ns.total_lead_value * 12) }}/year)
-          </div>
-        </div>
+      <div class="bg-white rounded-lg p-4 shadow-md border-2 border-blue-300 text-center">
+        <div class="text-4xl mb-1">📈</div>
+        <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Revenue Growth</div>
+        <div class="text-3xl font-black text-blue-600">${{ "%.0f"|format(ns.total_lead_value) }}</div>
+        <div class="text-xs text-gray-500">+{{ ns.total_monthly_leads|int }} leads/mo</div>
       </div>
       {% endif %}
 
-      <div class="bg-white rounded-xl p-6 shadow-md border-2 border-purple-300">
-        <div class="flex items-center justify-center mb-3">
-          <span class="text-5xl">💎</span>
-        </div>
-        <div class="text-center">
-          <div class="text-sm text-gray-600 uppercase font-semibold mb-1">Combined Value</div>
-          <div class="text-4xl font-black text-purple-600 mb-1">
-            ${{ "%.0f"|format(ns.total_combined_value) }}
-          </div>
-          <div class="text-xs text-gray-500 mb-2">/month</div>
-          <div class="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded font-semibold">
-            ${{ "%.0f"|format(ns.total_combined_value * 12) }}/year total
-          </div>
-          <div class="text-xs text-gray-600 mt-2 italic">
-            Savings + Revenue
-          </div>
-        </div>
+      <div class="bg-white rounded-lg p-4 shadow-md border-2 border-purple-300 text-center">
+        <div class="text-4xl mb-1">💎</div>
+        <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Combined Value</div>
+        <div class="text-3xl font-black text-purple-600">${{ "%.0f"|format(ns.total_combined_value) }}</div>
+        <div class="text-xs text-gray-500">/month</div>
       </div>
-    </div>
-
-    <!-- ROI Callout -->
-    <div class="mt-6 text-center bg-white rounded-lg p-4 border-2 border-emerald-400">
-      <p class="text-sm text-gray-700">
-        <span class="font-bold text-emerald-700">⚡ Return on Investment:</span>
-        These optimizations cost <span class="font-bold">$0</span> to implement (just your time).
-        Total value: <span class="font-bold text-purple-600">${{ "%.0f"|format(ns.total_combined_value * 12) }}/year</span>
-      </p>
     </div>
   </div>
   {% endif %}
 
-  <!-- Quick Wins Section -->
-  {% if analysis.quick_wins|length > 0 %}
-  <div id="quickWins" class="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-lg p-6">
-    <button id="quickWinsToggle" class="w-full flex items-center justify-between mb-4 cursor-pointer hover:opacity-80 transition">
-      <div class="flex items-center gap-4">
-        <div>
-          <h2 class="text-2xl font-bold text-gray-900 text-left">
-            <i class="fa-solid fa-bolt text-yellow-500 mr-2"></i>
-            Quick Wins
-          </h2>
-          <p class="text-sm text-gray-600 mt-1 text-left">High-impact optimizations automated by AI</p>
-        </div>
-        <div class="bg-white border-2 border-green-400 rounded-lg px-4 py-2">
-          <div class="text-xs text-gray-600 font-semibold">Implementation</div>
-          <div class="text-2xl font-bold text-green-600">AI Automated</div>
-        </div>
-      </div>
-      <i id="quickWinsChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl transition-transform duration-300"></i>
-    </button>
-
-    <div id="quickWinsContent" class="grid md:grid-cols-2 gap-4 hidden">
-      {% for qw in analysis.quick_wins %}
-      <div class="bg-white rounded-lg border-2 border-green-200 p-4 hover:shadow-md transition">
-        <div class="flex items-start gap-3">
-          <div class="w-10 h-10 rounded-full bg-{{ qw.color }}-100 border-2 border-{{ qw.color }}-300 flex items-center justify-center flex-shrink-0">
-            <i class="fa-solid {{ qw.icon }} text-{{ qw.color }}-600"></i>
-          </div>
-          <div class="flex-1">
-            <h3 class="font-bold text-gray-900 mb-1">{{ qw.title }}</h3>
-            <p class="text-sm text-gray-600 mb-2">{{ qw.description }}</p>
-            <div class="flex items-center gap-2 text-xs">
-              <span class="bg-green-100 text-green-800 px-2 py-0.5 rounded font-medium">
-                <i class="fa-solid fa-robot mr-1"></i>AI Automated
-              </span>
-              {% if qw.monthly_savings %}
-              <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">
-                💵 Save ${{ "%.0f"|format(qw.monthly_savings) }}/mo
-              </span>
-              {% elif qw.monthly_leads %}
-              <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-bold">
-                📈 +{{ qw.monthly_leads }} leads (${{ "%.0f"|format(qw.monthly_leads * 100) }}/mo)
-              </span>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- Competitive Insights -->
-  <div id="competitiveInsights" class="bg-white rounded-xl shadow-lg p-6">
-    <button id="competitiveInsightsToggle" class="w-full flex items-center justify-between mb-6 cursor-pointer hover:opacity-80 transition">
-      <h2 class="text-2xl font-bold text-left">
-        <i class="fa-solid fa-chart-line text-indigo-600 mr-2"></i>
-        Competitive Insights
+  <!-- Optimization Opportunities (Main Section) -->
+  <div class="bg-white rounded-xl shadow-lg p-6">
+    <div class="mb-6">
+      <h2 class="text-2xl font-bold">
+        <i class="fa-solid fa-list-check text-indigo-600 mr-2"></i>
+        Optimization Opportunities
       </h2>
-      <i id="competitiveInsightsChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl transition-transform duration-300"></i>
-    </button>
+      <p class="text-sm text-gray-600 mt-1">{{ analysis.opportunities|length }} specific optimizations identified - select items to implement</p>
+    </div>
 
-    <div id="competitiveInsightsContent" class="grid md:grid-cols-3 gap-6 hidden">
-      <!-- CPC vs Industry -->
-      <div class="bg-gradient-to-br from-orange-50 to-red-50 border border-orange-200 rounded-lg p-4">
-        <div class="text-sm text-gray-600 mb-2">Avg CPC vs Industry</div>
-        <div class="flex items-baseline gap-2 mb-2">
-          <span class="text-3xl font-bold text-red-600">${{ "%.2f"|format(analysis.competitive_insights.avg_cpc_vs_industry.yours) }}</span>
-          <span class="text-sm text-gray-500">vs ${{ "%.2f"|format(analysis.competitive_insights.avg_cpc_vs_industry.industry) }}</span>
-        </div>
-        <div class="text-xs font-semibold text-red-600">
-          <i class="fa-solid fa-arrow-up mr-1"></i>
-          {{ analysis.competitive_insights.avg_cpc_vs_industry.diff_pct }}% higher than average
-        </div>
-      </div>
-
-      <!-- Impression Share Lost -->
-      <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-        <div class="text-sm text-gray-600 mb-2">Impression Share Lost</div>
-        <div class="space-y-2">
-          <div>
-            <div class="flex justify-between text-xs mb-1">
-              <span>To Budget</span>
-              <span class="font-bold text-blue-700">{{ analysis.competitive_insights.impression_share_lost_to_budget }}%</span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full h-2">
-              <div class="bg-blue-500 h-2 rounded-full" style="width: {{ analysis.competitive_insights.impression_share_lost_to_budget }}%"></div>
-            </div>
-          </div>
-          <div>
-            <div class="flex justify-between text-xs mb-1">
-              <span>To Rank</span>
-              <span class="font-bold text-purple-700">{{ analysis.competitive_insights.impression_share_lost_to_rank }}%</span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full h-2">
-              <div class="bg-purple-500 h-2 rounded-full" style="width: {{ analysis.competitive_insights.impression_share_lost_to_rank }}%"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Competitor Tactics -->
-      <div class="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
-        <div class="text-sm text-gray-600 mb-2">Top Competitor Tactics</div>
-        <ul class="space-y-1 text-xs">
-          {% for tactic in analysis.competitive_insights.top_competitor_tactics %}
-          <li class="flex items-start gap-1">
-            <i class="fa-solid fa-check text-purple-600 mt-0.5"></i>
-            <span class="text-gray-700">{{ tactic }}</span>
-          </li>
-          {% endfor %}
-        </ul>
+    <!-- Filter/Sort Controls -->
+    <div class="flex items-center justify-end gap-2 text-sm mb-6">
+      <select id="filterPriority" class="border border-gray-300 rounded px-3 py-1 text-sm">
+        <option value="all">All Priorities</option>
+        <option value="high">High Only</option>
+        <option value="medium">Medium Only</option>
+        <option value="low">Low Only</option>
+      </select>
+      <select id="sortBy" class="border border-gray-300 rounded px-3 py-1 text-sm">
+        <option value="priority">Sort by Priority</option>
+        <option value="impact">Sort by Impact</option>
+        <option value="savings">Sort by Savings</option>
+      </select>
+      <div class="border-l border-gray-300 pl-2 flex gap-2">
+        <button id="selectHighPriority" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded font-medium text-xs">
+          <i class="fa-solid fa-fire mr-1"></i>High Priority
+        </button>
+        <button id="selectAllMain" class="text-indigo-600 hover:bg-indigo-50 px-3 py-1 rounded font-medium text-xs">
+          <i class="fa-solid fa-check-square mr-1"></i>Select All
+        </button>
       </div>
     </div>
-  </div>
 
-  <!-- Individual Optimization Line Items -->
-  <div id="optimizationList" class="bg-white rounded-xl shadow-lg p-6">
-    <button id="optimizationListToggle" class="w-full flex items-center justify-between mb-6 cursor-pointer hover:opacity-80 transition">
-      <div class="text-left">
-        <h2 class="text-2xl font-bold">
-          <i class="fa-solid fa-list-check text-indigo-600 mr-2"></i>
-          Select Optimizations to Implement
-        </h2>
-        <p class="text-sm text-gray-600 mt-1">{{ analysis.opportunities|length }} specific optimizations identified - select individual items below</p>
-      </div>
-      <i id="optimizationListChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl transition-transform duration-300 ml-4"></i>
-    </button>
+    <!-- Compact List of Optimizations -->
+    <div id="opportunitiesList" class="space-y-1 mb-6">
+      {% for opp in analysis.opportunities %}
+      <label class="opportunity-item block cursor-pointer hover:bg-gray-50 rounded-lg transition"
+             data-priority="{{ opp.priority }}"
+             data-impact="{{ opp.impact_score }}"
+             data-savings="{{ opp.monthly_savings or 0 }}"
+             data-time="{{ opp.estimated_time }}">
+        <div class="flex items-center gap-3 p-3 border
+                  {% if opp.priority == 'high' %}border-l-4 border-l-red-500
+                  {% elif opp.priority == 'medium' %}border-l-4 border-l-yellow-500
+                  {% else %}border-l-4 border-l-gray-400{% endif %} rounded">
 
-    <div id="optimizationListContent" class="hidden">
-      <!-- Filter/Sort Controls -->
-      <div class="flex items-center justify-end gap-2 text-sm mb-6">
-        <select id="filterPriority" class="border border-gray-300 rounded px-3 py-1 text-sm">
-          <option value="all">All Priorities</option>
-          <option value="high">High Only</option>
-          <option value="medium">Medium Only</option>
-          <option value="low">Low Only</option>
-        </select>
-        <select id="sortBy" class="border border-gray-300 rounded px-3 py-1 text-sm">
-          <option value="priority">Sort by Priority</option>
-          <option value="impact">Sort by Impact</option>
-          <option value="savings">Sort by Savings</option>
-        </select>
-        <div class="border-l border-gray-300 pl-2 flex gap-2">
-          <button id="selectHighPriority" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded font-medium text-xs">
-            <i class="fa-solid fa-fire mr-1"></i>High Priority
-          </button>
-          <button id="selectQuickWins" class="text-green-600 hover:bg-green-50 px-3 py-1 rounded font-medium text-xs">
-            <i class="fa-solid fa-bolt mr-1"></i>Quick Wins
-          </button>
-          <button id="selectAllMain" class="text-indigo-600 hover:bg-indigo-50 px-3 py-1 rounded font-medium text-xs">
-            <i class="fa-solid fa-check-square mr-1"></i>Select All
-          </button>
-        </div>
-      </div>
-
-      <!-- Compact List of Individual Optimizations -->
-      <div id="opportunitiesList" class="space-y-1">
-        {% for opp in analysis.opportunities %}
-        <label class="opportunity-item block cursor-pointer hover:bg-gray-50 rounded-lg transition"
-               data-priority="{{ opp.priority }}"
-               data-impact="{{ opp.impact_score }}"
+        <!-- Checkbox -->
+        <input type="checkbox"
+               class="optimization-checkbox w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 flex-shrink-0"
+               data-opp-id="{{ loop.index }}"
+               data-title="{{ opp.title }}"
                data-savings="{{ opp.monthly_savings or 0 }}"
-               data-time="{{ opp.estimated_time }}">
-          <div class="flex items-center gap-3 p-3 border
-                    {% if opp.priority == 'high' %}border-l-4 border-l-red-500
-                    {% elif opp.priority == 'medium' %}border-l-4 border-l-yellow-500
-                    {% else %}border-l-4 border-l-gray-400{% endif %} rounded">
+               data-leads="{{ opp.monthly_leads or 0 }}"
+               data-optimization-type="{{ opp.optimization_type | default('') }}"
+               data-optimization-data='{{ opp.optimization_data | default({}) | tojson }}'>
 
-          <!-- Checkbox -->
-          <input type="checkbox"
-                 class="optimization-checkbox w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 flex-shrink-0"
-                 data-opp-id="{{ loop.index }}"
-                 data-title="{{ opp.title }}"
-                 data-savings="{{ opp.monthly_savings or 0 }}"
-                 data-leads="{{ opp.monthly_leads or 0 }}"
-                 data-optimization-type="{{ opp.optimization_type | default('') }}"
-                 data-optimization-data='{{ opp.optimization_data | default({}) | tojson }}'>
+        <!-- Icon -->
+        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-{{ opp.color }}-100 flex items-center justify-center">
+          <i class="fa-solid {{ opp.icon }} text-{{ opp.color }}-600"></i>
+        </div>
 
-          <!-- Icon -->
-          <div class="flex-shrink-0 w-8 h-8 rounded-full bg-{{ opp.color }}-100 flex items-center justify-center">
-            <i class="fa-solid {{ opp.icon }} text-{{ opp.color }}-600"></i>
-          </div>
-
-          <!-- Content -->
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 flex-wrap">
-              <h3 class="font-bold text-gray-900 text-sm">{{ opp.title }}</h3>
-              {% if opp.quick_win %}
-              <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">
-                <i class="fa-solid fa-bolt mr-1"></i>QUICK
-              </span>
-              {% endif %}
-            </div>
-            <p class="text-xs text-gray-600 mt-0.5">{{ opp.action }}</p>
-          </div>
-
-          <!-- Badges & Metrics -->
-          <div class="flex items-center gap-3 flex-shrink-0">
-            <!-- Priority Badge -->
-            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium
-                        {% if opp.priority == 'high' %}bg-red-100 text-red-800
-                        {% elif opp.priority == 'medium' %}bg-yellow-100 text-yellow-800
-                        {% else %}bg-gray-100 text-gray-800{% endif %}">
-              {{ opp.priority|upper }}
+        <!-- Content -->
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 class="font-bold text-gray-900 text-sm">{{ opp.title }}</h3>
+            {% if opp.quick_win %}
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">
+              <i class="fa-solid fa-bolt mr-1"></i>QUICK
             </span>
-
-            <!-- ROI Value -->
-            {% if opp.monthly_savings %}
-            <div class="text-right min-w-[80px]">
-              <div class="text-xs text-gray-600">Save</div>
-              <div class="text-lg font-bold text-green-600">${{ "%.0f"|format(opp.monthly_savings) }}</div>
-              <div class="text-xs text-gray-500">/mo</div>
-            </div>
-            {% elif opp.monthly_leads %}
-            <div class="text-right min-w-[80px]">
-              <div class="text-xs text-gray-600">Value</div>
-              <div class="text-lg font-bold text-blue-600">${{ "%.0f"|format(opp.monthly_leads * 100) }}</div>
-              <div class="text-xs text-gray-500">+{{ opp.monthly_leads }} leads</div>
-            </div>
             {% endif %}
           </div>
+          <p class="text-xs text-gray-600 mt-0.5">{{ opp.action }}</p>
         </div>
-        </label>
-        {% endfor %}
-      </div>
 
-      <!-- Approve Optimizations Button -->
-      <div class="mt-6 text-center">
-        <button id="openModalButton" class="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-lg rounded-xl hover:from-green-600 hover:to-emerald-700 transition shadow-xl transform hover:scale-105">
-          <i class="fa-solid fa-check-double text-2xl"></i>
-          <span>Select & Approve Optimizations</span>
-          <span class="bg-white/20 px-3 py-1 rounded-full text-sm">{{ analysis.opportunities|length }} Actions</span>
-        </button>
-        <p class="text-sm text-gray-600 mt-2">
-          <i class="fa-solid fa-info-circle"></i> Choose which changes to implement in your Google Ads account
-        </p>
-      </div>
-    </div>
-  </div>
-
-  {% if is_demo %}
-  <!-- Timeline & What to Expect -->
-  <div class="bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-xl shadow-lg p-8">
-    <h2 class="text-2xl font-bold text-center mb-6">
-      <i class="fa-solid fa-clock text-indigo-600 mr-2"></i>
-      Timeline & What to Expect
-    </h2>
-
-    <div class="grid md:grid-cols-3 gap-6">
-      <div class="text-center">
-        <div class="bg-white rounded-xl p-6 shadow-md">
-          <div class="text-4xl mb-3">🤖</div>
-          <div class="font-bold text-gray-900 mb-2">AI Does the Work</div>
-          <div class="text-sm text-gray-600">Our AI handles 90% of optimizations automatically - you just approve</div>
-        </div>
-      </div>
-      <div class="text-center">
-        <div class="bg-white rounded-xl p-6 shadow-md">
-          <div class="text-4xl mb-3">📅</div>
-          <div class="font-bold text-gray-900 mb-2">30-60 Days</div>
-          <div class="text-sm text-gray-600">See measurable results in 1-2 months as optimizations take effect</div>
-        </div>
-      </div>
-      <div class="text-center">
-        <div class="bg-white rounded-xl p-6 shadow-md">
-          <div class="text-4xl mb-3">✅</div>
-          <div class="font-bold text-gray-900 mb-2">You Stay in Control</div>
-          <div class="text-sm text-gray-600">Review and approve all changes before they go live</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="mt-6 text-center bg-white rounded-lg p-4 border-2 border-indigo-300">
-      <p class="text-sm text-gray-700">
-        <strong class="text-indigo-600">Quick Process:</strong> Select optimizations → AI implements → Monitor results → Adjust as needed
-      </p>
-    </div>
-  </div>
-
-  <!-- Social Proof Section -->
-  <div class="bg-white border-2 border-indigo-200 rounded-xl shadow-lg p-8">
-    <h2 class="text-2xl font-bold text-center mb-6">
-      📊 Real Results from Home Service Businesses
-    </h2>
-
-    <div class="grid md:grid-cols-3 gap-6">
-      <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-6 border-2 border-green-200">
-        <div class="text-sm font-semibold text-gray-600 mb-2">ABC Plumbing</div>
-        <div class="text-4xl font-black text-green-600 mb-1">$3,200/mo</div>
-        <div class="text-sm text-gray-700 mb-3">saved in wasted spend</div>
-        <div class="pt-3 border-t border-green-200 text-xs text-gray-600">
-          <div class="font-bold text-green-700 mb-1">22% waste → 8% waste</div>
-          <div>in 45 days</div>
-        </div>
-      </div>
-
-      <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border-2 border-blue-200">
-        <div class="text-sm font-semibold text-gray-600 mb-2">XYZ HVAC</div>
-        <div class="text-4xl font-black text-blue-600 mb-1">+47 leads</div>
-        <div class="text-sm text-gray-700 mb-3">per month increase</div>
-        <div class="pt-3 border-t border-blue-200 text-xs text-gray-600">
-          <div class="font-bold text-blue-700 mb-1">40% more leads</div>
-          <div>same ad budget</div>
-        </div>
-      </div>
-
-      <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-6 border-2 border-purple-200">
-        <div class="text-sm font-semibold text-gray-600 mb-2">Elite Electric</div>
-        <div class="text-4xl font-black text-purple-600 mb-1">$5,800/mo</div>
-        <div class="text-sm text-gray-700 mb-3">total value gained</div>
-        <div class="pt-3 border-t border-purple-200 text-xs text-gray-600">
-          <div class="font-bold text-purple-700 mb-1">ROI: 2,900%</div>
-          <div>on platform cost</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="mt-6 text-center">
-      <p class="text-sm text-gray-600">
-        <i class="fa-solid fa-chart-line text-indigo-600 mr-1"></i>
-        Based on actual customer results from home service businesses spending $3-8k/month
-      </p>
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- Detailed Recommendations by Category -->
-  <div class="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6">
-    <button id="detailedActionPlanToggle" class="w-full flex items-center justify-between mb-6 cursor-pointer hover:opacity-80 transition">
-      <h2 class="text-2xl font-bold text-left">
-        <i class="fa-solid fa-lightbulb text-indigo-600 mr-2"></i>
-        Detailed Action Plan
-      </h2>
-      <i id="detailedActionPlanChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl transition-transform duration-300"></i>
-    </button>
-
-    <div id="detailedActionPlanContent" class="space-y-4 hidden">
-      {% for rec in analysis.recommendations %}
-      <div class="bg-white rounded-lg border-2
-                  {% if rec.priority == 'high' %}border-red-300
-                  {% elif rec.priority == 'medium' %}border-yellow-300
-                  {% else %}border-gray-300{% endif %}
-                  p-5">
-        <div class="flex items-start justify-between mb-3">
-          <h3 class="text-xl font-bold text-gray-900">{{ rec.title }}</h3>
-          <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
-                      {% if rec.priority == 'high' %}bg-red-100 text-red-800
-                      {% elif rec.priority == 'medium' %}bg-yellow-100 text-yellow-800
+        <!-- Badges & Metrics -->
+        <div class="flex items-center gap-3 flex-shrink-0">
+          <!-- Priority Badge -->
+          <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium
+                      {% if opp.priority == 'high' %}bg-red-100 text-red-800
+                      {% elif opp.priority == 'medium' %}bg-yellow-100 text-yellow-800
                       {% else %}bg-gray-100 text-gray-800{% endif %}">
-            {{ rec.priority|upper }}
+            {{ opp.priority|upper }}
           </span>
-        </div>
 
-        <ul class="space-y-2 mb-4">
-          {% for item in rec['items'] %}
-          <li class="flex items-start gap-2">
-            <i class="fa-solid fa-check-circle text-green-500 mt-1"></i>
-            <span class="text-gray-700">{{ item }}</span>
-          </li>
-          {% endfor %}
-        </ul>
-
-        <div class="flex items-center gap-2 text-sm pt-3 border-t border-gray-200">
-          <i class="fa-solid fa-chart-line text-indigo-600"></i>
-          <span class="font-semibold text-indigo-700">{{ rec.impact }}</span>
+          <!-- ROI Value -->
+          {% if opp.monthly_savings %}
+          <div class="text-right min-w-[80px]">
+            <div class="text-xs text-gray-600">Save</div>
+            <div class="text-lg font-bold text-green-600">${{ "%.0f"|format(opp.monthly_savings) }}</div>
+            <div class="text-xs text-gray-500">/mo</div>
+          </div>
+          {% elif opp.monthly_leads %}
+          <div class="text-right min-w-[80px]">
+            <div class="text-xs text-gray-600">Value</div>
+            <div class="text-lg font-bold text-blue-600">${{ "%.0f"|format(opp.monthly_leads * 100) }}</div>
+            <div class="text-xs text-gray-500">+{{ opp.monthly_leads }} leads</div>
+          </div>
+          {% endif %}
         </div>
       </div>
+      </label>
       {% endfor %}
     </div>
-  </div>
 
-  <!-- Performance Breakdown -->
-  <div class="bg-white rounded-xl shadow-lg p-6">
-    <h2 class="text-2xl font-bold mb-6">
-      <i class="fa-solid fa-sliders text-indigo-600 mr-2"></i>
-      Performance Breakdown
-    </h2>
-
-    {% macro score_bar(label, score, icon="fa-circle") %}
-      {% set color = "bg-red-500" if score < 40 else "bg-yellow-500" if score < 70 else "bg-green-500" %}
-      {% set text_color = "text-red-600" if score < 40 else "text-yellow-600" if score < 70 else "text-green-600" %}
-      <div class="mb-4">
-        <div class="flex justify-between items-center text-sm mb-2">
-          <span class="font-medium"><i class="{{ icon }} mr-2 text-gray-400"></i>{{ label }}</span>
-          <span class="font-bold {{ text_color }}">{{ score|int }}%</span>
-        </div>
-        <div class="w-full bg-gray-200 rounded-full h-3">
-          <div class="{{ color }} h-3 rounded-full transition-all duration-500" style="width: {{ score|int }}%"></div>
-        </div>
-      </div>
-    {% endmacro %}
-
-    <div class="grid md:grid-cols-2 gap-6">
-      <div>
-        {{ score_bar("Wasted Spend Prevention", analysis.scores.wasted_spend, "fa-solid fa-ban") }}
-        {{ score_bar("Quality Score Optimization", analysis.scores.quality_score, "fa-solid fa-star") }}
-        {{ score_bar("Click-Through Rate", analysis.scores.ctr, "fa-solid fa-mouse-pointer") }}
-      </div>
-      <div>
-        {{ score_bar("Account Structure", analysis.scores.account_structure, "fa-solid fa-folder-tree") }}
-        {{ score_bar("Mobile Optimization", analysis.scores.mobile, "fa-solid fa-mobile-screen") }}
-        {{ score_bar("Ad Extensions", analysis.scores.extensions, "fa-solid fa-puzzle-piece") }}
-      </div>
+    <!-- Approve Button -->
+    <div class="text-center">
+      <button id="openModalButton" class="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-lg rounded-xl hover:from-green-600 hover:to-emerald-700 transition shadow-xl transform hover:scale-105">
+        <i class="fa-solid fa-check-double text-2xl"></i>
+        <span>Review & Approve Selected</span>
+        <span class="bg-white/20 px-3 py-1 rounded-full text-sm">{{ analysis.opportunities|length }} Available</span>
+      </button>
+      <p class="text-sm text-gray-600 mt-2">
+        <i class="fa-solid fa-info-circle"></i> Select optimizations above and click to approve
+      </p>
     </div>
   </div>
 
-  <!-- CTA Section -->
-  <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-xl p-8 text-center text-white">
-    <h2 class="text-3xl font-bold mb-3">Ready to Implement These Changes?</h2>
-    <p class="text-lg mb-6 text-indigo-100">
-      Let our experts handle everything for you. We'll optimize your campaigns and manage them ongoing.
-    </p>
-    <div class="flex items-center justify-center gap-4">
-      <a href="{{ url_for('account_bp.dashboard') }}"
-         class="inline-flex items-center px-8 py-4 bg-white text-indigo-600 font-bold rounded-lg hover:bg-gray-100 shadow-lg transform hover:scale-105 transition">
-        <i class="fa-solid fa-rocket mr-2"></i>
-        Get More Leads
-      </a>
-      <a href="{{ url_for('google_bp.ads_ui') }}"
-         class="inline-flex items-center px-8 py-4 bg-indigo-500 text-white font-bold rounded-lg hover:bg-indigo-400 shadow-lg border-2 border-white/30">
-        <i class="fa-solid fa-pencil mr-2"></i>
-        Edit Campaigns Manually
-      </a>
+  <!-- Performance Breakdown (Collapsible) -->
+  <div class="bg-white rounded-xl shadow-lg p-6">
+    <button id="performanceToggle" class="w-full flex items-center justify-between mb-4 cursor-pointer hover:opacity-80 transition">
+      <h2 class="text-xl font-bold">
+        <i class="fa-solid fa-sliders text-indigo-600 mr-2"></i>
+        Performance Breakdown
+      </h2>
+      <i id="performanceChevron" class="fa-solid fa-chevron-down text-gray-600 transition-transform duration-300"></i>
+    </button>
+
+    <div id="performanceContent" class="hidden">
+      {% macro score_bar(label, score, icon="fa-circle") %}
+        {% set color = "bg-red-500" if score < 40 else "bg-yellow-500" if score < 70 else "bg-green-500" %}
+        {% set text_color = "text-red-600" if score < 40 else "text-yellow-600" if score < 70 else "text-green-600" %}
+        <div class="mb-4">
+          <div class="flex justify-between items-center text-sm mb-2">
+            <span class="font-medium"><i class="{{ icon }} mr-2 text-gray-400"></i>{{ label }}</span>
+            <span class="font-bold {{ text_color }}">{{ score|int }}%</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-3">
+            <div class="{{ color }} h-3 rounded-full transition-all duration-500" style="width: {{ score|int }}%"></div>
+          </div>
+        </div>
+      {% endmacro %}
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <div>
+          {{ score_bar("Wasted Spend Prevention", analysis.scores.wasted_spend, "fa-solid fa-ban") }}
+          {{ score_bar("Quality Score Optimization", analysis.scores.quality_score, "fa-solid fa-star") }}
+          {{ score_bar("Click-Through Rate", analysis.scores.ctr, "fa-solid fa-mouse-pointer") }}
+        </div>
+        <div>
+          {{ score_bar("Account Structure", analysis.scores.account_structure, "fa-solid fa-folder-tree") }}
+          {{ score_bar("Mobile Optimization", analysis.scores.mobile, "fa-solid fa-mobile-screen") }}
+          {{ score_bar("Ad Extensions", analysis.scores.extensions, "fa-solid fa-puzzle-piece") }}
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -877,8 +407,8 @@
       <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-t-2xl">
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-2xl font-bold mb-1">Select Optimizations to Approve</h2>
-            <p class="text-indigo-100 text-sm">Choose which changes you'd like to implement in your Google Ads account</p>
+            <h2 class="text-2xl font-bold mb-1">Review & Approve Optimizations</h2>
+            <p class="text-indigo-100 text-sm">Confirm which changes to implement in your Google Ads account</p>
           </div>
           <button id="closeModalX" class="text-white hover:bg-white/20 rounded-lg p-2 transition">
             <i class="fa-solid fa-times text-2xl"></i>
@@ -893,7 +423,7 @@
         <div class="flex items-center justify-between mb-6 pb-4 border-b">
           <div class="text-sm text-gray-600">
             <i class="fa-solid fa-info-circle text-indigo-600"></i>
-            Select the optimizations you want to implement
+            Review and confirm selected optimizations
           </div>
           <div class="flex gap-2">
             <button id="selectAllModal" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium px-3 py-1 hover:bg-indigo-50 rounded">
@@ -1027,7 +557,7 @@
         </button>
         <button id="approveButton" class="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg transform hover:scale-105">
           <i class="fa-solid fa-check-double mr-2"></i>
-          <span id="approveButtonText">Approve {{ analysis.opportunities|length }} Optimizations</span>
+          <span id="approveButtonText">Approve Selected</span>
         </button>
       </div>
 
@@ -1038,13 +568,12 @@
 <!-- Tutorial Popups Library -->
 <script src="{{ url_for('static', filename='js/tutorial-popups.js') }}"></script>
 
-<!-- JavaScript for Filtering/Sorting and Selection -->
+<!-- JavaScript -->
 <script nonce="{{ g.csp_nonce }}">
-// Toggle accordion sections
+// Toggle accordion
 function toggleAccordion(contentId, chevronId) {
   const content = document.getElementById(contentId);
   const chevron = document.getElementById(chevronId);
-
   if (content.classList.contains('hidden')) {
     content.classList.remove('hidden');
     chevron.classList.add('rotate-180');
@@ -1054,94 +583,47 @@ function toggleAccordion(contentId, chevronId) {
   }
 }
 
-// Update selected count display and sticky footer
+// Update selected count and sticky footer
 function updateSelectedCount() {
-  // Only use main list checkboxes to avoid duplicates
   const checkboxes = document.querySelectorAll('#opportunitiesList .optimization-checkbox:checked');
   const count = checkboxes.length;
 
-  console.log(`${count} optimizations selected`);
+  // Calculate totals
+  let totalSavings = 0;
+  let totalLeads = 0;
+  checkboxes.forEach(checkbox => {
+    totalSavings += parseFloat(checkbox.dataset.savings) || 0;
+    totalLeads += parseFloat(checkbox.dataset.leads) || 0;
+  });
 
-  // Update sticky footer
+  const totalLeadValue = totalLeads * 100;
+  const totalCombined = totalSavings + totalLeadValue;
+
+  // Update footer
   const stickyFooter = document.getElementById('stickyFooter');
   if (count > 0) {
-    // Calculate totals
-    let totalSavings = 0;
-    let totalLeads = 0;
-
-    checkboxes.forEach(checkbox => {
-      totalSavings += parseFloat(checkbox.dataset.savings) || 0;
-      const leads = parseFloat(checkbox.dataset.leads) || 0;
-      totalLeads += leads;
-    });
-
-    const totalLeadValue = totalLeads * 100; // $100 per lead (20% win rate × $500 customer value)
-    const totalCombined = totalSavings + totalLeadValue;
-
-    // Update footer UI
     document.getElementById('footerSelectedCount').textContent = count;
     document.getElementById('footerTotalValue').textContent = '$' + Math.round(totalCombined).toLocaleString();
-
-    // Show footer
     stickyFooter.classList.remove('hidden');
   } else {
-    // Hide footer when nothing selected
     stickyFooter.classList.add('hidden');
   }
 }
 
-// Filter and sort opportunities
+// DOM ready
 document.addEventListener('DOMContentLoaded', function() {
-  // Setup accordion toggles
-  const accordionToggles = [
-    { toggleId: 'quickWinsToggle', contentId: 'quickWinsContent', chevronId: 'quickWinsChevron' },
-    { toggleId: 'competitiveInsightsToggle', contentId: 'competitiveInsightsContent', chevronId: 'competitiveInsightsChevron' },
-    { toggleId: 'optimizationListToggle', contentId: 'optimizationListContent', chevronId: 'optimizationListChevron' },
-    { toggleId: 'detailedActionPlanToggle', contentId: 'detailedActionPlanContent', chevronId: 'detailedActionPlanChevron' }
-  ];
+  // Performance breakdown toggle
+  const perfToggle = document.getElementById('performanceToggle');
+  if (perfToggle) {
+    perfToggle.addEventListener('click', function() {
+      toggleAccordion('performanceContent', 'performanceChevron');
+    });
+  }
 
-  accordionToggles.forEach(accordion => {
-    const toggleBtn = document.getElementById(accordion.toggleId);
-    if (toggleBtn) {
-      toggleBtn.addEventListener('click', function() {
-        toggleAccordion(accordion.contentId, accordion.chevronId);
-      });
-    }
-  });
-
+  // Filter and sort
   const filterSelect = document.getElementById('filterPriority');
   const sortSelect = document.getElementById('sortBy');
   const opportunitiesList = document.getElementById('opportunitiesList');
-
-  if (filterSelect) {
-    filterSelect.addEventListener('change', filterAndSort);
-  }
-  if (sortSelect) {
-    sortSelect.addEventListener('change', filterAndSort);
-  }
-
-  // Event delegation for all checkboxes (CSP compliance)
-  document.body.addEventListener('change', function(e) {
-    if (e.target.classList.contains('optimization-checkbox')) {
-      // Synchronize checkbox state between main list and modal
-      const oppId = e.target.dataset.oppId;
-      const isChecked = e.target.checked;
-
-      // Update all checkboxes with the same oppId
-      document.querySelectorAll(`.optimization-checkbox[data-opp-id="${oppId}"]`).forEach(cb => {
-        if (cb !== e.target) {
-          cb.checked = isChecked;
-        }
-      });
-
-      // Update UI
-      const modal = document.getElementById('optimizationsModal');
-      if (modal && !modal.classList.contains('hidden')) {
-        updateTotals();
-      }
-      updateSelectedCount();
-    }
-  });
 
   function filterAndSort() {
     const filterValue = filterSelect ? filterSelect.value : 'all';
@@ -1173,90 +655,60 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
 
-    // Re-append in sorted order
     visibleItems.forEach(item => opportunitiesList.appendChild(item));
   }
 
-  // Initialize selected count
-  updateSelectedCount();
-});
-</script>
+  if (filterSelect) filterSelect.addEventListener('change', filterAndSort);
+  if (sortSelect) sortSelect.addEventListener('change', filterAndSort);
 
-<!-- JavaScript for Modal -->
-<script nonce="{{ g.csp_nonce }}">
-// Add event listeners for all buttons (to comply with CSP)
-document.addEventListener('DOMContentLoaded', function() {
-  // Main "Select & Approve" button
+  // Checkbox synchronization
+  document.body.addEventListener('change', function(e) {
+    if (e.target.classList.contains('optimization-checkbox')) {
+      const oppId = e.target.dataset.oppId;
+      const isChecked = e.target.checked;
+      document.querySelectorAll(`.optimization-checkbox[data-opp-id="${oppId}"]`).forEach(cb => {
+        if (cb !== e.target) cb.checked = isChecked;
+      });
+      const modal = document.getElementById('optimizationsModal');
+      if (modal && !modal.classList.contains('hidden')) {
+        updateTotals();
+      }
+      updateSelectedCount();
+    }
+  });
+
+  // Button handlers
   const openButton = document.getElementById('openModalButton');
-  if (openButton) {
-    openButton.addEventListener('click', openOptimizationsModal);
-  }
+  if (openButton) openButton.addEventListener('click', openOptimizationsModal);
 
-  // Select All button in main list
   const selectAllMain = document.getElementById('selectAllMain');
-  if (selectAllMain) {
-    selectAllMain.addEventListener('click', function() {
-      selectAllOptimizations(true);
-    });
-  }
+  if (selectAllMain) selectAllMain.addEventListener('click', () => selectAllOptimizations(true));
 
-  // Modal buttons
   const closeModalX = document.getElementById('closeModalX');
-  if (closeModalX) {
-    closeModalX.addEventListener('click', closeOptimizationsModal);
-  }
+  if (closeModalX) closeModalX.addEventListener('click', closeOptimizationsModal);
 
   const selectAllModal = document.getElementById('selectAllModal');
-  if (selectAllModal) {
-    selectAllModal.addEventListener('click', function() {
-      selectAllOptimizations(true);
-    });
-  }
+  if (selectAllModal) selectAllModal.addEventListener('click', () => selectAllOptimizations(true));
 
   const clearAllModal = document.getElementById('clearAllModal');
-  if (clearAllModal) {
-    clearAllModal.addEventListener('click', function() {
-      selectAllOptimizations(false);
-    });
-  }
+  if (clearAllModal) clearAllModal.addEventListener('click', () => selectAllOptimizations(false));
 
   const cancelButton = document.getElementById('cancelButton');
-  if (cancelButton) {
-    cancelButton.addEventListener('click', closeOptimizationsModal);
-  }
+  if (cancelButton) cancelButton.addEventListener('click', closeOptimizationsModal);
 
   const approveButton = document.getElementById('approveButton');
-  if (approveButton) {
-    approveButton.addEventListener('click', approveOptimizations);
-  }
+  if (approveButton) approveButton.addEventListener('click', approveOptimizations);
 
-  // Bulk selection buttons
   const selectHighPriority = document.getElementById('selectHighPriority');
-  if (selectHighPriority) {
-    selectHighPriority.addEventListener('click', function() {
-      selectByPriority('high');
-    });
-  }
+  if (selectHighPriority) selectHighPriority.addEventListener('click', () => selectByPriority('high'));
 
-  const selectQuickWinsBtn = document.getElementById('selectQuickWins');
-  if (selectQuickWinsBtn) {
-    selectQuickWinsBtn.addEventListener('click', function() {
-      selectQuickWinsOnly();
-    });
-  }
-
-  // Sticky footer buttons
   const clearAllFooter = document.getElementById('clearAllFooter');
-  if (clearAllFooter) {
-    clearAllFooter.addEventListener('click', function() {
-      selectAllOptimizations(false);
-    });
-  }
+  if (clearAllFooter) clearAllFooter.addEventListener('click', () => selectAllOptimizations(false));
 
   const openModalFromFooter = document.getElementById('openModalFromFooter');
-  if (openModalFromFooter) {
-    openModalFromFooter.addEventListener('click', openOptimizationsModal);
-  }
+  if (openModalFromFooter) openModalFromFooter.addEventListener('click', openOptimizationsModal);
+
+  updateSelectedCount();
 });
 
 function openOptimizationsModal() {
@@ -1271,11 +723,9 @@ function closeOptimizationsModal() {
 }
 
 function selectAllOptimizations(checked) {
-  // Update main list checkboxes - synchronization will handle modal checkboxes
   const checkboxes = document.querySelectorAll('#opportunitiesList .optimization-checkbox');
   checkboxes.forEach(checkbox => {
     checkbox.checked = checked;
-    // Manually trigger synchronization for each checkbox
     const event = new Event('change', { bubbles: true });
     checkbox.dispatchEvent(event);
   });
@@ -1289,23 +739,6 @@ function selectByPriority(priority) {
     const checkbox = item.querySelector('.optimization-checkbox');
     if (checkbox) {
       checkbox.checked = (item.dataset.priority === priority);
-      // Trigger synchronization
-      const event = new Event('change', { bubbles: true });
-      checkbox.dispatchEvent(event);
-    }
-  });
-  updateSelectedCount();
-}
-
-function selectQuickWinsOnly() {
-  const items = document.querySelectorAll('.opportunity-item');
-  items.forEach(item => {
-    const checkbox = item.querySelector('.optimization-checkbox');
-    if (checkbox) {
-      // Check if this optimization is marked as a quick win
-      const isQuickWin = item.textContent.includes('QUICK') || item.querySelector('.fa-bolt');
-      checkbox.checked = isQuickWin;
-      // Trigger synchronization
       const event = new Event('change', { bubbles: true });
       checkbox.dispatchEvent(event);
     }
@@ -1314,13 +747,11 @@ function selectQuickWinsOnly() {
 }
 
 function updateTotals() {
-  // Only use main list checkboxes to avoid duplicates
   const checkboxes = document.querySelectorAll('#opportunitiesList .optimization-checkbox:checked');
   const button = document.getElementById('approveButton');
   const buttonText = document.getElementById('approveButtonText');
   const count = checkboxes.length;
 
-  // Update button text and state
   if (count > 0) {
     buttonText.textContent = 'Approve ' + count + ' Optimization' + (count > 1 ? 's' : '');
     button.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -1331,7 +762,6 @@ function updateTotals() {
     button.disabled = true;
   }
 
-  // Calculate totals from checked checkboxes
   let totalSavings = 0;
   let totalLeads = 0;
   let totalLeadValue = 0;
@@ -1340,25 +770,21 @@ function updateTotals() {
     totalSavings += parseFloat(checkbox.dataset.savings) || 0;
     const leads = parseFloat(checkbox.dataset.leads) || 0;
     totalLeads += leads;
-    // Calculate lead value: 20% win rate (1 in 5 leads convert) × $500 customer value = $100 per lead
     totalLeadValue += leads * 100;
   });
 
   const totalCombined = totalSavings + totalLeadValue;
 
-  // Update UI
   document.getElementById('totalSavings').textContent = '$' + Math.round(totalSavings).toLocaleString();
   document.getElementById('totalRevenue').textContent = '$' + Math.round(totalLeadValue).toLocaleString();
   document.getElementById('totalLeadsText').textContent = '+' + Math.round(totalLeads) + ' leads';
   document.getElementById('totalCombined').textContent = '$' + Math.round(totalCombined).toLocaleString();
 
-  // Show/hide sections based on values
   document.getElementById('savingsSection').style.display = totalSavings > 0 ? 'block' : 'none';
   document.getElementById('revenueSection').style.display = totalLeadValue > 0 ? 'block' : 'none';
 }
 
 function approveOptimizations() {
-  // Only collect checkboxes from the MAIN list (not modal duplicates)
   const checkboxes = document.querySelectorAll('#opportunitiesList .optimization-checkbox:checked');
 
   if (checkboxes.length === 0) {
@@ -1366,7 +792,6 @@ function approveOptimizations() {
     return;
   }
 
-  // Collect selected optimization IDs and titles (removing duplicates)
   const selectedOptimizations = [];
   const seenIds = new Set();
   checkboxes.forEach(checkbox => {
@@ -1383,10 +808,7 @@ function approveOptimizations() {
   });
 
   {% if is_demo %}
-  // Demo mode - show demo message instead of submitting
   closeOptimizationsModal();
-
-  // Create demo notification
   const notification = document.createElement('div');
   notification.className = 'fixed top-4 right-4 bg-blue-50 border-2 border-blue-500 text-blue-900 px-6 py-4 rounded-lg shadow-xl z-50 max-w-md';
   notification.innerHTML = `
@@ -1396,9 +818,9 @@ function approveOptimizations() {
         <div class="font-bold text-lg mb-1">Demo Mode</div>
         <div class="text-sm">
           In the live version, ${selectedOptimizations.length} optimization${selectedOptimizations.length > 1 ? 's' : ''}
-          would be submitted to your Google Ads account for implementation.
+          would be submitted to your Google Ads account.
           <a href="{{ url_for('auth_bp.signup') }}" class="block mt-2 text-blue-700 font-bold hover:underline">
-            Get More Leads →
+            Get Started →
           </a>
         </div>
       </div>
@@ -1408,30 +830,17 @@ function approveOptimizations() {
     </div>
   `;
   document.body.appendChild(notification);
-
-  // Add close button listener (CSP compliance)
   const closeBtn = notification.querySelector('.notification-close');
-  if (closeBtn) {
-    closeBtn.addEventListener('click', function() {
-      notification.remove();
-    });
-  }
-
-  // Auto-remove after 8 seconds
-  setTimeout(() => {
-    notification.remove();
-  }, 8000);
-
+  if (closeBtn) closeBtn.addEventListener('click', () => notification.remove());
+  setTimeout(() => notification.remove(), 8000);
   return;
   {% endif %}
 
-  // Show loading state
   const button = document.getElementById('approveButton');
   const originalText = button.innerHTML;
   button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Submitting...';
   button.disabled = true;
 
-  // Submit to backend
   fetch('{{ url_for("google_bp.approve_optimizations") }}', {
     method: 'POST',
     headers: {
@@ -1443,23 +852,42 @@ function approveOptimizations() {
       account_id: '{{ analysis.account_name }}'
     })
   })
-  .then(response => response.json())
+  .then(response => {
+    if (!response.ok) {
+      return response.json().then(data => {
+        throw new Error(data.error || `Server returned ${response.status}`);
+      }).catch(() => {
+        throw new Error(`Server returned ${response.status}`);
+      });
+    }
+    return response.json();
+  })
   .then(data => {
     if (data.success) {
-      // Show success message
       closeOptimizationsModal();
 
-      // Create success notification
+      // Show detailed results
+      let resultHTML = '';
+      if (data.results && data.results.length > 0) {
+        resultHTML = '<div class="mt-2 space-y-1">';
+        data.results.forEach(result => {
+          const icon = result.success ? '<i class="fa-solid fa-check text-green-600"></i>' : '<i class="fa-solid fa-times text-red-600"></i>';
+          const msg = result.success ? 'Applied' : `Failed: ${result.error || 'Unknown error'}`;
+          resultHTML += `<div class="text-xs">${icon} ${result.title}: ${msg}</div>`;
+        });
+        resultHTML += '</div>';
+      }
+
       const notification = document.createElement('div');
       notification.className = 'fixed top-4 right-4 bg-green-50 border-2 border-green-500 text-green-900 px-6 py-4 rounded-lg shadow-xl z-50 max-w-md';
       notification.innerHTML = `
         <div class="flex items-start gap-3">
           <i class="fa-solid fa-check-circle text-green-600 text-2xl"></i>
-          <div>
-            <div class="font-bold text-lg mb-1">Optimizations Approved!</div>
+          <div class="flex-1">
+            <div class="font-bold text-lg mb-1">Optimizations Processed!</div>
             <div class="text-sm">
-              ${selectedOptimizations.length} optimization${selectedOptimizations.length > 1 ? 's' : ''}
-              ${selectedOptimizations.length > 1 ? 'have' : 'has'} been submitted to your Google Ads account.
+              ${selectedOptimizations.length} optimization${selectedOptimizations.length > 1 ? 's' : ''} submitted.
+              ${resultHTML}
             </div>
           </div>
           <button class="notification-close text-green-600 hover:text-green-800">
@@ -1469,32 +897,51 @@ function approveOptimizations() {
       `;
       document.body.appendChild(notification);
 
-      // Add close button listener (CSP compliance)
       const closeBtn = notification.querySelector('.notification-close');
-      if (closeBtn) {
-        closeBtn.addEventListener('click', function() {
-          notification.remove();
-        });
-      }
+      if (closeBtn) closeBtn.addEventListener('click', () => notification.remove());
 
-      // Auto-remove notification after 5 seconds
-      setTimeout(() => notification.remove(), 5000);
-
-      // Optionally reload the page to show updated data
-      setTimeout(() => location.reload(), 2000);
+      setTimeout(() => notification.remove(), 8000);
+      setTimeout(() => location.reload(), 3000);
     } else {
       throw new Error(data.error || 'Failed to approve optimizations');
     }
   })
   .catch(error => {
     console.error('Error:', error);
-    alert('Error approving optimizations: ' + error.message + '\n\nPlease try again or contact support.');
+
+    // Show detailed error notification
+    const notification = document.createElement('div');
+    notification.className = 'fixed top-4 right-4 bg-red-50 border-2 border-red-500 text-red-900 px-6 py-4 rounded-lg shadow-xl z-50 max-w-md';
+    notification.innerHTML = `
+      <div class="flex items-start gap-3">
+        <i class="fa-solid fa-exclamation-circle text-red-600 text-2xl"></i>
+        <div class="flex-1">
+          <div class="font-bold text-lg mb-1">Error Approving Optimizations</div>
+          <div class="text-sm mb-2">
+            ${error.message}
+          </div>
+          <div class="text-xs text-red-700">
+            Please try again or contact support if the problem persists.
+          </div>
+        </div>
+        <button class="notification-close text-red-600 hover:text-red-800">
+          <i class="fa-solid fa-times"></i>
+        </button>
+      </div>
+    `;
+    document.body.appendChild(notification);
+
+    const closeBtn = notification.querySelector('.notification-close');
+    if (closeBtn) closeBtn.addEventListener('click', () => notification.remove());
+
+    setTimeout(() => notification.remove(), 10000);
+
     button.innerHTML = originalText;
     button.disabled = false;
   });
 }
 
-// Close modal when clicking outside
+// Close modal on outside click or Escape
 document.addEventListener('click', function(event) {
   const modal = document.getElementById('optimizationsModal');
   if (event.target === modal) {
@@ -1502,7 +949,6 @@ document.addEventListener('click', function(event) {
   }
 });
 
-// Close modal on Escape key
 document.addEventListener('keydown', function(event) {
   if (event.key === 'Escape') {
     const modal = document.getElementById('optimizationsModal');
@@ -1512,44 +958,34 @@ document.addEventListener('keydown', function(event) {
   }
 });
 
-// ===== Tutorial Popups Initialization =====
-// Initialize interactive tutorial popups (Pendo-style onboarding)
+// Tutorial Popups
 if (typeof TutorialPopups !== 'undefined') {
-  // Wait for page to fully load
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-      TutorialPopups.init();
-    });
+    document.addEventListener('DOMContentLoaded', () => TutorialPopups.init());
   } else {
-    // DOM already loaded
     TutorialPopups.init();
   }
 }
 
-// ===== Google Ads Account Selector =====
+// Google Ads Account Selector
 (function() {
   const sel = document.getElementById('adsCustomerSelect');
   const saveBtn = document.getElementById('adsCustomerSave');
   const msg = document.getElementById('adsCustomerMsg');
   if (!sel || !saveBtn) return;
 
-  // Helper to handle session expiration
   function handleSessionExpired(json) {
     if (json.error === 'session_expired' && json.login_url) {
-      // Show a message to the user before redirecting
       if (msg) {
         msg.textContent = 'Session expired. Redirecting to login...';
         msg.className = 'text-sm text-yellow-600';
       }
-      setTimeout(() => {
-        window.location.href = json.login_url;
-      }, 1000);
+      setTimeout(() => window.location.href = json.login_url, 1000);
       return true;
     }
     return false;
   }
 
-  // Load accessible customers on page load
   async function loadCustomers() {
     try {
       const res = await fetch('{{ url_for("google_bp.ads_list_customers") }}', {
@@ -1557,7 +993,6 @@ if (typeof TutorialPopups !== 'undefined') {
       });
       const json = await res.json();
 
-      // Check for session expiration
       if (res.status === 401 && handleSessionExpired(json)) {
         return;
       }
@@ -1582,7 +1017,6 @@ if (typeof TutorialPopups !== 'undefined') {
       } else {
         sel.innerHTML = '<option value="">Error loading accounts</option>';
         if (msg) {
-          // Show a more helpful error message for access issues
           if (json.error_type === 'access_issue') {
             msg.innerHTML = '<span class="text-red-600 whitespace-pre-line">' + (json.error || 'Access issue') + '</span>';
           } else {
@@ -1597,7 +1031,6 @@ if (typeof TutorialPopups !== 'undefined') {
     }
   }
 
-  // Save selected customer
   saveBtn.addEventListener('click', async () => {
     const customerId = sel.value;
     if (!customerId) return;
@@ -1614,7 +1047,6 @@ if (typeof TutorialPopups !== 'undefined') {
       });
       const json = await res.json();
 
-      // Check for session expiration
       if (res.status === 401 && handleSessionExpired(json)) {
         return;
       }
@@ -1636,7 +1068,6 @@ if (typeof TutorialPopups !== 'undefined') {
     }
   });
 
-  // Load customers on page load
   loadCustomers();
 })();
 </script>

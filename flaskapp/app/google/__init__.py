@@ -2833,12 +2833,15 @@ def approve_optimizations():
             return jsonify({"success": False, "error": "No data provided"}), 400
 
         optimizations = data.get("optimizations", [])
-        account_id = data.get("account_id", "")
+
+        # Get actual numeric customer ID from database (not the display name from frontend)
+        aid = current_account_id()
+        customer_id = _get_saved_customer_id(aid)
+        if not customer_id:
+            return jsonify({"success": False, "error": "No Google Ads customer ID found. Please reconnect your Google Ads account."}), 400
 
         if not optimizations:
             return jsonify({"success": False, "error": "No optimizations selected"}), 400
-
-        aid = current_account_id()
 
         # Log the approval action
         from app.models_audit import AuditLog
@@ -2879,7 +2882,7 @@ def approve_optimizations():
             applied_opt = AppliedOptimization(
                 account_id=aid,
                 user_id=current_user.id,
-                customer_id=account_id,
+                customer_id=customer_id,
                 optimization_type=opt_type,
                 optimization_title=opt_title,
                 optimization_data=opt_data,
@@ -2890,7 +2893,7 @@ def approve_optimizations():
 
             try:
                 # Apply the optimization based on type
-                result = _apply_optimization(aid, account_id, opt_type, opt_data, opt_title)
+                result = _apply_optimization(aid, customer_id, opt_type, opt_data, opt_title)
 
                 if result.get("success"):
                     applied_opt.status = 'applied'

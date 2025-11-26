@@ -3341,24 +3341,37 @@ def mark_manual_task_complete():
 
 def _run_ai_agents_for_opportunities(aid: int, ads_data: dict, customer_id: str = None, refresh_token: str = None) -> list:
     """
-    Run all 8 AI agents (Strategic, Operational, Tactical) and convert their decisions
-    into optimization opportunities for the ads UI.
+    Run all 11 AI agents and convert their decisions into optimization opportunities for the ads UI.
+
+    Agents:
+    - 1 Strategic: Long-term planning and goal-setting
+    - 3 Operational: Daily management and coordination
+    - 4 Tactical (Search): Keyword, ad copy, negative keyword, landing page optimization
+    - 3 Performance Max: Asset performance, audience signals, campaign structure
 
     Returns: List of opportunity dictionaries compatible with the UI format.
     """
     opportunities = []
 
     try:
-        # Import agents
+        # Import agents (8 Search + 3 Performance Max = 11 total)
         from app.agents import (
+            # Strategic Layer (1)
             StrategicDirectorAgent,
+            # Operational Layer (3)
             CampaignManagerAgent,
             BudgetGuardianAgent,
             QualityScoreAgent,
+            # Tactical Layer (4)
             KeywordOptimizerAgent,
             NegativeKeywordAgent,
             AdCopyAgent,
             LandingPageAnalystAgent,
+            # Performance Max Layer (3)
+            AssetPerformanceAgent,
+            AudienceSignalAgent,
+            PMaxCampaignStructureAgent,
+            # Infrastructure
             EventBus,
             DecisionLog
         )
@@ -3465,16 +3478,23 @@ def _run_ai_agents_for_opportunities(aid: int, ads_data: dict, customer_id: str 
             }
         }
 
-        # Initialize all 8 agents
+        # Initialize all 11 agents (8 Search + 3 Performance Max)
         agents = [
+            # Strategic Layer
             StrategicDirectorAgent(event_bus=event_bus, decision_log=decision_log),
+            # Operational Layer
             CampaignManagerAgent(event_bus=event_bus, decision_log=decision_log),
             BudgetGuardianAgent(event_bus=event_bus, decision_log=decision_log),
             QualityScoreAgent(event_bus=event_bus, decision_log=decision_log),
+            # Tactical Layer (Search campaigns)
             KeywordOptimizerAgent(event_bus=event_bus, decision_log=decision_log),
             NegativeKeywordAgent(event_bus=event_bus, decision_log=decision_log),
             AdCopyAgent(event_bus=event_bus, decision_log=decision_log),
             LandingPageAnalystAgent(event_bus=event_bus, decision_log=decision_log),
+            # Performance Max Layer
+            AssetPerformanceAgent(event_bus=event_bus, decision_log=decision_log),
+            AudienceSignalAgent(event_bus=event_bus, decision_log=decision_log),
+            PMaxCampaignStructureAgent(event_bus=event_bus, decision_log=decision_log),
         ]
 
         # Run each agent and collect opportunities
@@ -3530,7 +3550,7 @@ def _run_ai_agents_for_opportunities(aid: int, ads_data: dict, customer_id: str 
                 current_app.logger.error(f"Error running agent {agent.agent_id}: {e}", exc_info=True)
                 continue
 
-        current_app.logger.info(f"AI Agents generated {len(opportunities)} total opportunities for account {aid}")
+        current_app.logger.info(f"11 AI Agents (8 Search + 3 PMax) generated {len(opportunities)} total opportunities for account {aid}")
 
     except ImportError as e:
         current_app.logger.warning(f"AI Agents not available: {e}")
@@ -3554,15 +3574,21 @@ def _map_risk_to_priority(risk_level: str) -> str:
 def _get_agent_icon(agent_type: str) -> str:
     """Get FontAwesome icon for agent type."""
     icons = {
+        # Strategic & Operational
         'strategic': 'fa-chess-king',
         'operational': 'fa-gauge-high',
         'campaign_manager': 'fa-chart-line',
         'budget_guardian': 'fa-shield-halved',
         'quality_score_doctor': 'fa-star',
+        # Tactical (Search)
         'keyword_optimizer': 'fa-key',
         'negative_keyword_agent': 'fa-ban',
         'ad_copy_scientist': 'fa-pen-to-square',
         'landing_page_analyst': 'fa-desktop',
+        # Performance Max
+        'AssetPerformanceAgent': 'fa-images',
+        'AudienceSignalAgent': 'fa-users',
+        'PMaxCampaignStructureAgent': 'fa-layer-group',
     }
     return icons.get(agent_type, 'fa-robot')
 
@@ -3570,15 +3596,21 @@ def _get_agent_icon(agent_type: str) -> str:
 def _get_agent_color(agent_type: str) -> str:
     """Get color for agent type."""
     colors = {
+        # Strategic & Operational
         'strategic': 'purple',
         'operational': 'blue',
         'campaign_manager': 'blue',
         'budget_guardian': 'red',
         'quality_score_doctor': 'yellow',
+        # Tactical (Search)
         'keyword_optimizer': 'green',
         'negative_keyword_agent': 'red',
         'ad_copy_scientist': 'purple',
         'landing_page_analyst': 'orange',
+        # Performance Max
+        'AssetPerformanceAgent': 'purple',
+        'AudienceSignalAgent': 'blue',
+        'PMaxCampaignStructureAgent': 'green',
     }
     return colors.get(agent_type, 'gray')
 

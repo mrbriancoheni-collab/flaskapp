@@ -6,6 +6,7 @@ Architecture:
 - Strategic Layer: Long-term planning and goal-setting
 - Operational Layer: Daily management and coordination
 - Tactical Layer: Specific optimizations and execution
+- Performance Max Layer: Performance Max campaign-specific optimization
 
 Communication:
 - Event Bus: Async messaging between agents
@@ -18,6 +19,7 @@ from .decision_log import DecisionLog
 from .strategic import StrategicDirectorAgent
 from .operational import CampaignManagerAgent, BudgetGuardianAgent, QualityScoreAgent
 from .tactical import KeywordOptimizerAgent, AdCopyAgent, NegativeKeywordAgent, LandingPageAnalystAgent
+from .pmax_agents import AssetPerformanceAgent, AudienceSignalAgent, PMaxCampaignStructureAgent
 
 __all__ = [
     # Base
@@ -39,4 +41,8 @@ __all__ = [
     'AdCopyAgent',
     'NegativeKeywordAgent',
     'LandingPageAnalystAgent',
+    # Performance Max Layer
+    'AssetPerformanceAgent',
+    'AudienceSignalAgent',
+    'PMaxCampaignStructureAgent',
 ]

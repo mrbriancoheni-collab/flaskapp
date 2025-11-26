@@ -2653,8 +2653,11 @@ def _apply_extension(aid: int, customer_id: str, opt_data: dict, refresh_token: 
         from google.ads.googleads.client import GoogleAdsClient
         from google.ads.googleads.errors import GoogleAdsException
 
+        current_app.logger.info(f"_apply_extension: opt_data={opt_data}")
         ext_type = opt_data.get("type", "").lower()
+        current_app.logger.info(f"_apply_extension: ext_type={ext_type}")
         if not ext_type:
+            current_app.logger.error(f"_apply_extension: No extension type in opt_data. Keys: {list(opt_data.keys())}")
             return {"success": False, "error": "No extension type specified"}
 
         # Create Google Ads client using same client_info lookup as data fetching
@@ -2866,11 +2869,16 @@ def approve_optimizations():
 
         # Get actual numeric customer ID from database (not the display name from frontend)
         aid = current_account_id()
+        current_app.logger.info(f"approve_optimizations: aid={aid}, looking up customer_id...")
         customer_id = _get_saved_customer_id(aid)
+        current_app.logger.info(f"approve_optimizations: customer_id={customer_id}")
+
         if not customer_id:
+            current_app.logger.error(f"approve_optimizations: No customer ID found for aid={aid}")
             return jsonify({"success": False, "error": "No Google Ads customer ID found. Please reconnect your Google Ads account."}), 400
 
         if not optimizations:
+            current_app.logger.warning(f"approve_optimizations: No optimizations provided in request")
             return jsonify({"success": False, "error": "No optimizations selected"}), 400
 
         # Log the approval action
@@ -2885,6 +2893,17 @@ def approve_optimizations():
             f"approve_optimizations: Received {len(optimizations)} items. "
             f"Types: {dict((t, opt_types.count(t)) for t in set(opt_types))}"
         )
+
+        # Log first optimization for debugging
+        if optimizations:
+            first_opt = optimizations[0]
+            current_app.logger.info(
+                f"approve_optimizations: First optimization: "
+                f"title={first_opt.get('title')}, "
+                f"type={first_opt.get('optimization_type')}, "
+                f"has_data={bool(first_opt.get('optimization_data'))}, "
+                f"data_keys={list(first_opt.get('optimization_data', {}).keys())}"
+            )
 
         AuditLog.log(
             account_id=aid,

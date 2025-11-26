@@ -2326,21 +2326,37 @@ def _apply_optimization(aid: int, customer_id: str, opt_type: str, opt_data: dic
     Returns dict with: {"success": bool, "resource_name": str, "api_response": dict, "message": str, "error": str}
     """
     try:
-        # Get Google Ads API client
+        # Get Google Ads refresh token from database
         try:
-            service, access_token = ensure_ads_api_service(aid, "GoogleAdsService")
+            with db.engine.connect() as conn:
+                row = (
+                    conn.execute(
+                        text("SELECT credentials_json FROM google_oauth_tokens WHERE account_id=:aid AND product='ads' ORDER BY id DESC LIMIT 1"),
+                        {"aid": aid},
+                    )
+                ).mappings().first()
+
+            if not row:
+                return {"success": False, "error": "No OAuth token found for Google Ads"}
+
+            creds = json.loads(row["credentials_json"])
+            refresh_token = creds.get("refresh_token")
+
+            if not refresh_token:
+                return {"success": False, "error": "No refresh token available"}
+
         except Exception as e:
             return {"success": False, "error": f"API authentication failed: {str(e)}"}
 
         # Apply based on optimization type
         if opt_type == "negative_keyword":
-            return _apply_negative_keyword(aid, customer_id, opt_data, access_token)
+            return _apply_negative_keyword(aid, customer_id, opt_data, refresh_token)
 
         elif opt_type == "mobile_bid":
-            return _apply_mobile_bid_adjustment(aid, customer_id, opt_data, access_token)
+            return _apply_mobile_bid_adjustment(aid, customer_id, opt_data, refresh_token)
 
         elif opt_type == "extension":
-            return _apply_extension(aid, customer_id, opt_data, access_token)
+            return _apply_extension(aid, customer_id, opt_data, refresh_token)
 
         else:
             # Unsupported optimization type - log but don't fail

@@ -1456,22 +1456,10 @@ def _fetch_ads_snapshot_from_google(aid: int) -> dict:
                     "campaign_id": campaign_id,
                 })
 
-        # Check for location extensions separately (they use a different resource)
-        try:
-            for r in _gaql("""
-                SELECT campaign.id, campaign_feed.placeholder_types
-                FROM campaign_feed
-                WHERE campaign_feed.placeholder_types = LOCATION
-            """):
-                campaign_id = str(r.campaign.id)
-                if not any(e["type"] == "location" for e in extensions):
-                    extensions.append({
-                        "type": "location",
-                        "campaign_id": campaign_id,
-                    })
-        except Exception as loc_err:
-            # Location extensions may not be available or query may fail
-            current_app.logger.debug(f"Could not fetch location extensions: {loc_err}")
+        # Location extensions detection is skipped for now
+        # The campaign_feed.placeholder_types field is not available/queryable in Google Ads API v21
+        # Location extensions are managed differently and require additional API calls
+        # Users will see "Add Location Extensions" in manual tasks if location tracking is important
 
     except Exception as e:
         current_app.logger.warning(f"Failed to fetch campaign assets: {e}")
@@ -2795,6 +2783,7 @@ def _apply_mobile_bid_adjustment(aid: int, customer_id: str, opt_data: dict, acc
     try:
         from google.ads.googleads.client import GoogleAdsClient
         from google.ads.googleads.errors import GoogleAdsException
+        from google.protobuf import field_mask_pb2
 
         bid_adjustment = opt_data.get("bid_adjustment", 20)  # Default 20%
         campaign_id = opt_data.get("campaign_id")
@@ -2826,10 +2815,9 @@ def _apply_mobile_bid_adjustment(aid: int, customer_id: str, opt_data: dict, acc
         campaign_criterion.resource_name = mobile_resource_name
         campaign_criterion.bid_modifier = 1.0 + (bid_adjustment / 100.0)  # Convert percentage to multiplier
 
-        # Set update mask (v21 API)
-        client.copy_from(
-            campaign_criterion_operation.update_mask,
-            client.get_type("FieldMask")(paths=["bid_modifier"])
+        # Set update mask using protobuf FieldMask
+        campaign_criterion_operation.update_mask.CopyFrom(
+            field_mask_pb2.FieldMask(paths=["bid_modifier"])
         )
 
         # Execute
@@ -3541,7 +3529,7 @@ def _run_ai_agents_for_opportunities(aid: int, ads_data: dict, customer_id: str 
                         'optimization_type': decision.decision_type,
                         'optimization_data': {
                             'agent_id': decision.agent_id,
-                            'decision_id': decision.decision_id,
+                            'decision_type': decision.decision_type,
                             'campaign_id': decision.campaign_id,
                             'ad_group_id': decision.ad_group_id,
                             'action_data': decision.action_data,

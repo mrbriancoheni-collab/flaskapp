@@ -1436,13 +1436,14 @@ def _fetch_ads_snapshot_from_google(aid: int) -> dict:
     # Fetch extensions
     extensions = []
     try:
-        # Fetch campaign-level assets (v21 API uses campaign_asset instead of campaign_extension_setting)
+        # Fetch campaign-level assets (v21 API uses campaign_asset)
+        # Note: LOCATION is not a valid field_type, it's set differently via location extensions
         for r in _gaql("""
             SELECT campaign_asset.field_type,
                    campaign.id
             FROM campaign_asset
             WHERE campaign_asset.field_type IN (
-                'CALL', 'SITELINK', 'CALLOUT', 'LOCATION', 'STRUCTURED_SNIPPET', 'PROMOTION'
+                'CALL', 'SITELINK', 'CALLOUT', 'STRUCTURED_SNIPPET', 'PROMOTION'
             )
         """):
             field_type = str(r.campaign_asset.field_type).split(".")[-1].lower()
@@ -1454,8 +1455,94 @@ def _fetch_ads_snapshot_from_google(aid: int) -> dict:
                     "type": field_type,
                     "campaign_id": campaign_id,
                 })
+
+        # Check for location extensions separately (they use a different resource)
+        try:
+            for r in _gaql("""
+                SELECT campaign.id
+                FROM campaign_feed
+                WHERE campaign_feed.placeholder_types CONTAINS 'LOCATION'
+            """):
+                campaign_id = str(r.campaign.id)
+                if not any(e["type"] == "location" for e in extensions):
+                    extensions.append({
+                        "type": "location",
+                        "campaign_id": campaign_id,
+                    })
+        except Exception as loc_err:
+            # Location extensions may not be available or query may fail
+            current_app.logger.debug(f"Could not fetch location extensions: {loc_err}")
+
     except Exception as e:
         current_app.logger.warning(f"Failed to fetch campaign assets: {e}")
+
+    # ========== PERFORMANCE MAX SUPPORT ==========
+    # Performance Max campaigns don't have traditional ad groups, keywords, or RSAs
+    # They use asset groups with various asset types instead
+    asset_groups = []
+    pmax_assets = []
+    pmax_campaigns = [c for c in campaigns if c.get('type') == 'PERFORMANCE_MAX']
+
+    if pmax_campaigns:
+        current_app.logger.info(f"Found {len(pmax_campaigns)} Performance Max campaigns, fetching asset groups...")
+        try:
+            # Fetch asset groups for Performance Max campaigns
+            for r in _gaql("""
+                SELECT asset_group.id, asset_group.name, asset_group.status,
+                       asset_group.campaign, asset_group.final_urls,
+                       asset_group.final_mobile_urls
+                FROM asset_group
+                WHERE asset_group.status != 'REMOVED'
+                LIMIT 100
+            """):
+                ag = r.asset_group
+                asset_groups.append({
+                    "id": str(ag.id),
+                    "name": ag.name,
+                    "status": str(ag.status).split(".")[-1],
+                    "campaign_id": str(ag.campaign.split("/")[-1]),
+                    "final_urls": list(ag.final_urls) if ag.final_urls else [],
+                    "final_mobile_urls": list(ag.final_mobile_urls) if ag.final_mobile_urls else [],
+                })
+            current_app.logger.info(f"Fetched {len(asset_groups)} asset groups for Performance Max")
+        except Exception as e:
+            current_app.logger.warning(f"Failed to fetch Performance Max asset groups: {e}")
+
+        try:
+            # Fetch assets for Performance Max campaigns
+            for r in _gaql("""
+                SELECT asset_group_asset.field_type, asset_group_asset.asset_group,
+                       asset.type, asset.name, asset.text_asset.text,
+                       asset.image_asset.full_size.url, asset.youtube_video_asset.youtube_video_id
+                FROM asset_group_asset
+                WHERE asset_group_asset.status != 'REMOVED'
+                LIMIT 500
+            """):
+                aga = r.asset_group_asset
+                asset = r.asset
+                asset_type = str(asset.type).split(".")[-1]
+                field_type = str(aga.field_type).split(".")[-1]
+
+                asset_data = {
+                    "asset_group_id": str(aga.asset_group.split("/")[-1]),
+                    "field_type": field_type,  # HEADLINE, DESCRIPTION, etc.
+                    "asset_type": asset_type,   # TEXT, IMAGE, YOUTUBE_VIDEO
+                    "name": asset.name if asset.name else None,
+                }
+
+                # Extract asset content based on type
+                if asset_type == 'TEXT' and asset.text_asset and asset.text_asset.text:
+                    asset_data["text"] = asset.text_asset.text
+                elif asset_type == 'IMAGE' and asset.image_asset:
+                    asset_data["image_url"] = asset.image_asset.full_size.url if asset.image_asset.full_size else None
+                elif asset_type == 'YOUTUBE_VIDEO' and asset.youtube_video_asset:
+                    asset_data["youtube_video_id"] = asset.youtube_video_asset.youtube_video_id
+
+                pmax_assets.append(asset_data)
+
+            current_app.logger.info(f"Fetched {len(pmax_assets)} assets for Performance Max asset groups")
+        except Exception as e:
+            current_app.logger.warning(f"Failed to fetch Performance Max assets: {e}")
 
     # Fetch landing pages from ads
     landing_pages = []
@@ -1475,6 +1562,8 @@ def _fetch_ads_snapshot_from_google(aid: int) -> dict:
         "ads": ads,
         "extensions": extensions,
         "landing_pages": landing_pages,
+        "asset_groups": asset_groups,  # Performance Max asset groups
+        "pmax_assets": pmax_assets,    # Performance Max assets (headlines, descriptions, images, videos)
         "__source": "live",
     }
 
@@ -1978,8 +2067,8 @@ def ads_ui():
     def is_auto_applicable(opp):
         opt_type = opp.get("optimization_type", "")
 
-        # Core auto-applicable types
-        if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads']:
+        # Core auto-applicable types (can be applied with one click)
+        if opt_type in ['negative_keyword', 'mobile_bid']:
             return True
 
         # Extension types - only callout and structured snippet are auto-applicable
@@ -2003,6 +2092,7 @@ def ads_ui():
         if opt_type in agent_auto_types:
             return True
 
+        # Note: mobile_ads requires custom ad copy, so it's NOT auto-applicable
         return False
 
     # Get already-applied optimizations to filter them out
@@ -2735,10 +2825,10 @@ def _apply_mobile_bid_adjustment(aid: int, customer_id: str, opt_data: dict, acc
         campaign_criterion.criterion_id = 30001  # Mobile devices
         campaign_criterion.bid_modifier = 1.0 + (bid_adjustment / 100.0)  # Convert percentage to multiplier
 
-        # Set update mask
+        # Set update mask (v21 API)
         client.copy_from(
             campaign_criterion_operation.update_mask,
-            client.get_type("FieldMask", version="v16")(paths=["bid_modifier"])
+            client.get_type("FieldMask")(paths=["bid_modifier"])
         )
 
         # Execute
@@ -3251,24 +3341,37 @@ def mark_manual_task_complete():
 
 def _run_ai_agents_for_opportunities(aid: int, ads_data: dict, customer_id: str = None, refresh_token: str = None) -> list:
     """
-    Run all 8 AI agents (Strategic, Operational, Tactical) and convert their decisions
-    into optimization opportunities for the ads UI.
+    Run all 11 AI agents and convert their decisions into optimization opportunities for the ads UI.
+
+    Agents:
+    - 1 Strategic: Long-term planning and goal-setting
+    - 3 Operational: Daily management and coordination
+    - 4 Tactical (Search): Keyword, ad copy, negative keyword, landing page optimization
+    - 3 Performance Max: Asset performance, audience signals, campaign structure
 
     Returns: List of opportunity dictionaries compatible with the UI format.
     """
     opportunities = []
 
     try:
-        # Import agents
+        # Import agents (8 Search + 3 Performance Max = 11 total)
         from app.agents import (
+            # Strategic Layer (1)
             StrategicDirectorAgent,
+            # Operational Layer (3)
             CampaignManagerAgent,
             BudgetGuardianAgent,
             QualityScoreAgent,
+            # Tactical Layer (4)
             KeywordOptimizerAgent,
             NegativeKeywordAgent,
             AdCopyAgent,
             LandingPageAnalystAgent,
+            # Performance Max Layer (3)
+            AssetPerformanceAgent,
+            AudienceSignalAgent,
+            PMaxCampaignStructureAgent,
+            # Infrastructure
             EventBus,
             DecisionLog
         )
@@ -3282,15 +3385,23 @@ def _run_ai_agents_for_opportunities(aid: int, ads_data: dict, customer_id: str 
         keywords = ads_data.get("keywords", [])
         search_terms = ads_data.get("search_terms", [])
         ad_groups = ads_data.get("ad_groups", [])
+        asset_groups = ads_data.get("asset_groups", [])  # Performance Max
+        pmax_assets = ads_data.get("pmax_assets", [])    # Performance Max assets
 
         # Calculate performance metrics for agent context
         total_cost = sum(c.get("cost_30d", 0) or 0 for c in campaigns)
         total_clicks = sum(c.get("clicks", 0) or 0 for c in campaigns)
         total_conversions = sum(c.get("conversions", 0) or 0 for c in campaigns)
 
+        # Separate Performance Max from Search campaigns
+        pmax_campaigns = [c for c in campaigns if c.get('type') == 'PERFORMANCE_MAX']
+        search_campaigns = [c for c in campaigns if c.get('type') != 'PERFORMANCE_MAX']
+
         context = {
             'account_id': aid,
             'customer_id': customer_id or '',
+            'has_pmax_campaigns': len(pmax_campaigns) > 0,
+            'has_search_campaigns': len(search_campaigns) > 0,
             'performance_90d': {
                 'spend': total_cost * 3,  # Estimate 90-day from 30-day
                 'conversions': total_conversions * 3,
@@ -3300,6 +3411,7 @@ def _run_ai_agents_for_opportunities(aid: int, ads_data: dict, customer_id: str 
                 {
                     'id': str(c.get('id', '')),
                     'name': c.get('name', ''),
+                    'type': c.get('type', ''),  # PERFORMANCE_MAX, SEARCH, etc.
                     'roas': (c.get('conversions', 0) * 500) / c.get('cost_30d', 1) if c.get('cost_30d', 0) > 0 else 0,
                     'impression_share': c.get('impression_share', None),
                     'monthly_spend': c.get('cost_30d', 0),
@@ -3339,6 +3451,24 @@ def _run_ai_agents_for_opportunities(aid: int, ads_data: dict, customer_id: str 
                 }
                 for ag in ad_groups
             ],
+            # Performance Max specific data
+            'asset_groups': [
+                {
+                    'id': str(asg.get('id', '')),
+                    'name': asg.get('name', ''),
+                    'campaign_id': str(asg.get('campaign_id', '')),
+                    'status': asg.get('status', ''),
+                }
+                for asg in asset_groups
+            ],
+            'pmax_assets': pmax_assets,  # Full asset list for agents to analyze
+            'pmax_summary': {
+                'asset_groups_count': len(asset_groups),
+                'total_assets': len(pmax_assets),
+                'headlines_count': len([a for a in pmax_assets if a.get('field_type') == 'HEADLINE']),
+                'descriptions_count': len([a for a in pmax_assets if a.get('field_type') == 'DESCRIPTION']),
+                'images_count': len([a for a in pmax_assets if a.get('asset_type') == 'IMAGE']),
+            },
             'total_budget': total_cost,
             'target_cpa': 100,  # Default target
             'business_goals': {
@@ -3348,16 +3478,23 @@ def _run_ai_agents_for_opportunities(aid: int, ads_data: dict, customer_id: str 
             }
         }
 
-        # Initialize all 8 agents
+        # Initialize all 11 agents (8 Search + 3 Performance Max)
         agents = [
+            # Strategic Layer
             StrategicDirectorAgent(event_bus=event_bus, decision_log=decision_log),
+            # Operational Layer
             CampaignManagerAgent(event_bus=event_bus, decision_log=decision_log),
             BudgetGuardianAgent(event_bus=event_bus, decision_log=decision_log),
             QualityScoreAgent(event_bus=event_bus, decision_log=decision_log),
+            # Tactical Layer (Search campaigns)
             KeywordOptimizerAgent(event_bus=event_bus, decision_log=decision_log),
             NegativeKeywordAgent(event_bus=event_bus, decision_log=decision_log),
             AdCopyAgent(event_bus=event_bus, decision_log=decision_log),
             LandingPageAnalystAgent(event_bus=event_bus, decision_log=decision_log),
+            # Performance Max Layer
+            AssetPerformanceAgent(event_bus=event_bus, decision_log=decision_log),
+            AudienceSignalAgent(event_bus=event_bus, decision_log=decision_log),
+            PMaxCampaignStructureAgent(event_bus=event_bus, decision_log=decision_log),
         ]
 
         # Run each agent and collect opportunities
@@ -3413,7 +3550,7 @@ def _run_ai_agents_for_opportunities(aid: int, ads_data: dict, customer_id: str 
                 current_app.logger.error(f"Error running agent {agent.agent_id}: {e}", exc_info=True)
                 continue
 
-        current_app.logger.info(f"AI Agents generated {len(opportunities)} total opportunities for account {aid}")
+        current_app.logger.info(f"11 AI Agents (8 Search + 3 PMax) generated {len(opportunities)} total opportunities for account {aid}")
 
     except ImportError as e:
         current_app.logger.warning(f"AI Agents not available: {e}")
@@ -3437,15 +3574,21 @@ def _map_risk_to_priority(risk_level: str) -> str:
 def _get_agent_icon(agent_type: str) -> str:
     """Get FontAwesome icon for agent type."""
     icons = {
+        # Strategic & Operational
         'strategic': 'fa-chess-king',
         'operational': 'fa-gauge-high',
         'campaign_manager': 'fa-chart-line',
         'budget_guardian': 'fa-shield-halved',
         'quality_score_doctor': 'fa-star',
+        # Tactical (Search)
         'keyword_optimizer': 'fa-key',
         'negative_keyword_agent': 'fa-ban',
         'ad_copy_scientist': 'fa-pen-to-square',
         'landing_page_analyst': 'fa-desktop',
+        # Performance Max
+        'AssetPerformanceAgent': 'fa-images',
+        'AudienceSignalAgent': 'fa-users',
+        'PMaxCampaignStructureAgent': 'fa-layer-group',
     }
     return icons.get(agent_type, 'fa-robot')
 
@@ -3453,15 +3596,21 @@ def _get_agent_icon(agent_type: str) -> str:
 def _get_agent_color(agent_type: str) -> str:
     """Get color for agent type."""
     colors = {
+        # Strategic & Operational
         'strategic': 'purple',
         'operational': 'blue',
         'campaign_manager': 'blue',
         'budget_guardian': 'red',
         'quality_score_doctor': 'yellow',
+        # Tactical (Search)
         'keyword_optimizer': 'green',
         'negative_keyword_agent': 'red',
         'ad_copy_scientist': 'purple',
         'landing_page_analyst': 'orange',
+        # Performance Max
+        'AssetPerformanceAgent': 'purple',
+        'AudienceSignalAgent': 'blue',
+        'PMaxCampaignStructureAgent': 'green',
     }
     return colors.get(agent_type, 'gray')
 
@@ -4170,12 +4319,22 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
     # Always check what's actually been set up, regardless of historical data
     # This helps new accounts AND existing accounts that may be missing critical components
 
+    # Performance Max campaigns use asset groups instead of ad groups
+    asset_groups = ads_data.get("asset_groups", [])
+    pmax_assets = ads_data.get("pmax_assets", [])
+    pmax_campaigns = [c for c in campaigns if c.get('type') == 'PERFORMANCE_MAX']
+    search_campaigns = [c for c in campaigns if c.get('type') != 'PERFORMANCE_MAX']
+
     setup_checks = {
         'has_conversion_tracking': total_conversions > 0,
         'has_campaigns': len(campaigns) > 0,
-        'has_ad_groups': len(ad_groups) > 0,
-        'has_keywords': len(keywords) > 0,
-        'has_ads': len(ads) > 0,
+        'has_pmax_campaigns': len(pmax_campaigns) > 0,
+        'has_search_campaigns': len(search_campaigns) > 0,
+        'has_ad_groups': len(ad_groups) > 0,  # Search campaigns only
+        'has_asset_groups': len(asset_groups) > 0,  # Performance Max only
+        'has_keywords': len(keywords) > 0,  # Search campaigns only
+        'has_ads': len(ads) > 0,  # Search RSAs
+        'has_pmax_assets': len(pmax_assets) > 0,  # Performance Max assets
         'has_negatives': len(negatives) > 0,
         'has_extensions': len(extensions) > 0,
         'has_callout_ext': any(e.get('type') == 'callout' for e in extensions),
@@ -4184,7 +4343,7 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
         'has_location_ext': any(e.get('type') == 'location' for e in extensions),
     }
 
-    current_app.logger.info(f"Account setup checks: {setup_checks}")
+    current_app.logger.info(f"Account setup checks: {setup_checks} | PMax campaigns: {len(pmax_campaigns)}, Search campaigns: {len(search_campaigns)}")
 
     # 1. CRITICAL: Conversion tracking
     if not setup_checks['has_conversion_tracking']:
@@ -4207,26 +4366,101 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
             "best_practice": True,
         })
 
-    # 2. Basic account structure (only if missing)
-    if not setup_checks['has_campaigns'] or not setup_checks['has_ad_groups']:
+    # 2. Basic account structure (only if missing Search campaigns)
+    # Performance Max campaigns use asset groups, not ad groups
+    if setup_checks['has_search_campaigns'] and not setup_checks['has_ad_groups']:
         opportunities.append({
-            "title": "⚠️ Set up campaign structure",
-            "description": f"Your account needs basic structure: {'campaigns' if not setup_checks['has_campaigns'] else ''} {('and ' if not setup_checks['has_campaigns'] and not setup_checks['has_ad_groups'] else '')} {'ad groups' if not setup_checks['has_ad_groups'] else ''}",
+            "title": "⚠️ Add ad groups to Search campaigns",
+            "description": "Your Search campaigns need ad groups. Create 2-3 tightly themed ad groups per campaign.",
             "priority": "high",
             "impact_score": 100,
             "category": "setup",
             "icon": "fa-folder-tree",
             "color": "red",
-            "action": "Create at least 1 campaign with 2-3 tightly themed ad groups",
+            "action": "Create 2-3 tightly themed ad groups for each Search campaign",
             "estimated_time": "1 hour",
             "quick_win": False,
             "confidence_score": 100,
             "risk_level": "low",
-            "benefit_explanation": "Campaigns and ad groups are the foundation of your account structure. You need at least one campaign with organized ad groups before adding keywords and ads.",
+            "benefit_explanation": "Search campaigns need ad groups to organize keywords and ads. Ad groups are the foundation of Search campaign structure.",
             "optimization_type": "setup",
             "optimization_data": {'setup_check': 'basic_structure'},
             "best_practice": True,
         })
+
+    # Performance Max-specific setup recommendations
+    if setup_checks['has_pmax_campaigns']:
+        # Check if asset groups exist for Performance Max
+        if not setup_checks['has_asset_groups']:
+            opportunities.append({
+                "title": "⚠️ Add asset groups to Performance Max campaigns",
+                "description": "Your Performance Max campaigns need asset groups. Each asset group should target a specific product/service category.",
+                "priority": "high",
+                "impact_score": 95,
+                "category": "setup",
+                "icon": "fa-layer-group",
+                "color": "purple",
+                "action": "Create asset groups for each product/service you offer",
+                "estimated_time": "1 hour",
+                "quick_win": False,
+                "confidence_score": 95,
+                "risk_level": "low",
+                "benefit_explanation": "Performance Max uses asset groups instead of ad groups. Each asset group contains headlines, descriptions, images, and videos that Google's AI combines to create ads.",
+                "optimization_type": "setup",
+                "optimization_data": {'setup_check': 'pmax_asset_groups'},
+                "best_practice": True,
+            })
+
+        # Check if assets exist for Performance Max
+        if setup_checks['has_asset_groups'] and not setup_checks['has_pmax_assets']:
+            opportunities.append({
+                "title": "Add assets to Performance Max asset groups",
+                "description": "Your asset groups need assets: 5+ headlines, 5+ descriptions, 15+ images, and optional videos.",
+                "priority": "high",
+                "impact_score": 90,
+                "category": "setup",
+                "icon": "fa-images",
+                "color": "green",
+                "action": "Upload 5+ headlines, 5+ descriptions, 15+ images (landscape/square), and videos to each asset group",
+                "estimated_time": "2 hours",
+                "quick_win": False,
+                "confidence_score": 95,
+                "risk_level": "low",
+                "benefit_explanation": "Performance Max needs diverse assets for Google's AI to test and optimize. More assets = more combinations = better performance.",
+                "optimization_type": "setup",
+                "optimization_data": {'setup_check': 'pmax_assets'},
+                "best_practice": True,
+            })
+
+        # Check asset variety for existing Performance Max
+        if setup_checks['has_pmax_assets']:
+            headlines = [a for a in pmax_assets if a.get('field_type') == 'HEADLINE']
+            descriptions = [a for a in pmax_assets if a.get('field_type') == 'DESCRIPTION']
+            images = [a for a in pmax_assets if a.get('asset_type') == 'IMAGE']
+
+            if len(headlines) < 5 or len(descriptions) < 4 or len(images) < 15:
+                opportunities.append({
+                    "title": f"Improve Performance Max asset variety",
+                    "description": f"You have {len(headlines)} headlines (need 5+), {len(descriptions)} descriptions (need 4+), {len(images)} images (need 15+). More assets improve performance.",
+                    "priority": "medium",
+                    "impact_score": 70,
+                    "category": "pmax",
+                    "icon": "fa-sparkles",
+                    "color": "purple",
+                    "action": f"Add {max(0, 5-len(headlines))} more headlines, {max(0, 4-len(descriptions))} more descriptions, {max(0, 15-len(images))} more images",
+                    "estimated_time": "1 hour",
+                    "quick_win": False,
+                    "confidence_score": 85,
+                    "risk_level": "low",
+                    "benefit_explanation": "More asset variety gives Google's AI more combinations to test. Best practices: 5+ headlines, 4+ descriptions, 15+ images (mix of landscape and square).",
+                    "optimization_type": "pmax",
+                    "optimization_data": {
+                        'current_headlines': len(headlines),
+                        'current_descriptions': len(descriptions),
+                        'current_images': len(images)
+                    },
+                    "best_practice": True,
+                })
 
     # 3. Keywords (only if missing)
     if setup_checks['has_campaigns'] and setup_checks['has_ad_groups'] and not setup_checks['has_keywords']:

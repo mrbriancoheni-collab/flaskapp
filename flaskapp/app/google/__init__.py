@@ -3034,6 +3034,12 @@ def approve_optimizations():
 
         db.session.commit()
 
+        # Clear cached ads data so next page load fetches fresh data with updated extensions/scores
+        sess_key = f"ads_state_{aid}"
+        if sess_key in session:
+            del session[sess_key]
+            current_app.logger.info(f"Cleared ads cache for account {aid} to refresh data after applying optimizations")
+
         current_app.logger.info(
             f"Account {aid} applied {applied_count}/{len(optimizations)} optimizations. {failed_count} failed."
         )
@@ -3877,9 +3883,10 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
         })
 
     # ========== NEW ACCOUNT / NO DATA RECOMMENDATIONS ==========
-    # Add Google Ads best practice recommendations for accounts without historical data
-    if not has_historical_data:
-        # These recommendations are based on industry expertise and Google Ads best practices
+    # Add Google Ads best practice recommendations for accounts without sufficient data
+    # Only show conversion tracking if there are NO conversions at all
+    if total_conversions == 0:
+        # Conversion tracking is missing - this is critical
         new_account_recommendations = [
             {
                 "title": "Set up conversion tracking",
@@ -3899,6 +3906,15 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
                 "optimization_data": {},
                 "best_practice": True,
             },
+        ]
+        for rec in new_account_recommendations:
+            opportunities.append(rec)
+
+    # Add other setup recommendations if account lacks historical data
+    if not has_historical_data:
+        # These recommendations are based on industry expertise and Google Ads best practices
+        # (Conversion tracking is handled separately above based on actual conversion data)
+        new_account_recommendations = [
             {
                 "title": "Build keyword foundation (15-30 keywords per ad group)",
                 "description": "Start with 3-5 tightly themed ad groups, each with 15-30 closely related keywords. Mix match types: 60% phrase, 30% exact, 10% broad.",

@@ -2266,6 +2266,14 @@ def ads_opportunities_demo():
             f"and {len(analysis['manual_tasks'])} manual tasks. Auto types: {[o.get('title') for o in analysis['opportunities']]}"
         )
 
+        # TEMPLATE DEBUG: Log what's being passed to template
+        current_app.logger.info(
+            f"TEMPLATE DEBUG - Passing to template: "
+            f"opportunities={len(analysis.get('opportunities', []))}, "
+            f"manual_tasks={len(analysis.get('manual_tasks', []))}, "
+            f"manual_task_titles={[t.get('title') for t in analysis.get('manual_tasks', [])]}"
+        )
+
         current_app.logger.info("Rendering template")
         return render_template(
             "google/ads_opportunities.html",
@@ -2326,6 +2334,14 @@ def ads_opportunities():
     current_app.logger.info(
         f"ads_opportunities: Split {len(all_opportunities)} total into {len(analysis['opportunities'])} auto-applicable "
         f"and {len(analysis['manual_tasks'])} manual tasks. Auto types: {[o.get('title') for o in analysis['opportunities']]}"
+    )
+
+    # TEMPLATE DEBUG: Log what's being passed to template
+    current_app.logger.info(
+        f"TEMPLATE DEBUG - Passing to template: "
+        f"opportunities={len(analysis.get('opportunities', []))}, "
+        f"manual_tasks={len(analysis.get('manual_tasks', []))}, "
+        f"manual_task_titles={[t.get('title') for t in analysis.get('manual_tasks', [])]}"
     )
 
     return render_template(

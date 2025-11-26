@@ -2498,11 +2498,12 @@ def _apply_negative_keyword(aid: int, customer_id: str, opt_data: dict, access_t
         if not campaign_id:
             return {"success": False, "error": "No campaign ID provided"}
 
-        # Create Google Ads client (isolated from SQLAlchemy)
+        # Create Google Ads client using same client_info lookup as data fetching
+        client_id, client_secret = _client_info("ads")
         credentials = {
             "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
-            "client_id": os.getenv("GOOGLE_CLIENT_ID") or os.getenv("GOOGLE_ADS_CLIENT_ID") or current_app.config.get("GOOGLE_CLIENT_ID") or current_app.config.get("GOOGLE_ADS_CLIENT_ID"),
-            "client_secret": os.getenv("GOOGLE_CLIENT_SECRET") or os.getenv("GOOGLE_ADS_CLIENT_SECRET") or current_app.config.get("GOOGLE_CLIENT_SECRET") or current_app.config.get("GOOGLE_ADS_CLIENT_SECRET"),
+            "client_id": client_id,
+            "client_secret": client_secret,
             "refresh_token": access_token,
             "token_uri": "https://oauth2.googleapis.com/token",
             "use_proto_plus": True
@@ -2557,11 +2558,12 @@ def _apply_mobile_bid_adjustment(aid: int, customer_id: str, opt_data: dict, acc
         if not campaign_id:
             return {"success": False, "error": "No campaign ID provided"}
 
-        # Create Google Ads client (isolated from SQLAlchemy)
+        # Create Google Ads client using same client_info lookup as data fetching
+        client_id, client_secret = _client_info("ads")
         credentials = {
             "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
-            "client_id": os.getenv("GOOGLE_CLIENT_ID") or os.getenv("GOOGLE_ADS_CLIENT_ID") or current_app.config.get("GOOGLE_CLIENT_ID") or current_app.config.get("GOOGLE_ADS_CLIENT_ID"),
-            "client_secret": os.getenv("GOOGLE_CLIENT_SECRET") or os.getenv("GOOGLE_ADS_CLIENT_SECRET") or current_app.config.get("GOOGLE_CLIENT_SECRET") or current_app.config.get("GOOGLE_ADS_CLIENT_SECRET"),
+            "client_id": client_id,
+            "client_secret": client_secret,
             "refresh_token": access_token,
             "token_uri": "https://oauth2.googleapis.com/token",
             "use_proto_plus": True
@@ -2619,11 +2621,12 @@ def _apply_extension(aid: int, customer_id: str, opt_data: dict, refresh_token: 
         if not ext_type:
             return {"success": False, "error": "No extension type specified"}
 
-        # Create Google Ads client
+        # Create Google Ads client using same client_info lookup as data fetching
+        client_id, client_secret = _client_info("ads")
         credentials = {
             "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
-            "client_id": os.getenv("GOOGLE_CLIENT_ID") or os.getenv("GOOGLE_ADS_CLIENT_ID") or current_app.config.get("GOOGLE_CLIENT_ID") or current_app.config.get("GOOGLE_ADS_CLIENT_ID"),
-            "client_secret": os.getenv("GOOGLE_CLIENT_SECRET") or os.getenv("GOOGLE_ADS_CLIENT_SECRET") or current_app.config.get("GOOGLE_CLIENT_SECRET") or current_app.config.get("GOOGLE_ADS_CLIENT_SECRET"),
+            "client_id": client_id,
+            "client_secret": client_secret,
             "refresh_token": refresh_token,
             "token_uri": "https://oauth2.googleapis.com/token",
             "use_proto_plus": True

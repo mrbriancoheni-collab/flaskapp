@@ -33,6 +33,50 @@ google_bp = Blueprint("google_bp", __name__, url_prefix="/account/google")
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 
+
+def _safe_db_query(query_func, retry_with_table_creation=True):
+    """
+    Execute a database query with automatic error handling and table creation.
+
+    If a table doesn't exist or column is missing, automatically create/alter the schema.
+
+    Args:
+        query_func: Function that executes the query and returns results
+        retry_with_table_creation: If True, retry once after ensuring tables exist
+
+    Returns:
+        Query results or None if error
+    """
+    try:
+        return query_func()
+    except Exception as e:
+        error_msg = str(e).lower()
+
+        # Check for common database errors indicating missing tables/columns
+        needs_schema_fix = any([
+            "doesn't exist" in error_msg,
+            "no such table" in error_msg,
+            "unknown column" in error_msg,
+            "table not found" in error_msg,
+        ])
+
+        if needs_schema_fix and retry_with_table_creation:
+            current_app.logger.warning(f"Database schema error detected: {e}. Attempting to create/fix tables...")
+            try:
+                # Ensure all Google tables exist
+                from app.models_google import ensure_google_tables
+                ensure_google_tables()
+                current_app.logger.info("Successfully created/fixed database tables")
+
+                # Retry the query
+                return query_func()
+            except Exception as retry_error:
+                current_app.logger.error(f"Failed to fix database schema: {retry_error}", exc_info=True)
+                return None
+        else:
+            current_app.logger.error(f"Database query error: {e}", exc_info=True)
+            return None
+
 CANONICAL = {"ga", "ads", "gsc", "gmb", "lsa"}
 
 PRODUCT_ALIASES = {
@@ -1320,9 +1364,8 @@ def _fetch_ads_snapshot_from_google(aid: int) -> dict:
                ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type,
                ad_group_criterion.ad_group,
                metrics.cost_micros, metrics.conversions, metrics.clicks
-        FROM ad_group_criterion
-        WHERE ad_group_criterion.type = KEYWORD
-          AND ad_group_criterion.status != 'REMOVED'
+        FROM keyword_view
+        WHERE ad_group_criterion.status != 'REMOVED'
           AND segments.date DURING LAST_30_DAYS
         ORDER BY metrics.cost_micros DESC
         LIMIT 100
@@ -1944,8 +1987,9 @@ def ads_ui():
     # Get already-applied optimizations to filter them out
     from app.models_google import AppliedOptimization, CompletedManualTask, ensure_google_tables
     applied_optimization_titles = set()
-    try:
-        # Get optimizations applied in the last 30 days
+
+    def _fetch_applied_opts():
+        """Fetch applied optimizations from database."""
         from datetime import datetime, timedelta
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
         applied_opts = AppliedOptimization.query.filter(
@@ -1953,10 +1997,15 @@ def ads_ui():
             AppliedOptimization.status == 'applied',
             AppliedOptimization.created_at >= thirty_days_ago
         ).all()
-        applied_optimization_titles = {opt.optimization_title for opt in applied_opts}
+        return {opt.optimization_title for opt in applied_opts}
+
+    # Use safe query wrapper with automatic table creation
+    result = _safe_db_query(_fetch_applied_opts)
+    if result is not None:
+        applied_optimization_titles = result
         current_app.logger.info(f"Found {len(applied_optimization_titles)} applied optimizations in last 30 days")
-    except Exception as e:
-        current_app.logger.error(f"Error fetching applied optimizations: {e}")
+    else:
+        current_app.logger.warning("Could not fetch applied optimizations, proceeding without filter")
 
     # Filter out already-applied optimizations from auto-applicable list
     auto_applicable_opps = [opp for opp in all_opportunities if is_auto_applicable(opp)]
@@ -1969,21 +2018,17 @@ def ads_ui():
 
     # Filter out completed manual tasks
     completed_task_ids = set()
-    try:
-        completed_task_ids = {
-            task.task_id for task in CompletedManualTask.query.filter_by(account_id=aid).all()
-        }
-    except Exception as e:
-        # Table might not exist yet - create it
-        if 'completed_manual_tasks' in str(e) and "doesn't exist" in str(e):
-            current_app.logger.warning(f"completed_manual_tasks table doesn't exist, creating it now")
-            try:
-                ensure_google_tables()
-                current_app.logger.info("Google tables created successfully")
-            except Exception as create_error:
-                current_app.logger.error(f"Failed to create tables: {create_error}")
-        else:
-            current_app.logger.error(f"Error fetching completed tasks: {e}")
+
+    def _fetch_completed_tasks():
+        """Fetch completed manual tasks from database."""
+        return {task.task_id for task in CompletedManualTask.query.filter_by(account_id=aid).all()}
+
+    # Use safe query wrapper with automatic table creation
+    result = _safe_db_query(_fetch_completed_tasks)
+    if result is not None:
+        completed_task_ids = result
+    else:
+        current_app.logger.warning("Could not fetch completed manual tasks, proceeding without filter")
 
     analysis["manual_tasks"] = [
         task for task in all_manual_tasks
@@ -3034,6 +3079,12 @@ def approve_optimizations():
 
         db.session.commit()
 
+        # Clear cached ads data so next page load fetches fresh data with updated extensions/scores
+        sess_key = f"ads_state_{aid}"
+        if sess_key in session:
+            del session[sess_key]
+            current_app.logger.info(f"Cleared ads cache for account {aid} to refresh data after applying optimizations")
+
         current_app.logger.info(
             f"Account {aid} applied {applied_count}/{len(optimizations)} optimizations. {failed_count} failed."
         )
@@ -3177,9 +3228,227 @@ def mark_manual_task_complete():
         }), 500
 
 
+def _run_ai_agents_for_opportunities(aid: int, ads_data: dict, customer_id: str = None, refresh_token: str = None) -> list:
+    """
+    Run all 8 AI agents (Strategic, Operational, Tactical) and convert their decisions
+    into optimization opportunities for the ads UI.
+
+    Returns: List of opportunity dictionaries compatible with the UI format.
+    """
+    opportunities = []
+
+    try:
+        # Import agents
+        from app.agents import (
+            StrategicDirectorAgent,
+            CampaignManagerAgent,
+            BudgetGuardianAgent,
+            QualityScoreAgent,
+            KeywordOptimizerAgent,
+            NegativeKeywordAgent,
+            AdCopyAgent,
+            LandingPageAnalystAgent,
+            EventBus,
+            DecisionLog
+        )
+
+        # Initialize infrastructure
+        event_bus = EventBus()
+        decision_log = DecisionLog()
+
+        # Prepare context for agents (convert ads_data to agent-compatible format)
+        campaigns = ads_data.get("campaigns", [])
+        keywords = ads_data.get("keywords", [])
+        search_terms = ads_data.get("search_terms", [])
+        ad_groups = ads_data.get("ad_groups", [])
+
+        # Calculate performance metrics for agent context
+        total_cost = sum(c.get("cost_30d", 0) or 0 for c in campaigns)
+        total_clicks = sum(c.get("clicks", 0) or 0 for c in campaigns)
+        total_conversions = sum(c.get("conversions", 0) or 0 for c in campaigns)
+
+        context = {
+            'account_id': aid,
+            'customer_id': customer_id or '',
+            'performance_90d': {
+                'spend': total_cost * 3,  # Estimate 90-day from 30-day
+                'conversions': total_conversions * 3,
+                'cost_per_conversion': (total_cost / total_conversions) if total_conversions > 0 else 0,
+            },
+            'campaigns': [
+                {
+                    'id': str(c.get('id', '')),
+                    'name': c.get('name', ''),
+                    'roas': (c.get('conversions', 0) * 500) / c.get('cost_30d', 1) if c.get('cost_30d', 0) > 0 else 0,
+                    'impression_share': c.get('impression_share', None),
+                    'monthly_spend': c.get('cost_30d', 0),
+                    'spend_90d': c.get('cost_30d', 0) * 3,
+                    'conversions': c.get('conversions', 0),
+                    'cpa': (c.get('cost_30d', 0) / c.get('conversions', 1)) if c.get('conversions', 0) > 0 else 0,
+                    'cpl_7d': (c.get('cost_30d', 0) / 7) / max(c.get('conversions', 0), 1),
+                    'conversion_rate_7d': (c.get('conversions', 0) / max(c.get('clicks', 1), 1)) * 100,
+                }
+                for c in campaigns
+            ],
+            'keywords': [
+                {
+                    'id': str(k.get('id', '')),
+                    'text': k.get('text', ''),
+                    'cpa_30d': k.get('cpa', 0),
+                    'conversions_30d': k.get('conv', 0),
+                    'spend_30d': k.get('cost', 0),
+                }
+                for k in keywords
+            ],
+            'search_terms': [
+                {
+                    'query': st.get('query', ''),
+                    'cost': st.get('cost', 0),
+                    'conversions': st.get('conversions', 0),
+                    'cost_per_conversion': st.get('cpa', 0),
+                }
+                for st in search_terms
+            ],
+            'ad_groups': [
+                {
+                    'id': str(ag.get('id', '')),
+                    'name': ag.get('name', ''),
+                    'ads': ag.get('ads', []),
+                    'avg_ctr': ag.get('ctr', 3.0),
+                }
+                for ag in ad_groups
+            ],
+            'total_budget': total_cost,
+            'target_cpa': 100,  # Default target
+            'business_goals': {
+                'target_roas': 3.0,
+                'target_cpl': 80,
+                'customer_value': 500,
+            }
+        }
+
+        # Initialize all 8 agents
+        agents = [
+            StrategicDirectorAgent(event_bus=event_bus, decision_log=decision_log),
+            CampaignManagerAgent(event_bus=event_bus, decision_log=decision_log),
+            BudgetGuardianAgent(event_bus=event_bus, decision_log=decision_log),
+            QualityScoreAgent(event_bus=event_bus, decision_log=decision_log),
+            KeywordOptimizerAgent(event_bus=event_bus, decision_log=decision_log),
+            NegativeKeywordAgent(event_bus=event_bus, decision_log=decision_log),
+            AdCopyAgent(event_bus=event_bus, decision_log=decision_log),
+            LandingPageAnalystAgent(event_bus=event_bus, decision_log=decision_log),
+        ]
+
+        # Run each agent and collect opportunities
+        for agent in agents:
+            try:
+                # Each agent runs analyze() -> decide() cycle
+                agent_opportunities = agent.analyze(context)
+                agent_decisions = agent.decide(agent_opportunities)
+
+                # Convert agent decisions to UI-compatible opportunities
+                for decision in agent_decisions:
+                    # Map agent decision to opportunity format
+                    opportunity = {
+                        'title': decision.title,
+                        'description': decision.description,
+                        'priority': _map_risk_to_priority(decision.risk_level),
+                        'impact_score': int((1 - decision.confidence) * 100) if decision.confidence else 50,
+                        'category': agent.agent_type,
+                        'icon': _get_agent_icon(agent.agent_type),
+                        'color': _get_agent_color(agent.agent_type),
+                        'action': decision.description,
+                        'estimated_time': '15 min' if decision.requires_approval == False else '30 min',
+                        'quick_win': decision.requires_approval == False and decision.risk_level == 'low',
+                        'confidence_score': int(decision.confidence * 100),
+                        'risk_level': decision.risk_level,
+                        'benefit_explanation': decision.reasoning,
+                        'optimization_type': decision.decision_type,
+                        'optimization_data': {
+                            'agent_id': decision.agent_id,
+                            'decision_id': decision.decision_id,
+                            'campaign_id': decision.campaign_id,
+                            'ad_group_id': decision.ad_group_id,
+                            'action_data': decision.action_data,
+                            'requires_approval': decision.requires_approval,
+                        },
+                        'agent_generated': True,
+                    }
+
+                    # Add financial metrics if available
+                    if decision.expected_monthly_savings:
+                        opportunity['monthly_savings'] = decision.expected_monthly_savings
+                        opportunity['annual_savings'] = decision.expected_monthly_savings * 12
+
+                    if decision.expected_monthly_leads:
+                        opportunity['monthly_leads'] = decision.expected_monthly_leads
+                        opportunity['annual_leads'] = decision.expected_monthly_leads * 12
+
+                    opportunities.append(opportunity)
+
+                current_app.logger.info(f"Agent {agent.agent_id} generated {len(agent_decisions)} opportunities")
+
+            except Exception as e:
+                current_app.logger.error(f"Error running agent {agent.agent_id}: {e}", exc_info=True)
+                continue
+
+        current_app.logger.info(f"AI Agents generated {len(opportunities)} total opportunities for account {aid}")
+
+    except ImportError as e:
+        current_app.logger.warning(f"AI Agents not available: {e}")
+    except Exception as e:
+        current_app.logger.error(f"Error running AI agents: {e}", exc_info=True)
+
+    return opportunities
+
+
+def _map_risk_to_priority(risk_level: str) -> str:
+    """Map agent risk level to UI priority."""
+    mapping = {
+        'low': 'high',      # Low risk = high priority (can execute safely)
+        'medium': 'medium',
+        'high': 'low',      # High risk = low priority (needs careful review)
+        'critical': 'high', # Critical issues = high priority
+    }
+    return mapping.get(risk_level, 'medium')
+
+
+def _get_agent_icon(agent_type: str) -> str:
+    """Get FontAwesome icon for agent type."""
+    icons = {
+        'strategic': 'fa-chess-king',
+        'operational': 'fa-gauge-high',
+        'campaign_manager': 'fa-chart-line',
+        'budget_guardian': 'fa-shield-halved',
+        'quality_score_doctor': 'fa-star',
+        'keyword_optimizer': 'fa-key',
+        'negative_keyword_agent': 'fa-ban',
+        'ad_copy_scientist': 'fa-pen-to-square',
+        'landing_page_analyst': 'fa-desktop',
+    }
+    return icons.get(agent_type, 'fa-robot')
+
+
+def _get_agent_color(agent_type: str) -> str:
+    """Get color for agent type."""
+    colors = {
+        'strategic': 'purple',
+        'operational': 'blue',
+        'campaign_manager': 'blue',
+        'budget_guardian': 'red',
+        'quality_score_doctor': 'yellow',
+        'keyword_optimizer': 'green',
+        'negative_keyword_agent': 'red',
+        'ad_copy_scientist': 'purple',
+        'landing_page_analyst': 'orange',
+    }
+    return colors.get(agent_type, 'gray')
+
+
 def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
     """
     Comprehensive analysis of Google Ads account to identify opportunities.
+    Uses 8 AI agents (Strategic, Operational, Tactical) plus rule-based analysis.
     Returns scores, top opportunities, and categorized recommendations.
     """
     campaigns = ads_data.get("campaigns", [])
@@ -3876,106 +4145,196 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
             },
         })
 
-    # ========== NEW ACCOUNT / NO DATA RECOMMENDATIONS ==========
-    # Add Google Ads best practice recommendations for accounts without historical data
-    if not has_historical_data:
-        # These recommendations are based on industry expertise and Google Ads best practices
-        new_account_recommendations = [
-            {
-                "title": "Set up conversion tracking",
-                "description": "Essential foundation: Without conversion tracking, you can't optimize for what matters. Set up phone calls, form submissions, and purchases as conversions.",
-                "priority": "high",
-                "impact_score": 100,
-                "category": "setup",
-                "icon": "fa-chart-line",
-                "color": "red",
-                "action": "Install Google Ads conversion tag and set up conversion actions for calls, forms, and purchases",
-                "estimated_time": "30 min",
-                "quick_win": True,
-                "confidence_score": 100,
-                "risk_level": "low",
-                "benefit_explanation": "**Why This is Critical:** Without conversion tracking, Google's AI can't optimize your bids for actual customers. You're essentially flying blind, paying for clicks that may never convert.",
-                "optimization_type": "setup",
-                "optimization_data": {},
-                "best_practice": True,
-            },
-            {
-                "title": "Build keyword foundation (15-30 keywords per ad group)",
-                "description": "Start with 3-5 tightly themed ad groups, each with 15-30 closely related keywords. Mix match types: 60% phrase, 30% exact, 10% broad.",
-                "priority": "high",
-                "impact_score": 95,
-                "category": "setup",
-                "icon": "fa-key",
-                "color": "blue",
-                "action": "Create themed ad groups with related keywords (e.g., 'emergency plumber', 'emergency plumbing', '24 hour plumber')",
-                "estimated_time": "2 hours",
-                "quick_win": False,
-                "confidence_score": 95,
-                "risk_level": "low",
-                "benefit_explanation": "**Why This Matters:** Tightly themed ad groups allow you to write highly specific ads that match search intent → higher CTR → lower CPCs → better ROI.",
-                "optimization_type": "setup",
-                "optimization_data": {},
-                "best_practice": True,
-            },
-            {
-                "title": "Create 3+ RSA ads per ad group",
-                "description": "Google's best practice: 3-5 Responsive Search Ads per ad group with diverse headlines and descriptions. This enables proper A/B testing.",
-                "priority": "high",
-                "impact_score": 90,
-                "category": "setup",
-                "icon": "fa-ad",
-                "color": "purple",
-                "action": "Write 15 headlines and 4 descriptions per ad group. Include keywords, benefits, and CTAs.",
-                "estimated_time": "1 hour",
-                "quick_win": False,
-                "confidence_score": 90,
-                "risk_level": "low",
-                "benefit_explanation": "**Why Multiple Ads:** Google tests different combinations to find what works. More variety = more testing = faster optimization. Single ads limit Google's ability to optimize.",
-                "optimization_type": "setup",
-                "optimization_data": {},
-                "best_practice": True,
-            },
-            {
-                "title": "Add starter negative keywords",
-                "description": "Block obvious non-converting terms before you spend: jobs, careers, DIY, how to, free, salary, training, reviews, complaints",
-                "priority": "high",
-                "impact_score": 85,
-                "category": "negative_keyword",
-                "icon": "fa-ban",
-                "color": "red",
-                "action": "Add these negatives to all campaigns: jobs, careers, DIY, how to, free, cheap, salary, training, reviews, complaints, lawsuit",
-                "estimated_time": "15 min",
-                "quick_win": True,
-                "confidence_score": 95,
-                "risk_level": "low",
-                "benefit_explanation": "**Prevent Wasted Spend:** These terms attract job seekers, DIYers, and researchers - not paying customers. Block them before they drain your budget.",
-                "optimization_type": "setup",  # Changed from negative_keyword - manual setup task, not auto-appliable
-                "optimization_data": {},
-                "best_practice": True,
-            },
-            {
-                "title": "Enable all 4 critical ad extensions",
-                "description": "Must-have extensions for service businesses: Call, Sitelinks, Callouts, Location. These increase ad size and CTR by 15-30%.",
-                "priority": "high",
-                "impact_score": 80,
-                "category": "extension",
-                "icon": "fa-puzzle-piece",
-                "color": "green",
-                "action": "Set up: Call extension with your phone number, 4-6 Sitelinks, 4 Callouts, Location extension",
-                "estimated_time": "45 min",
-                "quick_win": True,
-                "confidence_score": 95,
-                "risk_level": "low",
-                "benefit_explanation": "**Bigger Ads = More Clicks:** Extensions make your ad larger, pushing competitors down. Call extensions are especially critical for service businesses - mobile users expect tap-to-call.",
-                "optimization_type": "setup",  # Changed from extension - this is a checklist/guide, not a single auto-appliable extension
-                "optimization_data": {},
-                "best_practice": True,
-            },
-        ]
+    # ========== COMPREHENSIVE ACCOUNT SETUP CHECKING ==========
+    # Always check what's actually been set up, regardless of historical data
+    # This helps new accounts AND existing accounts that may be missing critical components
 
-        # Add these as high-priority opportunities for new accounts
-        for rec in new_account_recommendations:
-            opportunities.append(rec)
+    setup_checks = {
+        'has_conversion_tracking': total_conversions > 0,
+        'has_campaigns': len(campaigns) > 0,
+        'has_ad_groups': len(ad_groups) > 0,
+        'has_keywords': len(keywords) > 0,
+        'has_ads': len(ads) > 0,
+        'has_negatives': len(negatives) > 0,
+        'has_extensions': len(extensions) > 0,
+        'has_callout_ext': any(e.get('type') == 'callout' for e in extensions),
+        'has_sitelink_ext': any(e.get('type') == 'sitelink' for e in extensions),
+        'has_call_ext': any(e.get('type') == 'call' for e in extensions),
+        'has_location_ext': any(e.get('type') == 'location' for e in extensions),
+    }
+
+    current_app.logger.info(f"Account setup checks: {setup_checks}")
+
+    # 1. CRITICAL: Conversion tracking
+    if not setup_checks['has_conversion_tracking']:
+        opportunities.append({
+            "title": "⚠️ Set up conversion tracking (CRITICAL)",
+            "description": "Essential foundation: Without conversion tracking, you can't optimize for what matters. Set up phone calls, form submissions, and purchases as conversions.",
+            "priority": "high",
+            "impact_score": 100,
+            "category": "setup",
+            "icon": "fa-chart-line",
+            "color": "red",
+            "action": "Install Google Ads conversion tag and set up conversion actions for calls, forms, and purchases",
+            "estimated_time": "30 min",
+            "quick_win": True,
+            "confidence_score": 100,
+            "risk_level": "low",
+            "benefit_explanation": "**Why This is Critical:** Without conversion tracking, Google's AI can't optimize your bids for actual customers. You're essentially flying blind, paying for clicks that may never convert.",
+            "optimization_type": "setup",
+            "optimization_data": {'setup_check': 'conversion_tracking'},
+            "best_practice": True,
+        })
+
+    # 2. Basic account structure (only if missing)
+    if not setup_checks['has_campaigns'] or not setup_checks['has_ad_groups']:
+        opportunities.append({
+            "title": "⚠️ Set up campaign structure",
+            "description": f"Your account needs basic structure: {'campaigns' if not setup_checks['has_campaigns'] else ''} {('and ' if not setup_checks['has_campaigns'] and not setup_checks['has_ad_groups'] else '')} {'ad groups' if not setup_checks['has_ad_groups'] else ''}",
+            "priority": "high",
+            "impact_score": 100,
+            "category": "setup",
+            "icon": "fa-folder-tree",
+            "color": "red",
+            "action": "Create at least 1 campaign with 2-3 tightly themed ad groups",
+            "estimated_time": "1 hour",
+            "quick_win": False,
+            "confidence_score": 100,
+            "risk_level": "low",
+            "benefit_explanation": "Campaigns and ad groups are the foundation of your account structure. You need at least one campaign with organized ad groups before adding keywords and ads.",
+            "optimization_type": "setup",
+            "optimization_data": {'setup_check': 'basic_structure'},
+            "best_practice": True,
+        })
+
+    # 3. Keywords (only if missing)
+    if setup_checks['has_campaigns'] and setup_checks['has_ad_groups'] and not setup_checks['has_keywords']:
+        opportunities.append({
+            "title": "Add keywords to your ad groups",
+            "description": "Your ad groups need keywords to trigger your ads. Start with 15-30 tightly themed keywords per ad group.",
+            "priority": "high",
+            "impact_score": 95,
+            "category": "setup",
+            "icon": "fa-key",
+            "color": "blue",
+            "action": "Add 15-30 closely related keywords per ad group (e.g., 'emergency plumber', 'emergency plumbing', '24 hour plumber')",
+            "estimated_time": "2 hours",
+            "quick_win": False,
+            "confidence_score": 95,
+            "risk_level": "low",
+            "benefit_explanation": "Keywords determine when your ads show. Tightly themed ad groups (15-30 related keywords) allow you to write highly specific ads that match search intent → higher CTR → lower CPCs.",
+            "optimization_type": "setup",
+            "optimization_data": {'setup_check': 'keywords'},
+            "best_practice": True,
+        })
+
+    # 4. Ads (only if missing)
+    if setup_checks['has_campaigns'] and setup_checks['has_ad_groups'] and setup_checks['has_keywords'] and not setup_checks['has_ads']:
+        opportunities.append({
+            "title": "Create ads for your ad groups",
+            "description": "Your ad groups have keywords but no ads. Create 3-5 Responsive Search Ads per ad group for proper testing.",
+            "priority": "high",
+            "impact_score": 90,
+            "category": "setup",
+            "icon": "fa-ad",
+            "color": "purple",
+            "action": "Write 3-5 RSAs per ad group with 15 headlines and 4 descriptions each",
+            "estimated_time": "3 hours",
+            "quick_win": False,
+            "confidence_score": 90,
+            "risk_level": "low",
+            "benefit_explanation": "Ads are what users see and click. Multiple RSAs enable Google to test different combinations and find what works best. Without ads, your keywords can't trigger any impressions.",
+            "optimization_type": "setup",
+            "optimization_data": {'setup_check': 'ads'},
+            "best_practice": True,
+        })
+
+    # 5. Negative keywords (if few or none - ALWAYS check this)
+    if setup_checks['has_keywords'] and len(negatives) < 10:
+        missing_count = max(0, 10 - len(negatives))
+        opportunities.append({
+            "title": f"Add {missing_count} starter negative keywords",
+            "description": f"You have {len(negatives)} negative keywords. Add at least 10 to block obvious non-converting terms: jobs, careers, DIY, how to, free, salary.",
+            "priority": "high",
+            "impact_score": 85,
+            "category": "negative_keyword",
+            "icon": "fa-ban",
+            "color": "red",
+            "action": "Add these negatives: jobs, careers, DIY, how to, free, cheap, salary, training, reviews, complaints",
+            "estimated_time": "15 min",
+            "quick_win": True,
+            "confidence_score": 95,
+            "risk_level": "low",
+            "benefit_explanation": "These terms attract job seekers, DIYers, and researchers - not paying customers. Block them before they drain your budget.",
+            "optimization_type": "setup",
+            "optimization_data": {'setup_check': 'negative_keywords', 'current_count': len(negatives)},
+            "best_practice": True,
+        })
+
+    # 6. Extensions (always check what's missing)
+    missing_extensions = []
+    if not setup_checks['has_call_ext']:
+        missing_extensions.append('Call extension (critical for service businesses)')
+    if not setup_checks['has_sitelink_ext']:
+        missing_extensions.append('Sitelinks (4-6 links to key pages)')
+    if not setup_checks['has_callout_ext']:
+        missing_extensions.append('Callouts (4 benefit statements)')
+    if not setup_checks['has_location_ext']:
+        missing_extensions.append('Location extension')
+
+    if missing_extensions:
+        opportunities.append({
+            "title": f"Add {len(missing_extensions)} missing ad extensions",
+            "description": f"Missing: {', '.join(missing_extensions[:2])}{'...' if len(missing_extensions) > 2 else ''}. Extensions increase ad size and CTR by 15-30%.",
+            "priority": "high",
+            "impact_score": 80,
+            "category": "extension",
+            "icon": "fa-puzzle-piece",
+            "color": "green",
+            "action": f"Set up: {', '.join(missing_extensions)}",
+            "estimated_time": "45 min",
+            "quick_win": True,
+            "confidence_score": 95,
+            "risk_level": "low",
+            "benefit_explanation": "Extensions make your ad larger, pushing competitors down. Call extensions are especially critical for service businesses - mobile users expect tap-to-call.",
+            "optimization_type": "setup",
+            "optimization_data": {'setup_check': 'extensions', 'missing': missing_extensions},
+            "best_practice": True,
+        })
+
+    # Note: Setup recommendations are now handled by comprehensive setup checking above
+    # which runs ALWAYS, not just for new accounts
+
+    # ========== AI AGENTS INTEGRATION ==========
+    # Run 8 AI agents (Strategic, Operational, Tactical) to generate additional opportunities
+    try:
+        # Get customer_id from database for agent context
+        customer_id = None
+        refresh_token = None
+        try:
+            creds_query = text("""
+                SELECT customer_id, credentials_json
+                FROM google_oauth_tokens
+                WHERE account_id = :account_id AND product = 'ads'
+                ORDER BY id DESC LIMIT 1
+            """)
+            with db.engine.connect() as conn:
+                result = conn.execute(creds_query, {"account_id": aid})
+                row = result.mappings().first()
+                if row:
+                    customer_id = row['customer_id']
+                    creds_json = json.loads(row['credentials_json']) if isinstance(row['credentials_json'], str) else row['credentials_json']
+                    refresh_token = creds_json.get('refresh_token')
+        except Exception as e:
+            current_app.logger.warning(f"Could not fetch customer_id for AI agents: {e}")
+
+        # Run all 8 AI agents and collect their opportunities
+        agent_opportunities = _run_ai_agents_for_opportunities(aid, ads_data, customer_id, refresh_token)
+        if agent_opportunities:
+            opportunities.extend(agent_opportunities)
+            current_app.logger.info(f"Added {len(agent_opportunities)} AI agent opportunities to the list")
+    except Exception as e:
+        current_app.logger.error(f"Error integrating AI agents: {e}", exc_info=True)
 
     # Sort opportunities by priority and impact
     priority_order = {"high": 0, "medium": 1, "low": 2}

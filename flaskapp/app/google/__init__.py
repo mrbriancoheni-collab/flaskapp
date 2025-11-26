@@ -1436,13 +1436,14 @@ def _fetch_ads_snapshot_from_google(aid: int) -> dict:
     # Fetch extensions
     extensions = []
     try:
-        # Fetch campaign-level assets (v21 API uses campaign_asset instead of campaign_extension_setting)
+        # Fetch campaign-level assets (v21 API uses campaign_asset)
+        # Note: LOCATION is not a valid field_type, it's set differently via location extensions
         for r in _gaql("""
             SELECT campaign_asset.field_type,
                    campaign.id
             FROM campaign_asset
             WHERE campaign_asset.field_type IN (
-                'CALL', 'SITELINK', 'CALLOUT', 'LOCATION', 'STRUCTURED_SNIPPET', 'PROMOTION'
+                'CALL', 'SITELINK', 'CALLOUT', 'STRUCTURED_SNIPPET', 'PROMOTION'
             )
         """):
             field_type = str(r.campaign_asset.field_type).split(".")[-1].lower()
@@ -1454,6 +1455,24 @@ def _fetch_ads_snapshot_from_google(aid: int) -> dict:
                     "type": field_type,
                     "campaign_id": campaign_id,
                 })
+
+        # Check for location extensions separately (they use a different resource)
+        try:
+            for r in _gaql("""
+                SELECT campaign.id
+                FROM campaign_feed
+                WHERE campaign_feed.placeholder_types CONTAINS 'LOCATION'
+            """):
+                campaign_id = str(r.campaign.id)
+                if not any(e["type"] == "location" for e in extensions):
+                    extensions.append({
+                        "type": "location",
+                        "campaign_id": campaign_id,
+                    })
+        except Exception as loc_err:
+            # Location extensions may not be available or query may fail
+            current_app.logger.debug(f"Could not fetch location extensions: {loc_err}")
+
     except Exception as e:
         current_app.logger.warning(f"Failed to fetch campaign assets: {e}")
 
@@ -1978,8 +1997,8 @@ def ads_ui():
     def is_auto_applicable(opp):
         opt_type = opp.get("optimization_type", "")
 
-        # Core auto-applicable types
-        if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads']:
+        # Core auto-applicable types (can be applied with one click)
+        if opt_type in ['negative_keyword', 'mobile_bid']:
             return True
 
         # Extension types - only callout and structured snippet are auto-applicable
@@ -2003,6 +2022,7 @@ def ads_ui():
         if opt_type in agent_auto_types:
             return True
 
+        # Note: mobile_ads requires custom ad copy, so it's NOT auto-applicable
         return False
 
     # Get already-applied optimizations to filter them out
@@ -2735,10 +2755,10 @@ def _apply_mobile_bid_adjustment(aid: int, customer_id: str, opt_data: dict, acc
         campaign_criterion.criterion_id = 30001  # Mobile devices
         campaign_criterion.bid_modifier = 1.0 + (bid_adjustment / 100.0)  # Convert percentage to multiplier
 
-        # Set update mask
+        # Set update mask (v21 API)
         client.copy_from(
             campaign_criterion_operation.update_mask,
-            client.get_type("FieldMask", version="v16")(paths=["bid_modifier"])
+            client.get_type("FieldMask")(paths=["bid_modifier"])
         )
 
         # Execute

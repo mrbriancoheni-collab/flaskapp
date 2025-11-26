@@ -1436,25 +1436,26 @@ def _fetch_ads_snapshot_from_google(aid: int) -> dict:
     # Fetch extensions
     extensions = []
     try:
-        # Call extensions
+        # Fetch campaign-level assets (v21 API uses campaign_asset instead of campaign_extension_setting)
         for r in _gaql("""
-            SELECT campaign_extension_setting.extension_type,
-                   campaign_extension_setting.campaign
-            FROM campaign_extension_setting
-            WHERE campaign_extension_setting.extension_type IN (
+            SELECT campaign_asset.field_type,
+                   campaign.id
+            FROM campaign_asset
+            WHERE campaign_asset.field_type IN (
                 'CALL', 'SITELINK', 'CALLOUT', 'LOCATION', 'STRUCTURED_SNIPPET', 'PROMOTION'
             )
         """):
-            ext = r.campaign_extension_setting
-            ext_type = str(ext.extension_type).split(".")[-1].lower()
+            field_type = str(r.campaign_asset.field_type).split(".")[-1].lower()
+            campaign_id = str(r.campaign.id)
+
             # Dedupe by type
-            if not any(e["type"] == ext_type for e in extensions):
+            if not any(e["type"] == field_type for e in extensions):
                 extensions.append({
-                    "type": ext_type,
-                    "campaign_id": str(ext.campaign.split("/")[-1]),
+                    "type": field_type,
+                    "campaign_id": campaign_id,
                 })
     except Exception as e:
-        current_app.logger.warning(f"Failed to fetch extensions: {e}")
+        current_app.logger.warning(f"Failed to fetch campaign assets: {e}")
 
     # Fetch landing pages from ads
     landing_pages = []
@@ -1970,18 +1971,38 @@ def ads_ui():
     analysis = _analyze_ads_opportunities(aid, ads_data)
 
     # Split opportunities into auto-applicable and manual tasks
-    # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, callout/snippet extensions)
-    # Manual tasks: Require manual setup (setup, quality_score, mobile_ads, account_structure, location/call/sitelink extensions)
+    # Auto-applicable: Can be applied with one click or AI agent
+    # Manual tasks: Require extensive manual setup
     all_opportunities = analysis.get("opportunities", [])
 
     def is_auto_applicable(opp):
         opt_type = opp.get("optimization_type", "")
-        if opt_type in ['negative_keyword', 'mobile_bid']:
+
+        # Core auto-applicable types
+        if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads']:
             return True
+
+        # Extension types - only callout and structured snippet are auto-applicable
         if opt_type == 'extension':
-            # Only callout and structured snippet extensions are auto-applicable
             ext_type = opp.get("optimization_data", {}).get("type", "").lower()
             return "callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
+
+        # Agent-generated optimizations - check if they're auto-executable
+        if opp.get('agent_generated'):
+            requires_approval = opp.get('optimization_data', {}).get('requires_approval', True)
+            return not requires_approval  # Auto-applicable if doesn't require approval
+
+        # Agent decision types that are auto-executable
+        agent_auto_types = [
+            'pause_keyword',           # Pause underperformers
+            'adjust_keyword_bid',      # Bid adjustments
+            'add_negative_keyword',    # Block waste
+            'adjust_bids',             # Campaign-level bid adjustments
+            'adjust_daily_budget',     # Budget pacing
+        ]
+        if opt_type in agent_auto_types:
+            return True
+
         return False
 
     # Get already-applied optimizations to filter them out
@@ -4308,25 +4329,35 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
     # ========== AI AGENTS INTEGRATION ==========
     # Run 8 AI agents (Strategic, Operational, Tactical) to generate additional opportunities
     try:
-        # Get customer_id from database for agent context
+        # Get customer_id and credentials from database for agent context
         customer_id = None
         refresh_token = None
         try:
+            # Get customer_id from accounts table
+            cid_query = text("SELECT google_ads_customer_id FROM accounts WHERE id=:aid LIMIT 1")
+            with db.engine.connect() as conn:
+                result = conn.execute(cid_query, {"aid": aid})
+                row = result.first()
+                if row:
+                    customer_id = row[0]
+
+            # Get refresh_token from google_oauth_tokens
             creds_query = text("""
-                SELECT customer_id, credentials_json
+                SELECT credentials_json
                 FROM google_oauth_tokens
                 WHERE account_id = :account_id AND product = 'ads'
                 ORDER BY id DESC LIMIT 1
             """)
             with db.engine.connect() as conn:
                 result = conn.execute(creds_query, {"account_id": aid})
-                row = result.mappings().first()
+                row = result.first()
                 if row:
-                    customer_id = row['customer_id']
-                    creds_json = json.loads(row['credentials_json']) if isinstance(row['credentials_json'], str) else row['credentials_json']
+                    creds_json = json.loads(row[0]) if isinstance(row[0], str) else row[0]
                     refresh_token = creds_json.get('refresh_token')
+
+            current_app.logger.info(f"AI Agents context: customer_id={customer_id}, has_refresh_token={bool(refresh_token)}")
         except Exception as e:
-            current_app.logger.warning(f"Could not fetch customer_id for AI agents: {e}")
+            current_app.logger.warning(f"Could not fetch customer_id/token for AI agents: {e}")
 
         # Run all 8 AI agents and collect their opportunities
         agent_opportunities = _run_ai_agents_for_opportunities(aid, ads_data, customer_id, refresh_token)

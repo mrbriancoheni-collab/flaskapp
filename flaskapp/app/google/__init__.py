@@ -1320,9 +1320,8 @@ def _fetch_ads_snapshot_from_google(aid: int) -> dict:
                ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type,
                ad_group_criterion.ad_group,
                metrics.cost_micros, metrics.conversions, metrics.clicks
-        FROM ad_group_criterion
-        WHERE ad_group_criterion.type = KEYWORD
-          AND ad_group_criterion.status != 'REMOVED'
+        FROM keyword_view
+        WHERE ad_group_criterion.status != 'REMOVED'
           AND segments.date DURING LAST_30_DAYS
         ORDER BY metrics.cost_micros DESC
         LIMIT 100

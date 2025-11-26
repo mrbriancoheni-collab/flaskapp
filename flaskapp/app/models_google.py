@@ -80,6 +80,27 @@ class AppliedOptimization(db.Model):
         return f'<AppliedOptimization {self.id} {self.optimization_type} status={self.status}>'
 
 
+class CompletedManualTask(db.Model):
+    """Track manual tasks that users have completed so they don't appear again."""
+    __tablename__ = "completed_manual_tasks"
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    account_id = db.Column(db.Integer, index=True, nullable=False)
+    user_id = db.Column(db.Integer, nullable=True)
+    customer_id = db.Column(db.String(64), index=True, nullable=True)
+
+    # Task identification
+    task_id = db.Column(db.String(128), nullable=False)  # Unique task identifier
+    task_title = db.Column(db.String(512), nullable=True)
+
+    # Timestamps
+    completed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f'<CompletedManualTask {self.id} {self.task_title}>'
+
+
 def ensure_google_tables():
     """Call this once after deploy if you're not running Alembic migrations."""
     with db.engine.begin() as conn:
@@ -120,5 +141,22 @@ def ensure_google_tables():
           INDEX idx_applied_opt_customer (customer_id),
           INDEX idx_applied_opt_type (optimization_type),
           INDEX idx_applied_opt_status (status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        """))
+
+        conn.execute(db.text("""
+        CREATE TABLE IF NOT EXISTS completed_manual_tasks (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+          account_id INT NOT NULL,
+          user_id INT NULL,
+          customer_id VARCHAR(64) NULL,
+          task_id VARCHAR(128) NOT NULL,
+          task_title VARCHAR(512) NULL,
+          completed_at DATETIME NOT NULL,
+          created_at DATETIME NOT NULL,
+          INDEX idx_completed_task_account (account_id),
+          INDEX idx_completed_task_customer (customer_id),
+          INDEX idx_completed_task_id (task_id),
+          UNIQUE KEY unique_account_task (account_id, task_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         """))

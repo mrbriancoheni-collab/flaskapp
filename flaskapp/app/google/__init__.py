@@ -1459,9 +1459,9 @@ def _fetch_ads_snapshot_from_google(aid: int) -> dict:
         # Check for location extensions separately (they use a different resource)
         try:
             for r in _gaql("""
-                SELECT campaign.id
+                SELECT campaign.id, campaign_feed.placeholder_types
                 FROM campaign_feed
-                WHERE campaign_feed.placeholder_types CONTAINS 'LOCATION'
+                WHERE campaign_feed.placeholder_types = LOCATION
             """):
                 campaign_id = str(r.campaign.id)
                 if not any(e["type"] == "location" for e in extensions):
@@ -2816,13 +2816,14 @@ def _apply_mobile_bid_adjustment(aid: int, customer_id: str, opt_data: dict, acc
         client = GoogleAdsClient.load_from_dict(credentials)
         campaign_criterion_service = client.get_service("CampaignCriterionService")
 
-        # Build mobile device criterion operation
+        # Build the resource name for the mobile device criterion
+        mobile_resource_name = f"customers/{customer_id}/campaignCriteria/{campaign_id}~30001"
+
+        # Try to update the existing mobile device criterion
         campaign_criterion_operation = client.get_type("CampaignCriterionOperation")
         campaign_criterion = campaign_criterion_operation.update
 
-        # Set campaign resource name
-        campaign_criterion.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
-        campaign_criterion.criterion_id = 30001  # Mobile devices
+        campaign_criterion.resource_name = mobile_resource_name
         campaign_criterion.bid_modifier = 1.0 + (bid_adjustment / 100.0)  # Convert percentage to multiplier
 
         # Set update mask (v21 API)
@@ -2832,12 +2833,28 @@ def _apply_mobile_bid_adjustment(aid: int, customer_id: str, opt_data: dict, acc
         )
 
         # Execute
-        response = campaign_criterion_service.mutate_campaign_criteria(
-            customer_id=customer_id,
-            operations=[campaign_criterion_operation]
-        )
+        try:
+            response = campaign_criterion_service.mutate_campaign_criteria(
+                customer_id=customer_id,
+                operations=[campaign_criterion_operation]
+            )
+            resource_name = response.results[0].resource_name if response.results else None
+        except GoogleAdsException as update_ex:
+            # If criterion doesn't exist, create it instead
+            current_app.logger.info(f"Mobile criterion doesn't exist, creating it. Error: {update_ex}")
 
-        resource_name = response.results[0].resource_name if response.results else None
+            campaign_criterion_operation = client.get_type("CampaignCriterionOperation")
+            campaign_criterion = campaign_criterion_operation.create
+
+            campaign_criterion.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
+            campaign_criterion.criterion_id = 30001  # Mobile devices
+            campaign_criterion.bid_modifier = 1.0 + (bid_adjustment / 100.0)
+
+            response = campaign_criterion_service.mutate_campaign_criteria(
+                customer_id=customer_id,
+                operations=[campaign_criterion_operation]
+            )
+            resource_name = response.results[0].resource_name if response.results else None
 
         return {
             "success": True,

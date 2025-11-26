@@ -213,6 +213,20 @@ class AssetPerformanceAgent(BaseAgent):
 
         return decisions
 
+    def _execute_impl(self, decision: AgentDecision, google_ads_client: Any) -> Dict[str, Any]:
+        """
+        Asset creation and management require manual implementation.
+        This agent creates recommendations but does not auto-execute.
+        """
+        # Performance Max asset optimizations cannot be fully automated
+        # They require manual asset creation (images, headlines, descriptions)
+        return {
+            'success': True,
+            'note': 'Performance Max asset optimization requires manual asset creation',
+            'decision_type': decision.decision_type,
+            'requires_manual_work': True
+        }
+
 
 class AudienceSignalAgent(BaseAgent):
     """
@@ -295,6 +309,20 @@ class AudienceSignalAgent(BaseAgent):
                 ))
 
         return decisions
+
+    def _execute_impl(self, decision: AgentDecision, google_ads_client: Any) -> Dict[str, Any]:
+        """
+        Audience signal changes require manual implementation.
+        This agent creates recommendations but does not auto-execute.
+        """
+        # Audience signal optimizations require manual configuration in Google Ads
+        # Customer lists, audiences, etc. need to be uploaded/configured manually
+        return {
+            'success': True,
+            'note': 'Audience signal optimization requires manual configuration in Google Ads',
+            'decision_type': decision.decision_type,
+            'requires_manual_work': True
+        }
 
 
 class PMaxCampaignStructureAgent(BaseAgent):
@@ -443,3 +471,16 @@ class PMaxCampaignStructureAgent(BaseAgent):
                 ))
 
         return decisions
+
+    def _execute_impl(self, decision: AgentDecision, google_ads_client: Any) -> Dict[str, Any]:
+        """
+        Performance Max structure changes require manual implementation.
+        This agent creates recommendations but does not auto-execute.
+        """
+        # Campaign structure changes (asset groups, budget allocation) need manual setup
+        return {
+            'success': True,
+            'note': 'Performance Max structure optimization requires manual configuration',
+            'decision_type': decision.decision_type,
+            'requires_manual_work': True
+        }

@@ -1897,6 +1897,34 @@ def ads_ui():
     # Generate comprehensive analysis using the opportunities analyzer
     analysis = _analyze_ads_opportunities(aid, ads_data)
 
+    # Split opportunities into auto-applicable and manual tasks
+    # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, extension)
+    # Manual tasks: Require manual setup (setup, quality_score, mobile_ads, account_structure)
+    auto_applicable_types = ['negative_keyword', 'mobile_bid', 'extension']
+    all_opportunities = analysis.get("opportunities", [])
+
+    analysis["opportunities"] = [
+        opp for opp in all_opportunities
+        if opp.get("optimization_type") in auto_applicable_types
+    ]
+    analysis["manual_tasks"] = [
+        opp for opp in all_opportunities
+        if opp.get("optimization_type") not in auto_applicable_types
+    ]
+
+    current_app.logger.info(
+        f"ads_ui: Split {len(all_opportunities)} total into {len(analysis['opportunities'])} auto-applicable "
+        f"and {len(analysis['manual_tasks'])} manual tasks. Auto types: {[o.get('title') for o in analysis['opportunities']]}"
+    )
+
+    # TEMPLATE DEBUG: Log what's being passed to template
+    current_app.logger.info(
+        f"TEMPLATE DEBUG - Passing to template: "
+        f"opportunities={len(analysis.get('opportunities', []))}, "
+        f"manual_tasks={len(analysis.get('manual_tasks', []))}, "
+        f"manual_task_titles={[t.get('title') for t in analysis.get('manual_tasks', [])]}"
+    )
+
     return render_template(
         "google/ads_opportunities.html",
         connected=connected,

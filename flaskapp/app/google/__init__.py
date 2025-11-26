@@ -1913,11 +1913,22 @@ def ads_ui():
         return False
 
     analysis["opportunities"] = [opp for opp in all_opportunities if is_auto_applicable(opp)]
-    analysis["manual_tasks"] = [opp for opp in all_opportunities if not is_auto_applicable(opp)]
+    all_manual_tasks = [opp for opp in all_opportunities if not is_auto_applicable(opp)]
+
+    # Filter out completed manual tasks
+    from app.models_google import CompletedManualTask
+    completed_task_ids = {
+        task.task_id for task in CompletedManualTask.query.filter_by(account_id=aid).all()
+    }
+    analysis["manual_tasks"] = [
+        task for task in all_manual_tasks
+        if task.get("id") not in completed_task_ids
+    ]
 
     current_app.logger.info(
         f"ads_ui: Split {len(all_opportunities)} total into {len(analysis['opportunities'])} auto-applicable "
-        f"and {len(analysis['manual_tasks'])} manual tasks. Auto types: {[o.get('title') for o in analysis['opportunities']]}"
+        f"and {len(all_manual_tasks)} manual tasks ({len(completed_task_ids)} completed, {len(analysis['manual_tasks'])} remaining). "
+        f"Auto types: {[o.get('title') for o in analysis['opportunities']]}"
     )
 
     # TEMPLATE DEBUG: Log what's being passed to template
@@ -2278,19 +2289,24 @@ def ads_opportunities_demo():
         current_app.logger.info(f"Analysis completed - opportunities count: {len(analysis.get('opportunities', []))}")
 
         # Split opportunities into auto-applicable and manual tasks
-        # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, extension)
-        # Manual tasks: Require manual setup (setup, quality_score, mobile_ads, account_structure)
-        auto_applicable_types = ['negative_keyword', 'mobile_bid', 'extension']
+        # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, callout/snippet extensions)
+        # Manual tasks: Require manual setup (setup, quality_score, mobile_ads, account_structure, location/call/sitelink extensions)
         all_opportunities = analysis.get("opportunities", [])
 
-        analysis["opportunities"] = [
-            opp for opp in all_opportunities
-            if opp.get("optimization_type") in auto_applicable_types
-        ]
-        analysis["manual_tasks"] = [
-            opp for opp in all_opportunities
-            if opp.get("optimization_type") not in auto_applicable_types
-        ]
+        def is_auto_applicable(opp):
+            opt_type = opp.get("optimization_type", "")
+            if opt_type in ['negative_keyword', 'mobile_bid']:
+                return True
+            if opt_type == 'extension':
+                # Only callout and structured snippet extensions are auto-applicable
+                ext_type = opp.get("type", "").lower()
+                return "callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
+            return False
+
+        analysis["opportunities"] = [opp for opp in all_opportunities if is_auto_applicable(opp)]
+        analysis["manual_tasks"] = [opp for opp in all_opportunities if not is_auto_applicable(opp)]
+
+        # Note: Demo mode doesn't filter completed tasks since it's not tied to a real account
 
         current_app.logger.info(
             f"ads_opportunities_demo: Split {len(all_opportunities)} total into {len(analysis['opportunities'])} auto-applicable "
@@ -3017,6 +3033,59 @@ def get_applied_optimizations():
 
     except Exception as e:
         current_app.logger.exception("Error fetching applied optimizations")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@google_bp.route("/ads/mark-manual-task-complete", methods=["POST"], endpoint="mark_manual_task_complete")
+@login_required
+def mark_manual_task_complete():
+    """
+    Mark a manual task as complete so it doesn't appear in the list anymore.
+    Stores completion status in database.
+    """
+    try:
+        from flask import jsonify
+        from app.models_google import CompletedManualTask
+        from app import db
+
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "error": "No data provided"}), 400
+
+        task_id = data.get("task_id")
+        task_title = data.get("task_title")
+
+        if not task_id or not task_title:
+            return jsonify({"success": False, "error": "Task ID and title required"}), 400
+
+        aid = current_account_id()
+        customer_id = _get_saved_customer_id(aid)
+
+        # Create completion record
+        completed_task = CompletedManualTask(
+            account_id=aid,
+            user_id=current_user.id,
+            customer_id=customer_id,
+            task_id=task_id,
+            task_title=task_title
+        )
+        db.session.add(completed_task)
+        db.session.commit()
+
+        current_app.logger.info(
+            f"Manual task marked complete: account_id={aid}, task_id={task_id}, title={task_title}"
+        )
+
+        return jsonify({
+            "success": True,
+            "message": f"Task '{task_title}' marked as complete"
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Error marking manual task complete")
         return jsonify({
             "success": False,
             "error": str(e)

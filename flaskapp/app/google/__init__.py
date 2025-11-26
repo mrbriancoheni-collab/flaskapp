@@ -1898,19 +1898,22 @@ def ads_ui():
     analysis = _analyze_ads_opportunities(aid, ads_data)
 
     # Split opportunities into auto-applicable and manual tasks
-    # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, extension)
-    # Manual tasks: Require manual setup (setup, quality_score, mobile_ads, account_structure)
-    auto_applicable_types = ['negative_keyword', 'mobile_bid', 'extension']
+    # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, callout/snippet extensions)
+    # Manual tasks: Require manual setup (setup, quality_score, mobile_ads, account_structure, location/call/sitelink extensions)
     all_opportunities = analysis.get("opportunities", [])
 
-    analysis["opportunities"] = [
-        opp for opp in all_opportunities
-        if opp.get("optimization_type") in auto_applicable_types
-    ]
-    analysis["manual_tasks"] = [
-        opp for opp in all_opportunities
-        if opp.get("optimization_type") not in auto_applicable_types
-    ]
+    def is_auto_applicable(opp):
+        opt_type = opp.get("optimization_type", "")
+        if opt_type in ['negative_keyword', 'mobile_bid']:
+            return True
+        if opt_type == 'extension':
+            # Only callout and structured snippet extensions are auto-applicable
+            ext_type = opp.get("type", "").lower()
+            return "callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
+        return False
+
+    analysis["opportunities"] = [opp for opp in all_opportunities if is_auto_applicable(opp)]
+    analysis["manual_tasks"] = [opp for opp in all_opportunities if not is_auto_applicable(opp)]
 
     current_app.logger.info(
         f"ads_ui: Split {len(all_opportunities)} total into {len(analysis['opportunities'])} auto-applicable "
@@ -2345,19 +2348,22 @@ def ads_opportunities():
     analysis = _analyze_ads_opportunities(aid, ads_data)
 
     # Split opportunities into auto-applicable and manual tasks
-    # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, extension)
-    # Manual tasks: Require manual setup (setup, quality_score, mobile_ads, account_structure)
-    auto_applicable_types = ['negative_keyword', 'mobile_bid', 'extension']
+    # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, callout/snippet extensions)
+    # Manual tasks: Require manual setup (setup, quality_score, mobile_ads, account_structure, location/call/sitelink extensions)
     all_opportunities = analysis.get("opportunities", [])
 
-    analysis["opportunities"] = [
-        opp for opp in all_opportunities
-        if opp.get("optimization_type") in auto_applicable_types
-    ]
-    analysis["manual_tasks"] = [
-        opp for opp in all_opportunities
-        if opp.get("optimization_type") not in auto_applicable_types
-    ]
+    def is_auto_applicable(opp):
+        opt_type = opp.get("optimization_type", "")
+        if opt_type in ['negative_keyword', 'mobile_bid']:
+            return True
+        if opt_type == 'extension':
+            # Only callout and structured snippet extensions are auto-applicable
+            ext_type = opp.get("type", "").lower()
+            return "callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
+        return False
+
+    analysis["opportunities"] = [opp for opp in all_opportunities if is_auto_applicable(opp)]
+    analysis["manual_tasks"] = [opp for opp in all_opportunities if not is_auto_applicable(opp)]
 
     current_app.logger.info(
         f"ads_opportunities: Split {len(all_opportunities)} total into {len(analysis['opportunities'])} auto-applicable "
@@ -2686,7 +2692,7 @@ def _apply_extension(aid: int, customer_id: str, opt_data: dict, refresh_token: 
 
 
 def _create_callout_extension(client, customer_id: str, opt_data: dict) -> dict:
-    """Create callout extension with sample callouts for service business."""
+    """Create callout assets (API v21) for service business."""
     try:
         # Default callouts for service businesses
         callouts = [
@@ -2696,28 +2702,44 @@ def _create_callout_extension(client, customer_id: str, opt_data: dict) -> dict:
             "Free Estimates"
         ]
 
-        extension_feed_item_service = client.get_service("ExtensionFeedItemService")
-        operations = []
+        asset_service = client.get_service("AssetService")
+        customer_asset_service = client.get_service("CustomerAssetService")
 
+        created_assets = []
+
+        # Step 1: Create callout assets
         for callout_text in callouts:
-            operation = client.get_type("ExtensionFeedItemOperation")
-            extension_feed_item = operation.create
-            extension_feed_item.callout_feed_item.callout_text = callout_text
-            operations.append(operation)
+            asset_operation = client.get_type("AssetOperation")
+            asset = asset_operation.create
+            asset.name = f"Callout: {callout_text}"
+            asset.callout_asset.callout_text = callout_text
 
-        # Create extensions
-        response = extension_feed_item_service.mutate_extension_feed_items(
-            customer_id=customer_id,
-            operations=operations
-        )
+            # Create the asset
+            asset_response = asset_service.mutate_assets(
+                customer_id=customer_id,
+                operations=[asset_operation]
+            )
 
-        resource_names = [result.resource_name for result in response.results]
+            if asset_response.results:
+                asset_resource_name = asset_response.results[0].resource_name
+                created_assets.append(asset_resource_name)
+
+                # Step 2: Link asset to customer
+                customer_asset_operation = client.get_type("CustomerAssetOperation")
+                customer_asset = customer_asset_operation.create
+                customer_asset.asset = asset_resource_name
+                customer_asset.field_type = client.enums.AssetFieldTypeEnum.CALLOUT
+
+                customer_asset_service.mutate_customer_assets(
+                    customer_id=customer_id,
+                    operations=[customer_asset_operation]
+                )
 
         return {
             "success": True,
-            "resource_name": resource_names[0] if resource_names else None,
-            "api_response": {"results": resource_names},
-            "message": f"Created {len(callouts)} callout extensions: {', '.join(callouts)}"
+            "resource_name": created_assets[0] if created_assets else None,
+            "api_response": {"results": created_assets},
+            "message": f"Created {len(created_assets)} callout assets: {', '.join(callouts)}"
         }
 
     except Exception as e:
@@ -2725,46 +2747,11 @@ def _create_callout_extension(client, customer_id: str, opt_data: dict) -> dict:
 
 
 def _create_sitelink_extension(client, customer_id: str, opt_data: dict) -> dict:
-    """Create sitelink extensions for service business."""
-    try:
-        # Default sitelinks for service businesses
-        sitelinks = [
-            {"text": "Emergency Service", "description1": "24/7 Available", "description2": "Fast Response"},
-            {"text": "Free Estimate", "description1": "No Obligation Quote", "description2": "Transparent Pricing"},
-            {"text": "Our Services", "description1": "Full Service List", "description2": "Expert Technicians"},
-            {"text": "Contact Us", "description1": "Call or Text", "description2": "Quick Response"}
-        ]
-
-        extension_feed_item_service = client.get_service("ExtensionFeedItemService")
-        operations = []
-
-        for link in sitelinks:
-            operation = client.get_type("ExtensionFeedItemOperation")
-            extension_feed_item = operation.create
-            sitelink = extension_feed_item.sitelink_feed_item
-            sitelink.link_text = link["text"]
-            sitelink.line1 = link["description1"]
-            sitelink.line2 = link["description2"]
-            # Note: final_urls would need actual URLs from the business
-            operations.append(operation)
-
-        # Create extensions
-        response = extension_feed_item_service.mutate_extension_feed_items(
-            customer_id=customer_id,
-            operations=operations
-        )
-
-        resource_names = [result.resource_name for result in response.results]
-
-        return {
-            "success": True,
-            "resource_name": resource_names[0] if resource_names else None,
-            "api_response": {"results": resource_names},
-            "message": f"Created {len(sitelinks)} sitelink extensions"
-        }
-
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+    """Sitelinks require actual landing page URLs from the business."""
+    return {
+        "success": False,
+        "error": "Sitelink extensions require specific landing page URLs from your website. Please add manually in Google Ads UI with your actual page URLs (e.g., /services, /contact, /emergency)."
+    }
 
 
 def _create_call_extension(client, customer_id: str, opt_data: dict) -> dict:
@@ -2776,7 +2763,7 @@ def _create_call_extension(client, customer_id: str, opt_data: dict) -> dict:
 
 
 def _create_structured_snippet_extension(client, customer_id: str, opt_data: dict) -> dict:
-    """Create structured snippet extension."""
+    """Create structured snippet asset (API v21) for service business."""
     try:
         # Default snippets for service businesses
         snippet_values = [
@@ -2787,27 +2774,44 @@ def _create_structured_snippet_extension(client, customer_id: str, opt_data: dic
             "Inspection"
         ]
 
-        extension_feed_item_service = client.get_service("ExtensionFeedItemService")
-        operation = client.get_type("ExtensionFeedItemOperation")
-        extension_feed_item = operation.create
+        asset_service = client.get_service("AssetService")
+        customer_asset_service = client.get_service("CustomerAssetService")
 
-        snippet = extension_feed_item.structured_snippet_feed_item
+        # Step 1: Create structured snippet asset
+        asset_operation = client.get_type("AssetOperation")
+        asset = asset_operation.create
+        asset.name = "Structured Snippet: Services"
+
+        # Set the structured snippet data
+        snippet = asset.structured_snippet_asset
         snippet.header = "Services"
         snippet.values.extend(snippet_values)
 
-        # Create extension
-        response = extension_feed_item_service.mutate_extension_feed_items(
+        # Create the asset
+        asset_response = asset_service.mutate_assets(
             customer_id=customer_id,
-            operations=[operation]
+            operations=[asset_operation]
         )
 
-        resource_name = response.results[0].resource_name if response.results else None
+        asset_resource_name = asset_response.results[0].resource_name if asset_response.results else None
+
+        if asset_resource_name:
+            # Step 2: Link asset to customer
+            customer_asset_operation = client.get_type("CustomerAssetOperation")
+            customer_asset = customer_asset_operation.create
+            customer_asset.asset = asset_resource_name
+            customer_asset.field_type = client.enums.AssetFieldTypeEnum.STRUCTURED_SNIPPET
+
+            customer_asset_service.mutate_customer_assets(
+                customer_id=customer_id,
+                operations=[customer_asset_operation]
+            )
 
         return {
             "success": True,
-            "resource_name": resource_name,
-            "api_response": {"results": [resource_name]},
-            "message": f"Created structured snippet: Services - {', '.join(snippet_values)}"
+            "resource_name": asset_resource_name,
+            "api_response": {"results": [asset_resource_name]},
+            "message": f"Created structured snippet asset: Services - {', '.join(snippet_values)}"
         }
 
     except Exception as e:

@@ -2262,8 +2262,8 @@ def ads_opportunities_demo():
         ]
 
         current_app.logger.info(
-            f"Split optimizations: {len(analysis['opportunities'])} auto-applicable, "
-            f"{len(analysis['manual_tasks'])} manual tasks"
+            f"ads_opportunities_demo: Split {len(all_opportunities)} total into {len(analysis['opportunities'])} auto-applicable "
+            f"and {len(analysis['manual_tasks'])} manual tasks. Auto types: {[o.get('title') for o in analysis['opportunities']]}"
         )
 
         current_app.logger.info("Rendering template")
@@ -2324,8 +2324,8 @@ def ads_opportunities():
     ]
 
     current_app.logger.info(
-        f"Split optimizations: {len(analysis['opportunities'])} auto-applicable, "
-        f"{len(analysis['manual_tasks'])} manual tasks"
+        f"ads_opportunities: Split {len(all_opportunities)} total into {len(analysis['opportunities'])} auto-applicable "
+        f"and {len(analysis['manual_tasks'])} manual tasks. Auto types: {[o.get('title') for o in analysis['opportunities']]}"
     )
 
     return render_template(
@@ -2585,6 +2585,10 @@ def _apply_extension(aid: int, customer_id: str, opt_data: dict, refresh_token: 
             "use_proto_plus": True
         }
 
+        # Log credential status for debugging
+        cred_status = {k: ("present" if v else "MISSING") for k, v in credentials.items() if k != "use_proto_plus"}
+        current_app.logger.info(f"_apply_extension: Credential status: {cred_status}")
+
         client = GoogleAdsClient.load_from_dict(credentials)
 
         # Handle different extension types
@@ -2774,6 +2778,13 @@ def approve_optimizations():
         from app import db
 
         opt_titles = [opt.get("title", f"Optimization {opt.get('id')}") for opt in optimizations]
+        opt_types = [opt.get("optimization_type", "unknown") for opt in optimizations]
+
+        current_app.logger.info(
+            f"approve_optimizations: Received {len(optimizations)} items. "
+            f"Types: {dict((t, opt_types.count(t)) for t in set(opt_types))}"
+        )
+
         AuditLog.log(
             account_id=aid,
             user_id=current_user.id,
@@ -2781,7 +2792,8 @@ def approve_optimizations():
             context_data={
                 "note": f"Approved {len(optimizations)} optimizations: {', '.join(opt_titles)}",
                 "optimization_count": len(optimizations),
-                "optimization_titles": opt_titles
+                "optimization_titles": opt_titles,
+                "optimization_types": opt_types
             }
         )
 

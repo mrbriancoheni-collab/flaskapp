@@ -3158,6 +3158,15 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
     # Calculate performance metrics from REAL campaign data
     enabled_campaigns = [c for c in campaigns if c.get("status", "").lower() in ("enabled", "active")]
 
+    # Debug logging for campaign data
+    current_app.logger.info(
+        f"_analyze_ads_opportunities: aid={aid}, "
+        f"total_campaigns={len(campaigns)}, "
+        f"enabled_campaigns={len(enabled_campaigns)}, "
+        f"campaigns_with_ids={len([c for c in campaigns if c.get('id')])}, "
+        f"sample_campaign_keys={list(campaigns[0].keys()) if campaigns else []}"
+    )
+
     # Use real metrics from campaigns if available (fetched from Google Ads API)
     total_cost = sum(c.get("cost_30d", 0) or 0 for c in campaigns)
     total_clicks = sum(c.get("clicks", 0) or 0 for c in campaigns)
@@ -3345,6 +3354,13 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
         else:
             scores["mobile"] = 35  # Needs mobile optimization
 
+    current_app.logger.info(
+        f"Mobile scoring: has_mobile_indicators={has_mobile_indicators}, "
+        f"ads_per_group={ads_per_group}, "
+        f"extensions_count={len(extensions)}, "
+        f"mobile_score={scores['mobile']}"
+    )
+
     # ========== EXTENSIONS SCORE ==========
     # Score based on number and types of extensions (critical for service businesses)
     extension_types = set(e.get("type", "").lower() for e in extensions)
@@ -3427,9 +3443,14 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
             {"term": "salary", "waste_pct": 0.03, "relevance": "job seekers researching pay"},
         ]
 
+        neg_opps_created = 0
+        neg_opps_skipped_no_campaign = 0
+        neg_opps_skipped_too_small = 0
+
         for neg in negative_suggestions:
             estimated_waste = total_estimated_waste * neg["waste_pct"]
             if estimated_waste < 10:  # Skip if savings too small
+                neg_opps_skipped_too_small += 1
                 continue
 
             estimated_clicks_wasted = int(estimated_waste / avg_cpc)
@@ -3440,7 +3461,10 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
 
             # Skip if no campaign available to apply to
             if not first_campaign_id:
+                neg_opps_skipped_no_campaign += 1
                 continue
+
+            neg_opps_created += 1
 
             opportunities.append({
                 "title": f"Add negative keyword: \"{neg['term']}\"",
@@ -3469,6 +3493,13 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
                     "campaign_id": first_campaign_id
                 },
             })
+
+        current_app.logger.info(
+            f"Negative keywords: total_estimated_waste=${total_estimated_waste:.2f}, "
+            f"created={neg_opps_created}, "
+            f"skipped_too_small={neg_opps_skipped_too_small}, "
+            f"skipped_no_campaign={neg_opps_skipped_no_campaign}"
+        )
 
     # Ad Extensions - Create individual line item for each extension type
     # Calculate potential leads based on REAL traffic volume
@@ -3664,6 +3695,12 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
         # Get first enabled campaign ID for applying the optimization
         first_campaign_id = next((c.get("id") for c in campaigns if c.get("status", "").lower() in ("enabled", "active")),
                                 campaigns[0].get("id") if campaigns else None)
+
+        current_app.logger.info(
+            f"Mobile optimization: scores[mobile]={scores['mobile']}, "
+            f"first_campaign_id={first_campaign_id}, "
+            f"will_create_mobile_bid_opp={bool(first_campaign_id)}"
+        )
 
         # Skip mobile bid optimization if no campaign available
         if first_campaign_id:

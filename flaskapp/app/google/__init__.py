@@ -2447,6 +2447,7 @@ def _apply_negative_keyword(aid: int, customer_id: str, opt_data: dict, access_t
             "client_id": current_app.config.get("GOOGLE_CLIENT_ID"),
             "client_secret": current_app.config.get("GOOGLE_CLIENT_SECRET"),
             "refresh_token": access_token,
+            "token_uri": "https://oauth2.googleapis.com/token",
             "use_proto_plus": True
         }
 
@@ -2505,6 +2506,7 @@ def _apply_mobile_bid_adjustment(aid: int, customer_id: str, opt_data: dict, acc
             "client_id": current_app.config.get("GOOGLE_CLIENT_ID"),
             "client_secret": current_app.config.get("GOOGLE_CLIENT_SECRET"),
             "refresh_token": access_token,
+            "token_uri": "https://oauth2.googleapis.com/token",
             "use_proto_plus": True
         }
 
@@ -2566,6 +2568,7 @@ def _apply_extension(aid: int, customer_id: str, opt_data: dict, refresh_token: 
             "client_id": current_app.config.get("GOOGLE_CLIENT_ID"),
             "client_secret": current_app.config.get("GOOGLE_CLIENT_SECRET"),
             "refresh_token": refresh_token,
+            "token_uri": "https://oauth2.googleapis.com/token",
             "use_proto_plus": True
         }
 
@@ -3677,7 +3680,7 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
                 "confidence_score": 95,
                 "risk_level": "low",
                 "benefit_explanation": "**Bigger Ads = More Clicks:** Extensions make your ad larger, pushing competitors down. Call extensions are especially critical for service businesses - mobile users expect tap-to-call.",
-                "optimization_type": "extension",
+                "optimization_type": "setup",  # Changed from extension - this is a checklist/guide, not a single auto-appliable extension
                 "optimization_data": {},
                 "best_practice": True,
             },

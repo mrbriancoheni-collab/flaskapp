@@ -2993,6 +2993,10 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
             first_campaign_id = next((c.get("id") for c in campaigns if c.get("status", "").lower() in ("enabled", "active")),
                                     campaigns[0].get("id") if campaigns else None)
 
+            # Skip if no campaign available to apply to
+            if not first_campaign_id:
+                continue
+
             opportunities.append({
                 "title": f"Add negative keyword: \"{neg['term']}\"",
                 "description": f"Block '{neg['term']}' searches - {neg['relevance']} (est. {estimated_clicks_wasted} wasted clicks/mo)",
@@ -3216,34 +3220,36 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
         first_campaign_id = next((c.get("id") for c in campaigns if c.get("status", "").lower() in ("enabled", "active")),
                                 campaigns[0].get("id") if campaigns else None)
 
-        # Mobile bid adjustment - Do this FIRST
-        opportunities.append({
-            "title": "Add +20% mobile bid adjustment",
-            "description": f"Your account gets ~{estimated_mobile_clicks:,} mobile clicks/mo. A +20% bid adjustment could capture {additional_mobile_clicks} more clicks → {additional_mobile_leads} more leads",
-            "priority": "high" if additional_mobile_leads >= 3 else "medium",
-            "impact_score": 70,
-            "monthly_leads": additional_mobile_leads,
-            "annual_leads": additional_mobile_leads * 12,
-            "monthly_value": round(additional_mobile_leads * lead_value, 0),
-            "icon": "fa-mobile-screen",
-            "color": "green",
-            "category": "mobile",
-            "action": "Set mobile bid modifier to +20% for all campaigns",
-            "estimated_time": "10 min",
-            "quick_win": True,
-            "confidence_score": 85,
-            "risk_level": "low",
-            "before_state": f"Mobile bids at 0%, ~{estimated_mobile_clicks:,} mobile clicks/mo",
-            "after_state": f"Mobile bids +20%, +{additional_mobile_clicks} clicks/mo → +{additional_mobile_leads} leads",
-            "success_metrics": [f"+{additional_mobile_clicks} mobile clicks/mo", f"+{additional_mobile_leads} leads/mo", f"~${additional_mobile_leads * lead_value:.0f}/mo value"],
-            "benefit_explanation": "60% of local service searches happen on mobile. Higher bids = better ad position = more calls. Mobile users have higher purchase intent.",
-            "optimization_type": "mobile_bid",
-            "optimization_data": {
-                "bid_adjustment": 20,
-                "estimated_mobile_clicks": estimated_mobile_clicks,
-                "campaign_id": first_campaign_id
-            },
-        })
+        # Skip mobile bid optimization if no campaign available
+        if first_campaign_id:
+            # Mobile bid adjustment - Do this FIRST
+            opportunities.append({
+                "title": "Add +20% mobile bid adjustment",
+                "description": f"Your account gets ~{estimated_mobile_clicks:,} mobile clicks/mo. A +20% bid adjustment could capture {additional_mobile_clicks} more clicks → {additional_mobile_leads} more leads",
+                "priority": "high" if additional_mobile_leads >= 3 else "medium",
+                "impact_score": 70,
+                "monthly_leads": additional_mobile_leads,
+                "annual_leads": additional_mobile_leads * 12,
+                "monthly_value": round(additional_mobile_leads * lead_value, 0),
+                "icon": "fa-mobile-screen",
+                "color": "green",
+                "category": "mobile",
+                "action": "Set mobile bid modifier to +20% for all campaigns",
+                "estimated_time": "10 min",
+                "quick_win": True,
+                "confidence_score": 85,
+                "risk_level": "low",
+                "before_state": f"Mobile bids at 0%, ~{estimated_mobile_clicks:,} mobile clicks/mo",
+                "after_state": f"Mobile bids +20%, +{additional_mobile_clicks} clicks/mo → +{additional_mobile_leads} leads",
+                "success_metrics": [f"+{additional_mobile_clicks} mobile clicks/mo", f"+{additional_mobile_leads} leads/mo", f"~${additional_mobile_leads * lead_value:.0f}/mo value"],
+                "benefit_explanation": "60% of local service searches happen on mobile. Higher bids = better ad position = more calls. Mobile users have higher purchase intent.",
+                "optimization_type": "mobile_bid",
+                "optimization_data": {
+                    "bid_adjustment": 20,
+                    "estimated_mobile_clicks": estimated_mobile_clicks,
+                    "campaign_id": first_campaign_id
+                },
+            })
 
         # Mobile-preferred ads - Compounds with bid adjustment
         mobile_ctr_boost = 0.12  # 12% CTR improvement
@@ -3427,7 +3433,7 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
                 "confidence_score": 95,
                 "risk_level": "low",
                 "benefit_explanation": "**Prevent Wasted Spend:** These terms attract job seekers, DIYers, and researchers - not paying customers. Block them before they drain your budget.",
-                "optimization_type": "negative_keyword",
+                "optimization_type": "setup",  # Changed from negative_keyword - manual setup task, not auto-appliable
                 "optimization_data": {},
                 "best_practice": True,
             },

@@ -1163,6 +1163,19 @@ def _build_exclusion_filter(sources_to_exclude: list[str]) -> dict | None:
 
 
 def _get_saved_customer_id(aid: int) -> str | None:
+    # Try reading from accounts table first (where save_customer_id stores it)
+    try:
+        with db.engine.connect() as conn:
+            row = conn.execute(
+                text("SELECT google_ads_customer_id FROM accounts WHERE id=:aid LIMIT 1"),
+                {"aid": aid},
+            ).first()
+        if row and row[0]:
+            return str(row[0]).replace("-", "")
+    except Exception:
+        current_app.logger.debug("Could not read google_ads_customer_id from accounts table")
+
+    # Try utils_ads helper if available
     try:
         from app.google.utils_ads import get_customer_id  # optional
         cid = get_customer_id(aid)
@@ -1170,6 +1183,8 @@ def _get_saved_customer_id(aid: int) -> str | None:
             return str(cid).replace("-", "")
     except Exception:
         pass
+
+    # Try google_oauth_tokens table
     try:
         with db.engine.connect() as conn:
             row = conn.execute(
@@ -1184,7 +1199,9 @@ def _get_saved_customer_id(aid: int) -> str | None:
         if row and row[0]:
             return str(row[0]).replace("-", "")
     except Exception:
-        current_app.logger.exception("Could not read google_ads_customer_id from tokens table")
+        current_app.logger.debug("Could not read google_ads_customer_id from tokens table")
+
+    # Try google_ads_accounts table (legacy)
     try:
         with db.engine.connect() as conn:
             row = (
@@ -1196,8 +1213,9 @@ def _get_saved_customer_id(aid: int) -> str | None:
             cid = (row or {}).get("customer_id")
             return str(cid).replace("-", "") if cid else None
     except Exception:
-        current_app.logger.exception("Could not read saved Google Ads customer id (legacy table)")
-        return None
+        current_app.logger.debug("Could not read saved Google Ads customer id (legacy table)")
+
+    return None
 def _fetch_ads_snapshot_from_google(aid: int) -> dict:
     customer_id = _get_saved_customer_id(aid)
     if not customer_id:

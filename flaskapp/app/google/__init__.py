@@ -2633,7 +2633,24 @@ def _apply_extension(aid: int, customer_id: str, opt_data: dict, refresh_token: 
         cred_status = {k: ("present" if v else "MISSING") for k, v in credentials.items() if k != "use_proto_plus"}
         current_app.logger.info(f"_apply_extension: Credential status: {cred_status}")
 
-        client = GoogleAdsClient.load_from_dict(credentials)
+        # Log client_id prefix for OAuth debugging (mask most of it for security)
+        client_id = credentials.get("client_id", "")
+        if client_id:
+            client_id_preview = f"{client_id[:20]}...{client_id[-10:]}" if len(client_id) > 30 else "***"
+            current_app.logger.info(f"_apply_extension: Using OAuth client_id: {client_id_preview}")
+
+        try:
+            client = GoogleAdsClient.load_from_dict(credentials)
+        except Exception as oauth_error:
+            current_app.logger.error(f"_apply_extension: OAuth client initialization failed: {oauth_error}")
+            # Check if it's an unauthorized_client error
+            error_str = str(oauth_error)
+            if "unauthorized_client" in error_str.lower():
+                return {
+                    "success": False,
+                    "error": f"OAuth Error: The refresh_token was issued by a different OAuth client, or your OAuth client (client_id ending in {client_id[-10:] if client_id else '???'}) doesn't have Google Ads API enabled. Please verify: 1) Your OAuth client has Google Ads API scope enabled, 2) Regenerate refresh_token using the correct OAuth client"
+                }
+            raise
 
         # Handle different extension types
         if "callout" in ext_type:

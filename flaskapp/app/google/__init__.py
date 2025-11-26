@@ -1236,14 +1236,25 @@ def _fetch_ads_snapshot_from_google(aid: int) -> dict:
     client_id, client_secret = _client_info("ads")
 
     from google.ads.googleads.client import GoogleAdsClient
+
+    # Only include login_customer_id if it's actually set (MCC accounts only)
+    login_cid = (current_app.config.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID") or os.getenv("GOOGLE_ADS_LOGIN_CUSTOMER_ID") or "").replace("-", "")
+
     cfg = {
         "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN") or os.getenv("GOOGLE_ADS_DEVELOPER_TOKEN"),
-        "login_customer_id": (current_app.config.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID") or os.getenv("GOOGLE_ADS_LOGIN_CUSTOMER_ID") or "").replace("-", ""),
         "use_proto_plus": True,
         "client_id": client_id,
         "client_secret": client_secret,
         "refresh_token": refresh_token,
     }
+
+    # Only add login_customer_id if it's a valid 10-digit number (MCC mode)
+    if login_cid and len(login_cid) == 10 and login_cid.isdigit():
+        cfg["login_customer_id"] = login_cid
+        current_app.logger.info(f"Using MCC login_customer_id: {login_cid}")
+    else:
+        current_app.logger.info(f"Direct account mode (no MCC)")
+
     if not cfg["developer_token"]:
         raise RuntimeError("Missing GOOGLE_ADS_DEVELOPER_TOKEN")
 
@@ -1930,11 +1941,33 @@ def ads_ui():
             return "callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
         return False
 
-    analysis["opportunities"] = [opp for opp in all_opportunities if is_auto_applicable(opp)]
+    # Get already-applied optimizations to filter them out
+    from app.models_google import AppliedOptimization, CompletedManualTask, ensure_google_tables
+    applied_optimization_titles = set()
+    try:
+        # Get optimizations applied in the last 30 days
+        from datetime import datetime, timedelta
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        applied_opts = AppliedOptimization.query.filter(
+            AppliedOptimization.account_id == aid,
+            AppliedOptimization.status == 'applied',
+            AppliedOptimization.created_at >= thirty_days_ago
+        ).all()
+        applied_optimization_titles = {opt.optimization_title for opt in applied_opts}
+        current_app.logger.info(f"Found {len(applied_optimization_titles)} applied optimizations in last 30 days")
+    except Exception as e:
+        current_app.logger.error(f"Error fetching applied optimizations: {e}")
+
+    # Filter out already-applied optimizations from auto-applicable list
+    auto_applicable_opps = [opp for opp in all_opportunities if is_auto_applicable(opp)]
+    analysis["opportunities"] = [
+        opp for opp in auto_applicable_opps
+        if opp.get("title") not in applied_optimization_titles
+    ]
+
     all_manual_tasks = [opp for opp in all_opportunities if not is_auto_applicable(opp)]
 
     # Filter out completed manual tasks
-    from app.models_google import CompletedManualTask, ensure_google_tables
     completed_task_ids = set()
     try:
         completed_task_ids = {
@@ -1958,7 +1991,8 @@ def ads_ui():
     ]
 
     current_app.logger.info(
-        f"ads_ui: Split {len(all_opportunities)} total into {len(analysis['opportunities'])} auto-applicable "
+        f"ads_ui: Split {len(all_opportunities)} total into {len(auto_applicable_opps)} auto-applicable "
+        f"({len(applied_optimization_titles)} already applied, {len(analysis['opportunities'])} remaining) "
         f"and {len(all_manual_tasks)} manual tasks ({len(completed_task_ids)} completed, {len(analysis['manual_tasks'])} remaining). "
         f"Auto types: {[o.get('title') for o in analysis['opportunities']]}"
     )

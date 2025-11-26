@@ -1163,6 +1163,19 @@ def _build_exclusion_filter(sources_to_exclude: list[str]) -> dict | None:
 
 
 def _get_saved_customer_id(aid: int) -> str | None:
+    # Try reading from accounts table first (where save_customer_id stores it)
+    try:
+        with db.engine.connect() as conn:
+            row = conn.execute(
+                text("SELECT google_ads_customer_id FROM accounts WHERE id=:aid LIMIT 1"),
+                {"aid": aid},
+            ).first()
+        if row and row[0]:
+            return str(row[0]).replace("-", "")
+    except Exception:
+        current_app.logger.debug("Could not read google_ads_customer_id from accounts table")
+
+    # Try utils_ads helper if available
     try:
         from app.google.utils_ads import get_customer_id  # optional
         cid = get_customer_id(aid)
@@ -1170,6 +1183,8 @@ def _get_saved_customer_id(aid: int) -> str | None:
             return str(cid).replace("-", "")
     except Exception:
         pass
+
+    # Try google_oauth_tokens table
     try:
         with db.engine.connect() as conn:
             row = conn.execute(
@@ -1184,7 +1199,9 @@ def _get_saved_customer_id(aid: int) -> str | None:
         if row and row[0]:
             return str(row[0]).replace("-", "")
     except Exception:
-        current_app.logger.exception("Could not read google_ads_customer_id from tokens table")
+        current_app.logger.debug("Could not read google_ads_customer_id from tokens table")
+
+    # Try google_ads_accounts table (legacy)
     try:
         with db.engine.connect() as conn:
             row = (
@@ -1196,8 +1213,9 @@ def _get_saved_customer_id(aid: int) -> str | None:
             cid = (row or {}).get("customer_id")
             return str(cid).replace("-", "") if cid else None
     except Exception:
-        current_app.logger.exception("Could not read saved Google Ads customer id (legacy table)")
-        return None
+        current_app.logger.debug("Could not read saved Google Ads customer id (legacy table)")
+
+    return None
 def _fetch_ads_snapshot_from_google(aid: int) -> dict:
     customer_id = _get_saved_customer_id(aid)
     if not customer_id:
@@ -2653,8 +2671,11 @@ def _apply_extension(aid: int, customer_id: str, opt_data: dict, refresh_token: 
         from google.ads.googleads.client import GoogleAdsClient
         from google.ads.googleads.errors import GoogleAdsException
 
+        current_app.logger.info(f"_apply_extension: opt_data={opt_data}")
         ext_type = opt_data.get("type", "").lower()
+        current_app.logger.info(f"_apply_extension: ext_type={ext_type}")
         if not ext_type:
+            current_app.logger.error(f"_apply_extension: No extension type in opt_data. Keys: {list(opt_data.keys())}")
             return {"success": False, "error": "No extension type specified"}
 
         # Create Google Ads client using same client_info lookup as data fetching
@@ -2866,11 +2887,16 @@ def approve_optimizations():
 
         # Get actual numeric customer ID from database (not the display name from frontend)
         aid = current_account_id()
+        current_app.logger.info(f"approve_optimizations: aid={aid}, looking up customer_id...")
         customer_id = _get_saved_customer_id(aid)
+        current_app.logger.info(f"approve_optimizations: customer_id={customer_id}")
+
         if not customer_id:
+            current_app.logger.error(f"approve_optimizations: No customer ID found for aid={aid}")
             return jsonify({"success": False, "error": "No Google Ads customer ID found. Please reconnect your Google Ads account."}), 400
 
         if not optimizations:
+            current_app.logger.warning(f"approve_optimizations: No optimizations provided in request")
             return jsonify({"success": False, "error": "No optimizations selected"}), 400
 
         # Log the approval action
@@ -2885,6 +2911,17 @@ def approve_optimizations():
             f"approve_optimizations: Received {len(optimizations)} items. "
             f"Types: {dict((t, opt_types.count(t)) for t in set(opt_types))}"
         )
+
+        # Log first optimization for debugging
+        if optimizations:
+            first_opt = optimizations[0]
+            current_app.logger.info(
+                f"approve_optimizations: First optimization: "
+                f"title={first_opt.get('title')}, "
+                f"type={first_opt.get('optimization_type')}, "
+                f"has_data={bool(first_opt.get('optimization_data'))}, "
+                f"data_keys={list(first_opt.get('optimization_data', {}).keys())}"
+            )
 
         AuditLog.log(
             account_id=aid,
@@ -3121,6 +3158,15 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
     # Calculate performance metrics from REAL campaign data
     enabled_campaigns = [c for c in campaigns if c.get("status", "").lower() in ("enabled", "active")]
 
+    # Debug logging for campaign data
+    current_app.logger.info(
+        f"_analyze_ads_opportunities: aid={aid}, "
+        f"total_campaigns={len(campaigns)}, "
+        f"enabled_campaigns={len(enabled_campaigns)}, "
+        f"campaigns_with_ids={len([c for c in campaigns if c.get('id')])}, "
+        f"sample_campaign_keys={list(campaigns[0].keys()) if campaigns else []}"
+    )
+
     # Use real metrics from campaigns if available (fetched from Google Ads API)
     total_cost = sum(c.get("cost_30d", 0) or 0 for c in campaigns)
     total_clicks = sum(c.get("clicks", 0) or 0 for c in campaigns)
@@ -3308,6 +3354,13 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
         else:
             scores["mobile"] = 35  # Needs mobile optimization
 
+    current_app.logger.info(
+        f"Mobile scoring: has_mobile_indicators={has_mobile_indicators}, "
+        f"ads_per_group={ads_per_group}, "
+        f"extensions_count={len(extensions)}, "
+        f"mobile_score={scores['mobile']}"
+    )
+
     # ========== EXTENSIONS SCORE ==========
     # Score based on number and types of extensions (critical for service businesses)
     extension_types = set(e.get("type", "").lower() for e in extensions)
@@ -3390,9 +3443,14 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
             {"term": "salary", "waste_pct": 0.03, "relevance": "job seekers researching pay"},
         ]
 
+        neg_opps_created = 0
+        neg_opps_skipped_no_campaign = 0
+        neg_opps_skipped_too_small = 0
+
         for neg in negative_suggestions:
             estimated_waste = total_estimated_waste * neg["waste_pct"]
             if estimated_waste < 10:  # Skip if savings too small
+                neg_opps_skipped_too_small += 1
                 continue
 
             estimated_clicks_wasted = int(estimated_waste / avg_cpc)
@@ -3403,7 +3461,10 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
 
             # Skip if no campaign available to apply to
             if not first_campaign_id:
+                neg_opps_skipped_no_campaign += 1
                 continue
+
+            neg_opps_created += 1
 
             opportunities.append({
                 "title": f"Add negative keyword: \"{neg['term']}\"",
@@ -3432,6 +3493,13 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
                     "campaign_id": first_campaign_id
                 },
             })
+
+        current_app.logger.info(
+            f"Negative keywords: total_estimated_waste=${total_estimated_waste:.2f}, "
+            f"created={neg_opps_created}, "
+            f"skipped_too_small={neg_opps_skipped_too_small}, "
+            f"skipped_no_campaign={neg_opps_skipped_no_campaign}"
+        )
 
     # Ad Extensions - Create individual line item for each extension type
     # Calculate potential leads based on REAL traffic volume
@@ -3627,6 +3695,12 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
         # Get first enabled campaign ID for applying the optimization
         first_campaign_id = next((c.get("id") for c in campaigns if c.get("status", "").lower() in ("enabled", "active")),
                                 campaigns[0].get("id") if campaigns else None)
+
+        current_app.logger.info(
+            f"Mobile optimization: scores[mobile]={scores['mobile']}, "
+            f"first_campaign_id={first_campaign_id}, "
+            f"will_create_mobile_bid_opp={bool(first_campaign_id)}"
+        )
 
         # Skip mobile bid optimization if no campaign available
         if first_campaign_id:

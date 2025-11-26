@@ -1916,10 +1916,24 @@ def ads_ui():
     all_manual_tasks = [opp for opp in all_opportunities if not is_auto_applicable(opp)]
 
     # Filter out completed manual tasks
-    from app.models_google import CompletedManualTask
-    completed_task_ids = {
-        task.task_id for task in CompletedManualTask.query.filter_by(account_id=aid).all()
-    }
+    from app.models_google import CompletedManualTask, ensure_google_tables
+    completed_task_ids = set()
+    try:
+        completed_task_ids = {
+            task.task_id for task in CompletedManualTask.query.filter_by(account_id=aid).all()
+        }
+    except Exception as e:
+        # Table might not exist yet - create it
+        if 'completed_manual_tasks' in str(e) and "doesn't exist" in str(e):
+            current_app.logger.warning(f"completed_manual_tasks table doesn't exist, creating it now")
+            try:
+                ensure_google_tables()
+                current_app.logger.info("Google tables created successfully")
+            except Exception as create_error:
+                current_app.logger.error(f"Failed to create tables: {create_error}")
+        else:
+            current_app.logger.error(f"Error fetching completed tasks: {e}")
+
     analysis["manual_tasks"] = [
         task for task in all_manual_tasks
         if task.get("id") not in completed_task_ids

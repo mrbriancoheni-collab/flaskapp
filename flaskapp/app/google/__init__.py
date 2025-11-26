@@ -2457,8 +2457,8 @@ def _apply_negative_keyword(aid: int, customer_id: str, opt_data: dict, access_t
         # Create Google Ads client (isolated from SQLAlchemy)
         credentials = {
             "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
-            "client_id": current_app.config.get("GOOGLE_CLIENT_ID"),
-            "client_secret": current_app.config.get("GOOGLE_CLIENT_SECRET"),
+            "client_id": os.getenv("GOOGLE_CLIENT_ID") or os.getenv("GOOGLE_ADS_CLIENT_ID") or current_app.config.get("GOOGLE_CLIENT_ID") or current_app.config.get("GOOGLE_ADS_CLIENT_ID"),
+            "client_secret": os.getenv("GOOGLE_CLIENT_SECRET") or os.getenv("GOOGLE_ADS_CLIENT_SECRET") or current_app.config.get("GOOGLE_CLIENT_SECRET") or current_app.config.get("GOOGLE_ADS_CLIENT_SECRET"),
             "refresh_token": access_token,
             "token_uri": "https://oauth2.googleapis.com/token",
             "use_proto_plus": True
@@ -2516,8 +2516,8 @@ def _apply_mobile_bid_adjustment(aid: int, customer_id: str, opt_data: dict, acc
         # Create Google Ads client (isolated from SQLAlchemy)
         credentials = {
             "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
-            "client_id": current_app.config.get("GOOGLE_CLIENT_ID"),
-            "client_secret": current_app.config.get("GOOGLE_CLIENT_SECRET"),
+            "client_id": os.getenv("GOOGLE_CLIENT_ID") or os.getenv("GOOGLE_ADS_CLIENT_ID") or current_app.config.get("GOOGLE_CLIENT_ID") or current_app.config.get("GOOGLE_ADS_CLIENT_ID"),
+            "client_secret": os.getenv("GOOGLE_CLIENT_SECRET") or os.getenv("GOOGLE_ADS_CLIENT_SECRET") or current_app.config.get("GOOGLE_CLIENT_SECRET") or current_app.config.get("GOOGLE_ADS_CLIENT_SECRET"),
             "refresh_token": access_token,
             "token_uri": "https://oauth2.googleapis.com/token",
             "use_proto_plus": True
@@ -2578,8 +2578,8 @@ def _apply_extension(aid: int, customer_id: str, opt_data: dict, refresh_token: 
         # Create Google Ads client
         credentials = {
             "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
-            "client_id": current_app.config.get("GOOGLE_CLIENT_ID"),
-            "client_secret": current_app.config.get("GOOGLE_CLIENT_SECRET"),
+            "client_id": os.getenv("GOOGLE_CLIENT_ID") or os.getenv("GOOGLE_ADS_CLIENT_ID") or current_app.config.get("GOOGLE_CLIENT_ID") or current_app.config.get("GOOGLE_ADS_CLIENT_ID"),
+            "client_secret": os.getenv("GOOGLE_CLIENT_SECRET") or os.getenv("GOOGLE_ADS_CLIENT_SECRET") or current_app.config.get("GOOGLE_CLIENT_SECRET") or current_app.config.get("GOOGLE_ADS_CLIENT_SECRET"),
             "refresh_token": refresh_token,
             "token_uri": "https://oauth2.googleapis.com/token",
             "use_proto_plus": True

@@ -2246,6 +2246,17 @@ def ads_opportunities_demo():
         analysis = _analyze_ads_opportunities(0, mock_ads_data)  # aid=0 for demo
         current_app.logger.info(f"Analysis completed - opportunities count: {len(analysis.get('opportunities', []))}")
 
+        # Filter opportunities to only show auto-applicable ones
+        # Manual tasks (setup, quality_score, mobile_ads, account_structure) should not have checkboxes
+        auto_applicable_types = ['negative_keyword', 'mobile_bid', 'extension']
+        original_count = len(analysis.get("opportunities", []))
+        analysis["opportunities"] = [
+            opp for opp in analysis.get("opportunities", [])
+            if opp.get("optimization_type") in auto_applicable_types
+        ]
+        filtered_count = len(analysis["opportunities"])
+        current_app.logger.info(f"Filtered to {filtered_count} auto-applicable optimizations (from {original_count} total)")
+
         current_app.logger.info("Rendering template")
         return render_template(
             "google/ads_opportunities.html",
@@ -2287,6 +2298,22 @@ def ads_opportunities():
 
     # Generate comprehensive analysis
     analysis = _analyze_ads_opportunities(aid, ads_data)
+
+    # Filter opportunities to only show auto-applicable ones
+    # Manual tasks (setup, quality_score, mobile_ads, account_structure) should not have checkboxes
+    auto_applicable_types = ['negative_keyword', 'mobile_bid', 'extension']
+    original_count = len(analysis.get("opportunities", []))
+    analysis["opportunities"] = [
+        opp for opp in analysis.get("opportunities", [])
+        if opp.get("optimization_type") in auto_applicable_types
+    ]
+    filtered_count = len(analysis["opportunities"])
+
+    if original_count > filtered_count:
+        current_app.logger.info(
+            f"Filtered {original_count - filtered_count} manual optimizations from opportunities list. "
+            f"Showing {filtered_count} auto-applicable optimizations."
+        )
 
     return render_template(
         "google/ads_opportunities.html",

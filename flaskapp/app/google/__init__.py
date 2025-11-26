@@ -1908,7 +1908,7 @@ def ads_ui():
             return True
         if opt_type == 'extension':
             # Only callout and structured snippet extensions are auto-applicable
-            ext_type = opp.get("type", "").lower()
+            ext_type = opp.get("optimization_data", {}).get("type", "").lower()
             return "callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
         return False
 
@@ -2313,7 +2313,7 @@ def ads_opportunities_demo():
                 return True
             if opt_type == 'extension':
                 # Only callout and structured snippet extensions are auto-applicable
-                ext_type = opp.get("type", "").lower()
+                ext_type = opp.get("optimization_data", {}).get("type", "").lower()
                 return "callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
             return False
 

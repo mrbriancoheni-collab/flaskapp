@@ -2061,18 +2061,19 @@ def ads_ui():
             return True
 
         # AI-generated ad content (auto-complete with AI)
-        if opt_type in ['pmax_headlines', 'pmax_descriptions', 'rsa_headline_variations']:
+        if opt_type in ['pmax_headlines', 'pmax_descriptions', 'rsa_headline_variations', 'create_rsa_ads']:
             return True
 
         # AI-assisted campaign creation (auto-complete with AI)
         if decision_type == 'create_search_campaign':
             return True
 
-        # Extension types - callout, structured snippet, sitelink, call, and price are auto-applicable
+        # Extension types - ALL extensions are now auto-applicable (including location)
         if opt_type == 'extension':
             ext_type = opp.get("optimization_data", {}).get("type", "").lower()
             return ("callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
-                    or "sitelink" in ext_type or "call" in ext_type or "price" in ext_type)
+                    or "sitelink" in ext_type or "call" in ext_type or "price" in ext_type
+                    or "location" in ext_type)
 
         # Agent-generated optimizations - check if they're auto-executable
         if opp.get('agent_generated'):
@@ -2890,6 +2891,10 @@ def _apply_optimization(aid: int, customer_id: str, opt_type: str, opt_data: dic
         elif opt_type == "pmax_descriptions":
             # Generate AI-powered Performance Max descriptions
             return _apply_pmax_descriptions(aid, customer_id, opt_data, refresh_token)
+
+        elif opt_type == "create_rsa_ads":
+            # Generate AI-powered RSA ads for ad groups (complete ads with headlines and descriptions)
+            return _apply_create_rsa_ads(aid, customer_id, opt_data, refresh_token)
 
         elif opt_type == "account_structure":
             # Account restructuring is complex manual work
@@ -4168,11 +4173,8 @@ def _apply_extension(aid: int, customer_id: str, opt_data: dict, refresh_token: 
         elif "price" in ext_type:
             return _create_price_extension(client, customer_id, opt_data)
         elif "location" in ext_type:
-            # Location extensions require Google My Business integration
-            return {
-                "success": False,
-                "error": "Location extensions require Google My Business link. Please connect GMB first or add manually in Google Ads UI."
-            }
+            # Location extensions - auto-complete with GMB prerequisite check
+            return _create_location_extension(client, customer_id, opt_data, aid)
         else:
             return {
                 "success": False,
@@ -4561,6 +4563,349 @@ def _create_price_extension(client, customer_id: str, opt_data: dict) -> dict:
 
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+def _create_location_extension(client, customer_id: str, opt_data: dict, aid: int) -> dict:
+    """
+    Create location extension using Google My Business data.
+    Auto-complete with GMB prerequisite check.
+    """
+    try:
+        # Step 1: Check if GMB is connected for this account
+        gmb_connected = _check_gmb_connection(aid)
+
+        if not gmb_connected:
+            return {
+                "success": False,
+                "error": "Location extensions require Google Business Profile connection. To enable auto-complete: 1) Connect your Google Business Profile in Settings, 2) Come back and click 'Apply' again to auto-configure your location extension.",
+                "requires_prerequisite": "gmb_connection",
+                "prerequisite_url": "/account/google/auth/gmb"
+            }
+
+        # Step 2: Get GMB location data
+        gmb_locations = _get_gmb_locations(aid)
+
+        if not gmb_locations:
+            return {
+                "success": False,
+                "error": "No Google Business Profile locations found. Please ensure you have at least one business location set up in your Google Business Profile.",
+                "requires_prerequisite": "gmb_locations"
+            }
+
+        # Step 3: Link GMB location feed to Google Ads (this creates location extension automatically)
+        # Google Ads API will automatically create location extensions from linked GMB locations
+        location_feed_service = client.get_service("FeedService")
+
+        # Create location feed linked to GMB
+        feed_operation = client.get_type("FeedOperation")
+        feed = feed_operation.create
+        feed.name = "Location Extensions"
+        feed.origin = client.enums.FeedOriginEnum.GOOGLE
+
+        # The affiliate location feed uses GMB data
+        feed.affiliate_location_feed_data.chain_ids.append(gmb_locations[0].get('chain_id', ''))
+
+        # Create the feed
+        feed_response = location_feed_service.mutate_feeds(
+            customer_id=customer_id,
+            operations=[feed_operation]
+        )
+
+        resource_name = feed_response.results[0].resource_name if feed_response.results else None
+
+        return {
+            "success": True,
+            "resource_name": resource_name,
+            "api_response": {"results": [resource_name]},
+            "message": f"Location extension linked to {len(gmb_locations)} Google Business Profile location(s)"
+        }
+
+    except Exception as e:
+        current_app.logger.exception("Error creating location extension")
+        return {"success": False, "error": str(e)}
+
+
+def _apply_create_rsa_ads(aid: int, customer_id: str, opt_data: dict, refresh_token: str) -> dict:
+    """
+    Create AI-generated RSA ads for ad groups with headlines and descriptions.
+    This handles the complete "Create ads for ad groups" auto-complete optimization.
+    """
+    try:
+        from google.ads.googleads.client import GoogleAdsClient
+        from google.ads.googleads.errors import GoogleAdsException
+
+        # Get ad groups and keywords from opt_data
+        ad_groups = opt_data.get('ad_groups', [])
+        keywords_by_ad_group = opt_data.get('keywords_by_ad_group', {})
+
+        if not ad_groups:
+            return {"success": False, "error": "No ad groups provided"}
+
+        # Create Google Ads client
+        client_id, client_secret = _client_info("ads")
+        credentials = {
+            "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "use_proto_plus": True
+        }
+
+        client = GoogleAdsClient.load_from_dict(credentials)
+        ad_group_ad_service = client.get_service("AdGroupAdService")
+
+        # Get business info from account
+        business_name = _get_business_name_from_account(aid, customer_id, client)
+
+        created_ads = 0
+        operations = []
+
+        for ad_group in ad_groups[:5]:  # Limit to first 5 ad groups to avoid rate limits
+            ad_group_id = ad_group.get('id')
+            ad_group_name = ad_group.get('name', 'Ad Group')
+
+            if not ad_group_id:
+                continue
+
+            # Get keywords for this ad group
+            keywords = keywords_by_ad_group.get(ad_group_id, [])
+
+            if not keywords:
+                continue
+
+            # Generate AI-powered headlines and descriptions
+            ai_result = _generate_complete_rsa_ad(business_name, ad_group_name, keywords)
+
+            if not ai_result.get("success"):
+                current_app.logger.warning(f"AI generation failed for ad group {ad_group_id}: {ai_result.get('error')}")
+                continue
+
+            headlines = ai_result.get("headlines", [])
+            descriptions = ai_result.get("descriptions", [])
+
+            if len(headlines) < 3 or len(descriptions) < 2:
+                current_app.logger.warning(f"Insufficient ad content generated for ad group {ad_group_id}")
+                continue
+
+            # Create RSA ad
+            ad_group_ad_operation = client.get_type("AdGroupAdOperation")
+            ad_group_ad = ad_group_ad_operation.create
+            ad_group_ad.ad_group = client.get_service("AdGroupAdService").ad_group_path(customer_id, ad_group_id)
+            ad_group_ad.status = client.enums.AdGroupAdStatusEnum.PAUSED  # Start PAUSED for review
+
+            # Set ad final URL (try to get from campaign or use example)
+            final_url = _get_campaign_final_url(customer_id, client, ad_group.get('campaign_id'))
+            ad_group_ad.ad.final_urls.append(final_url)
+
+            # Create RSA with AI-generated content
+            rsa = ad_group_ad.ad.responsive_search_ad
+
+            # Add headlines (up to 15)
+            for headline in headlines[:15]:
+                headline_asset = client.get_type("AdTextAsset")
+                headline_asset.text = headline
+                rsa.headlines.append(headline_asset)
+
+            # Add descriptions (up to 4)
+            for description in descriptions[:4]:
+                description_asset = client.get_type("AdTextAsset")
+                description_asset.text = description
+                rsa.descriptions.append(description_asset)
+
+            operations.append(ad_group_ad_operation)
+            created_ads += 1
+
+        if not operations:
+            return {"success": False, "error": "Failed to generate ad content for any ad groups"}
+
+        # Execute ad creation
+        response = ad_group_ad_service.mutate_ad_group_ads(
+            customer_id=customer_id,
+            operations=operations
+        )
+
+        return {
+            "success": True,
+            "message": f"Created {created_ads} RSA ad{'' if created_ads == 1 else 's'} with AI-generated headlines and descriptions (starting PAUSED for review)",
+            "resource_name": response.results[0].resource_name if response.results else None,
+            "api_response": {
+                "created_ads": created_ads,
+                "ad_group_count": len(ad_groups)
+            }
+        }
+
+    except GoogleAdsException as ex:
+        error_msg = f"Google Ads API error: {ex.error.code().name}"
+        for error in ex.failure.errors:
+            error_msg += f" - {error.message}"
+        return {"success": False, "error": error_msg}
+    except Exception as e:
+        current_app.logger.exception(f"Error creating RSA ads")
+        return {"success": False, "error": str(e)}
+
+
+def _generate_complete_rsa_ad(business_name: str, ad_group_name: str, keywords: list) -> dict:
+    """Generate complete RSA ad with 15 headlines and 4 descriptions using AI."""
+    try:
+        from app.ai_clients import chatgpt_response
+        import json
+
+        keywords_text = ", ".join(keywords[:10])  # Use first 10 keywords
+
+        prompt = f"""Generate a complete Responsive Search Ad for Google Ads.
+
+Business: {business_name}
+Ad Group: {ad_group_name}
+Keywords: {keywords_text}
+
+Requirements:
+- Headlines: 15 unique headlines (max 30 chars each)
+- Descriptions: 4 unique descriptions (max 90 chars each)
+- Make them relevant to the keywords
+- Include variety: urgency, benefits, credibility, action-oriented
+- Focus on what makes this business stand out
+
+Return ONLY valid JSON in this format:
+{{
+  "headlines": ["Fast Service - Call Now", "Licensed Professionals", ...],
+  "descriptions": ["Get professional service from licensed experts. Same-day appointments available.", ...]
+}}"""
+
+        response = chatgpt_response(prompt)
+
+        try:
+            if "```json" in response:
+                response = response.split("```json")[1].split("```")[0].strip()
+            elif "```" in response:
+                response = response.split("```")[1].split("```")[0].strip()
+
+            result = json.loads(response)
+
+            if "headlines" not in result or "descriptions" not in result:
+                raise ValueError("Missing headlines or descriptions field")
+
+            # Truncate to character limits
+            headlines = [h[:30] for h in result["headlines"][:15]]
+            descriptions = [d[:90] for d in result["descriptions"][:4]]
+
+            return {
+                "success": True,
+                "headlines": headlines,
+                "descriptions": descriptions
+            }
+
+        except json.JSONDecodeError as e:
+            return {"success": False, "error": f"AI returned invalid JSON: {str(e)}"}
+
+    except Exception as e:
+        current_app.logger.exception("Error generating RSA ad content")
+        return {"success": False, "error": str(e)}
+
+
+def _get_business_name_from_account(aid: int, customer_id: str, client) -> str:
+    """Get business name from campaigns or account name."""
+    try:
+        google_ads_service = client.get_service("GoogleAdsService")
+        query = """
+            SELECT campaign.name
+            FROM campaign
+            WHERE campaign.status = 'ENABLED'
+            LIMIT 1
+        """
+        results = google_ads_service.search(customer_id=customer_id, query=query)
+        for row in results:
+            return row.campaign.name
+
+        # Fallback to customer name
+        query2 = "SELECT customer.descriptive_name FROM customer"
+        results2 = google_ads_service.search(customer_id=customer_id, query=query2)
+        for row in results2:
+            if row.customer.descriptive_name:
+                return row.customer.descriptive_name
+
+    except Exception:
+        pass
+
+    return "Your Business"
+
+
+def _get_campaign_final_url(customer_id: str, client, campaign_id: int = None) -> str:
+    """Get final URL from campaign or return example URL."""
+    try:
+        google_ads_service = client.get_service("GoogleAdsService")
+        query = """
+            SELECT campaign.final_url_suffix
+            FROM campaign
+            WHERE campaign.status = 'ENABLED'
+            LIMIT 1
+        """
+        results = google_ads_service.search(customer_id=customer_id, query=query)
+        for row in results:
+            if row.campaign.final_url_suffix:
+                return row.campaign.final_url_suffix
+
+    except Exception:
+        pass
+
+    return "https://www.example.com"
+
+
+def _check_gmb_connection(aid: int) -> bool:
+    """Check if Google My Business / Google Business Profile is connected for this account."""
+    try:
+        with db.engine.connect() as conn:
+            row = conn.execute(
+                text("SELECT id FROM google_oauth_tokens WHERE account_id=:aid AND product='gmb' ORDER BY id DESC LIMIT 1"),
+                {"aid": aid},
+            ).mappings().first()
+        return row is not None
+    except Exception:
+        current_app.logger.exception("Error checking GMB connection")
+        return False
+
+
+def _get_gmb_locations(aid: int) -> list:
+    """
+    Get Google My Business locations for this account.
+    Returns list of location data from GMB API.
+    """
+    try:
+        # Get GMB OAuth tokens
+        with db.engine.connect() as conn:
+            row = conn.execute(
+                text("SELECT credentials_json FROM google_oauth_tokens WHERE account_id=:aid AND product='gmb' ORDER BY id DESC LIMIT 1"),
+                {"aid": aid},
+            ).mappings().first()
+
+        if not row:
+            return []
+
+        creds = json.loads(row["credentials_json"])
+        access_token = creds.get("access_token")
+
+        if not access_token:
+            return []
+
+        # Call GMB API to get locations
+        # Using Google My Business API v4.9
+        response = requests.get(
+            "https://mybusinessbusinessinformation.googleapis.com/v1/accounts/-/locations",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10
+        )
+
+        if response.ok:
+            data = response.json()
+            locations = data.get("locations", [])
+            return locations
+        else:
+            current_app.logger.warning(f"GMB API error: {response.status_code} {response.text[:200]}")
+            return []
+
+    except Exception:
+        current_app.logger.exception("Error getting GMB locations")
+        return []
 
 
 @google_bp.route("/ads/approve-optimizations", methods=["POST"], endpoint="approve_optimizations")
@@ -6169,26 +6514,38 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
             "best_practice": True,
         })
 
-    # 4. Ads (only if missing)
+    # 4. Ads (AI-generated, auto-complete) - Create RSA ads with AI-generated headlines and descriptions
     if setup_checks['has_campaigns'] and setup_checks['has_ad_groups'] and setup_checks['has_keywords'] and not setup_checks['has_ads']:
-        opportunities.append({
-            "title": "Create ads for your ad groups",
-            "description": "Your ad groups have keywords but no ads. Create 3-5 Responsive Search Ads per ad group for proper testing.",
-            "priority": "high",
-            "impact_score": 90,
-            "category": "setup",
-            "icon": "fa-ad",
-            "color": "purple",
-            "action": "Write 3-5 RSAs per ad group with 15 headlines and 4 descriptions each",
-            "estimated_time": "3 hours",
-            "quick_win": False,
-            "confidence_score": 90,
-            "risk_level": "low",
-            "benefit_explanation": "Ads are what users see and click. Multiple RSAs enable Google to test different combinations and find what works best. Without ads, your keywords can't trigger any impressions.",
-            "optimization_type": "setup",
-            "optimization_data": {'setup_check': 'ads'},
-            "best_practice": True,
-        })
+        # Collect ad groups and keywords for AI generation
+        search_ad_groups = [ag for ag in ad_groups if ag.get('campaign_type', '').upper() == 'SEARCH']
+        keywords_by_ad_group = {}
+        for ag in search_ad_groups:
+            ag_keywords = [kw['keyword'] for kw in keywords if kw.get('ad_group_id') == ag['id']]
+            if ag_keywords:
+                keywords_by_ad_group[ag['id']] = ag_keywords
+
+        if keywords_by_ad_group:
+            opportunities.append({
+                "title": "AI-generate ads for your ad groups",
+                "description": f"AI will create Responsive Search Ads for {len(keywords_by_ad_group)} ad group{'' if len(keywords_by_ad_group) == 1 else 's'} with 15 headlines and 4 descriptions each, customized to your keywords.",
+                "priority": "high",
+                "impact_score": 90,
+                "category": "ad_copy",
+                "icon": "fa-ad",
+                "color": "purple",
+                "action": "AI-generate RSAs with 15 headlines and 4 descriptions for each ad group",
+                "estimated_time": "2 min (AI-generated)",
+                "quick_win": True,
+                "confidence_score": 90,
+                "risk_level": "low",
+                "benefit_explanation": "Ads are what users see and click. AI will generate Responsive Search Ads with varied headlines and descriptions that Google can test to find what works best. More variations = better performance.",
+                "optimization_type": "create_rsa_ads",
+                "optimization_data": {
+                    'ad_groups': search_ad_groups,
+                    'keywords_by_ad_group': keywords_by_ad_group
+                },
+                "best_practice": True,
+            })
 
     # 4b. RSA Headline Variations (for existing Search ads - AI-generated, auto-complete)
     # Check if Search campaigns have RSA ads with < 15 headlines
@@ -6366,28 +6723,24 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
             "best_practice": True,
         })
 
-    # Location extension remains manual (requires GMB)
-    missing_extensions = []
+    # Location extension - Now auto-applicable using Google Ads API location feed
     if not setup_checks['has_location_ext']:
-        missing_extensions.append('Location extension')
-
-    if missing_extensions:
         opportunities.append({
-            "title": f"Add {len(missing_extensions)} missing ad extensions",
-            "description": f"Missing: {', '.join(missing_extensions[:2])}{'...' if len(missing_extensions) > 2 else ''}. Extensions increase ad size and CTR by 15-30%.",
+            "title": "Add location extension to show your business address",
+            "description": "Location extensions display your business address with your ads, making them larger and more credible. Click to auto-configure using your Google Business Profile data.",
             "priority": "high",
             "impact_score": 80,
             "category": "extension",
-            "icon": "fa-puzzle-piece",
+            "icon": "fa-map-marker-alt",
             "color": "green",
-            "action": f"Set up: {', '.join(missing_extensions)}",
-            "estimated_time": "45 min",
+            "action": "Auto-configure location extension from your Google Business Profile",
+            "estimated_time": "1 min (auto-configured)",
             "quick_win": True,
             "confidence_score": 95,
             "risk_level": "low",
-            "benefit_explanation": "Extensions make your ad larger, pushing competitors down. Call extensions are especially critical for service businesses - mobile users expect tap-to-call.",
-            "optimization_type": "setup",
-            "optimization_data": {'setup_check': 'extensions', 'missing': missing_extensions},
+            "benefit_explanation": "Location extensions make your ad larger and show your business address, pushing competitors down. They increase CTR by 10-15% and are especially important for local service businesses.",
+            "optimization_type": "extension",
+            "optimization_data": {'type': 'location'},
             "best_practice": True,
         })
 

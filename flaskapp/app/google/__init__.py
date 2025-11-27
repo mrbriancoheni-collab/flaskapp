@@ -2091,6 +2091,8 @@ def ads_ui():
             'adjust_bids',             # Campaign-level bid adjustments
             'adjust_daily_budget',     # Budget pacing
             'create_search_campaign',  # AI-assisted Search campaign creation
+            'add_pmax_assets',         # AI-generated PMax headlines and descriptions
+            'improve_asset_variety',   # AI-generated additional headline variations
         ]
         if opt_type in agent_auto_types or decision_type in agent_auto_types:
             return True

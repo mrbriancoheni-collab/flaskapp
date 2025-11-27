@@ -4598,7 +4598,8 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
 
         # Mobile-preferred ads - Only for Search campaigns (not Performance Max)
         # Performance Max campaigns use asset groups, not traditional RSAs
-        if setup_checks.get('has_search_campaigns'):
+        # Check if there are any Search campaigns (first_campaign_id will be None if only PMax)
+        if first_campaign_id:
             mobile_ctr_boost = 0.12  # 12% CTR improvement
             mobile_ad_clicks = int(estimated_mobile_clicks * mobile_ctr_boost)
             mobile_ad_leads = max(1, int(mobile_ad_clicks * conversion_rate))

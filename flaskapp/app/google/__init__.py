@@ -2676,11 +2676,140 @@ def ads_structure():
     )
 
 
-def _apply_optimization(aid: int, customer_id: str, opt_type: str, opt_data: dict, opt_title: str) -> dict:
-    """
-    Apply a single optimization to Google Ads via API.
+def _generate_preview(opt_type: str, opt_data: dict, opt_title: str) -> dict:
+    """Generate human-readable preview of what an optimization will create."""
+    preview = {
+        "title": opt_title,
+        "type": opt_type,
+        "summary": "",
+        "details": []
+    }
 
-    Returns dict with: {"success": bool, "resource_name": str, "api_response": dict, "message": str, "error": str}
+    if opt_type == "negative_keyword":
+        term = opt_data.get("term", "")
+        preview["summary"] = f"Block searches containing '{term}'"
+        preview["details"] = [
+            f"Negative keyword: {term}",
+            "Match type: Broad",
+            "Will prevent ads from showing for queries containing this term"
+        ]
+
+    elif opt_type == "starter_negative_keywords":
+        keywords = opt_data.get("starter_keywords", [])
+        preview["summary"] = f"Block {len(keywords)} common non-buyer search terms"
+        preview["details"] = [f"• {kw}" for kw in keywords]
+        preview["details"].append(f"\nTotal: {len(keywords)} negative keywords")
+
+    elif opt_type == "mobile_bid":
+        adjustment = opt_data.get("bid_adjustment", 20)
+        preview["summary"] = f"Increase mobile bids by {adjustment}%"
+        preview["details"] = [
+            f"Mobile bid modifier: +{adjustment}%",
+            "Applies to all Search campaigns",
+            f"Mobile ads will bid {adjustment}% higher to capture more mobile traffic"
+        ]
+
+    elif opt_type == "rsa_headline_variations":
+        needed = opt_data.get("needed_headlines", 3)
+        preview["summary"] = f"Add {needed} AI-generated headline variations to your RSA ads"
+        preview["details"] = [
+            f"New headlines: {needed} variations",
+            "AI-generated based on your existing ad copy",
+            "Improves Google's ability to test and optimize ad combinations"
+        ]
+
+    elif opt_type == "pmax_headlines":
+        needed = opt_data.get("needed_headlines", 3)
+        preview["summary"] = f"Add {needed} AI-generated headlines to Performance Max"
+        preview["details"] = [
+            f"New headlines: {needed} variations",
+            "AI-generated for your Performance Max asset groups",
+            "Increases ad variety and testing opportunities"
+        ]
+
+    elif opt_type == "pmax_descriptions":
+        needed = opt_data.get("needed_descriptions", 2)
+        preview["summary"] = f"Add {needed} AI-generated descriptions to Performance Max"
+        preview["details"] = [
+            f"New descriptions: {needed} variations",
+            "AI-generated benefit-focused descriptions",
+            "Meets Google's Performance Max best practices"
+        ]
+
+    elif opt_type == "extension":
+        ext_type = opt_data.get("type", "").lower()
+        if "call" in ext_type:
+            preview["summary"] = "Add click-to-call button to your mobile ads"
+            preview["details"] = [
+                "Extension type: Call",
+                "Auto-detects your business phone or uses placeholder",
+                "Mobile users can tap to call directly from ads"
+            ]
+        elif "sitelink" in ext_type:
+            preview["summary"] = "Add 4-6 quick links below your ads"
+            preview["details"] = [
+                "Extension type: Sitelink",
+                "Links: Services, Contact, Emergency, About, Pricing, Reviews",
+                "Takes up more ad space, pushes competitors down"
+            ]
+        elif "callout" in ext_type:
+            preview["summary"] = "Add trust-building callouts to your ads"
+            preview["details"] = [
+                "Extension type: Callout",
+                "Callouts: Licensed & Insured, 20+ Years Experience, Same Day Service, Free Estimates",
+                "Highlights your unique selling points"
+            ]
+        elif "price" in ext_type:
+            preview["summary"] = "Show pricing directly in your ads"
+            preview["details"] = [
+                "Extension type: Price",
+                "Basic Service: $99 | Emergency: $199 | Inspection: $79 | Installation: $499",
+                "Pre-qualifies leads who see pricing upfront"
+            ]
+        elif "structured" in ext_type or "snippet" in ext_type:
+            preview["summary"] = "Showcase your service categories"
+            preview["details"] = [
+                "Extension type: Structured Snippet",
+                "Categories: Repairs, Installation, Maintenance, Emergency Service, Inspection",
+                "Shows breadth of services offered"
+            ]
+        else:
+            preview["summary"] = f"Add {ext_type} extension"
+            preview["details"] = [f"Extension type: {ext_type}"]
+
+    elif opt_type == "mobile_ads":
+        preview["summary"] = "Create mobile-optimized RSA ads with urgent CTAs"
+        preview["details"] = [
+            "AI-generated mobile-focused ad copy",
+            "10-15 short, punchy headlines (e.g., 'Call Now - Fast Service')",
+            "3-4 mobile-optimized descriptions with tap-to-call CTAs"
+        ]
+
+    elif opt_data.get("decision_type") == "create_search_campaign":
+        preview["summary"] = "Create AI-generated Search campaign with keywords and ads"
+        preview["details"] = [
+            "Campaign: 1 new Search campaign (starts PAUSED)",
+            "Structure: 2-3 tightly themed ad groups",
+            "Keywords: 5-10 relevant keywords per ad group (Phrase & Exact match)",
+            "Ads: 1 RSA per ad group with 10 headlines and 3 descriptions",
+            "Budget: $50/day default (you can adjust before enabling)"
+        ]
+
+    else:
+        preview["summary"] = f"Apply {opt_title}"
+        preview["details"] = ["Preview not available for this optimization type"]
+
+    return preview
+
+
+def _apply_optimization(aid: int, customer_id: str, opt_type: str, opt_data: dict, opt_title: str, preview: bool = False) -> dict:
+    """
+    Apply a single optimization to Google Ads via API, or preview what would be created.
+
+    Args:
+        preview: If True, returns preview data without applying changes
+
+    Returns dict with: {"success": bool, "resource_name": str, "api_response": dict, "message": str, "error": str, "preview_data": dict}
     """
     try:
         # Get Google Ads refresh token from database
@@ -2704,6 +2833,15 @@ def _apply_optimization(aid: int, customer_id: str, opt_type: str, opt_data: dic
 
         except Exception as e:
             return {"success": False, "error": f"API authentication failed: {str(e)}"}
+
+        # PREVIEW MODE: Generate preview data without making API calls
+        if preview:
+            preview_data = _generate_preview(opt_type, opt_data, opt_title)
+            return {
+                "success": True,
+                "message": f"Preview: {opt_title}",
+                "preview_data": preview_data
+            }
 
         # Check for agent-generated decisions with decision_type
         decision_type = opt_data.get('decision_type', '')
@@ -4440,6 +4578,7 @@ def approve_optimizations():
             return jsonify({"success": False, "error": "No data provided"}), 400
 
         optimizations = data.get("optimizations", [])
+        preview_mode = data.get("preview", False)  # Preview mode: return what would be created without applying
 
         # Get actual numeric customer ID from database (not the display name from frontend)
         aid = current_account_id()
@@ -4491,7 +4630,7 @@ def approve_optimizations():
             }
         )
 
-        # Apply each optimization via Google Ads API
+        # Apply each optimization via Google Ads API (or preview what would be created)
         results = []
         applied_count = 0
         failed_count = 0
@@ -4501,39 +4640,44 @@ def approve_optimizations():
             opt_title = opt.get("title", "")
             opt_data = opt.get("optimization_data", {})
 
-            # Create tracking record
-            applied_opt = AppliedOptimization(
-                account_id=aid,
-                user_id=current_user.id,
-                customer_id=customer_id,
-                optimization_type=opt_type,
-                optimization_title=opt_title,
-                optimization_data=opt_data,
-                status='pending'
-            )
-            db.session.add(applied_opt)
-            db.session.flush()  # Get ID
+            # Skip database tracking in preview mode
+            if not preview_mode:
+                # Create tracking record
+                applied_opt = AppliedOptimization(
+                    account_id=aid,
+                    user_id=current_user.id,
+                    customer_id=customer_id,
+                    optimization_type=opt_type,
+                    optimization_title=opt_title,
+                    optimization_data=opt_data,
+                    status='pending'
+                )
+                db.session.add(applied_opt)
+                db.session.flush()  # Get ID
 
             try:
-                # Apply the optimization based on type
-                result = _apply_optimization(aid, customer_id, opt_type, opt_data, opt_title)
+                # Apply the optimization (or generate preview)
+                result = _apply_optimization(aid, customer_id, opt_type, opt_data, opt_title, preview=preview_mode)
 
                 if result.get("success"):
-                    applied_opt.status = 'applied'
-                    applied_opt.resource_name = result.get("resource_name")
-                    applied_opt.api_response = result.get("api_response")
-                    applied_opt.applied_at = datetime.utcnow()
+                    if not preview_mode:
+                        applied_opt.status = 'applied'
+                        applied_opt.resource_name = result.get("resource_name")
+                        applied_opt.api_response = result.get("api_response")
+                        applied_opt.applied_at = datetime.utcnow()
                     applied_count += 1
                     results.append({
                         "optimization": opt_title,
                         "type": opt_type,
-                        "status": "applied",
+                        "status": "preview" if preview_mode else "applied",
                         "resource_name": result.get("resource_name"),
-                        "message": result.get("message", "Successfully applied")
+                        "message": result.get("message", "Successfully applied"),
+                        "preview_data": result.get("preview_data") if preview_mode else None
                     })
                 else:
-                    applied_opt.status = 'failed'
-                    applied_opt.error_message = result.get("error", "Unknown error")
+                    if not preview_mode:
+                        applied_opt.status = 'failed'
+                        applied_opt.error_message = result.get("error", "Unknown error")
                     failed_count += 1
                     results.append({
                         "optimization": opt_title,
@@ -4543,8 +4687,9 @@ def approve_optimizations():
                     })
 
             except Exception as e:
-                applied_opt.status = 'failed'
-                applied_opt.error_message = str(e)
+                if not preview_mode:
+                    applied_opt.status = 'failed'
+                    applied_opt.error_message = str(e)
                 failed_count += 1
                 results.append({
                     "optimization": opt_title,
@@ -4554,7 +4699,8 @@ def approve_optimizations():
                 })
                 current_app.logger.exception(f"Error applying optimization: {opt_title}")
 
-        db.session.commit()
+        if not preview_mode:
+            db.session.commit()
 
         # Clear cached ads data so next page load fetches fresh data with updated extensions/scores
         sess_key = f"ads_state_{aid}"
@@ -4979,6 +5125,116 @@ def _get_agent_color(agent_type: str) -> str:
         'PMaxCampaignStructureAgent': 'green',
     }
     return colors.get(agent_type, 'gray')
+
+
+def _create_optimization_bundles(opportunities: list) -> list:
+    """
+    Create smart bundles of complementary optimizations that work better together.
+
+    Returns list of bundles with metadata about synergies.
+    """
+    bundles = []
+    opp_titles = {opp.get("title"): opp for opp in opportunities}
+
+    # Bundle 1: Mobile Power Combo (3x better together)
+    mobile_bid = next((o for o in opportunities if o.get("optimization_type") == "mobile_bid"), None)
+    mobile_ads = next((o for o in opportunities if o.get("optimization_type") == "mobile_ads"), None)
+    call_ext = next((o for o in opportunities if o.get("optimization_type") == "extension" and "call" in o.get("optimization_data", {}).get("type", "").lower()), None)
+
+    if mobile_bid or mobile_ads or call_ext:
+        mobile_bundle_opps = [o for o in [mobile_bid, mobile_ads, call_ext] if o]
+        if len(mobile_bundle_opps) >= 2:
+            bundles.append({
+                "id": "mobile_power_combo",
+                "title": "🔥 Mobile Power Combo",
+                "description": "These mobile optimizations work 3x better together - bid higher + show mobile ads + enable tap-to-call",
+                "optimizations": mobile_bundle_opps,
+                "total_time": sum(int(o.get("estimated_time", "0").split()[0]) for o in mobile_bundle_opps if o.get("estimated_time", "0")[0].isdigit()),
+                "synergy_score": 95,
+                "impact_multiplier": "3x",
+                "recommendation": "Apply all together for maximum mobile traffic capture"
+            })
+
+    # Bundle 2: Extension Suite (complete your ad real estate)
+    extension_types = ["call", "sitelink", "callout", "price", "structured_snippet"]
+    extension_opps = [
+        o for o in opportunities
+        if o.get("optimization_type") == "extension"
+        and any(ext in o.get("optimization_data", {}).get("type", "").lower() for ext in extension_types)
+    ]
+
+    if len(extension_opps) >= 3:
+        bundles.append({
+            "id": "extension_suite",
+            "title": "⚡ Quick Wins: Extension Suite",
+            "description": f"Apply {len(extension_opps)} extensions in {len(extension_opps)} minutes - each adds 5-20% CTR boost",
+            "optimizations": extension_opps,
+            "total_time": len(extension_opps),  # 1 min each
+            "synergy_score": 85,
+            "impact_multiplier": "Compound CTR gains",
+            "recommendation": "Extensions stack - more extensions = larger ads = higher CTR"
+        })
+
+    # Bundle 3: AI Content Generator (let AI write your ads)
+    ai_content_opps = [
+        o for o in opportunities
+        if o.get("optimization_type") in ["pmax_headlines", "pmax_descriptions", "rsa_headline_variations", "mobile_ads"]
+    ]
+
+    if len(ai_content_opps) >= 2:
+        bundles.append({
+            "id": "ai_content_generator",
+            "title": "🤖 AI Content Generator",
+            "description": f"Let AI write {len(ai_content_opps)} types of ad content in minutes - saves hours of copywriting",
+            "optimizations": ai_content_opps,
+            "total_time": len(ai_content_opps),  # ~1 min each
+            "synergy_score": 80,
+            "impact_multiplier": "Time savings",
+            "recommendation": "AI-generated content is ready to test immediately"
+        })
+
+    # Bundle 4: Negative Keywords Foundation (block waste first)
+    negative_opps = [
+        o for o in opportunities
+        if o.get("optimization_type") in ["negative_keyword", "starter_negative_keywords"]
+    ]
+
+    if negative_opps:
+        bundles.append({
+            "id": "negative_keywords_foundation",
+            "title": "📊 Complete Your Setup: Negative Keywords",
+            "description": "Block non-buyer searches before spending more on campaigns",
+            "optimizations": negative_opps,
+            "total_time": sum(int(o.get("estimated_time", "0").split()[0]) for o in negative_opps if o.get("estimated_time", "0")[0].isdigit()),
+            "synergy_score": 90,
+            "impact_multiplier": "Waste reduction",
+            "recommendation": "Apply these first to stop wasting budget, then invest in new campaigns"
+        })
+
+    # Bundle 5: Search Campaign Starter Pack (for PMax-only accounts)
+    search_campaign = next((o for o in opportunities if o.get("optimization_data", {}).get("decision_type") == "create_search_campaign"), None)
+    rsa_headlines = next((o for o in opportunities if o.get("optimization_type") == "rsa_headline_variations"), None)
+
+    if search_campaign:
+        search_bundle_opps = [search_campaign]
+        if rsa_headlines:
+            search_bundle_opps.append(rsa_headlines)
+
+        bundles.append({
+            "id": "search_campaign_starter",
+            "title": "🎯 Search Campaign Starter Pack",
+            "description": "Create your first Search campaign with AI-generated keywords, ad groups, and RSA ads",
+            "optimizations": search_bundle_opps,
+            "total_time": 2,
+            "synergy_score": 95,
+            "impact_multiplier": "Keyword-level control",
+            "recommendation": "CRITICAL: Add Search campaigns alongside Performance Max for better control and insights"
+        })
+
+    # Sort bundles by synergy score (highest impact first)
+    bundles.sort(key=lambda b: b["synergy_score"], reverse=True)
+
+    return bundles
 
 
 def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
@@ -5714,6 +5970,7 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
         'has_callout_ext': any(e.get('type') == 'callout' for e in extensions),
         'has_sitelink_ext': any(e.get('type') == 'sitelink' for e in extensions),
         'has_call_ext': any(e.get('type') == 'call' for e in extensions),
+        'has_structured_snippet_ext': any(e.get('type') == 'structured_snippet' for e in extensions),
         'has_price_ext': any(e.get('type') == 'price' for e in extensions),
         'has_location_ext': any(e.get('type') == 'location' for e in extensions),
     }
@@ -6089,6 +6346,26 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
             "best_practice": True,
         })
 
+    if not setup_checks['has_structured_snippet_ext']:
+        opportunities.append({
+            "title": "Add Structured Snippet Extension",
+            "description": "Auto-add service categories: Repairs, Installation, Maintenance, Emergency Service, Inspection. Shows your service breadth in ads.",
+            "priority": "medium",
+            "impact_score": 70,
+            "category": "extension",
+            "icon": "fa-list",
+            "color": "green",
+            "action": "Auto-add structured snippet with service categories",
+            "estimated_time": "1 min (auto-complete)",
+            "quick_win": True,
+            "confidence_score": 90,
+            "risk_level": "low",
+            "benefit_explanation": "Structured snippets highlight your service variety. Users see exactly what you offer before clicking.",
+            "optimization_type": "extension",
+            "optimization_data": {'type': 'structured_snippet'},
+            "best_practice": True,
+        })
+
     # Location extension remains manual (requires GMB)
     missing_extensions = []
     if not setup_checks['has_location_ext']:
@@ -6233,6 +6510,9 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
     # Add quick wins (optimizations < 30 min)
     quick_wins = [opp for opp in opportunities if opp.get("quick_win", False)]
 
+    # SMART BUNDLING: Group complementary optimizations that work better together
+    bundles = _create_optimization_bundles(opportunities)
+
     return {
         "scores": scores,
         "grade": grade,
@@ -6242,6 +6522,7 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
         "campaign_breakdown": campaign_breakdown,
         "competitive_insights": competitive_insights,
         "quick_wins": quick_wins,
+        "bundles": bundles,  # Smart bundling recommendations
         "total_opportunities": len(opportunities),
         "performance": performance,
     }

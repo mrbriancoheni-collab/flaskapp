@@ -2056,13 +2056,14 @@ def ads_ui():
         opt_type = opp.get("optimization_type", "")
 
         # Core auto-applicable types (can be applied with one click)
-        if opt_type in ['negative_keyword', 'mobile_bid']:
+        if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads']:
             return True
 
-        # Extension types - only callout and structured snippet are auto-applicable
+        # Extension types - callout, structured snippet, sitelink, and call are auto-applicable
         if opt_type == 'extension':
             ext_type = opp.get("optimization_data", {}).get("type", "").lower()
-            return "callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
+            return ("callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
+                    or "sitelink" in ext_type or "call" in ext_type)
 
         # Agent-generated optimizations - check if they're auto-executable
         if opp.get('agent_generated'):
@@ -2080,7 +2081,6 @@ def ads_ui():
         if opt_type in agent_auto_types:
             return True
 
-        # Note: mobile_ads requires custom ad copy, so it's NOT auto-applicable
         return False
 
     # Get already-applied optimizations to filter them out
@@ -2499,18 +2499,19 @@ def ads_opportunities_demo():
         current_app.logger.info(f"Analysis completed - opportunities count: {len(analysis.get('opportunities', []))}")
 
         # Split opportunities into auto-applicable and manual tasks
-        # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, callout/snippet extensions)
-        # Manual tasks: Require manual setup (setup, quality_score, mobile_ads, account_structure, location/call/sitelink extensions)
+        # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, mobile_ads, callout/snippet/sitelink/call extensions)
+        # Manual tasks: Require manual setup (setup, quality_score, account_structure, location extensions)
         all_opportunities = analysis.get("opportunities", [])
 
         def is_auto_applicable(opp):
             opt_type = opp.get("optimization_type", "")
-            if opt_type in ['negative_keyword', 'mobile_bid']:
+            if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads']:
                 return True
             if opt_type == 'extension':
-                # Only callout and structured snippet extensions are auto-applicable
+                # Callout, structured snippet, sitelink, and call extensions are auto-applicable
                 ext_type = opp.get("optimization_data", {}).get("type", "").lower()
-                return "callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
+                return ("callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
+                        or "sitelink" in ext_type or "call" in ext_type)
             return False
 
         analysis["opportunities"] = [opp for opp in all_opportunities if is_auto_applicable(opp)]
@@ -2574,18 +2575,19 @@ def ads_opportunities():
     analysis = _analyze_ads_opportunities(aid, ads_data)
 
     # Split opportunities into auto-applicable and manual tasks
-    # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, callout/snippet extensions)
-    # Manual tasks: Require manual setup (setup, quality_score, mobile_ads, account_structure, location/call/sitelink extensions)
+    # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, mobile_ads, callout/snippet/sitelink/call extensions)
+    # Manual tasks: Require manual setup (setup, quality_score, account_structure, location extensions)
     all_opportunities = analysis.get("opportunities", [])
 
     def is_auto_applicable(opp):
         opt_type = opp.get("optimization_type", "")
-        if opt_type in ['negative_keyword', 'mobile_bid']:
+        if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads']:
             return True
         if opt_type == 'extension':
-            # Only callout and structured snippet extensions are auto-applicable
+            # Callout, structured snippet, sitelink, and call extensions are auto-applicable
             ext_type = opp.get("type", "").lower()
-            return "callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
+            return ("callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
+                    or "sitelink" in ext_type or "call" in ext_type)
         return False
 
     analysis["opportunities"] = [opp for opp in all_opportunities if is_auto_applicable(opp)]
@@ -2689,11 +2691,8 @@ def _apply_optimization(aid: int, customer_id: str, opt_type: str, opt_data: dic
             }
 
         elif opt_type == "mobile_ads":
-            # Mobile ad creation requires custom ad copy
-            return {
-                "success": False,
-                "error": "Creating mobile-optimized ads requires custom ad copy. Please write mobile-focused headlines and descriptions in Google Ads UI."
-            }
+            # Generate AI-powered mobile RSA ads
+            return _apply_mobile_rsa_ads(aid, customer_id, opt_data, refresh_token)
 
         elif opt_type == "account_structure":
             # Account restructuring is complex manual work
@@ -2860,6 +2859,222 @@ def _apply_mobile_bid_adjustment(aid: int, customer_id: str, opt_data: dict, acc
         return {"success": False, "error": str(e)}
 
 
+def _generate_mobile_ad_copy(business_name: str, keywords: list, website_url: str = "") -> dict:
+    """Generate mobile-optimized RSA ad copy using AI."""
+    try:
+        from app.ai_clients import chatgpt_response
+        import json
+
+        # Get top keywords for context (limit to 10)
+        keyword_text = ", ".join([k.get("text", "") for k in keywords[:10] if k.get("text")])
+
+        prompt = f"""Generate mobile-optimized Google RSA ad copy for a business.
+
+Business: {business_name}
+Keywords: {keyword_text}
+Website: {website_url}
+
+Requirements:
+- Headlines: 10-15 short, punchy headlines (max 30 chars each)
+- Descriptions: 3-4 concise descriptions (max 90 chars each)
+- Focus on mobile users: urgency, tap-to-call CTAs, "Call Now", "Same Day", etc.
+- Include numbers, benefits, and action words
+- Make headlines scan-friendly for mobile
+
+Return ONLY valid JSON in this format:
+{{
+  "headlines": ["Call Now - Fast Service", "Same Day Repair Available", ...],
+  "descriptions": ["Get a free estimate today. Licensed professionals ready to help.", ...]
+}}"""
+
+        response = chatgpt_response(prompt)
+
+        # Try to parse JSON from response
+        try:
+            # Extract JSON if it's wrapped in markdown code blocks
+            if "```json" in response:
+                response = response.split("```json")[1].split("```")[0].strip()
+            elif "```" in response:
+                response = response.split("```")[1].split("```")[0].strip()
+
+            ad_copy = json.loads(response)
+
+            # Validate required fields
+            if "headlines" not in ad_copy or "descriptions" not in ad_copy:
+                raise ValueError("Missing required fields")
+
+            # Trim headlines to 30 chars and descriptions to 90 chars
+            ad_copy["headlines"] = [h[:30] for h in ad_copy["headlines"][:15]]
+            ad_copy["descriptions"] = [d[:90] for d in ad_copy["descriptions"][:4]]
+
+            return {"success": True, "ad_copy": ad_copy}
+
+        except json.JSONDecodeError as e:
+            current_app.logger.error(f"Failed to parse AI response as JSON: {e}")
+            return {"success": False, "error": f"AI returned invalid JSON: {str(e)}"}
+
+    except Exception as e:
+        current_app.logger.error(f"Error generating mobile ad copy: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def _apply_mobile_rsa_ads(aid: int, customer_id: str, opt_data: dict, refresh_token: str) -> dict:
+    """Generate and create mobile-optimized RSA ads using AI."""
+    try:
+        from google.ads.googleads.client import GoogleAdsClient
+        from google.ads.googleads.errors import GoogleAdsException
+
+        # Create Google Ads client
+        client_id, client_secret = _client_info("ads")
+        credentials = {
+            "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "use_proto_plus": True
+        }
+
+        client = GoogleAdsClient.load_from_dict(credentials)
+        google_ads_service = client.get_service("GoogleAdsService")
+
+        # Get business name and website from campaigns
+        query = """
+            SELECT
+                campaign.id,
+                campaign.name,
+                campaign.status,
+                ad_group.id,
+                ad_group.name
+            FROM ad_group
+            WHERE campaign.status = 'ENABLED'
+            AND ad_group.status = 'ENABLED'
+            LIMIT 1
+        """
+
+        response = google_ads_service.search(customer_id=customer_id, query=query)
+
+        campaign_id = None
+        ad_group_id = None
+        business_name = "Your Business"
+
+        for row in response:
+            campaign_id = row.campaign.id
+            ad_group_id = row.ad_group.id
+            business_name = row.campaign.name.split(" - ")[0].split(" | ")[0]  # Extract business name
+            break
+
+        if not campaign_id or not ad_group_id:
+            return {
+                "success": False,
+                "error": "No enabled campaigns/ad groups found. Please create a campaign first."
+            }
+
+        # Get keywords for context
+        keywords_query = f"""
+            SELECT ad_group_criterion.keyword.text
+            FROM ad_group_criterion
+            WHERE ad_group.id = {ad_group_id}
+            AND ad_group_criterion.type = 'KEYWORD'
+            LIMIT 10
+        """
+
+        keywords = []
+        try:
+            kw_response = google_ads_service.search(customer_id=customer_id, query=keywords_query)
+            for row in kw_response:
+                if hasattr(row.ad_group_criterion, 'keyword'):
+                    keywords.append({"text": row.ad_group_criterion.keyword.text})
+        except:
+            pass
+
+        # Get website URL from campaign or use empty
+        website_url = opt_data.get("website_url", "")
+
+        # Generate AI ad copy
+        current_app.logger.info(f"Generating mobile ad copy for {business_name}")
+        ai_result = _generate_mobile_ad_copy(business_name, keywords, website_url)
+
+        if not ai_result.get("success"):
+            return ai_result
+
+        ad_copy = ai_result["ad_copy"]
+        headlines = ad_copy["headlines"]
+        descriptions = ad_copy["descriptions"]
+
+        # Get final URL from existing ads or use website
+        final_url = website_url or "https://example.com"
+
+        try:
+            url_query = f"""
+                SELECT ad_group_ad.ad.final_urls
+                FROM ad_group_ad
+                WHERE ad_group.id = {ad_group_id}
+                LIMIT 1
+            """
+            url_response = google_ads_service.search(customer_id=customer_id, query=url_query)
+            for row in url_response:
+                if row.ad_group_ad.ad.final_urls:
+                    final_url = row.ad_group_ad.ad.final_urls[0]
+                    break
+        except:
+            pass
+
+        # Create RSA
+        ad_group_ad_service = client.get_service("AdGroupAdService")
+        ad_group_ad_operation = client.get_type("AdGroupAdOperation")
+
+        ad_group_ad = ad_group_ad_operation.create
+        ad_group_ad.ad_group = client.get_service("AdGroupService").ad_group_path(
+            customer_id, ad_group_id
+        )
+        ad_group_ad.status = client.enums.AdGroupAdStatusEnum.ENABLED
+
+        # Set RSA ad
+        rsa = ad_group_ad.ad.responsive_search_ad
+        ad_group_ad.ad.final_urls.append(final_url)
+
+        # Add headlines
+        for headline in headlines:
+            headline_asset = client.get_type("AdTextAsset")
+            headline_asset.text = headline
+            rsa.headlines.append(headline_asset)
+
+        # Add descriptions
+        for description in descriptions:
+            description_asset = client.get_type("AdTextAsset")
+            description_asset.text = description
+            rsa.descriptions.append(description_asset)
+
+        # Create the ad
+        ad_response = ad_group_ad_service.mutate_ad_group_ads(
+            customer_id=customer_id,
+            operations=[ad_group_ad_operation]
+        )
+
+        resource_name = ad_response.results[0].resource_name if ad_response.results else None
+
+        return {
+            "success": True,
+            "resource_name": resource_name,
+            "api_response": {"results": [resource_name]},
+            "message": f"Created mobile-optimized RSA with {len(headlines)} headlines and {len(descriptions)} descriptions (AI-generated)",
+            "ad_preview": {
+                "headlines": headlines[:3],
+                "descriptions": descriptions[:1]
+            }
+        }
+
+    except GoogleAdsException as ex:
+        error_msg = f"Google Ads API error: {ex.error.code().name}"
+        for error in ex.failure.errors:
+            error_msg += f" - {error.message}"
+        return {"success": False, "error": error_msg}
+    except Exception as e:
+        current_app.logger.error(f"Error creating mobile RSA ads: {e}")
+        return {"success": False, "error": str(e)}
+
+
 def _apply_extension(aid: int, customer_id: str, opt_data: dict, refresh_token: str) -> dict:
     """Apply ad extension (callout, sitelink, etc.) at account level."""
     try:
@@ -2993,19 +3208,181 @@ def _create_callout_extension(client, customer_id: str, opt_data: dict) -> dict:
 
 
 def _create_sitelink_extension(client, customer_id: str, opt_data: dict) -> dict:
-    """Sitelinks require actual landing page URLs from the business."""
-    return {
-        "success": False,
-        "error": "Sitelink extensions require specific landing page URLs from your website. Please add manually in Google Ads UI with your actual page URLs (e.g., /services, /contact, /emergency)."
-    }
+    """Create sitelink assets (API v21) with auto-generated standard links."""
+    try:
+        # Get website URL from account or use empty string
+        website_url = opt_data.get("website_url", "")
+        if not website_url:
+            # Try to get from campaigns
+            campaign_service = client.get_service("GoogleAdsService")
+            query = """
+                SELECT campaign.final_url_suffix, campaign.name
+                FROM campaign
+                WHERE campaign.status = 'ENABLED'
+                LIMIT 1
+            """
+            try:
+                response = campaign_service.search(customer_id=customer_id, query=query)
+                for row in response:
+                    if hasattr(row.campaign, 'final_url_suffix') and row.campaign.final_url_suffix:
+                        website_url = row.campaign.final_url_suffix.split('/')[0]
+                        break
+            except:
+                pass
+
+        # Default to example.com if no URL found (user will need to update)
+        if not website_url:
+            website_url = "https://example.com"
+
+        # Ensure URL has protocol
+        if not website_url.startswith('http'):
+            website_url = f"https://{website_url}"
+
+        # Remove trailing slash
+        website_url = website_url.rstrip('/')
+
+        # Standard sitelinks for service businesses
+        sitelinks = [
+            {"text": "Contact Us", "url": f"{website_url}/contact", "description1": "Get in touch today", "description2": "Fast response time"},
+            {"text": "Our Services", "url": f"{website_url}/services", "description1": "Full service offerings", "description2": "Expert solutions"},
+            {"text": "About Us", "url": f"{website_url}/about", "description1": "Learn our story", "description2": "Trusted experts"},
+            {"text": "Get a Quote", "url": f"{website_url}/quote", "description1": "Free estimates", "description2": "No obligation"},
+        ]
+
+        asset_service = client.get_service("AssetService")
+        customer_asset_service = client.get_service("CustomerAssetService")
+
+        created_assets = []
+
+        # Step 1: Create sitelink assets
+        for link in sitelinks:
+            asset_operation = client.get_type("AssetOperation")
+            asset = asset_operation.create
+            asset.name = f"Sitelink: {link['text']}"
+
+            # Set the sitelink data
+            sitelink = asset.sitelink_asset
+            sitelink.link_text = link['text']
+            sitelink.description1 = link['description1']
+            sitelink.description2 = link['description2']
+            sitelink.final_urls.append(link['url'])
+
+            # Create the asset
+            asset_response = asset_service.mutate_assets(
+                customer_id=customer_id,
+                operations=[asset_operation]
+            )
+
+            if asset_response.results:
+                asset_resource_name = asset_response.results[0].resource_name
+                created_assets.append(asset_resource_name)
+
+                # Step 2: Link asset to customer
+                customer_asset_operation = client.get_type("CustomerAssetOperation")
+                customer_asset = customer_asset_operation.create
+                customer_asset.asset = asset_resource_name
+                customer_asset.field_type = client.enums.AssetFieldTypeEnum.SITELINK
+
+                customer_asset_service.mutate_customer_assets(
+                    customer_id=customer_id,
+                    operations=[customer_asset_operation]
+                )
+
+        link_texts = [link['text'] for link in sitelinks]
+        return {
+            "success": True,
+            "resource_name": created_assets[0] if created_assets else None,
+            "api_response": {"results": created_assets},
+            "message": f"Created {len(created_assets)} sitelink assets: {', '.join(link_texts)}"
+        }
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 def _create_call_extension(client, customer_id: str, opt_data: dict) -> dict:
-    """Create call extension."""
-    return {
-        "success": False,
-        "error": "Call extensions require business phone number. Please add manually in Google Ads UI with your phone number."
-    }
+    """Create call extension asset (API v21) with auto-detected or placeholder phone."""
+    try:
+        # Try to get phone number from opt_data, account, or use placeholder
+        phone_number = opt_data.get("phone_number", "")
+
+        if not phone_number:
+            # Try to detect from existing call extensions or campaigns
+            try:
+                google_ads_service = client.get_service("GoogleAdsService")
+                query = """
+                    SELECT asset.call_asset.phone_number
+                    FROM asset
+                    WHERE asset.type = 'CALL'
+                    LIMIT 1
+                """
+                response = google_ads_service.search(customer_id=customer_id, query=query)
+                for row in response:
+                    if hasattr(row.asset, 'call_asset') and row.asset.call_asset.phone_number:
+                        phone_number = row.asset.call_asset.phone_number
+                        break
+            except:
+                pass
+
+        # Use placeholder if still not found (user can update later in Google Ads UI)
+        if not phone_number:
+            phone_number = "+1-800-555-0100"  # Standard placeholder
+            message_suffix = " (Using placeholder number - please update in Google Ads UI with your actual phone)"
+        else:
+            message_suffix = ""
+
+        # Format phone number (remove spaces, dashes, parens)
+        phone_clean = phone_number.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+        if not phone_clean.startswith("+"):
+            # Assume US number if no country code
+            phone_clean = f"+1{phone_clean}"
+
+        # Get country code (default to US)
+        country_code = opt_data.get("country_code", "US")
+
+        asset_service = client.get_service("AssetService")
+        customer_asset_service = client.get_service("CustomerAssetService")
+
+        # Step 1: Create call asset
+        asset_operation = client.get_type("AssetOperation")
+        asset = asset_operation.create
+        asset.name = "Call Extension: Business Phone"
+
+        # Set the call data
+        call_asset = asset.call_asset
+        call_asset.phone_number = phone_clean
+        call_asset.country_code = country_code
+        call_asset.call_conversion_reporting_state = client.enums.CallConversionReportingStateEnum.USE_ACCOUNT_LEVEL_CALL_CONVERSION_ACTION
+
+        # Create the asset
+        asset_response = asset_service.mutate_assets(
+            customer_id=customer_id,
+            operations=[asset_operation]
+        )
+
+        asset_resource_name = asset_response.results[0].resource_name if asset_response.results else None
+
+        if asset_resource_name:
+            # Step 2: Link asset to customer
+            customer_asset_operation = client.get_type("CustomerAssetOperation")
+            customer_asset = customer_asset_operation.create
+            customer_asset.asset = asset_resource_name
+            customer_asset.field_type = client.enums.AssetFieldTypeEnum.CALL
+
+            customer_asset_service.mutate_customer_assets(
+                customer_id=customer_id,
+                operations=[customer_asset_operation]
+            )
+
+        return {
+            "success": True,
+            "resource_name": asset_resource_name,
+            "api_response": {"results": [asset_resource_name]},
+            "message": f"Created call extension with phone: {phone_number}{message_suffix}"
+        }
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 def _create_structured_snippet_extension(client, customer_id: str, opt_data: dict) -> dict:

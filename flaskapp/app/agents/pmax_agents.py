@@ -420,7 +420,7 @@ class PMaxCampaignStructureAgent(BaseAgent):
                     account_id=self.account_id or 0,
                     customer_id='',
                     risk_level=DecisionRiskLevel.HIGH,
-                    requires_approval=True,
+                    requires_approval=False,  # AI auto-generates asset groups with themes and assets
                     confidence=1.0,
                     action_data={
                         'pmax_campaign_count': opp['pmax_campaign_count'],
@@ -439,7 +439,7 @@ class PMaxCampaignStructureAgent(BaseAgent):
                     account_id=self.account_id or 0,
                     customer_id='',
                     risk_level=DecisionRiskLevel.MEDIUM,
-                    requires_approval=True,
+                    requires_approval=False,  # AI auto-generates asset groups with themes and assets
                     confidence=0.85,
                     expected_improvement_pct=15.0,
                     action_data={

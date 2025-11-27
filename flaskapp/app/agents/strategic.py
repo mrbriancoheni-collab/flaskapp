@@ -298,7 +298,7 @@ class StrategicDirectorAgent(BaseAgent):
                         ]
                     },
                     risk_level=DecisionRiskLevel.MEDIUM,
-                    requires_approval=True,  # Campaign creation requires setup
+                    requires_approval=False,  # AI auto-generates campaign structure, keywords, and ads
                     confidence=0.88,
                     expected_improvement_pct=15.0,  # 15% more leads expected
                 )

@@ -2938,17 +2938,20 @@ def _apply_mobile_rsa_ads(aid: int, customer_id: str, opt_data: dict, refresh_to
         client = GoogleAdsClient.load_from_dict(credentials)
         google_ads_service = client.get_service("GoogleAdsService")
 
-        # Get business name and website from campaigns
+        # Get business name and website from Search campaigns only (not Performance Max)
+        # Performance Max campaigns use asset groups, not ad groups with RSAs
         query = """
             SELECT
                 campaign.id,
                 campaign.name,
                 campaign.status,
+                campaign.advertising_channel_type,
                 ad_group.id,
                 ad_group.name
             FROM ad_group
             WHERE campaign.status = 'ENABLED'
             AND ad_group.status = 'ENABLED'
+            AND campaign.advertising_channel_type != 'PERFORMANCE_MAX'
             LIMIT 1
         """
 
@@ -2967,7 +2970,7 @@ def _apply_mobile_rsa_ads(aid: int, customer_id: str, opt_data: dict, refresh_to
         if not campaign_id or not ad_group_id:
             return {
                 "success": False,
-                "error": "No enabled campaigns/ad groups found. Please create a campaign first."
+                "error": "Mobile RSA ads require a Search campaign. Your account only has Performance Max campaigns, which use asset groups instead of RSAs. Create a Search campaign first to use this optimization."
             }
 
         # Get keywords for context
@@ -3265,7 +3268,7 @@ def _create_sitelink_extension(client, customer_id: str, opt_data: dict) -> dict
             sitelink.link_text = link['text']
             sitelink.description1 = link['description1']
             sitelink.description2 = link['description2']
-            sitelink.final_urls.append(link['url'])
+            sitelink.final_url = link['url']
 
             # Create the asset
             asset_response = asset_service.mutate_assets(
@@ -4593,34 +4596,36 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
                 },
             })
 
-        # Mobile-preferred ads - Compounds with bid adjustment
-        mobile_ctr_boost = 0.12  # 12% CTR improvement
-        mobile_ad_clicks = int(estimated_mobile_clicks * mobile_ctr_boost)
-        mobile_ad_leads = max(1, int(mobile_ad_clicks * conversion_rate))
+        # Mobile-preferred ads - Only for Search campaigns (not Performance Max)
+        # Performance Max campaigns use asset groups, not traditional RSAs
+        if setup_checks.get('has_search_campaigns'):
+            mobile_ctr_boost = 0.12  # 12% CTR improvement
+            mobile_ad_clicks = int(estimated_mobile_clicks * mobile_ctr_boost)
+            mobile_ad_leads = max(1, int(mobile_ad_clicks * conversion_rate))
 
-        opportunities.append({
-            "title": "Create mobile-optimized RSA ads",
-            "description": f"Mobile-specific headlines and CTAs can boost CTR by 12% → {mobile_ad_clicks} more clicks → {mobile_ad_leads} more leads",
-            "priority": "medium",
-            "impact_score": 50,
-            "monthly_leads": mobile_ad_leads,
-            "annual_leads": mobile_ad_leads * 12,
-            "monthly_value": round(mobile_ad_leads * lead_value, 0),
-            "icon": "fa-mobile-screen",
-            "color": "green",
-            "category": "mobile",
-            "action": "Create 3-5 RSA variations with mobile-focused headlines and tap-to-call CTAs",
-            "estimated_time": "30 min",
-            "quick_win": False,
-            "confidence_score": 75,
-            "risk_level": "low",
-            "before_state": "Same generic ads shown on all devices",
-            "after_state": f"Mobile-optimized ads with urgent CTAs, +{mobile_ad_leads} leads/mo",
-            "success_metrics": [f"Mobile CTR up {mobile_ctr_boost*100:.0f}%", f"+{mobile_ad_leads} leads/mo", f"~${mobile_ad_leads * lead_value:.0f}/mo value"],
-            "benefit_explanation": "Mobile users skim ads quickly. Shorter headlines, urgency words ('Call Now', 'Same Day'), and tap-to-call convert better than desktop-style ads.",
-            "optimization_type": "mobile_ads",
-            "optimization_data": {"ad_count": 5, "ctr_boost": mobile_ctr_boost, "compounds_with": "mobile_bid"},
-        })
+            opportunities.append({
+                "title": "Create mobile-optimized RSA ads",
+                "description": f"Mobile-specific headlines and CTAs can boost CTR by 12% → {mobile_ad_clicks} more clicks → {mobile_ad_leads} more leads",
+                "priority": "medium",
+                "impact_score": 50,
+                "monthly_leads": mobile_ad_leads,
+                "annual_leads": mobile_ad_leads * 12,
+                "monthly_value": round(mobile_ad_leads * lead_value, 0),
+                "icon": "fa-mobile-screen",
+                "color": "green",
+                "category": "mobile",
+                "action": "Create 3-5 RSA variations with mobile-focused headlines and tap-to-call CTAs",
+                "estimated_time": "30 min",
+                "quick_win": False,
+                "confidence_score": 75,
+                "risk_level": "low",
+                "before_state": "Same generic ads shown on all devices",
+                "after_state": f"Mobile-optimized ads with urgent CTAs, +{mobile_ad_leads} leads/mo",
+                "success_metrics": [f"Mobile CTR up {mobile_ctr_boost*100:.0f}%", f"+{mobile_ad_leads} leads/mo", f"~${mobile_ad_leads * lead_value:.0f}/mo value"],
+                "benefit_explanation": "Mobile users skim ads quickly. Shorter headlines, urgency words ('Call Now', 'Same Day'), and tap-to-call convert better than desktop-style ads.",
+                "optimization_type": "mobile_ads",
+                "optimization_data": {"ad_count": 5, "ctr_boost": mobile_ctr_boost, "compounds_with": "mobile_bid"},
+            })
 
     # Account Structure - Calculate benefits based on actual account metrics
     if scores["account_structure"] < 70:

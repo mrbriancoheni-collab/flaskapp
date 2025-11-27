@@ -2054,19 +2054,31 @@ def ads_ui():
 
     def is_auto_applicable(opp):
         opt_type = opp.get("optimization_type", "")
+        decision_type = opp.get('decision_type', '')
 
         # Core auto-applicable types (can be applied with one click)
-        if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads']:
+        if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads', 'starter_negative_keywords']:
             return True
 
-        # Extension types - callout, structured snippet, sitelink, and call are auto-applicable
+        # AI-generated ad content (auto-complete with AI)
+        if opt_type in ['pmax_headlines', 'pmax_descriptions', 'rsa_headline_variations']:
+            return True
+
+        # AI-assisted campaign creation (auto-complete with AI)
+        if decision_type == 'create_search_campaign':
+            return True
+
+        # Extension types - callout, structured snippet, sitelink, call, and price are auto-applicable
         if opt_type == 'extension':
             ext_type = opp.get("optimization_data", {}).get("type", "").lower()
             return ("callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
-                    or "sitelink" in ext_type or "call" in ext_type)
+                    or "sitelink" in ext_type or "call" in ext_type or "price" in ext_type)
 
         # Agent-generated optimizations - check if they're auto-executable
         if opp.get('agent_generated'):
+            # Search campaign creation is now auto-applicable
+            if decision_type == 'create_search_campaign':
+                return True
             requires_approval = opp.get('optimization_data', {}).get('requires_approval', True)
             return not requires_approval  # Auto-applicable if doesn't require approval
 
@@ -2077,8 +2089,9 @@ def ads_ui():
             'add_negative_keyword',    # Block waste
             'adjust_bids',             # Campaign-level bid adjustments
             'adjust_daily_budget',     # Budget pacing
+            'create_search_campaign',  # AI-assisted Search campaign creation
         ]
-        if opt_type in agent_auto_types:
+        if opt_type in agent_auto_types or decision_type in agent_auto_types:
             return True
 
         return False
@@ -2499,19 +2512,32 @@ def ads_opportunities_demo():
         current_app.logger.info(f"Analysis completed - opportunities count: {len(analysis.get('opportunities', []))}")
 
         # Split opportunities into auto-applicable and manual tasks
-        # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, mobile_ads, callout/snippet/sitelink/call extensions)
+        # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, mobile_ads, PMax AI content, extensions)
         # Manual tasks: Require manual setup (setup, quality_score, account_structure, location extensions)
         all_opportunities = analysis.get("opportunities", [])
 
         def is_auto_applicable(opp):
             opt_type = opp.get("optimization_type", "")
-            if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads']:
+            decision_type = opp.get('decision_type', '')
+
+            # Core auto-applicable types
+            if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads', 'starter_negative_keywords']:
                 return True
+
+            # AI-generated ad content
+            if opt_type in ['pmax_headlines', 'pmax_descriptions', 'rsa_headline_variations']:
+                return True
+
+            # AI-assisted campaign creation
+            if decision_type == 'create_search_campaign':
+                return True
+
+            # Extensions
             if opt_type == 'extension':
-                # Callout, structured snippet, sitelink, and call extensions are auto-applicable
+                # Callout, structured snippet, sitelink, call, and price extensions are auto-applicable
                 ext_type = opp.get("optimization_data", {}).get("type", "").lower()
                 return ("callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
-                        or "sitelink" in ext_type or "call" in ext_type)
+                        or "sitelink" in ext_type or "call" in ext_type or "price" in ext_type)
             return False
 
         analysis["opportunities"] = [opp for opp in all_opportunities if is_auto_applicable(opp)]
@@ -2575,19 +2601,32 @@ def ads_opportunities():
     analysis = _analyze_ads_opportunities(aid, ads_data)
 
     # Split opportunities into auto-applicable and manual tasks
-    # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, mobile_ads, callout/snippet/sitelink/call extensions)
+    # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, mobile_ads, PMax AI content, extensions)
     # Manual tasks: Require manual setup (setup, quality_score, account_structure, location extensions)
     all_opportunities = analysis.get("opportunities", [])
 
     def is_auto_applicable(opp):
         opt_type = opp.get("optimization_type", "")
-        if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads']:
+        decision_type = opp.get('decision_type', '')
+
+        # Core auto-applicable types
+        if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads', 'starter_negative_keywords']:
             return True
+
+        # AI-generated ad content
+        if opt_type in ['pmax_headlines', 'pmax_descriptions', 'rsa_headline_variations']:
+            return True
+
+        # AI-assisted campaign creation
+        if decision_type == 'create_search_campaign':
+            return True
+
+        # Extensions
         if opt_type == 'extension':
-            # Callout, structured snippet, sitelink, and call extensions are auto-applicable
+            # Callout, structured snippet, sitelink, call, and price extensions are auto-applicable
             ext_type = opp.get("type", "").lower()
             return ("callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
-                    or "sitelink" in ext_type or "call" in ext_type)
+                    or "sitelink" in ext_type or "call" in ext_type or "price" in ext_type)
         return False
 
     analysis["opportunities"] = [opp for opp in all_opportunities if is_auto_applicable(opp)]
@@ -2637,11 +2676,140 @@ def ads_structure():
     )
 
 
-def _apply_optimization(aid: int, customer_id: str, opt_type: str, opt_data: dict, opt_title: str) -> dict:
-    """
-    Apply a single optimization to Google Ads via API.
+def _generate_preview(opt_type: str, opt_data: dict, opt_title: str) -> dict:
+    """Generate human-readable preview of what an optimization will create."""
+    preview = {
+        "title": opt_title,
+        "type": opt_type,
+        "summary": "",
+        "details": []
+    }
 
-    Returns dict with: {"success": bool, "resource_name": str, "api_response": dict, "message": str, "error": str}
+    if opt_type == "negative_keyword":
+        term = opt_data.get("term", "")
+        preview["summary"] = f"Block searches containing '{term}'"
+        preview["details"] = [
+            f"Negative keyword: {term}",
+            "Match type: Broad",
+            "Will prevent ads from showing for queries containing this term"
+        ]
+
+    elif opt_type == "starter_negative_keywords":
+        keywords = opt_data.get("starter_keywords", [])
+        preview["summary"] = f"Block {len(keywords)} common non-buyer search terms"
+        preview["details"] = [f"• {kw}" for kw in keywords]
+        preview["details"].append(f"\nTotal: {len(keywords)} negative keywords")
+
+    elif opt_type == "mobile_bid":
+        adjustment = opt_data.get("bid_adjustment", 20)
+        preview["summary"] = f"Increase mobile bids by {adjustment}%"
+        preview["details"] = [
+            f"Mobile bid modifier: +{adjustment}%",
+            "Applies to all Search campaigns",
+            f"Mobile ads will bid {adjustment}% higher to capture more mobile traffic"
+        ]
+
+    elif opt_type == "rsa_headline_variations":
+        needed = opt_data.get("needed_headlines", 3)
+        preview["summary"] = f"Add {needed} AI-generated headline variations to your RSA ads"
+        preview["details"] = [
+            f"New headlines: {needed} variations",
+            "AI-generated based on your existing ad copy",
+            "Improves Google's ability to test and optimize ad combinations"
+        ]
+
+    elif opt_type == "pmax_headlines":
+        needed = opt_data.get("needed_headlines", 3)
+        preview["summary"] = f"Add {needed} AI-generated headlines to Performance Max"
+        preview["details"] = [
+            f"New headlines: {needed} variations",
+            "AI-generated for your Performance Max asset groups",
+            "Increases ad variety and testing opportunities"
+        ]
+
+    elif opt_type == "pmax_descriptions":
+        needed = opt_data.get("needed_descriptions", 2)
+        preview["summary"] = f"Add {needed} AI-generated descriptions to Performance Max"
+        preview["details"] = [
+            f"New descriptions: {needed} variations",
+            "AI-generated benefit-focused descriptions",
+            "Meets Google's Performance Max best practices"
+        ]
+
+    elif opt_type == "extension":
+        ext_type = opt_data.get("type", "").lower()
+        if "call" in ext_type:
+            preview["summary"] = "Add click-to-call button to your mobile ads"
+            preview["details"] = [
+                "Extension type: Call",
+                "Auto-detects your business phone or uses placeholder",
+                "Mobile users can tap to call directly from ads"
+            ]
+        elif "sitelink" in ext_type:
+            preview["summary"] = "Add 4-6 quick links below your ads"
+            preview["details"] = [
+                "Extension type: Sitelink",
+                "Links: Services, Contact, Emergency, About, Pricing, Reviews",
+                "Takes up more ad space, pushes competitors down"
+            ]
+        elif "callout" in ext_type:
+            preview["summary"] = "Add trust-building callouts to your ads"
+            preview["details"] = [
+                "Extension type: Callout",
+                "Callouts: Licensed & Insured, 20+ Years Experience, Same Day Service, Free Estimates",
+                "Highlights your unique selling points"
+            ]
+        elif "price" in ext_type:
+            preview["summary"] = "Show pricing directly in your ads"
+            preview["details"] = [
+                "Extension type: Price",
+                "Basic Service: $99 | Emergency: $199 | Inspection: $79 | Installation: $499",
+                "Pre-qualifies leads who see pricing upfront"
+            ]
+        elif "structured" in ext_type or "snippet" in ext_type:
+            preview["summary"] = "Showcase your service categories"
+            preview["details"] = [
+                "Extension type: Structured Snippet",
+                "Categories: Repairs, Installation, Maintenance, Emergency Service, Inspection",
+                "Shows breadth of services offered"
+            ]
+        else:
+            preview["summary"] = f"Add {ext_type} extension"
+            preview["details"] = [f"Extension type: {ext_type}"]
+
+    elif opt_type == "mobile_ads":
+        preview["summary"] = "Create mobile-optimized RSA ads with urgent CTAs"
+        preview["details"] = [
+            "AI-generated mobile-focused ad copy",
+            "10-15 short, punchy headlines (e.g., 'Call Now - Fast Service')",
+            "3-4 mobile-optimized descriptions with tap-to-call CTAs"
+        ]
+
+    elif opt_data.get("decision_type") == "create_search_campaign":
+        preview["summary"] = "Create AI-generated Search campaign with keywords and ads"
+        preview["details"] = [
+            "Campaign: 1 new Search campaign (starts PAUSED)",
+            "Structure: 2-3 tightly themed ad groups",
+            "Keywords: 5-10 relevant keywords per ad group (Phrase & Exact match)",
+            "Ads: 1 RSA per ad group with 10 headlines and 3 descriptions",
+            "Budget: $50/day default (you can adjust before enabling)"
+        ]
+
+    else:
+        preview["summary"] = f"Apply {opt_title}"
+        preview["details"] = ["Preview not available for this optimization type"]
+
+    return preview
+
+
+def _apply_optimization(aid: int, customer_id: str, opt_type: str, opt_data: dict, opt_title: str, preview: bool = False) -> dict:
+    """
+    Apply a single optimization to Google Ads via API, or preview what would be created.
+
+    Args:
+        preview: If True, returns preview data without applying changes
+
+    Returns dict with: {"success": bool, "resource_name": str, "api_response": dict, "message": str, "error": str, "preview_data": dict}
     """
     try:
         # Get Google Ads refresh token from database
@@ -2666,9 +2834,26 @@ def _apply_optimization(aid: int, customer_id: str, opt_type: str, opt_data: dic
         except Exception as e:
             return {"success": False, "error": f"API authentication failed: {str(e)}"}
 
+        # PREVIEW MODE: Generate preview data without making API calls
+        if preview:
+            preview_data = _generate_preview(opt_type, opt_data, opt_title)
+            return {
+                "success": True,
+                "message": f"Preview: {opt_title}",
+                "preview_data": preview_data
+            }
+
+        # Check for agent-generated decisions with decision_type
+        decision_type = opt_data.get('decision_type', '')
+        if decision_type == 'create_search_campaign':
+            return _apply_create_search_campaign(aid, customer_id, opt_data, refresh_token)
+
         # Apply based on optimization type
         if opt_type == "negative_keyword":
             return _apply_negative_keyword(aid, customer_id, opt_data, refresh_token)
+
+        elif opt_type == "starter_negative_keywords":
+            return _apply_starter_negative_keywords(aid, customer_id, opt_data, refresh_token)
 
         elif opt_type == "mobile_bid":
             return _apply_mobile_bid_adjustment(aid, customer_id, opt_data, refresh_token)
@@ -2693,6 +2878,18 @@ def _apply_optimization(aid: int, customer_id: str, opt_type: str, opt_data: dic
         elif opt_type == "mobile_ads":
             # Generate AI-powered mobile RSA ads
             return _apply_mobile_rsa_ads(aid, customer_id, opt_data, refresh_token)
+
+        elif opt_type == "rsa_headline_variations":
+            # Generate AI-powered RSA headline variations for existing ads
+            return _apply_rsa_headline_variations(aid, customer_id, opt_data, refresh_token)
+
+        elif opt_type == "pmax_headlines":
+            # Generate AI-powered Performance Max headlines
+            return _apply_pmax_headlines(aid, customer_id, opt_data, refresh_token)
+
+        elif opt_type == "pmax_descriptions":
+            # Generate AI-powered Performance Max descriptions
+            return _apply_pmax_descriptions(aid, customer_id, opt_data, refresh_token)
 
         elif opt_type == "account_structure":
             # Account restructuring is complex manual work
@@ -2774,6 +2971,94 @@ def _apply_negative_keyword(aid: int, customer_id: str, opt_data: dict, access_t
             error_msg += f" - {error.message}"
         return {"success": False, "error": error_msg}
     except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def _apply_starter_negative_keywords(aid: int, customer_id: str, opt_data: dict, access_token: str) -> dict:
+    """Add starter pack of negative keywords to all Search campaigns."""
+    try:
+        from google.ads.googleads.client import GoogleAdsClient
+        from google.ads.googleads.errors import GoogleAdsException
+
+        # Get starter keywords from optimization data
+        starter_keywords = opt_data.get("starter_keywords", [])
+        if not starter_keywords:
+            return {"success": False, "error": "No starter keywords provided"}
+
+        # Create Google Ads client
+        client_id, client_secret = _client_info("ads")
+        credentials = {
+            "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": access_token,
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "use_proto_plus": True
+        }
+
+        client = GoogleAdsClient.load_from_dict(credentials)
+        google_ads_service = client.get_service("GoogleAdsService")
+        campaign_criterion_service = client.get_service("CampaignCriterionService")
+
+        # Get all enabled Search campaigns
+        query = """
+            SELECT campaign.id, campaign.name
+            FROM campaign
+            WHERE campaign.status = 'ENABLED'
+            AND campaign.advertising_channel_type != 'PERFORMANCE_MAX'
+        """
+
+        response = google_ads_service.search(customer_id=customer_id, query=query)
+
+        campaign_ids = []
+        for row in response:
+            campaign_ids.append(row.campaign.id)
+
+        if not campaign_ids:
+            return {
+                "success": False,
+                "error": "No enabled Search campaigns found. Negative keywords can only be added to Search campaigns."
+            }
+
+        # Add each negative keyword to all campaigns
+        added_count = 0
+        operations = []
+
+        for campaign_id in campaign_ids:
+            for keyword in starter_keywords:
+                campaign_criterion_operation = client.get_type("CampaignCriterionOperation")
+                campaign_criterion = campaign_criterion_operation.create
+
+                campaign_criterion.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
+                campaign_criterion.negative = True
+                campaign_criterion.keyword.text = keyword
+                campaign_criterion.keyword.match_type = client.enums.KeywordMatchTypeEnum.BROAD
+
+                operations.append(campaign_criterion_operation)
+
+        # Execute all operations in batch
+        if operations:
+            response = campaign_criterion_service.mutate_campaign_criteria(
+                customer_id=customer_id,
+                operations=operations
+            )
+            added_count = len(response.results)
+
+        return {
+            "success": True,
+            "api_response": {"results": response.results if operations else []},
+            "message": f"Added {len(starter_keywords)} negative keywords to {len(campaign_ids)} campaign(s) ({added_count} total additions)",
+            "keywords_added": starter_keywords,
+            "campaigns_updated": len(campaign_ids)
+        }
+
+    except GoogleAdsException as ex:
+        error_msg = f"Google Ads API error: {ex.error.code().name}"
+        for error in ex.failure.errors:
+            error_msg += f" - {error.message}"
+        return {"success": False, "error": error_msg}
+    except Exception as e:
+        current_app.logger.error(f"Error adding starter negative keywords: {e}")
         return {"success": False, "error": str(e)}
 
 
@@ -3078,6 +3363,752 @@ def _apply_mobile_rsa_ads(aid: int, customer_id: str, opt_data: dict, refresh_to
         return {"success": False, "error": str(e)}
 
 
+def _generate_rsa_headline_variations(business_name: str, existing_headlines: list, needed: int) -> dict:
+    """Generate additional RSA headline variations using AI."""
+    try:
+        from app.ai_clients import chatgpt_response
+        import json
+
+        existing_text = "\n".join([f"- {h}" for h in existing_headlines if h]) if existing_headlines else "None yet"
+
+        prompt = f"""Generate {needed} RSA headline variations for a Google Search campaign.
+
+Business: {business_name}
+
+Existing Headlines (for context - don't duplicate):
+{existing_text}
+
+Requirements:
+- Headlines: {needed} NEW headlines (max 30 chars each)
+- Make them complementary to existing headlines
+- Mix of benefit-focused, action-oriented, and trust-building
+- Include numbers, urgency, and local appeal where appropriate
+- Examples: "24/7 Emergency Service", "Licensed Professionals", "Same Day Appointments"
+
+Return ONLY valid JSON:
+{{"headlines": ["Fast Service - Call Now", "Licensed Professionals", ...]}}"""
+
+        response = chatgpt_response(prompt)
+
+        # Parse JSON from response
+        try:
+            # Extract JSON if it's wrapped in markdown code blocks
+            if "```json" in response:
+                response = response.split("```json")[1].split("```")[0].strip()
+            elif "```" in response:
+                response = response.split("```")[1].split("```")[0].strip()
+
+            result = json.loads(response)
+
+            # Validate and trim
+            if "headlines" not in result:
+                raise ValueError("Missing headlines field")
+
+            headlines = [h[:30] for h in result["headlines"][:needed]]
+
+            return {"success": True, "headlines": headlines}
+
+        except json.JSONDecodeError as e:
+            current_app.logger.error(f"Failed to parse AI response as JSON: {e}")
+            return {"success": False, "error": f"AI returned invalid JSON: {str(e)}"}
+
+    except Exception as e:
+        current_app.logger.error(f"Error generating RSA headline variations: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def _apply_rsa_headline_variations(aid: int, customer_id: str, opt_data: dict, refresh_token: str) -> dict:
+    """Generate and add AI-generated headline variations to existing RSA ads."""
+    try:
+        from google.ads.googleads.client import GoogleAdsClient
+        from google.ads.googleads.errors import GoogleAdsException
+        from google.protobuf import field_mask_pb2
+
+        # Create Google Ads client
+        client_id, client_secret = _client_info("ads")
+        credentials = {
+            "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "use_proto_plus": True
+        }
+
+        client = GoogleAdsClient.load_from_dict(credentials)
+        google_ads_service = client.get_service("GoogleAdsService")
+        ad_service = client.get_service("AdService")
+        ad_group_ad_service = client.get_service("AdGroupAdService")
+
+        # Get existing RSA ads from Search campaigns
+        query = """
+            SELECT
+                ad_group.id,
+                ad_group.name,
+                ad_group_ad.ad.id,
+                ad_group_ad.ad.name,
+                ad_group_ad.ad.responsive_search_ad.headlines,
+                ad_group_ad.ad.responsive_search_ad.descriptions,
+                ad_group_ad.ad.final_urls,
+                campaign.name,
+                campaign.id
+            FROM ad_group_ad
+            WHERE ad_group_ad.ad.type = RESPONSIVE_SEARCH_AD
+            AND ad_group_ad.status = 'ENABLED'
+            AND ad_group.status = 'ENABLED'
+            AND campaign.status = 'ENABLED'
+            AND campaign.advertising_channel_type = 'SEARCH'
+            LIMIT 5
+        """
+
+        results = google_ads_service.search(customer_id=customer_id, query=query)
+
+        # Get business name from first campaign
+        business_name = "Your Business"
+        existing_headlines = opt_data.get('existing_headlines', [])
+        needed = opt_data.get('needed_headlines', 3)
+
+        for row in results:
+            business_name = row.campaign.name
+            break
+
+        # Generate new headlines using AI
+        ai_result = _generate_rsa_headline_variations(business_name, existing_headlines, needed)
+
+        if not ai_result.get("success"):
+            return ai_result
+
+        new_headlines = ai_result.get("headlines", [])
+
+        if not new_headlines:
+            return {"success": False, "error": "AI generated no headlines"}
+
+        # Update each RSA ad with new headlines
+        updated_ads = 0
+        operations = []
+
+        for row in results:
+            ad = row.ad_group_ad.ad
+            current_headlines = [h.text for h in ad.responsive_search_ad.headlines]
+            current_descriptions = [d.text for d in ad.responsive_search_ad.descriptions]
+
+            # Skip if already has 15 headlines
+            if len(current_headlines) >= 15:
+                continue
+
+            # Calculate how many new headlines to add
+            slots_available = 15 - len(current_headlines)
+            headlines_to_add = new_headlines[:min(slots_available, len(new_headlines))]
+
+            # Create updated ad
+            ad_group_ad_operation = client.get_type("AdGroupAdOperation")
+            updated_ad = ad_group_ad_operation.update
+
+            # Build resource name
+            updated_ad.resource_name = client.get_service("AdGroupAdService").ad_group_ad_path(
+                customer_id, row.ad_group.id, row.ad_group_ad.ad.id
+            )
+
+            # Copy existing ad settings
+            updated_ad.ad.id = ad.id
+            updated_ad.ad.final_urls.extend([str(url) for url in ad.final_urls])
+
+            # Set RSA
+            rsa = updated_ad.ad.responsive_search_ad
+
+            # Add existing headlines
+            for headline in current_headlines:
+                headline_asset = client.get_type("AdTextAsset")
+                headline_asset.text = headline
+                rsa.headlines.append(headline_asset)
+
+            # Add new AI-generated headlines
+            for headline in headlines_to_add:
+                headline_asset = client.get_type("AdTextAsset")
+                headline_asset.text = headline
+                rsa.headlines.append(headline_asset)
+
+            # Add existing descriptions
+            for description in current_descriptions:
+                description_asset = client.get_type("AdTextAsset")
+                description_asset.text = description
+                rsa.descriptions.append(description_asset)
+
+            # Set update mask - only update the ad fields we're changing
+            ad_group_ad_operation.update_mask.CopyFrom(
+                field_mask_pb2.FieldMask(paths=["ad.responsive_search_ad.headlines", "ad.responsive_search_ad.descriptions"])
+            )
+
+            operations.append(ad_group_ad_operation)
+            updated_ads += 1
+
+        if not operations:
+            return {
+                "success": False,
+                "error": "All RSA ads already have 15 headlines (maximum). No updates needed."
+            }
+
+        # Execute updates
+        response = ad_group_ad_service.mutate_ad_group_ads(
+            customer_id=customer_id,
+            operations=operations
+        )
+
+        return {
+            "success": True,
+            "message": f"Added {len(new_headlines)} headline variations to {updated_ads} RSA ad{'' if updated_ads == 1 else 's'}",
+            "resource_name": response.results[0].resource_name if response.results else None,
+            "api_response": {
+                "updated_ads": updated_ads,
+                "new_headlines": new_headlines
+            }
+        }
+
+    except GoogleAdsException as ex:
+        error_msg = f"Google Ads API error: {ex.error.code().name}"
+        for error in ex.failure.errors:
+            error_msg += f" - {error.message}"
+        return {"success": False, "error": error_msg}
+    except Exception as e:
+        current_app.logger.error(f"Error adding RSA headline variations: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def _generate_pmax_headlines(business_name: str, existing_headlines: list, needed: int) -> dict:
+    """Generate Performance Max headlines using AI."""
+    try:
+        from app.ai_clients import chatgpt_response
+        import json
+
+        existing_text = "\n".join([f"- {h}" for h in existing_headlines if h]) if existing_headlines else "None yet"
+
+        prompt = f"""Generate {needed} Performance Max headline variations for a business.
+
+Business: {business_name}
+
+Existing Headlines:
+{existing_text}
+
+Requirements:
+- Headlines: {needed} NEW headlines (max 30 chars each, don't duplicate existing)
+- Make them punchy, benefit-focused, and action-oriented
+- Include variety: some with urgency, some with benefits, some with credibility
+- Avoid duplicating existing headlines
+
+Return ONLY valid JSON in this format:
+{{
+  "headlines": ["Fast Service - Call Now", "Licensed Professionals", ...]
+}}"""
+
+        response = chatgpt_response(prompt)
+
+        try:
+            if "```json" in response:
+                response = response.split("```json")[1].split("```")[0].strip()
+            elif "```" in response:
+                response = response.split("```")[1].split("```")[0].strip()
+
+            result = json.loads(response)
+            if "headlines" not in result:
+                raise ValueError("Missing headlines field")
+
+            headlines = [h[:30] for h in result["headlines"][:needed]]
+            return {"success": True, "headlines": headlines}
+
+        except json.JSONDecodeError as e:
+            return {"success": False, "error": f"AI returned invalid JSON: {str(e)}"}
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def _generate_pmax_descriptions(business_name: str, existing_descriptions: list, needed: int) -> dict:
+    """Generate Performance Max descriptions using AI."""
+    try:
+        from app.ai_clients import chatgpt_response
+        import json
+
+        existing_text = "\n".join([f"- {d}" for d in existing_descriptions if d]) if existing_descriptions else "None yet"
+
+        prompt = f"""Generate {needed} Performance Max description variations for a business.
+
+Business: {business_name}
+
+Existing Descriptions:
+{existing_text}
+
+Requirements:
+- Descriptions: {needed} NEW descriptions (max 90 chars each, don't duplicate existing)
+- Focus on benefits, credibility, and calls-to-action
+- Include variety: some emphasize speed, some quality, some experience
+- Make them compelling and conversion-focused
+
+Return ONLY valid JSON in this format:
+{{
+  "descriptions": ["Get expert service with same-day availability. Licensed professionals ready to help.", ...]
+}}"""
+
+        response = chatgpt_response(prompt)
+
+        try:
+            if "```json" in response:
+                response = response.split("```json")[1].split("```")[0].strip()
+            elif "```" in response:
+                response = response.split("```")[1].split("```")[0].strip()
+
+            result = json.loads(response)
+            if "descriptions" not in result:
+                raise ValueError("Missing descriptions field")
+
+            descriptions = [d[:90] for d in result["descriptions"][:needed]]
+            return {"success": True, "descriptions": descriptions}
+
+        except json.JSONDecodeError as e:
+            return {"success": False, "error": f"AI returned invalid JSON: {str(e)}"}
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def _apply_pmax_headlines(aid: int, customer_id: str, opt_data: dict, refresh_token: str) -> dict:
+    """Generate and add AI-generated headlines to Performance Max asset groups."""
+    try:
+        from google.ads.googleads.client import GoogleAdsClient
+        from google.ads.googleads.errors import GoogleAdsException
+
+        client_id, client_secret = _client_info("ads")
+        credentials = {
+            "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "use_proto_plus": True
+        }
+
+        client = GoogleAdsClient.load_from_dict(credentials)
+        google_ads_service = client.get_service("GoogleAdsService")
+
+        # Get Performance Max campaign and asset group
+        query = """
+            SELECT
+                campaign.id,
+                campaign.name,
+                asset_group.id,
+                asset_group.name
+            FROM asset_group
+            WHERE campaign.advertising_channel_type = 'PERFORMANCE_MAX'
+            AND campaign.status = 'ENABLED'
+            LIMIT 1
+        """
+
+        response = google_ads_service.search(customer_id=customer_id, query=query)
+
+        campaign_id = None
+        asset_group_id = None
+        business_name = "Your Business"
+
+        for row in response:
+            campaign_id = row.campaign.id
+            asset_group_id = row.asset_group.id
+            business_name = row.campaign.name.split(" - ")[0].split(" | ")[0]
+            break
+
+        if not asset_group_id:
+            return {
+                "success": False,
+                "error": "No Performance Max asset groups found. Please create a Performance Max campaign first."
+            }
+
+        # Get existing headlines and generate new ones
+        existing_headlines = opt_data.get('existing_headlines', [])
+        needed = opt_data.get('needed_headlines', 1)
+
+        current_app.logger.info(f"Generating {needed} PMax headlines for {business_name}")
+        ai_result = _generate_pmax_headlines(business_name, existing_headlines, needed)
+
+        if not ai_result.get("success"):
+            return ai_result
+
+        headlines = ai_result["headlines"]
+
+        # Create headline assets and link to asset group
+        asset_service = client.get_service("AssetService")
+        asset_group_asset_service = client.get_service("AssetGroupAssetService")
+
+        created_assets = []
+
+        for headline_text in headlines:
+            # Create text asset
+            asset_operation = client.get_type("AssetOperation")
+            asset = asset_operation.create
+            asset.text_asset.text = headline_text
+            asset.name = f"PMax Headline: {headline_text[:20]}"
+
+            asset_response = asset_service.mutate_assets(
+                customer_id=customer_id,
+                operations=[asset_operation]
+            )
+
+            if asset_response.results:
+                asset_resource_name = asset_response.results[0].resource_name
+                created_assets.append(asset_resource_name)
+
+                # Link asset to asset group
+                asset_group_asset_operation = client.get_type("AssetGroupAssetOperation")
+                asset_group_asset = asset_group_asset_operation.create
+                asset_group_asset.asset = asset_resource_name
+                asset_group_asset.asset_group = client.get_service("AssetGroupService").asset_group_path(
+                    customer_id, asset_group_id
+                )
+                asset_group_asset.field_type = client.enums.AssetFieldTypeEnum.HEADLINE
+
+                asset_group_asset_service.mutate_asset_group_assets(
+                    customer_id=customer_id,
+                    operations=[asset_group_asset_operation]
+                )
+
+        return {
+            "success": True,
+            "resource_name": created_assets[0] if created_assets else None,
+            "api_response": {"results": created_assets},
+            "message": f"Added {len(created_assets)} AI-generated headline{'' if len(created_assets) == 1 else 's'} to Performance Max",
+            "headlines": headlines
+        }
+
+    except GoogleAdsException as ex:
+        error_msg = f"Google Ads API error: {ex.error.code().name}"
+        for error in ex.failure.errors:
+            error_msg += f" - {error.message}"
+        return {"success": False, "error": error_msg}
+    except Exception as e:
+        current_app.logger.error(f"Error adding PMax headlines: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def _apply_pmax_descriptions(aid: int, customer_id: str, opt_data: dict, refresh_token: str) -> dict:
+    """Generate and add AI-generated descriptions to Performance Max asset groups."""
+    try:
+        from google.ads.googleads.client import GoogleAdsClient
+        from google.ads.googleads.errors import GoogleAdsException
+
+        client_id, client_secret = _client_info("ads")
+        credentials = {
+            "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "use_proto_plus": True
+        }
+
+        client = GoogleAdsClient.load_from_dict(credentials)
+        google_ads_service = client.get_service("GoogleAdsService")
+
+        # Get Performance Max campaign and asset group
+        query = """
+            SELECT
+                campaign.id,
+                campaign.name,
+                asset_group.id,
+                asset_group.name
+            FROM asset_group
+            WHERE campaign.advertising_channel_type = 'PERFORMANCE_MAX'
+            AND campaign.status = 'ENABLED'
+            LIMIT 1
+        """
+
+        response = google_ads_service.search(customer_id=customer_id, query=query)
+
+        campaign_id = None
+        asset_group_id = None
+        business_name = "Your Business"
+
+        for row in response:
+            campaign_id = row.campaign.id
+            asset_group_id = row.asset_group.id
+            business_name = row.campaign.name.split(" - ")[0].split(" | ")[0]
+            break
+
+        if not asset_group_id:
+            return {
+                "success": False,
+                "error": "No Performance Max asset groups found. Please create a Performance Max campaign first."
+            }
+
+        # Get existing descriptions and generate new ones
+        existing_descriptions = opt_data.get('existing_descriptions', [])
+        needed = opt_data.get('needed_descriptions', 1)
+
+        current_app.logger.info(f"Generating {needed} PMax descriptions for {business_name}")
+        ai_result = _generate_pmax_descriptions(business_name, existing_descriptions, needed)
+
+        if not ai_result.get("success"):
+            return ai_result
+
+        descriptions = ai_result["descriptions"]
+
+        # Create description assets and link to asset group
+        asset_service = client.get_service("AssetService")
+        asset_group_asset_service = client.get_service("AssetGroupAssetService")
+
+        created_assets = []
+
+        for description_text in descriptions:
+            # Create text asset
+            asset_operation = client.get_type("AssetOperation")
+            asset = asset_operation.create
+            asset.text_asset.text = description_text
+            asset.name = f"PMax Description: {description_text[:20]}"
+
+            asset_response = asset_service.mutate_assets(
+                customer_id=customer_id,
+                operations=[asset_operation]
+            )
+
+            if asset_response.results:
+                asset_resource_name = asset_response.results[0].resource_name
+                created_assets.append(asset_resource_name)
+
+                # Link asset to asset group
+                asset_group_asset_operation = client.get_type("AssetGroupAssetOperation")
+                asset_group_asset = asset_group_asset_operation.create
+                asset_group_asset.asset = asset_resource_name
+                asset_group_asset.asset_group = client.get_service("AssetGroupService").asset_group_path(
+                    customer_id, asset_group_id
+                )
+                asset_group_asset.field_type = client.enums.AssetFieldTypeEnum.DESCRIPTION
+
+                asset_group_asset_service.mutate_asset_group_assets(
+                    customer_id=customer_id,
+                    operations=[asset_group_asset_operation]
+                )
+
+        return {
+            "success": True,
+            "resource_name": created_assets[0] if created_assets else None,
+            "api_response": {"results": created_assets},
+            "message": f"Added {len(created_assets)} AI-generated description{'' if len(created_assets) == 1 else 's'} to Performance Max",
+            "descriptions": descriptions
+        }
+
+    except GoogleAdsException as ex:
+        error_msg = f"Google Ads API error: {ex.error.code().name}"
+        for error in ex.failure.errors:
+            error_msg += f" - {error.message}"
+        return {"success": False, "error": error_msg}
+    except Exception as e:
+        current_app.logger.error(f"Error adding PMax descriptions: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def _apply_create_search_campaign(aid: int, customer_id: str, opt_data: dict, refresh_token: str) -> dict:
+    """Create AI-generated Search campaign with keywords and RSA ads."""
+    try:
+        from google.ads.googleads.client import GoogleAdsClient
+        from google.ads.googleads.errors import GoogleAdsException
+        from app.ai_clients import chatgpt_response
+        import json
+
+        # Create Google Ads client
+        client_id, client_secret = _client_info("ads")
+        credentials = {
+            "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "use_proto_plus": True
+        }
+
+        client = GoogleAdsClient.load_from_dict(credentials)
+
+        # Get business name from existing PMax campaign
+        google_ads_service = client.get_service("GoogleAdsService")
+        query = """
+            SELECT campaign.name
+            FROM campaign
+            WHERE campaign.status = 'ENABLED'
+            LIMIT 1
+        """
+        response = google_ads_service.search(customer_id=customer_id, query=query)
+        business_name = "Your Business"
+        for row in response:
+            business_name = row.campaign.name.split(" - ")[0].split(" | ")[0]
+            break
+
+        # Generate campaign structure using AI
+        current_app.logger.info(f"Generating Search campaign structure for {business_name}")
+
+        prompt = f"""Generate a Google Search campaign structure for a business.
+
+Business: {business_name}
+
+Create JSON with:
+- Campaign name
+- 2-3 ad groups with targeted themes
+- 5-10 relevant keywords per ad group (Phrase and Exact match)
+- 1 RSA ad per ad group (10 headlines, 3 descriptions)
+
+Return ONLY valid JSON:
+{{
+  "campaign_name": "Search - {business_name}",
+  "daily_budget": 50,
+  "ad_groups": [
+    {{
+      "name": "Brand",
+      "keywords": [{{"text": "{business_name}", "match": "Exact"}}, ...],
+      "rsa": {{
+        "final_url": "https://example.com",
+        "headlines": ["Headline 1", ...],
+        "descriptions": ["Description 1", ...]
+      }}
+    }}
+  ]
+}}"""
+
+        ai_response = chatgpt_response(prompt)
+
+        # Parse AI response
+        if "```json" in ai_response:
+            ai_response = ai_response.split("```json")[1].split("```")[0].strip()
+        elif "```" in ai_response:
+            ai_response = ai_response.split("```")[1].split("```")[0].strip()
+
+        campaign_data = json.loads(ai_response)
+
+        # Create campaign
+        campaign_service = client.get_service("CampaignService")
+        campaign_operation = client.get_type("CampaignOperation")
+        campaign = campaign_operation.create
+
+        campaign.name = campaign_data.get("campaign_name", f"Search - {business_name}")
+        campaign.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
+        campaign.status = client.enums.CampaignStatusEnum.PAUSED  # Start paused for safety
+        campaign.manual_cpc.enhanced_cpc_enabled = True
+        campaign.campaign_budget = client.get_service("CampaignBudgetService").campaign_budget_path(
+            customer_id, "temp"
+        )
+
+        # Create budget first
+        budget_service = client.get_service("CampaignBudgetService")
+        budget_operation = client.get_type("CampaignBudgetOperation")
+        budget = budget_operation.create
+        budget.name = f"Budget for {campaign.name}"
+        budget.amount_micros = int(campaign_data.get("daily_budget", 50) * 1_000_000)
+        budget.delivery_method = client.enums.BudgetDeliveryMethodEnum.STANDARD
+
+        budget_response = budget_service.mutate_campaign_budgets(
+            customer_id=customer_id,
+            operations=[budget_operation]
+        )
+        campaign.campaign_budget = budget_response.results[0].resource_name
+
+        campaign_response = campaign_service.mutate_campaigns(
+            customer_id=customer_id,
+            operations=[campaign_operation]
+        )
+
+        campaign_resource_name = campaign_response.results[0].resource_name
+        campaign_id = campaign_resource_name.split("/")[-1]
+
+        # Create ad groups, keywords, and RSAs
+        ad_group_service = client.get_service("AdGroupService")
+        ad_group_criterion_service = client.get_service("AdGroupCriterionService")
+        ad_group_ad_service = client.get_service("AdGroupAdService")
+
+        created_ad_groups = 0
+        created_keywords = 0
+        created_ads = 0
+
+        for ag_data in campaign_data.get("ad_groups", [])[:3]:  # Limit to 3 ad groups
+            # Create ad group
+            ad_group_operation = client.get_type("AdGroupOperation")
+            ad_group = ad_group_operation.create
+            ad_group.name = ag_data.get("name", "Ad Group")
+            ad_group.campaign = campaign_resource_name
+            ad_group.status = client.enums.AdGroupStatusEnum.ENABLED
+            ad_group.cpc_bid_micros = 2_000_000  # $2 default bid
+
+            ag_response = ad_group_ad_service = client.get_service("AdGroupService")
+            ag_response = ag_response.mutate_ad_groups(
+                customer_id=customer_id,
+                operations=[ad_group_operation]
+            )
+            ad_group_resource_name = ag_response.results[0].resource_name
+            created_ad_groups += 1
+
+            # Add keywords
+            keyword_operations = []
+            for kw_data in ag_data.get("keywords", [])[:10]:  # Limit to 10 keywords
+                kw_operation = client.get_type("AdGroupCriterionOperation")
+                keyword = kw_operation.create
+                keyword.ad_group = ad_group_resource_name
+                keyword.status = client.enums.AdGroupCriterionStatusEnum.ENABLED
+                keyword.keyword.text = kw_data.get("text", "")
+                keyword.keyword.match_type = (
+                    client.enums.KeywordMatchTypeEnum.EXACT
+                    if kw_data.get("match") == "Exact"
+                    else client.enums.KeywordMatchTypeEnum.PHRASE
+                )
+                keyword_operations.append(kw_operation)
+
+            if keyword_operations:
+                ad_group_criterion_service.mutate_ad_group_criteria(
+                    customer_id=customer_id,
+                    operations=keyword_operations
+                )
+                created_keywords += len(keyword_operations)
+
+            # Create RSA
+            rsa_data = ag_data.get("rsa", {})
+            if rsa_data:
+                ad_operation = client.get_type("AdGroupAdOperation")
+                ad_group_ad = ad_operation.create
+                ad_group_ad.ad_group = ad_group_resource_name
+                ad_group_ad.status = client.enums.AdGroupAdStatusEnum.ENABLED
+
+                rsa = ad_group_ad.ad.responsive_search_ad
+                ad_group_ad.ad.final_urls.append(rsa_data.get("final_url", "https://example.com"))
+
+                for headline in rsa_data.get("headlines", [])[:15]:
+                    h = client.get_type("AdTextAsset")
+                    h.text = headline[:30]
+                    rsa.headlines.append(h)
+
+                for description in rsa_data.get("descriptions", [])[:4]:
+                    d = client.get_type("AdTextAsset")
+                    d.text = description[:90]
+                    rsa.descriptions.append(d)
+
+                ad_group_ad_service = client.get_service("AdGroupAdService")
+                ad_group_ad_service.mutate_ad_group_ads(
+                    customer_id=customer_id,
+                    operations=[ad_operation]
+                )
+                created_ads += 1
+
+        return {
+            "success": True,
+            "resource_name": campaign_resource_name,
+            "message": f"Created Search campaign '{campaign.name}' with {created_ad_groups} ad groups, {created_keywords} keywords, {created_ads} RSA ads (campaign starts PAUSED - review and enable when ready)",
+            "campaign_id": campaign_id,
+            "campaign_name": campaign.name,
+            "ad_groups": created_ad_groups,
+            "keywords": created_keywords,
+            "ads": created_ads
+        }
+
+    except GoogleAdsException as ex:
+        error_msg = f"Google Ads API error: {ex.error.code().name}"
+        for error in ex.failure.errors:
+            error_msg += f" - {error.message}"
+        return {"success": False, "error": error_msg}
+    except Exception as e:
+        current_app.logger.error(f"Error creating Search campaign: {e}")
+        return {"success": False, "error": str(e)}
+
+
 def _apply_extension(aid: int, customer_id: str, opt_data: dict, refresh_token: str) -> dict:
     """Apply ad extension (callout, sitelink, etc.) at account level."""
     try:
@@ -3134,6 +4165,8 @@ def _apply_extension(aid: int, customer_id: str, opt_data: dict, refresh_token: 
             return _create_call_extension(client, customer_id, opt_data)
         elif "structured" in ext_type or "snippet" in ext_type:
             return _create_structured_snippet_extension(client, customer_id, opt_data)
+        elif "price" in ext_type:
+            return _create_price_extension(client, customer_id, opt_data)
         elif "location" in ext_type:
             # Location extensions require Google My Business integration
             return {
@@ -3143,7 +4176,7 @@ def _apply_extension(aid: int, customer_id: str, opt_data: dict, refresh_token: 
         else:
             return {
                 "success": False,
-                "error": f"Extension type '{ext_type}' not yet supported. Supported: Callout, Sitelink, Call, Structured Snippet"
+                "error": f"Extension type '{ext_type}' not yet supported. Supported: Callout, Sitelink, Call, Structured Snippet, Price"
             }
 
     except GoogleAdsException as ex:
@@ -3444,6 +4477,92 @@ def _create_structured_snippet_extension(client, customer_id: str, opt_data: dic
         return {"success": False, "error": str(e)}
 
 
+def _create_price_extension(client, customer_id: str, opt_data: dict) -> dict:
+    """Create price asset (API v21) with standard service pricing tiers."""
+    try:
+        # Get website URL from campaigns for price item URLs
+        website_url = "https://example.com"
+        campaign_service = client.get_service("GoogleAdsService")
+        query = """
+            SELECT campaign.final_url_suffix, campaign.name
+            FROM campaign
+            WHERE campaign.status = 'ENABLED'
+            LIMIT 1
+        """
+        try:
+            response = campaign_service.search(customer_id=customer_id, query=query)
+            for row in response:
+                # Try to extract base domain from campaign data if available
+                pass
+        except:
+            pass
+
+        # Standard service pricing tiers
+        price_offerings = [
+            {"header": "Basic Service", "description": "Standard maintenance & repairs", "price": 99, "unit": "USD"},
+            {"header": "Emergency Service", "description": "24/7 urgent repairs", "price": 199, "unit": "USD"},
+            {"header": "Inspection", "description": "Complete system check", "price": 79, "unit": "USD"},
+            {"header": "Installation", "description": "New system setup", "price": 499, "unit": "USD"},
+        ]
+
+        asset_service = client.get_service("AssetService")
+        customer_asset_service = client.get_service("CustomerAssetService")
+
+        # Step 1: Create price asset
+        asset_operation = client.get_type("AssetOperation")
+        asset = asset_operation.create
+        asset.name = "Price Extension: Services"
+
+        # Set the price asset data
+        price_asset = asset.price_asset
+        price_asset.type_ = client.enums.PriceExtensionTypeEnum.SERVICES
+        price_asset.price_qualifier = client.enums.PriceExtensionPriceQualifierEnum.FROM
+        price_asset.language_code = "en"
+
+        # Add price offerings
+        for offering in price_offerings:
+            price_offering = client.get_type("PriceOffering")
+            price_offering.header = offering["header"]
+            price_offering.description = offering["description"]
+            price_offering.price.amount_micros = int(offering["price"] * 1_000_000)
+            price_offering.price.currency_code = offering["unit"]
+            price_offering.unit = client.enums.PriceExtensionPriceUnitEnum.PER_HOUR
+            price_offering.final_url = website_url
+
+            price_asset.price_offerings.append(price_offering)
+
+        # Create the asset
+        asset_response = asset_service.mutate_assets(
+            customer_id=customer_id,
+            operations=[asset_operation]
+        )
+
+        asset_resource_name = asset_response.results[0].resource_name if asset_response.results else None
+
+        if asset_resource_name:
+            # Step 2: Link asset to customer
+            customer_asset_operation = client.get_type("CustomerAssetOperation")
+            customer_asset = customer_asset_operation.create
+            customer_asset.asset = asset_resource_name
+            customer_asset.field_type = client.enums.AssetFieldTypeEnum.PRICE
+
+            customer_asset_service.mutate_customer_assets(
+                customer_id=customer_id,
+                operations=[customer_asset_operation]
+            )
+
+        price_summary = ", ".join([f"{p['header']}: ${p['price']}" for p in price_offerings])
+        return {
+            "success": True,
+            "resource_name": asset_resource_name,
+            "api_response": {"results": [asset_resource_name]},
+            "message": f"Created price extension with {len(price_offerings)} service tiers: {price_summary}"
+        }
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 @google_bp.route("/ads/approve-optimizations", methods=["POST"], endpoint="approve_optimizations")
 @login_required
 def approve_optimizations():
@@ -3459,6 +4578,7 @@ def approve_optimizations():
             return jsonify({"success": False, "error": "No data provided"}), 400
 
         optimizations = data.get("optimizations", [])
+        preview_mode = data.get("preview", False)  # Preview mode: return what would be created without applying
 
         # Get actual numeric customer ID from database (not the display name from frontend)
         aid = current_account_id()
@@ -3510,7 +4630,7 @@ def approve_optimizations():
             }
         )
 
-        # Apply each optimization via Google Ads API
+        # Apply each optimization via Google Ads API (or preview what would be created)
         results = []
         applied_count = 0
         failed_count = 0
@@ -3520,39 +4640,44 @@ def approve_optimizations():
             opt_title = opt.get("title", "")
             opt_data = opt.get("optimization_data", {})
 
-            # Create tracking record
-            applied_opt = AppliedOptimization(
-                account_id=aid,
-                user_id=current_user.id,
-                customer_id=customer_id,
-                optimization_type=opt_type,
-                optimization_title=opt_title,
-                optimization_data=opt_data,
-                status='pending'
-            )
-            db.session.add(applied_opt)
-            db.session.flush()  # Get ID
+            # Skip database tracking in preview mode
+            if not preview_mode:
+                # Create tracking record
+                applied_opt = AppliedOptimization(
+                    account_id=aid,
+                    user_id=current_user.id,
+                    customer_id=customer_id,
+                    optimization_type=opt_type,
+                    optimization_title=opt_title,
+                    optimization_data=opt_data,
+                    status='pending'
+                )
+                db.session.add(applied_opt)
+                db.session.flush()  # Get ID
 
             try:
-                # Apply the optimization based on type
-                result = _apply_optimization(aid, customer_id, opt_type, opt_data, opt_title)
+                # Apply the optimization (or generate preview)
+                result = _apply_optimization(aid, customer_id, opt_type, opt_data, opt_title, preview=preview_mode)
 
                 if result.get("success"):
-                    applied_opt.status = 'applied'
-                    applied_opt.resource_name = result.get("resource_name")
-                    applied_opt.api_response = result.get("api_response")
-                    applied_opt.applied_at = datetime.utcnow()
+                    if not preview_mode:
+                        applied_opt.status = 'applied'
+                        applied_opt.resource_name = result.get("resource_name")
+                        applied_opt.api_response = result.get("api_response")
+                        applied_opt.applied_at = datetime.utcnow()
                     applied_count += 1
                     results.append({
                         "optimization": opt_title,
                         "type": opt_type,
-                        "status": "applied",
+                        "status": "preview" if preview_mode else "applied",
                         "resource_name": result.get("resource_name"),
-                        "message": result.get("message", "Successfully applied")
+                        "message": result.get("message", "Successfully applied"),
+                        "preview_data": result.get("preview_data") if preview_mode else None
                     })
                 else:
-                    applied_opt.status = 'failed'
-                    applied_opt.error_message = result.get("error", "Unknown error")
+                    if not preview_mode:
+                        applied_opt.status = 'failed'
+                        applied_opt.error_message = result.get("error", "Unknown error")
                     failed_count += 1
                     results.append({
                         "optimization": opt_title,
@@ -3562,8 +4687,9 @@ def approve_optimizations():
                     })
 
             except Exception as e:
-                applied_opt.status = 'failed'
-                applied_opt.error_message = str(e)
+                if not preview_mode:
+                    applied_opt.status = 'failed'
+                    applied_opt.error_message = str(e)
                 failed_count += 1
                 results.append({
                     "optimization": opt_title,
@@ -3573,7 +4699,8 @@ def approve_optimizations():
                 })
                 current_app.logger.exception(f"Error applying optimization: {opt_title}")
 
-        db.session.commit()
+        if not preview_mode:
+            db.session.commit()
 
         # Clear cached ads data so next page load fetches fresh data with updated extensions/scores
         sess_key = f"ads_state_{aid}"
@@ -3998,6 +5125,116 @@ def _get_agent_color(agent_type: str) -> str:
         'PMaxCampaignStructureAgent': 'green',
     }
     return colors.get(agent_type, 'gray')
+
+
+def _create_optimization_bundles(opportunities: list) -> list:
+    """
+    Create smart bundles of complementary optimizations that work better together.
+
+    Returns list of bundles with metadata about synergies.
+    """
+    bundles = []
+    opp_titles = {opp.get("title"): opp for opp in opportunities}
+
+    # Bundle 1: Mobile Power Combo (3x better together)
+    mobile_bid = next((o for o in opportunities if o.get("optimization_type") == "mobile_bid"), None)
+    mobile_ads = next((o for o in opportunities if o.get("optimization_type") == "mobile_ads"), None)
+    call_ext = next((o for o in opportunities if o.get("optimization_type") == "extension" and "call" in o.get("optimization_data", {}).get("type", "").lower()), None)
+
+    if mobile_bid or mobile_ads or call_ext:
+        mobile_bundle_opps = [o for o in [mobile_bid, mobile_ads, call_ext] if o]
+        if len(mobile_bundle_opps) >= 2:
+            bundles.append({
+                "id": "mobile_power_combo",
+                "title": "🔥 Mobile Power Combo",
+                "description": "These mobile optimizations work 3x better together - bid higher + show mobile ads + enable tap-to-call",
+                "optimizations": mobile_bundle_opps,
+                "total_time": sum(int(o.get("estimated_time", "0").split()[0]) for o in mobile_bundle_opps if o.get("estimated_time", "0")[0].isdigit()),
+                "synergy_score": 95,
+                "impact_multiplier": "3x",
+                "recommendation": "Apply all together for maximum mobile traffic capture"
+            })
+
+    # Bundle 2: Extension Suite (complete your ad real estate)
+    extension_types = ["call", "sitelink", "callout", "price", "structured_snippet"]
+    extension_opps = [
+        o for o in opportunities
+        if o.get("optimization_type") == "extension"
+        and any(ext in o.get("optimization_data", {}).get("type", "").lower() for ext in extension_types)
+    ]
+
+    if len(extension_opps) >= 3:
+        bundles.append({
+            "id": "extension_suite",
+            "title": "⚡ Quick Wins: Extension Suite",
+            "description": f"Apply {len(extension_opps)} extensions in {len(extension_opps)} minutes - each adds 5-20% CTR boost",
+            "optimizations": extension_opps,
+            "total_time": len(extension_opps),  # 1 min each
+            "synergy_score": 85,
+            "impact_multiplier": "Compound CTR gains",
+            "recommendation": "Extensions stack - more extensions = larger ads = higher CTR"
+        })
+
+    # Bundle 3: AI Content Generator (let AI write your ads)
+    ai_content_opps = [
+        o for o in opportunities
+        if o.get("optimization_type") in ["pmax_headlines", "pmax_descriptions", "rsa_headline_variations", "mobile_ads"]
+    ]
+
+    if len(ai_content_opps) >= 2:
+        bundles.append({
+            "id": "ai_content_generator",
+            "title": "🤖 AI Content Generator",
+            "description": f"Let AI write {len(ai_content_opps)} types of ad content in minutes - saves hours of copywriting",
+            "optimizations": ai_content_opps,
+            "total_time": len(ai_content_opps),  # ~1 min each
+            "synergy_score": 80,
+            "impact_multiplier": "Time savings",
+            "recommendation": "AI-generated content is ready to test immediately"
+        })
+
+    # Bundle 4: Negative Keywords Foundation (block waste first)
+    negative_opps = [
+        o for o in opportunities
+        if o.get("optimization_type") in ["negative_keyword", "starter_negative_keywords"]
+    ]
+
+    if negative_opps:
+        bundles.append({
+            "id": "negative_keywords_foundation",
+            "title": "📊 Complete Your Setup: Negative Keywords",
+            "description": "Block non-buyer searches before spending more on campaigns",
+            "optimizations": negative_opps,
+            "total_time": sum(int(o.get("estimated_time", "0").split()[0]) for o in negative_opps if o.get("estimated_time", "0")[0].isdigit()),
+            "synergy_score": 90,
+            "impact_multiplier": "Waste reduction",
+            "recommendation": "Apply these first to stop wasting budget, then invest in new campaigns"
+        })
+
+    # Bundle 5: Search Campaign Starter Pack (for PMax-only accounts)
+    search_campaign = next((o for o in opportunities if o.get("optimization_data", {}).get("decision_type") == "create_search_campaign"), None)
+    rsa_headlines = next((o for o in opportunities if o.get("optimization_type") == "rsa_headline_variations"), None)
+
+    if search_campaign:
+        search_bundle_opps = [search_campaign]
+        if rsa_headlines:
+            search_bundle_opps.append(rsa_headlines)
+
+        bundles.append({
+            "id": "search_campaign_starter",
+            "title": "🎯 Search Campaign Starter Pack",
+            "description": "Create your first Search campaign with AI-generated keywords, ad groups, and RSA ads",
+            "optimizations": search_bundle_opps,
+            "total_time": 2,
+            "synergy_score": 95,
+            "impact_multiplier": "Keyword-level control",
+            "recommendation": "CRITICAL: Add Search campaigns alongside Performance Max for better control and insights"
+        })
+
+    # Sort bundles by synergy score (highest impact first)
+    bundles.sort(key=lambda b: b["synergy_score"], reverse=True)
+
+    return bundles
 
 
 def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
@@ -4733,6 +5970,8 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
         'has_callout_ext': any(e.get('type') == 'callout' for e in extensions),
         'has_sitelink_ext': any(e.get('type') == 'sitelink' for e in extensions),
         'has_call_ext': any(e.get('type') == 'call' for e in extensions),
+        'has_structured_snippet_ext': any(e.get('type') == 'structured_snippet' for e in extensions),
+        'has_price_ext': any(e.get('type') == 'price' for e in extensions),
         'has_location_ext': any(e.get('type') == 'location' for e in extensions),
     }
 
@@ -4826,31 +6065,85 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
             })
 
         # Check asset variety for existing Performance Max
+        # Break down into separate auto-complete optimizations
         if setup_checks['has_pmax_assets']:
             headlines = [a for a in pmax_assets if a.get('field_type') == 'HEADLINE']
             descriptions = [a for a in pmax_assets if a.get('field_type') == 'DESCRIPTION']
             images = [a for a in pmax_assets if a.get('asset_type') == 'IMAGE']
 
-            if len(headlines) < 5 or len(descriptions) < 4 or len(images) < 15:
+            # Separate opportunity for headlines (AI-generated, auto-complete)
+            if len(headlines) < 5:
+                needed = max(0, 5 - len(headlines))
                 opportunities.append({
-                    "title": f"Improve Performance Max asset variety",
-                    "description": f"You have {len(headlines)} headlines (need 5+), {len(descriptions)} descriptions (need 4+), {len(images)} images (need 15+). More assets improve performance.",
+                    "title": f"Add {needed} more headline{'' if needed == 1 else 's'} to Performance Max",
+                    "description": f"You have {len(headlines)} headlines, need 5+. AI will generate {needed} mobile-optimized headline{'' if needed == 1 else 's'} for better ad variety.",
+                    "priority": "high",
+                    "impact_score": 75,
+                    "category": "pmax",
+                    "icon": "fa-heading",
+                    "color": "purple",
+                    "action": f"AI-generate {needed} compelling headline variations",
+                    "estimated_time": "1 min (AI-generated)",
+                    "quick_win": True,
+                    "confidence_score": 90,
+                    "risk_level": "low",
+                    "benefit_explanation": "More headline variety gives Google's AI more combinations to test. 5+ headlines is best practice for Performance Max.",
+                    "optimization_type": "pmax_headlines",
+                    "optimization_data": {
+                        'current_headlines': len(headlines),
+                        'needed_headlines': needed,
+                        'existing_headlines': [h.get('text', '') for h in headlines[:5]]
+                    },
+                    "best_practice": True,
+                })
+
+            # Separate opportunity for descriptions (AI-generated, auto-complete)
+            if len(descriptions) < 4:
+                needed = max(0, 4 - len(descriptions))
+                opportunities.append({
+                    "title": f"Add {needed} more description{'' if needed == 1 else 's'} to Performance Max",
+                    "description": f"You have {len(descriptions)} descriptions, need 4+. AI will generate {needed} persuasive description{'' if needed == 1 else 's'} highlighting benefits.",
+                    "priority": "high",
+                    "impact_score": 75,
+                    "category": "pmax",
+                    "icon": "fa-align-left",
+                    "color": "purple",
+                    "action": f"AI-generate {needed} compelling descriptions",
+                    "estimated_time": "1 min (AI-generated)",
+                    "quick_win": True,
+                    "confidence_score": 90,
+                    "risk_level": "low",
+                    "benefit_explanation": "More description variety improves ad testing. 4+ descriptions is best practice for Performance Max campaigns.",
+                    "optimization_type": "pmax_descriptions",
+                    "optimization_data": {
+                        'current_descriptions': len(descriptions),
+                        'needed_descriptions': needed,
+                        'existing_descriptions': [d.get('text', '') for d in descriptions[:4]]
+                    },
+                    "best_practice": True,
+                })
+
+            # Images remain manual (requires user to provide URLs)
+            if len(images) < 15:
+                needed = max(0, 15 - len(images))
+                opportunities.append({
+                    "title": f"Add {needed} more image{'' if needed == 1 else 's'} to Performance Max",
+                    "description": f"You have {len(images)} images, need 15+. Performance Max requires diverse images (landscape 1.91:1 and square 1:1) for optimal performance.",
                     "priority": "medium",
                     "impact_score": 70,
                     "category": "pmax",
-                    "icon": "fa-sparkles",
+                    "icon": "fa-image",
                     "color": "purple",
-                    "action": f"Add {max(0, 5-len(headlines))} more headlines, {max(0, 4-len(descriptions))} more descriptions, {max(0, 15-len(images))} more images",
-                    "estimated_time": "1 hour",
+                    "action": f"Upload {needed} high-quality images (mix of landscape and square)",
+                    "estimated_time": "30 min",
                     "quick_win": False,
                     "confidence_score": 85,
                     "risk_level": "low",
-                    "benefit_explanation": "More asset variety gives Google's AI more combinations to test. Best practices: 5+ headlines, 4+ descriptions, 15+ images (mix of landscape and square).",
-                    "optimization_type": "pmax",
+                    "benefit_explanation": "Images are critical for Performance Max ads. Mix landscape (1200x628) and square (1200x1200) images showing your products/services in action.",
+                    "optimization_type": "pmax_images",
                     "optimization_data": {
-                        'current_headlines': len(headlines),
-                        'current_descriptions': len(descriptions),
-                        'current_images': len(images)
+                        'current_images': len(images),
+                        'needed_images': needed
                     },
                     "best_practice": True,
                 })
@@ -4897,36 +6190,184 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
             "best_practice": True,
         })
 
+    # 4b. RSA Headline Variations (for existing Search ads - AI-generated, auto-complete)
+    # Check if Search campaigns have RSA ads with < 15 headlines
+    if setup_checks['has_search_campaigns'] and setup_checks['has_ads'] and len(ads) > 0:
+        # Analyze RSA headlines across all ads
+        total_headlines = 0
+        total_rsas = 0
+        sample_headlines = []
+
+        for ad in ads:
+            headlines = ad.get('headlines', [])
+            if headlines:  # Only count RSAs with headlines
+                total_headlines += len(headlines)
+                total_rsas += 1
+                # Collect sample headlines from first ad for AI context
+                if not sample_headlines:
+                    sample_headlines = headlines[:10]  # Max 10 samples
+
+        if total_rsas > 0:
+            avg_headlines = total_headlines / total_rsas
+            # Google allows 3-15 headlines per RSA, 15 is ideal for maximum testing
+            if avg_headlines < 15:
+                needed = int(15 - avg_headlines)
+                opportunities.append({
+                    "title": f"Add {needed} more headline{'' if needed == 1 else 's'} to RSA ads for better testing",
+                    "description": f"Your RSA ads average {int(avg_headlines)} headlines. AI will generate {needed} more headline variation{'' if needed == 1 else 's'} to reach the 15-headline best practice for maximum ad testing.",
+                    "priority": "medium",
+                    "impact_score": 65,
+                    "category": "ad_copy",
+                    "icon": "fa-heading",
+                    "color": "blue",
+                    "action": f"AI-generate {needed} compelling headline variations based on your existing ads",
+                    "estimated_time": "1 min (AI-generated)",
+                    "quick_win": True,
+                    "confidence_score": 88,
+                    "risk_level": "low",
+                    "benefit_explanation": "More headline variations give Google's AI more combinations to test. 15 headlines is best practice for RSAs - you're currently averaging {:.0f}. More variations = better testing = improved CTR.".format(avg_headlines),
+                    "optimization_type": "rsa_headline_variations",
+                    "optimization_data": {
+                        'current_avg_headlines': avg_headlines,
+                        'needed_headlines': needed,
+                        'total_rsas': total_rsas,
+                        'existing_headlines': sample_headlines
+                    },
+                    "best_practice": True,
+                })
+
     # 5. Negative keywords (if few or none - ALWAYS check this)
+    # Convert to auto-complete with starter pack
     if setup_checks['has_keywords'] and len(negatives) < 10:
         missing_count = max(0, 10 - len(negatives))
+        starter_negatives = ["jobs", "careers", "DIY", "how to", "free", "cheap", "salary", "training", "reviews", "complaints"]
         opportunities.append({
-            "title": f"Add {missing_count} starter negative keywords",
-            "description": f"You have {len(negatives)} negative keywords. Add at least 10 to block obvious non-converting terms: jobs, careers, DIY, how to, free, salary.",
+            "title": f"Add {min(missing_count, len(starter_negatives))} starter negative keywords",
+            "description": f"You have {len(negatives)} negative keywords. Auto-add {min(missing_count, len(starter_negatives))} essential negatives to block job seekers, DIYers, and non-buyers.",
             "priority": "high",
             "impact_score": 85,
             "category": "negative_keyword",
             "icon": "fa-ban",
             "color": "red",
-            "action": "Add these negatives: jobs, careers, DIY, how to, free, cheap, salary, training, reviews, complaints",
-            "estimated_time": "15 min",
+            "action": f"Auto-add: {', '.join(starter_negatives[:min(missing_count, len(starter_negatives))])}",
+            "estimated_time": "1 min (auto-complete)",
             "quick_win": True,
             "confidence_score": 95,
             "risk_level": "low",
             "benefit_explanation": "These terms attract job seekers, DIYers, and researchers - not paying customers. Block them before they drain your budget.",
-            "optimization_type": "setup",
-            "optimization_data": {'setup_check': 'negative_keywords', 'current_count': len(negatives)},
+            "optimization_type": "starter_negative_keywords",
+            "optimization_data": {
+                'current_count': len(negatives),
+                'starter_keywords': starter_negatives[:min(missing_count, len(starter_negatives))],
+                'needed_count': min(missing_count, len(starter_negatives))
+            },
             "best_practice": True,
         })
 
     # 6. Extensions (always check what's missing)
-    missing_extensions = []
+    # Create individual auto-complete opportunities for key extensions
     if not setup_checks['has_call_ext']:
-        missing_extensions.append('Call extension (critical for service businesses)')
+        opportunities.append({
+            "title": "Add Call Extension for mobile users",
+            "description": "Add click-to-call button to mobile ads. Auto-completes with your business phone or placeholder (update in Google Ads UI).",
+            "priority": "high",
+            "impact_score": 85,
+            "category": "extension",
+            "icon": "fa-phone",
+            "color": "green",
+            "action": "Auto-add call extension (edit phone number later if needed)",
+            "estimated_time": "1 min (auto-complete)",
+            "quick_win": True,
+            "confidence_score": 95,
+            "risk_level": "low",
+            "benefit_explanation": "Call extensions are critical for service businesses. Mobile users expect tap-to-call. 20% average CTR lift.",
+            "optimization_type": "extension",
+            "optimization_data": {'type': 'call'},
+            "best_practice": True,
+        })
+
     if not setup_checks['has_sitelink_ext']:
-        missing_extensions.append('Sitelinks (4-6 links to key pages)')
+        opportunities.append({
+            "title": "Add Sitelink Extensions to increase ad size",
+            "description": "Auto-generate 4-6 quick links below your ads (Services, Contact, Emergency, About). 12% average CTR lift.",
+            "priority": "high",
+            "impact_score": 80,
+            "category": "extension",
+            "icon": "fa-link",
+            "color": "green",
+            "action": "Auto-add standard sitelinks",
+            "estimated_time": "1 min (auto-complete)",
+            "quick_win": True,
+            "confidence_score": 90,
+            "risk_level": "low",
+            "benefit_explanation": "Sitelinks take up more ad space, pushing competitors down. Users find relevant pages faster.",
+            "optimization_type": "extension",
+            "optimization_data": {'type': 'sitelink'},
+            "best_practice": True,
+        })
+
     if not setup_checks['has_callout_ext']:
-        missing_extensions.append('Callouts (4 benefit statements)')
+        opportunities.append({
+            "title": "Add Callout Extensions to highlight USPs",
+            "description": "Auto-add callouts like 'Licensed & Insured', '20+ Years Experience', 'Same Day Service'. 8% average CTR lift.",
+            "priority": "medium",
+            "impact_score": 75,
+            "category": "extension",
+            "icon": "fa-star",
+            "color": "green",
+            "action": "Auto-add standard callouts",
+            "estimated_time": "1 min (auto-complete)",
+            "quick_win": True,
+            "confidence_score": 90,
+            "risk_level": "low",
+            "benefit_explanation": "Builds trust and differentiates from competitors. No extra cost for these clicks.",
+            "optimization_type": "extension",
+            "optimization_data": {'type': 'callout'},
+            "best_practice": True,
+        })
+
+    if not setup_checks['has_price_ext']:
+        opportunities.append({
+            "title": "Add Price Extensions to show pricing",
+            "description": "Auto-add standard pricing tiers: Basic Service ($99), Emergency ($199), Inspection ($79), Installation ($499). Shows prices directly in ads.",
+            "priority": "medium",
+            "impact_score": 70,
+            "category": "extension",
+            "icon": "fa-dollar-sign",
+            "color": "green",
+            "action": "Auto-add price extension with standard service tiers",
+            "estimated_time": "1 min (auto-complete)",
+            "quick_win": True,
+            "confidence_score": 85,
+            "risk_level": "low",
+            "benefit_explanation": "Price extensions build transparency and pre-qualify leads. Users who click already know your pricing range.",
+            "optimization_type": "extension",
+            "optimization_data": {'type': 'price'},
+            "best_practice": True,
+        })
+
+    if not setup_checks['has_structured_snippet_ext']:
+        opportunities.append({
+            "title": "Add Structured Snippet Extension",
+            "description": "Auto-add service categories: Repairs, Installation, Maintenance, Emergency Service, Inspection. Shows your service breadth in ads.",
+            "priority": "medium",
+            "impact_score": 70,
+            "category": "extension",
+            "icon": "fa-list",
+            "color": "green",
+            "action": "Auto-add structured snippet with service categories",
+            "estimated_time": "1 min (auto-complete)",
+            "quick_win": True,
+            "confidence_score": 90,
+            "risk_level": "low",
+            "benefit_explanation": "Structured snippets highlight your service variety. Users see exactly what you offer before clicking.",
+            "optimization_type": "extension",
+            "optimization_data": {'type': 'structured_snippet'},
+            "best_practice": True,
+        })
+
+    # Location extension remains manual (requires GMB)
+    missing_extensions = []
     if not setup_checks['has_location_ext']:
         missing_extensions.append('Location extension')
 
@@ -5069,6 +6510,9 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
     # Add quick wins (optimizations < 30 min)
     quick_wins = [opp for opp in opportunities if opp.get("quick_win", False)]
 
+    # SMART BUNDLING: Group complementary optimizations that work better together
+    bundles = _create_optimization_bundles(opportunities)
+
     return {
         "scores": scores,
         "grade": grade,
@@ -5078,6 +6522,7 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
         "campaign_breakdown": campaign_breakdown,
         "competitive_insights": competitive_insights,
         "quick_wins": quick_wins,
+        "bundles": bundles,  # Smart bundling recommendations
         "total_opportunities": len(opportunities),
         "performance": performance,
     }

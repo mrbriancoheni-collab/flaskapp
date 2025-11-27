@@ -4170,9 +4170,14 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
         additional_mobile_leads = max(1, int(additional_mobile_clicks * conversion_rate))
         lead_value = cost_per_conversion if cost_per_conversion > 0 else 100
 
-        # Get first enabled campaign ID for applying the optimization
-        first_campaign_id = next((c.get("id") for c in campaigns if c.get("status", "").lower() in ("enabled", "active")),
-                                campaigns[0].get("id") if campaigns else None)
+        # Get first enabled SEARCH campaign ID for applying the optimization
+        # Performance Max campaigns don't support device bid adjustments
+        first_campaign_id = next(
+            (c.get("id") for c in campaigns
+             if c.get("status", "").lower() in ("enabled", "active")
+             and c.get("type") != "PERFORMANCE_MAX"),
+            None
+        )
 
         current_app.logger.info(
             f"Mobile optimization: scores[mobile]={scores['mobile']}, "
@@ -4180,7 +4185,7 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
             f"will_create_mobile_bid_opp={bool(first_campaign_id)}"
         )
 
-        # Skip mobile bid optimization if no campaign available
+        # Only create mobile bid adjustment for Search campaigns (not Performance Max)
         if first_campaign_id:
             # Mobile bid adjustment - Do this FIRST
             opportunities.append({

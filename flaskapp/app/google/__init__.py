@@ -2059,6 +2059,10 @@ def ads_ui():
         if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads']:
             return True
 
+        # Performance Max AI-generated content (auto-complete with AI)
+        if opt_type in ['pmax_headlines', 'pmax_descriptions']:
+            return True
+
         # Extension types - callout, structured snippet, sitelink, and call are auto-applicable
         if opt_type == 'extension':
             ext_type = opp.get("optimization_data", {}).get("type", "").lower()
@@ -2499,13 +2503,15 @@ def ads_opportunities_demo():
         current_app.logger.info(f"Analysis completed - opportunities count: {len(analysis.get('opportunities', []))}")
 
         # Split opportunities into auto-applicable and manual tasks
-        # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, mobile_ads, callout/snippet/sitelink/call extensions)
+        # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, mobile_ads, PMax AI content, extensions)
         # Manual tasks: Require manual setup (setup, quality_score, account_structure, location extensions)
         all_opportunities = analysis.get("opportunities", [])
 
         def is_auto_applicable(opp):
             opt_type = opp.get("optimization_type", "")
             if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads']:
+                return True
+            if opt_type in ['pmax_headlines', 'pmax_descriptions']:
                 return True
             if opt_type == 'extension':
                 # Callout, structured snippet, sitelink, and call extensions are auto-applicable
@@ -2575,13 +2581,15 @@ def ads_opportunities():
     analysis = _analyze_ads_opportunities(aid, ads_data)
 
     # Split opportunities into auto-applicable and manual tasks
-    # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, mobile_ads, callout/snippet/sitelink/call extensions)
+    # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, mobile_ads, PMax AI content, extensions)
     # Manual tasks: Require manual setup (setup, quality_score, account_structure, location extensions)
     all_opportunities = analysis.get("opportunities", [])
 
     def is_auto_applicable(opp):
         opt_type = opp.get("optimization_type", "")
         if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads']:
+            return True
+        if opt_type in ['pmax_headlines', 'pmax_descriptions']:
             return True
         if opt_type == 'extension':
             # Callout, structured snippet, sitelink, and call extensions are auto-applicable
@@ -2693,6 +2701,14 @@ def _apply_optimization(aid: int, customer_id: str, opt_type: str, opt_data: dic
         elif opt_type == "mobile_ads":
             # Generate AI-powered mobile RSA ads
             return _apply_mobile_rsa_ads(aid, customer_id, opt_data, refresh_token)
+
+        elif opt_type == "pmax_headlines":
+            # Generate AI-powered Performance Max headlines
+            return _apply_pmax_headlines(aid, customer_id, opt_data, refresh_token)
+
+        elif opt_type == "pmax_descriptions":
+            # Generate AI-powered Performance Max descriptions
+            return _apply_pmax_descriptions(aid, customer_id, opt_data, refresh_token)
 
         elif opt_type == "account_structure":
             # Account restructuring is complex manual work
@@ -3075,6 +3091,334 @@ def _apply_mobile_rsa_ads(aid: int, customer_id: str, opt_data: dict, refresh_to
         return {"success": False, "error": error_msg}
     except Exception as e:
         current_app.logger.error(f"Error creating mobile RSA ads: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def _generate_pmax_headlines(business_name: str, existing_headlines: list, needed: int) -> dict:
+    """Generate Performance Max headlines using AI."""
+    try:
+        from app.ai_clients import chatgpt_response
+        import json
+
+        existing_text = "\n".join([f"- {h}" for h in existing_headlines if h]) if existing_headlines else "None yet"
+
+        prompt = f"""Generate {needed} Performance Max headline variations for a business.
+
+Business: {business_name}
+
+Existing Headlines:
+{existing_text}
+
+Requirements:
+- Headlines: {needed} NEW headlines (max 30 chars each, don't duplicate existing)
+- Make them punchy, benefit-focused, and action-oriented
+- Include variety: some with urgency, some with benefits, some with credibility
+- Avoid duplicating existing headlines
+
+Return ONLY valid JSON in this format:
+{{
+  "headlines": ["Fast Service - Call Now", "Licensed Professionals", ...]
+}}"""
+
+        response = chatgpt_response(prompt)
+
+        try:
+            if "```json" in response:
+                response = response.split("```json")[1].split("```")[0].strip()
+            elif "```" in response:
+                response = response.split("```")[1].split("```")[0].strip()
+
+            result = json.loads(response)
+            if "headlines" not in result:
+                raise ValueError("Missing headlines field")
+
+            headlines = [h[:30] for h in result["headlines"][:needed]]
+            return {"success": True, "headlines": headlines}
+
+        except json.JSONDecodeError as e:
+            return {"success": False, "error": f"AI returned invalid JSON: {str(e)}"}
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def _generate_pmax_descriptions(business_name: str, existing_descriptions: list, needed: int) -> dict:
+    """Generate Performance Max descriptions using AI."""
+    try:
+        from app.ai_clients import chatgpt_response
+        import json
+
+        existing_text = "\n".join([f"- {d}" for d in existing_descriptions if d]) if existing_descriptions else "None yet"
+
+        prompt = f"""Generate {needed} Performance Max description variations for a business.
+
+Business: {business_name}
+
+Existing Descriptions:
+{existing_text}
+
+Requirements:
+- Descriptions: {needed} NEW descriptions (max 90 chars each, don't duplicate existing)
+- Focus on benefits, credibility, and calls-to-action
+- Include variety: some emphasize speed, some quality, some experience
+- Make them compelling and conversion-focused
+
+Return ONLY valid JSON in this format:
+{{
+  "descriptions": ["Get expert service with same-day availability. Licensed professionals ready to help.", ...]
+}}"""
+
+        response = chatgpt_response(prompt)
+
+        try:
+            if "```json" in response:
+                response = response.split("```json")[1].split("```")[0].strip()
+            elif "```" in response:
+                response = response.split("```")[1].split("```")[0].strip()
+
+            result = json.loads(response)
+            if "descriptions" not in result:
+                raise ValueError("Missing descriptions field")
+
+            descriptions = [d[:90] for d in result["descriptions"][:needed]]
+            return {"success": True, "descriptions": descriptions}
+
+        except json.JSONDecodeError as e:
+            return {"success": False, "error": f"AI returned invalid JSON: {str(e)}"}
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def _apply_pmax_headlines(aid: int, customer_id: str, opt_data: dict, refresh_token: str) -> dict:
+    """Generate and add AI-generated headlines to Performance Max asset groups."""
+    try:
+        from google.ads.googleads.client import GoogleAdsClient
+        from google.ads.googleads.errors import GoogleAdsException
+
+        client_id, client_secret = _client_info("ads")
+        credentials = {
+            "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "use_proto_plus": True
+        }
+
+        client = GoogleAdsClient.load_from_dict(credentials)
+        google_ads_service = client.get_service("GoogleAdsService")
+
+        # Get Performance Max campaign and asset group
+        query = """
+            SELECT
+                campaign.id,
+                campaign.name,
+                asset_group.id,
+                asset_group.name
+            FROM asset_group
+            WHERE campaign.advertising_channel_type = 'PERFORMANCE_MAX'
+            AND campaign.status = 'ENABLED'
+            LIMIT 1
+        """
+
+        response = google_ads_service.search(customer_id=customer_id, query=query)
+
+        campaign_id = None
+        asset_group_id = None
+        business_name = "Your Business"
+
+        for row in response:
+            campaign_id = row.campaign.id
+            asset_group_id = row.asset_group.id
+            business_name = row.campaign.name.split(" - ")[0].split(" | ")[0]
+            break
+
+        if not asset_group_id:
+            return {
+                "success": False,
+                "error": "No Performance Max asset groups found. Please create a Performance Max campaign first."
+            }
+
+        # Get existing headlines and generate new ones
+        existing_headlines = opt_data.get('existing_headlines', [])
+        needed = opt_data.get('needed_headlines', 1)
+
+        current_app.logger.info(f"Generating {needed} PMax headlines for {business_name}")
+        ai_result = _generate_pmax_headlines(business_name, existing_headlines, needed)
+
+        if not ai_result.get("success"):
+            return ai_result
+
+        headlines = ai_result["headlines"]
+
+        # Create headline assets and link to asset group
+        asset_service = client.get_service("AssetService")
+        asset_group_asset_service = client.get_service("AssetGroupAssetService")
+
+        created_assets = []
+
+        for headline_text in headlines:
+            # Create text asset
+            asset_operation = client.get_type("AssetOperation")
+            asset = asset_operation.create
+            asset.text_asset.text = headline_text
+            asset.name = f"PMax Headline: {headline_text[:20]}"
+
+            asset_response = asset_service.mutate_assets(
+                customer_id=customer_id,
+                operations=[asset_operation]
+            )
+
+            if asset_response.results:
+                asset_resource_name = asset_response.results[0].resource_name
+                created_assets.append(asset_resource_name)
+
+                # Link asset to asset group
+                asset_group_asset_operation = client.get_type("AssetGroupAssetOperation")
+                asset_group_asset = asset_group_asset_operation.create
+                asset_group_asset.asset = asset_resource_name
+                asset_group_asset.asset_group = client.get_service("AssetGroupService").asset_group_path(
+                    customer_id, asset_group_id
+                )
+                asset_group_asset.field_type = client.enums.AssetFieldTypeEnum.HEADLINE
+
+                asset_group_asset_service.mutate_asset_group_assets(
+                    customer_id=customer_id,
+                    operations=[asset_group_asset_operation]
+                )
+
+        return {
+            "success": True,
+            "resource_name": created_assets[0] if created_assets else None,
+            "api_response": {"results": created_assets},
+            "message": f"Added {len(created_assets)} AI-generated headline{'' if len(created_assets) == 1 else 's'} to Performance Max",
+            "headlines": headlines
+        }
+
+    except GoogleAdsException as ex:
+        error_msg = f"Google Ads API error: {ex.error.code().name}"
+        for error in ex.failure.errors:
+            error_msg += f" - {error.message}"
+        return {"success": False, "error": error_msg}
+    except Exception as e:
+        current_app.logger.error(f"Error adding PMax headlines: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def _apply_pmax_descriptions(aid: int, customer_id: str, opt_data: dict, refresh_token: str) -> dict:
+    """Generate and add AI-generated descriptions to Performance Max asset groups."""
+    try:
+        from google.ads.googleads.client import GoogleAdsClient
+        from google.ads.googleads.errors import GoogleAdsException
+
+        client_id, client_secret = _client_info("ads")
+        credentials = {
+            "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "use_proto_plus": True
+        }
+
+        client = GoogleAdsClient.load_from_dict(credentials)
+        google_ads_service = client.get_service("GoogleAdsService")
+
+        # Get Performance Max campaign and asset group
+        query = """
+            SELECT
+                campaign.id,
+                campaign.name,
+                asset_group.id,
+                asset_group.name
+            FROM asset_group
+            WHERE campaign.advertising_channel_type = 'PERFORMANCE_MAX'
+            AND campaign.status = 'ENABLED'
+            LIMIT 1
+        """
+
+        response = google_ads_service.search(customer_id=customer_id, query=query)
+
+        campaign_id = None
+        asset_group_id = None
+        business_name = "Your Business"
+
+        for row in response:
+            campaign_id = row.campaign.id
+            asset_group_id = row.asset_group.id
+            business_name = row.campaign.name.split(" - ")[0].split(" | ")[0]
+            break
+
+        if not asset_group_id:
+            return {
+                "success": False,
+                "error": "No Performance Max asset groups found. Please create a Performance Max campaign first."
+            }
+
+        # Get existing descriptions and generate new ones
+        existing_descriptions = opt_data.get('existing_descriptions', [])
+        needed = opt_data.get('needed_descriptions', 1)
+
+        current_app.logger.info(f"Generating {needed} PMax descriptions for {business_name}")
+        ai_result = _generate_pmax_descriptions(business_name, existing_descriptions, needed)
+
+        if not ai_result.get("success"):
+            return ai_result
+
+        descriptions = ai_result["descriptions"]
+
+        # Create description assets and link to asset group
+        asset_service = client.get_service("AssetService")
+        asset_group_asset_service = client.get_service("AssetGroupAssetService")
+
+        created_assets = []
+
+        for description_text in descriptions:
+            # Create text asset
+            asset_operation = client.get_type("AssetOperation")
+            asset = asset_operation.create
+            asset.text_asset.text = description_text
+            asset.name = f"PMax Description: {description_text[:20]}"
+
+            asset_response = asset_service.mutate_assets(
+                customer_id=customer_id,
+                operations=[asset_operation]
+            )
+
+            if asset_response.results:
+                asset_resource_name = asset_response.results[0].resource_name
+                created_assets.append(asset_resource_name)
+
+                # Link asset to asset group
+                asset_group_asset_operation = client.get_type("AssetGroupAssetOperation")
+                asset_group_asset = asset_group_asset_operation.create
+                asset_group_asset.asset = asset_resource_name
+                asset_group_asset.asset_group = client.get_service("AssetGroupService").asset_group_path(
+                    customer_id, asset_group_id
+                )
+                asset_group_asset.field_type = client.enums.AssetFieldTypeEnum.DESCRIPTION
+
+                asset_group_asset_service.mutate_asset_group_assets(
+                    customer_id=customer_id,
+                    operations=[asset_group_asset_operation]
+                )
+
+        return {
+            "success": True,
+            "resource_name": created_assets[0] if created_assets else None,
+            "api_response": {"results": created_assets},
+            "message": f"Added {len(created_assets)} AI-generated description{'' if len(created_assets) == 1 else 's'} to Performance Max",
+            "descriptions": descriptions
+        }
+
+    except GoogleAdsException as ex:
+        error_msg = f"Google Ads API error: {ex.error.code().name}"
+        for error in ex.failure.errors:
+            error_msg += f" - {error.message}"
+        return {"success": False, "error": error_msg}
+    except Exception as e:
+        current_app.logger.error(f"Error adding PMax descriptions: {e}")
         return {"success": False, "error": str(e)}
 
 
@@ -4826,31 +5170,85 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
             })
 
         # Check asset variety for existing Performance Max
+        # Break down into separate auto-complete optimizations
         if setup_checks['has_pmax_assets']:
             headlines = [a for a in pmax_assets if a.get('field_type') == 'HEADLINE']
             descriptions = [a for a in pmax_assets if a.get('field_type') == 'DESCRIPTION']
             images = [a for a in pmax_assets if a.get('asset_type') == 'IMAGE']
 
-            if len(headlines) < 5 or len(descriptions) < 4 or len(images) < 15:
+            # Separate opportunity for headlines (AI-generated, auto-complete)
+            if len(headlines) < 5:
+                needed = max(0, 5 - len(headlines))
                 opportunities.append({
-                    "title": f"Improve Performance Max asset variety",
-                    "description": f"You have {len(headlines)} headlines (need 5+), {len(descriptions)} descriptions (need 4+), {len(images)} images (need 15+). More assets improve performance.",
+                    "title": f"Add {needed} more headline{'' if needed == 1 else 's'} to Performance Max",
+                    "description": f"You have {len(headlines)} headlines, need 5+. AI will generate {needed} mobile-optimized headline{'' if needed == 1 else 's'} for better ad variety.",
+                    "priority": "high",
+                    "impact_score": 75,
+                    "category": "pmax",
+                    "icon": "fa-heading",
+                    "color": "purple",
+                    "action": f"AI-generate {needed} compelling headline variations",
+                    "estimated_time": "1 min (AI-generated)",
+                    "quick_win": True,
+                    "confidence_score": 90,
+                    "risk_level": "low",
+                    "benefit_explanation": "More headline variety gives Google's AI more combinations to test. 5+ headlines is best practice for Performance Max.",
+                    "optimization_type": "pmax_headlines",
+                    "optimization_data": {
+                        'current_headlines': len(headlines),
+                        'needed_headlines': needed,
+                        'existing_headlines': [h.get('text', '') for h in headlines[:5]]
+                    },
+                    "best_practice": True,
+                })
+
+            # Separate opportunity for descriptions (AI-generated, auto-complete)
+            if len(descriptions) < 4:
+                needed = max(0, 4 - len(descriptions))
+                opportunities.append({
+                    "title": f"Add {needed} more description{'' if needed == 1 else 's'} to Performance Max",
+                    "description": f"You have {len(descriptions)} descriptions, need 4+. AI will generate {needed} persuasive description{'' if needed == 1 else 's'} highlighting benefits.",
+                    "priority": "high",
+                    "impact_score": 75,
+                    "category": "pmax",
+                    "icon": "fa-align-left",
+                    "color": "purple",
+                    "action": f"AI-generate {needed} compelling descriptions",
+                    "estimated_time": "1 min (AI-generated)",
+                    "quick_win": True,
+                    "confidence_score": 90,
+                    "risk_level": "low",
+                    "benefit_explanation": "More description variety improves ad testing. 4+ descriptions is best practice for Performance Max campaigns.",
+                    "optimization_type": "pmax_descriptions",
+                    "optimization_data": {
+                        'current_descriptions': len(descriptions),
+                        'needed_descriptions': needed,
+                        'existing_descriptions': [d.get('text', '') for d in descriptions[:4]]
+                    },
+                    "best_practice": True,
+                })
+
+            # Images remain manual (requires user to provide URLs)
+            if len(images) < 15:
+                needed = max(0, 15 - len(images))
+                opportunities.append({
+                    "title": f"Add {needed} more image{'' if needed == 1 else 's'} to Performance Max",
+                    "description": f"You have {len(images)} images, need 15+. Performance Max requires diverse images (landscape 1.91:1 and square 1:1) for optimal performance.",
                     "priority": "medium",
                     "impact_score": 70,
                     "category": "pmax",
-                    "icon": "fa-sparkles",
+                    "icon": "fa-image",
                     "color": "purple",
-                    "action": f"Add {max(0, 5-len(headlines))} more headlines, {max(0, 4-len(descriptions))} more descriptions, {max(0, 15-len(images))} more images",
-                    "estimated_time": "1 hour",
+                    "action": f"Upload {needed} high-quality images (mix of landscape and square)",
+                    "estimated_time": "30 min",
                     "quick_win": False,
                     "confidence_score": 85,
                     "risk_level": "low",
-                    "benefit_explanation": "More asset variety gives Google's AI more combinations to test. Best practices: 5+ headlines, 4+ descriptions, 15+ images (mix of landscape and square).",
-                    "optimization_type": "pmax",
+                    "benefit_explanation": "Images are critical for Performance Max ads. Mix landscape (1200x628) and square (1200x1200) images showing your products/services in action.",
+                    "optimization_type": "pmax_images",
                     "optimization_data": {
-                        'current_headlines': len(headlines),
-                        'current_descriptions': len(descriptions),
-                        'current_images': len(images)
+                        'current_images': len(images),
+                        'needed_images': needed
                     },
                     "best_practice": True,
                 })

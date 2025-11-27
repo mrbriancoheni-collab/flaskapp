@@ -2056,7 +2056,7 @@ def ads_ui():
         opt_type = opp.get("optimization_type", "")
 
         # Core auto-applicable types (can be applied with one click)
-        if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads']:
+        if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads', 'starter_negative_keywords']:
             return True
 
         # Performance Max AI-generated content (auto-complete with AI)
@@ -2509,7 +2509,7 @@ def ads_opportunities_demo():
 
         def is_auto_applicable(opp):
             opt_type = opp.get("optimization_type", "")
-            if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads']:
+            if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads', 'starter_negative_keywords']:
                 return True
             if opt_type in ['pmax_headlines', 'pmax_descriptions']:
                 return True
@@ -2587,7 +2587,7 @@ def ads_opportunities():
 
     def is_auto_applicable(opp):
         opt_type = opp.get("optimization_type", "")
-        if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads']:
+        if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads', 'starter_negative_keywords']:
             return True
         if opt_type in ['pmax_headlines', 'pmax_descriptions']:
             return True
@@ -2677,6 +2677,9 @@ def _apply_optimization(aid: int, customer_id: str, opt_type: str, opt_data: dic
         # Apply based on optimization type
         if opt_type == "negative_keyword":
             return _apply_negative_keyword(aid, customer_id, opt_data, refresh_token)
+
+        elif opt_type == "starter_negative_keywords":
+            return _apply_starter_negative_keywords(aid, customer_id, opt_data, refresh_token)
 
         elif opt_type == "mobile_bid":
             return _apply_mobile_bid_adjustment(aid, customer_id, opt_data, refresh_token)
@@ -2790,6 +2793,94 @@ def _apply_negative_keyword(aid: int, customer_id: str, opt_data: dict, access_t
             error_msg += f" - {error.message}"
         return {"success": False, "error": error_msg}
     except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def _apply_starter_negative_keywords(aid: int, customer_id: str, opt_data: dict, access_token: str) -> dict:
+    """Add starter pack of negative keywords to all Search campaigns."""
+    try:
+        from google.ads.googleads.client import GoogleAdsClient
+        from google.ads.googleads.errors import GoogleAdsException
+
+        # Get starter keywords from optimization data
+        starter_keywords = opt_data.get("starter_keywords", [])
+        if not starter_keywords:
+            return {"success": False, "error": "No starter keywords provided"}
+
+        # Create Google Ads client
+        client_id, client_secret = _client_info("ads")
+        credentials = {
+            "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": access_token,
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "use_proto_plus": True
+        }
+
+        client = GoogleAdsClient.load_from_dict(credentials)
+        google_ads_service = client.get_service("GoogleAdsService")
+        campaign_criterion_service = client.get_service("CampaignCriterionService")
+
+        # Get all enabled Search campaigns
+        query = """
+            SELECT campaign.id, campaign.name
+            FROM campaign
+            WHERE campaign.status = 'ENABLED'
+            AND campaign.advertising_channel_type != 'PERFORMANCE_MAX'
+        """
+
+        response = google_ads_service.search(customer_id=customer_id, query=query)
+
+        campaign_ids = []
+        for row in response:
+            campaign_ids.append(row.campaign.id)
+
+        if not campaign_ids:
+            return {
+                "success": False,
+                "error": "No enabled Search campaigns found. Negative keywords can only be added to Search campaigns."
+            }
+
+        # Add each negative keyword to all campaigns
+        added_count = 0
+        operations = []
+
+        for campaign_id in campaign_ids:
+            for keyword in starter_keywords:
+                campaign_criterion_operation = client.get_type("CampaignCriterionOperation")
+                campaign_criterion = campaign_criterion_operation.create
+
+                campaign_criterion.campaign = f"customers/{customer_id}/campaigns/{campaign_id}"
+                campaign_criterion.negative = True
+                campaign_criterion.keyword.text = keyword
+                campaign_criterion.keyword.match_type = client.enums.KeywordMatchTypeEnum.BROAD
+
+                operations.append(campaign_criterion_operation)
+
+        # Execute all operations in batch
+        if operations:
+            response = campaign_criterion_service.mutate_campaign_criteria(
+                customer_id=customer_id,
+                operations=operations
+            )
+            added_count = len(response.results)
+
+        return {
+            "success": True,
+            "api_response": {"results": response.results if operations else []},
+            "message": f"Added {len(starter_keywords)} negative keywords to {len(campaign_ids)} campaign(s) ({added_count} total additions)",
+            "keywords_added": starter_keywords,
+            "campaigns_updated": len(campaign_ids)
+        }
+
+    except GoogleAdsException as ex:
+        error_msg = f"Google Ads API error: {ex.error.code().name}"
+        for error in ex.failure.errors:
+            error_msg += f" - {error.message}"
+        return {"success": False, "error": error_msg}
+    except Exception as e:
+        current_app.logger.error(f"Error adding starter negative keywords: {e}")
         return {"success": False, "error": str(e)}
 
 
@@ -5296,24 +5387,30 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
         })
 
     # 5. Negative keywords (if few or none - ALWAYS check this)
+    # Convert to auto-complete with starter pack
     if setup_checks['has_keywords'] and len(negatives) < 10:
         missing_count = max(0, 10 - len(negatives))
+        starter_negatives = ["jobs", "careers", "DIY", "how to", "free", "cheap", "salary", "training", "reviews", "complaints"]
         opportunities.append({
-            "title": f"Add {missing_count} starter negative keywords",
-            "description": f"You have {len(negatives)} negative keywords. Add at least 10 to block obvious non-converting terms: jobs, careers, DIY, how to, free, salary.",
+            "title": f"Add {min(missing_count, len(starter_negatives))} starter negative keywords",
+            "description": f"You have {len(negatives)} negative keywords. Auto-add {min(missing_count, len(starter_negatives))} essential negatives to block job seekers, DIYers, and non-buyers.",
             "priority": "high",
             "impact_score": 85,
             "category": "negative_keyword",
             "icon": "fa-ban",
             "color": "red",
-            "action": "Add these negatives: jobs, careers, DIY, how to, free, cheap, salary, training, reviews, complaints",
-            "estimated_time": "15 min",
+            "action": f"Auto-add: {', '.join(starter_negatives[:min(missing_count, len(starter_negatives))])}",
+            "estimated_time": "1 min (auto-complete)",
             "quick_win": True,
             "confidence_score": 95,
             "risk_level": "low",
             "benefit_explanation": "These terms attract job seekers, DIYers, and researchers - not paying customers. Block them before they drain your budget.",
-            "optimization_type": "setup",
-            "optimization_data": {'setup_check': 'negative_keywords', 'current_count': len(negatives)},
+            "optimization_type": "starter_negative_keywords",
+            "optimization_data": {
+                'current_count': len(negatives),
+                'starter_keywords': starter_negatives[:min(missing_count, len(starter_negatives))],
+                'needed_count': min(missing_count, len(starter_negatives))
+            },
             "best_practice": True,
         })
 

@@ -1,0 +1,203 @@
+{% extends "base_app.html" %}
+
+{% block title %}Analyze Account - {{ account.account_name }} - FieldSprout{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                    <i class="fa-solid fa-magnifying-glass-chart text-indigo-600 mr-2"></i>
+                    Analyze Account Structure
+                </h1>
+                <p class="text-gray-600">{{ account.account_name }}</p>
+            </div>
+            <a href="{{ url_for('account_wizard.wizard_home') }}" class="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 font-semibold">
+                <i class="fa-solid fa-arrow-left mr-2"></i>
+                Back to Wizard
+            </a>
+        </div>
+    </div>
+
+    <!-- Progress Steps -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center flex-1">
+                <div class="flex items-center text-indigo-600 relative">
+                    <div class="rounded-full transition duration-500 ease-in-out h-12 w-12 py-3 border-2 border-indigo-600 bg-indigo-600 text-white flex items-center justify-center">
+                        1
+                    </div>
+                    <div class="absolute top-0 -ml-10 text-center mt-16 w-32 text-xs font-medium text-indigo-600">Analyze</div>
+                </div>
+                <div class="flex-auto border-t-2 transition duration-500 ease-in-out border-gray-300"></div>
+            </div>
+            <div class="flex items-center flex-1">
+                <div class="flex items-center text-gray-500 relative">
+                    <div class="rounded-full transition duration-500 ease-in-out h-12 w-12 py-3 border-2 border-gray-300 flex items-center justify-center">
+                        2
+                    </div>
+                    <div class="absolute top-0 -ml-10 text-center mt-16 w-32 text-xs font-medium text-gray-500">Review</div>
+                </div>
+                <div class="flex-auto border-t-2 transition duration-500 ease-in-out border-gray-300"></div>
+            </div>
+            <div class="flex items-center flex-1">
+                <div class="flex items-center text-gray-500 relative">
+                    <div class="rounded-full transition duration-500 ease-in-out h-12 w-12 py-3 border-2 border-gray-300 flex items-center justify-center">
+                        3
+                    </div>
+                    <div class="absolute top-0 -ml-10 text-center mt-16 w-32 text-xs font-medium text-gray-500">Apply</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis Form -->
+    <div class="bg-white rounded-lg shadow-md p-8">
+        <h2 class="text-xl font-bold text-gray-900 mb-6">
+            <i class="fa-solid fa-clipboard-question mr-2 text-indigo-600"></i>
+            Tell Us About Your Business
+        </h2>
+
+        <form id="analyzeForm" method="POST">
+            <div class="space-y-6">
+                <!-- Business Type -->
+                <div>
+                    <label for="business_type" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fa-solid fa-briefcase mr-2"></i>
+                        Business Type / Industry
+                    </label>
+                    <select id="business_type" name="business_type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        <option value="general">General / Other</option>
+                        <option value="hvac">HVAC Services</option>
+                        <option value="plumbing">Plumbing Services</option>
+                        <option value="electrical">Electrical Services</option>
+                        <option value="landscaping">Landscaping</option>
+                        <option value="roofing">Roofing</option>
+                        <option value="legal">Legal Services</option>
+                        <option value="medical">Medical / Healthcare</option>
+                        <option value="dental">Dental</option>
+                        <option value="automotive">Automotive</option>
+                        <option value="real_estate">Real Estate</option>
+                        <option value="ecommerce">E-commerce</option>
+                        <option value="saas">SaaS / Software</option>
+                        <option value="restaurant">Restaurant / Food Service</option>
+                        <option value="fitness">Fitness / Gym</option>
+                        <option value="beauty">Beauty / Salon</option>
+                    </select>
+                    <p class="mt-1 text-sm text-gray-500">This helps us provide industry-specific recommendations</p>
+                </div>
+
+                <!-- Monthly Budget -->
+                <div>
+                    <label for="monthly_budget" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fa-solid fa-dollar-sign mr-2"></i>
+                        Monthly Google Ads Budget
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">$</span>
+                        <input type="number" id="monthly_budget" name="monthly_budget"
+                               class="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                               placeholder="5000" min="0" step="100" value="{{ wizard_data.monthly_budget if wizard_data else '' }}">
+                    </div>
+                    <p class="mt-1 text-sm text-gray-500">Your total monthly budget for Google Ads campaigns</p>
+                </div>
+
+                <!-- What Will Be Analyzed -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-900 mb-3">
+                        <i class="fa-solid fa-list-check mr-2 text-indigo-600"></i>
+                        What We'll Analyze
+                    </h3>
+                    <ul class="space-y-2 text-sm text-gray-700">
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check text-green-600 mr-2 mt-1"></i>
+                            <span><strong>Campaign Type Diversity:</strong> Balance between Search and Performance Max campaigns</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check text-green-600 mr-2 mt-1"></i>
+                            <span><strong>Campaign Structure:</strong> Number of campaigns and ad groups, naming conventions</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check text-green-600 mr-2 mt-1"></i>
+                            <span><strong>Ad Group Themes:</strong> Keyword coherence and ad group sizes</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check text-green-600 mr-2 mt-1"></i>
+                            <span><strong>Budget Distribution:</strong> How budget is allocated across campaigns</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check text-green-600 mr-2 mt-1"></i>
+                            <span><strong>Keyword Strategy:</strong> Match type distribution and keyword coverage</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check text-green-600 mr-2 mt-1"></i>
+                            <span><strong>Account Setup:</strong> Recommendations for new or minimal accounts</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="flex items-center justify-between pt-4">
+                    <a href="{{ url_for('account_wizard.wizard_home') }}" class="text-gray-600 hover:text-gray-900">
+                        <i class="fa-solid fa-arrow-left mr-2"></i>
+                        Cancel
+                    </a>
+                    <button type="submit" class="bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700 font-semibold">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-2"></i>
+                        Run AI Analysis
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-8 border w-96 shadow-lg rounded-lg bg-white">
+            <div class="text-center">
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-indigo-100 mb-4">
+                    <i class="fa-solid fa-robot text-indigo-600 text-3xl animate-pulse"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Analyzing Your Account...</h3>
+                <p class="text-sm text-gray-600 mb-4">AccountStructureAgent is reviewing your campaigns and generating recommendations</p>
+                <div class="flex justify-center">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('analyzeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    // Show loading modal
+    document.getElementById('loadingModal').classList.remove('hidden');
+
+    // Submit form via AJAX
+    const formData = new FormData(this);
+
+    fetch('{{ url_for("account_wizard.analyze_account", account_id=account.id) }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Redirect to review page
+            window.location.href = data.redirect;
+        } else {
+            alert('Error: ' + data.error);
+            document.getElementById('loadingModal').classList.add('hidden');
+        }
+    })
+    .catch(error => {
+        alert('Error analyzing account: ' + error);
+        document.getElementById('loadingModal').classList.add('hidden');
+    });
+});
+</script>
+{% endblock %}

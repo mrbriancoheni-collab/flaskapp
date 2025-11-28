@@ -2091,6 +2091,10 @@ def ads_ui():
             'adjust_bids',             # Campaign-level bid adjustments
             'adjust_daily_budget',     # Budget pacing
             'create_search_campaign',  # AI-assisted Search campaign creation
+            'add_pmax_assets',         # AI-generated PMax headlines and descriptions
+            'improve_asset_variety',   # AI-generated additional headline variations
+            'add_asset_groups',        # AI-generated asset groups with themes
+            'create_asset_groups',     # AI-generated asset groups for new campaigns
         ]
         if opt_type in agent_auto_types or decision_type in agent_auto_types:
             return True
@@ -2848,6 +2852,8 @@ def _apply_optimization(aid: int, customer_id: str, opt_type: str, opt_data: dic
         decision_type = opt_data.get('decision_type', '')
         if decision_type == 'create_search_campaign':
             return _apply_create_search_campaign(aid, customer_id, opt_data, refresh_token)
+        elif decision_type in ['add_asset_groups', 'create_asset_groups']:
+            return _apply_add_asset_groups(aid, customer_id, opt_data, refresh_token)
 
         # Apply based on optimization type
         if opt_type == "negative_keyword":
@@ -3904,6 +3910,242 @@ def _apply_pmax_descriptions(aid: int, customer_id: str, opt_data: dict, refresh
         return {"success": False, "error": error_msg}
     except Exception as e:
         current_app.logger.error(f"Error adding PMax descriptions: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def _apply_add_asset_groups(aid: int, customer_id: str, opt_data: dict, refresh_token: str) -> dict:
+    """Create AI-generated asset groups for Performance Max campaigns."""
+    try:
+        from google.ads.googleads.client import GoogleAdsClient
+        from google.ads.googleads.errors import GoogleAdsException
+        from app.ai_clients import chatgpt_response
+        import json
+
+        # Create Google Ads client
+        client_id, client_secret = _client_info("ads")
+        credentials = {
+            "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "use_proto_plus": True
+        }
+
+        client = GoogleAdsClient.load_from_dict(credentials)
+
+        # Get business name and existing PMax campaign
+        google_ads_service = client.get_service("GoogleAdsService")
+        query = """
+            SELECT
+                campaign.id,
+                campaign.name
+            FROM campaign
+            WHERE campaign.advertising_channel_type = 'PERFORMANCE_MAX'
+                AND campaign.status = 'ENABLED'
+            LIMIT 1
+        """
+        response = google_ads_service.search(customer_id=customer_id, query=query)
+
+        pmax_campaign_id = None
+        business_name = "Your Business"
+        for row in response:
+            pmax_campaign_id = row.campaign.id
+            business_name = row.campaign.name.split(" - ")[0].split(" | ")[0]
+            break
+
+        if not pmax_campaign_id:
+            return {"success": False, "error": "No active Performance Max campaign found"}
+
+        # How many asset groups to create
+        current_count = opt_data.get('action_data', {}).get('current_count', 1)
+        recommended_count = opt_data.get('action_data', {}).get('recommended_count', 3)
+        num_to_create = min(recommended_count - current_count, 3)  # Max 3 at once
+
+        current_app.logger.info(f"Generating {num_to_create} asset groups for {business_name}")
+
+        # Generate asset group themes using AI
+        prompt = f"""Generate {num_to_create} asset group themes for a Google Performance Max campaign.
+
+Business: {business_name}
+
+Each asset group should target a different product/service category or customer segment.
+
+For each asset group, provide:
+- A specific theme/category name
+- 3 headlines (30 chars each)
+- 2 descriptions (90 chars each)
+- A suggested final URL path
+
+Return ONLY valid JSON:
+{{
+  "asset_groups": [
+    {{
+      "name": "Service Name",
+      "headlines": ["Headline 1", "Headline 2", "Headline 3"],
+      "descriptions": ["Description 1", "Description 2"],
+      "url_path": "/service-page"
+    }}
+  ]
+}}"""
+
+        ai_response = chatgpt_response(prompt)
+
+        # Parse AI response
+        if "```json" in ai_response:
+            ai_response = ai_response.split("```json")[1].split("```")[0].strip()
+        elif "```" in ai_response:
+            ai_response = ai_response.split("```")[1].split("```")[0].strip()
+
+        asset_group_data = json.loads(ai_response)
+
+        # Get existing PMax assets (images) to reuse
+        query = """
+            SELECT
+                asset.resource_name,
+                asset.type,
+                asset.image_asset.full_size.url
+            FROM asset
+            WHERE asset.type = 'IMAGE'
+            LIMIT 5
+        """
+        image_assets = []
+        try:
+            response = google_ads_service.search(customer_id=customer_id, query=query)
+            for row in response:
+                image_assets.append(row.asset.resource_name)
+        except:
+            pass  # Images optional for now
+
+        # Get website URL from campaign settings
+        base_url = "https://example.com"
+        query = f"""
+            SELECT
+                asset_group.final_urls
+            FROM asset_group
+            WHERE asset_group.campaign = 'customers/{customer_id}/campaigns/{pmax_campaign_id}'
+            LIMIT 1
+        """
+        try:
+            response = google_ads_service.search(customer_id=customer_id, query=query)
+            for row in response:
+                if row.asset_group.final_urls:
+                    base_url = row.asset_group.final_urls[0]
+                    break
+        except:
+            pass
+
+        # Create asset groups
+        asset_group_service = client.get_service("AssetGroupService")
+        asset_service = client.get_service("AssetService")
+        asset_group_asset_service = client.get_service("AssetGroupAssetService")
+
+        created_groups = []
+        campaign_resource_name = f"customers/{customer_id}/campaigns/{pmax_campaign_id}"
+
+        for ag_data in asset_group_data.get("asset_groups", [])[:num_to_create]:
+            # Create asset group
+            asset_group_operation = client.get_type("AssetGroupOperation")
+            asset_group = asset_group_operation.create
+
+            asset_group.name = ag_data.get("name", "Asset Group")
+            asset_group.campaign = campaign_resource_name
+            asset_group.status = client.enums.AssetGroupStatusEnum.ENABLED
+
+            # Set final URL
+            url_path = ag_data.get("url_path", "")
+            final_url = base_url.rstrip("/") + url_path if url_path else base_url
+            asset_group.final_urls.append(final_url)
+
+            ag_response = asset_group_service.mutate_asset_groups(
+                customer_id=customer_id,
+                operations=[asset_group_operation]
+            )
+
+            asset_group_resource_name = ag_response.results[0].resource_name
+            created_groups.append(ag_data.get("name"))
+
+            # Add headlines to asset group
+            headline_operations = []
+            for headline_text in ag_data.get("headlines", [])[:5]:
+                # Create text asset
+                asset_operation = client.get_type("AssetOperation")
+                text_asset = asset_operation.create
+                text_asset.text_asset.text = headline_text[:30]  # Max 30 chars
+                text_asset.type_ = client.enums.AssetTypeEnum.TEXT
+
+                asset_response = asset_service.mutate_assets(
+                    customer_id=customer_id,
+                    operations=[asset_operation]
+                )
+
+                # Link asset to asset group
+                asset_group_asset_operation = client.get_type("AssetGroupAssetOperation")
+                asset_group_asset = asset_group_asset_operation.create
+                asset_group_asset.asset = asset_response.results[0].resource_name
+                asset_group_asset.asset_group = asset_group_resource_name
+                asset_group_asset.field_type = client.enums.AssetFieldTypeEnum.HEADLINE
+
+                asset_group_asset_service.mutate_asset_group_assets(
+                    customer_id=customer_id,
+                    operations=[asset_group_asset_operation]
+                )
+
+            # Add descriptions to asset group
+            for desc_text in ag_data.get("descriptions", [])[:4]:
+                # Create text asset
+                asset_operation = client.get_type("AssetOperation")
+                text_asset = asset_operation.create
+                text_asset.text_asset.text = desc_text[:90]  # Max 90 chars
+                text_asset.type_ = client.enums.AssetTypeEnum.TEXT
+
+                asset_response = asset_service.mutate_assets(
+                    customer_id=customer_id,
+                    operations=[asset_operation]
+                )
+
+                # Link asset to asset group
+                asset_group_asset_operation = client.get_type("AssetGroupAssetOperation")
+                asset_group_asset = asset_group_asset_operation.create
+                asset_group_asset.asset = asset_response.results[0].resource_name
+                asset_group_asset.asset_group = asset_group_resource_name
+                asset_group_asset.field_type = client.enums.AssetFieldTypeEnum.DESCRIPTION
+
+                asset_group_asset_service.mutate_asset_group_assets(
+                    customer_id=customer_id,
+                    operations=[asset_group_asset_operation]
+                )
+
+            # Add images if available
+            if image_assets:
+                for image_asset in image_assets[:3]:  # Add up to 3 images
+                    asset_group_asset_operation = client.get_type("AssetGroupAssetOperation")
+                    asset_group_asset = asset_group_asset_operation.create
+                    asset_group_asset.asset = image_asset
+                    asset_group_asset.asset_group = asset_group_resource_name
+                    asset_group_asset.field_type = client.enums.AssetFieldTypeEnum.MARKETING_IMAGE
+
+                    try:
+                        asset_group_asset_service.mutate_asset_group_assets(
+                            customer_id=customer_id,
+                            operations=[asset_group_asset_operation]
+                        )
+                    except:
+                        pass  # Image linking optional
+
+        return {
+            "success": True,
+            "message": f"Created {len(created_groups)} asset group{'' if len(created_groups) == 1 else 's'}: {', '.join(created_groups)}",
+            "asset_groups": created_groups
+        }
+
+    except GoogleAdsException as ex:
+        error_msg = f"Google Ads API error: {ex.error.code().name}"
+        for error in ex.failure.errors:
+            error_msg += f" - {error.message}"
+        return {"success": False, "error": error_msg}
+    except Exception as e:
+        current_app.logger.error(f"Error creating asset groups: {e}")
         return {"success": False, "error": str(e)}
 
 

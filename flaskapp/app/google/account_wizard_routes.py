@@ -6,12 +6,13 @@ account restructuring using the AccountStructureAgent.
 """
 
 from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for
-from flask_login import login_required, current_user
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 import json
 
-from ..models import db, GoogleAdsAccount, Campaign, AdGroup, Keyword
+from ..models import db, Account
+from ..models_ads import AdsCampaign, AdsAdGroup, AdsKeyword
+from ..auth.utils import login_required, current_account_id
 from ..agents.account_structure_agent import AccountStructureAgent
 from ..agents.strategic import StrategicDirectorAgent
 from ..agents.decision_log import AgentDecisionLog
@@ -24,26 +25,26 @@ account_wizard_bp = Blueprint('account_wizard', __name__, url_prefix='/account/g
 def wizard_home():
     """
     Landing page for the account setup wizard.
-    Shows available accounts and wizard status.
+    Shows current account and wizard status.
     """
-    # Get user's Google Ads accounts
-    accounts = GoogleAdsAccount.query.filter_by(
-        company_id=current_user.company_id,
-        is_active=True
-    ).all()
+    # Get current account
+    account_id = current_account_id()
+    if not account_id:
+        return "No account found", 404
 
-    # Check which accounts have been analyzed
-    account_status = []
-    for account in accounts:
-        # Check if there's a recent wizard session
-        wizard_data = _get_wizard_session(account.id)
+    account = Account.query.get(account_id)
+    if not account:
+        return "Account not found", 404
 
-        account_status.append({
-            'account': account,
-            'has_wizard_data': wizard_data is not None,
-            'wizard_completed': wizard_data.get('completed', False) if wizard_data else False,
-            'last_analysis': wizard_data.get('analysis_date') if wizard_data else None
-        })
+    # Check if there's a recent wizard session
+    wizard_data = _get_wizard_session(account_id)
+
+    account_status = {
+        'account': account,
+        'has_wizard_data': wizard_data is not None,
+        'wizard_completed': wizard_data.get('completed', False) if wizard_data else False,
+        'last_analysis': wizard_data.get('analysis_date') if wizard_data else None
+    }
 
     return render_template('google/account_setup_wizard.html',
                          account_status=account_status,
@@ -56,10 +57,12 @@ def start_wizard(account_id: int):
     """
     Start the wizard for a specific account.
     """
-    account = GoogleAdsAccount.query.filter_by(
-        id=account_id,
-        company_id=current_user.company_id
-    ).first_or_404()
+    # Verify account belongs to current user
+    current_acct_id = current_account_id()
+    if not current_acct_id or account_id != current_acct_id:
+        return "Unauthorized", 403
+
+    account = Account.query.get_or_404(account_id)
 
     # Initialize wizard session
     wizard_session = {
@@ -81,10 +84,12 @@ def analyze_account(account_id: int):
     """
     Analyze account structure and show recommendations.
     """
-    account = GoogleAdsAccount.query.filter_by(
-        id=account_id,
-        company_id=current_user.company_id
-    ).first_or_404()
+    # Verify account belongs to current user
+    current_acct_id = current_account_id()
+    if not current_acct_id or account_id != current_acct_id:
+        return "Unauthorized", 403
+
+    account = Account.query.get_or_404(account_id)
 
     if request.method == 'GET':
         # Show analysis page
@@ -92,17 +97,17 @@ def analyze_account(account_id: int):
         return render_template('google/wizard_analyze.html',
                              account=account,
                              wizard_data=wizard_data,
-                             page_title=f'Analyze Account - {account.account_name}')
+                             page_title=f'Analyze Account - {account.name}')
 
     # POST: Run analysis
     try:
         # Gather account data
-        campaigns = Campaign.query.filter_by(google_ads_account_id=account_id).all()
-        ad_groups = AdGroup.query.join(Campaign).filter(
-            Campaign.google_ads_account_id == account_id
+        campaigns = AdsCampaign.query.filter_by(account_id=account_id).all()
+        ad_groups = AdsAdGroup.query.join(AdsCampaign).filter(
+            AdsCampaign.account_id == account_id
         ).all()
-        keywords = Keyword.query.join(AdGroup).join(Campaign).filter(
-            Campaign.google_ads_account_id == account_id
+        keywords = AdsKeyword.query.join(AdsAdGroup).join(AdsCampaign).filter(
+            AdsCampaign.account_id == account_id
         ).all()
 
         # Prepare context for analysis
@@ -113,7 +118,7 @@ def analyze_account(account_id: int):
             'campaigns': [_campaign_to_dict(c) for c in campaigns],
             'ad_groups': [_ad_group_to_dict(ag) for ag in ad_groups],
             'keywords': [_keyword_to_dict(kw) for kw in keywords],
-            'account_age_days': (datetime.now() - account.created_at).days if account.created_at else 0,
+            'account_age_days': (datetime.now() - account.created_at).days if hasattr(account, 'created_at') and account.created_at else 0,
             'business_type': business_type,
             'monthly_budget': monthly_budget
         }
@@ -159,10 +164,12 @@ def review_recommendations(account_id: int):
     """
     Review and customize recommendations.
     """
-    account = GoogleAdsAccount.query.filter_by(
-        id=account_id,
-        company_id=current_user.company_id
-    ).first_or_404()
+    # Verify account belongs to current user
+    current_acct_id = current_account_id()
+    if not current_acct_id or account_id != current_acct_id:
+        return "Unauthorized", 403
+
+    account = Account.query.get_or_404(account_id)
 
     wizard_data = _get_wizard_session(account_id)
     if not wizard_data or not wizard_data.get('opportunities'):
@@ -171,7 +178,7 @@ def review_recommendations(account_id: int):
     return render_template('google/wizard_review.html',
                          account=account,
                          wizard_data=wizard_data,
-                         page_title=f'Review Recommendations - {account.account_name}')
+                         page_title=f'Review Recommendations - {account.name}')
 
 
 @account_wizard_bp.route('/apply/<int:account_id>', methods=['POST'])
@@ -180,10 +187,12 @@ def apply_recommendations(account_id: int):
     """
     Apply selected recommendations.
     """
-    account = GoogleAdsAccount.query.filter_by(
-        id=account_id,
-        company_id=current_user.company_id
-    ).first_or_404()
+    # Verify account belongs to current user
+    current_acct_id = current_account_id()
+    if not current_acct_id or account_id != current_acct_id:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    account = Account.query.get_or_404(account_id)
 
     wizard_data = _get_wizard_session(account_id)
     if not wizard_data:
@@ -208,7 +217,7 @@ def apply_recommendations(account_id: int):
                     description=decision_data.get('description'),
                     reasoning=decision_data.get('reasoning'),
                     account_id=account_id,
-                    customer_id=account.customer_id or '',
+                    customer_id='',  # Google Ads customer ID not stored on Account model
                     action_data=json.dumps(decision_data.get('action_data', {})),
                     risk_level=decision_data.get('risk_level', 'medium'),
                     requires_approval=decision_data.get('risk_level', 'medium') != 'low',
@@ -251,19 +260,21 @@ def quick_analyze(account_id: int):
     Quick analysis endpoint for AJAX requests.
     Returns structure insights without full wizard flow.
     """
-    account = GoogleAdsAccount.query.filter_by(
-        id=account_id,
-        company_id=current_user.company_id
-    ).first_or_404()
+    # Verify account belongs to current user
+    current_acct_id = current_account_id()
+    if not current_acct_id or account_id != current_acct_id:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    account = Account.query.get_or_404(account_id)
 
     try:
         # Gather minimal account data
-        campaigns = Campaign.query.filter_by(google_ads_account_id=account_id).all()
+        campaigns = AdsCampaign.query.filter_by(account_id=account_id).all()
         campaign_count = len(campaigns)
 
-        # Quick structure check
-        has_search = any(c.campaign_type == 'SEARCH' for c in campaigns)
-        has_pmax = any(c.campaign_type == 'PERFORMANCE_MAX' for c in campaigns)
+        # Quick structure check (using 'network' field from AdsCampaign)
+        has_search = any(c.network == 'SEARCH' for c in campaigns)
+        has_pmax = any(c.network == 'PMax' or c.network == 'PERFORMANCE_MAX' for c in campaigns)
 
         total_budget = sum(c.daily_budget_cents or 0 for c in campaigns) * 30 / 100
 
@@ -325,34 +336,34 @@ def _save_wizard_session(account_id: int, data: Dict):
     session.modified = True
 
 
-def _campaign_to_dict(campaign: Campaign) -> Dict:
-    """Convert Campaign model to dict for agent analysis."""
+def _campaign_to_dict(campaign: AdsCampaign) -> Dict:
+    """Convert AdsCampaign model to dict for agent analysis."""
     return {
         'id': campaign.id,
         'name': campaign.name,
-        'advertising_channel_type': campaign.campaign_type or 'SEARCH',
-        'type': campaign.campaign_type or 'SEARCH',
+        'advertising_channel_type': campaign.network or 'SEARCH',
+        'type': campaign.network or 'SEARCH',
         'daily_budget_cents': campaign.daily_budget_cents or 0,
         'status': campaign.status,
-        'roas': getattr(campaign, 'roas', 0),
+        'roas': 0,  # Not stored in AdsCampaign model
         'monthly_spend': (campaign.daily_budget_cents or 0) * 30 / 100,
-        'impression_share': getattr(campaign, 'impression_share', 0)
+        'impression_share': 0  # Not stored in AdsCampaign model
     }
 
 
-def _ad_group_to_dict(ad_group: AdGroup) -> Dict:
-    """Convert AdGroup model to dict for agent analysis."""
+def _ad_group_to_dict(ad_group: AdsAdGroup) -> Dict:
+    """Convert AdsAdGroup model to dict for agent analysis."""
     return {
         'id': ad_group.id,
         'name': ad_group.name,
         'campaign_id': ad_group.campaign_id,
         'status': ad_group.status,
-        'cpc_bid_cents': ad_group.cpc_bid_cents or 0
+        'cpc_bid_cents': ad_group.max_cpc_cents or 0
     }
 
 
-def _keyword_to_dict(keyword: Keyword) -> Dict:
-    """Convert Keyword model to dict for agent analysis."""
+def _keyword_to_dict(keyword: AdsKeyword) -> Dict:
+    """Convert AdsKeyword model to dict for agent analysis."""
     return {
         'id': keyword.id,
         'text': keyword.text,

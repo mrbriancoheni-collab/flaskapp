@@ -250,7 +250,7 @@ def apply_recommendations(account_id: int):
             'success': True,
             'decisions_created': len(created_decisions),
             'message': f'Created {len(created_decisions)} recommendations for review',
-            'redirect': url_for('agents.approval_queue')
+            'redirect': url_for('agents_bp.approval_queue')
         })
 
     except Exception as e:

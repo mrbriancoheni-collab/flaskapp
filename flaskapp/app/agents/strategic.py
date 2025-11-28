@@ -6,9 +6,10 @@ The Strategic Director sets quarterly goals, allocates budget across campaigns,
 and makes high-level decisions about scaling, pausing, or launching campaigns.
 """
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
 from .base import BaseAgent, AgentDecision, AgentCapability, DecisionRiskLevel
+from .event_bus import AgentEventBus
 
 
 class StrategicDirectorAgent(BaseAgent):
@@ -41,6 +42,46 @@ class StrategicDirectorAgent(BaseAgent):
         self.quarterly_goals = {}
         self.budget_allocation = {}
         self.campaign_priorities = {}
+        self.account_structure_agent = None  # Will be initialized when needed
+
+    def get_account_structure_analysis(self, context: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
+        """
+        Delegate to AccountStructureAgent for detailed account structure analysis.
+
+        This allows the Strategic Director to get expert insights on:
+        - Campaign organization and hierarchy
+        - Ad group structure and theme coherence
+        - Budget distribution recommendations
+        - Campaign type portfolio balance
+        """
+        try:
+            from .account_structure_agent import AccountStructureAgent
+
+            # Initialize if not already done
+            if not self.account_structure_agent:
+                self.account_structure_agent = AccountStructureAgent(
+                    account_id=self.account_id,
+                    agent_config=self.agent_config
+                )
+
+            # Run structure analysis
+            structure_opportunities = self.account_structure_agent.analyze(context)
+
+            # Emit event for other agents
+            AgentEventBus.emit(
+                event_type='structure_analysis_complete',
+                source_agent=self.agent_id,
+                data={
+                    'opportunities_found': len(structure_opportunities),
+                    'analysis_timestamp': datetime.now().isoformat()
+                }
+            )
+
+            return structure_opportunities
+
+        except Exception as e:
+            self.log(f"Error in account structure analysis: {str(e)}")
+            return None
 
     def analyze(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
@@ -51,6 +92,8 @@ class StrategicDirectorAgent(BaseAgent):
         - campaigns: List of campaigns with metrics
         - budget: Current budget and spend
         - business_goals: Business objectives (if available)
+        - ad_groups: List of ad groups (optional, for structure analysis)
+        - keywords: List of keywords (optional, for structure analysis)
         """
         opportunities = []
 
@@ -59,6 +102,21 @@ class StrategicDirectorAgent(BaseAgent):
         campaigns = context.get('campaigns', [])
         total_budget = context.get('total_budget', 0)
         business_goals = context.get('business_goals', {})
+
+        # Delegate to AccountStructureAgent for detailed structure analysis
+        structure_opportunities = self.get_account_structure_analysis(context)
+        if structure_opportunities:
+            # Integrate structure recommendations into strategic planning
+            for struct_opp in structure_opportunities:
+                if struct_opp.get('priority') in ['critical', 'high']:
+                    # High-priority structure issues should be addressed strategically
+                    opportunities.append({
+                        'type': 'account_structure_issue',
+                        'severity': struct_opp.get('priority', 'medium'),
+                        'structure_type': struct_opp.get('type'),
+                        'details': struct_opp,
+                        'source': 'AccountStructureAgent'
+                    })
 
         # Campaign type analysis
         has_pmax_campaigns = context.get('has_pmax_campaigns', False)
@@ -191,6 +249,14 @@ class StrategicDirectorAgent(BaseAgent):
 
         for opp in opportunities:
             opp_type = opp['type']
+
+            if opp_type == 'account_structure_issue':
+                # Delegate structure decisions to AccountStructureAgent
+                struct_details = opp.get('details', {})
+                if self.account_structure_agent:
+                    struct_decisions = self.account_structure_agent.decide([struct_details])
+                    decisions.extend(struct_decisions)
+                continue
 
             if opp_type == 'budget_reallocation':
                 decision = AgentDecision(

@@ -17,6 +17,7 @@ from .base import BaseAgent, AgentDecision, AgentCapability
 from .event_bus import EventBus, AgentEvent
 from .decision_log import DecisionLog
 from .strategic import StrategicDirectorAgent
+from .account_structure_agent import AccountStructureAgent
 from .operational import CampaignManagerAgent, BudgetGuardianAgent, QualityScoreAgent
 from .tactical import KeywordOptimizerAgent, AdCopyAgent, NegativeKeywordAgent, LandingPageAnalystAgent
 from .pmax_agents import AssetPerformanceAgent, AudienceSignalAgent, PMaxCampaignStructureAgent
@@ -32,6 +33,7 @@ __all__ = [
     'DecisionLog',
     # Strategic Layer
     'StrategicDirectorAgent',
+    'AccountStructureAgent',
     # Operational Layer
     'CampaignManagerAgent',
     'BudgetGuardianAgent',

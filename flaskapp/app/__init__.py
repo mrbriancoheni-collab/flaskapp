@@ -570,6 +570,13 @@ def create_app():
         app.logger.exception("Failed to import/register agents_bp")
 
     try:
+        from app.google.account_wizard_routes import account_wizard_bp
+        app.register_blueprint(account_wizard_bp)
+        app.logger.info("account_wizard_bp registered at /account/google/ads/setup-wizard")
+    except Exception:
+        app.logger.exception("Failed to import/register account_wizard_bp")
+
+    try:
         from app.google.budget_routes import budget_bp
         app.register_blueprint(budget_bp)
         app.logger.info("budget_bp registered at /account/google/ads/budget")

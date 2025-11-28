@@ -15,7 +15,8 @@ from ..models_ads import AdsCampaign, AdsAdGroup, AdsKeyword
 from ..auth.utils import login_required, current_account_id
 from ..agents.account_structure_agent import AccountStructureAgent
 from ..agents.strategic import StrategicDirectorAgent
-from ..agents.decision_log import AgentDecisionLog
+from ..agents.decision_log import DecisionLog
+from ..agents.base import AgentDecision, DecisionRiskLevel
 
 account_wizard_bp = Blueprint('account_wizard', __name__, url_prefix='/account/google/ads/setup-wizard')
 
@@ -206,10 +207,17 @@ def apply_recommendations(account_id: int):
         decisions_data = wizard_data.get('decisions', [])
         created_decisions = []
 
+        # Initialize decision log
+        decision_log = DecisionLog()
+
         for decision_data in decisions_data:
             if decision_data.get('id') in selected_decisions or decision_data.get('index') in selected_decisions:
-                # Create AgentDecision record
-                decision_log = AgentDecisionLog(
+                # Map risk_level string to enum
+                risk_level_str = decision_data.get('risk_level', 'medium').upper()
+                risk_level = getattr(DecisionRiskLevel, risk_level_str, DecisionRiskLevel.MEDIUM)
+
+                # Create AgentDecision object
+                decision = AgentDecision(
                     agent_id='account_structure_agent',
                     agent_type='strategic',
                     decision_type=decision_data.get('decision_type'),
@@ -218,19 +226,19 @@ def apply_recommendations(account_id: int):
                     reasoning=decision_data.get('reasoning'),
                     account_id=account_id,
                     customer_id='',  # Google Ads customer ID not stored on Account model
-                    action_data=json.dumps(decision_data.get('action_data', {})),
-                    risk_level=decision_data.get('risk_level', 'medium'),
+                    action_data=decision_data.get('action_data', {}),
+                    risk_level=risk_level,
                     requires_approval=decision_data.get('risk_level', 'medium') != 'low',
                     confidence=decision_data.get('confidence', 0.75),
                     expected_monthly_savings=decision_data.get('expected_monthly_savings', 0),
                     expected_monthly_leads=decision_data.get('expected_monthly_leads', 0),
-                    status='pending_approval',
+                    status='pending',
                     created_at=datetime.now()
                 )
-                db.session.add(decision_log)
-                created_decisions.append(decision_log)
 
-        db.session.commit()
+                # Log the decision to the database
+                decision_log.log_decision(decision)
+                created_decisions.append(decision)
 
         # Mark wizard as completed
         wizard_data['completed'] = True

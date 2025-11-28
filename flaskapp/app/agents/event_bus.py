@@ -269,3 +269,10 @@ Example workflow showing how agents use the event bus:
 
 4. Campaign Manager receives results and makes decisions
 """
+
+# Global singleton instance for use across agents
+_global_event_bus = EventBus()
+
+# Alias for compatibility with existing code
+# AgentEventBus can be used as a singleton instance
+AgentEventBus = _global_event_bus

@@ -145,18 +145,39 @@ def analyze_account(account_id: int):
         })
         _save_wizard_session(account_id, wizard_data)
 
-        return jsonify({
-            'success': True,
-            'opportunities_found': len(opportunities),
-            'decisions_generated': len(decisions),
-            'redirect': url_for('account_wizard.review_recommendations', account_id=account_id)
-        })
+        # Check if this is an AJAX request
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+                  request.accept_mimetypes.accept_json and \
+                  not request.accept_mimetypes.accept_html
+
+        if is_ajax:
+            # Return JSON for AJAX requests
+            return jsonify({
+                'success': True,
+                'opportunities_found': len(opportunities),
+                'decisions_generated': len(decisions),
+                'redirect': url_for('account_wizard.review_recommendations', account_id=account_id)
+            })
+        else:
+            # Direct redirect for regular form submissions
+            return redirect(url_for('account_wizard.review_recommendations', account_id=account_id))
 
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 400
+        # Check if this is an AJAX request for error handling too
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+                  request.accept_mimetypes.accept_json and \
+                  not request.accept_mimetypes.accept_html
+
+        if is_ajax:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 400
+        else:
+            # For regular requests, show error page or redirect with flash message
+            from flask import flash
+            flash(f'Error analyzing account: {str(e)}', 'error')
+            return redirect(url_for('account_wizard.analyze_account', account_id=account_id))
 
 
 @account_wizard_bp.route('/review/<int:account_id>', methods=['GET'])

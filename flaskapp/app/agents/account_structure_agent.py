@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 import anthropic
 from flask import current_app
 
-from .base import BaseAgent, AgentDecision
+from .base import BaseAgent, AgentDecision, AgentCapability
 from .event_bus import AgentEventBus
 
 
@@ -33,17 +33,26 @@ class AccountStructureAgent(BaseAgent):
     - Design greenfield account structure
     """
 
-    def __init__(self, account_id: str, agent_config: Dict[str, Any] = None):
+    def __init__(self, account_id: Optional[int] = None, agent_config: Dict[str, Any] = None, **kwargs):
+        # Define capabilities for this agent
+        capabilities = [
+            AgentCapability.STRATEGIC_PLANNING,
+            AgentCapability.PERFORMANCE_MONITORING,
+        ]
+
+        # Strategic decisions require higher approval threshold
+        auto_threshold = agent_config.get('auto_execute_threshold', 0.70) if agent_config else 0.70
+
         super().__init__(
             agent_id="account_structure_agent",
-            agent_type="strategic",
+            capabilities=capabilities,
+            auto_execute_threshold=auto_threshold,
             account_id=account_id,
-            agent_config=agent_config
+            **kwargs
         )
+
         self.name = "Account Structure Agent"
         self.description = "Analyzes and optimizes Google Ads account architecture"
-        # Strategic decisions require higher approval threshold
-        self.auto_execute_threshold = agent_config.get('auto_execute_threshold', 0.70) if agent_config else 0.70
 
     def analyze(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """

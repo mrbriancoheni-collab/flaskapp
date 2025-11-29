@@ -71,6 +71,17 @@ def main():
             'table': 'keywords',
             'column': 'max_cpc_cents',
             'sql': "ALTER TABLE keywords ADD COLUMN max_cpc_cents INT DEFAULT NULL AFTER status"
+        },
+        {
+            'table': 'keywords',
+            'column': 'google_keyword_id',
+            'sql': "ALTER TABLE keywords ADD COLUMN google_keyword_id VARCHAR(64) DEFAULT NULL AFTER max_cpc_cents"
+        },
+        {
+            'table': 'keywords',
+            'column': 'idx_keywords_google_keyword_id',
+            'sql': "CREATE INDEX idx_keywords_google_keyword_id ON keywords(google_keyword_id)",
+            'is_index': True
         }
     ]
 

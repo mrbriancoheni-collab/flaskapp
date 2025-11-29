@@ -13,6 +13,9 @@ The application is experiencing multiple SQL errors due to missing columns:
 (pymysql.err.OperationalError) (1054, "Unknown column 'keywords.max_cpc_cents' in 'SELECT'")
 ```
 
+### Error 3: keywords.google_keyword_id (Missing)
+The model defines `google_keyword_id` (VARCHAR 64) but it's missing from the keywords table, which will cause issues when syncing Google Ads keyword data.
+
 **Root Cause**: The database tables are out of sync with the SQLAlchemy models defined in `app/models_ads.py`. The models define columns that don't exist in the actual database tables.
 
 ## Solution
@@ -40,8 +43,10 @@ Connect to your MySQL database and run these commands:
 ALTER TABLE ad_groups ADD COLUMN google_ad_group_id VARCHAR(64) DEFAULT NULL AFTER max_cpc_cents;
 CREATE INDEX idx_ad_groups_google_ad_group_id ON ad_groups(google_ad_group_id);
 
--- Fix keywords table
+-- Fix keywords table (2 columns)
 ALTER TABLE keywords ADD COLUMN max_cpc_cents INT DEFAULT NULL AFTER status;
+ALTER TABLE keywords ADD COLUMN google_keyword_id VARCHAR(64) DEFAULT NULL AFTER max_cpc_cents;
+CREATE INDEX idx_keywords_google_keyword_id ON keywords(google_keyword_id);
 ```
 
 ### Option 3: Individual Migration Files
@@ -49,6 +54,7 @@ ALTER TABLE keywords ADD COLUMN max_cpc_cents INT DEFAULT NULL AFTER status;
 The migrations are also available as separate SQL files in `flaskapp/migrations/`:
 - `add_google_ad_group_id_to_ad_groups.sql`
 - `add_max_cpc_cents_to_keywords.sql`
+- `add_google_keyword_id_to_keywords.sql`
 
 ## Verification
 
@@ -65,6 +71,7 @@ DESCRIBE keywords;
 You should see:
 - `google_ad_group_id` (VARCHAR(64)) in ad_groups table
 - `max_cpc_cents` (INT) in keywords table
+- `google_keyword_id` (VARCHAR(64)) in keywords table
 
 ## Impact
 

@@ -504,6 +504,8 @@ class AccountStructureAgent(BaseAgent):
             title=f"Set Up Complete Account Structure",
             description=f"Create optimized campaign structure with ${monthly_budget:,.0f}/month budget",
             reasoning='\n'.join(opp['recommendations']),
+            account_id=self.account_id or 0,
+            customer_id='',
             confidence=0.85,
             risk_level=risk_level,
             expected_monthly_savings=0,
@@ -512,8 +514,7 @@ class AccountStructureAgent(BaseAgent):
                 'structure_plan': structure_plan,
                 'monthly_budget': monthly_budget,
                 'business_type': opp['data'].get('business_type')
-            },
-            account_id=self.account_id
+            }
         )
 
     def _create_diversity_decision(self, opp: Dict, risk_level: str) -> Optional[AgentDecision]:
@@ -538,6 +539,8 @@ class AccountStructureAgent(BaseAgent):
             title=title,
             description=f"Improve campaign portfolio diversity",
             reasoning='\n'.join(opp['recommendations']),
+            account_id=self.account_id or 0,
+            customer_id='',
             confidence=0.80,
             risk_level=risk_level,
             expected_monthly_savings=0,
@@ -545,8 +548,7 @@ class AccountStructureAgent(BaseAgent):
             action_data={
                 'current_mix': type_counts,
                 'budget_data': opp['data']
-            },
-            account_id=self.account_id
+            }
         )
 
     def _create_efficiency_decision(self, opp: Dict, risk_level: str) -> Optional[AgentDecision]:
@@ -560,6 +562,8 @@ class AccountStructureAgent(BaseAgent):
             title="Optimize Campaign Structure",
             description=f"Improve efficiency of {campaign_count} campaigns",
             reasoning='\n'.join(opp['recommendations']),
+            account_id=self.account_id or 0,
+            customer_id='',
             confidence=0.75,
             risk_level='medium',
             expected_monthly_savings=int(campaign_count * 50),  # Estimate time savings
@@ -567,8 +571,7 @@ class AccountStructureAgent(BaseAgent):
             action_data={
                 'structure_data': opp['data'],
                 'issues': opp['issues']
-            },
-            account_id=self.account_id
+            }
         )
 
     def _create_budget_decision(self, opp: Dict, risk_level: str) -> Optional[AgentDecision]:
@@ -583,6 +586,8 @@ class AccountStructureAgent(BaseAgent):
             title=f"Optimize Budget Allocation ({utilization:.0f}% utilized)",
             description=f"Improve distribution of ${monthly_budget:,.0f} monthly budget",
             reasoning='\n'.join(opp['recommendations']),
+            account_id=self.account_id or 0,
+            customer_id='',
             confidence=0.80,
             risk_level=risk_level,
             expected_monthly_savings=int(monthly_budget * 0.05),  # 5% efficiency gain
@@ -590,8 +595,7 @@ class AccountStructureAgent(BaseAgent):
             action_data={
                 'budget_data': opp['data'],
                 'issues': opp['issues']
-            },
-            account_id=self.account_id
+            }
         )
 
     def _create_optimization_decision(self, opp: Dict, risk_level: str) -> Optional[AgentDecision]:
@@ -605,6 +609,8 @@ class AccountStructureAgent(BaseAgent):
             title=f"Optimize {opp_type.replace('_', ' ').title()}",
             description=f"Improve account organization",
             reasoning='\n'.join(opp['recommendations']),
+            account_id=self.account_id or 0,
+            customer_id='',
             confidence=0.70,
             risk_level='low',
             expected_monthly_savings=100,
@@ -612,8 +618,7 @@ class AccountStructureAgent(BaseAgent):
             action_data={
                 'optimization_data': opp['data'],
                 'issues': opp['issues']
-            },
-            account_id=self.account_id
+            }
         )
 
     def _execute_impl(self, decision: AgentDecision, google_ads_client: Any) -> Dict[str, Any]:

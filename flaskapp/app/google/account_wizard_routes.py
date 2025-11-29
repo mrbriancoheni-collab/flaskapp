@@ -40,12 +40,12 @@ def wizard_home():
     # Check if there's a recent wizard session
     wizard_data = _get_wizard_session(account_id)
 
-    account_status = {
+    account_status = [{
         'account': account,
         'has_wizard_data': wizard_data is not None,
         'wizard_completed': wizard_data.get('completed', False) if wizard_data else False,
         'last_analysis': wizard_data.get('analysis_date') if wizard_data else None
-    }
+    }]
 
     return render_template('google/account_setup_wizard.html',
                          account_status=account_status,

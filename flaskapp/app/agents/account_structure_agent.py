@@ -604,6 +604,26 @@ class AccountStructureAgent(BaseAgent):
             account_id=self.account_id
         )
 
+    def _execute_impl(self, decision: AgentDecision, google_ads_client: Any) -> Dict[str, Any]:
+        """
+        Execute the approved decision.
+        Account structure changes require manual implementation or wizard execution.
+
+        Args:
+            decision: The decision to execute
+            google_ads_client: Google Ads client or executor instance
+
+        Returns:
+            Dict indicating that manual implementation is required
+        """
+        self.log(f"AccountStructureAgent decisions require manual implementation")
+        return {
+            'success': False,
+            'message': 'Account structure changes require manual implementation or wizard execution',
+            'requires_manual_action': True,
+            'decision_type': decision.decision_type
+        }
+
     def execute(self, decision: AgentDecision) -> Dict[str, Any]:
         """
         Execute the approved decision.

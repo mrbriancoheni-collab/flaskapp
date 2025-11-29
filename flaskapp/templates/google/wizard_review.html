@@ -189,18 +189,31 @@
                                             <div class="mb-3">
                                                 <p class="font-semibold text-indigo-900 mb-2">Proposed Account Structure:</p>
                                                 <div class="bg-white rounded p-3 space-y-2">
+                                                    {% if decision.action_data.structure_plan.campaigns %}
+                                                    {# New format: campaigns list #}
+                                                    {% for campaign in decision.action_data.structure_plan.campaigns %}
+                                                    <div class="border-l-2 border-indigo-400 pl-3">
+                                                        <p class="font-medium text-gray-900">{{ campaign.type|replace('_', ' ')|title }} - {{ campaign.theme }}</p>
+                                                        <ul class="list-disc list-inside text-xs text-gray-600 ml-2 mt-1">
+                                                            <li>Budget Allocation: {{ campaign.budget_pct }}% (${{ ((decision.action_data.monthly_budget|default(0) * campaign.budget_pct / 100)|round|int) }}/month)</li>
+                                                        </ul>
+                                                    </div>
+                                                    {% endfor %}
+                                                    {% else %}
+                                                    {# Legacy format: dict with campaign types as keys #}
                                                     {% for campaign_type, plan in decision.action_data.structure_plan.items() %}
                                                     <div class="border-l-2 border-indigo-400 pl-3">
                                                         <p class="font-medium text-gray-900">{{ campaign_type|replace('_', ' ')|title }}</p>
                                                         <ul class="list-disc list-inside text-xs text-gray-600 ml-2 mt-1">
-                                                            <li>Campaigns: {{ plan.campaign_count }}</li>
-                                                            <li>Budget: ${{ plan.budget|round|int }}/month</li>
+                                                            <li>Campaigns: {{ plan.campaign_count|default(1) }}</li>
+                                                            <li>Budget: ${{ plan.budget|default(0)|round|int }}/month</li>
                                                             {% if plan.ad_groups_per_campaign %}
                                                             <li>Ad Groups per Campaign: {{ plan.ad_groups_per_campaign }}</li>
                                                             {% endif %}
                                                         </ul>
                                                     </div>
                                                     {% endfor %}
+                                                    {% endif %}
                                                 </div>
                                             </div>
                                             {% endif %}

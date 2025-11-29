@@ -13,11 +13,14 @@ This agent evaluates:
 
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
+import logging
 import anthropic
 from flask import current_app
 
 from .base import BaseAgent, AgentDecision, AgentCapability
 from .event_bus import AgentEventBus
+
+logger = logging.getLogger(__name__)
 
 
 class AccountStructureAgent(BaseAgent):
@@ -110,7 +113,7 @@ class AccountStructureAgent(BaseAgent):
             if greenfield_structure:
                 opportunities.append(greenfield_structure)
 
-        self.log(f"Identified {len(opportunities)} account structure opportunities")
+        logger.info(f"Identified {len(opportunities)} account structure opportunities")
         return opportunities
 
     def _analyze_campaign_types(self, campaigns: List[Dict]) -> Optional[Dict]:
@@ -625,7 +628,7 @@ class AccountStructureAgent(BaseAgent):
         Returns:
             Dict indicating that manual implementation is required
         """
-        self.log(f"AccountStructureAgent decisions require manual implementation")
+        logger.info(f"AccountStructureAgent decision requires manual implementation: {decision.decision_type}")
         return {
             'success': False,
             'message': 'Account structure changes require manual implementation or wizard execution',
@@ -638,7 +641,7 @@ class AccountStructureAgent(BaseAgent):
         Execute the approved decision.
         This should be called by GoogleAdsAgentExecutor.
         """
-        self.log(f"AccountStructureAgent decisions should be executed by GoogleAdsAgentExecutor")
+        logger.warning(f"AccountStructureAgent.execute() called directly - should use GoogleAdsAgentExecutor")
         return {
             'success': False,
             'message': 'Account structure changes require manual implementation or wizard execution'

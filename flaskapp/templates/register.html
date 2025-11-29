@@ -105,7 +105,7 @@
 
   <p class="text-sm text-gray-600 mt-4">
     Already have an account?
-    <a href="{{ url_for(ep('login'), next=request.args.get('next','')) }}" class="text-indigo-600 hover:underline">Sign in</a>
+    <a href="{{ url_for(ep('login'), next=(next or request.values.get('next',''))) }}" class="text-indigo-600 hover:underline">Sign in</a>
   </p>
 </div>
 

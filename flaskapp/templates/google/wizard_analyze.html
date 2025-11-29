@@ -182,6 +182,9 @@ document.getElementById('analyzeForm').addEventListener('submit', function(e) {
 
     fetch('{{ url_for("account_wizard.analyze_account", account_id=account.id) }}', {
         method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
         body: formData
     })
     .then(response => response.json())

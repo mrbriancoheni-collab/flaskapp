@@ -381,10 +381,63 @@ class AccountStructureAgent(BaseAgent):
 
             structure_plan = {
                 'campaigns': [
-                    {'type': 'SEARCH', 'theme': 'Brand', 'budget_pct': 15},
-                    {'type': 'SEARCH', 'theme': 'Core Services', 'budget_pct': 25},
-                    {'type': 'SEARCH', 'theme': 'High Intent', 'budget_pct': 20},
-                    {'type': 'PERFORMANCE_MAX', 'theme': 'All Products', 'budget_pct': 40}
+                    {
+                        'type': 'SEARCH',
+                        'theme': 'Brand',
+                        'budget_pct': 15,
+                        'name': f'{business_type.title()} - Brand Protection',
+                        'ad_groups': [
+                            {'name': 'Exact Brand Terms', 'keywords': ['[your business name]', '[your brand]']},
+                            {'name': 'Brand + Service', 'keywords': ['[your brand] services', '[your brand] near me']}
+                        ],
+                        'settings': {
+                            'bid_strategy': 'Target Impression Share (90%)',
+                            'location': 'Your service area',
+                            'networks': 'Search only'
+                        }
+                    },
+                    {
+                        'type': 'SEARCH',
+                        'theme': 'Core Services',
+                        'budget_pct': 25,
+                        'name': f'{business_type.title()} - Core Services',
+                        'ad_groups': [
+                            {'name': 'Primary Service', 'keywords': ['primary service keywords', 'main offering terms']},
+                            {'name': 'Secondary Service', 'keywords': ['secondary service keywords', 'additional offerings']}
+                        ],
+                        'settings': {
+                            'bid_strategy': 'Maximize Conversions with target CPA',
+                            'location': 'Your service area',
+                            'networks': 'Search + Search Partners'
+                        }
+                    },
+                    {
+                        'type': 'SEARCH',
+                        'theme': 'High Intent',
+                        'budget_pct': 20,
+                        'name': f'{business_type.title()} - High Intent',
+                        'ad_groups': [
+                            {'name': 'Emergency/Urgent', 'keywords': ['emergency [service]', 'urgent [service]', '24/7 [service]']},
+                            {'name': 'Near Me', 'keywords': ['[service] near me', 'local [service]', '[service] nearby']}
+                        ],
+                        'settings': {
+                            'bid_strategy': 'Maximize Conversions',
+                            'location': 'Your service area + 10 mile radius',
+                            'networks': 'Search only'
+                        }
+                    },
+                    {
+                        'type': 'PERFORMANCE_MAX',
+                        'theme': 'All Products',
+                        'budget_pct': 40,
+                        'name': f'{business_type.title()} - Performance Max',
+                        'ad_groups': [],  # PMax uses asset groups instead
+                        'settings': {
+                            'bid_strategy': 'Maximize Conversions with target ROAS',
+                            'location': 'Your service area',
+                            'asset_groups': 'Will include text, images, videos, and headlines'
+                        }
+                    }
                 ]
             }
         elif monthly_budget >= 2000:
@@ -396,9 +449,47 @@ class AccountStructureAgent(BaseAgent):
 
             structure_plan = {
                 'campaigns': [
-                    {'type': 'SEARCH', 'theme': 'Brand', 'budget_pct': 25},
-                    {'type': 'SEARCH', 'theme': 'Core Keywords', 'budget_pct': 35},
-                    {'type': 'PERFORMANCE_MAX', 'theme': 'All Products', 'budget_pct': 40}
+                    {
+                        'type': 'SEARCH',
+                        'theme': 'Brand',
+                        'budget_pct': 25,
+                        'name': f'{business_type.title()} - Brand',
+                        'ad_groups': [
+                            {'name': 'Brand Terms', 'keywords': ['[your business name]', '[your brand] [service]']}
+                        ],
+                        'settings': {
+                            'bid_strategy': 'Target Impression Share (90%)',
+                            'location': 'Your service area',
+                            'networks': 'Search only'
+                        }
+                    },
+                    {
+                        'type': 'SEARCH',
+                        'theme': 'Core Keywords',
+                        'budget_pct': 35,
+                        'name': f'{business_type.title()} - Core Services',
+                        'ad_groups': [
+                            {'name': 'Service Category 1', 'keywords': ['service keywords', 'related terms']},
+                            {'name': 'Service Category 2', 'keywords': ['additional keywords', 'variant terms']}
+                        ],
+                        'settings': {
+                            'bid_strategy': 'Maximize Conversions with target CPA',
+                            'location': 'Your service area',
+                            'networks': 'Search + Search Partners'
+                        }
+                    },
+                    {
+                        'type': 'PERFORMANCE_MAX',
+                        'theme': 'All Products',
+                        'budget_pct': 40,
+                        'name': f'{business_type.title()} - Performance Max',
+                        'ad_groups': [],
+                        'settings': {
+                            'bid_strategy': 'Maximize Conversions',
+                            'location': 'Your service area',
+                            'asset_groups': 'Will include text, images, and headlines'
+                        }
+                    }
                 ]
             }
         else:
@@ -409,8 +500,33 @@ class AccountStructureAgent(BaseAgent):
 
             structure_plan = {
                 'campaigns': [
-                    {'type': 'SEARCH', 'theme': 'High Intent', 'budget_pct': 60},
-                    {'type': 'PERFORMANCE_MAX', 'theme': 'All Products', 'budget_pct': 40}
+                    {
+                        'type': 'SEARCH',
+                        'theme': 'High Intent',
+                        'budget_pct': 60,
+                        'name': f'{business_type.title()} - High Intent',
+                        'ad_groups': [
+                            {'name': 'Primary Service', 'keywords': ['[service] near me', 'best [service]', '[service] cost']},
+                            {'name': 'Urgent/Emergency', 'keywords': ['emergency [service]', '24/7 [service]']}
+                        ],
+                        'settings': {
+                            'bid_strategy': 'Maximize Clicks',
+                            'location': 'Your service area',
+                            'networks': 'Search only'
+                        }
+                    },
+                    {
+                        'type': 'PERFORMANCE_MAX',
+                        'theme': 'All Products',
+                        'budget_pct': 40,
+                        'name': f'{business_type.title()} - Performance Max',
+                        'ad_groups': [],
+                        'settings': {
+                            'bid_strategy': 'Maximize Conversions',
+                            'location': 'Your service area',
+                            'asset_groups': 'Will include text and images'
+                        }
+                    }
                 ]
             }
 

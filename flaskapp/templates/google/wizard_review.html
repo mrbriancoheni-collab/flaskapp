@@ -188,15 +188,74 @@
                                             {% if decision.action_data.structure_plan %}
                                             <div class="mb-3">
                                                 <p class="font-semibold text-indigo-900 mb-2">Proposed Account Structure:</p>
-                                                <div class="bg-white rounded p-3 space-y-2">
+                                                <div class="bg-white rounded p-3 space-y-3">
                                                     {% if decision.action_data.structure_plan.campaigns %}
-                                                    {# New format: campaigns list #}
+                                                    {# New detailed format: campaigns list with full specs #}
                                                     {% for campaign in decision.action_data.structure_plan.campaigns %}
-                                                    <div class="border-l-2 border-indigo-400 pl-3">
-                                                        <p class="font-medium text-gray-900">{{ campaign.type|replace('_', ' ')|title }} - {{ campaign.theme }}</p>
-                                                        <ul class="list-disc list-inside text-xs text-gray-600 ml-2 mt-1">
-                                                            <li>Budget Allocation: {{ campaign.budget_pct }}% (${{ ((decision.action_data.monthly_budget|default(0) * campaign.budget_pct / 100)|round|int) }}/month)</li>
-                                                        </ul>
+                                                    <div class="border-l-4 border-indigo-500 pl-3 py-2 bg-gray-50 rounded">
+                                                        {# Campaign Header #}
+                                                        <div class="flex items-center justify-between mb-2">
+                                                            <p class="font-semibold text-gray-900">
+                                                                <i class="fa-solid fa-bullhorn mr-1 text-indigo-600"></i>
+                                                                {{ campaign.name|default(campaign.type|replace('_', ' ')|title + ' - ' + campaign.theme) }}
+                                                            </p>
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
+                                                                {{ campaign.type|replace('_', ' ')|title }}
+                                                            </span>
+                                                        </div>
+
+                                                        {# Budget #}
+                                                        <div class="text-xs text-gray-700 mb-2">
+                                                            <span class="font-medium">Budget:</span>
+                                                            {{ campaign.budget_pct }}% (${{ ((decision.action_data.monthly_budget|default(0) * campaign.budget_pct / 100)|round|int) }}/month)
+                                                        </div>
+
+                                                        {# Ad Groups & Keywords #}
+                                                        {% if campaign.ad_groups and campaign.ad_groups|length > 0 %}
+                                                        <div class="mb-2">
+                                                            <p class="text-xs font-medium text-gray-700 mb-1">
+                                                                <i class="fa-solid fa-layer-group mr-1"></i>
+                                                                Ad Groups ({{ campaign.ad_groups|length }}):
+                                                            </p>
+                                                            <div class="ml-3 space-y-1">
+                                                                {% for ad_group in campaign.ad_groups %}
+                                                                <div class="text-xs">
+                                                                    <span class="font-medium text-gray-800">{{ ad_group.name }}</span>
+                                                                    {% if ad_group.keywords %}
+                                                                    <div class="ml-2 mt-0.5">
+                                                                        <span class="text-gray-600">Keywords:</span>
+                                                                        <span class="text-gray-500 italic">{{ ad_group.keywords|join(', ') }}</span>
+                                                                    </div>
+                                                                    {% endif %}
+                                                                </div>
+                                                                {% endfor %}
+                                                            </div>
+                                                        </div>
+                                                        {% endif %}
+
+                                                        {# Campaign Settings #}
+                                                        {% if campaign.settings %}
+                                                        <div class="text-xs text-gray-600 bg-white rounded p-2 mt-2">
+                                                            <p class="font-medium text-gray-700 mb-1">
+                                                                <i class="fa-solid fa-gear mr-1"></i>
+                                                                Settings:
+                                                            </p>
+                                                            <div class="ml-3 space-y-0.5">
+                                                                {% if campaign.settings.bid_strategy %}
+                                                                <div><span class="font-medium">Bid Strategy:</span> {{ campaign.settings.bid_strategy }}</div>
+                                                                {% endif %}
+                                                                {% if campaign.settings.location %}
+                                                                <div><span class="font-medium">Location:</span> {{ campaign.settings.location }}</div>
+                                                                {% endif %}
+                                                                {% if campaign.settings.networks %}
+                                                                <div><span class="font-medium">Networks:</span> {{ campaign.settings.networks }}</div>
+                                                                {% endif %}
+                                                                {% if campaign.settings.asset_groups %}
+                                                                <div><span class="font-medium">Assets:</span> {{ campaign.settings.asset_groups }}</div>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                        {% endif %}
                                                     </div>
                                                     {% endfor %}
                                                     {% else %}

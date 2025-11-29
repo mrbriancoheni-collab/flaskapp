@@ -1,50 +1,76 @@
-# Fix: Add missing google_ad_group_id column to ad_groups table
+# Fix: Database Schema Sync Issues (models_ads.py)
 
-## Problem
-The application is experiencing a SQL error:
+## Problems
+The application is experiencing multiple SQL errors due to missing columns:
+
+### Error 1: ad_groups.google_ad_group_id
 ```
 (pymysql.err.OperationalError) (1054, "Unknown column 'ad_groups.google_ad_group_id' in 'SELECT'")
 ```
 
-This error occurs because the `ad_groups` table in the database is missing the `google_ad_group_id` column that is defined in the SQLAlchemy model (`app/models_ads.py`).
+### Error 2: keywords.max_cpc_cents
+```
+(pymysql.err.OperationalError) (1054, "Unknown column 'keywords.max_cpc_cents' in 'SELECT'")
+```
+
+**Root Cause**: The database tables are out of sync with the SQLAlchemy models defined in `app/models_ads.py`. The models define columns that don't exist in the actual database tables.
 
 ## Solution
 
-### Option 1: Run SQL Migration Directly (Quickest)
+### Option 1: Run All Migrations Script (Recommended)
 
-Connect to your MySQL database and run:
-
-```sql
-ALTER TABLE ad_groups ADD COLUMN google_ad_group_id VARCHAR(64) DEFAULT NULL AFTER max_cpc_cents;
-CREATE INDEX idx_ad_groups_google_ad_group_id ON ad_groups(google_ad_group_id);
-```
-
-### Option 2: Use Migration Script (Recommended for Development)
-
-If you have Flask and dependencies installed:
+This applies all pending migrations automatically:
 
 ```bash
-python3 run_ad_groups_migration.py check  # Check if column exists
-python3 run_ad_groups_migration.py up     # Apply migration
+python3 run_all_pending_migrations.py
 ```
 
-### Option 3: Manual SQL File
+This script will:
+- Check which columns are missing
+- Apply only the necessary migrations
+- Verify the results
+- Show the final table structure
 
-The migration SQL is also available in:
-`flaskapp/migrations/add_google_ad_group_id_to_ad_groups.sql`
+### Option 2: Manual SQL (Quick Fix)
 
-You can apply it manually or through your deployment pipeline.
+Connect to your MySQL database and run these commands:
+
+```sql
+-- Fix ad_groups table
+ALTER TABLE ad_groups ADD COLUMN google_ad_group_id VARCHAR(64) DEFAULT NULL AFTER max_cpc_cents;
+CREATE INDEX idx_ad_groups_google_ad_group_id ON ad_groups(google_ad_group_id);
+
+-- Fix keywords table
+ALTER TABLE keywords ADD COLUMN max_cpc_cents INT DEFAULT NULL AFTER status;
+```
+
+### Option 3: Individual Migration Files
+
+The migrations are also available as separate SQL files in `flaskapp/migrations/`:
+- `add_google_ad_group_id_to_ad_groups.sql`
+- `add_max_cpc_cents_to_keywords.sql`
 
 ## Verification
 
-After applying the migration, verify with:
+After applying the migrations, verify with:
 
 ```sql
+-- Check ad_groups table
 DESCRIBE ad_groups;
+
+-- Check keywords table
+DESCRIBE keywords;
 ```
 
-You should see the `google_ad_group_id` column in the output.
+You should see:
+- `google_ad_group_id` (VARCHAR(64)) in ad_groups table
+- `max_cpc_cents` (INT) in keywords table
 
 ## Impact
 
-This fix resolves SQL errors when querying ad_groups table and allows proper syncing of Google Ads ad group IDs.
+These fixes resolve critical SQL errors that prevent the application from:
+- Querying ad groups and keywords
+- Syncing Google Ads data
+- Displaying campaign/ad group analytics
+
+**Priority**: HIGH - Application functionality is broken without these migrations.

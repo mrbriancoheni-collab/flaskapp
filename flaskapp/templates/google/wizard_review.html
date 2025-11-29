@@ -174,6 +174,95 @@
                                     <p class="text-sm text-gray-600 whitespace-pre-line">{{ decision.reasoning }}</p>
                                 </div>
 
+                                {% if decision.action_data %}
+                                <div class="mt-4 bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+                                    <details class="group">
+                                        <summary class="cursor-pointer text-sm font-medium text-indigo-900 flex items-center justify-between">
+                                            <span>
+                                                <i class="fa-solid fa-code mr-2 text-indigo-600"></i>
+                                                Implementation Details
+                                            </span>
+                                            <i class="fa-solid fa-chevron-down group-open:rotate-180 transition-transform text-indigo-600"></i>
+                                        </summary>
+                                        <div class="mt-3 text-sm text-gray-700">
+                                            {% if decision.action_data.structure_plan %}
+                                            <div class="mb-3">
+                                                <p class="font-semibold text-indigo-900 mb-2">Proposed Account Structure:</p>
+                                                <div class="bg-white rounded p-3 space-y-2">
+                                                    {% for campaign_type, plan in decision.action_data.structure_plan.items() %}
+                                                    <div class="border-l-2 border-indigo-400 pl-3">
+                                                        <p class="font-medium text-gray-900">{{ campaign_type|replace('_', ' ')|title }}</p>
+                                                        <ul class="list-disc list-inside text-xs text-gray-600 ml-2 mt-1">
+                                                            <li>Campaigns: {{ plan.campaign_count }}</li>
+                                                            <li>Budget: ${{ plan.budget|round|int }}/month</li>
+                                                            {% if plan.ad_groups_per_campaign %}
+                                                            <li>Ad Groups per Campaign: {{ plan.ad_groups_per_campaign }}</li>
+                                                            {% endif %}
+                                                        </ul>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                            {% endif %}
+
+                                            {% if decision.action_data.monthly_budget %}
+                                            <div class="mb-2">
+                                                <span class="font-semibold text-indigo-900">Monthly Budget:</span>
+                                                <span class="ml-2 text-gray-700">${{ decision.action_data.monthly_budget|round|int }}</span>
+                                            </div>
+                                            {% endif %}
+
+                                            {% if decision.action_data.business_type %}
+                                            <div class="mb-2">
+                                                <span class="font-semibold text-indigo-900">Business Type:</span>
+                                                <span class="ml-2 text-gray-700">{{ decision.action_data.business_type|title }}</span>
+                                            </div>
+                                            {% endif %}
+
+                                            {% if decision.action_data.current_mix %}
+                                            <div class="mb-2">
+                                                <p class="font-semibold text-indigo-900 mb-1">Current Campaign Mix:</p>
+                                                <div class="grid grid-cols-2 gap-2 text-xs">
+                                                    {% for type, count in decision.action_data.current_mix.items() %}
+                                                    {% if count > 0 %}
+                                                    <div class="bg-white rounded px-2 py-1">
+                                                        <span class="font-medium">{{ type|replace('_', ' ')|title }}:</span> {{ count }}
+                                                    </div>
+                                                    {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                            {% endif %}
+
+                                            {% if decision.action_data.budget_data %}
+                                            <div class="mb-2">
+                                                <p class="font-semibold text-indigo-900 mb-1">Budget Analysis:</p>
+                                                <div class="bg-white rounded p-2 text-xs space-y-1">
+                                                    {% if decision.action_data.budget_data.monthly_budget %}
+                                                    <div><span class="font-medium">Total Budget:</span> ${{ decision.action_data.budget_data.monthly_budget|round|int }}/month</div>
+                                                    {% endif %}
+                                                    {% if decision.action_data.budget_data.utilization_rate %}
+                                                    <div><span class="font-medium">Current Utilization:</span> {{ decision.action_data.budget_data.utilization_rate|round }}%</div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endif %}
+
+                                            {% if decision.action_data.issues %}
+                                            <div class="mb-2">
+                                                <p class="font-semibold text-indigo-900 mb-1">Issues to Address:</p>
+                                                <ul class="list-disc list-inside text-xs text-gray-600 space-y-1">
+                                                    {% for issue in decision.action_data.issues %}
+                                                    <li>{{ issue }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </details>
+                                </div>
+                                {% endif %}
+
                                 <div class="mt-4 flex items-center space-x-6 text-sm">
                                     {% if decision.expected_monthly_savings > 0 %}
                                     <div class="flex items-center text-green-600">

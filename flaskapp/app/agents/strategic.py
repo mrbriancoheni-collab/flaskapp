@@ -8,8 +8,11 @@ and makes high-level decisions about scaling, pausing, or launching campaigns.
 
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
+import logging
 from .base import BaseAgent, AgentDecision, AgentCapability, DecisionRiskLevel
 from .event_bus import AgentEventBus
+
+logger = logging.getLogger(__name__)
 
 
 class StrategicDirectorAgent(BaseAgent):
@@ -61,7 +64,7 @@ class StrategicDirectorAgent(BaseAgent):
             if not self.account_structure_agent:
                 self.account_structure_agent = AccountStructureAgent(
                     account_id=self.account_id,
-                    agent_config=self.agent_config
+                    agent_config=self.config
                 )
 
             # Run structure analysis
@@ -80,7 +83,7 @@ class StrategicDirectorAgent(BaseAgent):
             return structure_opportunities
 
         except Exception as e:
-            self.log(f"Error in account structure analysis: {str(e)}")
+            logger.error(f"Error in account structure analysis for account {self.account_id}: {str(e)}", exc_info=True)
             return None
 
     def analyze(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:

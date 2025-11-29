@@ -53,7 +53,6 @@ class AdsAdGroup(db.Model):
     __tablename__ = "ad_groups"
 
     id = db.Column(db.Integer, primary_key=True)
-    account_id = db.Column(db.Integer, index=True, nullable=True)
 
     campaign_id = db.Column(
         db.Integer,
@@ -81,7 +80,6 @@ class AdsAd(db.Model):
     __tablename__ = "ads"
 
     id = db.Column(db.Integer, primary_key=True)
-    account_id = db.Column(db.Integer, index=True, nullable=True)
 
     ad_group_id = db.Column(
         db.Integer,
@@ -115,7 +113,6 @@ class AdsKeyword(db.Model):
     __tablename__ = "keywords"
 
     id = db.Column(db.Integer, primary_key=True)
-    account_id = db.Column(db.Integer, index=True, nullable=True)
 
     ad_group_id = db.Column(
         db.Integer,

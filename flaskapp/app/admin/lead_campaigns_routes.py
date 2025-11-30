@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from sqlalchemy import desc, func
 import logging
+import html
 
 from app.extensions import db
 from app.auth.decorators import require_admin_cloaked as require_admin
@@ -17,6 +18,52 @@ from app.services.lead_enrichment import LeadEnrichmentService
 from app.services.mailgun_outreach import MailgunOutreachService
 
 logger = logging.getLogger(__name__)
+
+
+def text_to_html(text):
+    """
+    Convert plain text to HTML, preserving line breaks and paragraphs.
+    Escapes HTML for security while preserving template variables like {{company_name}}.
+    """
+    if not text:
+        return ''
+
+    # Split into paragraphs (double line breaks)
+    paragraphs = text.split('\n\n')
+
+    html_parts = []
+    for para in paragraphs:
+        if para.strip():
+            # Escape HTML but preserve template variables
+            # First, temporarily replace template variables
+            import re
+            placeholders = {}
+            counter = 0
+
+            def replace_var(match):
+                nonlocal counter
+                placeholder = f"__PLACEHOLDER_{counter}__"
+                placeholders[placeholder] = match.group(0)
+                counter += 1
+                return placeholder
+
+            # Find and replace {{variable}} patterns
+            para_with_placeholders = re.sub(r'\{\{[^}]+\}\}', replace_var, para)
+
+            # Escape HTML
+            escaped = html.escape(para_with_placeholders)
+
+            # Restore template variables
+            for placeholder, original in placeholders.items():
+                escaped = escaped.replace(placeholder, original)
+
+            # Convert single line breaks to <br>
+            escaped = escaped.replace('\n', '<br>\n')
+
+            # Wrap in paragraph
+            html_parts.append(f'<p>{escaped}</p>')
+
+    return '\n'.join(html_parts)
 
 lead_campaigns_bp = Blueprint('lead_campaigns_bp', __name__, url_prefix='/admin/lead-campaigns')
 
@@ -249,13 +296,16 @@ def new_sequence(campaign_id: int):
         return render_template('admin/lead_campaigns/new_sequence.html', campaign=campaign, next_step=next_step)
 
     # Create sequence
+    body_text = request.form.get('body_text', '')
+    body_html = text_to_html(body_text)  # Convert plain text to HTML
+
     sequence = EmailSequence(
         campaign_id=campaign_id,
         step_number=int(request.form['step_number']),
         name=request.form['name'],
         subject=request.form['subject'],
-        body_html=request.form['body_html'],
-        body_text=request.form.get('body_text'),
+        body_html=body_html,
+        body_text=body_text,
         delay_days=int(request.form.get('delay_days', 0)),
         is_active=True
     )

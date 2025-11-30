@@ -1,4 +1,4 @@
-{% extends "base_app.html" %}
+{% extends "base_admin.html" %}
 
 {% block title %}{{ campaign.name }} - Lead Campaign{% endblock %}
 
@@ -167,12 +167,24 @@
 </div>
 
 <script>
+// Get CSRF token from meta tag
+function getCSRFToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.content || '';
+}
+
 function startScraping() {
     if (!confirm('Start scraping leads for this campaign?')) return;
 
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Scraping...';
+
     fetch('{{ url_for("lead_campaigns_bp.start_scraping", campaign_id=campaign.id) }}', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'}
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        }
     })
     .then(r => r.json())
     .then(data => {
@@ -181,16 +193,30 @@ function startScraping() {
             location.reload();
         } else {
             alert('Error: ' + data.error);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-magnifying-glass mr-2"></i>Start Scraping';
         }
+    })
+    .catch(err => {
+        alert('Error: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-magnifying-glass mr-2"></i>Start Scraping';
     });
 }
 
 function enrichLeads() {
     if (!confirm('Enrich leads with contact information?')) return;
 
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Enriching...';
+
     fetch('{{ url_for("lead_campaigns_bp.enrich_leads", campaign_id=campaign.id) }}', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'}
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        }
     })
     .then(r => r.json())
     .then(data => {
@@ -199,16 +225,30 @@ function enrichLeads() {
             location.reload();
         } else {
             alert('Error: ' + data.error);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-user-plus mr-2"></i>Enrich Leads';
         }
+    })
+    .catch(err => {
+        alert('Error: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-user-plus mr-2"></i>Enrich Leads';
     });
 }
 
 function sendEmails() {
     if (!confirm('Send emails to enriched leads?')) return;
 
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Sending...';
+
     fetch('{{ url_for("lead_campaigns_bp.send_emails", campaign_id=campaign.id) }}', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'}
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        }
     })
     .then(r => r.json())
     .then(data => {
@@ -217,7 +257,14 @@ function sendEmails() {
             location.reload();
         } else {
             alert('Error: ' + data.error);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Send Emails';
         }
+    })
+    .catch(err => {
+        alert('Error: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Send Emails';
     });
 }
 </script>

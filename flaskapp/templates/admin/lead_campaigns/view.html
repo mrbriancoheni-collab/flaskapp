@@ -1,0 +1,224 @@
+{% extends "base_app.html" %}
+
+{% block title %}{{ campaign.name }} - Lead Campaign{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">{{ campaign.name }}</h1>
+                <p class="text-gray-600 mt-1">{{ campaign.industry_service }} - {{ campaign.location }}</p>
+            </div>
+            <a href="{{ url_for('lead_campaigns_bp.index') }}" class="text-gray-600 hover:text-gray-900">
+                <i class="fa-solid fa-arrow-left mr-2"></i>
+                Back to Campaigns
+            </a>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center space-x-3">
+            {% if campaign.status == 'draft' or campaign.status == 'ready' %}
+            <button onclick="startScraping()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                <i class="fa-solid fa-magnifying-glass mr-2"></i>
+                Start Scraping
+            </button>
+            {% endif %}
+
+            {% if campaign.leads_scraped > 0 %}
+            <button onclick="enrichLeads()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                <i class="fa-solid fa-user-plus mr-2"></i>
+                Enrich Leads
+            </button>
+            {% endif %}
+
+            {% if campaign.leads_enriched > 0 and sequences %}
+            <button onclick="sendEmails()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+                <i class="fa-solid fa-paper-plane mr-2"></i>
+                Send Emails
+            </button>
+            {% endif %}
+
+            <a href="{{ url_for('lead_campaigns_bp.new_sequence', campaign_id=campaign.id) }}" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+                <i class="fa-solid fa-plus mr-2"></i>
+                Add Email Sequence
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-2xl font-bold text-gray-900">{{ campaign.leads_scraped }}</div>
+            <div class="text-sm text-gray-600">Leads Scraped</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-2xl font-bold text-green-600">{{ campaign.leads_enriched }}</div>
+            <div class="text-sm text-gray-600">Enriched</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-2xl font-bold text-blue-600">{{ campaign.emails_sent }}</div>
+            <div class="text-sm text-gray-600">Emails Sent</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-2xl font-bold text-purple-600">{{ campaign.emails_opened }}</div>
+            <div class="text-sm text-gray-600">Opened</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-2xl font-bold text-orange-600">{{ campaign.emails_replied }}</div>
+            <div class="text-sm text-gray-600">Replied</div>
+        </div>
+    </div>
+
+    <!-- Email Sequences -->
+    {% if sequences %}
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Email Sequences</h2>
+        <div class="space-y-3">
+            {% for seq in sequences %}
+            <div class="border border-gray-200 rounded p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="font-semibold text-gray-900">Step {{ seq.step_number }}: {{ seq.name }}</h3>
+                        <p class="text-sm text-gray-600 mt-1">{{ seq.subject }}</p>
+                        <p class="text-xs text-gray-500 mt-1">Delay: {{ seq.delay_days }} days | Sent: {{ seq.sent_count }} | Opened: {{ seq.opened_count }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Leads Table -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Leads ({{ pagination.total }})</h2>
+
+        {% if leads %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for lead in leads %}
+                    <tr>
+                        <td class="px-4 py-3">
+                            <div class="font-medium text-gray-900">{{ lead.company_name }}</div>
+                            {% if lead.website %}
+                            <a href="{{ lead.website }}" target="_blank" class="text-xs text-blue-600 hover:underline">{{ lead.website }}</a>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm">
+                            {% if lead.decision_maker_name %}
+                            <div class="font-medium">{{ lead.decision_maker_name }}</div>
+                            <div class="text-gray-600">{{ lead.decision_maker_email }}</div>
+                            {% else %}
+                            <span class="text-gray-400">Not enriched</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm">
+                            <span class="inline-flex px-2 py-1 text-xs font-medium rounded
+                                {% if lead.source_type == 'ad' %}bg-blue-100 text-blue-800
+                                {% elif lead.source_type == 'lsa' %}bg-green-100 text-green-800
+                                {% elif lead.source_type == 'map' %}bg-purple-100 text-purple-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ lead.source_type|upper }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-sm">
+                            <span class="inline-flex px-2 py-1 text-xs font-medium rounded
+                                {% if lead.email_status == 'sent' %}bg-blue-100 text-blue-800
+                                {% elif lead.email_status == 'opened' %}bg-green-100 text-green-800
+                                {% elif lead.email_status == 'replied' %}bg-purple-100 text-purple-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ lead.email_status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if pagination.pages > 1 %}
+        <div class="mt-4 flex justify-center">
+            <nav class="flex space-x-2">
+                {% if pagination.has_prev %}
+                <a href="?page={{ pagination.prev_num }}" class="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300">Previous</a>
+                {% endif %}
+                {% if pagination.has_next %}
+                <a href="?page={{ pagination.next_num }}" class="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300">Next</a>
+                {% endif %}
+            </nav>
+        </div>
+        {% endif %}
+        {% else %}
+        <p class="text-gray-600 text-center py-8">No leads yet. Start scraping to find leads.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function startScraping() {
+    if (!confirm('Start scraping leads for this campaign?')) return;
+
+    fetch('{{ url_for("lead_campaigns_bp.start_scraping", campaign_id=campaign.id) }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Scraped ${data.leads_created} leads!`);
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
+
+function enrichLeads() {
+    if (!confirm('Enrich leads with contact information?')) return;
+
+    fetch('{{ url_for("lead_campaigns_bp.enrich_leads", campaign_id=campaign.id) }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Enriched ${data.enriched_count} leads!`);
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
+
+function sendEmails() {
+    if (!confirm('Send emails to enriched leads?')) return;
+
+    fetch('{{ url_for("lead_campaigns_bp.send_emails", campaign_id=campaign.id) }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Sent ${data.sent_count} emails!`);
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
+</script>
+{% endblock %}

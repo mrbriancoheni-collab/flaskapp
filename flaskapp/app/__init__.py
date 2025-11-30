@@ -751,6 +751,13 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register servicetitan_bp")
 
+    try:
+        from app.admin.lead_campaigns_routes import lead_campaigns_bp
+        app.register_blueprint(lead_campaigns_bp)  # url_prefix=/admin/lead-campaigns
+        app.logger.info("lead_campaigns_bp registered at /admin/lead-campaigns")
+    except Exception:
+        app.logger.exception("Failed to register lead_campaigns_bp")
+
     # --- Email Tracking (public endpoints for pixel and click tracking) ----
     try:
         from app.email_tracking_routes import email_tracking_bp

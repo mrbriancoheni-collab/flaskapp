@@ -140,7 +140,7 @@ class Lead(db.Model):
 
     # Relationships
     campaign = relationship("LeadCampaign", back_populates="leads")
-    emails_sent = relationship("EmailSent", back_populates="lead", cascade="all, delete-orphan")
+    emails_sent = relationship("LeadEmail", back_populates="lead", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Lead id={self.id} company={self.company_name!r} status={self.email_status}>"
@@ -183,9 +183,9 @@ class EmailSequence(db.Model):
         return f"<EmailSequence id={self.id} step={self.step_number} name={self.name!r}>"
 
 
-class EmailSent(db.Model):
-    """Track sent emails"""
-    __tablename__ = "emails_sent"
+class LeadEmail(db.Model):
+    """Track sent emails for lead campaigns"""
+    __tablename__ = "lead_emails_sent"
 
     id = db.Column(Integer, primary_key=True)
     lead_id = db.Column(Integer, ForeignKey("leads.id"), nullable=False, index=True)
@@ -227,7 +227,7 @@ class EmailSent(db.Model):
     lead = relationship("Lead", back_populates="emails_sent")
 
     def __repr__(self) -> str:
-        return f"<EmailSent id={self.id} to={self.to_email!r} status={self.status}>"
+        return f"<LeadEmail id={self.id} to={self.to_email!r} status={self.status}>"
 
 
 class EmailUnsubscribe(db.Model):

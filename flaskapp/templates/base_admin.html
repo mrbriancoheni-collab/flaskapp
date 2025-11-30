@@ -122,6 +122,12 @@
         <i class="fa-solid fa-users"></i><span>Contact Groups</span>
       </a>
 
+      <div class="sidebar-label mt-4"><i class="fa-solid fa-bullseye"></i>Marketing</div>
+
+      <a class="secondary-link {% if request.endpoint and 'lead_campaigns_bp' in request.endpoint %}active{% endif %}" href="{{ url_for('lead_campaigns_bp.index') }}">
+        <i class="fa-solid fa-magnet"></i><span>Lead Generation</span>
+      </a>
+
       <div class="sidebar-label mt-4"><i class="fa-solid fa-wrench"></i>Integrations</div>
 
       <a class="secondary-link {% if request.endpoint and 'servicetitan_bp' in request.endpoint %}active{% endif %}" href="{{ url_for('servicetitan_bp.dashboard') }}">

@@ -4484,7 +4484,8 @@ Return ONLY valid JSON:
         campaign.network_settings.target_partner_search_network = False
 
         # Set bidding strategy to Manual CPC with Enhanced CPC
-        campaign.bidding_strategy_type = client.enums.BiddingStrategyTypeEnum.MANUAL_CPC
+        # Initialize the manual_cpc object first (required for proper configuration)
+        campaign.manual_cpc = client.get_type("ManualCpc")
         campaign.manual_cpc.enhanced_cpc_enabled = True
         # Note: campaign_budget will be set after creating the budget below
 

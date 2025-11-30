@@ -5,8 +5,15 @@
 {% block content %}
 <div class="container mx-auto px-4 py-8 max-w-3xl">
     <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">Add Email Sequence</h1>
+        <h1 class="text-3xl font-bold text-gray-900">Add Email Sequence Step</h1>
         <p class="text-gray-600 mt-2">{{ campaign.name }}</p>
+        <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p class="text-sm text-blue-800">
+                <i class="fa-solid fa-info-circle mr-2"></i>
+                <strong>Tip:</strong> Create multiple email steps to follow up with leads automatically.
+                Step 1 is sent first, then Step 2 after your chosen delay, and so on.
+            </p>
+        </div>
     </div>
 
     <form method="POST" class="bg-white rounded-lg shadow-md p-8">
@@ -40,15 +47,20 @@
         </div>
 
         <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Email Body (HTML)</label>
-            <textarea name="body_html" rows="12" required
-                      class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm"
-                      placeholder="<p>Hi {{decision_maker_name}},</p>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Email Body</label>
+            <textarea name="body_text" rows="12" required
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm"
+                      placeholder="Hi {{decision_maker_name}},
 
-<p>I noticed {{company_name}} in {{location}} and wanted to reach out...</p>
+I noticed {{company_name}} in {{location}} and wanted to reach out about helping you get more customers through Google Ads.
 
-<p>Best,<br>Your Name</p>"></textarea>
-            <p class="text-xs text-gray-500 mt-1">Available variables: {{company_name}}, {{decision_maker_name}}, {{decision_maker_title}}, {{service_type}}, {{location}}</p>
+We specialize in {{service_type}} and have helped similar businesses increase their leads by 40%.
+
+Would you be open to a quick 15-minute call this week?
+
+Best,
+Your Name"></textarea>
+            <p class="text-xs text-gray-500 mt-1">Write in plain text. Line breaks will be preserved. Available variables: {{company_name}}, {{decision_maker_name}}, {{decision_maker_title}}, {{service_type}}, {{location}}</p>
         </div>
 
         <div class="flex items-center justify-between pt-6 border-t border-gray-200">

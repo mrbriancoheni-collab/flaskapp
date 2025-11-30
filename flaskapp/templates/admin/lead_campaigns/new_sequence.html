@@ -1,0 +1,64 @@
+{% extends "base_app.html" %}
+
+{% block title %}New Email Sequence - {{ campaign.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-3xl">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Add Email Sequence</h1>
+        <p class="text-gray-600 mt-2">{{ campaign.name }}</p>
+    </div>
+
+    <form method="POST" class="bg-white rounded-lg shadow-md p-8">
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Step Number</label>
+            <input type="number" name="step_number" value="{{ next_step }}" min="1" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+            <p class="text-xs text-gray-500 mt-1">1 = first email, 2 = follow-up, etc.</p>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Name</label>
+            <input type="text" name="name" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                   placeholder="e.g., Initial Outreach">
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Delay (days)</label>
+            <input type="number" name="delay_days" value="0" min="0" max="30"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+            <p class="text-xs text-gray-500 mt-1">Days after previous email (0 for first email)</p>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Subject Line</label>
+            <input type="text" name="subject" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                   placeholder="Quick question about {{company_name}}">
+            <p class="text-xs text-gray-500 mt-1">Use {{company_name}}, {{decision_maker_name}}, etc.</p>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Email Body (HTML)</label>
+            <textarea name="body_html" rows="12" required
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm"
+                      placeholder="<p>Hi {{decision_maker_name}},</p>
+
+<p>I noticed {{company_name}} in {{location}} and wanted to reach out...</p>
+
+<p>Best,<br>Your Name</p>"></textarea>
+            <p class="text-xs text-gray-500 mt-1">Available variables: {{company_name}}, {{decision_maker_name}}, {{decision_maker_title}}, {{service_type}}, {{location}}</p>
+        </div>
+
+        <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+            <a href="{{ url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign.id) }}" class="text-gray-600 hover:text-gray-900">
+                Cancel
+            </a>
+            <button type="submit" class="bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700 font-semibold">
+                Create Sequence
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

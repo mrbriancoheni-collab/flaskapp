@@ -118,6 +118,21 @@
                 ⚡ Send immediately
               {% endif %}
             </div>
+            {% if step.condition_type and step.condition_type != 'none' %}
+              <div class="text-xs text-blue-600 mt-2 flex items-center gap-1">
+                <span class="font-semibold">🔀 Conditional:</span>
+                {% if step.condition_type == 'email_opened' %}
+                  Wait {{ step.condition_wait_hours }}h then check if previous email was opened
+                {% elif step.condition_type == 'email_not_opened' %}
+                  Wait {{ step.condition_wait_hours }}h then check if previous email was NOT opened
+                {% elif step.condition_type == 'link_clicked' %}
+                  Wait {{ step.condition_wait_hours }}h then check if link was clicked
+                {% endif %}
+                {% if step.alt_email_template %}
+                  <span class="text-gray-600">| Alt: {{ step.alt_email_template.name }}</span>
+                {% endif %}
+              </div>
+            {% endif %}
           </div>
         </div>
         <div class="flex items-center gap-2">
@@ -136,34 +151,93 @@
   <!-- Add New Step Form -->
   <div class="border-t pt-6">
     <h3 class="text-md font-semibold mb-4">➕ Add Email Step</h3>
-    <form id="add-step-form" class="grid md:grid-cols-4 gap-4 items-end">
-      <div class="md:col-span-2">
-        <label for="template_id" class="block text-sm font-medium text-gray-700 mb-2">
-          Choose Email Template <span class="text-red-500">*</span>
-        </label>
-        <select name="template_id" id="template_id" required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-          <option value="">-- Select Template --</option>
-          {% for tmpl in templates %}
-            <option value="{{ tmpl.id }}">{{ tmpl.name }} ({{ tmpl.subject }})</option>
-          {% endfor %}
-        </select>
+    <form id="add-step-form" class="space-y-4">
+      <div class="grid md:grid-cols-4 gap-4">
+        <div class="md:col-span-2">
+          <label for="template_id" class="block text-sm font-medium text-gray-700 mb-2">
+            Email Template <span class="text-red-500">*</span>
+          </label>
+          <select name="template_id" id="template_id" required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <option value="">-- Select Template --</option>
+            {% for tmpl in templates %}
+              <option value="{{ tmpl.id }}">{{ tmpl.name }} ({{ tmpl.subject }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label for="delay_days" class="block text-sm font-medium text-gray-700 mb-2">
+            Delay (Days)
+          </label>
+          <input type="number" name="delay_days" id="delay_days" min="0" value="0"
+                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+
+        <div>
+          <label for="delay_hours" class="block text-sm font-medium text-gray-700 mb-2">
+            Delay (Hours)
+          </label>
+          <input type="number" name="delay_hours" id="delay_hours" min="0" max="23" value="0"
+                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
       </div>
 
-      <div>
-        <label for="delay_days" class="block text-sm font-medium text-gray-700 mb-2">
-          Delay (Days)
-        </label>
-        <input type="number" name="delay_days" id="delay_days" min="0" value="0"
-               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-      </div>
+      <!-- Conditional Branching Section -->
+      <div class="border-t pt-4">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-sm font-medium text-gray-700">🔀 Conditional Branching (Optional)</span>
+          <span class="text-xs text-gray-500">Send different emails based on engagement</span>
+        </div>
 
-      <div>
-        <label for="delay_hours" class="block text-sm font-medium text-gray-700 mb-2">
-          Delay (Hours)
-        </label>
-        <input type="number" name="delay_hours" id="delay_hours" min="0" max="23" value="0"
-               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        <div class="grid md:grid-cols-3 gap-4">
+          <div>
+            <label for="condition_type" class="block text-sm font-medium text-gray-700 mb-2">
+              Condition
+            </label>
+            <select name="condition_type" id="condition_type" onchange="toggleConditionalFields()"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+              <option value="none">None (no condition)</option>
+              <option value="email_opened">Email was opened</option>
+              <option value="email_not_opened">Email was NOT opened</option>
+              <option value="link_clicked">Link was clicked</option>
+            </select>
+            <p class="text-xs text-gray-500 mt-1">Check previous email engagement</p>
+          </div>
+
+          <div>
+            <label for="condition_wait_hours" class="block text-sm font-medium text-gray-700 mb-2">
+              Wait Time (Hours)
+            </label>
+            <input type="number" name="condition_wait_hours" id="condition_wait_hours" min="1" value="24"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <p class="text-xs text-gray-500 mt-1">How long to wait before checking</p>
+          </div>
+
+          <div>
+            <label for="alt_template_id" class="block text-sm font-medium text-gray-700 mb-2">
+              Alternative Template
+            </label>
+            <select name="alt_template_id" id="alt_template_id"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+              <option value="">-- Use same template --</option>
+              {% for tmpl in templates %}
+                <option value="{{ tmpl.id }}">{{ tmpl.name }}</option>
+              {% endfor %}
+            </select>
+            <p class="text-xs text-gray-500 mt-1">Send if condition NOT met</p>
+          </div>
+        </div>
+
+        <!-- Link URL field (only for link_clicked condition) -->
+        <div id="link-url-field" style="display: none;" class="mt-4">
+          <label for="condition_url" class="block text-sm font-medium text-gray-700 mb-2">
+            Specific URL (optional)
+          </label>
+          <input type="text" name="condition_url" id="condition_url" placeholder="https://example.com/page"
+                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+          <p class="text-xs text-gray-500 mt-1">Leave blank to check for any link click</p>
+        </div>
       </div>
     </form>
 
@@ -171,7 +245,7 @@
       <button type="button" onclick="addStep()" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
         + Add to Workflow
       </button>
-      <p class="text-xs text-gray-500">Add emails in the order they should be sent. First step sends immediately (or after delay).</p>
+      <p class="text-xs text-gray-500">Add emails in the order they should be sent.</p>
     </div>
   </div>
 
@@ -184,7 +258,19 @@
   {% endif %}
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
+function toggleConditionalFields() {
+  const conditionType = document.getElementById('condition_type').value;
+  const linkUrlField = document.getElementById('link-url-field');
+
+  // Show URL field only for link_clicked condition
+  if (conditionType === 'link_clicked') {
+    linkUrlField.style.display = 'block';
+  } else {
+    linkUrlField.style.display = 'none';
+  }
+}
+
 function addStep() {
   const form = document.getElementById('add-step-form');
   const formData = new FormData(form);

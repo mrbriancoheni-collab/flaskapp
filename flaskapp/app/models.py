@@ -944,6 +944,7 @@ class WorkflowStep(db.Model):
     """
     Individual step in an email workflow.
     Each step sends an email template after a specified delay from the previous step.
+    Supports conditional branching based on email engagement (opens, clicks).
     """
     __tablename__ = "workflow_steps"
 
@@ -956,11 +957,23 @@ class WorkflowStep(db.Model):
     delay_days = db.Column(db.Integer, nullable=False, default=0)  # days to wait before sending (0 = immediate)
     delay_hours = db.Column(db.Integer, nullable=False, default=0)  # additional hours to wait
 
+    # Conditional branching
+    condition_type = db.Column(
+        SAEnum("none", "email_opened", "email_not_opened", "link_clicked", name="workflow_condition_type_enum"),
+        nullable=False,
+        default="none",
+        index=True
+    )  # What condition to check before sending this step
+    condition_wait_hours = db.Column(db.Integer, nullable=False, default=24)  # Hours to wait before checking condition
+    alt_email_template_id = db.Column(db.Integer, db.ForeignKey("email_templates.id"), nullable=True)  # Alternative template if condition not met
+    condition_data = db.Column(JSONType, nullable=True)  # Additional condition data (e.g., specific URL for link_clicked)
+
     # Metadata
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     # Relationships
-    email_template = db.relationship("EmailTemplate", backref="workflow_steps")
+    email_template = db.relationship("EmailTemplate", foreign_keys=[email_template_id], backref="workflow_steps")
+    alt_email_template = db.relationship("EmailTemplate", foreign_keys=[alt_email_template_id])
 
     __table_args__ = (
         db.UniqueConstraint("workflow_id", "step_order", name="uq_workflow_step_order"),
@@ -996,7 +1009,11 @@ class WorkflowEnrollment(db.Model):
     enrolled_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     last_email_sent_at = db.Column(db.DateTime, nullable=True)
     next_email_scheduled_at = db.Column(db.DateTime, nullable=True, index=True)  # when to send next email
+    step_history = db.Column(JSONType, nullable=True)  # History of which templates were sent at each step
     completed_at = db.Column(db.DateTime, nullable=True)
+
+    # Email tracking for conditional logic
+    last_email_sent_id = db.Column(db.Integer, db.ForeignKey("emails_sent.id"), nullable=True, index=True)
 
     # Metadata
     enrolled_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
@@ -1004,6 +1021,7 @@ class WorkflowEnrollment(db.Model):
     # Relationships
     crm_contact = db.relationship("CRMContact", backref="workflow_enrollments")
     enrolled_by = db.relationship("User", backref="workflow_enrollments_created")
+    last_email_sent = db.relationship("EmailSent", foreign_keys=[last_email_sent_id])
 
     __table_args__ = (
         db.UniqueConstraint("workflow_id", "crm_contact_id", name="uq_workflow_enrollment"),

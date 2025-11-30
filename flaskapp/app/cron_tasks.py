@@ -26,6 +26,15 @@ def run_minutely(app, db):
     except Exception:
         app.logger.exception("[CRON] process_wp_jobs failed")
 
+    # Process email workflow enrollments (up to 50 per minute)
+    try:
+        from app.services.workflow_processor import process_workflow_enrollments
+        emails_sent = process_workflow_enrollments(app, max_per_run=50)
+        if emails_sent > 0:
+            app.logger.info(f"[CRON] sent {emails_sent} workflow emails")
+    except Exception:
+        app.logger.exception("[CRON] process_workflow_enrollments failed")
+
 
 def run_hourly(app, db):
     """Periodic housekeeping. Keep this light; heavy jobs belong in run_daily."""

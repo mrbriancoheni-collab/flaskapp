@@ -386,6 +386,12 @@ def add_workflow_step(workflow_id: int):
     delay_days = request.form.get("delay_days", type=int, default=0)
     delay_hours = request.form.get("delay_hours", type=int, default=0)
 
+    # Conditional branching fields
+    condition_type = request.form.get("condition_type", "none")
+    condition_wait_hours = request.form.get("condition_wait_hours", type=int, default=24)
+    alt_template_id = request.form.get("alt_template_id", type=int)
+    condition_url = request.form.get("condition_url", "").strip()
+
     if not template_id:
         return jsonify({"success": False, "error": "Template ID is required"}), 400
 
@@ -393,15 +399,31 @@ def add_workflow_step(workflow_id: int):
     if not template:
         return jsonify({"success": False, "error": "Template not found"}), 404
 
+    # Validate alternative template if provided
+    alt_template = None
+    if alt_template_id:
+        alt_template = EmailTemplate.query.get(alt_template_id)
+        if not alt_template:
+            return jsonify({"success": False, "error": "Alternative template not found"}), 404
+
     # Get max step order
     max_order = db.session.query(db.func.max(WorkflowStep.step_order)).filter_by(workflow_id=workflow_id).scalar() or 0
+
+    # Build condition_data
+    condition_data = None
+    if condition_type == "link_clicked" and condition_url:
+        condition_data = {"url": condition_url}
 
     step = WorkflowStep(
         workflow_id=workflow_id,
         email_template_id=template_id,
         step_order=max_order + 1,
         delay_days=delay_days,
-        delay_hours=delay_hours
+        delay_hours=delay_hours,
+        condition_type=condition_type,
+        condition_wait_hours=condition_wait_hours,
+        alt_email_template_id=alt_template_id,
+        condition_data=condition_data
     )
 
     db.session.add(step)
@@ -415,7 +437,11 @@ def add_workflow_step(workflow_id: int):
             "template_name": template.name,
             "template_subject": template.subject,
             "delay_days": step.delay_days,
-            "delay_hours": step.delay_hours
+            "delay_hours": step.delay_hours,
+            "condition_type": step.condition_type,
+            "condition_wait_hours": step.condition_wait_hours,
+            "alt_template_name": alt_template.name if alt_template else None,
+            "alt_template_id": alt_template_id
         }
     })
 

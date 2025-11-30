@@ -46,6 +46,7 @@ def run_daily(app, db):
     """
     Daily heavy tasks.
     - Generates Google Business Profile monthly insights (at most every ~27 days per account).
+    - Runs Google Ads advanced intelligence features
     """
     app.logger.info("[CRON] daily tick at %s", datetime.utcnow().isoformat())
 
@@ -53,6 +54,12 @@ def run_daily(app, db):
         _run_daily_gmb_insights(app)
     except Exception:
         app.logger.exception("[CRON] GMB monthly insights run failed")
+
+    # Run Google Ads advanced intelligence features
+    try:
+        _run_daily_google_ads_intelligence(app)
+    except Exception:
+        app.logger.exception("[CRON] Google Ads intelligence run failed")
 
     # TODO: email digests, cleanups, churn pings, etc.
 
@@ -444,3 +451,70 @@ def _generate_google_ads_optimizations_for_account(app, aid: int) -> bool:
     except Exception as e:
         app.logger.exception("[CRON] Error sending optimization email for account_id=%s: %s", aid, e)
         return False
+
+
+# =========================
+# Google Ads Advanced Intelligence
+# =========================
+
+def _run_daily_google_ads_intelligence(app) -> None:
+    """
+    Run Google Ads advanced intelligence features daily.
+    - Negative keyword mining
+    - Anomaly detection
+    - Self-healing campaigns
+    - Budget reallocation
+    - Seasonal forecasting
+    """
+    enabled = app.config.get("GOOGLE_ADS_INTELLIGENCE_ENABLED", True)
+    if not enabled:
+        app.logger.info("[CRON] Google Ads intelligence disabled")
+        return
+
+    # Get list of active Google Ads accounts
+    accounts = _accounts_with_google_ads_tokens(max_candidates=100)
+    if not accounts:
+        app.logger.info("[CRON] No Google Ads accounts to process")
+        return
+
+    app.logger.info(f"[CRON] Processing {len(accounts)} Google Ads accounts for intelligence features")
+
+    for account_id in accounts:
+        try:
+            # 1. Mine negative keywords
+            from app.services.google_ads_intelligence import mine_negative_keywords
+            suggestions = mine_negative_keywords(account_id, lookback_days=30)
+            if suggestions:
+                app.logger.info(f"[CRON] Account {account_id}: Found {len(suggestions)} negative keyword suggestions")
+
+            # 2. Detect anomalies
+            from app.services.google_ads_forecasting import detect_anomalies
+            anomalies = detect_anomalies(account_id, lookback_days=7)
+            if anomalies:
+                app.logger.info(f"[CRON] Account {account_id}: Detected {len(anomalies)} anomalies")
+
+            # 3. Run self-healing campaigns (dry run first for safety)
+            from app.services.google_ads_automation import run_self_healing_campaigns
+            result = run_self_healing_campaigns(account_id, dry_run=True)
+            if result.get('total_changes', 0) > 0:
+                app.logger.info(f"[CRON] Account {account_id}: Self-healing recommends {result['total_changes']} changes")
+
+            # 4. Budget reallocation (dry run)
+            from app.services.google_ads_automation import reallocate_budgets
+            realloc = reallocate_budgets(account_id, dry_run=True)
+            if realloc.get('reallocations'):
+                app.logger.info(f"[CRON] Account {account_id}: Budget reallocation recommends {len(realloc['reallocations'])} changes")
+
+            # 5. Seasonal forecasting (weekly)
+            if datetime.utcnow().weekday() == 0:  # Monday only
+                from app.services.google_ads_forecasting import forecast_seasonal_demand
+                # Forecast for common service categories
+                for category in ['HVAC', 'Plumbing', 'Roofing', 'Lawn Care']:
+                    forecasts = forecast_seasonal_demand(account_id, category, forecast_days=90)
+                    if forecasts:
+                        app.logger.info(f"[CRON] Account {account_id}: Generated {len(forecasts)} days of {category} forecasts")
+
+        except Exception as e:
+            app.logger.exception(f"[CRON] Error processing intelligence for account {account_id}: {e}")
+
+    app.logger.info("[CRON] Google Ads intelligence processing completed")

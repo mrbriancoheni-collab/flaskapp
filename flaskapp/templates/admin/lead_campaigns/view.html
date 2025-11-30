@@ -173,21 +173,36 @@ function getCSRFToken() {
 }
 
 function startScraping() {
-    if (!confirm('Start scraping leads for this campaign?')) return;
+    console.log('startScraping called');
+
+    if (!confirm('Start scraping leads for this campaign?')) {
+        console.log('User cancelled');
+        return;
+    }
 
     const btn = event.target;
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Scraping...';
 
-    fetch('{{ url_for("lead_campaigns_bp.start_scraping", campaign_id=campaign.id) }}', {
+    const url = '{{ url_for("lead_campaigns_bp.start_scraping", campaign_id=campaign.id) }}';
+    const csrfToken = getCSRFToken();
+
+    console.log('Fetching:', url);
+    console.log('CSRF Token:', csrfToken);
+
+    fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
+            'X-CSRFToken': csrfToken
         }
     })
-    .then(r => r.json())
+    .then(r => {
+        console.log('Response status:', r.status);
+        return r.json();
+    })
     .then(data => {
+        console.log('Response data:', data);
         if (data.success) {
             alert(`Scraped ${data.leads_created} leads!`);
             location.reload();
@@ -198,6 +213,7 @@ function startScraping() {
         }
     })
     .catch(err => {
+        console.error('Fetch error:', err);
         alert('Error: ' + err.message);
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-magnifying-glass mr-2"></i>Start Scraping';

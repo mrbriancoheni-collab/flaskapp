@@ -4232,10 +4232,17 @@ Return ONLY valid JSON:
         campaign.name = campaign_data.get("campaign_name", f"Search - {business_name}")
         campaign.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
         campaign.status = client.enums.CampaignStatusEnum.PAUSED  # Start paused for safety
+
+        # Set up network settings (required field for Search campaigns)
+        campaign.network_settings.target_google_search = True
+        campaign.network_settings.target_search_network = True
+        campaign.network_settings.target_content_network = False
+        campaign.network_settings.target_partner_search_network = False
+
+        # Set bidding strategy to Manual CPC with Enhanced CPC
+        campaign.bidding_strategy_type = client.enums.BiddingStrategyTypeEnum.MANUAL_CPC
         campaign.manual_cpc.enhanced_cpc_enabled = True
-        campaign.campaign_budget = client.get_service("CampaignBudgetService").campaign_budget_path(
-            customer_id, "temp"
-        )
+        # Note: campaign_budget will be set after creating the budget below
 
         # Create budget first
         budget_service = client.get_service("CampaignBudgetService")

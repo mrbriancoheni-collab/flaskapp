@@ -387,11 +387,16 @@ def create_app():
                     return v
             return name
 
+        def csp_nonce():
+            """Return the CSP nonce for inline scripts."""
+            return getattr(g, "csp_nonce", "")
+
         return {
             "app_name": app.config["APP_NAME"],
             "year": datetime.now().year,
             "current_year": datetime.utcnow().year,
             "csrf_token": _generate_csrf,
+            "csp_nonce": csp_nonce,
             "is_logged_in": is_logged_in,
             "current_user_id": current_user_id,
             "has_endpoint": has_endpoint,

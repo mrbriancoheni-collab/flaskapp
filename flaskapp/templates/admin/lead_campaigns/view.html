@@ -20,21 +20,21 @@
         <!-- Actions -->
         <div class="flex items-center space-x-3">
             {% if campaign.status == 'draft' or campaign.status == 'ready' %}
-            <button onclick="startScraping()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+            <button id="btnStartScraping" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                 <i class="fa-solid fa-magnifying-glass mr-2"></i>
                 Start Scraping
             </button>
             {% endif %}
 
             {% if campaign.leads_scraped > 0 %}
-            <button onclick="enrichLeads()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+            <button id="btnEnrichLeads" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
                 <i class="fa-solid fa-user-plus mr-2"></i>
                 Enrich Leads
             </button>
             {% endif %}
 
             {% if campaign.leads_enriched > 0 and sequences %}
-            <button onclick="sendEmails()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+            <button id="btnSendEmails" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
                 <i class="fa-solid fa-paper-plane mr-2"></i>
                 Send Emails
             </button>
@@ -166,28 +166,42 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 // Get CSRF token from meta tag
 function getCSRFToken() {
     return document.querySelector('meta[name="csrf-token"]')?.content || '';
 }
 
-function startScraping() {
-    if (!confirm('Start scraping leads for this campaign?')) return;
+function startScraping(btn) {
+    console.log('startScraping called');
 
-    const btn = event.target;
+    if (!confirm('Start scraping leads for this campaign?')) {
+        console.log('User cancelled');
+        return;
+    }
+
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Scraping...';
 
-    fetch('{{ url_for("lead_campaigns_bp.start_scraping", campaign_id=campaign.id) }}', {
+    const url = '{{ url_for("lead_campaigns_bp.start_scraping", campaign_id=campaign.id) }}';
+    const csrfToken = getCSRFToken();
+
+    console.log('Fetching:', url);
+    console.log('CSRF Token:', csrfToken);
+
+    fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
+            'X-CSRFToken': csrfToken
         }
     })
-    .then(r => r.json())
+    .then(r => {
+        console.log('Response status:', r.status);
+        return r.json();
+    })
     .then(data => {
+        console.log('Response data:', data);
         if (data.success) {
             alert(`Scraped ${data.leads_created} leads!`);
             location.reload();
@@ -198,16 +212,16 @@ function startScraping() {
         }
     })
     .catch(err => {
+        console.error('Fetch error:', err);
         alert('Error: ' + err.message);
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-magnifying-glass mr-2"></i>Start Scraping';
     });
 }
 
-function enrichLeads() {
+function enrichLeads(btn) {
     if (!confirm('Enrich leads with contact information?')) return;
 
-    const btn = event.target;
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Enriching...';
 
@@ -236,10 +250,9 @@ function enrichLeads() {
     });
 }
 
-function sendEmails() {
+function sendEmails(btn) {
     if (!confirm('Send emails to enriched leads?')) return;
 
-    const btn = event.target;
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Sending...';
 
@@ -267,5 +280,32 @@ function sendEmails() {
         btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Send Emails';
     });
 }
+
+// Add event listeners when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOMContentLoaded - attaching event listeners');
+
+    const btnStartScraping = document.getElementById('btnStartScraping');
+    if (btnStartScraping) {
+        console.log('Found btnStartScraping, attaching listener');
+        btnStartScraping.addEventListener('click', function() {
+            startScraping(this);
+        });
+    }
+
+    const btnEnrichLeads = document.getElementById('btnEnrichLeads');
+    if (btnEnrichLeads) {
+        btnEnrichLeads.addEventListener('click', function() {
+            enrichLeads(this);
+        });
+    }
+
+    const btnSendEmails = document.getElementById('btnSendEmails');
+    if (btnSendEmails) {
+        btnSendEmails.addEventListener('click', function() {
+            sendEmails(this);
+        });
+    }
+});
 </script>
 {% endblock %}

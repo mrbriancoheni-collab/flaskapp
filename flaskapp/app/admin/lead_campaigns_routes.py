@@ -157,6 +157,14 @@ def start_scraping(campaign_id: int):
     if campaign.status not in ['draft', 'ready']:
         return jsonify({'success': False, 'error': 'Campaign is already running or completed'}), 400
 
+    # Check if SerpAPI key is configured
+    import os
+    if not os.getenv('SERPAPI_API_KEY'):
+        return jsonify({
+            'success': False,
+            'error': 'SERPAPI_API_KEY environment variable not configured. Please add it to your .env file and restart the app.'
+        }), 400
+
     try:
         # Update status
         campaign.status = 'scraping'

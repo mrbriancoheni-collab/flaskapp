@@ -4477,7 +4477,7 @@ Return ONLY valid JSON:
         # Set EU political advertising declaration (required field in v21)
         # Must use enum value, not boolean
         campaign.contains_eu_political_advertising = (
-            client.enums.ContainsEuPoliticalAdvertisingEnum.DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING
+            client.enums.EuPoliticalAdvertisingStatusEnum.DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING
         )
 
         # Set start and end dates (recommended practice)

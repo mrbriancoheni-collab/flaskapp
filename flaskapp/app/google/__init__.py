@@ -4481,9 +4481,8 @@ Return ONLY valid JSON:
         )
 
         # Set start and end dates (recommended practice)
-        from datetime import datetime, timedelta
-        start_date = (datetime.now() + timedelta(days=1)).strftime("%Y%m%d")
-        end_date = (datetime.now() + timedelta(days=365)).strftime("%Y%m%d")
+        start_date = (datetime.utcnow() + timedelta(days=1)).strftime("%Y%m%d")
+        end_date = (datetime.utcnow() + timedelta(days=365)).strftime("%Y%m%d")
         campaign.start_date = start_date
         campaign.end_date = end_date
 
@@ -4615,9 +4614,15 @@ Return ONLY valid JSON:
         error_msg = f"Google Ads API error: {ex.error.code().name}"
         for error in ex.failure.errors:
             error_msg += f" - {error.message}"
+            # Log field path elements to identify which field is causing the issue
+            if error.location:
+                for field_path_element in error.location.field_path_elements:
+                    error_msg += f" (field: {field_path_element.field_name})"
+        current_app.logger.error(f"GoogleAdsException details: {error_msg}")
         return {"success": False, "error": error_msg}
     except Exception as e:
         current_app.logger.error(f"Error creating Search campaign: {e}")
+        current_app.logger.exception("Full exception traceback:")
         return {"success": False, "error": str(e)}
 
 

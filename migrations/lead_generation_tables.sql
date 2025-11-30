@@ -129,8 +129,8 @@ CREATE TABLE IF NOT EXISTS email_sequences (
     UNIQUE KEY unique_campaign_step (campaign_id, step_number)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Emails Sent table
-CREATE TABLE IF NOT EXISTS emails_sent (
+-- Lead Emails Sent table (renamed to avoid conflict with existing emails_sent table)
+CREATE TABLE IF NOT EXISTS lead_emails_sent (
     id INT AUTO_INCREMENT PRIMARY KEY,
     lead_id INT NOT NULL,
     sequence_id INT NOT NULL,

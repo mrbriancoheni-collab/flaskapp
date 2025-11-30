@@ -11,7 +11,7 @@ import logging
 
 from app.extensions import db
 from app.auth.decorators import require_admin_cloaked as require_admin
-from app.models_leads import LeadCampaign, Lead, EmailSequence, EmailSent, EmailUnsubscribe
+from app.models_leads import LeadCampaign, Lead, EmailSequence, LeadEmail, EmailUnsubscribe
 from app.services.serpapi_scraper import SerpAPIScraperService
 from app.services.lead_enrichment import LeadEnrichmentService
 from app.services.mailgun_outreach import MailgunOutreachService
@@ -36,10 +36,10 @@ def index():
             'campaign': campaign,
             'leads_total': Lead.query.filter_by(campaign_id=campaign.id).count(),
             'leads_enriched': Lead.query.filter_by(campaign_id=campaign.id, enrichment_status='completed').count(),
-            'emails_sent': EmailSent.query.join(Lead).filter(Lead.campaign_id == campaign.id).count(),
-            'emails_opened': EmailSent.query.join(Lead).filter(
+            'emails_sent': LeadEmail.query.join(Lead).filter(Lead.campaign_id == campaign.id).count(),
+            'emails_opened': LeadEmail.query.join(Lead).filter(
                 Lead.campaign_id == campaign.id,
-                EmailSent.opened_at.isnot(None)
+                LeadEmail.opened_at.isnot(None)
             ).count(),
         }
         campaign_stats.append(stats)
@@ -278,9 +278,9 @@ def send_emails(campaign_id: int):
 
         # Check daily limit
         today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        sent_today = EmailSent.query.join(Lead).filter(
+        sent_today = LeadEmail.query.join(Lead).filter(
             Lead.campaign_id == campaign_id,
-            EmailSent.created_at >= today_start
+            LeadEmail.created_at >= today_start
         ).count()
 
         if sent_today >= campaign.daily_email_limit:
@@ -347,7 +347,7 @@ def send_emails(campaign_id: int):
 
             if result['success']:
                 # Record sent email
-                email_sent = EmailSent(
+                email_sent = LeadEmail(
                     lead_id=lead.id,
                     sequence_id=sequence.id,
                     to_email=lead.decision_maker_email,
@@ -374,7 +374,7 @@ def send_emails(campaign_id: int):
             db.session.commit()
 
         # Update campaign stats
-        campaign.emails_sent = EmailSent.query.join(Lead).filter(Lead.campaign_id == campaign_id).count()
+        campaign.emails_sent = LeadEmail.query.join(Lead).filter(Lead.campaign_id == campaign_id).count()
         campaign.sending_started_at = campaign.sending_started_at or datetime.now()
         db.session.commit()
 

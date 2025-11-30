@@ -3,6 +3,7 @@ from __future__ import annotations
 from flask import Blueprint, current_app, request, redirect, url_for, session, render_template, flash
 import json
 import os
+import uuid
 from datetime import datetime, timedelta, date
 from urllib.parse import urlencode, urlparse, parse_qs
 from flask_login import current_user, login_required
@@ -4488,7 +4489,10 @@ Return ONLY valid JSON:
         budget_service = client.get_service("CampaignBudgetService")
         budget_operation = client.get_type("CampaignBudgetOperation")
         budget = budget_operation.create
-        budget.name = f"Budget for {campaign.name}"
+        # Add timestamp and short UUID to ensure unique budget names
+        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        unique_id = str(uuid.uuid4())[:8]
+        budget.name = f"Budget for {campaign.name} {timestamp}-{unique_id}"
         budget.amount_micros = int(campaign_data.get("daily_budget", 50) * 1_000_000)
         budget.delivery_method = client.enums.BudgetDeliveryMethodEnum.STANDARD
 

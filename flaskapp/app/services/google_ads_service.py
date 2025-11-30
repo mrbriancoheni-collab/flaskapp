@@ -53,6 +53,8 @@ def create_everything_from_draft(client: GoogleAdsClient, customer_id: str, draf
     ops = []
     res_index = {"budget": {}, "campaign": {}, "adgroup": {}}
     tmp_id = -1
+    import uuid
+    from datetime import datetime
 
     # 1) Budgets & Campaigns
     budget_svc = client.get_service("CampaignBudgetService")
@@ -60,7 +62,10 @@ def create_everything_from_draft(client: GoogleAdsClient, customer_id: str, draf
     for c in draft.get("campaigns", []):
         budget = client.get_type("CampaignBudget")
         budget.resource_name = budget_svc.campaign_budget_path(customer_id, str(abs(tmp_id)))
-        budget.name = f"{c['name']} Budget"
+        # Add timestamp and short UUID to ensure unique budget names
+        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        unique_id = str(uuid.uuid4())[:8]
+        budget.name = f"{c['name']} Budget {timestamp}-{unique_id}"
         budget.amount_micros = int(c.get("budget_per_day", 100) * 1_000_000)
         budget.delivery_method = client.enums.BudgetDeliveryMethodEnum.STANDARD
         op = client.get_type("CampaignBudgetOperation")

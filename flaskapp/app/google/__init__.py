@@ -4475,7 +4475,17 @@ Return ONLY valid JSON:
         campaign.status = client.enums.CampaignStatusEnum.PAUSED  # Start paused for safety
 
         # Set EU political advertising declaration (required field in v21)
-        campaign.contains_eu_political_advertising = False
+        # Must use enum value, not boolean
+        campaign.contains_eu_political_advertising = (
+            client.enums.ContainsEuPoliticalAdvertisingEnum.DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING
+        )
+
+        # Set start and end dates (recommended practice)
+        from datetime import datetime, timedelta
+        start_date = (datetime.now() + timedelta(days=1)).strftime("%Y%m%d")
+        end_date = (datetime.now() + timedelta(days=365)).strftime("%Y%m%d")
+        campaign.start_date = start_date
+        campaign.end_date = end_date
 
         # Set up network settings (required field for Search campaigns)
         campaign.network_settings.target_google_search = True

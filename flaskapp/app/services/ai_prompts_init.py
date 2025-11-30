@@ -410,6 +410,131 @@ Return ONLY valid JSON array of recommendations, no additional text.'''
         fbads_campaigns_prompt.is_active = True
         count += 1
 
+    # Google Ads Search Campaign Creation Prompt
+    google_ads_campaign_creation_prompt = AIPrompt.query.filter_by(prompt_key='google_ads_campaign_creation').first()
+    if not google_ads_campaign_creation_prompt or force:
+        if not google_ads_campaign_creation_prompt:
+            google_ads_campaign_creation_prompt = AIPrompt(prompt_key='google_ads_campaign_creation')
+            db.session.add(google_ads_campaign_creation_prompt)
+
+        google_ads_campaign_creation_prompt.name = 'Google Ads Search Campaign Creation'
+        google_ads_campaign_creation_prompt.description = 'AI prompt for creating complete Google Ads search campaigns with ad groups, keywords, and ads'
+        google_ads_campaign_creation_prompt.system_message = 'You are a Google Ads campaign architect. Create high-performing search campaigns with strategic ad groups, keyword research, and compelling ad copy that drives conversions.'
+        google_ads_campaign_creation_prompt.prompt_template = '''You are an expert Google Ads campaign architect. Create a complete Google Ads search campaign structure for a local service business.
+
+BUSINESS INFORMATION:
+- Business Name: {business_name}
+- Business Type: {business_type}
+- Services Offered: {services}
+- Service Area: {service_area}
+- Target Audience: {target_audience}
+- Unique Selling Points: {usp}
+- Monthly Budget: ${monthly_budget}
+- Primary Goal: {campaign_goal}
+- Landing Page URL: {landing_page_url}
+
+CAMPAIGN REQUIREMENTS:
+Create a comprehensive search campaign including:
+1. Campaign structure with 3-5 tightly themed ad groups
+2. 15-30 high-intent keywords per ad group (exact, phrase, broad match modifier)
+3. 3-4 responsive search ads per ad group with multiple headlines and descriptions
+4. Negative keywords list to prevent wasted spend
+5. Ad extensions recommendations (sitelinks, callouts, structured snippets, call)
+
+CAMPAIGN STRATEGY:
+- Focus on high-intent, commercial keywords (e.g., "[service] near me", "best [service] in [location]")
+- Use Single Keyword Ad Groups (SKAGs) for top 5 most valuable keywords
+- Include location modifiers in keywords and ad copy
+- Emphasize unique selling points in ad copy
+- Add strong CTAs (call now, get quote, book online, schedule service)
+- Include price qualifiers where appropriate (starting at $X, free estimate)
+- Target Quality Score of 7+ through keyword-ad-landing page alignment
+
+KEYWORD STRATEGY:
+- Mix of match types: 60% exact/phrase, 40% broad match modifier
+- Long-tail keywords (3-5 words) for lower CPC and higher intent
+- Include local modifiers (city names, neighborhoods, "near me")
+- Service-specific terms (emergency, 24/7, licensed, certified)
+- Problem/solution keywords (fix, repair, install, replace)
+
+AD COPY BEST PRACTICES:
+- Headline 1: Service + Location (e.g., "Expert Plumber in Austin")
+- Headline 2: USP or Offer (e.g., "Same-Day Service Available")
+- Headline 3: CTA or Benefit (e.g., "Call Now for Free Quote")
+- Description 1: Expand on service, include credentials (licensed, insured, experienced)
+- Description 2: Social proof, guarantees, or urgency (100+ 5-star reviews, satisfaction guaranteed)
+- Include dynamic keyword insertion where appropriate: {KeyWord:Default Text}
+- Use emotional triggers and power words (trusted, expert, guaranteed, fast, affordable)
+
+OUTPUT FORMAT (JSON):
+{
+  "campaign": {
+    "name": "Campaign name following best practices",
+    "daily_budget": calculated from monthly budget,
+    "network": "SEARCH",
+    "geo_targets": ["location codes"],
+    "language": "en",
+    "bidding_strategy": "recommended strategy",
+    "start_date": "YYYY-MM-DD"
+  },
+  "ad_groups": [
+    {
+      "name": "Ad group name (specific service/keyword theme)",
+      "keywords": [
+        {
+          "text": "keyword text",
+          "match_type": "EXACT|PHRASE|BROAD",
+          "max_cpc_bid": estimated CPC
+        }
+      ],
+      "ads": [
+        {
+          "headlines": ["15 headline variations - 30 char max each"],
+          "descriptions": ["4 description variations - 90 char max each"],
+          "path1": "url-path",
+          "path2": "url-path"
+        }
+      ]
+    }
+  ],
+  "negative_keywords": [
+    {
+      "text": "negative keyword",
+      "match_type": "BROAD|PHRASE|EXACT",
+      "level": "CAMPAIGN|ACCOUNT"
+    }
+  ],
+  "extensions": {
+    "sitelinks": [
+      {
+        "text": "Link Text",
+        "description1": "Description line 1",
+        "description2": "Description line 2",
+        "final_url": "URL"
+      }
+    ],
+    "callouts": ["Callout text 1", "Callout text 2"],
+    "structured_snippets": {
+      "header": "Services|Brands|Types",
+      "values": ["Value 1", "Value 2"]
+    }
+  },
+  "recommendations": [
+    {
+      "title": "Implementation recommendation",
+      "description": "Detailed guidance",
+      "priority": "HIGH|MEDIUM|LOW"
+    }
+  ]
+}
+
+GOAL: Create a campaign that drives qualified leads while maintaining CPL ≤ $50 and Quality Score ≥ 7.'''
+        google_ads_campaign_creation_prompt.model = 'gpt-4o'
+        google_ads_campaign_creation_prompt.temperature = 0.7
+        google_ads_campaign_creation_prompt.max_tokens = 6000
+        google_ads_campaign_creation_prompt.is_active = True
+        count += 1
+
     db.session.commit()
     return count
 

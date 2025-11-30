@@ -2681,6 +2681,246 @@ def ads_structure():
     )
 
 
+@google_bp.route("/ads/campaigns/paused", methods=["GET"], endpoint="get_paused_campaigns")
+@login_required
+def get_paused_campaigns():
+    """Get all paused campaigns with details."""
+    aid = current_account_id()
+    ads_data = _get_ads_state(aid)
+
+    # Filter for paused campaigns
+    paused = [c for c in ads_data.get('campaigns', []) if c.get('status', '').lower() == 'paused']
+
+    return jsonify({
+        'success': True,
+        'campaigns': paused
+    })
+
+
+@google_bp.route("/ads/campaigns/<campaign_id>/details", methods=["GET"], endpoint="get_campaign_details")
+@login_required
+def get_campaign_details(campaign_id):
+    """Get detailed information about a specific campaign including ad groups, keywords, and ads."""
+    aid = current_account_id()
+    customer_id = _get_ads_customer_id(aid)
+
+    if not customer_id:
+        return jsonify({'success': False, 'error': 'No Google Ads customer ID found'}), 400
+
+    try:
+        from google.ads.googleads.client import GoogleAdsClient
+
+        # Get refresh token
+        tok = _get_ads_user_tokens(aid) or {}
+        refresh_token = tok.get("refresh_token")
+        if not refresh_token:
+            return jsonify({'success': False, 'error': 'No refresh token available'}), 400
+
+        # Create Google Ads client
+        client_id, client_secret = _client_info("ads")
+        credentials = {
+            "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "use_proto_plus": True
+        }
+
+        client = GoogleAdsClient.load_from_dict(credentials)
+        google_ads_service = client.get_service("GoogleAdsService")
+
+        # Get campaign details
+        campaign_query = f"""
+            SELECT
+                campaign.id,
+                campaign.name,
+                campaign.status,
+                campaign.advertising_channel_type,
+                campaign.bidding_strategy_type,
+                campaign_budget.amount_micros,
+                metrics.cost_micros,
+                metrics.conversions,
+                metrics.clicks,
+                metrics.impressions
+            FROM campaign
+            WHERE campaign.id = {campaign_id}
+            AND segments.date DURING LAST_30_DAYS
+        """
+
+        campaign_response = google_ads_service.search(customer_id=customer_id, query=campaign_query)
+        campaign_data = None
+
+        for row in campaign_response:
+            c = row.campaign
+            metrics = row.metrics
+            budget_micros = row.campaign_budget.amount_micros if hasattr(row, 'campaign_budget') and row.campaign_budget else None
+
+            campaign_data = {
+                'id': str(c.id),
+                'name': c.name,
+                'type': str(c.advertising_channel_type).split(".")[-1],
+                'status': str(c.status).split(".")[-1].title(),
+                'daily_budget': (budget_micros / 1_000_000) if budget_micros else None,
+                'bidding': str(c.bidding_strategy_type).split(".")[-1].replace("_", " ").title(),
+                'cost_30d': (metrics.cost_micros or 0) / 1_000_000,
+                'conversions': metrics.conversions or 0,
+                'clicks': metrics.clicks or 0,
+                'impressions': metrics.impressions or 0,
+            }
+            break
+
+        if not campaign_data:
+            return jsonify({'success': False, 'error': 'Campaign not found'}), 404
+
+        # Get ad groups for this campaign
+        ag_query = f"""
+            SELECT
+                ad_group.id,
+                ad_group.name,
+                ad_group.status,
+                metrics.clicks,
+                metrics.impressions,
+                metrics.conversions
+            FROM ad_group
+            WHERE campaign.id = {campaign_id}
+            AND ad_group.status != 'REMOVED'
+            AND segments.date DURING LAST_30_DAYS
+            LIMIT 50
+        """
+
+        ad_groups = []
+        ag_response = google_ads_service.search(customer_id=customer_id, query=ag_query)
+        for row in ag_response:
+            ag = row.ad_group
+            metrics = row.metrics
+            ad_groups.append({
+                'id': str(ag.id),
+                'name': ag.name,
+                'status': str(ag.status).split(".")[-1].title(),
+                'clicks': metrics.clicks or 0,
+                'impressions': metrics.impressions or 0,
+                'conversions': metrics.conversions or 0,
+            })
+
+        # Get keywords for this campaign
+        kw_query = f"""
+            SELECT
+                ad_group_criterion.keyword.text,
+                ad_group_criterion.keyword.match_type,
+                ad_group.name,
+                metrics.clicks,
+                metrics.impressions,
+                metrics.conversions,
+                metrics.cost_micros
+            FROM keyword_view
+            WHERE campaign.id = {campaign_id}
+            AND ad_group_criterion.status != 'REMOVED'
+            AND segments.date DURING LAST_30_DAYS
+            LIMIT 100
+        """
+
+        keywords = []
+        kw_response = google_ads_service.search(customer_id=customer_id, query=kw_query)
+        for row in kw_response:
+            kw = row.ad_group_criterion.keyword
+            metrics = row.metrics
+            keywords.append({
+                'text': kw.text,
+                'match_type': str(kw.match_type).split(".")[-1].title(),
+                'ad_group': row.ad_group.name,
+                'clicks': metrics.clicks or 0,
+                'impressions': metrics.impressions or 0,
+                'conversions': metrics.conversions or 0,
+                'cost': (metrics.cost_micros or 0) / 1_000_000,
+            })
+
+        campaign_data['ad_groups'] = ad_groups
+        campaign_data['keywords'] = keywords
+
+        return jsonify({
+            'success': True,
+            'campaign': campaign_data
+        })
+
+    except Exception as e:
+        current_app.logger.exception(f"Error getting campaign details: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@google_bp.route("/ads/campaigns/<campaign_id>/activate", methods=["POST"], endpoint="activate_campaign")
+@login_required
+def activate_campaign(campaign_id):
+    """Activate a paused campaign."""
+    aid = current_account_id()
+    customer_id = _get_ads_customer_id(aid)
+
+    if not customer_id:
+        return jsonify({'success': False, 'error': 'No Google Ads customer ID found'}), 400
+
+    try:
+        from google.ads.googleads.client import GoogleAdsClient
+        from google.ads.googleads.errors import GoogleAdsException
+
+        # Get refresh token
+        tok = _get_ads_user_tokens(aid) or {}
+        refresh_token = tok.get("refresh_token")
+        if not refresh_token:
+            return jsonify({'success': False, 'error': 'No refresh token available'}), 400
+
+        # Create Google Ads client
+        client_id, client_secret = _client_info("ads")
+        credentials = {
+            "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "use_proto_plus": True
+        }
+
+        client = GoogleAdsClient.load_from_dict(credentials)
+        campaign_service = client.get_service("CampaignService")
+
+        # Create campaign operation to update status
+        campaign_operation = client.get_type("CampaignOperation")
+        campaign = campaign_operation.update
+        campaign.resource_name = f"customers/{customer_id}/campaigns/{campaign_id}"
+        campaign.status = client.enums.CampaignStatusEnum.ENABLED
+
+        # Update field mask
+        client.copy_from(
+            campaign_operation.update_mask,
+            client.get_type("FieldMask", version='v21')(paths=["status"])
+        )
+
+        # Execute the operation
+        response = campaign_service.mutate_campaigns(
+            customer_id=customer_id,
+            operations=[campaign_operation]
+        )
+
+        # Clear ads cache to refresh data
+        sess_key = f"_ads_state_{aid}"
+        session.pop(sess_key, None)
+
+        return jsonify({
+            'success': True,
+            'message': f'Campaign activated successfully',
+            'resource_name': response.results[0].resource_name if response.results else None
+        })
+
+    except GoogleAdsException as ex:
+        error_msg = f"Google Ads API error: {ex.error.code().name}"
+        for error in ex.failure.errors:
+            error_msg += f" - {error.message}"
+        current_app.logger.error(f"Error activating campaign: {error_msg}")
+        return jsonify({'success': False, 'error': error_msg}), 500
+    except Exception as e:
+        current_app.logger.exception(f"Error activating campaign: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 def _generate_preview(opt_type: str, opt_data: dict, opt_title: str) -> dict:
     """Generate human-readable preview of what an optimization will create."""
     preview = {
@@ -4232,10 +4472,17 @@ Return ONLY valid JSON:
         campaign.name = campaign_data.get("campaign_name", f"Search - {business_name}")
         campaign.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
         campaign.status = client.enums.CampaignStatusEnum.PAUSED  # Start paused for safety
+
+        # Set up network settings (required field for Search campaigns)
+        campaign.network_settings.target_google_search = True
+        campaign.network_settings.target_search_network = True
+        campaign.network_settings.target_content_network = False
+        campaign.network_settings.target_partner_search_network = False
+
+        # Set bidding strategy to Manual CPC with Enhanced CPC
+        campaign.bidding_strategy_type = client.enums.BiddingStrategyTypeEnum.MANUAL_CPC
         campaign.manual_cpc.enhanced_cpc_enabled = True
-        campaign.campaign_budget = client.get_service("CampaignBudgetService").campaign_budget_path(
-            customer_id, "temp"
-        )
+        # Note: campaign_budget will be set after creating the budget below
 
         # Create budget first
         budget_service = client.get_service("CampaignBudgetService")

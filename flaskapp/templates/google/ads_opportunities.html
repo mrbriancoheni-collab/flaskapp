@@ -406,6 +406,60 @@
   </div>
   {% endif %}
 
+  <!-- Paused Campaigns Section -->
+  <div id="pausedCampaignsSection" class="bg-white rounded-xl shadow-lg p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="text-xl font-bold">
+          <i class="fa-solid fa-pause-circle text-amber-600 mr-2"></i>
+          Paused Campaigns
+        </h2>
+        <p class="text-sm text-gray-600 mt-1">Review and activate campaigns created by AI</p>
+      </div>
+      <button id="refreshPausedCampaigns" class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition">
+        <i class="fa-solid fa-refresh mr-1"></i> Refresh
+      </button>
+    </div>
+
+    <div id="pausedCampaignsContent">
+      <div class="text-center py-8 text-gray-500">
+        <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+        <p>Loading paused campaigns...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Campaign Details Modal -->
+  <div id="campaignDetailsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between p-6 border-b">
+        <h2 class="text-2xl font-bold" id="modalCampaignName">Campaign Details</h2>
+        <button onclick="closeCampaignModal()" class="text-gray-400 hover:text-gray-600 text-2xl">
+          <i class="fa-solid fa-times"></i>
+        </button>
+      </div>
+
+      <!-- Modal Content (Scrollable) -->
+      <div class="flex-1 overflow-y-auto p-6" id="modalCampaignContent">
+        <div class="text-center py-8 text-gray-500">
+          <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+          <p>Loading campaign details...</p>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-end gap-3 p-6 border-t bg-gray-50">
+        <button onclick="closeCampaignModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg font-medium transition">
+          Close
+        </button>
+        <button id="activateCampaignBtn" onclick="activateCampaignFromModal()" class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition">
+          <i class="fa-solid fa-play mr-2"></i>Activate Campaign
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Performance Breakdown (Collapsible) -->
   <div class="bg-white rounded-xl shadow-lg p-6">
     <button id="performanceToggle" class="w-full flex items-center justify-between mb-4 cursor-pointer hover:opacity-80 transition">
@@ -1217,6 +1271,292 @@ async function markManualTaskComplete(taskId, taskTitle, buttonElement) {
     buttonElement.innerHTML = originalHTML;
   }
 }
+
+// Paused Campaigns Functionality
+let currentCampaignId = null;
+
+async function loadPausedCampaigns() {
+  const content = document.getElementById('pausedCampaignsContent');
+  content.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i><p>Loading paused campaigns...</p></div>';
+
+  try {
+    const response = await fetch('{{ url_for("google_bp.get_paused_campaigns") }}', {
+      credentials: 'same-origin'
+    });
+    const result = await response.json();
+
+    if (result.success && result.campaigns.length > 0) {
+      content.innerHTML = `
+        <div class="space-y-3">
+          ${result.campaigns.map(campaign => `
+            <div class="border border-amber-200 rounded-lg p-4 bg-amber-50 hover:bg-amber-100 transition">
+              <div class="flex items-center justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-3 mb-2">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
+                      <i class="fa-solid fa-pause mr-1"></i>PAUSED
+                    </span>
+                    <h3 class="font-bold text-gray-900">${campaign.name || 'Unnamed Campaign'}</h3>
+                  </div>
+                  <div class="flex items-center gap-4 text-sm text-gray-600">
+                    <span><i class="fa-solid fa-tag mr-1"></i>${campaign.type || 'Search'}</span>
+                    ${campaign.daily_budget ? `<span><i class="fa-solid fa-dollar-sign mr-1"></i>$${campaign.daily_budget.toFixed(2)}/day</span>` : ''}
+                    <span><i class="fa-solid fa-chart-bar mr-1"></i>${campaign.bidding || 'Manual CPC'}</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button onclick="viewCampaignDetails('${campaign.id}')" class="px-4 py-2 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 rounded-lg font-medium transition text-sm">
+                    <i class="fa-solid fa-eye mr-1"></i>Review
+                  </button>
+                  <button onclick="quickActivate('${campaign.id}', '${campaign.name || 'Campaign'}')" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition text-sm">
+                    <i class="fa-solid fa-play mr-1"></i>Activate
+                  </button>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } else {
+      content.innerHTML = `
+        <div class="text-center py-12">
+          <i class="fa-solid fa-check-circle text-6xl text-green-500 mb-4"></i>
+          <p class="text-gray-600 text-lg font-medium">No paused campaigns</p>
+          <p class="text-gray-500 text-sm mt-2">All your campaigns are either enabled or removed</p>
+        </div>
+      `;
+    }
+  } catch (error) {
+    console.error('Error loading paused campaigns:', error);
+    content.innerHTML = `
+      <div class="text-center py-12">
+        <i class="fa-solid fa-exclamation-triangle text-6xl text-red-500 mb-4"></i>
+        <p class="text-gray-600 text-lg font-medium">Error loading campaigns</p>
+        <p class="text-gray-500 text-sm mt-2">${error.message || 'Please try again'}</p>
+        <button onclick="loadPausedCampaigns()" class="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm">
+          <i class="fa-solid fa-refresh mr-1"></i>Retry
+        </button>
+      </div>
+    `;
+  }
+}
+
+async function viewCampaignDetails(campaignId) {
+  currentCampaignId = campaignId;
+  const modal = document.getElementById('campaignDetailsModal');
+  const content = document.getElementById('modalCampaignContent');
+
+  modal.classList.remove('hidden');
+  content.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i><p>Loading campaign details...</p></div>';
+
+  try {
+    const response = await fetch(`/account/google/ads/campaigns/${campaignId}/details`, {
+      credentials: 'same-origin'
+    });
+    const result = await response.json();
+
+    if (result.success) {
+      const campaign = result.campaign;
+      document.getElementById('modalCampaignName').textContent = campaign.name;
+
+      content.innerHTML = `
+        <!-- Campaign Overview -->
+        <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+          <h3 class="text-lg font-bold mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-info-circle text-indigo-600"></i>
+            Campaign Information
+          </h3>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <div class="text-sm text-gray-600">Type</div>
+              <div class="font-medium">${campaign.type || 'Search'}</div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-600">Status</div>
+              <div class="font-medium">
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                  ${campaign.status}
+                </span>
+              </div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-600">Daily Budget</div>
+              <div class="font-medium">${campaign.daily_budget ? '$' + campaign.daily_budget.toFixed(2) : 'Not set'}</div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-600">Bidding Strategy</div>
+              <div class="font-medium">${campaign.bidding || 'Manual CPC'}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Performance (Last 30 Days) -->
+        ${campaign.clicks > 0 || campaign.impressions > 0 ? `
+        <div class="mb-6 p-4 bg-blue-50 rounded-lg">
+          <h3 class="text-lg font-bold mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-chart-line text-blue-600"></i>
+            Performance (Last 30 Days)
+          </h3>
+          <div class="grid grid-cols-4 gap-4">
+            <div>
+              <div class="text-sm text-gray-600">Impressions</div>
+              <div class="text-2xl font-bold text-blue-600">${campaign.impressions.toLocaleString()}</div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-600">Clicks</div>
+              <div class="text-2xl font-bold text-blue-600">${campaign.clicks.toLocaleString()}</div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-600">Conversions</div>
+              <div class="text-2xl font-bold text-green-600">${campaign.conversions.toLocaleString()}</div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-600">Cost</div>
+              <div class="text-2xl font-bold text-gray-900">$${campaign.cost_30d.toFixed(2)}</div>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- Ad Groups -->
+        ${campaign.ad_groups && campaign.ad_groups.length > 0 ? `
+        <div class="mb-6">
+          <h3 class="text-lg font-bold mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-layer-group text-purple-600"></i>
+            Ad Groups (${campaign.ad_groups.length})
+          </h3>
+          <div class="space-y-2 max-h-60 overflow-y-auto">
+            ${campaign.ad_groups.map(ag => `
+              <div class="p-3 bg-gray-50 rounded border border-gray-200">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="font-medium">${ag.name}</div>
+                    <div class="text-xs text-gray-600 mt-1">
+                      ${ag.clicks} clicks, ${ag.impressions} impressions, ${ag.conversions} conversions
+                    </div>
+                  </div>
+                  <span class="px-2 py-1 rounded text-xs font-medium ${ag.status === 'Enabled' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                    ${ag.status}
+                  </span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- Keywords -->
+        ${campaign.keywords && campaign.keywords.length > 0 ? `
+        <div class="mb-6">
+          <h3 class="text-lg font-bold mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-key text-indigo-600"></i>
+            Keywords (${campaign.keywords.length})
+          </h3>
+          <div class="space-y-2 max-h-60 overflow-y-auto">
+            ${campaign.keywords.map(kw => `
+              <div class="p-3 bg-gray-50 rounded border border-gray-200">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="font-medium">${kw.text}</div>
+                    <div class="text-xs text-gray-600 mt-1">
+                      ${kw.match_type} · ${kw.ad_group} · ${kw.clicks} clicks, ${kw.impressions} impressions
+                      ${kw.cost > 0 ? '· $' + kw.cost.toFixed(2) : ''}
+                    </div>
+                  </div>
+                  ${kw.conversions > 0 ? `<span class="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">${kw.conversions} conv</span>` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        ` : ''}
+
+        <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+          <h3 class="font-bold text-green-900 mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-lightbulb"></i>
+            Ready to activate
+          </h3>
+          <p class="text-sm text-green-800">
+            This campaign has been created and is ready to go. Review the details above and click "Activate Campaign" to start running ads.
+          </p>
+        </div>
+      `;
+    } else {
+      content.innerHTML = `
+        <div class="text-center py-12">
+          <i class="fa-solid fa-exclamation-triangle text-6xl text-red-500 mb-4"></i>
+          <p class="text-gray-600 text-lg font-medium">Error loading campaign details</p>
+          <p class="text-gray-500 text-sm mt-2">${result.error || 'Please try again'}</p>
+        </div>
+      `;
+    }
+  } catch (error) {
+    console.error('Error loading campaign details:', error);
+    content.innerHTML = `
+      <div class="text-center py-12">
+        <i class="fa-solid fa-exclamation-triangle text-6xl text-red-500 mb-4"></i>
+        <p class="text-gray-600 text-lg font-medium">Error loading campaign details</p>
+        <p class="text-gray-500 text-sm mt-2">${error.message || 'Please try again'}</p>
+      </div>
+    `;
+  }
+}
+
+function closeCampaignModal() {
+  document.getElementById('campaignDetailsModal').classList.add('hidden');
+  currentCampaignId = null;
+}
+
+async function activateCampaignFromModal() {
+  if (!currentCampaignId) return;
+
+  const campaignName = document.getElementById('modalCampaignName').textContent;
+  if (!confirm(`Activate "${campaignName}"?\n\nThis will start running ads and spending budget.`)) {
+    return;
+  }
+
+  await activateCampaign(currentCampaignId);
+  closeCampaignModal();
+}
+
+async function quickActivate(campaignId, campaignName) {
+  if (!confirm(`Activate "${campaignName}"?\n\nThis will start running ads and spending budget.`)) {
+    return;
+  }
+
+  await activateCampaign(campaignId);
+}
+
+async function activateCampaign(campaignId) {
+  try {
+    const response = await fetch(`/account/google/ads/campaigns/${campaignId}/activate`, {
+      method: 'POST',
+      credentials: 'same-origin'
+    });
+    const result = await response.json();
+
+    if (result.success) {
+      alert('✅ Campaign activated successfully!\n\nYour campaign is now running. You can view its performance in your Google Ads dashboard.');
+      loadPausedCampaigns(); // Refresh the list
+    } else {
+      alert('❌ Failed to activate campaign:\n\n' + (result.error || 'Unknown error'));
+    }
+  } catch (error) {
+    console.error('Error activating campaign:', error);
+    alert('❌ Error activating campaign:\n\n' + (error.message || 'Please try again'));
+  }
+}
+
+// Load paused campaigns on page load
+document.addEventListener('DOMContentLoaded', function() {
+  loadPausedCampaigns();
+
+  // Refresh button
+  const refreshBtn = document.getElementById('refreshPausedCampaigns');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', loadPausedCampaigns);
+  }
+});
 </script>
 
 {% endblock %}

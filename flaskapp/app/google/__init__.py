@@ -4474,6 +4474,9 @@ Return ONLY valid JSON:
         campaign.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
         campaign.status = client.enums.CampaignStatusEnum.PAUSED  # Start paused for safety
 
+        # Set EU political advertising declaration (required field in v21)
+        campaign.contains_eu_political_advertising = False
+
         # Set up network settings (required field for Search campaigns)
         campaign.network_settings.target_google_search = True
         campaign.network_settings.target_search_network = True

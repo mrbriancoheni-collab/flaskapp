@@ -4410,50 +4410,127 @@ def _apply_create_search_campaign(aid: int, customer_id: str, opt_data: dict, re
         }
 
         client = GoogleAdsClient.load_from_dict(credentials)
-
-        # Get business name from existing PMax campaign
         google_ads_service = client.get_service("GoogleAdsService")
+
+        # Get business name, website URL, and existing budgets
         query = """
-            SELECT campaign.name
+            SELECT
+                campaign.name,
+                campaign.id,
+                campaign_budget.amount_micros
             FROM campaign
             WHERE campaign.status = 'ENABLED'
-            LIMIT 1
+            LIMIT 5
         """
         response = google_ads_service.search(customer_id=customer_id, query=query)
         business_name = "Your Business"
+        website_url = "https://example.com"
+        total_existing_budget_micros = 0
+        campaign_count = 0
+
         for row in response:
             business_name = row.campaign.name.split(" - ")[0].split(" | ")[0]
-            break
+            total_existing_budget_micros += row.campaign_budget.amount_micros
+            campaign_count += 1
+            break  # Get business name from first campaign
 
-        # Generate campaign structure using AI
-        current_app.logger.info(f"Generating Search campaign structure for {business_name}")
+        # Get website URL from existing ads or Performance Max asset groups
+        try:
+            url_query = """
+                SELECT ad_group_ad.ad.final_urls
+                FROM ad_group_ad
+                WHERE ad_group_ad.status = 'ENABLED'
+                LIMIT 1
+            """
+            url_response = google_ads_service.search(customer_id=customer_id, query=url_query)
+            for row in url_response:
+                if row.ad_group_ad.ad.final_urls:
+                    website_url = row.ad_group_ad.ad.final_urls[0]
+                    break
+        except:
+            # Try Performance Max asset groups if no Search ads found
+            try:
+                pmax_query = """
+                    SELECT asset_group.final_urls
+                    FROM asset_group
+                    WHERE asset_group.status = 'ENABLED'
+                    LIMIT 1
+                """
+                pmax_response = google_ads_service.search(customer_id=customer_id, query=pmax_query)
+                for row in pmax_response:
+                    if row.asset_group.final_urls:
+                        website_url = row.asset_group.final_urls[0]
+                        break
+            except:
+                pass
 
-        prompt = f"""Generate a Google Search campaign structure for a business.
+        # Extract domain from URL for ad copy
+        domain = website_url.replace("https://", "").replace("http://", "").replace("www.", "").split("/")[0]
+
+        # Calculate budget: use a portion of existing budget (don't just add more)
+        # Split budget proportionally across campaigns
+        if campaign_count > 0 and total_existing_budget_micros > 0:
+            # Allocate 30% of average existing campaign budget to new campaign
+            avg_budget_micros = total_existing_budget_micros // campaign_count
+            new_campaign_budget_micros = int(avg_budget_micros * 0.3)
+            # Minimum $10/day, maximum $100/day
+            new_campaign_budget_micros = max(10_000_000, min(new_campaign_budget_micros, 100_000_000))
+        else:
+            new_campaign_budget_micros = 30_000_000  # Default $30/day
+
+        # Generate campaign structure using AI with expert copywriting
+        current_app.logger.info(f"Generating Search campaign structure for {business_name} ({domain})")
+
+        prompt = f"""You are an expert Google Ads copywriter. Generate a high-converting Search campaign structure.
 
 Business: {business_name}
+Website: {website_url}
+Domain: {domain}
 
-Create JSON with:
-- Campaign name
-- 2-3 ad groups with targeted themes
-- 5-10 relevant keywords per ad group (Phrase and Exact match)
-- 1 RSA ad per ad group (10 headlines, 3 descriptions)
+Create JSON with 2-3 themed ad groups, relevant keywords, and compelling RSA ads following these copywriting principles:
 
-Return ONLY valid JSON:
+1. Headlines: Use power words, include benefits, create urgency, mention the business name
+2. Descriptions: Focus on unique value propositions, include calls-to-action, address pain points
+3. Keywords: Mix of branded, service-based, and intent-based keywords (Phrase and Exact match)
+4. Ad copy should be specific, benefit-driven, and include the domain naturally
+
+Return ONLY valid JSON (no markdown):
 {{
   "campaign_name": "Search - {business_name}",
-  "daily_budget": 50,
   "ad_groups": [
     {{
       "name": "Brand",
-      "keywords": [{{"text": "{business_name}", "match": "Exact"}}, ...],
+      "keywords": [
+        {{"text": "{business_name}", "match": "Exact"}},
+        {{"text": "{business_name.lower()}", "match": "Phrase"}},
+        {{"text": "{business_name} services", "match": "Phrase"}}
+      ],
       "rsa": {{
-        "final_url": "https://example.com",
-        "headlines": ["Headline 1", ...],
-        "descriptions": ["Description 1", ...]
-      }}
+        "final_url": "{website_url}",
+        "headlines": [
+          "{business_name} - Official Site",
+          "Top-Rated Service Provider",
+          "Get Started Today",
+          "Professional & Reliable",
+          "Expert Solutions Available",
+          "Trusted by Thousands",
+          "Call Now for Free Quote",
+          "Same-Day Service Available",
+          "Visit {domain}",
+          "{business_name} Specialists"
+        ],
+        "descriptions": [
+          "Experience exceptional service with {business_name}. Contact us today for a free consultation and discover why we're the trusted choice.",
+          "Professional, reliable, and affordable. Get the expert service you deserve. Visit {domain} or call now to get started.",
+          "Quality solutions tailored to your needs. Fast response times and competitive pricing. Your satisfaction is guaranteed."
+        ]
+      }},
+      "negative_keywords": ["free", "cheap", "diy", "job", "jobs", "career", "careers", "salary", "how to"]
     }}
   ]
-}}"""
+}}
+
+Generate 2-3 ad groups with thematically relevant keywords and compelling ad copy for each. Make headlines punchy (under 30 chars) and descriptions persuasive (under 90 chars)."""
 
         ai_response = chatgpt_response(prompt)
 
@@ -4498,7 +4575,7 @@ Return ONLY valid JSON:
         # Note: enhanced_cpc_enabled cannot be set during campaign creation in API v21
         # Note: campaign_budget will be set after creating the budget below
 
-        # Create budget first
+        # Create budget using calculated amount (spread from existing budget)
         budget_service = client.get_service("CampaignBudgetService")
         budget_operation = client.get_type("CampaignBudgetOperation")
         budget = budget_operation.create
@@ -4506,7 +4583,7 @@ Return ONLY valid JSON:
         timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
         unique_id = str(uuid.uuid4())[:8]
         budget.name = f"Budget for {campaign.name} {timestamp}-{unique_id}"
-        budget.amount_micros = int(campaign_data.get("daily_budget", 50) * 1_000_000)
+        budget.amount_micros = new_campaign_budget_micros
         budget.delivery_method = client.enums.BudgetDeliveryMethodEnum.STANDARD
 
         budget_response = budget_service.mutate_campaign_budgets(
@@ -4523,7 +4600,7 @@ Return ONLY valid JSON:
         campaign_resource_name = campaign_response.results[0].resource_name
         campaign_id = campaign_resource_name.split("/")[-1]
 
-        # Create ad groups, keywords, and RSAs
+        # Create ad groups, keywords, RSAs, and negative keywords
         ad_group_service = client.get_service("AdGroupService")
         ad_group_criterion_service = client.get_service("AdGroupCriterionService")
         ad_group_ad_service = client.get_service("AdGroupAdService")
@@ -4531,6 +4608,7 @@ Return ONLY valid JSON:
         created_ad_groups = 0
         created_keywords = 0
         created_ads = 0
+        created_negative_keywords = 0
 
         for ag_data in campaign_data.get("ad_groups", [])[:3]:  # Limit to 3 ad groups
             # Create ad group
@@ -4571,6 +4649,30 @@ Return ONLY valid JSON:
                 )
                 created_keywords += len(keyword_operations)
 
+            # Add negative keywords
+            negative_kw_list = ag_data.get("negative_keywords", [])
+            if negative_kw_list:
+                negative_kw_operations = []
+                for neg_kw in negative_kw_list[:20]:  # Limit to 20 negative keywords per ad group
+                    neg_operation = client.get_type("AdGroupCriterionOperation")
+                    negative_keyword = neg_operation.create
+                    negative_keyword.ad_group = ad_group_resource_name
+                    negative_keyword.status = client.enums.AdGroupCriterionStatusEnum.ENABLED
+                    negative_keyword.negative = True
+                    negative_keyword.keyword.text = neg_kw
+                    negative_keyword.keyword.match_type = client.enums.KeywordMatchTypeEnum.PHRASE
+                    negative_kw_operations.append(neg_operation)
+
+                if negative_kw_operations:
+                    try:
+                        ad_group_criterion_service.mutate_ad_group_criteria(
+                            customer_id=customer_id,
+                            operations=negative_kw_operations
+                        )
+                        created_negative_keywords += len(negative_kw_operations)
+                    except GoogleAdsException as ex:
+                        current_app.logger.warning(f"Failed to add negative keywords: {ex}")
+
             # Create RSA
             rsa_data = ag_data.get("rsa", {})
             if rsa_data:
@@ -4580,7 +4682,9 @@ Return ONLY valid JSON:
                 ad_group_ad.status = client.enums.AdGroupAdStatusEnum.ENABLED
 
                 rsa = ad_group_ad.ad.responsive_search_ad
-                ad_group_ad.ad.final_urls.append(rsa_data.get("final_url", "https://example.com"))
+                # Use actual website URL from AI response or fallback to detected URL
+                final_url = rsa_data.get("final_url", website_url)
+                ad_group_ad.ad.final_urls.append(final_url)
 
                 for headline in rsa_data.get("headlines", [])[:15]:
                     h = client.get_type("AdTextAsset")
@@ -4599,15 +4703,77 @@ Return ONLY valid JSON:
                 )
                 created_ads += 1
 
+        # Add sitelink extensions at campaign level
+        created_sitelinks = 0
+        try:
+            # Generate sitelinks using AI
+            sitelink_prompt = f"""Generate 4 sitelink extensions for {business_name}.
+Return ONLY valid JSON (no markdown):
+{{
+  "sitelinks": [
+    {{"text": "About Us", "description1": "Learn about our company", "description2": "Our story and values", "final_url": "{website_url}/about"}},
+    {{"text": "Services", "description1": "View all services", "description2": "Complete service list", "final_url": "{website_url}/services"}},
+    {{"text": "Contact", "description1": "Get in touch today", "description2": "Call or message us", "final_url": "{website_url}/contact"}},
+    {{"text": "Free Quote", "description1": "Request pricing info", "description2": "No obligation quote", "final_url": "{website_url}/quote"}}
+  ]
+}}
+Make text under 25 chars, descriptions under 35 chars each."""
+
+            sitelink_response = chatgpt_response(sitelink_prompt)
+            if "```json" in sitelink_response:
+                sitelink_response = sitelink_response.split("```json")[1].split("```")[0].strip()
+            elif "```" in sitelink_response:
+                sitelink_response = sitelink_response.split("```")[1].split("```")[0].strip()
+
+            sitelink_data = json.loads(sitelink_response)
+
+            # Create sitelink assets
+            asset_service = client.get_service("AssetService")
+            campaign_asset_service = client.get_service("CampaignAssetService")
+
+            for sitelink in sitelink_data.get("sitelinks", [])[:4]:
+                # Create sitelink asset
+                asset_operation = client.get_type("AssetOperation")
+                asset = asset_operation.create
+                asset.type_ = client.enums.AssetTypeEnum.SITELINK
+                asset.sitelink_asset.link_text = sitelink.get("text", "")[:25]
+                asset.sitelink_asset.description1 = sitelink.get("description1", "")[:35]
+                asset.sitelink_asset.description2 = sitelink.get("description2", "")[:35]
+                asset.final_urls.append(sitelink.get("final_url", website_url))
+
+                asset_response = asset_service.mutate_assets(
+                    customer_id=customer_id,
+                    operations=[asset_operation]
+                )
+                asset_resource_name = asset_response.results[0].resource_name
+
+                # Link asset to campaign
+                campaign_asset_operation = client.get_type("CampaignAssetOperation")
+                campaign_asset = campaign_asset_operation.create
+                campaign_asset.campaign = campaign_resource_name
+                campaign_asset.asset = asset_resource_name
+                campaign_asset.field_type = client.enums.AssetFieldTypeEnum.SITELINK
+
+                campaign_asset_service.mutate_campaign_assets(
+                    customer_id=customer_id,
+                    operations=[campaign_asset_operation]
+                )
+                created_sitelinks += 1
+        except Exception as ex:
+            current_app.logger.warning(f"Failed to add sitelinks: {ex}")
+
         return {
             "success": True,
             "resource_name": campaign_resource_name,
-            "message": f"Created Search campaign '{campaign.name}' with {created_ad_groups} ad groups, {created_keywords} keywords, {created_ads} RSA ads (campaign starts PAUSED - review and enable when ready)",
+            "message": f"Created Search campaign '{campaign.name}' with {created_ad_groups} ad groups, {created_keywords} keywords, {created_negative_keywords} negative keywords, {created_ads} RSA ads, {created_sitelinks} sitelinks (campaign starts PAUSED - review and enable when ready). Budget: ${new_campaign_budget_micros/1_000_000:.2f}/day",
             "campaign_id": campaign_id,
             "campaign_name": campaign.name,
             "ad_groups": created_ad_groups,
             "keywords": created_keywords,
-            "ads": created_ads
+            "negative_keywords": created_negative_keywords,
+            "ads": created_ads,
+            "sitelinks": created_sitelinks,
+            "budget_per_day": f"${new_campaign_budget_micros/1_000_000:.2f}"
         }
 
     except GoogleAdsException as ex:

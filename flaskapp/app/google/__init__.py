@@ -4492,10 +4492,10 @@ Return ONLY valid JSON:
         campaign.network_settings.target_content_network = False
         campaign.network_settings.target_partner_search_network = False
 
-        # Set bidding strategy to Manual CPC with Enhanced CPC
+        # Set bidding strategy to Manual CPC
         # Initialize the manual_cpc object first (required for proper configuration)
         campaign.manual_cpc = client.get_type("ManualCpc")
-        campaign.manual_cpc.enhanced_cpc_enabled = True
+        # Note: enhanced_cpc_enabled cannot be set during campaign creation in API v21
         # Note: campaign_budget will be set after creating the budget below
 
         # Create budget first

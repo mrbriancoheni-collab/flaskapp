@@ -19,6 +19,11 @@
 
         <!-- Actions -->
         <div class="flex items-center space-x-3">
+            <a href="{{ url_for('lead_campaigns_bp.edit_campaign', campaign_id=campaign.id) }}" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
+                <i class="fa-solid fa-pencil mr-2"></i>
+                Edit Campaign
+            </a>
+
             {% if campaign.status == 'draft' or campaign.status == 'ready' %}
             <button id="btnStartScraping" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                 <i class="fa-solid fa-magnifying-glass mr-2"></i>

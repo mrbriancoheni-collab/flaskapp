@@ -68,12 +68,36 @@
                 </div>
 
                 <!-- Actions -->
-                <div class="ml-4 flex flex-col space-y-2">
+                <div class="ml-4 flex flex-col space-y-2 min-w-[140px]">
                     <a href="{{ url_for('lead_campaigns_bp.view_campaign', campaign_id=stat.campaign.id) }}"
-                       class="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 text-sm font-medium text-center">
+                       class="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 text-sm font-medium text-center whitespace-nowrap">
                         <i class="fa-solid fa-eye mr-1"></i>
                         View
                     </a>
+
+                    {% if stat.campaign.status in ['draft', 'ready'] %}
+                    <button onclick="startScraping({{ stat.campaign.id }})"
+                            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-medium text-center whitespace-nowrap">
+                        <i class="fa-solid fa-magnifying-glass mr-1"></i>
+                        Scrape
+                    </button>
+                    {% endif %}
+
+                    {% if stat.leads_total > 0 and stat.leads_enriched < stat.leads_total %}
+                    <button onclick="enrichLeads({{ stat.campaign.id }})"
+                            class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm font-medium text-center whitespace-nowrap">
+                        <i class="fa-solid fa-user-plus mr-1"></i>
+                        Enrich
+                    </button>
+                    {% endif %}
+
+                    {% if stat.leads_enriched > 0 and stat.sequence_count > 0 %}
+                    <button onclick="sendEmails({{ stat.campaign.id }})"
+                            class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 text-sm font-medium text-center whitespace-nowrap">
+                        <i class="fa-solid fa-paper-plane mr-1"></i>
+                        Send
+                    </button>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -91,4 +115,109 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+async function startScraping(campaignId) {
+    if (!confirm('Start scraping leads for this campaign?')) return;
+
+    const btn = event.target.closest('button');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Scraping...';
+
+    try {
+        const response = await fetch(`/admin/lead-campaigns/${campaignId}/scrape`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(`Success! Scraped ${data.leads_count} leads.`);
+            location.reload();
+        } else {
+            alert(`Error: ${data.error}`);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    } catch (error) {
+        alert(`Error: ${error.message}`);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+async function enrichLeads(campaignId) {
+    if (!confirm('Start enriching leads (finding decision makers and emails)?')) return;
+
+    const btn = event.target.closest('button');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Enriching...';
+
+    try {
+        const response = await fetch(`/admin/lead-campaigns/${campaignId}/enrich`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(`Success! Enriched ${data.enriched_count} leads.`);
+            location.reload();
+        } else {
+            alert(`Error: ${data.error}`);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    } catch (error) {
+        alert(`Error: ${error.message}`);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+async function sendEmails(campaignId) {
+    if (!confirm('Start sending emails to enriched leads?')) return;
+
+    const btn = event.target.closest('button');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Sending...';
+
+    try {
+        const response = await fetch(`/admin/lead-campaigns/${campaignId}/send-emails`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(`Success! Sent ${data.sent_count} emails.`);
+            location.reload();
+        } else {
+            alert(`Error: ${data.error}`);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    } catch (error) {
+        alert(`Error: ${error.message}`);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+</script>
+
 {% endblock %}

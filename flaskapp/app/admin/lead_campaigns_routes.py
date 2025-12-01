@@ -88,6 +88,7 @@ def index():
                 Lead.campaign_id == campaign.id,
                 LeadEmail.opened_at.isnot(None)
             ).count(),
+            'sequence_count': EmailSequence.query.filter_by(campaign_id=campaign.id).count(),
         }
         campaign_stats.append(stats)
 

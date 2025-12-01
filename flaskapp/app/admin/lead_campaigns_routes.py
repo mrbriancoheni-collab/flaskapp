@@ -518,6 +518,48 @@ def sequences_delete(sequence_id: int):
     return redirect(url_for('lead_campaigns_bp.sequences_list'))
 
 
+@lead_campaigns_bp.route('/sequences/<int:sequence_id>/copy', methods=['GET', 'POST'])
+@require_admin
+def sequences_copy(sequence_id: int):
+    """Copy an existing sequence to another campaign"""
+    source_sequence = EmailSequence.query.get_or_404(sequence_id)
+
+    if request.method == 'GET':
+        # Show form to select target campaign
+        campaigns = LeadCampaign.query.order_by(LeadCampaign.name).all()
+        return render_template('admin/lead_campaigns/sequences_copy.html',
+                             source_sequence=source_sequence,
+                             campaigns=campaigns)
+
+    # Copy sequence to target campaign
+    target_campaign_id = int(request.form['campaign_id'])
+    target_campaign = LeadCampaign.query.get_or_404(target_campaign_id)
+
+    # Get next step number for target campaign
+    max_step = db.session.query(func.max(EmailSequence.step_number)).filter_by(
+        campaign_id=target_campaign_id
+    ).scalar() or 0
+    next_step = max_step + 1
+
+    # Create copy
+    new_sequence = EmailSequence(
+        campaign_id=target_campaign_id,
+        step_number=next_step,
+        name=source_sequence.name,
+        subject=source_sequence.subject,
+        body_html=source_sequence.body_html,
+        body_text=source_sequence.body_text,
+        delay_days=source_sequence.delay_days,
+        is_active=source_sequence.is_active
+    )
+
+    db.session.add(new_sequence)
+    db.session.commit()
+
+    flash(f'Sequence "{source_sequence.name}" copied to "{target_campaign.name}" as Step {next_step}!', 'success')
+    return redirect(url_for('lead_campaigns_bp.sequences_list'))
+
+
 @lead_campaigns_bp.route('/<int:campaign_id>/sequences/new', methods=['GET', 'POST'])
 @require_admin
 def new_sequence(campaign_id: int):

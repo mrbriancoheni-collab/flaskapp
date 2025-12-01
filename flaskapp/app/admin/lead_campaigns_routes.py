@@ -148,6 +148,33 @@ def view_campaign(campaign_id: int):
     )
 
 
+@lead_campaigns_bp.route('/<int:campaign_id>/edit', methods=['GET', 'POST'])
+@require_admin
+def edit_campaign(campaign_id: int):
+    """Edit an existing campaign"""
+    campaign = LeadCampaign.query.get_or_404(campaign_id)
+
+    if request.method == 'GET':
+        return render_template('admin/lead_campaigns/edit.html', campaign=campaign)
+
+    # Update campaign
+    campaign.name = request.form['name']
+    campaign.industry_service = request.form['industry_service']
+    campaign.location = request.form['location']
+    campaign.scrape_ads = request.form.get('scrape_ads') == 'on'
+    campaign.scrape_maps = request.form.get('scrape_maps') == 'on'
+    campaign.scrape_lsa = request.form.get('scrape_lsa') == 'on'
+    campaign.scrape_organic = request.form.get('scrape_organic') == 'on'
+    campaign.max_organic_results = int(request.form.get('max_organic_results', 5))
+    campaign.daily_email_limit = int(request.form.get('daily_email_limit', 250))
+    campaign.sequence_delay_days = int(request.form.get('sequence_delay_days', 3))
+
+    db.session.commit()
+
+    flash(f'Campaign "{campaign.name}" updated!', 'success')
+    return redirect(url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign.id))
+
+
 @lead_campaigns_bp.route('/<int:campaign_id>/start-scraping', methods=['POST'])
 @require_admin
 def start_scraping(campaign_id: int):

@@ -10,6 +10,7 @@ from typing import Dict, Optional, List
 from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
+from app.services.serpapi_scraper import should_exclude_domain
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +90,11 @@ class DomainCrawler:
 
         # Normalize domain
         if not domain:
+            return result
+
+        # Skip excluded domains (.gov, .org, review sites, etc.)
+        if should_exclude_domain(domain):
+            logger.info(f"Skipping crawl for excluded domain: {domain}")
             return result
 
         domain = domain.strip().lower()
@@ -254,6 +260,11 @@ class DomainCrawler:
 
         # Normalize domain
         if not domain:
+            return contacts
+
+        # Skip excluded domains (.gov, .org, review sites, etc.)
+        if should_exclude_domain(domain):
+            logger.info(f"Skipping team contacts search for excluded domain: {domain}")
             return contacts
 
         domain = domain.strip().lower()

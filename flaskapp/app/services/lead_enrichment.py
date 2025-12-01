@@ -13,6 +13,7 @@ import logging
 from typing import Optional, Dict, List
 import requests
 from urllib.parse import quote_plus
+from app.services.serpapi_scraper import should_exclude_domain
 
 logger = logging.getLogger(__name__)
 
@@ -29,13 +30,20 @@ class LeadEnrichmentService:
 
         Returns dict with:
         - email_format: Detected email format (e.g., "first@domain.com")
-        - decision_maker_name: Name of owner/marketer
-        - decision_maker_title: Job title
-        - decision_maker_email: Constructed email
-        - decision_maker_linkedin: LinkedIn profile URL
+        - contacts: List of contact dicts, each containing:
+            - name: Full name
+            - title: Job title
+            - email: Constructed email address
+            - linkedin_url: LinkedIn profile URL
+            - role_category: Category (executive, owner, marketing, etc.)
+        - decision_maker_name: (Legacy, first contact's name)
+        - decision_maker_title: (Legacy, first contact's title)
+        - decision_maker_email: (Legacy, first contact's email)
+        - decision_maker_linkedin: (Legacy, first contact's linkedin)
         """
         result = {
             'email_format': None,
+            'contacts': [],
             'decision_maker_name': None,
             'decision_maker_title': None,
             'decision_maker_email': None,
@@ -44,6 +52,11 @@ class LeadEnrichmentService:
 
         if not website:
             logger.warning(f"No website for {company_name}, skipping enrichment")
+            return result
+
+        # Skip excluded domains (.gov, .org, review sites, etc.)
+        if should_exclude_domain(website):
+            logger.info(f"Skipping enrichment for excluded domain: {website}")
             return result
 
         domain = self._extract_domain(website)
@@ -55,20 +68,17 @@ class LeadEnrichmentService:
         email_format = self._find_email_format(company_name, domain)
         result['email_format'] = email_format
 
-        # Step 2: Find decision maker on LinkedIn
-        linkedin_info = self._find_decision_maker_linkedin(company_name)
-        if linkedin_info:
-            result['decision_maker_name'] = linkedin_info.get('name')
-            result['decision_maker_title'] = linkedin_info.get('title')
-            result['decision_maker_linkedin'] = linkedin_info.get('url')
+        # Step 2: Find multiple decision makers on LinkedIn
+        contacts = self._find_decision_makers_linkedin(company_name, domain, email_format)
+        result['contacts'] = contacts
 
-            # Step 3: Construct email if we have format and name
-            if email_format and result['decision_maker_name']:
-                result['decision_maker_email'] = self._construct_email(
-                    result['decision_maker_name'],
-                    domain,
-                    email_format
-                )
+        # Set legacy fields for backwards compatibility (use first contact)
+        if contacts:
+            first_contact = contacts[0]
+            result['decision_maker_name'] = first_contact.get('name')
+            result['decision_maker_title'] = first_contact.get('title')
+            result['decision_maker_email'] = first_contact.get('email')
+            result['decision_maker_linkedin'] = first_contact.get('linkedin_url')
 
         return result
 
@@ -130,56 +140,127 @@ class LeadEnrichmentService:
             logger.error(f"Error finding email format: {e}")
             return f"first@{domain}"  # Fallback
 
-    def _find_decision_maker_linkedin(self, company_name: str) -> Optional[Dict]:
+    def _find_decision_makers_linkedin(self, company_name: str, domain: str, email_format: Optional[str]) -> List[Dict]:
         """
-        Find company owner/marketer on LinkedIn via Google search
+        Find multiple decision makers on LinkedIn via Google search
 
-        Returns dict with name, title, linkedin_url
+        Returns list of dicts with name, title, email, linkedin_url, role_category
         """
         if not self.serpapi_key:
             logger.warning("No SERPAPI_API_KEY, skipping LinkedIn search")
-            return None
+            return []
+
+        contacts = []
+        seen_names = set()  # Track unique contacts
 
         try:
-            # Search LinkedIn for owner/founder
-            query = f'site:linkedin.com/in "{company_name}" (owner OR founder OR CEO OR president OR marketing OR manager)'
+            # Search LinkedIn for multiple decision makers
+            query = f'site:linkedin.com/in "{company_name}" (owner OR founder OR CEO OR president OR marketing OR director OR manager)'
             params = {
                 'api_key': self.serpapi_key,
                 'engine': 'google',
                 'q': query,
-                'num': 5
+                'num': 10  # Get more results to find multiple contacts
             }
 
             response = requests.get('https://serpapi.com/search', params=params, timeout=20)
             response.raise_for_status()
             data = response.json()
 
-            # Parse first LinkedIn result
+            # Parse all LinkedIn results
             for result in data.get('organic_results', []):
                 link = result.get('link', '')
-                if 'linkedin.com/in/' in link:
-                    title = result.get('title', '')
-                    snippet = result.get('snippet', '')
+                if 'linkedin.com/in/' not in link:
+                    continue
 
-                    # Extract name from title (usually "Name - Title - Company")
-                    name_match = re.match(r'([^-|]+)', title)
-                    name = name_match.group(1).strip() if name_match else None
+                title = result.get('title', '')
+                snippet = result.get('snippet', '')
 
-                    # Extract title
-                    title_match = re.search(r'(Owner|Founder|CEO|President|Marketing|Manager|Director)', snippet, re.IGNORECASE)
-                    job_title = title_match.group(1) if title_match else 'Owner'
+                # Extract name from title (usually "Name - Title - Company")
+                name_match = re.match(r'([^-|]+)', title)
+                name = name_match.group(1).strip() if name_match else None
 
-                    if name:
-                        return {
-                            'name': name,
-                            'title': job_title,
-                            'url': link
-                        }
+                if not name or name in seen_names:
+                    continue
+
+                # Extract title and categorize role
+                job_title, role_category = self._extract_title_and_category(snippet, title)
+
+                if name and job_title:
+                    # Construct email if format available
+                    contact_email = None
+                    if email_format and domain:
+                        contact_email = self._construct_email(name, domain, email_format)
+
+                    contacts.append({
+                        'name': name,
+                        'title': job_title,
+                        'email': contact_email,
+                        'linkedin_url': link,
+                        'role_category': role_category
+                    })
+
+                    seen_names.add(name)
+
+                    # Limit to top 5 contacts to avoid overwhelming
+                    if len(contacts) >= 5:
+                        break
 
         except Exception as e:
-            logger.error(f"Error finding LinkedIn profile: {e}")
+            logger.error(f"Error finding LinkedIn profiles: {e}")
 
-        return None
+        return contacts
+
+    def _extract_title_and_category(self, snippet: str, title: str) -> tuple:
+        """
+        Extract job title and categorize the role
+
+        Returns (job_title, role_category)
+        """
+        combined_text = f"{title} {snippet}".lower()
+
+        # Define role patterns and their categories
+        role_patterns = [
+            # Executive roles
+            (r'\b(ceo|chief executive officer)\b', 'CEO', 'executive'),
+            (r'\b(president)\b', 'President', 'executive'),
+            (r'\b(coo|chief operating officer)\b', 'COO', 'executive'),
+            (r'\b(cto|chief technology officer)\b', 'CTO', 'executive'),
+            (r'\b(cfo|chief financial officer)\b', 'CFO', 'executive'),
+            (r'\b(cmo|chief marketing officer)\b', 'CMO', 'executive'),
+
+            # Owner/Founder
+            (r'\b(owner|co-owner)\b', 'Owner', 'owner'),
+            (r'\b(founder|co-founder)\b', 'Founder', 'owner'),
+
+            # Marketing roles
+            (r'\b(marketing director|director of marketing)\b', 'Marketing Director', 'marketing'),
+            (r'\b(marketing manager|manager of marketing)\b', 'Marketing Manager', 'marketing'),
+            (r'\b(head of marketing)\b', 'Head of Marketing', 'marketing'),
+            (r'\b(vp marketing|vice president of marketing)\b', 'VP Marketing', 'marketing'),
+
+            # Operations roles
+            (r'\b(operations director|director of operations)\b', 'Operations Director', 'operations'),
+            (r'\b(operations manager|manager of operations)\b', 'Operations Manager', 'operations'),
+            (r'\b(general manager)\b', 'General Manager', 'operations'),
+
+            # Sales roles
+            (r'\b(sales director|director of sales)\b', 'Sales Director', 'sales'),
+            (r'\b(sales manager|manager of sales)\b', 'Sales Manager', 'sales'),
+            (r'\b(vp sales|vice president of sales)\b', 'VP Sales', 'sales'),
+        ]
+
+        # Try to match patterns
+        for pattern, display_title, category in role_patterns:
+            if re.search(pattern, combined_text):
+                return (display_title, category)
+
+        # Fallback: extract any title-like text
+        title_match = re.search(r'(Owner|Founder|CEO|President|Marketing|Manager|Director)', combined_text, re.IGNORECASE)
+        if title_match:
+            return (title_match.group(1).title(), 'other')
+
+        return ('Contact', 'other')
 
     def _construct_email(self, full_name: str, domain: str, email_format: str) -> str:
         """Construct email address based on format"""

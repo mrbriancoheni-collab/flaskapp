@@ -141,9 +141,56 @@ class Lead(db.Model):
     # Relationships
     campaign = relationship("LeadCampaign", back_populates="leads")
     emails_sent = relationship("LeadEmail", back_populates="lead", cascade="all, delete-orphan")
+    contacts = relationship("LeadContact", back_populates="lead", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Lead id={self.id} company={self.company_name!r} status={self.email_status}>"
+
+
+class LeadContact(db.Model):
+    """Individual contact at a lead company (supports multiple contacts per company)"""
+    __tablename__ = "lead_contacts"
+
+    id = db.Column(Integer, primary_key=True)
+    lead_id = db.Column(Integer, ForeignKey("leads.id"), nullable=False, index=True)
+
+    # Contact info
+    name = db.Column(String(200), nullable=False)
+    title = db.Column(String(100), nullable=True)
+    email = db.Column(String(255), nullable=True, index=True)
+    linkedin_url = db.Column(String(500), nullable=True)
+
+    # Contact categorization
+    role_category = db.Column(
+        SAEnum('executive', 'owner', 'marketing', 'operations', 'sales', 'other', name='contact_role_category'),
+        default='other',
+        nullable=False
+    )
+    is_primary = db.Column(Boolean, default=False)  # Primary contact for this lead
+
+    # Email tracking for this specific contact
+    email_status = db.Column(
+        SAEnum('pending', 'sending', 'sent', 'opened', 'replied', 'bounced', 'unsubscribed', name='contact_email_status'),
+        default='pending',
+        nullable=False,
+        index=True
+    )
+    current_sequence_step = db.Column(Integer, default=0)
+    last_email_sent_at = db.Column(DateTime, nullable=True)
+    first_opened_at = db.Column(DateTime, nullable=True)
+    replied_at = db.Column(DateTime, nullable=True)
+    unsubscribed_at = db.Column(DateTime, nullable=True)
+
+    # Timestamps
+    created_at = db.Column(DateTime, server_default=func.now(), nullable=False)
+    updated_at = db.Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # Relationships
+    lead = relationship("Lead", back_populates="contacts")
+    emails_sent = relationship("LeadContactEmail", back_populates="contact", cascade="all, delete-orphan")
+
+    def __repr__(self) -> str:
+        return f"<LeadContact id={self.id} name={self.name!r} title={self.title!r} email={self.email!r}>"
 
 
 class EmailSequence(db.Model):
@@ -228,6 +275,52 @@ class LeadEmail(db.Model):
 
     def __repr__(self) -> str:
         return f"<LeadEmail id={self.id} to={self.to_email!r} status={self.status}>"
+
+
+class LeadContactEmail(db.Model):
+    """Track emails sent to specific contacts"""
+    __tablename__ = "lead_contact_emails"
+
+    id = db.Column(Integer, primary_key=True)
+    contact_id = db.Column(Integer, ForeignKey("lead_contacts.id"), nullable=False, index=True)
+    lead_id = db.Column(Integer, ForeignKey("leads.id"), nullable=False, index=True)
+    campaign_id = db.Column(Integer, ForeignKey("lead_campaigns.id"), nullable=False, index=True)
+    sequence_step = db.Column(Integer, nullable=False)
+
+    # Email details
+    subject = db.Column(String(500), nullable=False)
+    body = db.Column(Text, nullable=True)
+
+    # Mailgun tracking
+    mailgun_message_id = db.Column(String(255), nullable=True, unique=True, index=True)
+
+    # Status
+    status = db.Column(
+        SAEnum('queued', 'sent', 'delivered', 'opened', 'clicked', 'bounced', 'failed', name='contact_email_sent_status'),
+        default='queued',
+        nullable=False,
+        index=True
+    )
+
+    # Engagement tracking
+    sent_at = db.Column(DateTime, nullable=True)
+    delivered_at = db.Column(DateTime, nullable=True)
+    opened_at = db.Column(DateTime, nullable=True)
+    clicked_at = db.Column(DateTime, nullable=True)
+    bounced_at = db.Column(DateTime, nullable=True)
+
+    # Error tracking
+    error_message = db.Column(Text, nullable=True)
+
+    # Timestamps
+    created_at = db.Column(DateTime, server_default=func.now(), nullable=False)
+    updated_at = db.Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # Relationships
+    contact = relationship("LeadContact", back_populates="emails_sent")
+
+    def __repr__(self) -> str:
+        return f"<LeadContactEmail id={self.id} contact_id={self.contact_id} status={self.status}>"
 
 
 class EmailUnsubscribe(db.Model):

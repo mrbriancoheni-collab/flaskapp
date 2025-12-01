@@ -13,6 +13,7 @@ import logging
 from typing import Optional, Dict, List
 import requests
 from urllib.parse import quote_plus
+from app.services.serpapi_scraper import should_exclude_domain
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,11 @@ class LeadEnrichmentService:
 
         if not website:
             logger.warning(f"No website for {company_name}, skipping enrichment")
+            return result
+
+        # Skip excluded domains (.gov, .org, review sites, etc.)
+        if should_exclude_domain(website):
+            logger.info(f"Skipping enrichment for excluded domain: {website}")
             return result
 
         domain = self._extract_domain(website)

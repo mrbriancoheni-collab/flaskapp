@@ -16,6 +16,56 @@ import requests
 logger = logging.getLogger(__name__)
 
 
+def should_exclude_domain(url_or_domain: str) -> bool:
+    """
+    Check if a domain should be excluded from scraping/enrichment.
+
+    Excludes:
+    - Government sites (.gov)
+    - Non-profit organizations (.org)
+    - Review/aggregator sites (Yelp, HomeAdvisor, etc.)
+
+    Args:
+        url_or_domain: URL or domain to check
+
+    Returns:
+        True if domain should be excluded, False otherwise
+    """
+    if not url_or_domain:
+        return True
+
+    domain = url_or_domain.lower()
+
+    # Check for excluded TLDs
+    if domain.endswith('.gov') or '.gov/' in domain:
+        return True
+    if domain.endswith('.org') or '.org/' in domain:
+        return True
+
+    # Check for review/aggregator sites
+    excluded_domains = [
+        'yelp.com', 'yelp.',
+        'yellowpages.com', 'yellowpages.',
+        'thumbtack.com', 'thumbtack.',
+        'angi.com', 'angi.', 'angieslist.com',
+        'homeadvisor.com', 'homeadvisor.',
+        'bbb.org', 'bbb.',
+        'porch.com', 'porch.',
+        'houzz.com', 'houzz.',
+        'nextdoor.com', 'nextdoor.',
+        'facebook.com', 'facebook.',
+        'instagram.com', 'instagram.',
+        'twitter.com', 'twitter.',
+        'linkedin.com', 'linkedin.'
+    ]
+
+    for excluded in excluded_domains:
+        if excluded in domain:
+            return True
+
+    return False
+
+
 class SerpAPIScraperService:
     """Scrape Google SERPs using SerpAPI (compliant, legal approach)"""
 
@@ -110,10 +160,17 @@ class SerpAPIScraperService:
 
         # Top ads
         for ad in data.get('ads', []):
+            website = ad.get('displayed_link', '')
+            source_url = ad.get('link', '')
+
+            # Skip excluded domains
+            if should_exclude_domain(website) or should_exclude_domain(source_url):
+                continue
+
             ads.append({
                 'company_name': ad.get('title', ''),
-                'website': ad.get('displayed_link', ''),
-                'source_url': ad.get('link', ''),
+                'website': website,
+                'source_url': source_url,
                 'description': ad.get('description', ''),
                 'phone': ad.get('phone'),
                 'position': ad.get('position'),
@@ -125,10 +182,17 @@ class SerpAPIScraperService:
 
         # Bottom ads (inline ads)
         for ad in data.get('inline_ads', []):
+            website = ad.get('displayed_link', '')
+            source_url = ad.get('link', '')
+
+            # Skip excluded domains
+            if should_exclude_domain(website) or should_exclude_domain(source_url):
+                continue
+
             ads.append({
                 'company_name': ad.get('title', ''),
-                'website': ad.get('displayed_link', ''),
-                'source_url': ad.get('link', ''),
+                'website': website,
+                'source_url': source_url,
                 'description': ad.get('description', ''),
                 'phone': ad.get('phone'),
                 'position': ad.get('position'),
@@ -148,12 +212,19 @@ class SerpAPIScraperService:
 
         # Places in local pack
         for place in local_results.get('places', []):
+            website = place.get('website')
+            source_url = place.get('link')
+
+            # Skip excluded domains
+            if should_exclude_domain(website) or should_exclude_domain(source_url):
+                continue
+
             maps.append({
                 'company_name': place.get('title', ''),
-                'website': place.get('website'),
+                'website': website,
                 'phone': place.get('phone'),
                 'address': place.get('address'),
-                'source_url': place.get('link'),
+                'source_url': source_url,
                 'position': place.get('position'),
                 'extra_data': {
                     'rating': place.get('rating'),
@@ -172,12 +243,19 @@ class SerpAPIScraperService:
         lsa = []
 
         for ad in data.get('local_services', []):
+            website = ad.get('website')
+            source_url = ad.get('link')
+
+            # Skip excluded domains
+            if should_exclude_domain(website) or should_exclude_domain(source_url):
+                continue
+
             lsa.append({
                 'company_name': ad.get('title', ''),
-                'website': ad.get('website'),
+                'website': website,
                 'phone': ad.get('phone'),
                 'address': ad.get('address'),
-                'source_url': ad.get('link'),
+                'source_url': source_url,
                 'position': ad.get('position'),
                 'extra_data': {
                     'rating': ad.get('rating'),
@@ -194,15 +272,16 @@ class SerpAPIScraperService:
         organic = []
 
         for result in data.get('organic_results', [])[:max_results]:
-            # Skip aggregators, marketplaces, review sites
-            domain = result.get('displayed_link', '').lower()
-            if any(x in domain for x in ['yelp', 'yellowpages', 'thumbtack', 'angi', 'homeadvisor', 'bbb.org']):
+            website = result.get('link', '')
+
+            # Skip excluded domains (.gov, .org, review sites, etc.)
+            if should_exclude_domain(website):
                 continue
 
             organic.append({
                 'company_name': result.get('title', ''),
-                'website': result.get('link', ''),
-                'source_url': result.get('link', ''),
+                'website': website,
+                'source_url': website,
                 'description': result.get('snippet', ''),
                 'position': result.get('position'),
                 'extra_data': {

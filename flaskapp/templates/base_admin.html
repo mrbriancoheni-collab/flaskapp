@@ -130,6 +130,15 @@
       <a class="secondary-link {% if request.endpoint and 'lead_campaigns_bp' in request.endpoint and 'sequence' in request.endpoint %}active{% endif %}" href="{{ url_for('lead_campaigns_bp.sequences_list') }}">
         <i class="fa-solid fa-paper-plane"></i><span>Email Sequences</span>
       </a>
+      <a class="secondary-link {% if request.endpoint == 'lead_campaigns_bp.automation_status' %}active{% endif %}" href="{{ url_for('lead_campaigns_bp.automation_status') }}">
+        <i class="fa-solid fa-robot"></i><span>Automation Status</span>
+      </a>
+      <a class="secondary-link {% if request.endpoint == 'lead_campaigns_bp.activity' %}active{% endif %}" href="{{ url_for('lead_campaigns_bp.activity') }}">
+        <i class="fa-solid fa-stream"></i><span>Activity Feed</span>
+      </a>
+      <a class="secondary-link {% if request.endpoint == 'lead_campaigns_bp.email_activity' %}active{% endif %}" href="{{ url_for('lead_campaigns_bp.email_activity') }}">
+        <i class="fa-solid fa-envelope-open-text"></i><span>Email Activity</span>
+      </a>
 
       <div class="sidebar-label mt-4"><i class="fa-solid fa-wrench"></i>Integrations</div>
 

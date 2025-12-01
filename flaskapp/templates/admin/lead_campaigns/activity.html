@@ -1,0 +1,141 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Activity Feed - Lead Campaigns{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Activity Feed</h1>
+        <p class="text-gray-600 mt-2">Recent activity in the last 24 hours</p>
+    </div>
+
+    <!-- Recent Emails -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">
+            <i class="fa-solid fa-paper-plane mr-2 text-purple-600"></i>
+            Recent Emails ({{ recent_emails|length }})
+        </h2>
+
+        {% if recent_emails %}
+        <div class="space-y-3">
+            {% for email in recent_emails %}
+            <div class="flex items-start p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
+                <div class="flex-shrink-0 w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white">
+                    <i class="fa-solid fa-envelope"></i>
+                </div>
+                <div class="ml-4 flex-1">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm font-medium text-gray-900">{{ email.to_email }}</p>
+                        <span class="text-xs text-gray-500">{{ email.sent_at.strftime('%I:%M %p') if email.sent_at else 'Pending' }}</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-1">{{ email.subject }}</p>
+                    <div class="flex items-center space-x-3 mt-2">
+                        {% if email.opened_at %}
+                        <span class="inline-flex items-center text-xs text-green-700">
+                            <i class="fa-solid fa-envelope-open mr-1"></i> Opened
+                        </span>
+                        {% endif %}
+                        {% if email.status == 'bounced' %}
+                        <span class="inline-flex items-center text-xs text-red-700">
+                            <i class="fa-solid fa-exclamation-triangle mr-1"></i> Bounced
+                        </span>
+                        {% endif %}
+                        <span class="text-xs text-gray-500">{{ email.lead.company_name }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-gray-500 text-center py-8">No emails sent in the last 24 hours</p>
+        {% endif %}
+    </div>
+
+    <!-- Recent Enrichments -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">
+            <i class="fa-solid fa-user-plus mr-2 text-green-600"></i>
+            Recent Enrichments ({{ recent_enrichments|length }})
+        </h2>
+
+        {% if recent_enrichments %}
+        <div class="space-y-3">
+            {% for lead in recent_enrichments %}
+            <div class="flex items-start p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                <div class="flex-shrink-0 w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white">
+                    <i class="fa-solid fa-user-check"></i>
+                </div>
+                <div class="ml-4 flex-1">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm font-medium text-gray-900">{{ lead.company_name }}</p>
+                        <span class="text-xs text-gray-500">{{ lead.enriched_at.strftime('%I:%M %p') if lead.enriched_at else '' }}</span>
+                    </div>
+                    {% if lead.decision_maker_name %}
+                    <p class="text-sm text-gray-600 mt-1">
+                        <i class="fa-solid fa-user mr-1"></i>
+                        {{ lead.decision_maker_name }} - {{ lead.decision_maker_title or 'Contact' }}
+                    </p>
+                    {% endif %}
+                    {% if lead.decision_maker_email %}
+                    <p class="text-xs text-gray-500 mt-1">
+                        <i class="fa-solid fa-envelope mr-1"></i>
+                        {{ lead.decision_maker_email }}
+                    </p>
+                    {% endif %}
+                    <p class="text-xs text-gray-500 mt-1">
+                        <i class="fa-solid fa-tag mr-1"></i>
+                        {{ lead.campaign.name }}
+                    </p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-gray-500 text-center py-8">No leads enriched in the last 24 hours</p>
+        {% endif %}
+    </div>
+
+    <!-- Recent Leads Scraped -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">
+            <i class="fa-solid fa-magnifying-glass mr-2 text-blue-600"></i>
+            Recent Leads Scraped ({{ recent_leads|length }})
+        </h2>
+
+        {% if recent_leads %}
+        <div class="space-y-3">
+            {% for lead in recent_leads %}
+            <div class="flex items-start p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                <div class="flex-shrink-0 w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white">
+                    <i class="fa-solid fa-building"></i>
+                </div>
+                <div class="ml-4 flex-1">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm font-medium text-gray-900">{{ lead.company_name }}</p>
+                        <span class="text-xs text-gray-500">{{ lead.created_at.strftime('%I:%M %p') }}</span>
+                    </div>
+                    <div class="flex items-center space-x-3 mt-1">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-{{ {'ad': 'yellow', 'map': 'green', 'lsa': 'purple', 'organic': 'gray'}[lead.source_type] }}-100 text-{{ {'ad': 'yellow', 'map': 'green', 'lsa': 'purple', 'organic': 'gray'}[lead.source_type] }}-800">
+                            {{ lead.source_type|upper }}
+                        </span>
+                        {% if lead.website %}
+                        <span class="text-xs text-gray-600">
+                            <i class="fa-solid fa-globe mr-1"></i>
+                            {{ lead.website[:30] }}{% if lead.website|length > 30 %}...{% endif %}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">
+                        <i class="fa-solid fa-tag mr-1"></i>
+                        {{ lead.campaign.name }}
+                    </p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-gray-500 text-center py-8">No leads scraped in the last 24 hours</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

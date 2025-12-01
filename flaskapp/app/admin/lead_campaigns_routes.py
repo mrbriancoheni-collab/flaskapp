@@ -68,6 +68,113 @@ def text_to_html(text):
 lead_campaigns_bp = Blueprint('lead_campaigns_bp', __name__, url_prefix='/admin/lead-campaigns')
 
 
+# ==================== Monitoring & Analytics ====================
+
+@lead_campaigns_bp.route('/automation-status')
+@require_admin
+def automation_status():
+    """Show automation system status and progress"""
+    from app.services.lead_automation_service import LeadAutomationService
+    import os
+    import json
+
+    service = LeadAutomationService()
+    progress = service.get_progress_report()
+
+    # Get today's stats
+    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_scraped = Lead.query.filter(Lead.created_at >= today_start).count()
+    today_enriched = Lead.query.filter(Lead.enriched_at >= today_start).count()
+
+    today_emails = db.session.query(func.count(LeadEmail.id)).filter(
+        LeadEmail.sent_at >= today_start
+    ).scalar() or 0
+
+    # Check if automation is enabled
+    state_file = "/home/user/flaskapp/automation_state.json"
+    automation_enabled = os.path.exists(state_file)
+    last_run = None
+
+    if automation_enabled and os.path.exists(state_file):
+        with open(state_file, 'r') as f:
+            state = json.load(f)
+            last_run = state.get('last_run_date')
+
+    return render_template('admin/lead_campaigns/automation_status.html',
+                         progress=progress,
+                         today_scraped=today_scraped,
+                         today_enriched=today_enriched,
+                         today_emails=today_emails,
+                         automation_enabled=automation_enabled,
+                         last_run=last_run)
+
+
+@lead_campaigns_bp.route('/activity')
+@require_admin
+def activity():
+    """Show recent activity feed"""
+    # Recent leads scraped (last 24 hours)
+    yesterday = datetime.now() - timedelta(hours=24)
+    recent_leads = Lead.query.filter(
+        Lead.created_at >= yesterday
+    ).order_by(desc(Lead.created_at)).limit(50).all()
+
+    # Recent enrichments (last 24 hours)
+    recent_enrichments = Lead.query.filter(
+        Lead.enriched_at >= yesterday,
+        Lead.enrichment_status == 'completed'
+    ).order_by(desc(Lead.enriched_at)).limit(50).all()
+
+    # Recent emails sent (last 24 hours)
+    recent_emails = LeadEmail.query.filter(
+        LeadEmail.sent_at >= yesterday
+    ).order_by(desc(LeadEmail.sent_at)).limit(50).all()
+
+    return render_template('admin/lead_campaigns/activity.html',
+                         recent_leads=recent_leads,
+                         recent_enrichments=recent_enrichments,
+                         recent_emails=recent_emails)
+
+
+@lead_campaigns_bp.route('/email-activity')
+@require_admin
+def email_activity():
+    """Show email activity log with filters"""
+    page = request.args.get('page', 1, type=int)
+    status_filter = request.args.get('status', 'all')
+    campaign_filter = request.args.get('campaign', 'all', type=str)
+
+    # Base query
+    query = LeadEmail.query.join(Lead)
+
+    # Apply filters
+    if status_filter != 'all':
+        if status_filter == 'opened':
+            query = query.filter(LeadEmail.opened_at.isnot(None))
+        elif status_filter == 'bounced':
+            query = query.filter(LeadEmail.status == 'bounced')
+        elif status_filter == 'sent':
+            query = query.filter(LeadEmail.status == 'sent')
+
+    if campaign_filter != 'all':
+        query = query.filter(Lead.campaign_id == int(campaign_filter))
+
+    # Paginate
+    per_page = 50
+    emails = query.order_by(desc(LeadEmail.created_at)).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+
+    # Get campaigns for filter dropdown
+    campaigns = LeadCampaign.query.order_by(LeadCampaign.name).all()
+
+    return render_template('admin/lead_campaigns/email_activity.html',
+                         emails=emails,
+                         campaigns=campaigns,
+                         status_filter=status_filter,
+                         campaign_filter=campaign_filter)
+
+
 # ==================== Campaign Management ====================
 
 @lead_campaigns_bp.route('/')

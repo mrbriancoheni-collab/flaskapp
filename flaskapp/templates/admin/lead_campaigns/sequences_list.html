@@ -90,6 +90,9 @@
                             <a href="{{ url_for('lead_campaigns_bp.sequences_edit', sequence_id=sequence.id) }}" class="text-indigo-600 hover:text-indigo-900 px-3 py-1 text-sm">
                                 <i class="fa-solid fa-edit"></i> Edit
                             </a>
+                            <a href="{{ url_for('lead_campaigns_bp.sequences_copy', sequence_id=sequence.id) }}" class="text-blue-600 hover:text-blue-900 px-3 py-1 text-sm">
+                                <i class="fa-solid fa-copy"></i> Copy
+                            </a>
                             <form method="post" action="{{ url_for('lead_campaigns_bp.sequences_delete', sequence_id=sequence.id) }}" class="inline" onsubmit="return confirm('Are you sure you want to delete this sequence step?')">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="text-red-600 hover:text-red-900 px-3 py-1 text-sm">

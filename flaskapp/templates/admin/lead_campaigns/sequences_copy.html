@@ -1,0 +1,71 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Copy Sequence - {{ source_sequence.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-2xl">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Copy Email Sequence</h1>
+        <p class="text-gray-600 mt-2">Select which campaign to copy this sequence to</p>
+    </div>
+
+    <!-- Source Sequence Info -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <h2 class="font-semibold text-blue-900 mb-2">
+            <i class="fa-solid fa-copy mr-2"></i>
+            Copying: {{ source_sequence.name }}
+        </h2>
+        <p class="text-sm text-blue-800 mb-2">
+            <strong>Subject:</strong> {{ source_sequence.subject }}
+        </p>
+        <p class="text-sm text-blue-800">
+            <strong>From:</strong> {{ source_sequence.campaign.name }}
+        </p>
+    </div>
+
+    <!-- Copy Form -->
+    <form method="POST" class="bg-white rounded-lg shadow-md p-8">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+                Target Campaign
+                <span class="text-red-500">*</span>
+            </label>
+            <select name="campaign_id" required class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                <option value="">Select a campaign...</option>
+                {% for campaign in campaigns %}
+                <option value="{{ campaign.id }}">
+                    {{ campaign.name }} ({{ campaign.industry_service }} - {{ campaign.location }})
+                </option>
+                {% endfor %}
+            </select>
+            <p class="text-xs text-gray-500 mt-1">
+                The sequence will be added as the next step in the selected campaign
+            </p>
+        </div>
+
+        <!-- Preview -->
+        <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+            <h3 class="text-sm font-semibold text-gray-700 mb-2">What will be copied:</h3>
+            <ul class="text-sm text-gray-600 space-y-1">
+                <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Sequence name: {{ source_sequence.name }}</li>
+                <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Subject line</li>
+                <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Email body content</li>
+                <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Delay days: {{ source_sequence.delay_days }}</li>
+                <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Active status: {{ 'Yes' if source_sequence.is_active else 'No' }}</li>
+            </ul>
+        </div>
+
+        <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+            <a href="{{ url_for('lead_campaigns_bp.sequences_list') }}" class="text-gray-600 hover:text-gray-900">
+                Cancel
+            </a>
+            <button type="submit" class="bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700 font-semibold">
+                <i class="fa-solid fa-copy mr-2"></i>
+                Copy Sequence
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

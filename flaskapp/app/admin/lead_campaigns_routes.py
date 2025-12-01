@@ -317,6 +317,99 @@ def enrich_leads(campaign_id: int):
 
 # ==================== Email Sequences ====================
 
+@lead_campaigns_bp.route('/sequences', methods=['GET'])
+@require_admin
+def sequences_list():
+    """List all email sequences across all campaigns"""
+    # Get all sequences with campaign info
+    sequences = EmailSequence.query.join(LeadCampaign).order_by(
+        LeadCampaign.name, EmailSequence.step_number
+    ).all()
+
+    return render_template('admin/lead_campaigns/sequences_list.html', sequences=sequences)
+
+
+@lead_campaigns_bp.route('/sequences/new', methods=['GET', 'POST'])
+@require_admin
+def sequences_new():
+    """Create a new email sequence (select campaign first)"""
+    if request.method == 'GET':
+        # Get all campaigns
+        campaigns = LeadCampaign.query.order_by(LeadCampaign.name).all()
+        return render_template('admin/lead_campaigns/sequences_new.html', campaigns=campaigns)
+
+    # Create sequence
+    campaign_id = int(request.form['campaign_id'])
+    campaign = LeadCampaign.query.get_or_404(campaign_id)
+
+    # Get next step number for this campaign
+    max_step = db.session.query(func.max(EmailSequence.step_number)).filter_by(campaign_id=campaign_id).scalar() or 0
+    next_step = max_step + 1
+
+    body_text = request.form.get('body_text', '')
+    body_html = text_to_html(body_text)
+
+    sequence = EmailSequence(
+        campaign_id=campaign_id,
+        step_number=next_step,
+        name=request.form['name'],
+        subject=request.form['subject'],
+        body_html=body_html,
+        body_text=body_text,
+        delay_days=int(request.form.get('delay_days', 0)),
+        is_active=request.form.get('is_active') == 'on'
+    )
+
+    db.session.add(sequence)
+    db.session.commit()
+
+    flash(f'Email sequence "{sequence.name}" created for campaign "{campaign.name}"!', 'success')
+    return redirect(url_for('lead_campaigns_bp.sequences_list'))
+
+
+@lead_campaigns_bp.route('/sequences/<int:sequence_id>/edit', methods=['GET', 'POST'])
+@require_admin
+def sequences_edit(sequence_id: int):
+    """Edit an existing email sequence"""
+    sequence = EmailSequence.query.get_or_404(sequence_id)
+
+    if request.method == 'GET':
+        campaigns = LeadCampaign.query.order_by(LeadCampaign.name).all()
+        return render_template('admin/lead_campaigns/sequences_edit.html',
+                             sequence=sequence, campaigns=campaigns)
+
+    # Update sequence
+    sequence.campaign_id = int(request.form['campaign_id'])
+    sequence.name = request.form['name']
+    sequence.subject = request.form['subject']
+    sequence.step_number = int(request.form['step_number'])
+    sequence.delay_days = int(request.form.get('delay_days', 0))
+    sequence.is_active = request.form.get('is_active') == 'on'
+
+    body_text = request.form.get('body_text', '')
+    sequence.body_text = body_text
+    sequence.body_html = text_to_html(body_text)
+
+    db.session.commit()
+
+    flash(f'Email sequence "{sequence.name}" updated!', 'success')
+    return redirect(url_for('lead_campaigns_bp.sequences_list'))
+
+
+@lead_campaigns_bp.route('/sequences/<int:sequence_id>/delete', methods=['POST'])
+@require_admin
+def sequences_delete(sequence_id: int):
+    """Delete an email sequence"""
+    sequence = EmailSequence.query.get_or_404(sequence_id)
+    sequence_name = sequence.name
+
+    db.session.delete(sequence)
+    db.session.commit()
+
+    flash(f'Email sequence "{sequence_name}" deleted!', 'success')
+    return redirect(url_for('lead_campaigns_bp.sequences_list'))
+
+
 @lead_campaigns_bp.route('/<int:campaign_id>/sequences/new', methods=['GET', 'POST'])
 @require_admin
 def new_sequence(campaign_id: int):

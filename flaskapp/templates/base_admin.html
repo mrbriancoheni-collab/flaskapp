@@ -124,8 +124,11 @@
 
       <div class="sidebar-label mt-4"><i class="fa-solid fa-bullseye"></i>Marketing</div>
 
-      <a class="secondary-link {% if request.endpoint and 'lead_campaigns_bp' in request.endpoint %}active{% endif %}" href="{{ url_for('lead_campaigns_bp.index') }}">
-        <i class="fa-solid fa-magnet"></i><span>Lead Generation</span>
+      <a class="secondary-link {% if request.endpoint and 'lead_campaigns_bp' in request.endpoint and 'sequence' not in request.endpoint %}active{% endif %}" href="{{ url_for('lead_campaigns_bp.index') }}">
+        <i class="fa-solid fa-magnet"></i><span>Lead Campaigns</span>
+      </a>
+      <a class="secondary-link {% if request.endpoint and 'lead_campaigns_bp' in request.endpoint and 'sequence' in request.endpoint %}active{% endif %}" href="{{ url_for('lead_campaigns_bp.sequences_list') }}">
+        <i class="fa-solid fa-paper-plane"></i><span>Email Sequences</span>
       </a>
 
       <div class="sidebar-label mt-4"><i class="fa-solid fa-wrench"></i>Integrations</div>

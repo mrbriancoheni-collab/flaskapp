@@ -1,26 +1,45 @@
 {% extends "base_admin.html" %}
 
-{% block title %}Copy Sequence - {{ source_sequence.name }}{% endblock %}
+{% block title %}Copy Email Sequence - {{ source_campaign.name }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8 max-w-2xl">
+<div class="container mx-auto px-4 py-8 max-w-3xl">
     <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-900">Copy Email Sequence</h1>
-        <p class="text-gray-600 mt-2">Select which campaign to copy this sequence to</p>
+        <p class="text-gray-600 mt-2">Copy all {{ source_sequences|length }} email steps to another campaign</p>
     </div>
 
-    <!-- Source Sequence Info -->
-    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-        <h2 class="font-semibold text-blue-900 mb-2">
+    <!-- Source Campaign Info -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+        <h2 class="font-semibold text-blue-900 mb-3 text-lg">
             <i class="fa-solid fa-copy mr-2"></i>
-            Copying: {{ source_sequence.name }}
+            Copying from: {{ source_campaign.name }}
         </h2>
-        <p class="text-sm text-blue-800 mb-2">
-            <strong>Subject:</strong> {{ source_sequence.subject }}
+        <p class="text-sm text-blue-800 mb-4">
+            {{ source_campaign.industry_service }} - {{ source_campaign.location }}
         </p>
-        <p class="text-sm text-blue-800">
-            <strong>From:</strong> {{ source_sequence.campaign.name }}
-        </p>
+
+        <div class="bg-white rounded-lg p-4">
+            <h3 class="font-semibold text-gray-900 mb-3">
+                Email Steps ({{ source_sequences|length }}):
+            </h3>
+            <div class="space-y-2">
+                {% for seq in source_sequences %}
+                <div class="flex items-start text-sm">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mr-3">
+                        Step {{ seq.step_number }}
+                    </span>
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-900">{{ seq.name }}</p>
+                        <p class="text-gray-600 text-xs mt-1">{{ seq.subject }}</p>
+                        <p class="text-gray-500 text-xs mt-1">
+                            Delay: {% if seq.delay_days == 0 %}Immediate{% else %}{{ seq.delay_days }} day{% if seq.delay_days != 1 %}s{% endif %}{% endif %}
+                        </p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 
     <!-- Copy Form -->
@@ -41,19 +60,22 @@
                 {% endfor %}
             </select>
             <p class="text-xs text-gray-500 mt-1">
-                The sequence will be added as the next step in the selected campaign
+                All {{ source_sequences|length }} steps will be added to the selected campaign
             </p>
         </div>
 
-        <!-- Preview -->
+        <!-- What will be copied -->
         <div class="mb-6 p-4 bg-gray-50 rounded-lg">
-            <h3 class="text-sm font-semibold text-gray-700 mb-2">What will be copied:</h3>
+            <h3 class="text-sm font-semibold text-gray-700 mb-2">
+                <i class="fa-solid fa-info-circle mr-2"></i>
+                What will be copied:
+            </h3>
             <ul class="text-sm text-gray-600 space-y-1">
-                <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Sequence name: {{ source_sequence.name }}</li>
-                <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Subject line</li>
-                <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Email body content</li>
-                <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Delay days: {{ source_sequence.delay_days }}</li>
-                <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Active status: {{ 'Yes' if source_sequence.is_active else 'No' }}</li>
+                <li><i class="fa-solid fa-check text-green-600 mr-2"></i>All {{ source_sequences|length }} email steps</li>
+                <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Step names and subject lines</li>
+                <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Email body content (HTML and text)</li>
+                <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Delay days for each step</li>
+                <li><i class="fa-solid fa-check text-green-600 mr-2"></i>Active/Inactive status</li>
             </ul>
         </div>
 
@@ -63,7 +85,7 @@
             </a>
             <button type="submit" class="bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700 font-semibold">
                 <i class="fa-solid fa-copy mr-2"></i>
-                Copy Sequence
+                Copy All {{ source_sequences|length }} Steps
             </button>
         </div>
     </form>

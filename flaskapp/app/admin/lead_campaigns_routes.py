@@ -209,11 +209,38 @@ def new_campaign():
     if request.method == 'GET':
         return render_template('admin/lead_campaigns/new.html')
 
+    # Validate inputs
+    industry_service = request.form.get('industry_service', '').strip()
+    location = request.form.get('location', '').strip()
+
+    # Validation checks
+    errors = []
+
+    if not industry_service or len(industry_service) < 3:
+        errors.append('Service/Industry must be at least 3 characters (e.g., "plumber", "hvac repair")')
+
+    if industry_service.lower() in ['all', 'all us', 'us', 'usa', 'united states']:
+        errors.append('Service/Industry cannot be "All" or "US" - must be a specific service (e.g., "plumber", "hvac")')
+
+    if not location or len(location) < 3:
+        errors.append('Location must be at least 3 characters (e.g., "New York, NY")')
+
+    if location.lower() in ['us', 'usa', 'united states', 'all']:
+        errors.append('Location must be a specific city and state, not just "US" (e.g., "Dallas, TX")')
+
+    if ',' not in location:
+        errors.append('Location should include city and state separated by comma (e.g., "Austin, TX")')
+
+    if errors:
+        for error in errors:
+            flash(error, 'error')
+        return render_template('admin/lead_campaigns/new.html')
+
     # Create campaign
     campaign = LeadCampaign(
         name=request.form['name'],
-        industry_service=request.form['industry_service'],
-        location=request.form['location'],
+        industry_service=industry_service,
+        location=location,
         scrape_ads=request.form.get('scrape_ads') == 'on',
         scrape_maps=request.form.get('scrape_maps') == 'on',
         scrape_lsa=request.form.get('scrape_lsa') == 'on',
@@ -265,10 +292,37 @@ def edit_campaign(campaign_id: int):
     if request.method == 'GET':
         return render_template('admin/lead_campaigns/edit.html', campaign=campaign)
 
+    # Validate inputs
+    industry_service = request.form.get('industry_service', '').strip()
+    location = request.form.get('location', '').strip()
+
+    # Validation checks
+    errors = []
+
+    if not industry_service or len(industry_service) < 3:
+        errors.append('Service/Industry must be at least 3 characters (e.g., "plumber", "hvac repair")')
+
+    if industry_service.lower() in ['all', 'all us', 'us', 'usa', 'united states']:
+        errors.append('Service/Industry cannot be "All" or "US" - must be a specific service (e.g., "plumber", "hvac")')
+
+    if not location or len(location) < 3:
+        errors.append('Location must be at least 3 characters (e.g., "New York, NY")')
+
+    if location.lower() in ['us', 'usa', 'united states', 'all']:
+        errors.append('Location must be a specific city and state, not just "US" (e.g., "Dallas, TX")')
+
+    if ',' not in location:
+        errors.append('Location should include city and state separated by comma (e.g., "Austin, TX")')
+
+    if errors:
+        for error in errors:
+            flash(error, 'error')
+        return render_template('admin/lead_campaigns/edit.html', campaign=campaign)
+
     # Update campaign
     campaign.name = request.form['name']
-    campaign.industry_service = request.form['industry_service']
-    campaign.location = request.form['location']
+    campaign.industry_service = industry_service
+    campaign.location = location
     campaign.scrape_ads = request.form.get('scrape_ads') == 'on'
     campaign.scrape_maps = request.form.get('scrape_maps') == 'on'
     campaign.scrape_lsa = request.form.get('scrape_lsa') == 'on'

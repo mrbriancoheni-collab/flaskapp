@@ -518,45 +518,57 @@ def sequences_delete(sequence_id: int):
     return redirect(url_for('lead_campaigns_bp.sequences_list'))
 
 
-@lead_campaigns_bp.route('/sequences/<int:sequence_id>/copy', methods=['GET', 'POST'])
+@lead_campaigns_bp.route('/sequences/copy-campaign/<int:source_campaign_id>', methods=['GET', 'POST'])
 @require_admin
-def sequences_copy(sequence_id: int):
-    """Copy an existing sequence to another campaign"""
-    source_sequence = EmailSequence.query.get_or_404(sequence_id)
+def sequences_copy_campaign(source_campaign_id: int):
+    """Copy all sequence steps from one campaign to another"""
+    source_campaign = LeadCampaign.query.get_or_404(source_campaign_id)
+    source_sequences = EmailSequence.query.filter_by(
+        campaign_id=source_campaign_id
+    ).order_by(EmailSequence.step_number).all()
+
+    if not source_sequences:
+        flash('This campaign has no email sequences to copy.', 'warning')
+        return redirect(url_for('lead_campaigns_bp.sequences_list'))
 
     if request.method == 'GET':
         # Show form to select target campaign
-        campaigns = LeadCampaign.query.order_by(LeadCampaign.name).all()
+        campaigns = LeadCampaign.query.filter(
+            LeadCampaign.id != source_campaign_id
+        ).order_by(LeadCampaign.name).all()
         return render_template('admin/lead_campaigns/sequences_copy.html',
-                             source_sequence=source_sequence,
+                             source_campaign=source_campaign,
+                             source_sequences=source_sequences,
                              campaigns=campaigns)
 
-    # Copy sequence to target campaign
+    # Copy all sequences to target campaign
     target_campaign_id = int(request.form['campaign_id'])
     target_campaign = LeadCampaign.query.get_or_404(target_campaign_id)
 
-    # Get next step number for target campaign
+    # Get starting step number for target campaign
     max_step = db.session.query(func.max(EmailSequence.step_number)).filter_by(
         campaign_id=target_campaign_id
     ).scalar() or 0
-    next_step = max_step + 1
 
-    # Create copy
-    new_sequence = EmailSequence(
-        campaign_id=target_campaign_id,
-        step_number=next_step,
-        name=source_sequence.name,
-        subject=source_sequence.subject,
-        body_html=source_sequence.body_html,
-        body_text=source_sequence.body_text,
-        delay_days=source_sequence.delay_days,
-        is_active=source_sequence.is_active
-    )
+    # Copy all sequences
+    copied_count = 0
+    for idx, source_seq in enumerate(source_sequences):
+        new_sequence = EmailSequence(
+            campaign_id=target_campaign_id,
+            step_number=max_step + idx + 1,
+            name=source_seq.name,
+            subject=source_seq.subject,
+            body_html=source_seq.body_html,
+            body_text=source_seq.body_text,
+            delay_days=source_seq.delay_days,
+            is_active=source_seq.is_active
+        )
+        db.session.add(new_sequence)
+        copied_count += 1
 
-    db.session.add(new_sequence)
     db.session.commit()
 
-    flash(f'Sequence "{source_sequence.name}" copied to "{target_campaign.name}" as Step {next_step}!', 'success')
+    flash(f'Copied {copied_count} email steps from "{source_campaign.name}" to "{target_campaign.name}"!', 'success')
     return redirect(url_for('lead_campaigns_bp.sequences_list'))
 
 

@@ -1,0 +1,98 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Edit Email Sequence - {{ sequence.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-3xl">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Edit Email Sequence</h1>
+        <p class="text-gray-600 mt-2">{{ sequence.name }}</p>
+    </div>
+
+    <form method="POST" class="bg-white rounded-lg shadow-md p-8">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Campaign</label>
+            <select name="campaign_id" required class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                {% for campaign in campaigns %}
+                <option value="{{ campaign.id }}" {% if campaign.id == sequence.campaign_id %}selected{% endif %}>
+                    {{ campaign.name }} ({{ campaign.industry_service }} - {{ campaign.location }})
+                </option>
+                {% endfor %}
+            </select>
+            <p class="text-xs text-gray-500 mt-1">Select the campaign this sequence belongs to</p>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Step Number</label>
+            <input type="number" name="step_number" value="{{ sequence.step_number }}" min="1" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+            <p class="text-xs text-gray-500 mt-1">1 = first email, 2 = follow-up, etc.</p>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Sequence Name</label>
+            <input type="text" name="name" value="{{ sequence.name }}" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                   placeholder="e.g., Initial Outreach">
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Delay (days)</label>
+            <input type="number" name="delay_days" value="{{ sequence.delay_days }}" min="0" max="30"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+            <p class="text-xs text-gray-500 mt-1">Days after previous email (0 for first email)</p>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Subject Line</label>
+            <input type="text" name="subject" value="{{ sequence.subject }}" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                   placeholder="Quick question about {{company_name}}">
+            <p class="text-xs text-gray-500 mt-1">Use {{company_name}}, {{decision_maker_name}}, etc.</p>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Email Body</label>
+            <textarea name="body_text" rows="12" required
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm font-mono">{{ sequence.body_text }}</textarea>
+            <p class="text-xs text-gray-500 mt-1">Write in plain text. Line breaks will be preserved. Available variables: {{company_name}}, {{decision_maker_name}}, {{decision_maker_title}}, {{service_type}}, {{location}}</p>
+        </div>
+
+        <div class="mb-6">
+            <label class="flex items-center">
+                <input type="checkbox" name="is_active" {% if sequence.is_active %}checked{% endif %} class="mr-2">
+                <span class="text-sm font-medium text-gray-700">Active (emails will be sent)</span>
+            </label>
+        </div>
+
+        <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+            <h3 class="text-sm font-semibold text-gray-700 mb-2">Stats</h3>
+            <div class="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                    <div class="text-2xl font-bold text-gray-900">{{ sequence.sent_count }}</div>
+                    <div class="text-xs text-gray-600">Sent</div>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-green-700">{{ sequence.opened_count }}</div>
+                    <div class="text-xs text-gray-600">Opened</div>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-blue-700">{{ sequence.replied_count }}</div>
+                    <div class="text-xs text-gray-600">Replied</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+            <a href="{{ url_for('lead_campaigns_bp.sequences_list') }}" class="text-gray-600 hover:text-gray-900">
+                Cancel
+            </a>
+            <button type="submit" class="bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700 font-semibold">
+                Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

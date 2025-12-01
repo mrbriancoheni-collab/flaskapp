@@ -20,7 +20,7 @@ from typing import Dict, List, Optional, Tuple
 from sqlalchemy import func
 
 from app.extensions import db
-from app.models_leads import LeadCampaign, Lead, EmailSequence, LeadEmail
+from app.models_leads import LeadCampaign, Lead, EmailSequence, LeadEmail, LeadContact, LeadContactEmail
 from app.config.lead_automation_config import (
     get_campaign_queue,
     AUTOMATION_CONFIG,
@@ -317,13 +317,37 @@ class LeadAutomationService:
                     website=lead.website
                 )
 
-                # Update lead with enrichment data
+                # Update lead with enrichment data (legacy fields for backwards compatibility)
                 lead.decision_maker_name = enrichment_data.get('decision_maker_name')
                 lead.decision_maker_title = enrichment_data.get('decision_maker_title')
                 lead.decision_maker_email = enrichment_data.get('decision_maker_email')
                 lead.decision_maker_linkedin = enrichment_data.get('decision_maker_linkedin')
                 lead.enrichment_status = 'completed'
                 lead.enriched_at = datetime.utcnow()
+
+                # Create LeadContact records for each contact found
+                contacts = enrichment_data.get('contacts', [])
+                for idx, contact_data in enumerate(contacts):
+                    # Check if contact already exists (by name and lead_id)
+                    existing_contact = LeadContact.query.filter_by(
+                        lead_id=lead.id,
+                        name=contact_data['name']
+                    ).first()
+
+                    if existing_contact:
+                        continue
+
+                    contact = LeadContact(
+                        lead_id=lead.id,
+                        name=contact_data['name'],
+                        title=contact_data.get('title'),
+                        email=contact_data.get('email'),
+                        linkedin_url=contact_data.get('linkedin_url'),
+                        role_category=contact_data.get('role_category', 'other'),
+                        is_primary=(idx == 0),  # First contact is primary
+                        email_status='pending'
+                    )
+                    db.session.add(contact)
 
                 db.session.commit()
 
@@ -339,7 +363,7 @@ class LeadAutomationService:
                 self.state["daily_stats"]["enrichments"] += 1
                 enriched_count += 1
 
-                logger.info(f"Enriched lead: {lead.company_name}")
+                logger.info(f"Enriched lead: {lead.company_name} with {len(contacts)} contacts")
 
             except Exception as e:
                 logger.error(f"Error enriching lead {lead.id}: {e}")
@@ -373,74 +397,149 @@ class LeadAutomationService:
             if not self._can_send_email_today():
                 break
 
-            # Get pending leads with email addresses
-            pending_leads = Lead.query.filter_by(
+            # Get enriched leads with contacts
+            enriched_leads = Lead.query.filter_by(
                 campaign_id=campaign.id,
-                email_status='pending',
                 enrichment_status='completed'
-            ).filter(
-                Lead.decision_maker_email.isnot(None)
             ).limit(AUTOMATION_CONFIG["daily_email_limit"]).all()
 
-            for lead in pending_leads:
+            for lead in enriched_leads:
                 if not self._can_send_email_today():
                     break
 
-                try:
-                    # Send first email in sequence
-                    first_sequence = EmailSequence.query.filter_by(
-                        campaign_id=campaign.id,
-                        step_number=1
-                    ).first()
+                # Get pending contacts for this lead
+                pending_contacts = LeadContact.query.filter_by(
+                    lead_id=lead.id,
+                    email_status='pending'
+                ).filter(
+                    LeadContact.email.isnot(None)
+                ).all()
 
-                    if not first_sequence:
-                        logger.warning(f"No email sequence found for campaign {campaign.id}")
-                        continue
-
-                    # Prepare email content
-                    subject = self._replace_variables(first_sequence.subject, lead, campaign)
-                    body = self._replace_variables(first_sequence.body_text, lead, campaign)
-
-                    # Send email
-                    result = self.outreach.send_email(
-                        to_email=lead.decision_maker_email,
-                        to_name=lead.decision_maker_name or lead.company_name,
-                        subject=subject,
-                        body_text=body,
-                        body_html=body.replace('\n', '<br>')
-                    )
-
-                    if result.get('success'):
-                        # Record email sent
-                        email_record = LeadEmail(
-                            lead_id=lead.id,
+                # If no contacts, fall back to legacy decision_maker_email
+                if not pending_contacts and lead.email_status == 'pending' and lead.decision_maker_email:
+                    # Send using legacy method
+                    try:
+                        first_sequence = EmailSequence.query.filter_by(
                             campaign_id=campaign.id,
-                            sequence_step=1,
+                            step_number=1
+                        ).first()
+
+                        if not first_sequence:
+                            logger.warning(f"No email sequence found for campaign {campaign.id}")
+                            continue
+
+                        # Prepare email content
+                        subject = self._replace_variables(first_sequence.subject, lead, campaign)
+                        body = self._replace_variables(first_sequence.body_text, lead, campaign)
+
+                        # Send email
+                        result = self.outreach.send_email(
+                            to_email=lead.decision_maker_email,
+                            to_name=lead.decision_maker_name or lead.company_name,
                             subject=subject,
-                            body=body,
-                            sent_at=datetime.utcnow(),
-                            status='sent'
+                            body_text=body,
+                            body_html=body.replace('\n', '<br>')
                         )
-                        db.session.add(email_record)
 
-                        # Update lead status
-                        lead.email_status = 'sent'
-                        lead.last_email_sent_at = datetime.utcnow()
+                        if result.get('success'):
+                            # Record email sent
+                            email_record = LeadEmail(
+                                lead_id=lead.id,
+                                campaign_id=campaign.id,
+                                sequence_step=1,
+                                subject=subject,
+                                body=body,
+                                sent_at=datetime.utcnow(),
+                                status='sent'
+                            )
+                            db.session.add(email_record)
 
-                        # Update campaign stats
-                        campaign.emails_sent = (campaign.emails_sent or 0) + 1
+                            # Update lead status
+                            lead.email_status = 'sent'
+                            lead.last_email_sent_at = datetime.utcnow()
 
-                        db.session.commit()
+                            # Update campaign stats
+                            campaign.emails_sent = (campaign.emails_sent or 0) + 1
 
-                        self.state["emails_sent"] += 1
-                        self.state["daily_stats"]["emails"] += 1
-                        sent_count += 1
+                            db.session.commit()
 
-                        logger.info(f"Sent email to {lead.decision_maker_email}")
+                            self.state["emails_sent"] += 1
+                            self.state["daily_stats"]["emails"] += 1
+                            sent_count += 1
 
-                except Exception as e:
-                    logger.error(f"Error sending email to lead {lead.id}: {e}")
-                    db.session.rollback()
+                            logger.info(f"Sent email to {lead.decision_maker_email} (legacy)")
+
+                    except Exception as e:
+                        logger.error(f"Error sending email to lead {lead.id}: {e}")
+                        db.session.rollback()
+                    continue
+
+                # Send to each contact
+                for contact in pending_contacts:
+                    if not self._can_send_email_today():
+                        break
+
+                    try:
+                        # Get first email sequence
+                        first_sequence = EmailSequence.query.filter_by(
+                            campaign_id=campaign.id,
+                            step_number=1
+                        ).first()
+
+                        if not first_sequence:
+                            logger.warning(f"No email sequence found for campaign {campaign.id}")
+                            continue
+
+                        # Prepare email content with contact variables
+                        subject = self._replace_contact_variables(first_sequence.subject, lead, contact, campaign)
+                        body = self._replace_contact_variables(first_sequence.body_text, lead, contact, campaign)
+
+                        # Send email
+                        result = self.outreach.send_email(
+                            to_email=contact.email,
+                            to_name=contact.name or lead.company_name,
+                            subject=subject,
+                            body_text=body,
+                            body_html=body.replace('\n', '<br>')
+                        )
+
+                        if result.get('success'):
+                            # Record email sent to contact
+                            email_record = LeadContactEmail(
+                                contact_id=contact.id,
+                                lead_id=lead.id,
+                                campaign_id=campaign.id,
+                                sequence_step=1,
+                                subject=subject,
+                                body=body,
+                                sent_at=datetime.utcnow(),
+                                status='sent'
+                            )
+                            db.session.add(email_record)
+
+                            # Update contact status
+                            contact.email_status = 'sent'
+                            contact.last_email_sent_at = datetime.utcnow()
+
+                            # Update lead status if this was the first/primary contact
+                            if contact.is_primary:
+                                lead.email_status = 'sent'
+                                lead.last_email_sent_at = datetime.utcnow()
+
+                            # Update campaign stats
+                            campaign.emails_sent = (campaign.emails_sent or 0) + 1
+
+                            db.session.commit()
+
+                            self.state["emails_sent"] += 1
+                            self.state["daily_stats"]["emails"] += 1
+                            sent_count += 1
+
+                            logger.info(f"Sent email to {contact.email} ({contact.name} - {contact.title})")
+
+                    except Exception as e:
+                        logger.error(f"Error sending email to contact {contact.id}: {e}")
+                        db.session.rollback()
 
         return sent_count
 
@@ -453,6 +552,25 @@ class LeadAutomationService:
             '{{company_name}}': lead.company_name or '',
             '{{decision_maker_name}}': lead.decision_maker_name or '',
             '{{decision_maker_title}}': lead.decision_maker_title or '',
+            '{{service_type}}': campaign.industry_service or '',
+            '{{location}}': campaign.location or '',
+        }
+
+        result = text
+        for var, value in replacements.items():
+            result = result.replace(var, value)
+
+        return result
+
+    def _replace_contact_variables(self, text: str, lead: Lead, contact: LeadContact, campaign: LeadCampaign) -> str:
+        """Replace template variables in email text with contact-specific info"""
+        if not text:
+            return ""
+
+        replacements = {
+            '{{company_name}}': lead.company_name or '',
+            '{{decision_maker_name}}': contact.name or '',
+            '{{decision_maker_title}}': contact.title or '',
             '{{service_type}}': campaign.industry_service or '',
             '{{location}}': campaign.location or '',
         }

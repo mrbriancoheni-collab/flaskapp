@@ -61,6 +61,12 @@ def run_daily(app, db):
     except Exception:
         app.logger.exception("[CRON] Google Ads intelligence run failed")
 
+    # Run automated lead generation and outreach
+    try:
+        _run_daily_lead_automation(app)
+    except Exception:
+        app.logger.exception("[CRON] Lead automation run failed")
+
     # TODO: email digests, cleanups, churn pings, etc.
 
 
@@ -518,3 +524,38 @@ def _run_daily_google_ads_intelligence(app) -> None:
             app.logger.exception(f"[CRON] Error processing intelligence for account {account_id}: {e}")
 
     app.logger.info("[CRON] Google Ads intelligence processing completed")
+
+
+# =========================
+# Lead Generation Automation
+# =========================
+
+def _run_daily_lead_automation(app) -> None:
+    """
+    Run automated lead generation and outreach.
+
+    This systematically:
+    - Creates campaigns for cities and service categories
+    - Scrapes leads from Google (respects daily limits)
+    - Enriches leads with decision maker info
+    - Sends automated emails (skips Sundays)
+    - Resumes from where it stopped previously
+    """
+    enabled = app.config.get("LEAD_AUTOMATION_ENABLED", True)
+    if not enabled:
+        app.logger.info("[CRON] Lead automation disabled")
+        return
+
+    try:
+        from app.services.lead_automation_service import LeadAutomationService
+
+        service = LeadAutomationService()
+        result = service.run_daily_automation()
+
+        app.logger.info(
+            "[CRON] Lead automation completed: %d campaigns scraped, %d leads enriched, %d emails sent",
+            result['scraped'], result['enriched'], result['sent']
+        )
+
+    except Exception as e:
+        app.logger.exception(f"[CRON] Error running lead automation: {e}")

@@ -90,6 +90,75 @@ def run_agents_command(layer, account):
         return 1
 
 
+@click.command('run-lead-automation')
+@click.option('--dry-run', is_flag=True, help='Show what would be done without making changes')
+@with_appcontext
+def run_lead_automation_command(dry_run):
+    """
+    Run automated lead generation and outreach.
+
+    This command:
+    - Creates campaigns for cities and service categories
+    - Scrapes leads from Google (respects daily limits)
+    - Enriches leads with decision maker info
+    - Sends automated emails (skips Sundays)
+    - Resumes from where it stopped previously
+
+    Examples:
+        flask run-lead-automation          # Run daily automation
+        flask run-lead-automation --dry-run  # Preview what will be done
+    """
+    from app.services.lead_automation_service import LeadAutomationService
+
+    click.echo(f"\n{'='*80}")
+    click.echo("LEAD GENERATION AUTOMATION")
+    click.echo(f"{'='*80}\n")
+
+    try:
+        service = LeadAutomationService()
+
+        if dry_run:
+            click.echo("DRY RUN MODE - No changes will be made\n")
+            progress = service.get_progress_report()
+            click.echo(f"Current Progress:")
+            click.echo(f"  Total Campaigns Planned: {progress['total_campaigns_planned']}")
+            click.echo(f"  Campaigns Created: {progress['campaigns_created']}")
+            click.echo(f"  Campaigns Scraped: {progress['campaigns_scraped']}")
+            click.echo(f"  Progress: {progress['progress_percent']:.1f}%")
+            click.echo(f"  Leads Enriched: {progress['leads_enriched']}")
+            click.echo(f"  Emails Sent: {progress['emails_sent']}")
+            click.echo(f"  Unique Domains: {progress['unique_domains_processed']}")
+            click.echo(f"\nDaily Stats ({progress['daily_stats']['date']}):")
+            click.echo(f"  Scrapes: {progress['daily_stats']['scrapes']}")
+            click.echo(f"  Enrichments: {progress['daily_stats']['enrichments']}")
+            click.echo(f"  Emails: {progress['daily_stats']['emails']}")
+            return 0
+
+        # Run automation
+        result = service.run_daily_automation()
+
+        click.echo("\nResults:")
+        click.echo(f"  Campaigns Scraped: {result['scraped']}")
+        click.echo(f"  Leads Enriched: {result['enriched']}")
+        click.echo(f"  Emails Sent: {result['sent']}")
+        click.echo(f"\nTotal Progress:")
+        click.echo(f"  Total Campaigns: {result['total_campaigns']}")
+        click.echo(f"  Total Emails: {result['total_emails']}")
+
+        click.echo(f"\n{'='*80}")
+        click.echo("AUTOMATION COMPLETE")
+        click.echo(f"{'='*80}\n")
+
+        return 0
+
+    except Exception as e:
+        click.echo(f"\nError running automation: {e}", err=True)
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
 def register_commands(app):
     """Register all CLI commands with the Flask app."""
     app.cli.add_command(run_agents_command)
+    app.cli.add_command(run_lead_automation_command)

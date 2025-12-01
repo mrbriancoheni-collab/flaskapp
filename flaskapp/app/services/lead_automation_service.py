@@ -1,0 +1,482 @@
+# app/services/lead_automation_service.py
+"""
+Automated Lead Generation Service
+
+Systematically creates campaigns, scrapes leads, enriches contacts,
+and sends automated emails across cities and categories.
+
+Handles:
+- State management (resume from where stopped)
+- Duplicate domain detection
+- Rate limiting
+- Sunday skip for emails
+- Multi-day/week execution
+"""
+import os
+import json
+import logging
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple
+from sqlalchemy import func
+
+from app.extensions import db
+from app.models_leads import LeadCampaign, Lead, EmailSequence, LeadEmail
+from app.config.lead_automation_config import (
+    get_campaign_queue,
+    AUTOMATION_CONFIG,
+    HOME_SERVICE_CATEGORIES
+)
+from app.services.serpapi_scraper import SerpAPIScraperService
+from app.services.lead_enrichment import LeadEnrichmentService
+from app.services.domain_crawler import DomainCrawler
+from app.services.mailgun_outreach import MailgunOutreachService
+
+logger = logging.getLogger(__name__)
+
+
+class LeadAutomationService:
+    """Automated lead generation and outreach service"""
+
+    STATE_FILE = "/home/user/flaskapp/automation_state.json"
+
+    def __init__(self):
+        self.state = self._load_state()
+        self.scraper = None
+        self.enrichment = None
+        self.outreach = None
+
+    def _load_state(self) -> Dict:
+        """Load automation state from file"""
+        if os.path.exists(self.STATE_FILE):
+            try:
+                with open(self.STATE_FILE, 'r') as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.error(f"Error loading state: {e}")
+
+        # Default state
+        return {
+            "last_run": None,
+            "campaigns_created": 0,
+            "campaigns_scraped": 0,
+            "leads_enriched": 0,
+            "emails_sent": 0,
+            "current_campaign_index": 0,
+            "processed_domains": [],  # Track domains to avoid duplicates
+            "daily_stats": {
+                "date": None,
+                "scrapes": 0,
+                "enrichments": 0,
+                "emails": 0
+            }
+        }
+
+    def _save_state(self):
+        """Save automation state to file"""
+        try:
+            self.state["last_run"] = datetime.utcnow().isoformat()
+            with open(self.STATE_FILE, 'w') as f:
+                json.dump(self.state, f, indent=2)
+            logger.info(f"State saved: {self.state['campaigns_created']} campaigns created, "
+                       f"{self.state['leads_enriched']} leads enriched, "
+                       f"{self.state['emails_sent']} emails sent")
+        except Exception as e:
+            logger.error(f"Error saving state: {e}")
+
+    def _reset_daily_stats_if_new_day(self):
+        """Reset daily stats if it's a new day"""
+        today = datetime.utcnow().date().isoformat()
+        if self.state["daily_stats"]["date"] != today:
+            self.state["daily_stats"] = {
+                "date": today,
+                "scrapes": 0,
+                "enrichments": 0,
+                "emails": 0
+            }
+            logger.info(f"Reset daily stats for {today}")
+
+    def _can_scrape_today(self) -> bool:
+        """Check if we can scrape more campaigns today"""
+        return self.state["daily_stats"]["scrapes"] < AUTOMATION_CONFIG["daily_scrape_limit"]
+
+    def _can_enrich_today(self) -> bool:
+        """Check if we can enrich more leads today"""
+        return self.state["daily_stats"]["enrichments"] < AUTOMATION_CONFIG["daily_enrich_limit"]
+
+    def _can_send_email_today(self) -> bool:
+        """Check if we can send more emails today"""
+        today = datetime.utcnow()
+
+        # Check if today is Sunday (or other skip day)
+        if today.weekday() in AUTOMATION_CONFIG["skip_email_days"]:
+            logger.info(f"Skipping emails - today is a skip day (weekday {today.weekday()})")
+            return False
+
+        return self.state["daily_stats"]["emails"] < AUTOMATION_CONFIG["daily_email_limit"]
+
+    def _is_duplicate_domain(self, domain: str) -> bool:
+        """Check if domain has already been processed"""
+        if not domain:
+            return False
+
+        domain_clean = domain.lower().replace("http://", "").replace("https://", "").replace("www.", "").split("/")[0]
+        return domain_clean in self.state["processed_domains"]
+
+    def _mark_domain_processed(self, domain: str):
+        """Mark domain as processed to avoid duplicates"""
+        if not domain:
+            return
+
+        domain_clean = domain.lower().replace("http://", "").replace("https://", "").replace("www.", "").split("/")[0]
+        if domain_clean not in self.state["processed_domains"]:
+            self.state["processed_domains"].append(domain_clean)
+
+    def run_daily_automation(self):
+        """
+        Run daily automation cycle:
+        1. Create/scrape campaigns (up to daily limit)
+        2. Enrich leads (up to daily limit)
+        3. Send emails (up to daily limit, skip Sundays)
+        """
+        logger.info("=" * 80)
+        logger.info("STARTING DAILY LEAD AUTOMATION")
+        logger.info("=" * 80)
+
+        self._reset_daily_stats_if_new_day()
+
+        # Step 1: Create and scrape campaigns
+        scraped = self._process_campaign_scraping()
+        logger.info(f"Scraped {scraped} campaigns today")
+
+        # Step 2: Enrich leads
+        enriched = self._process_lead_enrichment()
+        logger.info(f"Enriched {enriched} leads today")
+
+        # Step 3: Send emails
+        sent = self._process_email_sending()
+        logger.info(f"Sent {sent} emails today")
+
+        # Save state
+        self._save_state()
+
+        logger.info("=" * 80)
+        logger.info(f"DAILY AUTOMATION COMPLETE")
+        logger.info(f"Total Progress: {self.state['campaigns_created']} campaigns, "
+                   f"{self.state['leads_enriched']} leads, {self.state['emails_sent']} emails")
+        logger.info("=" * 80)
+
+        return {
+            "scraped": scraped,
+            "enriched": enriched,
+            "sent": sent,
+            "total_campaigns": self.state['campaigns_created'],
+            "total_emails": self.state['emails_sent']
+        }
+
+    def _process_campaign_scraping(self) -> int:
+        """Create and scrape campaigns up to daily limit"""
+        scraped_count = 0
+        campaign_queue = get_campaign_queue()
+
+        # Initialize scraper
+        try:
+            self.scraper = SerpAPIScraperService()
+        except ValueError as e:
+            logger.error(f"Cannot initialize scraper: {e}")
+            return 0
+
+        while self._can_scrape_today() and self.state["current_campaign_index"] < len(campaign_queue):
+            campaign_config = campaign_queue[self.state["current_campaign_index"]]
+
+            try:
+                # Check if campaign already exists
+                existing = LeadCampaign.query.filter_by(
+                    name=campaign_config["name"]
+                ).first()
+
+                if existing and existing.status in ['ready', 'active']:
+                    logger.info(f"Skipping existing campaign: {campaign_config['name']}")
+                    self.state["current_campaign_index"] += 1
+                    continue
+
+                # Create or get campaign
+                if not existing:
+                    campaign = LeadCampaign(
+                        name=campaign_config["name"],
+                        industry_service=campaign_config["keyword"],
+                        location=campaign_config["city"],
+                        scrape_ads=AUTOMATION_CONFIG["scrape_sources"]["scrape_ads"],
+                        scrape_maps=AUTOMATION_CONFIG["scrape_sources"]["scrape_maps"],
+                        scrape_lsa=AUTOMATION_CONFIG["scrape_sources"]["scrape_lsa"],
+                        scrape_organic=AUTOMATION_CONFIG["scrape_sources"]["scrape_organic"],
+                        max_organic_results=AUTOMATION_CONFIG["scrape_sources"]["max_organic_results"],
+                        daily_email_limit=AUTOMATION_CONFIG["daily_email_limit"],
+                        sequence_delay_days=AUTOMATION_CONFIG["email_sequence_delay_days"],
+                        status='draft'
+                    )
+                    db.session.add(campaign)
+                    db.session.commit()
+                    self.state["campaigns_created"] += 1
+                    logger.info(f"Created campaign: {campaign_config['name']}")
+                else:
+                    campaign = existing
+
+                # Scrape leads
+                query = f"{campaign.industry_service} {campaign.location}"
+                results = self.scraper.scrape_campaign(
+                    query=query,
+                    location=campaign.location,
+                    scrape_ads=campaign.scrape_ads,
+                    scrape_maps=campaign.scrape_maps,
+                    scrape_lsa=campaign.scrape_lsa,
+                    scrape_organic=campaign.scrape_organic,
+                    max_organic=campaign.max_organic_results
+                )
+
+                # Save leads (skip duplicates by domain)
+                leads_created = 0
+                for source_type, items in results.items():
+                    for item in items:
+                        # Skip if duplicate domain
+                        if self._is_duplicate_domain(item.get('website')):
+                            logger.debug(f"Skipping duplicate domain: {item.get('website')}")
+                            continue
+
+                        # Check if lead already exists
+                        existing_lead = Lead.query.filter_by(
+                            campaign_id=campaign.id,
+                            company_name=item['company_name']
+                        ).first()
+
+                        if existing_lead:
+                            continue
+
+                        lead = Lead(
+                            campaign_id=campaign.id,
+                            company_name=item['company_name'],
+                            website=item.get('website'),
+                            phone=item.get('phone'),
+                            address=item.get('address'),
+                            source_type=source_type,
+                            source_url=item.get('source_url'),
+                            serp_position=item.get('position'),
+                            enrichment_status='pending',
+                            email_status='pending',
+                            extra_data=item.get('extra_data', {})
+                        )
+
+                        db.session.add(lead)
+                        leads_created += 1
+
+                        # Mark domain as processed
+                        self._mark_domain_processed(item.get('website'))
+
+                # Update campaign
+                campaign.status = 'ready'
+                campaign.scraping_started_at = datetime.utcnow()
+                campaign.scraping_completed_at = datetime.utcnow()
+                campaign.leads_scraped = leads_created
+                db.session.commit()
+
+                self.state["campaigns_scraped"] += 1
+                self.state["daily_stats"]["scrapes"] += 1
+                scraped_count += 1
+
+                logger.info(f"Scraped campaign {campaign.name}: {leads_created} new leads")
+
+            except Exception as e:
+                logger.error(f"Error scraping campaign {campaign_config['name']}: {e}")
+                db.session.rollback()
+
+            finally:
+                self.state["current_campaign_index"] += 1
+
+        return scraped_count
+
+    def _process_lead_enrichment(self) -> int:
+        """Enrich pending leads up to daily limit"""
+        enriched_count = 0
+
+        # Initialize enrichment service
+        self.enrichment = LeadEnrichmentService()
+
+        # Get pending leads across all campaigns
+        pending_leads = Lead.query.filter_by(
+            enrichment_status='pending'
+        ).filter(
+            Lead.website.isnot(None)
+        ).limit(AUTOMATION_CONFIG["daily_enrich_limit"]).all()
+
+        for lead in pending_leads:
+            if not self._can_enrich_today():
+                break
+
+            try:
+                enrichment_data = self.enrichment.enrich_lead(
+                    company_name=lead.company_name,
+                    website=lead.website
+                )
+
+                # Update lead with enrichment data
+                lead.decision_maker_name = enrichment_data.get('decision_maker_name')
+                lead.decision_maker_title = enrichment_data.get('decision_maker_title')
+                lead.decision_maker_email = enrichment_data.get('decision_maker_email')
+                lead.decision_maker_linkedin = enrichment_data.get('decision_maker_linkedin')
+                lead.enrichment_status = 'completed'
+                lead.enriched_at = datetime.utcnow()
+
+                db.session.commit()
+
+                # Update campaign stats
+                campaign = lead.campaign
+                campaign.leads_enriched = Lead.query.filter_by(
+                    campaign_id=campaign.id,
+                    enrichment_status='completed'
+                ).count()
+                db.session.commit()
+
+                self.state["leads_enriched"] += 1
+                self.state["daily_stats"]["enrichments"] += 1
+                enriched_count += 1
+
+                logger.info(f"Enriched lead: {lead.company_name}")
+
+            except Exception as e:
+                logger.error(f"Error enriching lead {lead.id}: {e}")
+                lead.enrichment_status = 'failed'
+                db.session.commit()
+
+        return enriched_count
+
+    def _process_email_sending(self) -> int:
+        """Send emails to enriched leads up to daily limit"""
+        if not self._can_send_email_today():
+            return 0
+
+        sent_count = 0
+
+        # Initialize outreach service
+        try:
+            self.outreach = MailgunOutreachService()
+        except Exception as e:
+            logger.error(f"Cannot initialize outreach service: {e}")
+            return 0
+
+        # Get campaigns with enriched leads and email sequences
+        campaigns_with_sequences = db.session.query(LeadCampaign).join(
+            EmailSequence, EmailSequence.campaign_id == LeadCampaign.id
+        ).filter(
+            LeadCampaign.status == 'ready'
+        ).distinct().all()
+
+        for campaign in campaigns_with_sequences:
+            if not self._can_send_email_today():
+                break
+
+            # Get pending leads with email addresses
+            pending_leads = Lead.query.filter_by(
+                campaign_id=campaign.id,
+                email_status='pending',
+                enrichment_status='completed'
+            ).filter(
+                Lead.decision_maker_email.isnot(None)
+            ).limit(AUTOMATION_CONFIG["daily_email_limit"]).all()
+
+            for lead in pending_leads:
+                if not self._can_send_email_today():
+                    break
+
+                try:
+                    # Send first email in sequence
+                    first_sequence = EmailSequence.query.filter_by(
+                        campaign_id=campaign.id,
+                        step_number=1
+                    ).first()
+
+                    if not first_sequence:
+                        logger.warning(f"No email sequence found for campaign {campaign.id}")
+                        continue
+
+                    # Prepare email content
+                    subject = self._replace_variables(first_sequence.subject, lead, campaign)
+                    body = self._replace_variables(first_sequence.body_text, lead, campaign)
+
+                    # Send email
+                    result = self.outreach.send_email(
+                        to_email=lead.decision_maker_email,
+                        to_name=lead.decision_maker_name or lead.company_name,
+                        subject=subject,
+                        body_text=body,
+                        body_html=body.replace('\n', '<br>')
+                    )
+
+                    if result.get('success'):
+                        # Record email sent
+                        email_record = LeadEmail(
+                            lead_id=lead.id,
+                            campaign_id=campaign.id,
+                            sequence_step=1,
+                            subject=subject,
+                            body=body,
+                            sent_at=datetime.utcnow(),
+                            status='sent'
+                        )
+                        db.session.add(email_record)
+
+                        # Update lead status
+                        lead.email_status = 'sent'
+                        lead.last_email_sent_at = datetime.utcnow()
+
+                        # Update campaign stats
+                        campaign.emails_sent = (campaign.emails_sent or 0) + 1
+
+                        db.session.commit()
+
+                        self.state["emails_sent"] += 1
+                        self.state["daily_stats"]["emails"] += 1
+                        sent_count += 1
+
+                        logger.info(f"Sent email to {lead.decision_maker_email}")
+
+                except Exception as e:
+                    logger.error(f"Error sending email to lead {lead.id}: {e}")
+                    db.session.rollback()
+
+        return sent_count
+
+    def _replace_variables(self, text: str, lead: Lead, campaign: LeadCampaign) -> str:
+        """Replace template variables in email text"""
+        if not text:
+            return ""
+
+        replacements = {
+            '{{company_name}}': lead.company_name or '',
+            '{{decision_maker_name}}': lead.decision_maker_name or '',
+            '{{decision_maker_title}}': lead.decision_maker_title or '',
+            '{{service_type}}': campaign.industry_service or '',
+            '{{location}}': campaign.location or '',
+        }
+
+        result = text
+        for var, value in replacements.items():
+            result = result.replace(var, value)
+
+        return result
+
+    def get_progress_report(self) -> Dict:
+        """Get current automation progress"""
+        campaign_queue = get_campaign_queue()
+        total_campaigns = len(campaign_queue)
+
+        return {
+            "total_campaigns_planned": total_campaigns,
+            "campaigns_created": self.state["campaigns_created"],
+            "campaigns_scraped": self.state["campaigns_scraped"],
+            "current_index": self.state["current_campaign_index"],
+            "progress_percent": (self.state["current_campaign_index"] / total_campaigns * 100) if total_campaigns > 0 else 0,
+            "leads_enriched": self.state["leads_enriched"],
+            "emails_sent": self.state["emails_sent"],
+            "unique_domains_processed": len(self.state["processed_domains"]),
+            "last_run": self.state["last_run"],
+            "daily_stats": self.state["daily_stats"]
+        }

@@ -37,7 +37,8 @@ logger = logging.getLogger(__name__)
 class LeadAutomationService:
     """Automated lead generation and outreach service"""
 
-    STATE_FILE = "/home/user/flaskapp/automation_state.json"
+    # Use relative path from project root, or absolute if env var set
+    STATE_FILE = os.getenv('AUTOMATION_STATE_FILE', 'automation_state.json')
 
     def __init__(self):
         self.state = self._load_state()

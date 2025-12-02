@@ -393,6 +393,8 @@ class LeadAutomationService:
             LeadCampaign.status == 'ready'
         ).distinct().all()
 
+        logger.info(f"Found {len(campaigns_with_sequences)} campaigns with email sequences")
+
         for campaign in campaigns_with_sequences:
             if not self._can_send_email_today():
                 break
@@ -402,6 +404,8 @@ class LeadAutomationService:
                 campaign_id=campaign.id,
                 enrichment_status='completed'
             ).limit(AUTOMATION_CONFIG["daily_email_limit"]).all()
+
+            logger.info(f"Campaign '{campaign.name}': {len(enriched_leads)} enriched leads")
 
             for lead in enriched_leads:
                 if not self._can_send_email_today():
@@ -414,6 +418,12 @@ class LeadAutomationService:
                 ).filter(
                     LeadContact.email.isnot(None)
                 ).all()
+
+                total_contacts = LeadContact.query.filter_by(lead_id=lead.id).count()
+                if total_contacts > 0 and not pending_contacts:
+                    logger.debug(f"Lead '{lead.company_name}': {total_contacts} contacts but none pending")
+                elif total_contacts == 0:
+                    logger.debug(f"Lead '{lead.company_name}': No contacts found during enrichment")
 
                 # If no contacts, fall back to legacy decision_maker_email
                 if not pending_contacts and lead.email_status == 'pending' and lead.decision_maker_email:

@@ -158,7 +158,63 @@ def run_lead_automation_command(dry_run):
         return 1
 
 
+@click.command('send-pending-emails')
+@with_appcontext
+def send_pending_emails_command():
+    """
+    Send emails to enriched leads without scraping or enrichment.
+
+    This command:
+    - Sends emails to all enriched leads with pending contacts
+    - Auto-creates email sequences if missing
+    - Respects daily email limit (250/day)
+    - Skips scraping and enrichment steps
+
+    Examples:
+        flask send-pending-emails  # Send to all pending contacts
+    """
+    from app.services.lead_automation_service import LeadAutomationService
+
+    click.echo(f"\n{'='*80}")
+    click.echo("SENDING PENDING EMAILS ONLY")
+    click.echo(f"{'='*80}\n")
+
+    try:
+        service = LeadAutomationService()
+
+        # Show current progress
+        progress = service.get_progress_report()
+        click.echo(f"Current Stats:")
+        click.echo(f"  Total Campaigns: {progress['campaigns_created']}")
+        click.echo(f"  Leads Enriched: {progress['leads_enriched']}")
+        click.echo(f"  Emails Sent: {progress['emails_sent']}")
+        click.echo(f"\nToday's Stats ({progress['daily_stats']['date']}):")
+        click.echo(f"  Emails: {progress['daily_stats']['emails']}/250")
+        click.echo(f"\n{'='*80}\n")
+
+        # Only send emails (skip scraping and enrichment)
+        sent_count = service._process_email_sending()
+
+        # Save state
+        service._save_state()
+
+        click.echo(f"\n{'='*80}")
+        click.echo("EMAIL SENDING COMPLETE")
+        click.echo(f"{'='*80}")
+        click.echo(f"  Emails Sent: {sent_count}")
+        click.echo(f"{'='*80}\n")
+
+        return 0
+
+    except Exception as e:
+        click.echo(f"\nError sending emails: {e}", err=True)
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
 def register_commands(app):
     """Register all CLI commands with the Flask app."""
     app.cli.add_command(run_agents_command)
     app.cli.add_command(run_lead_automation_command)
+    app.cli.add_command(send_pending_emails_command)

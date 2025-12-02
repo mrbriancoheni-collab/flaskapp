@@ -119,13 +119,28 @@ class SerpAPIScraperService:
                 'location': location,
                 'hl': 'en',
                 'gl': 'us',
-                'google_domain': 'google.com'
+                'google_domain': 'google.com',
+                'num': 20,  # Request more results (helps get more organic + triggers more result types)
+                'no_cache': 'false',  # Use cache when available to save credits
             }
 
             response = requests.get(self.base_url, params=params, timeout=30)
             response.raise_for_status()
 
             data = response.json()
+
+            # Debug: Log what result types are available
+            available_keys = [k for k in data.keys() if 'result' in k.lower() or k in ['ads', 'inline_ads', 'local_results', 'local_services']]
+            logger.info(f"SerpAPI response contains these result keys: {available_keys}")
+            if 'ads' in data:
+                logger.debug(f"Found {len(data.get('ads', []))} raw ads in response")
+            if 'local_results' in data:
+                places_count = len(data.get('local_results', {}).get('places', []))
+                logger.debug(f"Found {places_count} places in local_results")
+            if 'local_services' in data:
+                logger.debug(f"Found {len(data.get('local_services', []))} local services ads")
+            if 'organic_results' in data:
+                logger.debug(f"Found {len(data.get('organic_results', []))} organic results before filtering")
 
             # Parse different result types
             if scrape_ads:
@@ -157,6 +172,7 @@ class SerpAPIScraperService:
     def _parse_ads(self, data: Dict) -> List[Dict[str, Any]]:
         """Parse search ads from SerpAPI response"""
         ads = []
+        filtered_count = 0
 
         # Top ads
         for ad in data.get('ads', []):
@@ -165,6 +181,8 @@ class SerpAPIScraperService:
 
             # Skip excluded domains
             if should_exclude_domain(website) or should_exclude_domain(source_url):
+                filtered_count += 1
+                logger.debug(f"Filtered out top ad: {ad.get('title', '')} (domain: {website})")
                 continue
 
             ads.append({
@@ -187,6 +205,8 @@ class SerpAPIScraperService:
 
             # Skip excluded domains
             if should_exclude_domain(website) or should_exclude_domain(source_url):
+                filtered_count += 1
+                logger.debug(f"Filtered out inline ad: {ad.get('title', '')} (domain: {website})")
                 continue
 
             ads.append({
@@ -202,11 +222,14 @@ class SerpAPIScraperService:
                 }
             })
 
+        if filtered_count > 0:
+            logger.info(f"Filtered out {filtered_count} ads due to domain exclusions")
         return ads
 
     def _parse_maps(self, data: Dict) -> List[Dict[str, Any]]:
         """Parse Google Maps / Local Pack results"""
         maps = []
+        filtered_count = 0
 
         local_results = data.get('local_results', {})
 
@@ -217,6 +240,8 @@ class SerpAPIScraperService:
 
             # Skip excluded domains
             if should_exclude_domain(website) or should_exclude_domain(source_url):
+                filtered_count += 1
+                logger.debug(f"Filtered out map listing: {place.get('title', '')} (domain: {website})")
                 continue
 
             maps.append({
@@ -236,11 +261,14 @@ class SerpAPIScraperService:
                 }
             })
 
+        if filtered_count > 0:
+            logger.info(f"Filtered out {filtered_count} map listings due to domain exclusions")
         return maps
 
     def _parse_lsa(self, data: Dict) -> List[Dict[str, Any]]:
         """Parse Local Services Ads"""
         lsa = []
+        filtered_count = 0
 
         for ad in data.get('local_services', []):
             website = ad.get('website')
@@ -248,6 +276,8 @@ class SerpAPIScraperService:
 
             # Skip excluded domains
             if should_exclude_domain(website) or should_exclude_domain(source_url):
+                filtered_count += 1
+                logger.debug(f"Filtered out LSA: {ad.get('title', '')} (domain: {website})")
                 continue
 
             lsa.append({
@@ -265,17 +295,22 @@ class SerpAPIScraperService:
                 }
             })
 
+        if filtered_count > 0:
+            logger.info(f"Filtered out {filtered_count} LSA listings due to domain exclusions")
         return lsa
 
     def _parse_organic(self, data: Dict, max_results: int = 5) -> List[Dict[str, Any]]:
         """Parse organic search results (filter for local companies)"""
         organic = []
+        filtered_count = 0
 
         for result in data.get('organic_results', [])[:max_results]:
             website = result.get('link', '')
 
             # Skip excluded domains (.gov, .org, review sites, etc.)
             if should_exclude_domain(website):
+                filtered_count += 1
+                logger.debug(f"Filtered out organic result: {result.get('title', '')} (domain: {website})")
                 continue
 
             organic.append({
@@ -290,6 +325,8 @@ class SerpAPIScraperService:
                 }
             })
 
+        if filtered_count > 0:
+            logger.info(f"Filtered out {filtered_count} organic results due to domain exclusions")
         return organic
 
     def get_credits_remaining(self) -> Optional[int]:

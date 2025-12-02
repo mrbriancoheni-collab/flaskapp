@@ -372,6 +372,59 @@ class LeadAutomationService:
 
         return enriched_count
 
+    def _ensure_campaign_has_sequence(self, campaign: LeadCampaign) -> Optional[EmailSequence]:
+        """
+        Ensure campaign has an email sequence. Create default if missing.
+
+        Returns the first email sequence (step 1) for the campaign.
+        """
+        # Check if sequence exists
+        existing_sequence = EmailSequence.query.filter_by(
+            campaign_id=campaign.id,
+            step_number=1
+        ).first()
+
+        if existing_sequence:
+            return existing_sequence
+
+        # Create default sequence for automated campaigns
+        logger.info(f"Creating default email sequence for campaign '{campaign.name}'")
+
+        # Default template for home services
+        default_subject = "Quick question about {{company_name}}'s {{service_type}} services"
+        default_body = """Hi {{decision_maker_name}},
+
+I came across {{company_name}} while searching for {{service_type}} services in {{location}}.
+
+I help local service businesses like yours get more customers through Google Ads and SEO. I noticed a few opportunities that could help you show up higher in search results and get more leads.
+
+Would you be interested in a quick 10-minute call to discuss how we could help grow your business?
+
+Best regards,
+FieldSprout Team
+https://fieldsprout.io
+
+---
+If you'd prefer not to receive these emails, please reply with "unsubscribe" and I'll remove you from my list.
+"""
+
+        sequence = EmailSequence(
+            campaign_id=campaign.id,
+            step_number=1,
+            name="Initial Outreach",
+            subject=default_subject,
+            body_text=default_body,
+            body_html=default_body.replace('\n', '<br>'),
+            delay_days=0,
+            is_active=True
+        )
+
+        db.session.add(sequence)
+        db.session.commit()
+
+        logger.info(f"Created default email sequence for campaign '{campaign.name}'")
+        return sequence
+
     def _process_email_sending(self) -> int:
         """Send emails to enriched leads up to daily limit"""
         if not self._can_send_email_today():
@@ -386,14 +439,12 @@ class LeadAutomationService:
             logger.error(f"Cannot initialize outreach service: {e}")
             return 0
 
-        # Get campaigns with enriched leads and email sequences
-        campaigns_with_sequences = db.session.query(LeadCampaign).join(
-            EmailSequence, EmailSequence.campaign_id == LeadCampaign.id
-        ).filter(
-            LeadCampaign.status == 'ready'
-        ).distinct().all()
+        # Get ALL ready campaigns (we'll create sequences if missing)
+        ready_campaigns = LeadCampaign.query.filter_by(status='ready').all()
 
-        for campaign in campaigns_with_sequences:
+        logger.info(f"Found {len(ready_campaigns)} ready campaigns")
+
+        for campaign in ready_campaigns:
             if not self._can_send_email_today():
                 break
 
@@ -402,6 +453,14 @@ class LeadAutomationService:
                 campaign_id=campaign.id,
                 enrichment_status='completed'
             ).limit(AUTOMATION_CONFIG["daily_email_limit"]).all()
+
+            logger.info(f"Campaign '{campaign.name}': {len(enriched_leads)} enriched leads")
+
+            # Ensure campaign has an email sequence (create if missing)
+            email_sequence = self._ensure_campaign_has_sequence(campaign)
+            if not email_sequence:
+                logger.warning(f"Could not get/create email sequence for campaign '{campaign.name}'")
+                continue
 
             for lead in enriched_leads:
                 if not self._can_send_email_today():
@@ -415,22 +474,20 @@ class LeadAutomationService:
                     LeadContact.email.isnot(None)
                 ).all()
 
+                total_contacts = LeadContact.query.filter_by(lead_id=lead.id).count()
+                if total_contacts > 0 and not pending_contacts:
+                    logger.debug(f"Lead '{lead.company_name}': {total_contacts} contacts but none pending")
+                elif total_contacts == 0:
+                    logger.debug(f"Lead '{lead.company_name}': No contacts found during enrichment")
+
                 # If no contacts, fall back to legacy decision_maker_email
                 if not pending_contacts and lead.email_status == 'pending' and lead.decision_maker_email:
-                    # Send using legacy method
+                    # Send using legacy method (use the sequence we ensured exists)
                     try:
-                        first_sequence = EmailSequence.query.filter_by(
-                            campaign_id=campaign.id,
-                            step_number=1
-                        ).first()
-
-                        if not first_sequence:
-                            logger.warning(f"No email sequence found for campaign {campaign.id}")
-                            continue
 
                         # Prepare email content
-                        subject = self._replace_variables(first_sequence.subject, lead, campaign)
-                        body = self._replace_variables(first_sequence.body_text, lead, campaign)
+                        subject = self._replace_variables(email_sequence.subject, lead, campaign)
+                        body = self._replace_variables(email_sequence.body_text, lead, campaign)
 
                         # Send email
                         result = self.outreach.send_email(
@@ -479,19 +536,9 @@ class LeadAutomationService:
                         break
 
                     try:
-                        # Get first email sequence
-                        first_sequence = EmailSequence.query.filter_by(
-                            campaign_id=campaign.id,
-                            step_number=1
-                        ).first()
-
-                        if not first_sequence:
-                            logger.warning(f"No email sequence found for campaign {campaign.id}")
-                            continue
-
-                        # Prepare email content with contact variables
-                        subject = self._replace_contact_variables(first_sequence.subject, lead, contact, campaign)
-                        body = self._replace_contact_variables(first_sequence.body_text, lead, contact, campaign)
+                        # Prepare email content with contact variables (use the sequence we ensured exists)
+                        subject = self._replace_contact_variables(email_sequence.subject, lead, contact, campaign)
+                        body = self._replace_contact_variables(email_sequence.body_text, lead, contact, campaign)
 
                         # Send email
                         result = self.outreach.send_email(

@@ -119,7 +119,7 @@ AUTOMATION_CONFIG = {
         "scrape_maps": True,
         "scrape_lsa": True,
         "scrape_organic": True,
-        "max_organic_results": 5
+        "max_organic_results": 20  # Increased from 5 to capture top 20 organic results
     },
     "email_sequence_delay_days": 3,  # Days between follow-up emails
     "campaign_prefix": "Auto",  # Prefix for auto-generated campaigns

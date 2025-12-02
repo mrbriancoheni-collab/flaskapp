@@ -497,6 +497,12 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                             body_text=body
                         )
 
+                        # Check for rate limiting
+                        if result.get('rate_limited'):
+                            retry_after = result.get('retry_after', 300)
+                            logger.warning(f"Mailgun rate limit hit. Stopping email sending. Retry after {retry_after} seconds ({retry_after/3600:.1f} hours)")
+                            return sent_count
+
                         if result.get('success'):
                             # Record email sent
                             email_record = LeadEmail(
@@ -547,6 +553,12 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                             body_html=body.replace('\n', '<br>'),
                             body_text=body
                         )
+
+                        # Check for rate limiting
+                        if result.get('rate_limited'):
+                            retry_after = result.get('retry_after', 300)
+                            logger.warning(f"Mailgun rate limit hit. Stopping email sending. Retry after {retry_after} seconds ({retry_after/3600:.1f} hours)")
+                            return sent_count
 
                         if result.get('success'):
                             # Record email sent to contact

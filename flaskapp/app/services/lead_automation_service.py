@@ -30,6 +30,7 @@ from app.services.serpapi_scraper import SerpAPIScraperService
 from app.services.lead_enrichment import LeadEnrichmentService
 from app.services.domain_crawler import DomainCrawler
 from app.services.mailgun_outreach import MailgunOutreachService
+from app.services.brevo_outreach import BrevoOutreachService
 
 logger = logging.getLogger(__name__)
 
@@ -433,11 +434,17 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
 
         sent_count = 0
 
-        # Initialize outreach service
+        # Initialize outreach service (Brevo or Mailgun)
+        email_provider = os.getenv('EMAIL_PROVIDER', 'mailgun').lower()
         try:
-            self.outreach = MailgunOutreachService()
+            if email_provider == 'brevo':
+                logger.info("Using Brevo email service")
+                self.outreach = BrevoOutreachService()
+            else:
+                logger.info("Using Mailgun email service")
+                self.outreach = MailgunOutreachService()
         except Exception as e:
-            logger.error(f"Cannot initialize outreach service: {e}")
+            logger.error(f"Cannot initialize {email_provider} outreach service: {e}")
             return 0
 
         # Get ALL ready campaigns (we'll create sequences if missing)

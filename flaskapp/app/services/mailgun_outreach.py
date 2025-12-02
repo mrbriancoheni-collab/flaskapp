@@ -51,6 +51,7 @@ class MailgunOutreachService:
         - success: bool
         - message_id: str (Mailgun ID)
         - error: str (if failed)
+        - retry_after: int (seconds to wait if rate limited)
         """
         try:
             data = {
@@ -86,6 +87,16 @@ class MailgunOutreachService:
                     'message_id': result.get('id'),
                     'message': result.get('message')
                 }
+            elif response.status_code in [420, 429]:
+                # Rate limit exceeded
+                retry_after = self._parse_retry_after(response.text)
+                logger.warning(f"Mailgun rate limit hit. Retry after {retry_after} seconds")
+                return {
+                    'success': False,
+                    'error': f"Rate limit exceeded. Retry after {retry_after} seconds",
+                    'retry_after': retry_after,
+                    'rate_limited': True
+                }
             else:
                 logger.error(f"Mailgun error: {response.status_code} - {response.text}")
                 return {
@@ -99,6 +110,27 @@ class MailgunOutreachService:
                 'success': False,
                 'error': str(e)
             }
+
+    def _parse_retry_after(self, response_text: str) -> int:
+        """Parse retry-after time from Mailgun error message"""
+        import re
+        from datetime import datetime
+
+        # Try to extract timestamp from message like "try again after Tue, 02 Dec 2025 15:34:08 UTC"
+        match = re.search(r'try again after ([^"]+)', response_text)
+        if match:
+            try:
+                retry_time_str = match.group(1).strip()
+                # Parse the datetime
+                retry_time = datetime.strptime(retry_time_str, '%a, %d %b %Y %H:%M:%S %Z')
+                now = datetime.utcnow()
+                seconds_to_wait = int((retry_time - now).total_seconds())
+                return max(0, seconds_to_wait)
+            except Exception as e:
+                logger.debug(f"Could not parse retry time: {e}")
+
+        # Default: wait 5 minutes
+        return 300
 
     def personalize_template(
         self,

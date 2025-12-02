@@ -37,7 +37,8 @@ logger = logging.getLogger(__name__)
 class LeadAutomationService:
     """Automated lead generation and outreach service"""
 
-    STATE_FILE = "/home/user/flaskapp/automation_state.json"
+    # Use relative path from project root, or absolute if env var set
+    STATE_FILE = os.getenv('AUTOMATION_STATE_FILE', 'automation_state.json')
 
     def __init__(self):
         self.state = self._load_state()
@@ -497,6 +498,12 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                             body_text=body
                         )
 
+                        # Check for rate limiting
+                        if result.get('rate_limited'):
+                            retry_after = result.get('retry_after', 300)
+                            logger.warning(f"Mailgun rate limit hit. Stopping email sending. Retry after {retry_after} seconds ({retry_after/3600:.1f} hours)")
+                            return sent_count
+
                         if result.get('success'):
                             # Record email sent
                             email_record = LeadEmail(
@@ -547,6 +554,12 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                             body_html=body.replace('\n', '<br>'),
                             body_text=body
                         )
+
+                        # Check for rate limiting
+                        if result.get('rate_limited'):
+                            retry_after = result.get('retry_after', 300)
+                            logger.warning(f"Mailgun rate limit hit. Stopping email sending. Retry after {retry_after} seconds ({retry_after/3600:.1f} hours)")
+                            return sent_count
 
                         if result.get('success'):
                             # Record email sent to contact

@@ -12,7 +12,7 @@ import html
 
 from app.extensions import db
 from app.auth.decorators import require_admin_cloaked as require_admin
-from app.models_leads import LeadCampaign, Lead, EmailSequence, LeadEmail, EmailUnsubscribe
+from app.models_leads import LeadCampaign, Lead, EmailSequence, LeadEmail, LeadContactEmail, EmailUnsubscribe
 from app.services.serpapi_scraper import SerpAPIScraperService
 from app.services.lead_enrichment import LeadEnrichmentService
 from app.services.mailgun_outreach import MailgunOutreachService
@@ -86,12 +86,17 @@ def automation_status():
     today_scraped = Lead.query.filter(Lead.created_at >= today_start).count()
     today_enriched = Lead.query.filter(Lead.enriched_at >= today_start).count()
 
-    today_emails = db.session.query(func.count(LeadEmail.id)).filter(
+    # Count emails from both tables
+    today_legacy_emails = db.session.query(func.count(LeadEmail.id)).filter(
         LeadEmail.sent_at >= today_start
     ).scalar() or 0
+    today_contact_emails = db.session.query(func.count(LeadContactEmail.id)).filter(
+        LeadContactEmail.sent_at >= today_start
+    ).scalar() or 0
+    today_emails = today_legacy_emails + today_contact_emails
 
     # Check if automation is enabled
-    state_file = "/home/user/flaskapp/automation_state.json"
+    state_file = os.getenv('AUTOMATION_STATE_FILE', 'automation_state.json')
     automation_enabled = os.path.exists(state_file)
     last_run = None
 
@@ -186,15 +191,27 @@ def index():
     # Get stats for each campaign
     campaign_stats = []
     for campaign in campaigns:
+        # Count emails from both legacy (LeadEmail) and new (LeadContactEmail) tables
+        legacy_emails_sent = LeadEmail.query.join(Lead).filter(Lead.campaign_id == campaign.id).count()
+        contact_emails_sent = LeadContactEmail.query.filter_by(campaign_id=campaign.id).count()
+        total_emails_sent = legacy_emails_sent + contact_emails_sent
+
+        legacy_emails_opened = LeadEmail.query.join(Lead).filter(
+            Lead.campaign_id == campaign.id,
+            LeadEmail.opened_at.isnot(None)
+        ).count()
+        contact_emails_opened = LeadContactEmail.query.filter(
+            LeadContactEmail.campaign_id == campaign.id,
+            LeadContactEmail.opened_at.isnot(None)
+        ).count()
+        total_emails_opened = legacy_emails_opened + contact_emails_opened
+
         stats = {
             'campaign': campaign,
             'leads_total': Lead.query.filter_by(campaign_id=campaign.id).count(),
             'leads_enriched': Lead.query.filter_by(campaign_id=campaign.id, enrichment_status='completed').count(),
-            'emails_sent': LeadEmail.query.join(Lead).filter(Lead.campaign_id == campaign.id).count(),
-            'emails_opened': LeadEmail.query.join(Lead).filter(
-                Lead.campaign_id == campaign.id,
-                LeadEmail.opened_at.isnot(None)
-            ).count(),
+            'emails_sent': total_emails_sent,
+            'emails_opened': total_emails_opened,
             'sequence_count': EmailSequence.query.filter_by(campaign_id=campaign.id).count(),
         }
         campaign_stats.append(stats)

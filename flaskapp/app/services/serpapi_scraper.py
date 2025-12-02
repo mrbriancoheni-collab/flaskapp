@@ -119,7 +119,9 @@ class SerpAPIScraperService:
                 'location': location,
                 'hl': 'en',
                 'gl': 'us',
-                'google_domain': 'google.com'
+                'google_domain': 'google.com',
+                'num': 20,  # Request more results (helps get more organic + triggers more result types)
+                'no_cache': 'false',  # Use cache when available to save credits
             }
 
             response = requests.get(self.base_url, params=params, timeout=30)

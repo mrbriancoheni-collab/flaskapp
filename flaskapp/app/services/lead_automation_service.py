@@ -435,10 +435,9 @@ class LeadAutomationService:
                         # Send email
                         result = self.outreach.send_email(
                             to_email=lead.decision_maker_email,
-                            to_name=lead.decision_maker_name or lead.company_name,
                             subject=subject,
-                            body_text=body,
-                            body_html=body.replace('\n', '<br>')
+                            body_html=body.replace('\n', '<br>'),
+                            body_text=body
                         )
 
                         if result.get('success'):
@@ -497,10 +496,9 @@ class LeadAutomationService:
                         # Send email
                         result = self.outreach.send_email(
                             to_email=contact.email,
-                            to_name=contact.name or lead.company_name,
                             subject=subject,
-                            body_text=body,
-                            body_html=body.replace('\n', '<br>')
+                            body_html=body.replace('\n', '<br>'),
+                            body_text=body
                         )
 
                         if result.get('success'):

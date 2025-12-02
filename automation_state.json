@@ -1,0 +1,15 @@
+{
+  "last_run": null,
+  "campaigns_created": 0,
+  "campaigns_scraped": 0,
+  "leads_enriched": 0,
+  "emails_sent": 0,
+  "current_campaign_index": 0,
+  "processed_domains": [],
+  "daily_stats": {
+    "date": null,
+    "scrapes": 0,
+    "enrichments": 0,
+    "emails": 0
+  }
+}

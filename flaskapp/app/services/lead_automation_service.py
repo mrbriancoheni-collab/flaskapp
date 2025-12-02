@@ -21,7 +21,7 @@ from sqlalchemy import func
 
 from app.extensions import db
 from app.models_leads import LeadCampaign, Lead, EmailSequence, LeadEmail, LeadContact, LeadContactEmail
-from app.config.lead_automation_config import (
+from app.configs.lead_automation_config import (
     get_campaign_queue,
     AUTOMATION_CONFIG,
     HOME_SERVICE_CATEGORIES

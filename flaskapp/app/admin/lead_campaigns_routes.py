@@ -199,7 +199,25 @@ def index():
         }
         campaign_stats.append(stats)
 
-    return render_template('admin/lead_campaigns/index.html', campaign_stats=campaign_stats)
+    # Get automation progress
+    from app.services.lead_automation_service import LeadAutomationService
+    try:
+        service = LeadAutomationService()
+        automation_progress = service.get_progress_report()
+    except Exception as e:
+        logger.error(f"Error getting automation progress: {e}")
+        automation_progress = {
+            'campaigns_created': 0,
+            'leads_enriched': 0,
+            'emails_sent': 0,
+            'progress_percent': 0,
+            'current_index': 0,
+            'daily_stats': {'scrapes': 0, 'enrichments': 0, 'emails': 0}
+        }
+
+    return render_template('admin/lead_campaigns/index.html',
+                         campaign_stats=campaign_stats,
+                         automation_progress=automation_progress)
 
 
 @lead_campaigns_bp.route('/new', methods=['GET', 'POST'])

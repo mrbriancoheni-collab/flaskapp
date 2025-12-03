@@ -339,9 +339,154 @@ def check_email_status_command(days):
     click.echo(f"{'='*80}\n")
 
 
+@click.command('test-email-provider')
+@click.option('--to', 'to_email', required=True, help='Email address to send test email to')
+@click.option('--provider', type=click.Choice(['brevo', 'mailgun']), help='Override EMAIL_PROVIDER env var')
+@with_appcontext
+def test_email_provider_command(to_email, provider):
+    """
+    Test email provider connection by sending a test email.
+
+    This validates:
+    - API credentials are correct
+    - API connection is working
+    - Email sending functionality works
+    - Provider returns proper message IDs
+
+    Examples:
+        flask test-email-provider --to your@email.com
+        flask test-email-provider --to your@email.com --provider brevo
+        flask test-email-provider --to your@email.com --provider mailgun
+    """
+    import os
+    from datetime import datetime
+
+    click.echo(f"\n{'='*80}")
+    click.echo("EMAIL PROVIDER CONNECTION TEST")
+    click.echo(f"{'='*80}\n")
+
+    # Determine which provider to use
+    email_provider = provider or os.getenv('EMAIL_PROVIDER', 'mailgun').lower()
+    click.echo(f"🔧 Testing Provider: {email_provider.upper()}")
+    click.echo(f"📧 Test Email To: {to_email}\n")
+
+    # Initialize the provider
+    try:
+        if email_provider == 'brevo':
+            from app.services.brevo_outreach import BrevoOutreachService
+
+            # Check env vars
+            api_key = os.getenv('BREVO_API_KEY')
+            from_email = os.getenv('BREVO_FROM_EMAIL', 'noreply@fieldsprout.io')
+            from_name = os.getenv('BREVO_FROM_NAME', 'FieldSprout')
+
+            click.echo("📋 Configuration:")
+            click.echo(f"   API Key: {'✓ Set (' + api_key[:20] + '...)' if api_key else '✗ MISSING'}")
+            click.echo(f"   From Email: {from_email}")
+            click.echo(f"   From Name: {from_name}\n")
+
+            if not api_key:
+                click.echo("❌ ERROR: BREVO_API_KEY environment variable not set", err=True)
+                return 1
+
+            click.echo("🔌 Initializing Brevo service...")
+            service = BrevoOutreachService()
+
+        else:
+            from app.services.mailgun_outreach import MailgunOutreachService
+
+            # Check env vars
+            api_key = os.getenv('MAILGUN_API_KEY')
+            domain = os.getenv('MAILGUN_DOMAIN')
+
+            click.echo("📋 Configuration:")
+            click.echo(f"   API Key: {'✓ Set (' + api_key[:20] + '...)' if api_key else '✗ MISSING'}")
+            click.echo(f"   Domain: {domain or '✗ MISSING'}\n")
+
+            if not api_key or not domain:
+                click.echo("❌ ERROR: MAILGUN_API_KEY and MAILGUN_DOMAIN environment variables required", err=True)
+                return 1
+
+            click.echo("🔌 Initializing Mailgun service...")
+            service = MailgunOutreachService()
+
+        click.echo("✓ Service initialized successfully\n")
+
+    except Exception as e:
+        click.echo(f"❌ ERROR initializing {email_provider} service: {e}", err=True)
+        import traceback
+        traceback.print_exc()
+        return 1
+
+    # Send test email
+    try:
+        click.echo("📤 Sending test email...")
+
+        subject = f"Test Email from {email_provider.title()} - {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
+        body_text = f"""This is a test email from your FieldSprout lead generation system.
+
+Provider: {email_provider.upper()}
+Sent at: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}
+
+If you received this email, your {email_provider.title()} integration is working correctly!
+
+✓ API credentials are valid
+✓ Connection is established
+✓ Email sending is functional
+
+You can now use this provider for your automated lead generation campaigns.
+"""
+
+        body_html = body_text.replace('\n', '<br>')
+
+        result = service.send_email(
+            to_email=to_email,
+            subject=subject,
+            body_html=body_html,
+            body_text=body_text
+        )
+
+        click.echo(f"\n{'='*80}")
+        click.echo("TEST RESULT")
+        click.echo(f"{'='*80}\n")
+
+        if result.get('success'):
+            click.echo("✅ SUCCESS! Email sent successfully\n")
+            click.echo(f"📊 Details:")
+            click.echo(f"   Provider: {email_provider}")
+            click.echo(f"   To: {to_email}")
+            click.echo(f"   Message ID: {result.get('message_id', 'N/A')}")
+
+            if result.get('rate_limited'):
+                click.echo(f"   ⚠️  Rate Limited: Retry after {result.get('retry_after', 'unknown')} seconds")
+
+            click.echo(f"\n✓ Your {email_provider.title()} integration is working correctly!")
+            click.echo(f"✓ Check {to_email} for the test email")
+
+        else:
+            click.echo("❌ FAILED to send email\n")
+            click.echo(f"Error: {result.get('error', 'Unknown error')}")
+
+            if result.get('rate_limited'):
+                click.echo(f"\n⚠️  Rate Limited: Retry after {result.get('retry_after', 'unknown')} seconds")
+                click.echo("This is normal if you've been sending many emails.")
+
+            return 1
+
+        click.echo(f"\n{'='*80}\n")
+        return 0
+
+    except Exception as e:
+        click.echo(f"\n❌ ERROR sending test email: {e}", err=True)
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
 def register_commands(app):
     """Register all CLI commands with the Flask app."""
     app.cli.add_command(run_agents_command)
     app.cli.add_command(run_lead_automation_command)
     app.cli.add_command(send_pending_emails_command)
     app.cli.add_command(check_email_status_command)
+    app.cli.add_command(test_email_provider_command)

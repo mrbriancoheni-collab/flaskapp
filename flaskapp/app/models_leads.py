@@ -290,9 +290,12 @@ class LeadContactEmail(db.Model):
     # Email details
     subject = db.Column(String(500), nullable=False)
     body = db.Column(Text, nullable=True)
+    to_email = db.Column(String(255), nullable=True)  # Store recipient email
 
-    # Mailgun tracking
+    # Provider tracking
+    email_provider = db.Column(String(50), nullable=True, default='mailgun')  # 'mailgun' or 'brevo'
     mailgun_message_id = db.Column(String(255), nullable=True, unique=True, index=True)
+    brevo_message_id = db.Column(String(255), nullable=True, index=True)  # Brevo message ID
 
     # Status
     status = db.Column(

@@ -577,9 +577,18 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                                 sequence_step=1,
                                 subject=subject,
                                 body=body,
+                                to_email=contact.email,
+                                email_provider=email_provider,
                                 sent_at=datetime.utcnow(),
                                 status='sent'
                             )
+
+                            # Store provider-specific message ID
+                            if email_provider == 'brevo' and result.get('message_id'):
+                                email_record.brevo_message_id = result.get('message_id')
+                            elif result.get('message_id'):
+                                email_record.mailgun_message_id = result.get('message_id')
+
                             db.session.add(email_record)
 
                             # Update contact status

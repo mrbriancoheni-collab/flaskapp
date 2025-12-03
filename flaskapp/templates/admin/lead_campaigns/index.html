@@ -213,7 +213,7 @@ async function startScraping(campaignId) {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Scraping...';
 
     try {
-        const response = await fetch(`/admin/lead-campaigns/${campaignId}/scrape`, {
+        const response = await fetch(`/admin/lead-campaigns/${campaignId}/start-scraping`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -224,7 +224,7 @@ async function startScraping(campaignId) {
         const data = await response.json();
 
         if (data.success) {
-            alert(`Success! Scraped ${data.leads_count} leads.`);
+            alert(`Success! Scraped ${data.leads_created} leads.`);
             location.reload();
         } else {
             alert(`Error: ${data.error}`);
@@ -247,7 +247,7 @@ async function enrichLeads(campaignId) {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Enriching...';
 
     try {
-        const response = await fetch(`/admin/lead-campaigns/${campaignId}/enrich`, {
+        const response = await fetch(`/admin/lead-campaigns/${campaignId}/enrich-leads`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

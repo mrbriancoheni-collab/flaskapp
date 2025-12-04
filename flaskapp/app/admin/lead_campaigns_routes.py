@@ -70,6 +70,52 @@ lead_campaigns_bp = Blueprint('lead_campaigns_bp', __name__, url_prefix='/admin/
 
 # ==================== Monitoring & Analytics ====================
 
+@lead_campaigns_bp.route('/debug-stats')
+@require_admin
+def debug_stats():
+    """Debug endpoint to show raw database statistics"""
+    campaigns = LeadCampaign.query.order_by(desc(LeadCampaign.created_at)).all()
+
+    debug_data = []
+    for campaign in campaigns:
+        # Get all counts
+        leads_total = Lead.query.filter_by(campaign_id=campaign.id).count()
+        leads_enriched = Lead.query.filter_by(campaign_id=campaign.id, enrichment_status='completed').count()
+        leads_pending_enrichment = Lead.query.filter_by(campaign_id=campaign.id, enrichment_status='pending').count()
+
+        legacy_emails = LeadEmail.query.join(Lead).filter(Lead.campaign_id == campaign.id).count()
+        contact_emails = LeadContactEmail.query.filter_by(campaign_id=campaign.id).count()
+
+        sequences = EmailSequence.query.filter_by(campaign_id=campaign.id).count()
+
+        debug_data.append({
+            'id': campaign.id,
+            'name': campaign.name,
+            'status': campaign.status,
+            'industry_service': campaign.industry_service,
+            'location': campaign.location,
+            'created_at': str(campaign.created_at),
+            'stats': {
+                'leads_total': leads_total,
+                'leads_enriched': leads_enriched,
+                'leads_pending_enrichment': leads_pending_enrichment,
+                'legacy_emails': legacy_emails,
+                'contact_emails': contact_emails,
+                'total_emails': legacy_emails + contact_emails,
+                'sequences': sequences
+            },
+            'campaign_table_values': {
+                'leads_scraped': campaign.leads_scraped,
+                'leads_enriched': campaign.leads_enriched,
+                'emails_sent': campaign.emails_sent
+            }
+        })
+
+    return jsonify({
+        'total_campaigns': len(campaigns),
+        'campaigns': debug_data
+    })
+
 @lead_campaigns_bp.route('/automation-status')
 @require_admin
 def automation_status():
@@ -188,6 +234,8 @@ def index():
     """List all lead campaigns"""
     campaigns = LeadCampaign.query.order_by(desc(LeadCampaign.created_at)).all()
 
+    logger.info(f"Found {len(campaigns)} campaigns")
+
     # Get stats for each campaign
     campaign_stats = []
     for campaign in campaigns:
@@ -206,13 +254,22 @@ def index():
         ).count()
         total_emails_opened = legacy_emails_opened + contact_emails_opened
 
+        leads_total = Lead.query.filter_by(campaign_id=campaign.id).count()
+        leads_enriched = Lead.query.filter_by(campaign_id=campaign.id, enrichment_status='completed').count()
+        sequence_count = EmailSequence.query.filter_by(campaign_id=campaign.id).count()
+
+        logger.info(f"Campaign '{campaign.name}' (ID:{campaign.id}): "
+                   f"leads={leads_total}, enriched={leads_enriched}, "
+                   f"emails={total_emails_sent} (legacy={legacy_emails_sent}, contact={contact_emails_sent}), "
+                   f"opened={total_emails_opened}, sequences={sequence_count}")
+
         stats = {
             'campaign': campaign,
-            'leads_total': Lead.query.filter_by(campaign_id=campaign.id).count(),
-            'leads_enriched': Lead.query.filter_by(campaign_id=campaign.id, enrichment_status='completed').count(),
+            'leads_total': leads_total,
+            'leads_enriched': leads_enriched,
             'emails_sent': total_emails_sent,
             'emails_opened': total_emails_opened,
-            'sequence_count': EmailSequence.query.filter_by(campaign_id=campaign.id).count(),
+            'sequence_count': sequence_count,
         }
         campaign_stats.append(stats)
 

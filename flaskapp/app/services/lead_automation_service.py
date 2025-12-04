@@ -98,15 +98,29 @@ class LeadAutomationService:
             logger.info(f"Reset daily stats for {today}")
 
     def _can_scrape_today(self) -> bool:
-        """Check if we can scrape more campaigns today"""
-        return self.state["daily_stats"]["scrapes"] < AUTOMATION_CONFIG["daily_scrape_limit"]
+        """Check if we can scrape more campaigns today (checks database for all operations)"""
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Count all leads created today (from manual + automated operations)
+        today_scrapes = db.session.query(func.count(Lead.id)).filter(
+            Lead.created_at >= today_start
+        ).scalar() or 0
+
+        return today_scrapes < AUTOMATION_CONFIG["daily_scrape_limit"]
 
     def _can_enrich_today(self) -> bool:
-        """Check if we can enrich more leads today"""
-        return self.state["daily_stats"]["enrichments"] < AUTOMATION_CONFIG["daily_enrich_limit"]
+        """Check if we can enrich more leads today (checks database for all operations)"""
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Count all leads enriched today (from manual + automated operations)
+        today_enrichments = db.session.query(func.count(Lead.id)).filter(
+            Lead.enriched_at >= today_start
+        ).scalar() or 0
+
+        return today_enrichments < AUTOMATION_CONFIG["daily_enrich_limit"]
 
     def _can_send_email_today(self) -> bool:
-        """Check if we can send more emails today"""
+        """Check if we can send more emails today (checks database for all operations)"""
         today = datetime.utcnow()
 
         # Check if today is Sunday (or other skip day)
@@ -114,7 +128,20 @@ class LeadAutomationService:
             logger.info(f"Skipping emails - today is a skip day (weekday {today.weekday()})")
             return False
 
-        return self.state["daily_stats"]["emails"] < AUTOMATION_CONFIG["daily_email_limit"]
+        today_start = today.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Count all emails sent today from both tables (manual + automated operations)
+        today_legacy_emails = db.session.query(func.count(LeadEmail.id)).filter(
+            LeadEmail.sent_at >= today_start
+        ).scalar() or 0
+
+        today_contact_emails = db.session.query(func.count(LeadContactEmail.id)).filter(
+            LeadContactEmail.sent_at >= today_start
+        ).scalar() or 0
+
+        today_emails = today_legacy_emails + today_contact_emails
+
+        return today_emails < AUTOMATION_CONFIG["daily_email_limit"]
 
     def _is_duplicate_domain(self, domain: str) -> bool:
         """Check if domain has already been processed"""
@@ -660,15 +687,55 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
         campaign_queue = get_campaign_queue()
         total_campaigns = len(campaign_queue)
 
+        # Calculate actual stats from database instead of state file
+        # This ensures we always show current real data
+        total_leads_enriched = db.session.query(func.count(Lead.id)).filter(
+            Lead.enrichment_status == 'completed'
+        ).scalar() or 0
+
+        # Count emails from both legacy (LeadEmail) and new (LeadContactEmail) tables
+        total_legacy_emails = db.session.query(func.count(LeadEmail.id)).scalar() or 0
+        total_contact_emails = db.session.query(func.count(LeadContactEmail.id)).scalar() or 0
+        total_emails_sent = total_legacy_emails + total_contact_emails
+
+        # Get campaigns created count from database
+        campaigns_created_count = LeadCampaign.query.count()
+
+        # Calculate today's stats from database
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        today_scrapes = db.session.query(func.count(Lead.id)).filter(
+            Lead.created_at >= today_start
+        ).scalar() or 0
+
+        today_enrichments = db.session.query(func.count(Lead.id)).filter(
+            Lead.enriched_at >= today_start
+        ).scalar() or 0
+
+        today_legacy_emails = db.session.query(func.count(LeadEmail.id)).filter(
+            LeadEmail.sent_at >= today_start
+        ).scalar() or 0
+
+        today_contact_emails = db.session.query(func.count(LeadContactEmail.id)).filter(
+            LeadContactEmail.sent_at >= today_start
+        ).scalar() or 0
+
+        today_emails = today_legacy_emails + today_contact_emails
+
         return {
             "total_campaigns_planned": total_campaigns,
-            "campaigns_created": self.state["campaigns_created"],
+            "campaigns_created": campaigns_created_count,
             "campaigns_scraped": self.state["campaigns_scraped"],
             "current_index": self.state["current_campaign_index"],
             "progress_percent": (self.state["current_campaign_index"] / total_campaigns * 100) if total_campaigns > 0 else 0,
-            "leads_enriched": self.state["leads_enriched"],
-            "emails_sent": self.state["emails_sent"],
+            "leads_enriched": total_leads_enriched,
+            "emails_sent": total_emails_sent,
             "unique_domains_processed": len(self.state["processed_domains"]),
             "last_run": self.state["last_run"],
-            "daily_stats": self.state["daily_stats"]
+            "daily_stats": {
+                "date": datetime.now().date().isoformat(),
+                "scrapes": today_scrapes,
+                "enrichments": today_enrichments,
+                "emails": today_emails
+            }
         }

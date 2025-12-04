@@ -31,6 +31,7 @@ from app.services.lead_enrichment import LeadEnrichmentService
 from app.services.domain_crawler import DomainCrawler
 from app.services.mailgun_outreach import MailgunOutreachService
 from app.services.brevo_outreach import BrevoOutreachService
+from app.services.crm_sync_service import CRMSyncService
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,7 @@ class LeadAutomationService:
         self.scraper = None
         self.enrichment = None
         self.outreach = None
+        self.crm_sync = None
 
     def _load_state(self) -> Dict:
         """Load automation state from file"""
@@ -375,8 +377,9 @@ class LeadAutomationService:
         """Enrich pending leads up to daily limit"""
         enriched_count = 0
 
-        # Initialize enrichment service
+        # Initialize enrichment and CRM sync services
         self.enrichment = LeadEnrichmentService()
+        self.crm_sync = CRMSyncService()
 
         # Get pending leads across all campaigns
         pending_leads = Lead.query.filter_by(
@@ -428,6 +431,16 @@ class LeadAutomationService:
                     db.session.add(contact)
 
                 db.session.commit()
+
+                # Sync to CRM
+                try:
+                    crm_contact = self.crm_sync.sync_lead_to_crm(lead, stage="lead")
+                    if crm_contact:
+                        company_contacts = self.crm_sync.sync_lead_contacts_to_crm(lead)
+                        logger.info(f"Synced lead {lead.id} to CRM: company {crm_contact.id}, {len(company_contacts)} contacts")
+                except Exception as e:
+                    logger.error(f"Error syncing lead {lead.id} to CRM: {e}")
+                    # Don't fail enrichment if CRM sync fails
 
                 # Update campaign stats
                 campaign = lead.campaign

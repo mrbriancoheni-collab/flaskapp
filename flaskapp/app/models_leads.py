@@ -83,6 +83,9 @@ class Lead(db.Model):
     id = db.Column(Integer, primary_key=True)
     campaign_id = db.Column(Integer, ForeignKey("lead_campaigns.id"), nullable=False, index=True)
 
+    # CRM integration
+    crm_contact_id = db.Column(Integer, ForeignKey("crm_contacts.id"), nullable=True, index=True)
+
     # Company info
     company_name = db.Column(String(255), nullable=False)
     website = db.Column(String(500), nullable=True)
@@ -153,6 +156,9 @@ class LeadContact(db.Model):
 
     id = db.Column(Integer, primary_key=True)
     lead_id = db.Column(Integer, ForeignKey("leads.id"), nullable=False, index=True)
+
+    # CRM integration
+    company_contact_id = db.Column(Integer, ForeignKey("company_contacts.id"), nullable=True, index=True)
 
     # Contact info
     name = db.Column(String(200), nullable=False)

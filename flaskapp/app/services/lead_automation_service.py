@@ -98,15 +98,29 @@ class LeadAutomationService:
             logger.info(f"Reset daily stats for {today}")
 
     def _can_scrape_today(self) -> bool:
-        """Check if we can scrape more campaigns today"""
-        return self.state["daily_stats"]["scrapes"] < AUTOMATION_CONFIG["daily_scrape_limit"]
+        """Check if we can scrape more campaigns today (checks database for all operations)"""
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Count all leads created today (from manual + automated operations)
+        today_scrapes = db.session.query(func.count(Lead.id)).filter(
+            Lead.created_at >= today_start
+        ).scalar() or 0
+
+        return today_scrapes < AUTOMATION_CONFIG["daily_scrape_limit"]
 
     def _can_enrich_today(self) -> bool:
-        """Check if we can enrich more leads today"""
-        return self.state["daily_stats"]["enrichments"] < AUTOMATION_CONFIG["daily_enrich_limit"]
+        """Check if we can enrich more leads today (checks database for all operations)"""
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Count all leads enriched today (from manual + automated operations)
+        today_enrichments = db.session.query(func.count(Lead.id)).filter(
+            Lead.enriched_at >= today_start
+        ).scalar() or 0
+
+        return today_enrichments < AUTOMATION_CONFIG["daily_enrich_limit"]
 
     def _can_send_email_today(self) -> bool:
-        """Check if we can send more emails today"""
+        """Check if we can send more emails today (checks database for all operations)"""
         today = datetime.utcnow()
 
         # Check if today is Sunday (or other skip day)
@@ -114,7 +128,20 @@ class LeadAutomationService:
             logger.info(f"Skipping emails - today is a skip day (weekday {today.weekday()})")
             return False
 
-        return self.state["daily_stats"]["emails"] < AUTOMATION_CONFIG["daily_email_limit"]
+        today_start = today.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Count all emails sent today from both tables (manual + automated operations)
+        today_legacy_emails = db.session.query(func.count(LeadEmail.id)).filter(
+            LeadEmail.sent_at >= today_start
+        ).scalar() or 0
+
+        today_contact_emails = db.session.query(func.count(LeadContactEmail.id)).filter(
+            LeadContactEmail.sent_at >= today_start
+        ).scalar() or 0
+
+        today_emails = today_legacy_emails + today_contact_emails
+
+        return today_emails < AUTOMATION_CONFIG["daily_email_limit"]
 
     def _is_duplicate_domain(self, domain: str) -> bool:
         """Check if domain has already been processed"""

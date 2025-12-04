@@ -203,7 +203,10 @@ class LeadAutomationService:
         }
 
     def _process_campaign_scraping(self) -> int:
-        """Create and scrape campaigns up to daily limit"""
+        """Create and scrape campaigns up to daily limit
+
+        Each campaign scrapes ALL keywords for one city
+        """
         scraped_count = 0
         campaign_queue = get_campaign_queue()
 
@@ -232,7 +235,7 @@ class LeadAutomationService:
                 if not existing:
                     campaign = LeadCampaign(
                         name=campaign_config["name"],
-                        industry_service=campaign_config["keyword"],
+                        industry_service="Home Services",  # Generic since we scrape all keywords
                         location=campaign_config["city"],
                         scrape_ads=AUTOMATION_CONFIG["scrape_sources"]["scrape_ads"],
                         scrape_maps=AUTOMATION_CONFIG["scrape_sources"]["scrape_maps"],
@@ -250,68 +253,114 @@ class LeadAutomationService:
                 else:
                     campaign = existing
 
-                # Scrape leads
-                query = f"{campaign.industry_service} {campaign.location}"
-                results = self.scraper.scrape_campaign(
-                    query=query,
-                    location=campaign.location,
-                    scrape_ads=campaign.scrape_ads,
-                    scrape_maps=campaign.scrape_maps,
-                    scrape_lsa=campaign.scrape_lsa,
-                    scrape_organic=campaign.scrape_organic,
-                    max_organic=campaign.max_organic_results
-                )
+                # Track leads found by each keyword (for deduplication within campaign)
+                campaign_leads = {}  # {domain: lead_object}
+                total_leads_created = 0
 
-                # Save leads (skip duplicates by domain)
-                leads_created = 0
-                for source_type, items in results.items():
-                    for item in items:
-                        # Skip if duplicate domain
-                        if self._is_duplicate_domain(item.get('website')):
-                            logger.debug(f"Skipping duplicate domain: {item.get('website')}")
-                            continue
+                # Loop through all keywords for this city
+                keywords = campaign_config["keywords"]
+                logger.info(f"Scraping {len(keywords)} keywords for {campaign.location}")
 
-                        # Check if lead already exists
-                        existing_lead = Lead.query.filter_by(
-                            campaign_id=campaign.id,
-                            company_name=item['company_name']
-                        ).first()
+                for keyword in keywords:
+                    # Scrape leads for this keyword
+                    query = f"{keyword} {campaign.location}"
 
-                        if existing_lead:
-                            continue
-
-                        lead = Lead(
-                            campaign_id=campaign.id,
-                            company_name=item['company_name'],
-                            website=item.get('website'),
-                            phone=item.get('phone'),
-                            address=item.get('address'),
-                            source_type=source_type,
-                            source_url=item.get('source_url'),
-                            serp_position=item.get('position'),
-                            enrichment_status='pending',
-                            email_status='pending',
-                            extra_data=item.get('extra_data', {})
+                    try:
+                        results = self.scraper.scrape_campaign(
+                            query=query,
+                            location=campaign.location,
+                            scrape_ads=campaign.scrape_ads,
+                            scrape_maps=campaign.scrape_maps,
+                            scrape_lsa=campaign.scrape_lsa,
+                            scrape_organic=campaign.scrape_organic,
+                            max_organic=campaign.max_organic_results
                         )
 
-                        db.session.add(lead)
-                        leads_created += 1
+                        # Process leads from this keyword
+                        for source_type, items in results.items():
+                            for item in items:
+                                domain = item.get('website')
 
-                        # Mark domain as processed
-                        self._mark_domain_processed(item.get('website'))
+                                # Skip if duplicate domain globally
+                                if self._is_duplicate_domain(domain):
+                                    logger.debug(f"Skipping duplicate domain globally: {domain}")
+                                    continue
+
+                                # Clean domain for comparison
+                                domain_clean = domain.lower().replace("http://", "").replace("https://", "").replace("www.", "").split("/")[0] if domain else None
+
+                                # Check if this lead already exists in this campaign (from another keyword)
+                                if domain_clean and domain_clean in campaign_leads:
+                                    # Add this keyword to the existing lead's keywords list
+                                    existing_lead = campaign_leads[domain_clean]
+                                    if 'keywords' not in existing_lead.extra_data:
+                                        existing_lead.extra_data['keywords'] = []
+                                    if keyword not in existing_lead.extra_data['keywords']:
+                                        existing_lead.extra_data['keywords'].append(keyword)
+                                    logger.debug(f"Lead {item['company_name']} also found for keyword: {keyword}")
+                                    continue
+
+                                # Check if lead already exists in database
+                                existing_lead = Lead.query.filter_by(
+                                    campaign_id=campaign.id,
+                                    company_name=item['company_name']
+                                ).first()
+
+                                if existing_lead:
+                                    # Update existing lead with new keyword
+                                    if 'keywords' not in existing_lead.extra_data:
+                                        existing_lead.extra_data['keywords'] = []
+                                    if keyword not in existing_lead.extra_data['keywords']:
+                                        existing_lead.extra_data['keywords'].append(keyword)
+                                    campaign_leads[domain_clean] = existing_lead
+                                    continue
+
+                                # Create new lead
+                                extra_data = item.get('extra_data', {})
+                                extra_data['keywords'] = [keyword]  # Track which keyword(s) found this lead
+
+                                lead = Lead(
+                                    campaign_id=campaign.id,
+                                    company_name=item['company_name'],
+                                    website=domain,
+                                    phone=item.get('phone'),
+                                    address=item.get('address'),
+                                    source_type=source_type,
+                                    source_url=item.get('source_url'),
+                                    serp_position=item.get('position'),
+                                    enrichment_status='pending',
+                                    email_status='pending',
+                                    extra_data=extra_data
+                                )
+
+                                db.session.add(lead)
+                                total_leads_created += 1
+
+                                # Track in campaign_leads for deduplication
+                                if domain_clean:
+                                    campaign_leads[domain_clean] = lead
+
+                                # Mark domain as processed globally
+                                self._mark_domain_processed(domain)
+
+                        logger.info(f"  - Keyword '{keyword}': found {len(items)} items from {source_type}")
+
+                    except Exception as e:
+                        logger.error(f"Error scraping keyword '{keyword}' for {campaign.location}: {e}")
+                        continue
 
                 # Update campaign
                 campaign.status = 'ready'
                 campaign.scraping_started_at = datetime.utcnow()
                 campaign.scraping_completed_at = datetime.utcnow()
-                campaign.leads_scraped = leads_created
+                campaign.leads_scraped = total_leads_created
                 db.session.commit()
 
                 self.state["campaigns_scraped"] += 1
                 self.state["daily_stats"]["scrapes"] += 1
                 scraped_count += 1
 
-                logger.info(f"Scraped campaign {campaign.name}: {leads_created} new leads")
+                logger.info(f"Scraped campaign {campaign.name}: {total_leads_created} unique leads across {len(keywords)} keywords")
 
             except Exception as e:
                 logger.error(f"Error scraping campaign {campaign_config['name']}: {e}")

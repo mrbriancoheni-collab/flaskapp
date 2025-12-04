@@ -126,27 +126,33 @@ AUTOMATION_CONFIG = {
 }
 
 
+def get_all_keywords():
+    """Get flat list of all keywords across all categories"""
+    keywords = []
+    for category_keywords in HOME_SERVICE_CATEGORIES.values():
+        keywords.extend(category_keywords)
+    return keywords
+
+
 def get_total_campaign_count():
-    """Calculate total number of campaigns to create"""
-    cities = len(TOP_CITIES)
-    keywords_per_category = sum(len(keywords) for keywords in HOME_SERVICE_CATEGORIES.values())
-    return cities * keywords_per_category
+    """Calculate total number of campaigns to create (one per city)"""
+    return len(TOP_CITIES)
 
 
 def get_campaign_queue():
     """
     Generate queue of all campaigns to create
 
-    Returns list of dicts with: city, category, keyword
+    Returns list of dicts with: city, keywords (all keywords for that city)
+    Each campaign will scrape all 45 keywords for one city
     """
     queue = []
+    all_keywords = get_all_keywords()
+
     for city in TOP_CITIES:
-        for category, keywords in HOME_SERVICE_CATEGORIES.items():
-            for keyword in keywords:
-                queue.append({
-                    "city": city,
-                    "category": category,
-                    "keyword": keyword,
-                    "name": f"Auto: {keyword} - {city}"
-                })
+        queue.append({
+            "city": city,
+            "keywords": all_keywords,  # All 45 keywords
+            "name": f"Auto: Home Services - {city}"
+        })
     return queue

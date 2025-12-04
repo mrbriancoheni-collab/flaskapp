@@ -665,6 +665,13 @@ def create_app():
         app.logger.exception("Failed to register public_bp")
 
     try:
+        from app.social import social_bp
+        app.register_blueprint(social_bp)
+        app.logger.info("social_bp registered at /social")
+    except Exception:
+        app.logger.exception("Failed to register social_bp")
+
+    try:
         from app.gmb import gmb_bp
         app.register_blueprint(gmb_bp)  # url_prefix defined in blueprint
         app.logger.info("gmb_bp registered at /account/gmb")

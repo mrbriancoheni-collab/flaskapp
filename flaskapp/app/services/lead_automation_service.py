@@ -760,8 +760,11 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
         total_contact_emails = db.session.query(func.count(LeadContactEmail.id)).scalar() or 0
         total_emails_sent = total_legacy_emails + total_contact_emails
 
-        # Get campaigns created count from database
-        campaigns_created_count = LeadCampaign.query.count()
+        # Get campaigns created count from database (only consolidated campaigns)
+        # Only count campaigns with "Auto:" prefix to exclude old individual campaigns
+        campaigns_created_count = LeadCampaign.query.filter(
+            LeadCampaign.name.like('Auto:%')
+        ).count()
 
         # Calculate today's stats from database
         today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)

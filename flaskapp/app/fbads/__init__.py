@@ -638,3 +638,217 @@ def optimize_ads_json():
             "Duplicate best audience with new creative",
             "Test Advantage+ placements"
         ], sample=summary[:10])
+
+# -----------------------------------------------------------------------------
+# Facebook Ads Optimizer Page (similar to Google Ads optimizer)
+# -----------------------------------------------------------------------------
+@fbads_bp.route("/optimize", endpoint="optimize")
+@login_required
+def fb_ads_optimize():
+    """
+    Facebook Ads optimizer page with AI-powered recommendations.
+    Analyzes campaigns, ad sets, and ads for optimization opportunities.
+    """
+    connected = _is_connected()
+
+    # Sample data for demo purposes
+    recommendations = _generate_sample_recommendations()
+    performance_summary = _generate_sample_performance()
+
+    return render_template(
+        "fbads/optimizer.html",
+        connected=connected,
+        recommendations=recommendations,
+        performance=performance_summary
+    )
+
+def _generate_sample_recommendations():
+    """Generate sample optimization recommendations for Facebook Ads"""
+    return [
+        {
+            "id": 1,
+            "category": "Budget Optimization",
+            "severity": "high",
+            "title": "Redistribute budget from underperforming ad sets",
+            "description": "3 ad sets with CTR < 0.5% are consuming 35% of your budget. Reallocate to better performers.",
+            "impact": "Potential 40% reduction in CPC (~$850/month savings)",
+            "ad_sets": ["General Audience 18-65", "Broad Interest Targeting", "Lookalike 1%"],
+            "current_metrics": {
+                "avg_ctr": "0.42%",
+                "avg_cpc": "$4.25",
+                "monthly_spend": "$2,450"
+            },
+            "suggested_action": {
+                "type": "budget_reallocation",
+                "details": "Reduce budget by 60% on these ad sets, increase top 3 performers by 30%"
+            }
+        },
+        {
+            "id": 2,
+            "category": "Creative Fatigue",
+            "severity": "high",
+            "title": "Refresh ad creatives showing engagement decline",
+            "description": "5 ads have been running for 45+ days with 60% drop in CTR. Time to refresh creative.",
+            "impact": "Expected 50-80% CTR improvement",
+            "ads": ["Summer Special - Image A", "Get Quote - Video", "Testimonial Carousel"],
+            "current_metrics": {
+                "frequency": "8.2",
+                "ctr_decline": "-62%",
+                "days_running": "47"
+            },
+            "suggested_action": {
+                "type": "creative_refresh",
+                "details": "Create 3 new variations with different hooks, images, and CTAs"
+            }
+        },
+        {
+            "id": 3,
+            "category": "Audience Targeting",
+            "severity": "medium",
+            "title": "Expand high-performing lookalike audiences",
+            "description": "Your 1% lookalike audience has 2.1% CTR and $18 CPL. Scale with 2-3% lookalikes.",
+            "impact": "3x reach potential while maintaining <20% CPL increase",
+            "audiences": ["Lookalike 1% - Customer List"],
+            "current_metrics": {
+                "ctr": "2.1%",
+                "cpl": "$18.00",
+                "roas": "4.2x"
+            },
+            "suggested_action": {
+                "type": "audience_expansion",
+                "details": "Create 2% and 3% lookalike audiences, start with $30/day test budget each"
+            }
+        },
+        {
+            "id": 4,
+            "category": "Placement Optimization",
+            "severity": "medium",
+            "title": "Disable underperforming placements",
+            "description": "Audience Network and Messenger placements have 0.08% CTR vs 1.4% on Feed.",
+            "impact": "15-25% cost savings by focusing on high-performing placements",
+            "placements": ["Audience Network", "Messenger Inbox", "Right Column"],
+            "current_metrics": {
+                "audience_network_ctr": "0.08%",
+                "feed_ctr": "1.42%",
+                "wasted_spend": "$340/mo"
+            },
+            "suggested_action": {
+                "type": "placement_optimization",
+                "details": "Disable Audience Network and Right Column, focus on Feed and Stories"
+            }
+        },
+        {
+            "id": 5,
+            "category": "Conversion Tracking",
+            "severity": "high",
+            "title": "Fix incomplete conversion tracking",
+            "description": "Only 2 of 8 campaigns have proper conversion events. Missing critical ROAS data.",
+            "impact": "Enable data-driven optimization and accurate ROAS measurement",
+            "campaigns": ["Lead Gen - Spring 2025", "Service Area Expansion"],
+            "current_metrics": {
+                "campaigns_with_tracking": "2/8",
+                "untracked_spend": "$1,850/mo"
+            },
+            "suggested_action": {
+                "type": "tracking_setup",
+                "details": "Install Facebook Pixel events for Lead, Contact, and Purchase on all campaigns"
+            }
+        },
+        {
+            "id": 6,
+            "category": "Ad Copy",
+            "severity": "low",
+            "title": "Test urgency-driven copy variations",
+            "description": "Current ads lack urgency. Test limited-time offers and seasonal promotions.",
+            "impact": "10-30% conversion rate improvement based on industry benchmarks",
+            "ads": ["General Service Ad", "Quality Promise"],
+            "current_metrics": {
+                "conversion_rate": "1.2%",
+                "industry_avg": "2.1%"
+            },
+            "suggested_action": {
+                "type": "copy_testing",
+                "details": "A/B test: '20% Off This Week Only' vs current evergreen copy"
+            }
+        },
+        {
+            "id": 7,
+            "category": "Landing Page",
+            "severity": "medium",
+            "title": "Improve landing page load speed",
+            "description": "Landing page takes 4.2s to load. 40% of clicks don't reach the page.",
+            "impact": "Recover 30-40% of lost traffic, reduce CPL by $8-12",
+            "current_metrics": {
+                "load_time": "4.2s",
+                "bounce_rate": "68%",
+                "target_load_time": "<2s"
+            },
+            "suggested_action": {
+                "type": "landing_page",
+                "details": "Compress images, enable caching, use CDN, minimize JavaScript"
+            }
+        },
+        {
+            "id": 8,
+            "category": "Bidding Strategy",
+            "severity": "low",
+            "title": "Test Lowest Cost with bid cap",
+            "description": "Current Lowest Cost strategy occasionally spikes above target CPL.",
+            "impact": "More consistent CPL with 10-15% volume increase",
+            "campaigns": ["Lead Gen - Primary"],
+            "current_metrics": {
+                "avg_cpl": "$22",
+                "cpl_spikes": "up to $45",
+                "target_cpl": "$20"
+            },
+            "suggested_action": {
+                "type": "bid_strategy",
+                "details": "Switch to Cost Cap bidding with $24 cap to control costs while scaling"
+            }
+        }
+    ]
+
+def _generate_sample_performance():
+    """Generate sample performance metrics for the optimizer dashboard"""
+    return {
+        "account_health_score": 72,
+        "monthly_spend": 8450.00,
+        "total_impressions": 1245000,
+        "total_clicks": 8920,
+        "avg_ctr": 0.72,
+        "avg_cpc": 2.85,
+        "avg_cpm": 20.50,
+        "total_conversions": 156,
+        "cost_per_conversion": 54.17,
+        "roas": 3.8,
+        "campaigns": {
+            "total": 8,
+            "active": 6,
+            "paused": 2,
+            "issues": 3
+        },
+        "ad_sets": {
+            "total": 24,
+            "active": 18,
+            "learning": 3,
+            "low_performance": 5
+        },
+        "ads": {
+            "total": 67,
+            "active": 52,
+            "creative_fatigue": 12,
+            "high_performers": 8
+        },
+        "quick_stats": [
+            {"label": "Wasted Spend", "value": "$1,250/mo", "trend": "down", "severity": "warning"},
+            {"label": "Creative Fatigue", "value": "12 ads", "trend": "up", "severity": "danger"},
+            {"label": "Optimization Potential", "value": "$3,200/mo", "trend": "neutral", "severity": "info"},
+            {"label": "CTR vs Industry", "value": "-22%", "trend": "down", "severity": "warning"}
+        ],
+        "top_opportunities": [
+            {"category": "Budget", "potential_savings": 850},
+            {"category": "Creative", "potential_lift": "60% CTR"},
+            {"category": "Audience", "potential_reach": "3x"}
+        ]
+    }
+

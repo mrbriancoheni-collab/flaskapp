@@ -432,8 +432,14 @@ def fb_connect():
         flash("Facebook App ID not configured.", "error")
         return redirect(url_for("fbads_bp.index"))
 
+    # Use standard Facebook permissions (no advanced access required)
+    # business_management covers ad account access
+    # pages_show_list allows listing pages
+    # pages_read_engagement allows reading page data
     scope = ",".join([
-        "ads_read", "ads_management", "pages_show_list", "pages_read_engagement", "business_management"
+        "business_management",
+        "pages_show_list",
+        "pages_read_engagement"
     ])
     from urllib.parse import urlencode
     params = dict(

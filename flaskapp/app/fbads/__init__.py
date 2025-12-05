@@ -1238,4 +1238,223 @@ def ads():
         ads=ads_data
     )
 
+# -----------------------------------------------------------------------------
+# Optimizer API - Apply Fixes
+# -----------------------------------------------------------------------------
+@fbads_bp.post("/api/apply-fix", endpoint="apply_fix")
+@login_required
+def apply_fix():
+    """Apply an optimization fix to a campaign, ad set, or ad"""
+    aid = current_account_id()
+    tok = _get_fb_token(aid)
+
+    if not tok:
+        return jsonify({"success": False, "error": "Not connected to Facebook"}), 401
+
+    try:
+        data = request.get_json()
+        recommendation_id = data.get('recommendation_id')
+        action_type = data.get('action_type')
+        entity_type = data.get('entity_type')  # 'campaign', 'adset', 'ad'
+        entity_id = data.get('entity_id')
+        params = data.get('params', {})
+
+        if not all([recommendation_id, action_type, entity_type]):
+            return jsonify({"success": False, "error": "Missing required parameters"}), 400
+
+        # Apply the fix based on action type
+        result = _apply_facebook_fix(tok, action_type, entity_type, entity_id, params)
+
+        if result.get('success'):
+            return jsonify({
+                "success": True,
+                "message": f"Successfully applied fix: {result.get('message', 'Optimization applied')}",
+                "details": result.get('details', {})
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": result.get('error', 'Failed to apply fix')
+            }), 400
+
+    except Exception as e:
+        current_app.logger.exception("Error applying Facebook Ads fix")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+def _apply_facebook_fix(access_token: str, action_type: str, entity_type: str, entity_id: str, params: dict) -> dict:
+    """
+    Apply a specific optimization fix via Facebook Graph API
+
+    Action types:
+    - adjust_budget: Modify campaign/adset budget
+    - pause_entity: Pause campaign/adset/ad
+    - enable_entity: Enable campaign/adset/ad
+    - adjust_bid: Modify bid strategy or bid amount
+    - update_schedule: Modify ad schedule
+    - duplicate_winner: Duplicate high-performing ad
+    """
+    try:
+        if action_type == 'adjust_budget':
+            # Update budget for campaign or ad set
+            budget_value = params.get('budget')
+            if not budget_value:
+                return {"success": False, "error": "Budget value required"}
+
+            endpoint = f"{GRAPH}/{entity_id}"
+            payload = {
+                "access_token": access_token
+            }
+
+            if entity_type == 'campaign':
+                payload['daily_budget'] = int(float(budget_value) * 100)  # Convert to cents
+            elif entity_type == 'adset':
+                payload['daily_budget'] = int(float(budget_value) * 100)
+
+            resp = requests.post(endpoint, data=payload, timeout=30)
+            if resp.status_code == 200:
+                return {
+                    "success": True,
+                    "message": f"Budget updated to ${budget_value}",
+                    "details": {"new_budget": budget_value}
+                }
+            else:
+                return {"success": False, "error": f"API error: {resp.text}"}
+
+        elif action_type == 'pause_entity':
+            # Pause campaign, ad set, or ad
+            endpoint = f"{GRAPH}/{entity_id}"
+            payload = {
+                "access_token": access_token,
+                "status": "PAUSED"
+            }
+
+            resp = requests.post(endpoint, data=payload, timeout=30)
+            if resp.status_code == 200:
+                return {
+                    "success": True,
+                    "message": f"{entity_type.title()} paused successfully",
+                    "details": {"status": "PAUSED"}
+                }
+            else:
+                return {"success": False, "error": f"API error: {resp.text}"}
+
+        elif action_type == 'enable_entity':
+            # Enable campaign, ad set, or ad
+            endpoint = f"{GRAPH}/{entity_id}"
+            payload = {
+                "access_token": access_token,
+                "status": "ACTIVE"
+            }
+
+            resp = requests.post(endpoint, data=payload, timeout=30)
+            if resp.status_code == 200:
+                return {
+                    "success": True,
+                    "message": f"{entity_type.title()} enabled successfully",
+                    "details": {"status": "ACTIVE"}
+                }
+            else:
+                return {"success": False, "error": f"API error: {resp.text}"}
+
+        elif action_type == 'adjust_bid':
+            # Update bid strategy or bid amount for ad set
+            if entity_type != 'adset':
+                return {"success": False, "error": "Bid adjustments only available for ad sets"}
+
+            bid_strategy = params.get('bid_strategy')
+            bid_amount = params.get('bid_amount')
+
+            endpoint = f"{GRAPH}/{entity_id}"
+            payload = {
+                "access_token": access_token
+            }
+
+            if bid_strategy:
+                payload['bid_strategy'] = bid_strategy
+            if bid_amount:
+                payload['bid_amount'] = int(float(bid_amount) * 100)  # Convert to cents
+
+            resp = requests.post(endpoint, data=payload, timeout=30)
+            if resp.status_code == 200:
+                return {
+                    "success": True,
+                    "message": "Bid strategy updated",
+                    "details": {"bid_strategy": bid_strategy, "bid_amount": bid_amount}
+                }
+            else:
+                return {"success": False, "error": f"API error: {resp.text}"}
+
+        elif action_type == 'update_schedule':
+            # Update ad schedule for ad set
+            if entity_type != 'adset':
+                return {"success": False, "error": "Schedule updates only available for ad sets"}
+
+            schedule = params.get('schedule')
+            if not schedule:
+                return {"success": False, "error": "Schedule data required"}
+
+            endpoint = f"{GRAPH}/{entity_id}"
+            payload = {
+                "access_token": access_token,
+                "adset_schedule": schedule
+            }
+
+            resp = requests.post(endpoint, data=payload, timeout=30)
+            if resp.status_code == 200:
+                return {
+                    "success": True,
+                    "message": "Ad schedule updated",
+                    "details": {"schedule": schedule}
+                }
+            else:
+                return {"success": False, "error": f"API error: {resp.text}"}
+
+        elif action_type == 'duplicate_winner':
+            # Duplicate a high-performing ad
+            if entity_type != 'ad':
+                return {"success": False, "error": "Duplication only available for ads"}
+
+            # First fetch the ad details
+            fetch_resp = requests.get(
+                f"{GRAPH}/{entity_id}",
+                params={
+                    "access_token": access_token,
+                    "fields": "name,adset_id,creative"
+                },
+                timeout=30
+            )
+
+            if fetch_resp.status_code != 200:
+                return {"success": False, "error": "Failed to fetch ad details"}
+
+            ad_data = fetch_resp.json()
+            adset_id = ad_data.get('adset_id')
+
+            # Create duplicate ad
+            endpoint = f"{GRAPH}/{adset_id}/ads"
+            payload = {
+                "access_token": access_token,
+                "name": f"{ad_data.get('name', 'Ad')} (Copy)",
+                "creative": ad_data.get('creative'),
+                "status": "PAUSED"  # Start paused for review
+            }
+
+            resp = requests.post(endpoint, data=payload, timeout=30)
+            if resp.status_code == 200:
+                new_ad = resp.json()
+                return {
+                    "success": True,
+                    "message": "Ad duplicated successfully (started paused)",
+                    "details": {"new_ad_id": new_ad.get('id')}
+                }
+            else:
+                return {"success": False, "error": f"API error: {resp.text}"}
+
+        else:
+            return {"success": False, "error": f"Unknown action type: {action_type}"}
+
+    except Exception as e:
+        current_app.logger.exception("Error in _apply_facebook_fix")
+        return {"success": False, "error": str(e)}
+
 

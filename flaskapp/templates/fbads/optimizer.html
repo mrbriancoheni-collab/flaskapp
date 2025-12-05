@@ -312,9 +312,12 @@
                                 </details>
                             </div>
 
-                            <div class="ml-4">
-                                <button class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                            <div class="ml-4 flex gap-2">
+                                <button onclick="applyAutomatedFix({{ rec.id }})" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
                                     Apply Fix
+                                </button>
+                                <button onclick="openManualEdit({{ rec.id }})" class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                                    Manual Edit
                                 </button>
                             </div>
                         </div>
@@ -346,4 +349,343 @@
         </div>
     </div>
 </div>
+
+<!-- Manual Edit Modal -->
+<div id="manualEditModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-2xl font-bold">Manual Edit</h2>
+                <button onclick="closeManualEdit()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div id="manualEditContent" class="space-y-4">
+                <!-- Manual edit form will be inserted here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Store recommendations data for JavaScript access
+const recommendations = {{ recommendations|tojson }};
+
+/**
+ * Apply an automated optimization fix
+ */
+function applyAutomatedFix(recommendationId) {
+    const rec = recommendations.find(r => r.id === recommendationId);
+    if (!rec) {
+        alert('Recommendation not found');
+        return;
+    }
+
+    // Confirm before applying
+    const confirmed = confirm(
+        `Apply automated fix: ${rec.title}?\n\n` +
+        `This will automatically apply the recommended optimization to your Facebook Ads account.\n\n` +
+        `Impact: ${rec.impact}`
+    );
+
+    if (!confirmed) return;
+
+    // Show loading state
+    const button = event.target;
+    const originalText = button.textContent;
+    button.textContent = 'Applying...';
+    button.disabled = true;
+
+    // Determine action type and parameters based on recommendation
+    const fixData = buildFixData(rec);
+
+    // Call the API
+    fetch('{{ url_for("fbads_bp.apply_fix") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(fixData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        button.textContent = originalText;
+        button.disabled = false;
+
+        if (data.success) {
+            alert('✓ ' + data.message);
+            // Reload page to show updated data
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to apply fix'));
+        }
+    })
+    .catch(error => {
+        button.textContent = originalText;
+        button.disabled = false;
+        alert('Error: ' + error.message);
+    });
+}
+
+/**
+ * Build fix data based on recommendation type
+ */
+function buildFixData(rec) {
+    const data = {
+        recommendation_id: rec.id,
+        action_type: rec.suggested_action.type,
+        entity_type: 'campaign',  // Default, will be overridden based on recommendation
+        entity_id: null,
+        params: {}
+    };
+
+    // Map recommendation types to fix actions
+    switch(rec.suggested_action.type) {
+        case 'budget_reallocation':
+            data.action_type = 'adjust_budget';
+            data.entity_type = rec.ad_sets ? 'adset' : 'campaign';
+            // In a real implementation, we'd get specific entity IDs from the recommendation
+            data.params.budget = rec.suggested_action.details.match(/\$(\d+)/)?.[1] || 50;
+            break;
+
+        case 'pause_underperformer':
+            data.action_type = 'pause_entity';
+            data.entity_type = rec.ads ? 'ad' : 'adset';
+            break;
+
+        case 'bid_strategy':
+            data.action_type = 'adjust_bid';
+            data.entity_type = 'adset';
+            data.params.bid_strategy = 'COST_CAP';
+            data.params.bid_amount = rec.suggested_action.details.match(/\$(\d+)/)?.[1];
+            break;
+
+        case 'duplicate_winner':
+            data.action_type = 'duplicate_winner';
+            data.entity_type = 'ad';
+            break;
+
+        case 'creative_refresh':
+        case 'audience_expansion':
+        case 'copy_testing':
+        case 'landing_page':
+            // These require manual intervention
+            alert('This optimization requires manual changes. Click "Manual Edit" to proceed with custom modifications.');
+            return null;
+    }
+
+    return data;
+}
+
+/**
+ * Open manual edit modal for custom changes
+ */
+function openManualEdit(recommendationId) {
+    const rec = recommendations.find(r => r.id === recommendationId);
+    if (!rec) {
+        alert('Recommendation not found');
+        return;
+    }
+
+    const content = document.getElementById('manualEditContent');
+
+    content.innerHTML = `
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+            <h3 class="font-semibold text-blue-900 mb-1">${rec.title}</h3>
+            <p class="text-sm text-blue-800">${rec.description}</p>
+        </div>
+
+        <form id="manualEditForm" class="space-y-4">
+            <input type="hidden" name="recommendation_id" value="${rec.id}">
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Action Type</label>
+                <select name="action_type" class="w-full border border-gray-300 rounded-lg px-3 py-2" required onchange="updateManualEditForm(this.value)">
+                    <option value="">Select action...</option>
+                    <option value="adjust_budget">Adjust Budget</option>
+                    <option value="pause_entity">Pause Campaign/Ad Set/Ad</option>
+                    <option value="enable_entity">Enable Campaign/Ad Set/Ad</option>
+                    <option value="adjust_bid">Adjust Bid Strategy</option>
+                    <option value="update_schedule">Update Ad Schedule</option>
+                    <option value="duplicate_winner">Duplicate High-Performing Ad</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Entity Type</label>
+                <select name="entity_type" class="w-full border border-gray-300 rounded-lg px-3 py-2" required>
+                    <option value="">Select type...</option>
+                    <option value="campaign">Campaign</option>
+                    <option value="adset">Ad Set</option>
+                    <option value="ad">Ad</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Entity ID</label>
+                <input type="text" name="entity_id" class="w-full border border-gray-300 rounded-lg px-3 py-2"
+                       placeholder="Enter campaign/adset/ad ID" required>
+                <p class="text-xs text-gray-500 mt-1">Find IDs in the Campaigns, Ad Sets, or Ads pages</p>
+            </div>
+
+            <div id="actionParams" class="space-y-4">
+                <!-- Dynamic parameters based on action type -->
+            </div>
+
+            <div class="flex gap-3 pt-4">
+                <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                    Apply Changes
+                </button>
+                <button type="button" onclick="closeManualEdit()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    `;
+
+    // Add form submit handler
+    document.getElementById('manualEditForm').addEventListener('submit', handleManualEditSubmit);
+
+    // Show modal
+    document.getElementById('manualEditModal').classList.remove('hidden');
+}
+
+/**
+ * Update manual edit form based on selected action type
+ */
+function updateManualEditForm(actionType) {
+    const paramsDiv = document.getElementById('actionParams');
+
+    switch(actionType) {
+        case 'adjust_budget':
+            paramsDiv.innerHTML = `
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">New Daily Budget ($)</label>
+                    <input type="number" name="budget" class="w-full border border-gray-300 rounded-lg px-3 py-2"
+                           placeholder="50.00" step="0.01" min="1" required>
+                </div>
+            `;
+            break;
+
+        case 'adjust_bid':
+            paramsDiv.innerHTML = `
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Bid Strategy</label>
+                    <select name="bid_strategy" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                        <option value="">Keep current</option>
+                        <option value="LOWEST_COST">Lowest Cost</option>
+                        <option value="COST_CAP">Cost Cap</option>
+                        <option value="LOWEST_COST_WITH_BID_CAP">Bid Cap</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Bid Amount ($) - Optional</label>
+                    <input type="number" name="bid_amount" class="w-full border border-gray-300 rounded-lg px-3 py-2"
+                           placeholder="Leave empty to keep current" step="0.01" min="0">
+                </div>
+            `;
+            break;
+
+        case 'update_schedule':
+            paramsDiv.innerHTML = `
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Schedule (JSON format)</label>
+                    <textarea name="schedule" class="w-full border border-gray-300 rounded-lg px-3 py-2"
+                              rows="4" placeholder='[{"days": [0,1,2,3,4], "start_minute": 0, "end_minute": 1440}]' required></textarea>
+                    <p class="text-xs text-gray-500 mt-1">See <a href="https://developers.facebook.com/docs/marketing-api/reference/ad-set/" target="_blank" class="text-blue-600 underline">Facebook docs</a> for schedule format</p>
+                </div>
+            `;
+            break;
+
+        default:
+            paramsDiv.innerHTML = '';
+    }
+}
+
+/**
+ * Handle manual edit form submission
+ */
+function handleManualEditSubmit(e) {
+    e.preventDefault();
+
+    const formData = new FormData(e.target);
+    const data = {
+        recommendation_id: parseInt(formData.get('recommendation_id')),
+        action_type: formData.get('action_type'),
+        entity_type: formData.get('entity_type'),
+        entity_id: formData.get('entity_id'),
+        params: {}
+    };
+
+    // Collect action-specific parameters
+    if (formData.get('budget')) data.params.budget = formData.get('budget');
+    if (formData.get('bid_strategy')) data.params.bid_strategy = formData.get('bid_strategy');
+    if (formData.get('bid_amount')) data.params.bid_amount = formData.get('bid_amount');
+    if (formData.get('schedule')) {
+        try {
+            data.params.schedule = JSON.parse(formData.get('schedule'));
+        } catch (e) {
+            alert('Invalid schedule JSON format');
+            return;
+        }
+    }
+
+    // Show loading state
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Applying...';
+    submitBtn.disabled = true;
+
+    // Call the API
+    fetch('{{ url_for("fbads_bp.apply_fix") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+
+        if (data.success) {
+            alert('✓ ' + data.message);
+            closeManualEdit();
+            // Reload page to show updated data
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to apply changes'));
+        }
+    })
+    .catch(error => {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        alert('Error: ' + error.message);
+    });
+}
+
+/**
+ * Close manual edit modal
+ */
+function closeManualEdit() {
+    document.getElementById('manualEditModal').classList.add('hidden');
+}
+
+// Close modal on background click
+document.getElementById('manualEditModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeManualEdit();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeManualEdit();
+    }
+});
+</script>
 {% endblock %}

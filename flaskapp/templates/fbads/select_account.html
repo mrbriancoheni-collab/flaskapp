@@ -1,0 +1,121 @@
+{% extends "base_app.html" %}
+
+{% block title %}Select Facebook Ad Account - FieldSprout{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900">Select Facebook Ad Account</h1>
+        <p class="mt-2 text-sm text-gray-600">Choose the ad account and page you want to manage</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('fbads_bp.select_account_post') }}" class="space-y-6">
+        {{ csrf_token() if csrf_token }}
+
+        <!-- Ad Account Selection -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Ad Account</h2>
+
+            {% if ad_accounts %}
+            <div class="space-y-3">
+                {% for account in ad_accounts %}
+                <label class="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors
+                    {% if selected and selected.ad_account_id == account.id %}border-blue-500 bg-blue-50{% else %}border-gray-200{% endif %}">
+                    <input type="radio" name="ad_account_id" value="{{ account.id }}"
+                           data-name="{{ account.name }}"
+                           class="mt-1 mr-3"
+                           {% if selected and selected.ad_account_id == account.id %}checked{% endif %}
+                           required>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between">
+                            <div class="font-medium text-gray-900">{{ account.name }}</div>
+                            <span class="px-2 py-1 text-xs rounded
+                                {% if account.account_status == 1 %}bg-green-100 text-green-800
+                                {% elif account.account_status == 2 %}bg-red-100 text-red-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {% if account.account_status == 1 %}Active
+                                {% elif account.account_status == 2 %}Disabled
+                                {% else %}Unknown{% endif %}
+                            </span>
+                        </div>
+                        <div class="text-sm text-gray-500 mt-1">
+                            <span class="mr-4">ID: {{ account.id }}</span>
+                            <span class="mr-4">{{ account.currency }}</span>
+                            <span>{{ account.timezone_name }}</span>
+                        </div>
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+            <input type="hidden" name="ad_account_name" id="ad_account_name" value="{{ selected.ad_account_name if selected else '' }}">
+            {% else %}
+            <div class="text-center py-8">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                </svg>
+                <p class="mt-2 text-sm text-gray-500">No ad accounts found. Make sure you have proper permissions.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Page Selection -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Facebook Page (Optional)</h2>
+
+            {% if pages %}
+            <div class="space-y-3">
+                {% for page in pages %}
+                <label class="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors
+                    {% if selected and selected.page_id == page.id %}border-blue-500 bg-blue-50{% else %}border-gray-200{% endif %}">
+                    <input type="radio" name="page_id" value="{{ page.id }}"
+                           data-name="{{ page.name }}"
+                           class="mt-1 mr-3"
+                           {% if selected and selected.page_id == page.id %}checked{% endif %}>
+                    <div class="flex-1">
+                        <div class="font-medium text-gray-900">{{ page.name }}</div>
+                        <div class="text-sm text-gray-500 mt-1">
+                            <span class="mr-4">{{ page.category }}</span>
+                            <span>ID: {{ page.id }}</span>
+                        </div>
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+            <input type="hidden" name="page_name" id="page_name" value="{{ selected.page_name if selected else '' }}">
+            {% else %}
+            <div class="text-center py-8">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                </svg>
+                <p class="mt-2 text-sm text-gray-500">No pages found. Make sure you have page management permissions.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-between">
+            <a href="{{ url_for('fbads_bp.index') }}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                Cancel
+            </a>
+            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                Save Selection
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Update hidden name fields when radio buttons change
+document.querySelectorAll('input[name="ad_account_id"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        document.getElementById('ad_account_name').value = this.dataset.name;
+    });
+});
+
+document.querySelectorAll('input[name="page_id"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        document.getElementById('page_name').value = this.dataset.name;
+    });
+});
+</script>
+{% endblock %}

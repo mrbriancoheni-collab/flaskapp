@@ -288,6 +288,140 @@ def profile_edit_post():
     return redirect(url_for("fbads_bp.profile_edit"))
 
 # -----------------------------------------------------------------------------
+# Account/Page Selection Helpers
+# -----------------------------------------------------------------------------
+def _get_selected_account(aid: int) -> Optional[Dict[str, Any]]:
+    """Get the selected Facebook ad account for this user"""
+    if db:
+        try:
+            row = db.engine.execute(
+                db.text(
+                    "SELECT ad_account_id, ad_account_name, page_id, page_name "
+                    "FROM facebook_selected_accounts WHERE account_id=:aid LIMIT 1"
+                ),
+                {"aid": aid},
+            ).fetchone()
+            if row:
+                return {
+                    "ad_account_id": row[0],
+                    "ad_account_name": row[1],
+                    "page_id": row[2],
+                    "page_name": row[3]
+                }
+        except Exception:
+            current_app.logger.debug("No selected Facebook account found")
+    return None
+
+def _save_selected_account(aid: int, ad_account_id: str, ad_account_name: str, page_id: str, page_name: str):
+    """Save the selected Facebook ad account/page for this user"""
+    if db:
+        try:
+            # Create table if not exists
+            db.engine.execute(
+                db.text(
+                    """
+                    CREATE TABLE IF NOT EXISTS facebook_selected_accounts (
+                        account_id BIGINT NOT NULL PRIMARY KEY,
+                        ad_account_id VARCHAR(255) NOT NULL,
+                        ad_account_name VARCHAR(255),
+                        page_id VARCHAR(255),
+                        page_name VARCHAR(255),
+                        created_at DATETIME NOT NULL,
+                        updated_at DATETIME NOT NULL
+                    )
+                    """
+                )
+            )
+            db.engine.execute(
+                db.text(
+                    """
+                    INSERT INTO facebook_selected_accounts
+                    (account_id, ad_account_id, ad_account_name, page_id, page_name, created_at, updated_at)
+                    VALUES (:aid, :ad_id, :ad_name, :pg_id, :pg_name, NOW(), NOW())
+                    ON DUPLICATE KEY UPDATE
+                        ad_account_id = VALUES(ad_account_id),
+                        ad_account_name = VALUES(ad_account_name),
+                        page_id = VALUES(page_id),
+                        page_name = VALUES(page_name),
+                        updated_at = NOW()
+                    """
+                ),
+                dict(aid=aid, ad_id=ad_account_id, ad_name=ad_account_name, pg_id=page_id, pg_name=page_name),
+            )
+        except Exception as e:
+            current_app.logger.exception("Failed to save selected Facebook account: %s", e)
+
+# -----------------------------------------------------------------------------
+# Account/Page Selection Routes
+# -----------------------------------------------------------------------------
+@fbads_bp.get("/select-account", endpoint="select_account")
+@login_required
+def select_account():
+    """Page to select Facebook ad account and page"""
+    aid = current_account_id()
+    tok = _get_fb_token(aid)
+
+    if not tok:
+        flash("Please connect your Facebook account first.", "warning")
+        return redirect(url_for("fbads_bp.connect"))
+
+    # Fetch available ad accounts
+    ad_accounts = []
+    try:
+        aa = requests.get(
+            f"{GRAPH}/me/adaccounts",
+            params=dict(access_token=tok, fields="id,name,account_status,currency,timezone_name"),
+            timeout=30,
+        ).json()
+        ad_accounts = aa.get("data", [])
+    except Exception as e:
+        current_app.logger.exception("Failed to fetch ad accounts")
+        flash(f"Failed to fetch ad accounts: {str(e)}", "error")
+
+    # Fetch available pages
+    pages = []
+    try:
+        pg = requests.get(
+            f"{GRAPH}/me/accounts",
+            params=dict(access_token=tok, fields="id,name,category,access_token"),
+            timeout=30,
+        ).json()
+        pages = pg.get("data", [])
+    except Exception as e:
+        current_app.logger.exception("Failed to fetch pages")
+        flash(f"Failed to fetch pages: {str(e)}", "error")
+
+    # Get currently selected account
+    selected = _get_selected_account(aid)
+
+    return render_template(
+        "fbads/select_account.html",
+        ad_accounts=ad_accounts,
+        pages=pages,
+        selected=selected
+    )
+
+@fbads_bp.post("/select-account", endpoint="select_account_post")
+@login_required
+def select_account_post():
+    """Save selected Facebook ad account and page"""
+    aid = current_account_id()
+
+    ad_account_id = request.form.get("ad_account_id", "").strip()
+    ad_account_name = request.form.get("ad_account_name", "").strip()
+    page_id = request.form.get("page_id", "").strip()
+    page_name = request.form.get("page_name", "").strip()
+
+    if not ad_account_id:
+        flash("Please select an ad account.", "error")
+        return redirect(url_for("fbads_bp.select_account"))
+
+    _save_selected_account(aid, ad_account_id, ad_account_name, page_id, page_name)
+    flash("Account selection saved successfully!", "success")
+
+    return redirect(url_for("fbads_bp.index"))
+
+# -----------------------------------------------------------------------------
 # Connect / Disconnect (now real OAuth; keeps same endpoints)
 # -----------------------------------------------------------------------------
 @fbads_bp.get("/connect", endpoint="connect")
@@ -851,4 +985,251 @@ def _generate_sample_performance():
             {"category": "Audience", "potential_reach": "3x"}
         ]
     }
+
+# -----------------------------------------------------------------------------
+# Campaigns, Ad Sets, and Ads Management
+# -----------------------------------------------------------------------------
+@fbads_bp.route("/campaigns", endpoint="campaigns")
+@login_required
+def campaigns():
+    """View and manage Facebook Ad campaigns"""
+    aid = current_account_id()
+    tok = _get_fb_token(aid)
+    connected = bool(tok)
+    selected = _get_selected_account(aid)
+
+    campaigns_data = []
+    if connected and selected:
+        try:
+            # Fetch campaigns from Facebook API
+            resp = requests.get(
+                f"{GRAPH}/{selected['ad_account_id']}/campaigns",
+                params=dict(
+                    access_token=tok,
+                    fields="id,name,status,objective,daily_budget,lifetime_budget,created_time,updated_time",
+                    limit=100
+                ),
+                timeout=30,
+            ).json()
+            campaigns_data = resp.get("data", [])
+        except Exception as e:
+            current_app.logger.exception("Failed to fetch campaigns")
+            flash(f"Failed to load campaigns: {str(e)}", "error")
+
+    # Sample data if not connected
+    if not campaigns_data:
+        campaigns_data = [
+            {
+                "id": "camp_001",
+                "name": "Lead Gen - Sacramento",
+                "status": "ACTIVE",
+                "objective": "LEAD_GENERATION",
+                "daily_budget": "5000",
+                "lifetime_budget": None,
+                "spend": "$1,234.56",
+                "impressions": "45,230",
+                "clicks": "892",
+                "ctr": "1.97%",
+                "cpc": "$1.38"
+            },
+            {
+                "id": "camp_002",
+                "name": "Brand Awareness - Bay Area",
+                "status": "ACTIVE",
+                "objective": "BRAND_AWARENESS",
+                "daily_budget": "3000",
+                "lifetime_budget": None,
+                "spend": "$876.23",
+                "impressions": "78,940",
+                "clicks": "523",
+                "ctr": "0.66%",
+                "cpc": "$1.68"
+            },
+            {
+                "id": "camp_003",
+                "name": "Retargeting - Website Visitors",
+                "status": "PAUSED",
+                "objective": "CONVERSIONS",
+                "daily_budget": "2500",
+                "lifetime_budget": None,
+                "spend": "$0.00",
+                "impressions": "0",
+                "clicks": "0",
+                "ctr": "0.00%",
+                "cpc": "$0.00"
+            }
+        ]
+
+    return render_template(
+        "fbads/campaigns.html",
+        connected=connected,
+        selected=selected,
+        campaigns=campaigns_data
+    )
+
+@fbads_bp.route("/adsets", endpoint="adsets")
+@login_required
+def adsets():
+    """View and manage Facebook Ad sets"""
+    aid = current_account_id()
+    tok = _get_fb_token(aid)
+    connected = bool(tok)
+    selected = _get_selected_account(aid)
+
+    campaign_id = request.args.get("campaign_id")
+    adsets_data = []
+
+    if connected and selected and campaign_id:
+        try:
+            # Fetch ad sets from Facebook API
+            resp = requests.get(
+                f"{GRAPH}/{campaign_id}/adsets",
+                params=dict(
+                    access_token=tok,
+                    fields="id,name,status,daily_budget,lifetime_budget,targeting,optimization_goal,billing_event,bid_amount,created_time",
+                    limit=100
+                ),
+                timeout=30,
+            ).json()
+            adsets_data = resp.get("data", [])
+        except Exception as e:
+            current_app.logger.exception("Failed to fetch ad sets")
+            flash(f"Failed to load ad sets: {str(e)}", "error")
+
+    # Sample data
+    if not adsets_data:
+        adsets_data = [
+            {
+                "id": "adset_001",
+                "name": "Age 25-45 | Homeowners",
+                "status": "ACTIVE",
+                "daily_budget": "2000",
+                "optimization_goal": "LEAD_GENERATION",
+                "spend": "$612.34",
+                "impressions": "23,450",
+                "clicks": "489",
+                "ctr": "2.08%",
+                "cpc": "$1.25",
+                "cpl": "$18.50"
+            },
+            {
+                "id": "adset_002",
+                "name": "Lookalike 1% - Past Customers",
+                "status": "ACTIVE",
+                "daily_budget": "1500",
+                "optimization_goal": "LEAD_GENERATION",
+                "spend": "$445.89",
+                "impressions": "18,230",
+                "clicks": "312",
+                "ctr": "1.71%",
+                "cpc": "$1.43",
+                "cpl": "$22.30"
+            },
+            {
+                "id": "adset_003",
+                "name": "Interest: Home Improvement",
+                "status": "LEARNING",
+                "daily_budget": "1000",
+                "optimization_goal": "LEAD_GENERATION",
+                "spend": "$89.12",
+                "impressions": "3,550",
+                "clicks": "91",
+                "ctr": "2.56%",
+                "cpc": "$0.98",
+                "cpl": "$14.85"
+            }
+        ]
+
+    return render_template(
+        "fbads/adsets.html",
+        connected=connected,
+        selected=selected,
+        campaign_id=campaign_id,
+        adsets=adsets_data
+    )
+
+@fbads_bp.route("/ads", endpoint="ads")
+@login_required
+def ads():
+    """View and manage Facebook Ads"""
+    aid = current_account_id()
+    tok = _get_fb_token(aid)
+    connected = bool(tok)
+    selected = _get_selected_account(aid)
+
+    adset_id = request.args.get("adset_id")
+    ads_data = []
+
+    if connected and selected and adset_id:
+        try:
+            # Fetch ads from Facebook API
+            resp = requests.get(
+                f"{GRAPH}/{adset_id}/ads",
+                params=dict(
+                    access_token=tok,
+                    fields="id,name,status,creative,preview_shareable_link,created_time",
+                    limit=100
+                ),
+                timeout=30,
+            ).json()
+            ads_data = resp.get("data", [])
+        except Exception as e:
+            current_app.logger.exception("Failed to fetch ads")
+            flash(f"Failed to load ads: {str(e)}", "error")
+
+    # Sample data
+    if not ads_data:
+        ads_data = [
+            {
+                "id": "ad_001",
+                "name": "Summer Special - Image A",
+                "status": "ACTIVE",
+                "creative_type": "single_image",
+                "headline": "Save 20% on All Services This Month",
+                "body": "Professional service you can trust. Licensed, insured, and highly rated.",
+                "spend": "$234.56",
+                "impressions": "12,340",
+                "clicks": "256",
+                "ctr": "2.07%",
+                "cpc": "$0.92",
+                "frequency": "1.8"
+            },
+            {
+                "id": "ad_002",
+                "name": "Testimonial Video",
+                "status": "ACTIVE",
+                "creative_type": "video",
+                "headline": "See Why Customers Choose Us",
+                "body": "Over 500 5-star reviews. Same-day service available.",
+                "spend": "$178.23",
+                "impressions": "8,920",
+                "clicks": "189",
+                "ctr": "2.12%",
+                "cpc": "$0.94",
+                "frequency": "1.5"
+            },
+            {
+                "id": "ad_003",
+                "name": "Free Quote CTA",
+                "status": "ACTIVE",
+                "creative_type": "single_image",
+                "headline": "Get Your Free Quote Today",
+                "body": "Fast, reliable service. Book online in 60 seconds.",
+                "spend": "$89.45",
+                "impressions": "4,230",
+                "clicks": "98",
+                "ctr": "2.32%",
+                "cpc": "$0.91",
+                "frequency": "1.3"
+            }
+        ]
+
+    return render_template(
+        "fbads/ads.html",
+        connected=connected,
+        selected=selected,
+        adset_id=adset_id,
+        ads=ads_data
+    )
+
 

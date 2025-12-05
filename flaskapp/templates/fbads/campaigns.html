@@ -1,0 +1,69 @@
+{% extends "base_app.html" %}
+{% block title %}Facebook Ad Campaigns{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold">Campaigns</h1>
+            {% if selected %}
+            <p class="text-sm text-gray-600 mt-1">{{ selected.ad_account_name }}</p>
+            {% endif %}
+        </div>
+        <div class="flex gap-3">
+            <a href="{{ url_for('fbads_bp.select_account') }}" class="px-4 py-2 border rounded-lg hover:bg-gray-50">
+                Switch Account
+            </a>
+            <a href="{{ url_for('fbads_bp.index') }}" class="px-4 py-2 border rounded-lg hover:bg-gray-50">
+                Back
+            </a>
+        </div>
+    </div>
+
+    {% if not selected %}
+    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded mb-6">
+        <p class="text-yellow-800">Please <a href="{{ url_for('fbads_bp.select_account') }}" class="underline">select an ad account</a> first.</p>
+    </div>
+    {% endif %}
+
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Campaign</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Objective</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Daily Budget</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Spend</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">CTR</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">CPC</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for campaign in campaigns %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-medium text-gray-900">{{ campaign.name }}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 text-xs rounded {% if campaign.status == 'ACTIVE' %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ campaign.status }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">{{ campaign.objective.replace('_', ' ').title() }}</td>
+                    <td class="px-6 py-4 text-sm text-right text-gray-900">${{ "%.2f"|format(campaign.daily_budget|int / 100) if campaign.daily_budget else '0.00' }}</td>
+                    <td class="px-6 py-4 text-sm text-right text-gray-900">{{ campaign.spend if campaign.spend else '$0.00' }}</td>
+                    <td class="px-6 py-4 text-sm text-right text-gray-900">{{ campaign.ctr if campaign.ctr else '0.00%' }}</td>
+                    <td class="px-6 py-4 text-sm text-right text-gray-900">{{ campaign.cpc if campaign.cpc else '$0.00' }}</td>
+                    <td class="px-6 py-4 text-center">
+                        <a href="{{ url_for('fbads_bp.adsets', campaign_id=campaign.id) }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                            View Ad Sets →
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

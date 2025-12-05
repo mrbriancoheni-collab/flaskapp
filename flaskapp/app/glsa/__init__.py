@@ -83,13 +83,100 @@ def _has_any_google_token(aid: int, prods: Sequence[str]) -> bool:
         return False
 
 
+def _get_selected_glsa_account(aid: int) -> dict:
+    """Get the selected Google Ads account for GLSA"""
+    try:
+        with db.engine.connect() as conn:
+            row = conn.execute(
+                text(
+                    """
+                    SELECT customer_id, customer_name, login_customer_id
+                    FROM glsa_selected_accounts
+                    WHERE account_id = :aid
+                    LIMIT 1
+                    """
+                ),
+                {"aid": aid}
+            ).fetchone()
+
+            if row:
+                return {
+                    "customer_id": row[0],
+                    "customer_name": row[1],
+                    "login_customer_id": row[2]
+                }
+    except Exception as e:
+        current_app.logger.debug("No selected GLSA account found: %s", e)
+
+    return {"customer_id": None, "customer_name": None, "login_customer_id": None}
+
+
+def _save_selected_glsa_account(aid: int, customer_id: str, customer_name: str, login_customer_id: str = None):
+    """Save the selected Google Ads account for GLSA"""
+    try:
+        with db.engine.connect() as conn:
+            # Create table if not exists
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE IF NOT EXISTS glsa_selected_accounts (
+                        account_id BIGINT NOT NULL PRIMARY KEY,
+                        customer_id VARCHAR(50) NOT NULL,
+                        customer_name VARCHAR(255),
+                        login_customer_id VARCHAR(50),
+                        created_at DATETIME NOT NULL,
+                        updated_at DATETIME NOT NULL
+                    )
+                    """
+                )
+            )
+            conn.commit()
+
+            # Insert or update selection
+            conn.execute(
+                text(
+                    """
+                    INSERT INTO glsa_selected_accounts
+                    (account_id, customer_id, customer_name, login_customer_id, created_at, updated_at)
+                    VALUES (:aid, :cid, :cname, :lcid, NOW(), NOW())
+                    ON DUPLICATE KEY UPDATE
+                        customer_id = VALUES(customer_id),
+                        customer_name = VALUES(customer_name),
+                        login_customer_id = VALUES(login_customer_id),
+                        updated_at = NOW()
+                    """
+                ),
+                {
+                    "aid": aid,
+                    "cid": customer_id,
+                    "cname": customer_name,
+                    "lcid": login_customer_id
+                }
+            )
+            conn.commit()
+
+        current_app.logger.info("Saved GLSA account selection for account %s: %s", aid, customer_id)
+    except Exception as e:
+        current_app.logger.exception("Failed to save selected GLSA account: %s", e)
+
+
 def _ads_ctx(aid: int, include_profile: bool = False) -> dict:
     """Resolve Ads context (customer_id + optional login_customer_id). Include a template-safe profile key."""
-    try:
-        ctx = resolve_ads_context(aid) or {"customer_id": None, "login_customer_id": None}
-    except Exception as e:
-        current_app.logger.warning("resolve_ads_context error: %s", e)
-        ctx = {"customer_id": None, "login_customer_id": None}
+    # First check if user has manually selected an account
+    selected = _get_selected_glsa_account(aid)
+    if selected and selected.get("customer_id"):
+        ctx = {
+            "customer_id": selected["customer_id"],
+            "login_customer_id": selected.get("login_customer_id"),
+            "customer_name": selected.get("customer_name")
+        }
+    else:
+        # Fall back to automatic context resolution
+        try:
+            ctx = resolve_ads_context(aid) or {"customer_id": None, "login_customer_id": None}
+        except Exception as e:
+            current_app.logger.warning("resolve_ads_context error: %s", e)
+            ctx = {"customer_id": None, "login_customer_id": None}
 
     # Load profile from database if requested
     profile_data = {}
@@ -154,6 +241,68 @@ def connect():
     # After OAuth, return to GLSA leads (or provided next)
     nxt = request.args.get("next") or url_for("glsa_bp.leads_page")
     return redirect(url_for("google_bp.connect_lsa", next=nxt))
+
+
+@glsa_bp.get("/select-account", endpoint="select_account")
+@login_required
+def select_account():
+    """Page to select Google Ads account for Local Services Ads"""
+    aid = current_account_id()
+    connected = _has_any_google_token(aid, ("lsa", "ads"))
+
+    if not connected:
+        flash("Please connect your Google account first.", "warning")
+        return redirect(url_for("glsa_bp.connect"))
+
+    # Get available accounts from Google Ads
+    # For now, we'll use the automatically resolved context
+    # In a full implementation, this would call Google Ads API to list accessible accounts
+    ctx = {}
+    try:
+        ctx = resolve_ads_context(aid) or {}
+    except Exception as e:
+        current_app.logger.warning("resolve_ads_context error: %s", e)
+
+    # For demo purposes, create a list with the current account
+    # In production, you'd fetch all accessible accounts via Google Ads API
+    available_accounts = []
+    if ctx.get("customer_id"):
+        available_accounts.append({
+            "customer_id": ctx["customer_id"],
+            "customer_name": f"Google Ads Account {ctx['customer_id'][-4:]}",
+            "login_customer_id": ctx.get("login_customer_id")
+        })
+
+    # Get currently selected account
+    selected = _get_selected_glsa_account(aid)
+
+    return render_template(
+        "glsa/select_account.html",
+        connected=connected,
+        available_accounts=available_accounts,
+        selected=selected,
+        ctx=ctx
+    )
+
+
+@glsa_bp.post("/select-account", endpoint="select_account_post")
+@login_required
+def select_account_post():
+    """Save selected Google Ads account for GLSA"""
+    aid = current_account_id()
+
+    customer_id = request.form.get("customer_id", "").strip()
+    customer_name = request.form.get("customer_name", "").strip()
+    login_customer_id = request.form.get("login_customer_id", "").strip() or None
+
+    if not customer_id:
+        flash("Please select a Google Ads account.", "error")
+        return redirect(url_for("glsa_bp.select_account"))
+
+    _save_selected_glsa_account(aid, customer_id, customer_name, login_customer_id)
+    flash("Account selection saved successfully!", "success")
+
+    return redirect(url_for("glsa_bp.dashboard"))
 
 
 @glsa_bp.get("/optimize", endpoint="optimize")

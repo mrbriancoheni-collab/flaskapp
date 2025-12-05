@@ -1,0 +1,65 @@
+{% extends "base_app.html" %}
+{% block title %}Facebook Ads{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold">Ads</h1>
+            {% if selected %}
+            <p class="text-sm text-gray-600 mt-1">{{ selected.ad_account_name }}</p>
+            {% endif %}
+        </div>
+        <div class="flex gap-3">
+            <a href="{{ url_for('fbads_bp.adsets', campaign_id=request.args.get('campaign_id', '')) }}" class="px-4 py-2 border rounded-lg hover:bg-gray-50">
+                Back to Ad Sets
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for ad in ads %}
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+            <div class="p-5">
+                <div class="flex items-start justify-between mb-3">
+                    <h3 class="text-lg font-semibold text-gray-900">{{ ad.name }}</h3>
+                    <span class="px-2 py-1 text-xs rounded {% if ad.status == 'ACTIVE' %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {{ ad.status }}
+                    </span>
+                </div>
+
+                <div class="space-y-2 mb-4">
+                    <div>
+                        <p class="text-sm font-medium text-gray-700">{{ ad.headline if ad.headline else 'No headline' }}</p>
+                        <p class="text-xs text-gray-500 mt-1">{{ ad.body if ad.body else 'No body text' }}</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 text-sm mb-4">
+                    <div>
+                        <p class="text-gray-500 text-xs">Spend</p>
+                        <p class="font-semibold">{{ ad.spend }}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-xs">CTR</p>
+                        <p class="font-semibold">{{ ad.ctr }}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-xs">CPC</p>
+                        <p class="font-semibold">{{ ad.cpc }}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-xs">Frequency</p>
+                        <p class="font-semibold">{{ ad.frequency }}</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <button class="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Edit</button>
+                    <button class="px-3 py-2 border border-gray-300 text-sm rounded hover:bg-gray-50">Preview</button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

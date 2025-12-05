@@ -216,6 +216,11 @@
         <a href="{{ url_for('glsa_bp.index') }}" class="block px-3 py-3 nav-link min-h-12">
           <i class="fa-solid fa-bullhorn"></i><span>Local Services Ads</span>
         </a>
+        {% if has_endpoint('glsa_bp.select_account') %}
+          <a href="{{ url_for('glsa_bp.select_account') }}" class="block px-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-building"></i><span>Select Account</span>
+          </a>
+        {% endif %}
         {% if has_endpoint('glsa_bp.leads_page') %}
           <a href="{{ url_for('glsa_bp.leads_page') }}" class="block px-3 py-3 nav-link min-h-12">
               <i class="fa-solid fa-inbox"></i><span>Review Leads</span>
@@ -229,15 +234,33 @@
         {% endif %}
       {% endif %}
 
-      <!-- {% if has_endpoint('fbads_bp.index') %}
-        <a href="{{ url_for('fbads_bp.index') }}" class="block px-2 py-2 nav-link"><i class="fa-brands fa-facebook"></i><span>Facebook Ads</span></a>
+      <!-- Facebook Ads Section -->
+      {% if has_endpoint('fbads_bp.index') %}
+        <div class="pt-2 text-sm font-semibold text-gray-600 uppercase">Facebook Ads</div>
+        <a href="{{ url_for('fbads_bp.index') }}" class="block px-3 py-3 nav-link min-h-12">
+          <i class="fa-solid fa-gauge"></i><span>Overview / Connect</span>
+        </a>
+        {% if has_endpoint('fbads_bp.select_account') %}
+          <a href="{{ url_for('fbads_bp.select_account') }}" class="block px-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-building"></i><span>Select Account</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('fbads_bp.campaigns') %}
+          <a href="{{ url_for('fbads_bp.campaigns') }}" class="block px-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-bullseye"></i><span>Campaigns</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('fbads_bp.optimize') %}
+          <a href="{{ url_for('fbads_bp.optimize') }}" class="block px-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimizer</span>
+          </a>
+        {% endif %}
         {% if has_endpoint('fbads_bp.leads') %}
-          <a href="{{ url_for('fbads_bp.leads') }}" class="block pl-7 pr-2 py-1 text-sm nav-link">Review Leads</a>
+          <a href="{{ url_for('fbads_bp.leads') }}" class="block px-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-inbox"></i><span>Review Leads</span>
+          </a>
         {% endif %}
-        {% if has_endpoint('fbads_bp.profile_edit') %}
-          <a href="{{ url_for('fbads_bp.profile_edit') }}" class="block pl-7 pr-2 py-1 text-sm nav-link">Edit Facebook Profile</a>
-        {% endif %}
-      {% endif %} -->
+      {% endif %}
 
       {% if has_endpoint('gmb_bp.index') %}
         <a href="{{ url_for('gmb_bp.index') }}" class="block px-3 py-3 nav-link min-h-12"><i class="fa-brands fa-google"></i><span>Google Business</span></a>
@@ -309,7 +332,7 @@
       {# <a href="{{ url_for('strategy_bp.index') }}" class="primary-btn {% if SECTION=='strategy' %}active{% endif %}" title="Strategy"><i class="fa-solid fa-lightbulb"></i></a> #}
       <a href="{{ url_for('google_bp.index') }}" class="primary-btn {% if SECTION=='google' %}active{% endif %}" title="Google"><i class="fa-brands fa-google"></i></a>
       <a href="{{ url_for('glsa_bp.index') }}" class="primary-btn {% if SECTION=='glsa' %}active{% endif %}" title="Local Services Ads"><i class="fa-solid fa-bullhorn"></i></a>
-      {# <a href="{{ url_for('fbads_bp.index') }}" class="primary-btn {% if SECTION=='fbads' %}active{% endif %}" title="Facebook Ads"><i class="fa-brands fa-facebook-f"></i></a> #}
+      <a href="{{ url_for('fbads_bp.index') }}" class="primary-btn {% if SECTION=='fbads' %}active{% endif %}" title="Facebook Ads"><i class="fa-brands fa-facebook-f"></i></a>
       {# <a href="{{ url_for('yelp_bp.index') }}" class="primary-btn {% if SECTION=='yelp' %}active{% endif %}" title="Yelp"><i class="fa-brands fa-yelp"></i></a> #}
       <a href="{{ url_for('gmb_bp.index') }}" class="primary-btn {% if SECTION=='gmb' %}active{% endif %}" title="Google Business"><i class="fa-brands fa-google"></i></a>
       {% if has_endpoint('linkedin_bp.index') %}
@@ -430,13 +453,26 @@
       {% elif SECTION == 'glsa' %}
         <div class="sidebar-label"><i class="fa-solid fa-bullhorn"></i>Local Services Ads</div>
         <a class="secondary-link {% if epn=='glsa_bp.dashboard' or epn=='glsa_bp.index' %}active{% endif %}" href="{{ url_for('glsa_bp.dashboard') }}"><i class="fa-solid fa-gauge"></i><span>Dashboard</span></a>
+        {% if has_endpoint('glsa_bp.select_account') %}
+          <a class="secondary-link {% if epn=='glsa_bp.select_account' or epn=='glsa_bp.select_account_post' %}active{% endif %}" href="{{ url_for('glsa_bp.select_account') }}"><i class="fa-solid fa-building"></i><span>Select Account</span></a>
+        {% endif %}
         <a class="secondary-link {% if epn=='glsa_bp.leads_page' %}active{% endif %}" href="{{ url_for('glsa_bp.leads_page') }}"><i class="fa-solid fa-inbox"></i><span>Review Leads</span></a>
         <a class="secondary-link {% if epn=='glsa_bp.optimize' %}active{% endif %} {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" href="{{ url_for('glsa_bp.optimize') if is_paid else '#' }}" {% if not is_paid %}onclick="alert('This feature requires a paid plan. Please upgrade.'); return false;"{% endif %}><i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimize Profile</span>{% if not is_paid %}<i class="fa-solid fa-lock ml-1 text-xs"></i>{% endif %}</a>
       {% elif SECTION == 'fbads' %}
-        <!-- <div class="sidebar-label"><i class="fa-brands fa-facebook"></i>Facebook Ads</div>
-        <a class="secondary-link {% if epn=='fbads_bp.index' %}active{% endif %}" href="{{ url_for('fbads_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview</span></a>
-        <a class="secondary-link {% if epn=='fbads_bp.leads' %}active{% endif %}" href="{{ url_for('fbads_bp.leads') }}"><i class="fa-solid fa-inbox"></i><span>Review Leads</span></a>
-        <a class="secondary-link {% if epn=='fbads_bp.profile_edit' %}active{% endif %}" href="{{ url_for('fbads_bp.profile_edit') }}"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimize FB Profiles</span></a> -->
+        <div class="sidebar-label"><i class="fa-brands fa-facebook"></i>Facebook Ads</div>
+        <a class="secondary-link {% if epn=='fbads_bp.index' %}active{% endif %}" href="{{ url_for('fbads_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview / Connect</span></a>
+        {% if has_endpoint('fbads_bp.select_account') %}
+          <a class="secondary-link {% if epn=='fbads_bp.select_account' or epn=='fbads_bp.select_account_post' %}active{% endif %}" href="{{ url_for('fbads_bp.select_account') }}"><i class="fa-solid fa-building"></i><span>Select Account</span></a>
+        {% endif %}
+        {% if has_endpoint('fbads_bp.campaigns') %}
+          <a class="secondary-link {% if epn=='fbads_bp.campaigns' %}active{% endif %}" href="{{ url_for('fbads_bp.campaigns') }}"><i class="fa-solid fa-bullseye"></i><span>Campaigns</span></a>
+        {% endif %}
+        {% if has_endpoint('fbads_bp.optimize') %}
+          <a class="secondary-link {% if epn=='fbads_bp.optimize' %}active{% endif %}" href="{{ url_for('fbads_bp.optimize') }}"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimizer</span></a>
+        {% endif %}
+        {% if has_endpoint('fbads_bp.leads') %}
+          <a class="secondary-link {% if epn=='fbads_bp.leads' %}active{% endif %}" href="{{ url_for('fbads_bp.leads') }}"><i class="fa-solid fa-inbox"></i><span>Review Leads</span></a>
+        {% endif %}
       {% elif SECTION == 'gmb' %}
         <div class="sidebar-label"><i class="fa-brands fa-google"></i>Google Business</div>
         <a class="secondary-link {% if epn=='gmb_bp.index' %}active{% endif %}" href="{{ url_for('gmb_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview</span></a>

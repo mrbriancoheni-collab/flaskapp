@@ -58,3 +58,7 @@ def spend_when_open():
 @public_bp.route("/solutions/see-what-works", endpoint="see_what_works")
 def see_what_works():
     return render_template("see_what_works.html")
+
+@public_bp.route("/podcast", endpoint="podcast")
+def podcast():
+    return render_template("public/podcast.html")

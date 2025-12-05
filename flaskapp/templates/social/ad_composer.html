@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+
+{% block title %}AI Ad Composer | FieldSprout{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Header -->
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">AI Ad Composer</h1>
+    <p class="text-gray-600">Create stunning social media ads with AI-powered images and copy</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Left Panel: Controls -->
+    <div class="lg:col-span-1 space-y-6">
+      <!-- Generation Method -->
+      <div class="bg-white rounded-lg shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Generate From</h2>
+
+        <div class="space-y-3">
+          <button onclick="setGenerationMode('website')"
+                  class="w-full text-left px-4 py-3 rounded-lg border-2 hover:border-primary-500 transition-colors generation-mode-btn active"
+                  data-mode="website">
+            <div class="flex items-center">
+              <svg class="w-5 h-5 text-primary-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+              </svg>
+              <div>
+                <div class="font-medium text-gray-900">Website URL</div>
+                <div class="text-sm text-gray-500">Scan and auto-generate</div>
+              </div>
+            </div>
+          </button>
+
+          <button onclick="setGenerationMode('manual')"
+                  class="w-full text-left px-4 py-3 rounded-lg border-2 hover:border-primary-500 transition-colors generation-mode-btn"
+                  data-mode="manual">
+            <div class="flex items-center">
+              <svg class="w-5 h-5 text-primary-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+              </svg>
+              <div>
+                <div class="font-medium text-gray-900">Manual Input</div>
+                <div class="text-sm text-gray-500">Enter details manually</div>
+              </div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Website URL Input -->
+      <div id="website-input-panel" class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Website URL</h3>
+        <input type="url" id="website-url" placeholder="https://example.com"
+               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+        <p class="text-sm text-gray-500 mt-2">We'll scan your site to understand your business and generate relevant ads</p>
+      </div>
+
+      <!-- Manual Input Panel -->
+      <div id="manual-input-panel" class="bg-white rounded-lg shadow-sm p-6 hidden">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Business Details</h3>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
+            <input type="text" id="business-name" placeholder="ABC Plumbing"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Services</label>
+            <input type="text" id="services" placeholder="Plumbing, Repair, Installation"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500">
+            <p class="text-xs text-gray-500 mt-1">Comma-separated</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Platform Selection -->
+      <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Platform</h3>
+        <select id="platform" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500">
+          <option value="facebook">Facebook</option>
+          <option value="instagram">Instagram</option>
+          <option value="linkedin">LinkedIn</option>
+          <option value="twitter">Twitter</option>
+        </select>
+      </div>
+
+      <!-- Industry -->
+      <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Industry</h3>
+        <select id="industry" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500">
+          <option value="">Auto-detect</option>
+          <option value="plumbing">Plumbing</option>
+          <option value="hvac">HVAC</option>
+          <option value="electrical">Electrical</option>
+          <option value="roofing">Roofing</option>
+          <option value="landscaping">Landscaping</option>
+          <option value="cleaning">Cleaning</option>
+          <option value="painting">Painting</option>
+        </select>
+      </div>
+
+      <!-- Ad Objective -->
+      <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Ad Objective</h3>
+        <select id="objective" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500">
+          <option value="leads">Generate Leads</option>
+          <option value="awareness">Brand Awareness</option>
+          <option value="conversions">Drive Conversions</option>
+          <option value="engagement">Engagement</option>
+        </select>
+      </div>
+
+      <!-- Image Style -->
+      <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Image Style</h3>
+        <select id="image-style" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500">
+          <option value="professional">Professional</option>
+          <option value="lifestyle">Lifestyle</option>
+          <option value="modern">Modern/Minimalist</option>
+          <option value="dramatic">Dramatic</option>
+        </select>
+      </div>
+
+      <!-- Generate Button -->
+      <button onclick="generateAd()"
+              class="w-full bg-primary-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        Generate Ad
+      </button>
+    </div>
+
+    <!-- Right Panel: Preview & Editor -->
+    <div class="lg:col-span-2">
+      <div class="bg-white rounded-lg shadow-sm p-6">
+        <!-- Loading State -->
+        <div id="loading-state" class="hidden text-center py-12">
+          <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
+          <p class="text-gray-600">Generating your ad creative...</p>
+          <p class="text-sm text-gray-500 mt-2">This may take 10-30 seconds</p>
+        </div>
+
+        <!-- Initial State -->
+        <div id="initial-state" class="text-center py-12">
+          <svg class="w-24 h-24 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Your Ad Preview Will Appear Here</h3>
+          <p class="text-gray-600">Configure your settings and click "Generate Ad" to create stunning social media ads powered by AI</p>
+        </div>
+
+        <!-- Preview & Editor -->
+        <div id="preview-editor" class="hidden">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-gray-900">Ad Preview</h2>
+            <div class="flex gap-2">
+              <button onclick="regenerateImage()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium">
+                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Regenerate Image
+              </button>
+              <button onclick="saveCreative()" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium">
+                Save
+              </button>
+            </div>
+          </div>
+
+          <!-- Ad Preview Card -->
+          <div class="border-2 border-gray-200 rounded-lg overflow-hidden mb-6">
+            <!-- Image -->
+            <div class="relative bg-gray-100" style="padding-top: 52.5%;">
+              <img id="preview-image" src="" alt="Ad Image" class="absolute inset-0 w-full h-full object-cover">
+            </div>
+
+            <!-- Copy -->
+            <div class="p-4 space-y-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Headline</label>
+                <textarea id="edit-headline" rows="2"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 font-semibold text-gray-900"></textarea>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Primary Text</label>
+                <textarea id="edit-primary" rows="4"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-gray-700"></textarea>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Description</label>
+                <input type="text" id="edit-description"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-gray-600 text-sm">
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Call to Action</label>
+                <input type="text" id="edit-cta"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 font-medium text-primary-600">
+              </div>
+            </div>
+          </div>
+
+          <!-- Platform Preview -->
+          <div class="bg-gray-50 rounded-lg p-4">
+            <h3 class="text-sm font-semibold text-gray-700 mb-3">Platform Preview</h3>
+            <p class="text-xs text-gray-500">How your ad will appear on <span id="platform-name">Facebook</span></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Creatives -->
+      {% if recent_creatives %}
+      <div class="bg-white rounded-lg shadow-sm p-6 mt-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Creatives</h3>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {% for creative in recent_creatives %}
+          <div class="border border-gray-200 rounded-lg overflow-hidden hover:border-primary-500 transition-colors cursor-pointer"
+               onclick="loadCreative({{ creative.id }})">
+            {% if creative.image_url %}
+            <img src="{{ creative.image_url }}" alt="{{ creative.name }}" class="w-full h-32 object-cover">
+            {% else %}
+            <div class="w-full h-32 bg-gray-100 flex items-center justify-center">
+              <svg class="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+            </div>
+            {% endif %}
+            <div class="p-2">
+              <p class="text-sm font-medium text-gray-900 truncate">{{ creative.name }}</p>
+              <p class="text-xs text-gray-500">{{ creative.created_at.strftime('%b %d, %Y') }}</p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+let currentCreativeId = null;
+
+function setGenerationMode(mode) {
+  // Update button states
+  document.querySelectorAll('.generation-mode-btn').forEach(btn => {
+    btn.classList.remove('active', 'border-primary-500', 'bg-primary-50');
+    btn.classList.add('border-gray-200');
+  });
+
+  const activeBtn = document.querySelector(`[data-mode="${mode}"]`);
+  activeBtn.classList.add('active', 'border-primary-500', 'bg-primary-50');
+  activeBtn.classList.remove('border-gray-200');
+
+  // Show/hide input panels
+  if (mode === 'website') {
+    document.getElementById('website-input-panel').classList.remove('hidden');
+    document.getElementById('manual-input-panel').classList.add('hidden');
+  } else {
+    document.getElementById('website-input-panel').classList.add('hidden');
+    document.getElementById('manual-input-panel').classList.remove('hidden');
+  }
+}
+
+async function generateAd() {
+  const mode = document.querySelector('.generation-mode-btn.active').dataset.mode;
+  const platform = document.getElementById('platform').value;
+  const objective = document.getElementById('objective').value;
+  const industry = document.getElementById('industry').value;
+  const style = document.getElementById('image-style').value;
+
+  let requestData = {
+    platform,
+    objective,
+    industry,
+    style
+  };
+
+  if (mode === 'website') {
+    const websiteUrl = document.getElementById('website-url').value.trim();
+    if (!websiteUrl) {
+      alert('Please enter a website URL');
+      return;
+    }
+    requestData.website_url = websiteUrl;
+  } else {
+    const businessName = document.getElementById('business-name').value.trim();
+    const services = document.getElementById('services').value.trim();
+    if (!businessName) {
+      alert('Please enter a business name');
+      return;
+    }
+    requestData.business_name = businessName;
+    requestData.services = services.split(',').map(s => s.trim());
+  }
+
+  // Show loading state
+  document.getElementById('initial-state').classList.add('hidden');
+  document.getElementById('preview-editor').classList.add('hidden');
+  document.getElementById('loading-state').classList.remove('hidden');
+
+  try {
+    const endpoint = mode === 'website' ? '/social/api/generate-from-website' : '/social/api/generate-copy';
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify(requestData)
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      displayCreative(data.creative || data);
+      currentCreativeId = data.creative_id || null;
+    } else {
+      alert(`Error: ${data.error}`);
+      document.getElementById('loading-state').classList.add('hidden');
+      document.getElementById('initial-state').classList.remove('hidden');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('An error occurred while generating the ad');
+    document.getElementById('loading-state').classList.add('hidden');
+    document.getElementById('initial-state').classList.remove('hidden');
+  }
+}
+
+function displayCreative(creative) {
+  document.getElementById('loading-state').classList.add('hidden');
+  document.getElementById('preview-editor').classList.remove('hidden');
+
+  document.getElementById('preview-image').src = creative.image_url || '';
+  document.getElementById('edit-headline').value = creative.headline || '';
+  document.getElementById('edit-primary').value = creative.primary_text || '';
+  document.getElementById('edit-description').value = creative.description || '';
+  document.getElementById('edit-cta').value = creative.call_to_action || '';
+
+  const platform = document.getElementById('platform').value;
+  document.getElementById('platform-name').textContent = platform.charAt(0).toUpperCase() + platform.slice(1);
+}
+
+async function saveCreative() {
+  const creativeData = {
+    id: currentCreativeId,
+    name: `Ad - ${new Date().toLocaleDateString()}`,
+    platform: document.getElementById('platform').value,
+    headline: document.getElementById('edit-headline').value,
+    primary_text: document.getElementById('edit-primary').value,
+    description: document.getElementById('edit-description').value,
+    call_to_action: document.getElementById('edit-cta').value,
+    image_url: document.getElementById('preview-image').src
+  };
+
+  try {
+    const response = await fetch('/social/api/save-creative', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify(creativeData)
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      alert('Creative saved successfully!');
+      currentCreativeId = data.creative_id;
+    } else {
+      alert(`Error: ${data.error}`);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('An error occurred while saving');
+  }
+}
+
+async function loadCreative(creativeId) {
+  try {
+    const response = await fetch(`/social/api/creative/${creativeId}`);
+    const data = await response.json();
+
+    if (data.success) {
+      displayCreative(data.creative);
+      currentCreativeId = creativeId;
+    }
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+async function regenerateImage() {
+  // Implementation for regenerating just the image
+  alert('Regenerate image feature coming soon!');
+}
+</script>
+
+<style>
+.generation-mode-btn.active {
+  border-color: rgb(124, 58, 237);
+  background-color: rgb(245, 243, 255);
+}
+</style>
+{% endblock %}

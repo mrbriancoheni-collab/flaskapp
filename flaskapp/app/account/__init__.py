@@ -20,6 +20,18 @@ from sqlalchemy import text
 from app import db
 from app.auth.utils import login_required, current_account_id, is_paid_account
 
+# Import performance utilities for caching
+try:
+    from app.performance_utils import cache_result, request_cache
+except ImportError:
+    # Fallback no-op decorators if performance_utils not available
+    def cache_result(ttl=300, key_prefix=""):
+        def decorator(func):
+            return func
+        return decorator
+    def request_cache(func):
+        return func
+
 account_bp = Blueprint("account_bp", __name__, url_prefix="/account")
 
 # --------------------------- helpers ---------------------------
@@ -68,10 +80,12 @@ def _connect_url(provider: str) -> str:
     except Exception:
         return "#"
 
+@request_cache
 def _has_google_oauth(aid: int, product: str) -> Tuple[bool, Optional[datetime]]:
     """
     True if there is an OAuth row in google_oauth_tokens for this product.
     Mirrors the pattern used elsewhere in the app.
+    Cached per-request to avoid duplicate queries.
     """
     try:
         with db.engine.connect() as conn:
@@ -98,7 +112,9 @@ def _has_google_oauth(aid: int, product: str) -> Tuple[bool, Optional[datetime]]
         pass
     return False, None
 
+@request_cache
 def _is_facebook_connected(aid: int) -> Tuple[bool, Optional[datetime]]:
+    """Cached per-request to avoid duplicate queries."""
     try:
         with db.engine.connect() as conn:
             row = (
@@ -164,7 +180,12 @@ def _wp_get(aid: int, path: str, params: Optional[Dict[str, Any]] = None, timeou
     resp.raise_for_status()
     return resp
 
+@cache_result(ttl=300, key_prefix="wp_summary")
 def _fetch_wp_summary(aid: int) -> Dict[str, Any]:
+    """
+    Fetch WordPress summary with 5-minute cache.
+    This prevents slow HTTP requests on every dashboard load.
+    """
     out: Dict[str, Any] = {"connected": False, "error": None, "site": {}, "posts": [], "pages": [], "counts": {}}
     if not _is_wp_connected(aid):
         return out

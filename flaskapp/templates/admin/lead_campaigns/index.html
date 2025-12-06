@@ -20,7 +20,7 @@
         <div class="flex items-center justify-between mb-4">
             <div>
                 <h2 class="text-2xl font-bold">Automation Status</h2>
-                <p class="text-indigo-100 mt-1">4,500 Campaign System</p>
+                <p class="text-indigo-100 mt-1">100 Consolidated Campaigns</p>
             </div>
             <a href="{{ url_for('lead_campaigns_bp.automation_status') }}"
                class="bg-white text-indigo-600 px-4 py-2 rounded-lg hover:bg-indigo-50 font-semibold text-sm">
@@ -33,7 +33,7 @@
             <div class="bg-white bg-opacity-20 rounded-lg p-4">
                 <div class="text-3xl font-bold">{{ automation_progress.campaigns_created|default(0) }}</div>
                 <div class="text-sm text-indigo-100">Campaigns Created</div>
-                <div class="text-xs text-indigo-200 mt-1">of 4,500 total</div>
+                <div class="text-xs text-indigo-200 mt-1">of 100 total</div>
             </div>
             <div class="bg-white bg-opacity-20 rounded-lg p-4">
                 <div class="text-3xl font-bold">{{ automation_progress.leads_enriched|default(0) }}</div>

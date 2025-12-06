@@ -54,12 +54,123 @@
                 </div>
 
                 <div class="flex gap-2">
-                    <button class="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Edit</button>
-                    <button class="px-3 py-2 border border-gray-300 text-sm rounded hover:bg-gray-50">Preview</button>
+                    <button onclick="editAd('{{ ad.id }}', '{{ ad.name|e }}')" class="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Edit</button>
+                    <button onclick="previewAd({{ loop.index0 }})" class="px-3 py-2 border border-gray-300 text-sm rounded hover:bg-gray-50">Preview</button>
                 </div>
             </div>
         </div>
         {% endfor %}
     </div>
+
+    <!-- Preview Modal -->
+    <div id="previewModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="text-2xl font-bold">Ad Preview</h2>
+                    <button onclick="closePreview()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div id="previewContent" class="space-y-4">
+                    <!-- Preview content will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<script>
+const adsData = {{ ads|tojson }};
+
+function editAd(adId, adName) {
+    // For now, redirect to Facebook Ads Manager
+    // In future, open an edit modal or dedicated edit page
+    const confirmed = confirm(`Edit ad: ${adName}?\n\nThis will open Facebook Ads Manager in a new tab.`);
+    if (confirmed) {
+        window.open(`https://www.facebook.com/adsmanager/manage/ads?act={{ selected.ad_account_id if selected else '' }}&selected_ad_ids=${adId}`, '_blank');
+    }
+}
+
+function previewAd(index) {
+    const ad = adsData[index];
+    const content = document.getElementById('previewContent');
+
+    content.innerHTML = `
+        <div class="border rounded-lg p-4 bg-gray-50">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-lg">${ad.name}</h3>
+                <span class="px-3 py-1 text-sm rounded ${ad.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                    ${ad.status}
+                </span>
+            </div>
+
+            <div class="space-y-3">
+                <div class="bg-white p-4 rounded border">
+                    <p class="text-xs text-gray-500 uppercase mb-1">Headline</p>
+                    <p class="font-semibold">${ad.headline || 'No headline'}</p>
+                </div>
+
+                <div class="bg-white p-4 rounded border">
+                    <p class="text-xs text-gray-500 uppercase mb-1">Body Text</p>
+                    <p class="text-sm">${ad.body || 'No body text'}</p>
+                </div>
+
+                ${ad.call_to_action ? `
+                <div class="bg-white p-4 rounded border">
+                    <p class="text-xs text-gray-500 uppercase mb-1">Call to Action</p>
+                    <button class="px-4 py-2 bg-blue-600 text-white rounded font-medium">${ad.call_to_action}</button>
+                </div>
+                ` : ''}
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-white p-3 rounded border">
+                        <p class="text-xs text-gray-500 mb-1">Spend</p>
+                        <p class="font-semibold text-lg">${ad.spend}</p>
+                    </div>
+                    <div class="bg-white p-3 rounded border">
+                        <p class="text-xs text-gray-500 mb-1">CTR</p>
+                        <p class="font-semibold text-lg">${ad.ctr}</p>
+                    </div>
+                    <div class="bg-white p-3 rounded border">
+                        <p class="text-xs text-gray-500 mb-1">CPC</p>
+                        <p class="font-semibold text-lg">${ad.cpc}</p>
+                    </div>
+                    <div class="bg-white p-3 rounded border">
+                        <p class="text-xs text-gray-500 mb-1">Frequency</p>
+                        <p class="font-semibold text-lg">${ad.frequency}</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-3 rounded border">
+                    <p class="text-xs text-gray-500 mb-1">Creative Type</p>
+                    <p class="font-medium">${ad.creative_type || 'Not specified'}</p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('previewModal').classList.remove('hidden');
+}
+
+function closePreview() {
+    document.getElementById('previewModal').classList.add('hidden');
+}
+
+// Close modal on background click
+document.getElementById('previewModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closePreview();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closePreview();
+    }
+});
+</script>
 {% endblock %}

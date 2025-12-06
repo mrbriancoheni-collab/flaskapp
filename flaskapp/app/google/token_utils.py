@@ -294,10 +294,12 @@ def ensure_access_token(account_id: int, products: tuple[str, ...]) -> Tuple[str
         raise RuntimeError("Google token expired and no refresh_token available.")
 
     # refresh
-    client_id = current_app.config.get("GOOGLE_CLIENT_ID")
-    client_secret = current_app.config.get("GOOGLE_CLIENT_SECRET")
+    # Try GOOGLE_CLIENT_ID first, fallback to GOOGLE_ADS_CLIENT_ID
+    # (Some deployments use the same OAuth app for both general Google and Ads API)
+    client_id = current_app.config.get("GOOGLE_CLIENT_ID") or current_app.config.get("GOOGLE_ADS_CLIENT_ID")
+    client_secret = current_app.config.get("GOOGLE_CLIENT_SECRET") or current_app.config.get("GOOGLE_ADS_CLIENT_SECRET")
     if not client_id or not client_secret:
-        raise RuntimeError("Google OAuth client not configured.")
+        raise RuntimeError("Google OAuth client not configured. Set GOOGLE_CLIENT_ID/SECRET or GOOGLE_ADS_CLIENT_ID/SECRET.")
 
     resp = requests.post(
         GOOGLE_TOKEN_URL,

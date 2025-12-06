@@ -10,7 +10,7 @@
     </div>
 
     <form method="POST" action="{{ url_for('glsa_bp.select_account_post') }}" class="space-y-6">
-        {{ csrf_token() if csrf_token }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
         <!-- Google Ads Account Selection -->
         <div class="bg-white shadow rounded-lg p-6">

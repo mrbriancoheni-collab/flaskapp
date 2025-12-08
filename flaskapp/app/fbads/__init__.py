@@ -510,6 +510,55 @@ def fb_disconnect():
     flash("Facebook disconnected.", "success")
     return redirect(url_for("fbads_bp.profile_edit"))
 
+@fbads_bp.post("/save-token", endpoint="save_token")
+@login_required
+def save_token():
+    """Save Facebook access token from client-side login"""
+    try:
+        data = request.get_json()
+        access_token = data.get('access_token')
+        user_id = data.get('user_id')
+        expires_in = data.get('expires_in')
+
+        if not access_token:
+            return jsonify({"success": False, "error": "No access token provided"}), 400
+
+        aid = current_account_id()
+
+        # Exchange short-lived token for long-lived token
+        app_id = current_app.config.get("FB_APP_ID") or os.getenv("FB_APP_ID")
+        app_secret = current_app.config.get("FB_APP_SECRET") or os.getenv("FB_APP_SECRET")
+
+        if app_id and app_secret:
+            try:
+                # Exchange for long-lived token (60 days)
+                exchange_url = f"{GRAPH}/oauth/access_token"
+                params = {
+                    "grant_type": "fb_exchange_token",
+                    "client_id": app_id,
+                    "client_secret": app_secret,
+                    "fb_exchange_token": access_token
+                }
+                resp = requests.get(exchange_url, params=params, timeout=30)
+                if resp.status_code == 200:
+                    token_data = resp.json()
+                    long_lived_token = token_data.get('access_token')
+                    if long_lived_token:
+                        access_token = long_lived_token
+                        current_app.logger.info("Exchanged for long-lived Facebook token")
+            except Exception as e:
+                current_app.logger.warning(f"Failed to exchange for long-lived token: {e}")
+                # Continue with short-lived token
+
+        # Save the token
+        _save_fb_token(aid, access_token)
+
+        return jsonify({"success": True, "message": "Facebook connected successfully"})
+
+    except Exception as e:
+        current_app.logger.exception("Error saving Facebook token")
+        return jsonify({"success": False, "error": str(e)}), 500
+
 # -----------------------------------------------------------------------------
 # Lead actions used by templates
 # -----------------------------------------------------------------------------

@@ -21,3 +21,26 @@
   <a href="{{ url_for('account_bp.dashboard') }}" class="inline-flex mt-2 rounded border px-3 py-2 text-gray-700 hover:bg-gray-50">Back to Dashboard</a>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+  window.fbAsyncInit = function() {
+    FB.init({
+      appId      : '{{ config.get("FB_APP_ID") or "" }}',
+      cookie     : true,
+      xfbml      : true,
+      version    : 'v20.0'
+    });
+
+    FB.AppEvents.logPageView();
+  };
+
+  (function(d, s, id){
+     var js, fjs = d.getElementsByTagName(s)[0];
+     if (d.getElementById(id)) {return;}
+     js = d.createElement(s); js.id = id;
+     js.src = "https://connect.facebook.net/en_US/sdk.js";
+     fjs.parentNode.insertBefore(js, fjs);
+   }(document, 'script', 'facebook-jssdk'));
+</script>
+{% endblock %}

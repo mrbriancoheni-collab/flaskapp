@@ -2056,6 +2056,7 @@ def ads_ui():
     def is_auto_applicable(opp):
         opt_type = opp.get("optimization_type", "")
         decision_type = opp.get('decision_type', '')
+        title = opp.get("title", "").lower()
 
         # Core auto-applicable types (can be applied with one click)
         if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads', 'starter_negative_keywords']:
@@ -2098,6 +2099,20 @@ def ads_ui():
             'create_asset_groups',     # AI-generated asset groups for new campaigns
         ]
         if opt_type in agent_auto_types or decision_type in agent_auto_types:
+            return True
+
+        # Flexible matching based on title/description for common auto-applicable actions
+        # This catches variations in naming conventions
+        if any(keyword in title for keyword in ['create', 'add'] + ['ad', 'ads', 'rsa']):
+            # Ad creation is auto-applicable
+            return True
+
+        if any(keyword in title for keyword in ['reallocate', 'adjust', 'increase', 'decrease'] + ['budget']):
+            # Budget adjustments are auto-applicable
+            return True
+
+        if 'pause' in title and any(keyword in title for keyword in ['keyword', 'ad', 'campaign']):
+            # Pausing underperformers is auto-applicable
             return True
 
         return False
@@ -2525,13 +2540,14 @@ def ads_opportunities_demo():
         def is_auto_applicable(opp):
             opt_type = opp.get("optimization_type", "")
             decision_type = opp.get('decision_type', '')
+            title = opp.get("title", "").lower()
 
             # Core auto-applicable types
             if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads', 'starter_negative_keywords']:
                 return True
 
             # AI-generated ad content
-            if opt_type in ['pmax_headlines', 'pmax_descriptions', 'rsa_headline_variations']:
+            if opt_type in ['pmax_headlines', 'pmax_descriptions', 'rsa_headline_variations', 'create_rsa_ads']:
                 return True
 
             # AI-assisted campaign creation
@@ -2544,6 +2560,17 @@ def ads_opportunities_demo():
                 ext_type = opp.get("optimization_data", {}).get("type", "").lower()
                 return ("callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
                         or "sitelink" in ext_type or "call" in ext_type or "price" in ext_type)
+
+            # Flexible matching based on title/description for common auto-applicable actions
+            if any(keyword in title for keyword in ['create', 'add'] + ['ad', 'ads', 'rsa']):
+                return True
+
+            if any(keyword in title for keyword in ['reallocate', 'adjust', 'increase', 'decrease'] + ['budget']):
+                return True
+
+            if 'pause' in title and any(keyword in title for keyword in ['keyword', 'ad', 'campaign']):
+                return True
+
             return False
 
         analysis["opportunities"] = [opp for opp in all_opportunities if is_auto_applicable(opp)]
@@ -2614,13 +2641,14 @@ def ads_opportunities():
     def is_auto_applicable(opp):
         opt_type = opp.get("optimization_type", "")
         decision_type = opp.get('decision_type', '')
+        title = opp.get("title", "").lower()
 
         # Core auto-applicable types
         if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads', 'starter_negative_keywords']:
             return True
 
         # AI-generated ad content
-        if opt_type in ['pmax_headlines', 'pmax_descriptions', 'rsa_headline_variations']:
+        if opt_type in ['pmax_headlines', 'pmax_descriptions', 'rsa_headline_variations', 'create_rsa_ads']:
             return True
 
         # AI-assisted campaign creation
@@ -2633,6 +2661,17 @@ def ads_opportunities():
             ext_type = opp.get("type", "").lower()
             return ("callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
                     or "sitelink" in ext_type or "call" in ext_type or "price" in ext_type)
+
+        # Flexible matching based on title/description for common auto-applicable actions
+        if any(keyword in title for keyword in ['create', 'add'] + ['ad', 'ads', 'rsa']):
+            return True
+
+        if any(keyword in title for keyword in ['reallocate', 'adjust', 'increase', 'decrease'] + ['budget']):
+            return True
+
+        if 'pause' in title and any(keyword in title for keyword in ['keyword', 'ad', 'campaign']):
+            return True
+
         return False
 
     analysis["opportunities"] = [opp for opp in all_opportunities if is_auto_applicable(opp)]

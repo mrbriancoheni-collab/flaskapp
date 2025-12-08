@@ -127,16 +127,22 @@ class AccountStructureAgent(BaseAgent):
 
         for campaign in campaigns:
             campaign_type = campaign.get('advertising_channel_type', 'SEARCH')
+            # Count ALL campaigns regardless of status (ENABLED, PAUSED, REMOVED)
+            # This prevents recommending to add a campaign type that already exists (even if paused)
             type_counts[campaign_type] = type_counts.get(campaign_type, 0) + 1
 
-            budget = campaign.get('daily_budget_cents', 0) * 30 / 100  # Monthly estimate
-            total_budget += budget
-            type_budgets[campaign_type] = type_budgets.get(campaign_type, 0) + budget
+            # Only count budget for ENABLED campaigns
+            if campaign.get('status') == 'ENABLED':
+                budget = campaign.get('daily_budget_cents', 0) * 30 / 100  # Monthly estimate
+                total_budget += budget
+                type_budgets[campaign_type] = type_budgets.get(campaign_type, 0) + budget
 
         issues = []
         recommendations = []
 
         # Check for missing campaign types
+        # Note: type_counts includes ALL campaigns (active, paused, removed)
+        # so we won't recommend adding a campaign type that already exists
         if type_counts['SEARCH'] == 0 and type_counts['PERFORMANCE_MAX'] > 0:
             issues.append("Account only uses Performance Max campaigns")
             recommendations.append("Add Search campaigns for better keyword control and brand protection")

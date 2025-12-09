@@ -792,8 +792,8 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             "total_campaigns_planned": total_campaigns,
             "campaigns_created": campaigns_created_count,
             "campaigns_scraped": self.state["campaigns_scraped"],
-            "current_index": self.state["current_campaign_index"],
-            "progress_percent": (self.state["current_campaign_index"] / total_campaigns * 100) if total_campaigns > 0 else 0,
+            "current_index": campaigns_created_count,  # Use actual DB count, not state file
+            "progress_percent": (campaigns_created_count / total_campaigns * 100) if total_campaigns > 0 else 0,  # Use actual DB count
             "leads_enriched": total_leads_enriched,
             "emails_sent": total_emails_sent,
             "unique_domains_processed": len(self.state["processed_domains"]),

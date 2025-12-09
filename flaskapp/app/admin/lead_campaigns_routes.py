@@ -228,17 +228,54 @@ def email_activity():
 
 # ==================== Campaign Management ====================
 
+@lead_campaigns_bp.route('/debug/campaign-patterns')
+@require_admin
+def debug_campaign_patterns():
+    """Debug endpoint to see what campaign naming patterns exist"""
+    # Get sample of all campaigns with different prefixes
+    all_campaigns = LeadCampaign.query.order_by(LeadCampaign.created_at.desc()).limit(50).all()
+
+    patterns = {}
+    for campaign in all_campaigns:
+        # Extract pattern (first 50 chars of name)
+        pattern = campaign.name[:50] if len(campaign.name) > 50 else campaign.name
+        if pattern not in patterns:
+            patterns[pattern] = {
+                'count': 0,
+                'example_id': campaign.id,
+                'created_at': campaign.created_at.isoformat() if campaign.created_at else None
+            }
+        patterns[pattern]['count'] += 1
+
+    # Get counts by prefix
+    total_campaigns = LeadCampaign.query.count()
+    auto_colon = LeadCampaign.query.filter(LeadCampaign.name.like('Auto:%')).count()
+    auto_home_services = LeadCampaign.query.filter(LeadCampaign.name.like('Auto: Home Services -%')).count()
+
+    return jsonify({
+        'total_campaigns': total_campaigns,
+        'campaigns_with_auto_prefix': auto_colon,
+        'campaigns_with_consolidated_pattern': auto_home_services,
+        'sample_patterns': patterns,
+        'recent_50_campaigns': [
+            {
+                'id': c.id,
+                'name': c.name,
+                'created_at': c.created_at.isoformat() if c.created_at else None
+            }
+            for c in all_campaigns
+        ]
+    })
+
 @lead_campaigns_bp.route('/')
 @require_admin
 def index():
     """List all lead campaigns"""
-    # Only show NEW consolidated campaigns (Auto: Home Services - {city})
-    # Filter out old individual campaigns (Auto: {keyword} - {city})
-    campaigns = LeadCampaign.query.filter(
-        LeadCampaign.name.like('Auto: Home Services -%')
-    ).order_by(desc(LeadCampaign.created_at)).all()
+    # Show all campaigns - consolidation to 100 hasn't been executed yet
+    # Current system has individual campaigns per keyword/location
+    campaigns = LeadCampaign.query.order_by(desc(LeadCampaign.created_at)).all()
 
-    logger.info(f"Found {len(campaigns)} consolidated campaigns")
+    logger.info(f"Found {len(campaigns)} campaigns")
 
     # Get stats for each campaign
     campaign_stats = []

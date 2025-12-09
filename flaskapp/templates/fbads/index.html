@@ -7,17 +7,110 @@
     <p class="text-gray-500">Connect Facebook Ads to bring leads and spend into your dashboard.</p>
   </div>
 
-  {% if connected %}
+  <div id="fb-status-container">
+    {% if connected %}
     <div class="rounded border bg-green-50 border-green-200 text-green-800 px-4 py-3">
       Connected. Data will appear on your dashboard.
     </div>
-  {% else %}
-    <a href="{{ url_for('fbads_bp.connect') }}"
-       class="rounded bg-indigo-600 text-white px-3 py-2 inline-flex items-center hover:bg-indigo-700">
-      Connect Facebook
-    </a>
-  {% endif %}
+    {% else %}
+    <!-- Facebook Login Button -->
+    <div id="fb-login-section">
+      <div class="mb-4">
+        <fb:login-button
+          scope="business_management,pages_show_list,pages_read_engagement"
+          onlogin="checkLoginState();"
+          class="fb-login-button">
+        </fb:login-button>
+      </div>
+      <p class="text-sm text-gray-600">Or use manual connection:</p>
+      <a href="{{ url_for('fbads_bp.connect') }}"
+         class="rounded bg-indigo-600 text-white px-3 py-2 inline-flex items-center hover:bg-indigo-700 mt-2">
+        Connect Facebook
+      </a>
+    </div>
+    {% endif %}
+  </div>
 
   <a href="{{ url_for('account_bp.dashboard') }}" class="inline-flex mt-2 rounded border px-3 py-2 text-gray-700 hover:bg-gray-50">Back to Dashboard</a>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  window.fbAsyncInit = function() {
+    FB.init({
+      appId      : '{{ config.get("FB_APP_ID") or "" }}',
+      cookie     : true,
+      xfbml      : true,
+      version    : 'v20.0'
+    });
+
+    FB.AppEvents.logPageView();
+
+    // Check login status on page load
+    {% if not connected %}
+    FB.getLoginStatus(function(response) {
+      statusChangeCallback(response);
+    });
+    {% endif %}
+  };
+
+  (function(d, s, id){
+     var js, fjs = d.getElementsByTagName(s)[0];
+     if (d.getElementById(id)) {return;}
+     js = d.createElement(s); js.id = id;
+     js.src = "https://connect.facebook.net/en_US/sdk.js";
+     fjs.parentNode.insertBefore(js, fjs);
+   }(document, 'script', 'facebook-jssdk'));
+
+  // Callback for login button
+  function checkLoginState() {
+    FB.getLoginStatus(function(response) {
+      statusChangeCallback(response);
+    });
+  }
+
+  // Handle login status response
+  function statusChangeCallback(response) {
+    console.log('Facebook login status:', response);
+
+    if (response.status === 'connected') {
+      // User is logged in and has authorized the app
+      const authResponse = response.authResponse;
+      console.log('Facebook auth response:', authResponse);
+
+      // Send the access token to your backend
+      fetch('{{ url_for("fbads_bp.save_token") }}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          access_token: authResponse.accessToken,
+          user_id: authResponse.userID,
+          expires_in: authResponse.expiresIn
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Reload page to show connected status
+          window.location.reload();
+        } else {
+          alert('Failed to save Facebook connection: ' + (data.error || 'Unknown error'));
+        }
+      })
+      .catch(error => {
+        console.error('Error saving Facebook token:', error);
+        alert('Error connecting to Facebook. Please try again.');
+      });
+    } else if (response.status === 'not_authorized') {
+      // User is logged into Facebook but hasn't authorized the app
+      console.log('User is logged into Facebook but not authorized');
+    } else {
+      // User isn't logged into Facebook
+      console.log('User is not logged into Facebook');
+    }
+  }
+</script>
 {% endblock %}

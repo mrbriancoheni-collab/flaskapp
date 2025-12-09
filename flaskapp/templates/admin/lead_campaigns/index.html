@@ -313,6 +313,8 @@ async function sendEmails(campaignId) {
 }
 
 async function cleanupOldCampaigns() {
+    console.log('Cleanup button clicked');
+
     const message = `⚠️ WARNING: This will DELETE all old campaigns and their data:
 
 - ~4,507 old campaigns
@@ -324,25 +326,35 @@ This action CANNOT be undone!
 Type "DELETE" in the next prompt to confirm.`;
 
     if (!confirm(message)) {
+        console.log('User cancelled at first confirmation');
         return;
     }
 
     const confirmation = prompt('Type DELETE to confirm deletion:');
     if (confirmation !== 'DELETE') {
         alert('Deletion cancelled - confirmation text did not match.');
+        console.log('User cancelled - typed:', confirmation);
         return;
     }
 
+    console.log('Sending delete request...');
+
     try {
-        const response = await fetch('{{ url_for("lead_campaigns_bp.delete_old_campaigns") }}', {
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        console.log('CSRF token element:', csrfToken);
+
+        const response = await fetch('/admin/lead-campaigns/cleanup/delete-old-campaigns', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                ...(csrfToken && { 'X-CSRFToken': csrfToken.content })
             }
         });
 
+        console.log('Response status:', response.status);
         const data = await response.json();
+        console.log('Response data:', data);
 
         if (data.success) {
             alert(`✓ Success! Deleted ${data.deleted_count} old campaigns and associated data.`);
@@ -351,6 +363,7 @@ Type "DELETE" in the next prompt to confirm.`;
             alert(`Error: ${data.error}`);
         }
     } catch (error) {
+        console.error('Delete error:', error);
         alert(`Error: ${error.message}`);
     }
 }

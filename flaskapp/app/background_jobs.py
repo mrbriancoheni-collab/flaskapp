@@ -153,6 +153,17 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
+    # Lead generation automation (daily at 10 AM UTC)
+    scheduler.add_job(
+        func=run_lead_automation_daily,
+        trigger='cron',
+        hour=10,
+        minute=0,
+        id='run_lead_automation_daily',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
     # Process email queue (every 1 minute)
     scheduler.add_job(
         func=process_email_queue,
@@ -163,7 +174,7 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
-    app.logger.info("Registered 6 scheduled background jobs")
+    app.logger.info("Registered 7 scheduled background jobs")
 
 
 # ===== Scheduled Job Functions =====
@@ -543,6 +554,35 @@ def generate_google_ads_insights_daily(app: Flask):
 
         except Exception as e:
             current_app.logger.error(f"Error in daily Google Ads insights job: {e}", exc_info=True)
+
+
+def run_lead_automation_daily(app: Flask):
+    """
+    Run daily lead generation automation.
+
+    This systematically:
+    - Creates campaigns for cities and service categories
+    - Scrapes leads from Google (respects daily limits: 50/day)
+    - Enriches leads with decision maker info (respects daily limits: 100/day)
+    - Sends automated emails (respects daily limits: 250/day, skips Sundays)
+    - Resumes from where it stopped previously
+    """
+    with app.app_context():
+        try:
+            # Check if automation is enabled
+            enabled = current_app.config.get("LEAD_AUTOMATION_ENABLED", True)
+            if not enabled:
+                current_app.logger.info("[JOB] Lead automation disabled via config")
+                return
+
+            from app.cron_tasks import _run_daily_lead_automation
+
+            current_app.logger.info("[JOB] Starting daily lead automation")
+            _run_daily_lead_automation(current_app)
+            current_app.logger.info("[JOB] Daily lead automation completed")
+
+        except Exception as e:
+            current_app.logger.error(f"Error in daily lead automation job: {e}", exc_info=True)
 
 
 # ===== Manual Job Execution =====

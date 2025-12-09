@@ -232,10 +232,10 @@ def email_activity():
 @require_admin
 def index():
     """List all lead campaigns"""
-    # Only show consolidated campaigns (new system with "Auto:" prefix)
-    # Filter out old individual keyword/location campaigns
+    # Only show NEW consolidated campaigns (Auto: Home Services - {city})
+    # Filter out old individual campaigns (Auto: {keyword} - {city})
     campaigns = LeadCampaign.query.filter(
-        LeadCampaign.name.like('Auto:%')
+        LeadCampaign.name.like('Auto: Home Services -%')
     ).order_by(desc(LeadCampaign.created_at)).all()
 
     logger.info(f"Found {len(campaigns)} consolidated campaigns")

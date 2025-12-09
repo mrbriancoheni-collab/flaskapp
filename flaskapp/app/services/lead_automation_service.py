@@ -761,9 +761,10 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
         total_emails_sent = total_legacy_emails + total_contact_emails
 
         # Get campaigns created count from database (only consolidated campaigns)
-        # Only count campaigns with "Auto:" prefix to exclude old individual campaigns
+        # Only count NEW consolidated campaigns with "Auto: Home Services -" pattern
+        # Old campaigns were "Auto: {keyword} - {city}", new are "Auto: Home Services - {city}"
         campaigns_created_count = LeadCampaign.query.filter(
-            LeadCampaign.name.like('Auto:%')
+            LeadCampaign.name.like('Auto: Home Services -%')
         ).count()
 
         # Calculate today's stats from database

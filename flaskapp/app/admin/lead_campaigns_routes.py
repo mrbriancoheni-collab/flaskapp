@@ -267,6 +267,45 @@ def debug_campaign_patterns():
         ]
     })
 
+@lead_campaigns_bp.route('/debug/scheduler-status')
+@require_admin
+def scheduler_status():
+    """Check APScheduler job status"""
+    try:
+        from flask import current_app
+        scheduler = getattr(current_app, 'scheduler', None)
+
+        if not scheduler:
+            return jsonify({
+                'scheduler_active': False,
+                'error': 'Scheduler not initialized. App may need restart.'
+            })
+
+        # Get lead automation job
+        job = scheduler.get_job('run_lead_automation_daily')
+
+        if not job:
+            return jsonify({
+                'scheduler_active': True,
+                'job_found': False,
+                'error': 'Lead automation job not registered. Check background_jobs.py'
+            })
+
+        return jsonify({
+            'scheduler_active': True,
+            'job_found': True,
+            'job_id': job.id,
+            'next_run_time': job.next_run_time.isoformat() if job.next_run_time else None,
+            'trigger': str(job.trigger),
+            'current_time_utc': datetime.utcnow().isoformat()
+        })
+
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'scheduler_active': False
+        }), 500
+
 @lead_campaigns_bp.route('/cleanup/delete-old-campaigns', methods=['POST'])
 @require_admin
 def delete_old_campaigns():

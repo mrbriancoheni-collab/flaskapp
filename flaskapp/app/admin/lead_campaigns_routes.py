@@ -271,13 +271,11 @@ def debug_campaign_patterns():
 @require_admin
 def index():
     """List all lead campaigns"""
-    # Only show NEW consolidated campaigns (Auto: Home Services - {city})
-    # Filter out old individual campaigns (Auto: {keyword} - {city})
-    campaigns = LeadCampaign.query.filter(
-        LeadCampaign.name.like('Auto: Home Services -%')
-    ).order_by(desc(LeadCampaign.created_at)).all()
+    # Show all campaigns - consolidation to 100 hasn't been executed yet
+    # Current system has individual campaigns per keyword/location
+    campaigns = LeadCampaign.query.order_by(desc(LeadCampaign.created_at)).all()
 
-    logger.info(f"Found {len(campaigns)} consolidated campaigns")
+    logger.info(f"Found {len(campaigns)} campaigns")
 
     # Get stats for each campaign
     campaign_stats = []

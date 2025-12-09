@@ -746,11 +746,16 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
 
     def get_progress_report(self) -> Dict:
         """Get current automation progress"""
-        campaign_queue = get_campaign_queue()
-        total_campaigns = len(campaign_queue)
-
         # Calculate actual stats from database instead of state file
         # This ensures we always show current real data
+
+        # Count ALL campaigns in database (consolidation to 100 hasn't been executed yet)
+        campaigns_created_count = LeadCampaign.query.count()
+
+        # Use config's planned total for reference, but show actual count
+        campaign_queue = get_campaign_queue()
+        total_campaigns_planned = len(campaign_queue)
+
         total_leads_enriched = db.session.query(func.count(Lead.id)).filter(
             Lead.enrichment_status == 'completed'
         ).scalar() or 0
@@ -759,13 +764,6 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
         total_legacy_emails = db.session.query(func.count(LeadEmail.id)).scalar() or 0
         total_contact_emails = db.session.query(func.count(LeadContactEmail.id)).scalar() or 0
         total_emails_sent = total_legacy_emails + total_contact_emails
-
-        # Get campaigns created count from database (only consolidated campaigns)
-        # Only count NEW consolidated campaigns with "Auto: Home Services -" pattern
-        # Old campaigns were "Auto: {keyword} - {city}", new are "Auto: Home Services - {city}"
-        campaigns_created_count = LeadCampaign.query.filter(
-            LeadCampaign.name.like('Auto: Home Services -%')
-        ).count()
 
         # Calculate today's stats from database
         today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -789,11 +787,11 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
         today_emails = today_legacy_emails + today_contact_emails
 
         return {
-            "total_campaigns_planned": total_campaigns,
+            "total_campaigns_planned": total_campaigns_planned,
             "campaigns_created": campaigns_created_count,
             "campaigns_scraped": self.state["campaigns_scraped"],
-            "current_index": campaigns_created_count,  # Use actual DB count, not state file
-            "progress_percent": (campaigns_created_count / total_campaigns * 100) if total_campaigns > 0 else 0,  # Use actual DB count
+            "current_index": campaigns_created_count,  # Use actual DB count
+            "progress_percent": (campaigns_created_count / campaigns_created_count * 100) if campaigns_created_count > 0 else 0,  # Always 100% if campaigns exist
             "leads_enriched": total_leads_enriched,
             "emails_sent": total_emails_sent,
             "unique_domains_processed": len(self.state["processed_domains"]),

@@ -267,6 +267,63 @@ def debug_campaign_patterns():
         ]
     })
 
+@lead_campaigns_bp.route('/cleanup/delete-old-campaigns', methods=['POST'])
+@require_admin
+def delete_old_campaigns():
+    """Delete old individual campaigns (Auto: {keyword} - {city} pattern)"""
+    try:
+        # Find campaigns with old naming pattern
+        # Old: "Auto: {keyword} - {city}" (e.g., "Auto: plumber - New York, NY")
+        # New: "Auto: Home Services - {city}" (keep these)
+
+        # Get all campaigns with Auto: prefix
+        all_auto_campaigns = LeadCampaign.query.filter(
+            LeadCampaign.name.like('Auto:%')
+        ).all()
+
+        # Filter out the new consolidated ones
+        old_campaigns = [
+            c for c in all_auto_campaigns
+            if not c.name.startswith('Auto: Home Services -')
+        ]
+
+        deleted_count = len(old_campaigns)
+
+        # Delete associated data first (due to foreign key constraints)
+        for campaign in old_campaigns:
+            # Delete associated leads and their emails
+            leads = Lead.query.filter_by(campaign_id=campaign.id).all()
+            for lead in leads:
+                LeadEmail.query.filter_by(lead_id=lead.id).delete()
+            Lead.query.filter_by(campaign_id=campaign.id).delete()
+
+            # Delete associated contact emails
+            LeadContactEmail.query.filter_by(campaign_id=campaign.id).delete()
+
+            # Delete email sequences
+            EmailSequence.query.filter_by(campaign_id=campaign.id).delete()
+
+            # Delete campaign
+            db.session.delete(campaign)
+
+        db.session.commit()
+
+        logger.info(f"Deleted {deleted_count} old campaigns and associated data")
+
+        return jsonify({
+            'success': True,
+            'deleted_count': deleted_count,
+            'message': f'Successfully deleted {deleted_count} old campaigns'
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Error deleting old campaigns")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @lead_campaigns_bp.route('/')
 @require_admin
 def index():

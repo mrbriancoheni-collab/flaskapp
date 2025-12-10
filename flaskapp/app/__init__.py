@@ -1523,6 +1523,14 @@ def create_app():
     except Exception as e:
         app.logger.warning(f"Failed to register CLI commands: {e}")
 
+    # ---- Initialize Background Scheduler -----------------------------------
+    try:
+        from app.background_jobs import init_scheduler
+        init_scheduler(app)
+        app.logger.info("Background job scheduler initialized")
+    except Exception as e:
+        app.logger.warning(f"Failed to initialize scheduler: {e}")
+
     return app
 
 

@@ -310,6 +310,8 @@ def scheduler_status():
 @require_admin
 def delete_old_campaigns():
     """Delete old individual campaigns (Auto: {keyword} - {city} pattern)"""
+    logger.info("Delete endpoint called - starting deletion process")
+
     try:
         # Find campaigns with old naming pattern
         # Old: "Auto: {keyword} - {city}" (e.g., "Auto: plumber - New York, NY")
@@ -320,34 +322,57 @@ def delete_old_campaigns():
             LeadCampaign.name.like('Auto:%')
         ).all()
 
+        logger.info(f"Found {len(all_auto_campaigns)} campaigns with Auto: prefix")
+
         # Filter out the new consolidated ones
         old_campaigns = [
             c for c in all_auto_campaigns
             if not c.name.startswith('Auto: Home Services -')
         ]
 
-        deleted_count = len(old_campaigns)
+        logger.info(f"Identified {len(old_campaigns)} old campaigns to delete")
+
+        if len(old_campaigns) == 0:
+            return jsonify({
+                'success': True,
+                'deleted_count': 0,
+                'message': 'No old campaigns to delete'
+            })
+
+        deleted_count = 0
 
         # Delete associated data first (due to foreign key constraints)
-        for campaign in old_campaigns:
-            # Delete associated leads and their emails
-            leads = Lead.query.filter_by(campaign_id=campaign.id).all()
-            for lead in leads:
-                LeadEmail.query.filter_by(lead_id=lead.id).delete()
-            Lead.query.filter_by(campaign_id=campaign.id).delete()
+        for idx, campaign in enumerate(old_campaigns):
+            try:
+                # Delete associated leads and their emails
+                leads = Lead.query.filter_by(campaign_id=campaign.id).all()
+                for lead in leads:
+                    LeadEmail.query.filter_by(lead_id=lead.id).delete()
+                Lead.query.filter_by(campaign_id=campaign.id).delete()
 
-            # Delete associated contact emails
-            LeadContactEmail.query.filter_by(campaign_id=campaign.id).delete()
+                # Delete associated contact emails
+                LeadContactEmail.query.filter_by(campaign_id=campaign.id).delete()
 
-            # Delete email sequences
-            EmailSequence.query.filter_by(campaign_id=campaign.id).delete()
+                # Delete email sequences
+                EmailSequence.query.filter_by(campaign_id=campaign.id).delete()
 
-            # Delete campaign
-            db.session.delete(campaign)
+                # Delete campaign
+                db.session.delete(campaign)
+                deleted_count += 1
 
+                # Commit every 100 campaigns to avoid long transactions
+                if (idx + 1) % 100 == 0:
+                    db.session.commit()
+                    logger.info(f"Deleted {idx + 1}/{len(old_campaigns)} campaigns")
+
+            except Exception as e:
+                logger.error(f"Error deleting campaign {campaign.id}: {str(e)}")
+                continue
+
+        # Final commit
         db.session.commit()
 
-        logger.info(f"Deleted {deleted_count} old campaigns and associated data")
+        logger.info(f"Successfully deleted {deleted_count} old campaigns and associated data")
 
         return jsonify({
             'success': True,
@@ -362,6 +387,16 @@ def delete_old_campaigns():
             'success': False,
             'error': str(e)
         }), 500
+
+@lead_campaigns_bp.route('/cleanup/test-button', methods=['POST'])
+@require_admin
+def test_button():
+    """Test endpoint to verify button works"""
+    logger.info("Test button endpoint called!")
+    return jsonify({
+        'success': True,
+        'message': 'Button works! Endpoint was called successfully.'
+    })
 
 @lead_campaigns_bp.route('/')
 @require_admin

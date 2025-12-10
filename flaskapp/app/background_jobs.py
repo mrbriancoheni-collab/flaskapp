@@ -39,7 +39,6 @@ def init_scheduler(app: Flask):
     """
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
-        from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
         from apscheduler.executors.pool import ThreadPoolExecutor
     except ImportError:
         app.logger.warning(
@@ -53,11 +52,7 @@ def init_scheduler(app: Flask):
         # Skip in Flask reloader parent process
         return None
 
-    # Configuration
-    jobstores = {
-        'default': SQLAlchemyJobStore(url=app.config['SQLALCHEMY_DATABASE_URI'])
-    }
-
+    # Configuration - use in-memory job store (simpler, no pickling issues)
     executors = {
         'default': ThreadPoolExecutor(max_workers=app.config.get('SCHEDULER_MAX_WORKERS', 3))
     }
@@ -68,9 +63,8 @@ def init_scheduler(app: Flask):
         'misfire_grace_time': 300  # 5 minutes grace period for missed jobs
     }
 
-    # Create scheduler
+    # Create scheduler (no jobstores = uses MemoryJobStore by default)
     scheduler = BackgroundScheduler(
-        jobstores=jobstores,
         executors=executors,
         job_defaults=job_defaults,
         timezone='UTC'

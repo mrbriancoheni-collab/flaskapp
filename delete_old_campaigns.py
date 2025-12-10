@@ -7,11 +7,11 @@ import sys
 import os
 
 # Add flaskapp to path
-sys.path.insert(0, '/home/fieljtgr/flaskapp')
+sys.path.insert(0, '/home/fieljtgr/flaskapp/flaskapp')
 
-from flaskapp.app import create_app
-from flaskapp.app.extensions import db
-from flaskapp.app.models_leads import LeadCampaign, Lead, LeadEmail, LeadContactEmail, EmailSequence
+from app import create_app
+from app.extensions import db
+from app.models_leads import LeadCampaign, Lead, LeadEmail, LeadContactEmail, EmailSequence
 
 app = create_app()
 

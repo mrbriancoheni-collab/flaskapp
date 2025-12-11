@@ -78,32 +78,34 @@ def _store_fb_token(aid: int, token: str, expires_in: Optional[int]) -> None:
     expires_at = datetime.utcnow() + timedelta(seconds=int(expires_in or 60 * 60 * 24 * 60))
     if db:
         try:
-            db.engine.execute(
-                db.text(
-                    """
-                    CREATE TABLE IF NOT EXISTS facebook_tokens (
-                        account_id BIGINT NOT NULL PRIMARY KEY,
-                        access_token TEXT NOT NULL,
-                        expires_at DATETIME NULL,
-                        created_at DATETIME NOT NULL,
-                        updated_at DATETIME NOT NULL
+            with db.engine.connect() as conn:
+                conn.execute(
+                    db.text(
+                        """
+                        CREATE TABLE IF NOT EXISTS facebook_tokens (
+                            account_id BIGINT NOT NULL PRIMARY KEY,
+                            access_token TEXT NOT NULL,
+                            expires_at DATETIME NULL,
+                            created_at DATETIME NOT NULL,
+                            updated_at DATETIME NOT NULL
+                        )
+                        """
                     )
-                    """
                 )
-            )
-            db.engine.execute(
-                db.text(
-                    """
-                    INSERT INTO facebook_tokens (account_id, access_token, expires_at, created_at, updated_at)
-                    VALUES (:aid, :t, :exp, NOW(), NOW())
-                    ON DUPLICATE KEY UPDATE
-                        access_token = VALUES(access_token),
-                        expires_at   = VALUES(expires_at),
-                        updated_at   = NOW()
-                    """
-                ),
-                dict(aid=aid, t=token, exp=expires_at),
-            )
+                conn.execute(
+                    db.text(
+                        """
+                        INSERT INTO facebook_tokens (account_id, access_token, expires_at, created_at, updated_at)
+                        VALUES (:aid, :t, :exp, NOW(), NOW())
+                        ON DUPLICATE KEY UPDATE
+                            access_token = VALUES(access_token),
+                            expires_at   = VALUES(expires_at),
+                            updated_at   = NOW()
+                        """
+                    ),
+                    dict(aid=aid, t=token, exp=expires_at),
+                )
+                conn.commit()
             return
         except Exception:
             current_app.logger.exception("FB token DB store failed; falling back to session.")
@@ -115,12 +117,14 @@ def _store_fb_token(aid: int, token: str, expires_in: Optional[int]) -> None:
 def _get_fb_token(aid: int) -> Optional[str]:
     if db:
         try:
-            row = db.engine.execute(
-                db.text("SELECT access_token, expires_at FROM facebook_tokens WHERE account_id=:aid LIMIT 1"),
-                {"aid": aid},
-            ).fetchone()
-            if row:
-                return row[0]
+            with db.engine.connect() as conn:
+                result = conn.execute(
+                    db.text("SELECT access_token, expires_at FROM facebook_tokens WHERE account_id=:aid LIMIT 1"),
+                    {"aid": aid},
+                )
+                row = result.fetchone()
+                if row:
+                    return row[0]
         except Exception:
             current_app.logger.exception("FB token DB read failed; trying session fallback.")
     return session.get("fb_access_token")
@@ -129,10 +133,12 @@ def _get_fb_token(aid: int) -> Optional[str]:
 def _clear_fb_token(aid: int) -> None:
     if db:
         try:
-            db.engine.execute(
-                db.text("DELETE FROM facebook_tokens WHERE account_id=:aid"),
-                {"aid": aid},
-            )
+            with db.engine.connect() as conn:
+                conn.execute(
+                    db.text("DELETE FROM facebook_tokens WHERE account_id=:aid"),
+                    {"aid": aid},
+                )
+                conn.commit()
         except Exception:
             current_app.logger.exception("FB token DB delete failed.")
     session.pop("fb_access_token", None)
@@ -294,20 +300,22 @@ def _get_selected_account(aid: int) -> Optional[Dict[str, Any]]:
     """Get the selected Facebook ad account for this user"""
     if db:
         try:
-            row = db.engine.execute(
-                db.text(
-                    "SELECT ad_account_id, ad_account_name, page_id, page_name "
-                    "FROM facebook_selected_accounts WHERE account_id=:aid LIMIT 1"
-                ),
-                {"aid": aid},
-            ).fetchone()
-            if row:
-                return {
-                    "ad_account_id": row[0],
-                    "ad_account_name": row[1],
-                    "page_id": row[2],
-                    "page_name": row[3]
-                }
+            with db.engine.connect() as conn:
+                result = conn.execute(
+                    db.text(
+                        "SELECT ad_account_id, ad_account_name, page_id, page_name "
+                        "FROM facebook_selected_accounts WHERE account_id=:aid LIMIT 1"
+                    ),
+                    {"aid": aid},
+                )
+                row = result.fetchone()
+                if row:
+                    return {
+                        "ad_account_id": row[0],
+                        "ad_account_name": row[1],
+                        "page_id": row[2],
+                        "page_name": row[3]
+                    }
         except Exception:
             current_app.logger.debug("No selected Facebook account found")
     return None
@@ -316,38 +324,40 @@ def _save_selected_account(aid: int, ad_account_id: str, ad_account_name: str, p
     """Save the selected Facebook ad account/page for this user"""
     if db:
         try:
-            # Create table if not exists
-            db.engine.execute(
-                db.text(
-                    """
-                    CREATE TABLE IF NOT EXISTS facebook_selected_accounts (
-                        account_id BIGINT NOT NULL PRIMARY KEY,
-                        ad_account_id VARCHAR(255) NOT NULL,
-                        ad_account_name VARCHAR(255),
-                        page_id VARCHAR(255),
-                        page_name VARCHAR(255),
-                        created_at DATETIME NOT NULL,
-                        updated_at DATETIME NOT NULL
+            with db.engine.connect() as conn:
+                # Create table if not exists
+                conn.execute(
+                    db.text(
+                        """
+                        CREATE TABLE IF NOT EXISTS facebook_selected_accounts (
+                            account_id BIGINT NOT NULL PRIMARY KEY,
+                            ad_account_id VARCHAR(255) NOT NULL,
+                            ad_account_name VARCHAR(255),
+                            page_id VARCHAR(255),
+                            page_name VARCHAR(255),
+                            created_at DATETIME NOT NULL,
+                            updated_at DATETIME NOT NULL
+                        )
+                        """
                     )
-                    """
                 )
-            )
-            db.engine.execute(
-                db.text(
-                    """
-                    INSERT INTO facebook_selected_accounts
-                    (account_id, ad_account_id, ad_account_name, page_id, page_name, created_at, updated_at)
-                    VALUES (:aid, :ad_id, :ad_name, :pg_id, :pg_name, NOW(), NOW())
-                    ON DUPLICATE KEY UPDATE
-                        ad_account_id = VALUES(ad_account_id),
-                        ad_account_name = VALUES(ad_account_name),
-                        page_id = VALUES(page_id),
-                        page_name = VALUES(page_name),
-                        updated_at = NOW()
-                    """
-                ),
-                dict(aid=aid, ad_id=ad_account_id, ad_name=ad_account_name, pg_id=page_id, pg_name=page_name),
-            )
+                conn.execute(
+                    db.text(
+                        """
+                        INSERT INTO facebook_selected_accounts
+                        (account_id, ad_account_id, ad_account_name, page_id, page_name, created_at, updated_at)
+                        VALUES (:aid, :ad_id, :ad_name, :pg_id, :pg_name, NOW(), NOW())
+                        ON DUPLICATE KEY UPDATE
+                            ad_account_id = VALUES(ad_account_id),
+                            ad_account_name = VALUES(ad_account_name),
+                            page_id = VALUES(page_id),
+                            page_name = VALUES(page_name),
+                            updated_at = NOW()
+                        """
+                    ),
+                    dict(aid=aid, ad_id=ad_account_id, ad_name=ad_account_name, pg_id=page_id, pg_name=page_name),
+                )
+                conn.commit()
         except Exception as e:
             current_app.logger.exception("Failed to save selected Facebook account: %s", e)
 

@@ -2042,11 +2042,24 @@ def ads_ui():
     aid = current_account_id()
     connected = _is_connected(aid, "ads")
 
-    # Get ads data
-    ads_data = _get_ads_state(aid)
+    try:
+        # Get ads data (with memory optimization: limit to essentials)
+        ads_data = _get_ads_state(aid)
 
-    # Generate comprehensive analysis using the opportunities analyzer
-    analysis = _analyze_ads_opportunities(aid, ads_data)
+        # Generate comprehensive analysis using the opportunities analyzer
+        # Use lighter analysis to prevent OOM on shared hosting
+        analysis = _analyze_ads_opportunities(aid, ads_data)
+    except MemoryError:
+        current_app.logger.error(f"Memory error in ads_ui for account {aid}")
+        flash("Unable to load full analysis due to server constraints. Showing simplified view.", "warning")
+        # Fallback to minimal data
+        ads_data = {"campaigns": [], "ad_groups": [], "keywords": [], "ads": []}
+        analysis = {"opportunities": [], "account_score": 0, "top_opportunities": []}
+    except Exception as e:
+        current_app.logger.error(f"Error in ads_ui for account {aid}: {e}", exc_info=True)
+        flash(f"Error loading Google Ads data: {str(e)}", "error")
+        ads_data = {"campaigns": [], "ad_groups": [], "keywords": [], "ads": []}
+        analysis = {"opportunities": [], "account_score": 0, "top_opportunities": []}
 
     # Split opportunities into auto-applicable and manual tasks
     # Auto-applicable: Can be applied with one click or AI agent

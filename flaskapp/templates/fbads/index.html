@@ -9,15 +9,38 @@
 
   <div id="fb-status-container">
     {% if connected %}
-    <div class="rounded border bg-green-50 border-green-200 text-green-800 px-4 py-3">
-      Connected. Data will appear on your dashboard.
+    <div class="rounded border bg-green-50 border-green-200 text-green-800 px-4 py-3 mb-6">
+      ✅ Connected. Data will appear on your dashboard.
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <a href="{{ url_for('fbads_bp.campaigns') }}" class="p-6 border rounded-lg hover:border-blue-500 hover:shadow-md transition-all">
+        <h3 class="font-semibold text-lg mb-2">View Campaigns</h3>
+        <p class="text-sm text-gray-600">See all your Facebook ad campaigns, ad sets, and ads</p>
+      </a>
+
+      <a href="{{ url_for('fbads_bp.create_test_campaign') }}" class="p-6 border rounded-lg hover:border-blue-500 hover:shadow-md transition-all bg-blue-50">
+        <h3 class="font-semibold text-lg mb-2 text-blue-900">+ Create Campaign</h3>
+        <p class="text-sm text-gray-600">Create a new test campaign via Marketing API</p>
+      </a>
+
+      <a href="{{ url_for('fbads_bp.optimize') }}" class="p-6 border rounded-lg hover:border-blue-500 hover:shadow-md transition-all">
+        <h3 class="font-semibold text-lg mb-2">AI Optimizer</h3>
+        <p class="text-sm text-gray-600">Get AI-powered optimization recommendations</p>
+      </a>
+
+      <a href="{{ url_for('fbads_bp.leads') }}" class="p-6 border rounded-lg hover:border-blue-500 hover:shadow-md transition-all">
+        <h3 class="font-semibold text-lg mb-2">Leads</h3>
+        <p class="text-sm text-gray-600">View and manage leads from Facebook ads</p>
+      </a>
     </div>
     {% else %}
     <!-- Facebook Login Button -->
     <div id="fb-login-section">
       <div class="mb-4">
         <fb:login-button
-          scope="business_management,pages_show_list,pages_read_engagement"
+          scope="ads_management,read_insights,business_management,pages_show_list"
           onlogin="checkLoginState();"
           class="fb-login-button">
         </fb:login-button>

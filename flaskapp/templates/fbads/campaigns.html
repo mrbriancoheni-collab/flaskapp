@@ -10,6 +10,11 @@
             {% endif %}
         </div>
         <div class="flex gap-3">
+            {% if connected and selected %}
+            <a href="{{ url_for('fbads_bp.create_test_campaign') }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                + Create Campaign
+            </a>
+            {% endif %}
             <a href="{{ url_for('fbads_bp.select_account') }}" class="px-4 py-2 border rounded-lg hover:bg-gray-50">
                 Switch Account
             </a>

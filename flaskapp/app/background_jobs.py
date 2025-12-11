@@ -53,8 +53,9 @@ def init_scheduler(app: Flask):
         return None
 
     # Configuration - use in-memory job store (simpler, no pickling issues)
+    # Using 1 worker to minimize resource usage on shared hosting
     executors = {
-        'default': ThreadPoolExecutor(max_workers=app.config.get('SCHEDULER_MAX_WORKERS', 3))
+        'default': ThreadPoolExecutor(max_workers=1)
     }
 
     job_defaults = {

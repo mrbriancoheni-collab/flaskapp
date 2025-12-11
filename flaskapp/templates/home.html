@@ -168,7 +168,7 @@
     </div>
   </div>
 
-  <div class="container-max relative py-20 lg:py-32 text-center">
+  <div class="container-max relative py-12 lg:py-20 text-center">
     <span class="badge animate-fade-in">Revenue AI for Local Pros</span>
 
     <h1 class="mt-6 text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight animate-fade-in-up">
@@ -177,39 +177,14 @@
         <svg class="absolute -bottom-2 left-0 w-full" height="8" viewBox="0 0 200 8" fill="none">
           <path d="M0 7C60 1 140 1 200 7" stroke="currentColor" stroke-width="2" class="text-accent-500"/>
         </svg>
-      </span> while increasing booked jobs — automatically with AI
+      </span> while increasing booked jobs
     </h1>
 
     <p class="mt-6 text-xl md:text-2xl text-gray-700 max-w-4xl mx-auto font-medium animate-fade-in-up animation-delay-200">
       FieldSprout uses AI agents that monitor, optimize, and improve your campaigns 24/7 — so you get more calls, more booked jobs, and less wasted ad spend.
     </p>
 
-    <!-- Objection-crushing bullets -->
-    <div class="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-gray-700 animate-fade-in-up animation-delay-300">
-      <div class="flex items-center gap-2">
-        <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
-        <span class="font-medium">Works with any existing Google Ads setup</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
-        <span class="font-medium">No agency needed — AI does the heavy lifting</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
-        <span class="font-medium">Saves 10+ hours/week managing campaigns</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
-        <span class="font-medium">No long onboarding or setup</span>
-      </div>
-    </div>
-
-    <!-- Trust micro-copy with risk reversal -->
-    <p class="mt-4 text-sm text-gray-600 animate-fade-in-up animation-delay-300">
-      ✓ No credit card required &nbsp;•&nbsp; ✓ Cancel anytime &nbsp;•&nbsp; ✓ 30-day guarantee
-    </p>
-
-    <!-- CTA buttons with urgency -->
+    <!-- CTA buttons -->
     <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-400">
       {% if has_endpoint('signup') %}
         <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
@@ -233,14 +208,6 @@
         </svg>
         See How It Works
       </a>
-    </div>
-
-    <!-- Urgency indicator -->
-    <div class="mt-6 inline-flex items-center gap-2 text-sm text-gray-600 animate-fade-in-up animation-delay-500">
-      <svg class="w-4 h-4 text-accent-500" fill="currentColor" viewBox="0 0 20 20">
-        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"/>
-      </svg>
-      <span><strong>14 spots left</strong> at this price this month</span>
     </div>
 
     <!-- Video Showcase -->

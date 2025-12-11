@@ -169,7 +169,41 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
-    app.logger.info("Registered 7 scheduled background jobs")
+    # Google Ads AI Agents - Tactical (every 2 hours)
+    # Quick wins: bid adjustments, add negative keywords, pause low CTR ads
+    scheduler.add_job(
+        func=run_tactical_agents,
+        trigger='interval',
+        hours=2,
+        id='run_tactical_agents',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    # Google Ads AI Agents - Operational (every 6 hours)
+    # Budget redistribution, pause underperformers, scale winners
+    scheduler.add_job(
+        func=run_operational_agents,
+        trigger='interval',
+        hours=6,
+        id='run_operational_agents',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    # Google Ads AI Agents - Strategic (daily at 6 AM UTC)
+    # Campaign structure changes, new keyword themes, A/B test decisions
+    scheduler.add_job(
+        func=run_strategic_agents,
+        trigger='cron',
+        hour=6,
+        minute=0,
+        id='run_strategic_agents',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    app.logger.info("Registered 10 scheduled background jobs")
 
 
 # ===== Scheduled Job Functions =====
@@ -578,6 +612,93 @@ def run_lead_automation_daily(app: Flask):
 
         except Exception as e:
             current_app.logger.error(f"Error in daily lead automation job: {e}", exc_info=True)
+
+
+def run_tactical_agents(app: Flask):
+    """
+    Run tactical-layer AI agents for all active Google Ads accounts.
+
+    Tactical agents make quick, high-frequency optimizations:
+    - Bid adjustments based on performance
+    - Add negative keywords from search term reports
+    - Pause low-performing ads (CTR < 1%)
+    - Add high-performing broad match queries as exact match
+
+    Runs every 2 hours to catch opportunities quickly.
+    """
+    with app.app_context():
+        try:
+            current_app.logger.info("[JOB] Starting tactical agents for all accounts")
+
+            from app.tasks.agent_scheduler import run_agents_for_all_accounts
+
+            success_count, error_count = run_agents_for_all_accounts(layer='tactical')
+
+            current_app.logger.info(
+                f"[JOB] Tactical agents completed: {success_count} succeeded, {error_count} failed"
+            )
+
+        except Exception as e:
+            current_app.logger.error(f"Error running tactical agents: {e}", exc_info=True)
+
+
+def run_operational_agents(app: Flask):
+    """
+    Run operational-layer AI agents for all active Google Ads accounts.
+
+    Operational agents manage medium-term optimizations:
+    - Budget redistribution between campaigns
+    - Pause underperforming campaigns/ad groups
+    - Scale winners by increasing budgets
+    - A/B test analysis and winner selection
+    - Quality score improvements
+
+    Runs every 6 hours for balanced optimization.
+    """
+    with app.app_context():
+        try:
+            current_app.logger.info("[JOB] Starting operational agents for all accounts")
+
+            from app.tasks.agent_scheduler import run_agents_for_all_accounts
+
+            success_count, error_count = run_agents_for_all_accounts(layer='operational')
+
+            current_app.logger.info(
+                f"[JOB] Operational agents completed: {success_count} succeeded, {error_count} failed"
+            )
+
+        except Exception as e:
+            current_app.logger.error(f"Error running operational agents: {e}", exc_info=True)
+
+
+def run_strategic_agents(app: Flask):
+    """
+    Run strategic-layer AI agents for all active Google Ads accounts.
+
+    Strategic agents make long-term, structural optimizations:
+    - Campaign structure analysis and recommendations
+    - New keyword theme discovery
+    - Landing page optimization opportunities
+    - Competitive analysis and positioning
+    - Budget allocation strategy across campaigns
+    - ROAS optimization decisions
+
+    Runs daily at 6 AM UTC for strategic planning.
+    """
+    with app.app_context():
+        try:
+            current_app.logger.info("[JOB] Starting strategic agents for all accounts")
+
+            from app.tasks.agent_scheduler import run_agents_for_all_accounts
+
+            success_count, error_count = run_agents_for_all_accounts(layer='strategic')
+
+            current_app.logger.info(
+                f"[JOB] Strategic agents completed: {success_count} succeeded, {error_count} failed"
+            )
+
+        except Exception as e:
+            current_app.logger.error(f"Error running strategic agents: {e}", exc_info=True)
 
 
 # ===== Manual Job Execution =====

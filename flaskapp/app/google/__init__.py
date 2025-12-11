@@ -2039,16 +2039,55 @@ def ads_ui():
     Google Ads main page - Uses the Opportunities Dashboard layout with real user data.
     Same layout as the demo page but shows actual connected account data.
     """
+    from datetime import datetime, timedelta
+
     aid = current_account_id()
     connected = _is_connected(aid, "ads")
 
-    try:
-        # Get ads data (with memory optimization: limit to essentials)
-        ads_data = _get_ads_state(aid)
+    # Force refresh parameter (only for manual refresh)
+    force_refresh = request.args.get('refresh') == '1'
 
-        # Generate comprehensive analysis using the opportunities analyzer
-        # Use lighter analysis to prevent OOM on shared hosting
-        analysis = _analyze_ads_opportunities(aid, ads_data)
+    try:
+        # Memory optimization: Use cached session data if available (unless force refresh)
+        sess_key = f"ads_state_{aid}"
+        analysis_key = f"ads_analysis_{aid}"
+        use_cache = False
+
+        if not force_refresh and sess_key in session:
+            cached_state = session.get(sess_key)
+            # Use cache if it's less than 1 hour old
+            if cached_state and cached_state.get("__cached_at"):
+                try:
+                    cache_time = datetime.fromisoformat(cached_state["__cached_at"])
+                    if datetime.utcnow() - cache_time < timedelta(hours=1):
+                        current_app.logger.info(f"Using cached ads data for account {aid}")
+                        ads_data = cached_state
+                        use_cache = True
+
+                        # Use cached analysis if available
+                        if analysis_key in session:
+                            analysis = session.get(analysis_key)
+                        else:
+                            # Generate analysis from cached data
+                            analysis = _analyze_ads_opportunities(aid, ads_data)
+                            session[analysis_key] = analysis
+                except (ValueError, TypeError):
+                    # Invalid cache timestamp, fetch fresh
+                    use_cache = False
+
+        if not use_cache:
+            # Get ads data (with memory optimization: limit to essentials)
+            ads_data = _get_ads_state(aid)
+
+            # Add timestamp to cache
+            ads_data["__cached_at"] = datetime.utcnow().isoformat()
+            session[sess_key] = ads_data
+
+            # Generate comprehensive analysis using the opportunities analyzer
+            # Use lighter analysis to prevent OOM on shared hosting
+            analysis = _analyze_ads_opportunities(aid, ads_data)
+            session[analysis_key] = analysis
+
     except MemoryError:
         current_app.logger.error(f"Memory error in ads_ui for account {aid}")
         flash("Unable to load full analysis due to server constraints. Showing simplified view.", "warning")

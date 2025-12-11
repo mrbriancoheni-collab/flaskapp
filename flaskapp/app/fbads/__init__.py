@@ -23,6 +23,9 @@ from flask import (
     current_app,
 )
 
+# SQLAlchemy imports
+from sqlalchemy import text
+
 # Optional DB imports (graceful if not present)
 try:
     from app import db  # type: ignore
@@ -80,7 +83,7 @@ def _store_fb_token(aid: int, token: str, expires_in: Optional[int]) -> None:
         try:
             with db.engine.connect() as conn:
                 conn.execute(
-                    db.text(
+                    text(
                         """
                         CREATE TABLE IF NOT EXISTS facebook_tokens (
                             account_id BIGINT NOT NULL PRIMARY KEY,
@@ -93,7 +96,7 @@ def _store_fb_token(aid: int, token: str, expires_in: Optional[int]) -> None:
                     )
                 )
                 conn.execute(
-                    db.text(
+                    text(
                         """
                         INSERT INTO facebook_tokens (account_id, access_token, expires_at, created_at, updated_at)
                         VALUES (:aid, :t, :exp, NOW(), NOW())
@@ -119,7 +122,7 @@ def _get_fb_token(aid: int) -> Optional[str]:
         try:
             with db.engine.connect() as conn:
                 result = conn.execute(
-                    db.text("SELECT access_token, expires_at FROM facebook_tokens WHERE account_id=:aid LIMIT 1"),
+                    text("SELECT access_token, expires_at FROM facebook_tokens WHERE account_id=:aid LIMIT 1"),
                     {"aid": aid},
                 )
                 row = result.fetchone()
@@ -135,7 +138,7 @@ def _clear_fb_token(aid: int) -> None:
         try:
             with db.engine.connect() as conn:
                 conn.execute(
-                    db.text("DELETE FROM facebook_tokens WHERE account_id=:aid"),
+                    text("DELETE FROM facebook_tokens WHERE account_id=:aid"),
                     {"aid": aid},
                 )
                 conn.commit()
@@ -302,7 +305,7 @@ def _get_selected_account(aid: int) -> Optional[Dict[str, Any]]:
         try:
             with db.engine.connect() as conn:
                 result = conn.execute(
-                    db.text(
+                    text(
                         "SELECT ad_account_id, ad_account_name, page_id, page_name "
                         "FROM facebook_selected_accounts WHERE account_id=:aid LIMIT 1"
                     ),
@@ -327,7 +330,7 @@ def _save_selected_account(aid: int, ad_account_id: str, ad_account_name: str, p
             with db.engine.connect() as conn:
                 # Create table if not exists
                 conn.execute(
-                    db.text(
+                    text(
                         """
                         CREATE TABLE IF NOT EXISTS facebook_selected_accounts (
                             account_id BIGINT NOT NULL PRIMARY KEY,
@@ -342,7 +345,7 @@ def _save_selected_account(aid: int, ad_account_id: str, ad_account_name: str, p
                     )
                 )
                 conn.execute(
-                    db.text(
+                    text(
                         """
                         INSERT INTO facebook_selected_accounts
                         (account_id, ad_account_id, ad_account_name, page_id, page_name, created_at, updated_at)

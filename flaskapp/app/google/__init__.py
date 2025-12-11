@@ -1612,35 +1612,70 @@ def index():
     force_refresh = request.args.get('refresh') == '1'
     cache_key = f"google_connected_{aid}"
 
-    if not force_refresh and cache_key in session:
-        cached = session.get(cache_key)
-        if cached and cached.get("__cached_at"):
-            try:
-                cache_time = datetime.fromisoformat(cached["__cached_at"])
-                if datetime.utcnow() - cache_time < timedelta(hours=1):
-                    current_app.logger.info(f"Using cached connection status for account {aid}")
-                    connected = {k: v for k, v in cached.items() if k != "__cached_at"}
-                    return render_template("google/index.html", connected=connected, epn=request.endpoint)
-            except (ValueError, TypeError):
-                pass
+    try:
+        if not force_refresh and cache_key in session:
+            cached = session.get(cache_key)
+            if cached and cached.get("__cached_at"):
+                try:
+                    cache_time = datetime.fromisoformat(cached["__cached_at"])
+                    if datetime.utcnow() - cache_time < timedelta(hours=1):
+                        current_app.logger.info(f"Using cached connection status for account {aid}")
+                        connected = {k: v for k, v in cached.items() if k != "__cached_at"}
+                        return render_template("google/index.html", connected=connected, epn=request.endpoint)
+                except (ValueError, TypeError):
+                    pass
 
-    # Fetch fresh connection status
-    connected = {
-        "ga":  _is_connected(aid, "ga"),
-        "ads": _is_connected(aid, "ads"),
-        "gsc": _is_connected(aid, "gsc"),
-        "gmb": _is_connected(aid, "gmb"),
-        "lsa": _is_connected(aid, "lsa"),
-    }
+        # Fetch fresh connection status with error handling for each check
+        connected = {}
+        try:
+            connected["ga"] = _is_connected(aid, "ga")
+        except Exception as e:
+            current_app.logger.error(f"Error checking GA connection: {e}")
+            connected["ga"] = False
 
-    # Cache the result
-    connected["__cached_at"] = datetime.utcnow().isoformat()
-    session[cache_key] = connected
+        try:
+            connected["ads"] = _is_connected(aid, "ads")
+        except Exception as e:
+            current_app.logger.error(f"Error checking Ads connection: {e}")
+            connected["ads"] = False
 
-    # Remove timestamp before rendering
-    display_connected = {k: v for k, v in connected.items() if k != "__cached_at"}
+        try:
+            connected["gsc"] = _is_connected(aid, "gsc")
+        except Exception as e:
+            current_app.logger.error(f"Error checking GSC connection: {e}")
+            connected["gsc"] = False
 
-    return render_template("google/index.html", connected=display_connected, epn=request.endpoint)
+        try:
+            connected["gmb"] = _is_connected(aid, "gmb")
+        except Exception as e:
+            current_app.logger.error(f"Error checking GMB connection: {e}")
+            connected["gmb"] = False
+
+        try:
+            connected["lsa"] = _is_connected(aid, "lsa")
+        except Exception as e:
+            current_app.logger.error(f"Error checking LSA connection: {e}")
+            connected["lsa"] = False
+
+        # Cache the result
+        connected["__cached_at"] = datetime.utcnow().isoformat()
+        session[cache_key] = connected
+
+        # Remove timestamp before rendering
+        display_connected = {k: v for k, v in connected.items() if k != "__cached_at"}
+
+        return render_template("google/index.html", connected=display_connected, epn=request.endpoint)
+
+    except Exception as e:
+        current_app.logger.error(f"Error in Google index route: {e}", exc_info=True)
+        # Fallback to all disconnected
+        return render_template("google/index.html", connected={
+            "ga": False,
+            "ads": False,
+            "gsc": False,
+            "gmb": False,
+            "lsa": False
+        }, epn=request.endpoint)
 
 # ------------------------- GA Insights (ChatGPT) -------------------------
 

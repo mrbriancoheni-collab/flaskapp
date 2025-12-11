@@ -411,7 +411,8 @@ def select_account():
         "fbads/select_account.html",
         ad_accounts=ad_accounts,
         pages=pages,
-        selected=selected
+        selected=selected,
+        config=current_app.config
     )
 
 @fbads_bp.post("/select-account", endpoint="select_account_post")
@@ -863,7 +864,8 @@ def fb_ads_optimize():
         "fbads/optimizer.html",
         connected=connected,
         recommendations=recommendations,
-        performance=performance_summary
+        performance=performance_summary,
+        config=current_app.config
     )
 
 def _generate_sample_recommendations():
@@ -1134,7 +1136,8 @@ def campaigns():
         "fbads/campaigns.html",
         connected=connected,
         selected=selected,
-        campaigns=campaigns_data
+        campaigns=campaigns_data,
+        config=current_app.config
     )
 
 # -----------------------------------------------------------------------------
@@ -1173,7 +1176,8 @@ def create_test_campaign():
         "fbads/create_test_campaign.html",
         connected=connected,
         selected=selected,
-        objectives=objectives
+        objectives=objectives,
+        config=current_app.config
     )
 
 @fbads_bp.post("/create-test-campaign", endpoint="create_test_campaign_post")
@@ -1338,7 +1342,8 @@ def adsets():
         connected=connected,
         selected=selected,
         campaign_id=campaign_id,
-        adsets=adsets_data
+        adsets=adsets_data,
+        config=current_app.config
     )
 
 @fbads_bp.route("/ads", endpoint="ads")
@@ -1422,7 +1427,8 @@ def ads():
         connected=connected,
         selected=selected,
         adset_id=adset_id,
-        ads=ads_data
+        ads=ads_data,
+        config=current_app.config
     )
 
 # -----------------------------------------------------------------------------

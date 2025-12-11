@@ -432,14 +432,16 @@ def fb_connect():
         flash("Facebook App ID not configured.", "error")
         return redirect(url_for("fbads_bp.index"))
 
-    # Use standard Facebook permissions (no advanced access required)
-    # business_management covers ad account access
-    # pages_show_list allows listing pages
-    # pages_read_engagement allows reading page data
+    # Facebook Marketing API permissions required for campaign management
+    # ads_management: Create, edit, and manage campaigns, ad sets, and ads
+    # read_insights: Access performance data and analytics
+    # business_management: Access ad accounts under business manager
+    # pages_show_list: List Facebook pages for ad account association
     scope = ",".join([
+        "ads_management",
+        "read_insights",
         "business_management",
-        "pages_show_list",
-        "pages_read_engagement"
+        "pages_show_list"
     ])
     from urllib.parse import urlencode
     params = dict(
@@ -1121,6 +1123,129 @@ def campaigns():
         selected=selected,
         campaigns=campaigns_data
     )
+
+# -----------------------------------------------------------------------------
+# Campaign Creation (for Meta App Review)
+# -----------------------------------------------------------------------------
+@fbads_bp.route("/create-test-campaign", methods=["GET"], endpoint="create_test_campaign")
+@login_required
+def create_test_campaign():
+    """
+    Simple campaign creation form for Meta app review.
+    Demonstrates end-to-end flow: create campaign → show in Ads Manager → pull metrics.
+    """
+    aid = current_account_id()
+    tok = _get_fb_token(aid)
+    connected = bool(tok)
+    selected = _get_selected_account(aid)
+
+    if not connected:
+        flash("Please connect your Facebook account first.", "warning")
+        return redirect(url_for("fbads_bp.connect"))
+
+    if not selected:
+        flash("Please select an ad account first.", "warning")
+        return redirect(url_for("fbads_bp.select_account"))
+
+    # Common campaign objectives for home services
+    objectives = [
+        ("OUTCOME_LEADS", "Lead Generation"),
+        ("OUTCOME_TRAFFIC", "Traffic"),
+        ("OUTCOME_ENGAGEMENT", "Engagement"),
+        ("OUTCOME_AWARENESS", "Brand Awareness"),
+        ("OUTCOME_SALES", "Conversions/Sales"),
+    ]
+
+    return render_template(
+        "fbads/create_test_campaign.html",
+        connected=connected,
+        selected=selected,
+        objectives=objectives
+    )
+
+@fbads_bp.post("/create-test-campaign", endpoint="create_test_campaign_post")
+@login_required
+def create_test_campaign_post():
+    """
+    Handle campaign creation via Marketing API.
+    Creates a test campaign in the user's ad account.
+    """
+    aid = current_account_id()
+    tok = _get_fb_token(aid)
+    selected = _get_selected_account(aid)
+
+    if not tok or not selected:
+        flash("Not connected to Facebook or no account selected.", "error")
+        return redirect(url_for("fbads_bp.create_test_campaign"))
+
+    # Get form data
+    campaign_name = request.form.get("campaign_name", "").strip()
+    objective = request.form.get("objective", "OUTCOME_LEADS")
+    daily_budget = request.form.get("daily_budget", "5")
+    status = request.form.get("status", "PAUSED")  # Start paused for safety
+
+    # Validation
+    if not campaign_name:
+        flash("Campaign name is required.", "error")
+        return redirect(url_for("fbads_bp.create_test_campaign"))
+
+    try:
+        daily_budget_cents = int(float(daily_budget) * 100)  # Convert to cents
+    except (ValueError, TypeError):
+        flash("Invalid budget amount.", "error")
+        return redirect(url_for("fbads_bp.create_test_campaign"))
+
+    # Create campaign via Marketing API
+    try:
+        endpoint = f"{GRAPH}/{selected['ad_account_id']}/campaigns"
+        payload = {
+            "name": campaign_name,
+            "objective": objective,
+            "status": status,
+            "special_ad_categories": [],  # Required field
+            "access_token": tok
+        }
+
+        # Note: daily_budget is set at ad set level, not campaign level for newer objectives
+        # For now we'll create campaign without budget (budget goes on ad set)
+
+        current_app.logger.info(f"Creating campaign: {campaign_name} with objective {objective}")
+
+        resp = requests.post(endpoint, data=payload, timeout=30)
+        resp.raise_for_status()
+
+        result = resp.json()
+        campaign_id = result.get("id")
+
+        current_app.logger.info(f"Campaign created successfully: {campaign_id}")
+
+        flash(
+            f"✅ Campaign '{campaign_name}' created successfully! "
+            f"Campaign ID: {campaign_id}. "
+            f"You can view it in Facebook Ads Manager.",
+            "success"
+        )
+
+        # Store campaign ID in session for potential follow-up actions
+        session["last_created_campaign_id"] = campaign_id
+        session["last_created_campaign_name"] = campaign_name
+
+        return redirect(url_for("fbads_bp.campaigns"))
+
+    except requests.exceptions.HTTPError as e:
+        error_msg = e.response.text if e.response else str(e)
+        current_app.logger.error(f"Campaign creation failed: {error_msg}")
+
+        flash(
+            f"Failed to create campaign. Facebook API error: {error_msg}",
+            "error"
+        )
+        return redirect(url_for("fbads_bp.create_test_campaign"))
+
+    except Exception as e:
+        current_app.logger.exception("Unexpected error creating campaign")
+        flash(f"Unexpected error: {str(e)}", "error")
+        return redirect(url_for("fbads_bp.create_test_campaign"))
 
 @fbads_bp.route("/adsets", endpoint="adsets")
 @login_required

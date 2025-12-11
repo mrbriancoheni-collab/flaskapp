@@ -1603,7 +1603,28 @@ def ads_ai_summary_json():
 @google_bp.route("/", methods=["GET"], endpoint="index")
 @login_required
 def index():
+    """Google integrations index with session caching to prevent OOM."""
+    from datetime import datetime, timedelta
+
     aid = current_account_id()
+
+    # Use session cache to prevent repeated DB calls (1 hour cache)
+    force_refresh = request.args.get('refresh') == '1'
+    cache_key = f"google_connected_{aid}"
+
+    if not force_refresh and cache_key in session:
+        cached = session.get(cache_key)
+        if cached and cached.get("__cached_at"):
+            try:
+                cache_time = datetime.fromisoformat(cached["__cached_at"])
+                if datetime.utcnow() - cache_time < timedelta(hours=1):
+                    current_app.logger.info(f"Using cached connection status for account {aid}")
+                    connected = {k: v for k, v in cached.items() if k != "__cached_at"}
+                    return render_template("google/index.html", connected=connected, epn=request.endpoint)
+            except (ValueError, TypeError):
+                pass
+
+    # Fetch fresh connection status
     connected = {
         "ga":  _is_connected(aid, "ga"),
         "ads": _is_connected(aid, "ads"),
@@ -1611,7 +1632,15 @@ def index():
         "gmb": _is_connected(aid, "gmb"),
         "lsa": _is_connected(aid, "lsa"),
     }
-    return render_template("google/index.html", connected=connected, epn=request.endpoint)
+
+    # Cache the result
+    connected["__cached_at"] = datetime.utcnow().isoformat()
+    session[cache_key] = connected
+
+    # Remove timestamp before rendering
+    display_connected = {k: v for k, v in connected.items() if k != "__cached_at"}
+
+    return render_template("google/index.html", connected=display_connected, epn=request.endpoint)
 
 # ------------------------- GA Insights (ChatGPT) -------------------------
 

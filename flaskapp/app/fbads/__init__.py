@@ -250,7 +250,7 @@ def _get_lead_by_id_from_db(lead_id: int, user_id: Optional[int] = None) -> Opti
 @login_required
 def index():
     connected = _is_connected()
-    return render_template("fbads/index.html", connected=connected)
+    return render_template("fbads/index.html", connected=connected, config=current_app.config)
 
 @fbads_bp.get("/leads")
 @login_required

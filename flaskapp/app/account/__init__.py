@@ -81,36 +81,45 @@ def _connect_url(provider: str) -> str:
         return "#"
 
 @request_cache
+def _get_all_google_oauth(aid: int) -> Dict[str, Tuple[bool, Optional[datetime]]]:
+    """
+    Batch fetch all Google OAuth tokens for an account in ONE query.
+    Returns dict keyed by product name.
+    Cached per-request to avoid duplicate queries.
+    """
+    result = {}
+    try:
+        with db.engine.connect() as conn:
+            rows = conn.execute(
+                text(
+                    """
+                    SELECT DISTINCT ON (product) product, token_expiry
+                      FROM google_oauth_tokens
+                     WHERE account_id=:aid
+                     ORDER BY product, updated_at DESC
+                    """
+                ),
+                {"aid": aid},
+            ).mappings().all()
+
+            for row in rows:
+                product = row.get("product")
+                if product:
+                    result[product] = (True, _safe_dt(row.get("token_expiry")))
+    except Exception as e:
+        current_app.logger.error(f"Error fetching Google OAuth tokens: {e}")
+
+    return result
+
+@request_cache
 def _has_google_oauth(aid: int, product: str) -> Tuple[bool, Optional[datetime]]:
     """
     True if there is an OAuth row in google_oauth_tokens for this product.
-    Mirrors the pattern used elsewhere in the app.
+    Now uses batch query for better performance.
     Cached per-request to avoid duplicate queries.
     """
-    try:
-        with db.engine.connect() as conn:
-            row = (
-                conn.execute(
-                    text(
-                        """
-                        SELECT token_expiry
-                          FROM google_oauth_tokens
-                         WHERE account_id=:aid
-                           AND product=:prod
-                         ORDER BY updated_at DESC
-                         LIMIT 1
-                        """
-                    ),
-                    {"aid": aid, "prod": product},
-                )
-                .mappings()
-                .first()
-            )
-            if row:
-                return True, _safe_dt(row.get("token_expiry"))
-    except Exception:
-        pass
-    return False, None
+    all_tokens = _get_all_google_oauth(aid)
+    return all_tokens.get(product, (False, None))
 
 @request_cache
 def _is_facebook_connected(aid: int) -> Tuple[bool, Optional[datetime]]:
@@ -373,11 +382,39 @@ def account_index():
 @account_bp.route("/dashboard", methods=["GET"], endpoint="dashboard")
 @login_required
 def dashboard():
+    """Dashboard with aggressive 5-minute session caching for instant loads."""
+    from datetime import datetime, timedelta
+    from flask import session
+
     aid = current_account_id()
     if not aid:
         flash("We couldn't determine your account. Please log in again.", "error")
         return redirect(url_for("auth_bp.logout"))
 
+    # Check for cached dashboard data (5-minute TTL)
+    force_refresh = request.args.get('refresh') == '1'
+    cache_key = f"dashboard_data_{aid}"
+
+    if not force_refresh and cache_key in session:
+        cached = session.get(cache_key)
+        if cached and cached.get("__cached_at"):
+            try:
+                cache_time = datetime.fromisoformat(cached["__cached_at"])
+                if datetime.utcnow() - cache_time < timedelta(minutes=5):
+                    current_app.logger.debug(f"Using cached dashboard for account {aid}")
+                    return render_template(
+                        "account/dashboard.html",
+                        cards=cached["cards"],
+                        card_order=cached["card_order"],
+                        is_paid=cached["is_paid"],
+                        connected_count=cached["connected_count"],
+                        total_count=cached["total_count"],
+                        connected_percent=cached["connected_percent"],
+                    )
+            except (ValueError, TypeError, KeyError):
+                pass
+
+    # Fetch fresh data
     is_paid = is_paid_account()
     cards = _connection_cards(aid)
 
@@ -387,6 +424,17 @@ def dashboard():
     connected_count = sum(1 for k in card_order if cards.get(k, {}).get("connected"))
     total_count = len(card_order)
     pct = int(round((connected_count / max(1, total_count)) * 100))
+
+    # Cache the result
+    session[cache_key] = {
+        "cards": cards,
+        "card_order": card_order,
+        "is_paid": is_paid,
+        "connected_count": connected_count,
+        "total_count": total_count,
+        "connected_percent": pct,
+        "__cached_at": datetime.utcnow().isoformat(),
+    }
 
     return render_template(
         "account/dashboard.html",

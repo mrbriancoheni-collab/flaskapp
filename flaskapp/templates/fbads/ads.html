@@ -82,7 +82,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
 const adsData = {{ ads|tojson }};
 
 function editAd(adId, adName) {

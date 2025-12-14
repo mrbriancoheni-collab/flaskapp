@@ -440,6 +440,7 @@ def create_app():
     def _security_headers(resp):
         nonce = getattr(g, "csp_nonce", "")
 
+        # Security headers
         resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")
         resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
@@ -461,6 +462,17 @@ def create_app():
             "frame-ancestors 'self'; base-uri 'self'; "
             "form-action 'self' https://checkout.stripe.com https://*.stripe.com"
         )
+
+        # Performance: Aggressive caching for static files (CSS, JS, images, fonts)
+        if request.path.startswith('/static/'):
+            # Cache static files for 1 year (immutable)
+            resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            resp.headers["Expires"] = (datetime.utcnow() + timedelta(days=365)).strftime('%a, %d %b %Y %H:%M:%S GMT')
+        elif request.path.endswith(('.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.woff', '.woff2', '.ttf', '.ico')):
+            # Cache other static assets for 1 week
+            resp.headers["Cache-Control"] = "public, max-age=604800"
+            resp.headers["Expires"] = (datetime.utcnow() + timedelta(days=7)).strftime('%a, %d %b %Y %H:%M:%S GMT')
+
         return resp
 
     # Enable loop controls in Jinja

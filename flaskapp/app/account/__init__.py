@@ -86,6 +86,7 @@ def _get_all_google_oauth(aid: int) -> Dict[str, Tuple[bool, Optional[datetime]]
     Batch fetch all Google OAuth tokens for an account in ONE query.
     Returns dict keyed by product name.
     Cached per-request to avoid duplicate queries.
+    MySQL-compatible version using GROUP BY.
     """
     result = {}
     try:
@@ -93,10 +94,10 @@ def _get_all_google_oauth(aid: int) -> Dict[str, Tuple[bool, Optional[datetime]]
             rows = conn.execute(
                 text(
                     """
-                    SELECT DISTINCT ON (product) product, token_expiry
+                    SELECT product, MAX(token_expiry) as token_expiry
                       FROM google_oauth_tokens
                      WHERE account_id=:aid
-                     ORDER BY product, updated_at DESC
+                     GROUP BY product
                     """
                 ),
                 {"aid": aid},

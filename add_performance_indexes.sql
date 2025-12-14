@@ -37,8 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_accounts_id
 
 -- Optimize common date range queries on Google OAuth
 CREATE INDEX IF NOT EXISTS idx_google_oauth_expiry
-    ON google_oauth_tokens(token_expiry)
-    WHERE token_expiry IS NOT NULL;
+    ON google_oauth_tokens(token_expiry);
 
 SELECT 'Core performance indexes created successfully!' as status;
 SELECT 'Note: Some indexes were skipped because tables don\'t exist yet.' as note;

@@ -1346,6 +1346,54 @@ def adsets():
         config=current_app.config
     )
 
+@fbads_bp.post("/ads/update", endpoint="update_ad")
+@login_required
+def update_ad():
+    """Update a Facebook ad via Marketing API"""
+    aid = current_account_id()
+    tok = _get_fb_token(aid)
+
+    if not tok:
+        flash("Not connected to Facebook", "error")
+        return redirect(url_for("fbads_bp.ads", adset_id=request.form.get("adset_id")))
+
+    ad_id = request.form.get("ad_id")
+    name = request.form.get("name")
+    status = request.form.get("status")
+    adset_id = request.form.get("adset_id")
+
+    if not ad_id or not name:
+        flash("Ad ID and name are required", "error")
+        return redirect(url_for("fbads_bp.ads", adset_id=adset_id))
+
+    try:
+        # Update ad via Facebook Marketing API
+        update_data = {
+            "name": name,
+            "status": status,
+            "access_token": tok
+        }
+
+        resp = requests.post(
+            f"{GRAPH}/{ad_id}",
+            data=update_data,
+            timeout=30
+        )
+        resp.raise_for_status()
+
+        flash(f"✅ Ad '{name}' updated successfully!", "success")
+        current_app.logger.info(f"Updated Facebook ad {ad_id}: {name}")
+
+    except requests.exceptions.HTTPError as e:
+        error_msg = e.response.text if e.response else str(e)
+        current_app.logger.error(f"Failed to update ad {ad_id}: {error_msg}")
+        flash(f"Failed to update ad: {error_msg}", "error")
+    except Exception as e:
+        current_app.logger.exception(f"Error updating ad {ad_id}")
+        flash(f"Error updating ad: {str(e)}", "error")
+
+    return redirect(url_for("fbads_bp.ads", adset_id=adset_id))
+
 @fbads_bp.route("/ads", endpoint="ads")
 @login_required
 def ads():

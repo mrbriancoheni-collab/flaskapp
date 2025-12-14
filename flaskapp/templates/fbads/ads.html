@@ -80,18 +80,182 @@
             </div>
         </div>
     </div>
+
+    <!-- Edit Ad Modal -->
+    <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <form id="editAdForm" method="post" action="{{ url_for('fbads_bp.update_ad') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="ad_id" id="edit_ad_id">
+                <input type="hidden" name="adset_id" value="{{ request.args.get('adset_id', '') }}">
+
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold">Edit Ad</h2>
+                            <p class="text-sm text-gray-500 mt-1">Make changes to your Facebook ad</p>
+                        </div>
+                        <button type="button" id="closeEditBtn" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Performance Summary (Read-only) -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                        <h3 class="text-sm font-semibold text-blue-900 mb-3">Performance Overview</h3>
+                        <div class="grid grid-cols-4 gap-4 text-center">
+                            <div>
+                                <p class="text-xs text-blue-600">Spend</p>
+                                <p class="text-lg font-bold text-blue-900" id="edit_spend">-</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-blue-600">CTR</p>
+                                <p class="text-lg font-bold text-blue-900" id="edit_ctr">-</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-blue-600">CPC</p>
+                                <p class="text-lg font-bold text-blue-900" id="edit_cpc">-</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-blue-600">Clicks</p>
+                                <p class="text-lg font-bold text-blue-900" id="edit_clicks">-</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-5">
+                        <!-- Ad Name -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Ad Name <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" name="name" id="edit_name" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   placeholder="Enter ad name">
+                        </div>
+
+                        <!-- Status -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Status <span class="text-red-500">*</span>
+                            </label>
+                            <select name="status" id="edit_status" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="ACTIVE">Active</option>
+                                <option value="PAUSED">Paused</option>
+                            </select>
+                        </div>
+
+                        <!-- Headline -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Headline
+                                <span class="text-xs text-gray-500 ml-2">(Primary text shown in bold)</span>
+                            </label>
+                            <input type="text" name="headline" id="edit_headline"
+                                   maxlength="40"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   placeholder="Grab attention with a compelling headline">
+                            <p class="text-xs text-gray-500 mt-1">Max 40 characters</p>
+                        </div>
+
+                        <!-- Body Text -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Body Text
+                                <span class="text-xs text-gray-500 ml-2">(Main ad copy)</span>
+                            </label>
+                            <textarea name="body" id="edit_body" rows="4"
+                                      maxlength="125"
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                      placeholder="Describe your offer, benefits, or value proposition"></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Max 125 characters</p>
+                        </div>
+
+                        <!-- Call to Action -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Call to Action Button
+                            </label>
+                            <select name="call_to_action" id="edit_cta"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">No button</option>
+                                <option value="LEARN_MORE">Learn More</option>
+                                <option value="SHOP_NOW">Shop Now</option>
+                                <option value="SIGN_UP">Sign Up</option>
+                                <option value="GET_QUOTE">Get Quote</option>
+                                <option value="APPLY_NOW">Apply Now</option>
+                                <option value="BOOK_TRAVEL">Book Now</option>
+                                <option value="CONTACT_US">Contact Us</option>
+                                <option value="DOWNLOAD">Download</option>
+                                <option value="SUBSCRIBE">Subscribe</option>
+                            </select>
+                        </div>
+
+                        <!-- Note -->
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                            <div class="flex">
+                                <svg class="w-5 h-5 text-yellow-600 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                                <div>
+                                    <p class="text-sm font-medium text-yellow-800">Note about ad editing</p>
+                                    <p class="text-xs text-yellow-700 mt-1">Creative changes (images/videos) require editing in Facebook Ads Manager. This editor updates ad text and status only.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex gap-3 mt-6 pt-6 border-t">
+                        <button type="button" id="cancelEditBtn"
+                                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
 const adsData = {{ ads|tojson }};
 
 function editAd(adId, adName) {
-    // For now, redirect to Facebook Ads Manager
-    // In future, open an edit modal or dedicated edit page
-    const confirmed = confirm(`Edit ad: ${adName}?\n\nThis will open Facebook Ads Manager in a new tab.`);
-    if (confirmed) {
-        window.open(`https://www.facebook.com/adsmanager/manage/ads?act={{ selected.ad_account_id if selected else '' }}&selected_ad_ids=${adId}`, '_blank');
+    // Find the ad data
+    const ad = adsData.find(a => a.id === adId);
+    if (!ad) {
+        alert('Ad not found');
+        return;
     }
+
+    // Populate the edit form
+    document.getElementById('edit_ad_id').value = ad.id;
+    document.getElementById('edit_name').value = ad.name || '';
+    document.getElementById('edit_status').value = ad.status || 'ACTIVE';
+    document.getElementById('edit_headline').value = ad.headline || '';
+    document.getElementById('edit_body').value = ad.body || '';
+    document.getElementById('edit_cta').value = ad.call_to_action || '';
+
+    // Populate performance metrics (read-only)
+    document.getElementById('edit_spend').textContent = ad.spend || '-';
+    document.getElementById('edit_ctr').textContent = ad.ctr || '-';
+    document.getElementById('edit_cpc').textContent = ad.cpc || '-';
+    document.getElementById('edit_clicks').textContent = ad.clicks || '-';
+
+    // Show the modal
+    document.getElementById('editModal').classList.remove('hidden');
+}
+
+function closeEdit() {
+    document.getElementById('editModal').classList.add('hidden');
 }
 
 function previewAd(index) {
@@ -194,10 +358,31 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Close modal on Escape key
+    // Edit modal close buttons
+    const closeEditBtn = document.getElementById('closeEditBtn');
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
+    if (closeEditBtn) {
+        closeEditBtn.addEventListener('click', closeEdit);
+    }
+    if (cancelEditBtn) {
+        cancelEditBtn.addEventListener('click', closeEdit);
+    }
+
+    // Close edit modal on background click
+    const editModal = document.getElementById('editModal');
+    if (editModal) {
+        editModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeEdit();
+            }
+        });
+    }
+
+    // Close modals on Escape key
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closePreview();
+            closeEdit();
         }
     });
 });

@@ -91,7 +91,7 @@
     <!-- Edit Ad Modal -->
     <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <form id="editAdForm" method="post" action="{{ url_for('fbads_bp.update_ad') }}">
+            <form id="editAdForm" method="post" action="{{ url_for('fbads_bp.update_ad') }}" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="ad_id" id="edit_ad_id">
                 <input type="hidden" name="adset_id" value="{{ request.args.get('adset_id', '') }}">
@@ -201,15 +201,69 @@
                             </select>
                         </div>
 
+                        <!-- Image Upload -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Ad Image
+                                <span class="text-xs text-gray-500 ml-2">(1200x628px recommended)</span>
+                            </label>
+
+                            <!-- Current image preview -->
+                            <div id="currentImagePreview" class="mb-3 hidden">
+                                <p class="text-xs text-gray-500 mb-2">Current image:</p>
+                                <div class="relative inline-block">
+                                    <img id="currentImage" src="" alt="Current ad image" class="max-w-full h-auto rounded-lg border border-gray-300" style="max-height: 200px;">
+                                </div>
+                            </div>
+
+                            <!-- File upload -->
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                                <input type="file" name="image" id="imageUpload" accept="image/*" class="hidden">
+                                <label for="imageUpload" class="cursor-pointer">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    <p class="mt-2 text-sm text-gray-600">
+                                        <span class="font-semibold text-blue-600">Click to upload</span> or drag and drop
+                                    </p>
+                                    <p class="text-xs text-gray-500 mt-1">PNG, JPG up to 10MB</p>
+                                </label>
+                            </div>
+
+                            <!-- New image preview -->
+                            <div id="newImagePreview" class="mt-3 hidden">
+                                <div class="flex items-start justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <div class="flex items-center gap-3">
+                                        <img id="previewImage" src="" alt="Preview" class="w-20 h-20 object-cover rounded">
+                                        <div>
+                                            <p class="text-sm font-medium text-blue-900" id="fileName"></p>
+                                            <p class="text-xs text-blue-600" id="fileSize"></p>
+                                            <p class="text-xs text-blue-600" id="imageDimensions"></p>
+                                        </div>
+                                    </div>
+                                    <button type="button" id="removeImage" class="text-blue-600 hover:text-blue-800">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Note -->
-                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                             <div class="flex">
-                                <svg class="w-5 h-5 text-yellow-600 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                <svg class="w-5 h-5 text-blue-600 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
                                 </svg>
                                 <div>
-                                    <p class="text-sm font-medium text-yellow-800">Note about ad editing</p>
-                                    <p class="text-xs text-yellow-700 mt-1">Creative changes (images/videos) require editing in Facebook Ads Manager. This editor updates ad text and status only.</p>
+                                    <p class="text-sm font-medium text-blue-800">Image Guidelines</p>
+                                    <ul class="text-xs text-blue-700 mt-1 space-y-1">
+                                        <li>• Recommended: 1200x628px (1.91:1 ratio)</li>
+                                        <li>• Minimum: 600x315px</li>
+                                        <li>• Text should be less than 20% of image</li>
+                                        <li>• File size: under 10MB</li>
+                                    </ul>
                                 </div>
                             </div>
                         </div>
@@ -392,6 +446,99 @@ document.addEventListener('DOMContentLoaded', function() {
             closeEdit();
         }
     });
+
+    // Image upload handling
+    const imageUpload = document.getElementById('imageUpload');
+    const newImagePreview = document.getElementById('newImagePreview');
+    const previewImage = document.getElementById('previewImage');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const imageDimensions = document.getElementById('imageDimensions');
+    const removeImage = document.getElementById('removeImage');
+
+    if (imageUpload) {
+        imageUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Validate file type
+            if (!file.type.match('image.*')) {
+                alert('Please select an image file');
+                return;
+            }
+
+            // Validate file size (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('Image must be less than 10MB');
+                return;
+            }
+
+            // Read and preview the image
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+
+                // Get image dimensions
+                const img = new Image();
+                img.onload = function() {
+                    imageDimensions.textContent = `${this.width}x${this.height}px`;
+
+                    // Warn if dimensions are not optimal
+                    if (this.width < 600 || this.height < 315) {
+                        imageDimensions.textContent += ' ⚠️ Too small';
+                        imageDimensions.classList.add('text-red-600');
+                    } else {
+                        imageDimensions.classList.remove('text-red-600');
+                    }
+                };
+                img.src = e.target.result;
+
+                fileName.textContent = file.name;
+                fileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+                newImagePreview.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    if (removeImage) {
+        removeImage.addEventListener('click', function() {
+            imageUpload.value = '';
+            newImagePreview.classList.add('hidden');
+            previewImage.src = '';
+        });
+    }
+
+    // Drag and drop support
+    const dropZone = imageUpload?.closest('.border-dashed');
+    if (dropZone) {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, function() {
+                this.classList.add('border-blue-500', 'bg-blue-50');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, function() {
+                this.classList.remove('border-blue-500', 'bg-blue-50');
+            });
+        });
+
+        dropZone.addEventListener('drop', function(e) {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                imageUpload.files = files;
+                imageUpload.dispatchEvent(new Event('change'));
+            }
+        });
+    }
 });
 
 // Facebook SDK

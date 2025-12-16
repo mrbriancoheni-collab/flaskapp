@@ -635,13 +635,6 @@ def _ensure_default_gsc_site_selected(aid: int):
     if sites:
         _set_gsc_selected_site(aid, sites[0]["siteUrl"])
 
-def _fetch_ads_live(aid: int):
-    cid = _get_saved_customer_id(aid, conn)
-    if not cid:
-        # Fall back instead of raising
-        current_app.logger.info("No CID; returning empty snapshot with CTA")
-        return {"ok": True, "data": [], "needs_setup": True}
-
 def _fetch_gsc_report(site_url: str, start_date: str, end_date: str) -> dict | None:
     """Return clicks, impressions, ctr, position, top pages, top queries from GSC."""
     if not site_url:
@@ -2106,7 +2099,13 @@ def ads_ui():
     from datetime import datetime, timedelta
 
     aid = current_account_id()
-    connected = _is_connected(aid, "ads")
+
+    # Wrap entire route in try/except for comprehensive error handling
+    try:
+        connected = _is_connected(aid, "ads")
+    except Exception as e:
+        current_app.logger.error(f"Error checking connection status: {e}")
+        connected = False
 
     # Force refresh parameter (only for manual refresh)
     force_refresh = request.args.get('refresh') == '1'
@@ -2234,79 +2233,95 @@ def ads_ui():
         return False
 
     # Get already-applied optimizations to filter them out
-    from app.models_google import AppliedOptimization, CompletedManualTask, ensure_google_tables
-    applied_optimization_titles = set()
+    try:
+        from app.models_google import AppliedOptimization, CompletedManualTask, ensure_google_tables
+        applied_optimization_titles = set()
 
-    def _fetch_applied_opts():
-        """Fetch applied optimizations from database."""
-        from datetime import datetime, timedelta
-        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-        applied_opts = AppliedOptimization.query.filter(
-            AppliedOptimization.account_id == aid,
-            AppliedOptimization.status == 'applied',
-            AppliedOptimization.created_at >= thirty_days_ago
-        ).all()
-        return {opt.optimization_title for opt in applied_opts}
+        def _fetch_applied_opts():
+            """Fetch applied optimizations from database."""
+            from datetime import datetime, timedelta
+            thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+            applied_opts = AppliedOptimization.query.filter(
+                AppliedOptimization.account_id == aid,
+                AppliedOptimization.status == 'applied',
+                AppliedOptimization.created_at >= thirty_days_ago
+            ).all()
+            return {opt.optimization_title for opt in applied_opts}
 
-    # Use safe query wrapper with automatic table creation
-    result = _safe_db_query(_fetch_applied_opts)
-    if result is not None:
-        applied_optimization_titles = result
-        current_app.logger.info(f"Found {len(applied_optimization_titles)} applied optimizations in last 30 days")
-    else:
-        current_app.logger.warning("Could not fetch applied optimizations, proceeding without filter")
+        # Use safe query wrapper with automatic table creation
+        result = _safe_db_query(_fetch_applied_opts)
+        if result is not None:
+            applied_optimization_titles = result
+            current_app.logger.info(f"Found {len(applied_optimization_titles)} applied optimizations in last 30 days")
+        else:
+            current_app.logger.warning("Could not fetch applied optimizations, proceeding without filter")
 
-    # Filter out already-applied optimizations from auto-applicable list
-    auto_applicable_opps = [opp for opp in all_opportunities if is_auto_applicable(opp)]
-    analysis["opportunities"] = [
-        opp for opp in auto_applicable_opps
-        if opp.get("title") not in applied_optimization_titles
-    ]
+        # Filter out already-applied optimizations from auto-applicable list
+        auto_applicable_opps = [opp for opp in all_opportunities if is_auto_applicable(opp)]
+        analysis["opportunities"] = [
+            opp for opp in auto_applicable_opps
+            if opp.get("title") not in applied_optimization_titles
+        ]
 
-    all_manual_tasks = [opp for opp in all_opportunities if not is_auto_applicable(opp)]
+        all_manual_tasks = [opp for opp in all_opportunities if not is_auto_applicable(opp)]
 
-    # Filter out completed manual tasks
-    completed_task_ids = set()
+        # Filter out completed manual tasks
+        completed_task_ids = set()
 
-    def _fetch_completed_tasks():
-        """Fetch completed manual tasks from database."""
-        return {task.task_id for task in CompletedManualTask.query.filter_by(account_id=aid).all()}
+        def _fetch_completed_tasks():
+            """Fetch completed manual tasks from database."""
+            return {task.task_id for task in CompletedManualTask.query.filter_by(account_id=aid).all()}
 
-    # Use safe query wrapper with automatic table creation
-    result = _safe_db_query(_fetch_completed_tasks)
-    if result is not None:
-        completed_task_ids = result
-    else:
-        current_app.logger.warning("Could not fetch completed manual tasks, proceeding without filter")
+        # Use safe query wrapper with automatic table creation
+        result = _safe_db_query(_fetch_completed_tasks)
+        if result is not None:
+            completed_task_ids = result
+        else:
+            current_app.logger.warning("Could not fetch completed manual tasks, proceeding without filter")
 
-    analysis["manual_tasks"] = [
-        task for task in all_manual_tasks
-        if task.get("id") not in completed_task_ids
-    ]
+        analysis["manual_tasks"] = [
+            task for task in all_manual_tasks
+            if task.get("id") not in completed_task_ids
+        ]
 
-    current_app.logger.info(
-        f"ads_ui: Split {len(all_opportunities)} total into {len(auto_applicable_opps)} auto-applicable "
-        f"({len(applied_optimization_titles)} already applied, {len(analysis['opportunities'])} remaining) "
-        f"and {len(all_manual_tasks)} manual tasks ({len(completed_task_ids)} completed, {len(analysis['manual_tasks'])} remaining). "
-        f"Auto types: {[o.get('title') for o in analysis['opportunities']]}"
-    )
+        current_app.logger.info(
+            f"ads_ui: Split {len(all_opportunities)} total into {len(auto_applicable_opps)} auto-applicable "
+            f"({len(applied_optimization_titles)} already applied, {len(analysis['opportunities'])} remaining) "
+            f"and {len(all_manual_tasks)} manual tasks ({len(completed_task_ids)} completed, {len(analysis['manual_tasks'])} remaining). "
+            f"Auto types: {[o.get('title') for o in analysis['opportunities']]}"
+        )
 
-    # TEMPLATE DEBUG: Log what's being passed to template
-    current_app.logger.info(
-        f"TEMPLATE DEBUG - Passing to template: "
-        f"opportunities={len(analysis.get('opportunities', []))}, "
-        f"manual_tasks={len(analysis.get('manual_tasks', []))}, "
-        f"manual_task_titles={[t.get('title') for t in analysis.get('manual_tasks', [])]}"
-    )
+        # TEMPLATE DEBUG: Log what's being passed to template
+        current_app.logger.info(
+            f"TEMPLATE DEBUG - Passing to template: "
+            f"opportunities={len(analysis.get('opportunities', []))}, "
+            f"manual_tasks={len(analysis.get('manual_tasks', []))}, "
+            f"manual_task_titles={[t.get('title') for t in analysis.get('manual_tasks', [])]}"
+        )
 
-    return render_template(
-        "google/ads_opportunities.html",
-        connected=connected,
-        ads_data=ads_data,
-        analysis=analysis,
-        epn=request.endpoint,
-        is_demo=False,
-    )
+        return render_template(
+            "google/ads_opportunities.html",
+            connected=connected,
+            ads_data=ads_data,
+            analysis=analysis,
+            epn=request.endpoint,
+            is_demo=False,
+        )
+
+    except Exception as e:
+        # Catch any errors in the database query or template rendering phase
+        current_app.logger.error(f"Error in ads_ui post-analysis phase: {e}", exc_info=True)
+        flash(f"Error displaying Google Ads data: {str(e)}", "error")
+
+        # Fallback to minimal template with demo data
+        return render_template(
+            "google/ads_opportunities.html",
+            connected=connected,
+            ads_data={"campaigns": [], "ad_groups": [], "keywords": [], "ads": []},
+            analysis={"opportunities": [], "manual_tasks": [], "account_score": 0, "top_opportunities": []},
+            epn=request.endpoint,
+            is_demo=False,
+        )
 
 # ------------------------- GA JSON data (AJAX) -------------------------
 

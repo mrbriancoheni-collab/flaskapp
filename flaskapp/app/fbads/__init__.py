@@ -1349,17 +1349,21 @@ def adsets():
 @fbads_bp.post("/ads/update", endpoint="update_ad")
 @login_required
 def update_ad():
-    """Update a Facebook ad via Marketing API"""
+    """Update a Facebook ad via Marketing API with optional image upload"""
     aid = current_account_id()
     tok = _get_fb_token(aid)
+    selected = _get_selected_account(aid)
 
-    if not tok:
+    if not tok or not selected:
         flash("Not connected to Facebook", "error")
         return redirect(url_for("fbads_bp.ads", adset_id=request.form.get("adset_id")))
 
     ad_id = request.form.get("ad_id")
     name = request.form.get("name")
     status = request.form.get("status")
+    headline = request.form.get("headline")
+    body = request.form.get("body")
+    call_to_action = request.form.get("call_to_action")
     adset_id = request.form.get("adset_id")
 
     if not ad_id or not name:
@@ -1367,7 +1371,43 @@ def update_ad():
         return redirect(url_for("fbads_bp.ads", adset_id=adset_id))
 
     try:
-        # Update ad via Facebook Marketing API
+        # Handle image upload if provided
+        image_hash = None
+        if 'image' in request.files:
+            image_file = request.files['image']
+            if image_file and image_file.filename:
+                current_app.logger.info(f"Uploading image: {image_file.filename}")
+
+                # Upload image to Facebook AdImage API
+                ad_account_id = selected['ad_account_id']
+                image_upload_url = f"{GRAPH}/{ad_account_id}/adimages"
+
+                files = {
+                    'filename': (image_file.filename, image_file.stream, image_file.content_type)
+                }
+                data = {
+                    'access_token': tok
+                }
+
+                img_resp = requests.post(
+                    image_upload_url,
+                    files=files,
+                    data=data,
+                    timeout=60
+                )
+                img_resp.raise_for_status()
+                img_result = img_resp.json()
+
+                # Get the image hash
+                if 'images' in img_result and image_file.filename in img_result['images']:
+                    image_hash = img_result['images'][image_file.filename]['hash']
+                    current_app.logger.info(f"Image uploaded successfully: hash={image_hash}")
+                    flash(f"✅ Image uploaded successfully!", "success")
+                else:
+                    current_app.logger.error(f"Image upload failed: {img_result}")
+                    flash("Image upload failed. Updating text only.", "warning")
+
+        # Update ad basic properties
         update_data = {
             "name": name,
             "status": status,
@@ -1380,6 +1420,52 @@ def update_ad():
             timeout=30
         )
         resp.raise_for_status()
+
+        # If we have a new image, create/update the creative
+        if image_hash and headline and body:
+            try:
+                # Create new creative with the image
+                creative_data = {
+                    "name": f"Creative for {name}",
+                    "object_story_spec": {
+                        "page_id": selected.get('page_id', ''),
+                        "link_data": {
+                            "image_hash": image_hash,
+                            "link": "https://fieldsprout.io",  # Replace with actual link
+                            "message": body,
+                            "name": headline,
+                            "call_to_action": {
+                                "type": call_to_action or "LEARN_MORE"
+                            } if call_to_action else {}
+                        }
+                    },
+                    "access_token": tok
+                }
+
+                creative_resp = requests.post(
+                    f"{GRAPH}/{selected['ad_account_id']}/adcreatives",
+                    json=creative_data,
+                    timeout=30
+                )
+                creative_resp.raise_for_status()
+                creative_result = creative_resp.json()
+                creative_id = creative_result.get('id')
+
+                if creative_id:
+                    # Update ad with new creative
+                    requests.post(
+                        f"{GRAPH}/{ad_id}",
+                        data={
+                            "creative": {"creative_id": creative_id},
+                            "access_token": tok
+                        },
+                        timeout=30
+                    )
+                    current_app.logger.info(f"Ad creative updated: {creative_id}")
+
+            except Exception as creative_error:
+                current_app.logger.error(f"Failed to update creative: {creative_error}")
+                flash("Ad updated but creative update failed. Text changes only.", "warning")
 
         flash(f"✅ Ad '{name}' updated successfully!", "success")
         current_app.logger.info(f"Updated Facebook ad {ad_id}: {name}")

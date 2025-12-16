@@ -28,10 +28,27 @@ from app.google.utils_ads import (
     pick_and_save_customer_id_after_oauth,
     save_customer_id,
 )
+from enum import Enum
 
 google_bp = Blueprint("google_bp", __name__, url_prefix="/account/google")
 
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+
+def _make_json_serializable(obj):
+    """
+    Recursively convert objects to be JSON serializable.
+    Converts Enum values to their string representation.
+    """
+    if isinstance(obj, Enum):
+        return obj.name  # Convert enum to its name (string)
+    elif isinstance(obj, dict):
+        return {key: _make_json_serializable(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [_make_json_serializable(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple(_make_json_serializable(item) for item in obj)
+    else:
+        return obj
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 
 
@@ -2100,17 +2117,22 @@ def ads_ui():
 
     aid = current_account_id()
 
-    # Wrap entire route in try/except for comprehensive error handling
-    try:
-        connected = _is_connected(aid, "ads")
-    except Exception as e:
-        current_app.logger.error(f"Error checking connection status: {e}")
-        connected = False
+    # Initialize defaults in case of early error
+    connected = False
+    ads_data = {"campaigns": [], "ad_groups": [], "keywords": [], "ads": []}
+    analysis = {"opportunities": [], "manual_tasks": [], "account_score": 0, "top_opportunities": []}
 
-    # Force refresh parameter (only for manual refresh)
-    force_refresh = request.args.get('refresh') == '1'
-
+    # Wrap entire route in comprehensive error handling
     try:
+        # Check connection status
+        try:
+            connected = _is_connected(aid, "ads")
+        except Exception as e:
+            current_app.logger.error(f"Error checking connection status: {e}")
+            connected = False
+
+        # Force refresh parameter (only for manual refresh)
+        force_refresh = request.args.get('refresh') == '1'
         # Memory optimization: Use cached session data if available (unless force refresh)
         sess_key = f"ads_state_{aid}"
         analysis_key = f"ads_analysis_{aid}"
@@ -2133,7 +2155,8 @@ def ads_ui():
                         else:
                             # Generate analysis from cached data
                             analysis = _analyze_ads_opportunities(aid, ads_data)
-                            session[analysis_key] = analysis
+                            # Make JSON serializable before storing in session (converts enums to strings)
+                            session[analysis_key] = _make_json_serializable(analysis)
                 except (ValueError, TypeError):
                     # Invalid cache timestamp, fetch fresh
                     use_cache = False
@@ -2144,29 +2167,19 @@ def ads_ui():
 
             # Add timestamp to cache
             ads_data["__cached_at"] = datetime.utcnow().isoformat()
-            session[sess_key] = ads_data
+            # Make JSON serializable before storing in session
+            session[sess_key] = _make_json_serializable(ads_data)
 
             # Generate comprehensive analysis using the opportunities analyzer
             # Use lighter analysis to prevent OOM on shared hosting
             analysis = _analyze_ads_opportunities(aid, ads_data)
-            session[analysis_key] = analysis
+            # Make JSON serializable before storing in session (converts enums to strings)
+            session[analysis_key] = _make_json_serializable(analysis)
 
-    except MemoryError:
-        current_app.logger.error(f"Memory error in ads_ui for account {aid}")
-        flash("Unable to load full analysis due to server constraints. Showing simplified view.", "warning")
-        # Fallback to minimal data
-        ads_data = {"campaigns": [], "ad_groups": [], "keywords": [], "ads": []}
-        analysis = {"opportunities": [], "account_score": 0, "top_opportunities": []}
-    except Exception as e:
-        current_app.logger.error(f"Error in ads_ui for account {aid}: {e}", exc_info=True)
-        flash(f"Error loading Google Ads data: {str(e)}", "error")
-        ads_data = {"campaigns": [], "ad_groups": [], "keywords": [], "ads": []}
-        analysis = {"opportunities": [], "account_score": 0, "top_opportunities": []}
-
-    # Split opportunities into auto-applicable and manual tasks
-    # Auto-applicable: Can be applied with one click or AI agent
-    # Manual tasks: Require extensive manual setup
-    all_opportunities = analysis.get("opportunities", [])
+        # Split opportunities into auto-applicable and manual tasks
+        # Auto-applicable: Can be applied with one click or AI agent
+        # Manual tasks: Require extensive manual setup
+        all_opportunities = analysis.get("opportunities", [])
 
     def is_auto_applicable(opp):
         opt_type = opp.get("optimization_type", "")

@@ -34,21 +34,21 @@ google_bp = Blueprint("google_bp", __name__, url_prefix="/account/google")
 
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 
+class EnumEncoder(json.JSONEncoder):
+    """JSON encoder that converts Enum values to strings."""
+    def default(self, obj):
+        if isinstance(obj, Enum):
+            return obj.name
+        return super().default(obj)
+
 def _make_json_serializable(obj):
     """
-    Recursively convert objects to be JSON serializable.
-    Converts Enum values to their string representation.
+    Efficiently convert objects to be JSON serializable using json dumps/loads.
+    This avoids creating deep copies and is much more memory efficient.
     """
-    if isinstance(obj, Enum):
-        return obj.name  # Convert enum to its name (string)
-    elif isinstance(obj, dict):
-        return {key: _make_json_serializable(value) for key, value in obj.items()}
-    elif isinstance(obj, list):
-        return [_make_json_serializable(item) for item in obj]
-    elif isinstance(obj, tuple):
-        return tuple(_make_json_serializable(item) for item in obj)
-    else:
-        return obj
+    # Use json dumps with custom encoder, then loads to get serializable dict
+    # This is more memory efficient than recursive dict copying
+    return json.loads(json.dumps(obj, cls=EnumEncoder))
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 
 
@@ -2153,14 +2153,10 @@ def ads_ui():
                         if analysis_key in session:
                             analysis = session.get(analysis_key)
                         else:
-                            # DISABLE analysis - too memory-intensive for shared hosting
-                            analysis = {
-                                "opportunities": [],
-                                "manual_tasks": [],
-                                "account_score": 0,
-                                "top_opportunities": [],
-                            }
-                            session[analysis_key] = analysis
+                            # Generate analysis from cached data
+                            analysis = _analyze_ads_opportunities(aid, ads_data)
+                            # Efficiently serialize enums without deep copy overhead
+                            session[analysis_key] = _make_json_serializable(analysis)
                 except (ValueError, TypeError):
                     # Invalid cache timestamp, fetch fresh
                     use_cache = False
@@ -2174,15 +2170,10 @@ def ads_ui():
             # Store directly - ads_data doesn't contain enums, no need to deep copy
             session[sess_key] = ads_data
 
-            # DISABLE analysis - too memory-intensive for shared hosting (causes OOM kills)
-            # Return minimal structure for template compatibility
-            analysis = {
-                "opportunities": [],
-                "manual_tasks": [],
-                "account_score": 0,
-                "top_opportunities": [],
-            }
-            session[analysis_key] = analysis
+            # Generate comprehensive analysis using the opportunities analyzer
+            analysis = _analyze_ads_opportunities(aid, ads_data)
+            # Efficiently serialize enums using json dumps/loads (no deep copy overhead)
+            session[analysis_key] = _make_json_serializable(analysis)
 
         # Split opportunities into auto-applicable and manual tasks
         # Auto-applicable: Can be applied with one click or AI agent

@@ -2181,137 +2181,165 @@ def ads_ui():
         # Manual tasks: Require extensive manual setup
         all_opportunities = analysis.get("opportunities", [])
 
-    def is_auto_applicable(opp):
-        opt_type = opp.get("optimization_type", "")
-        decision_type = opp.get('decision_type', '')
-        title = opp.get("title", "").lower()
+        def is_auto_applicable(opp):
+            opt_type = opp.get("optimization_type", "")
+            decision_type = opp.get('decision_type', '')
+            title = opp.get("title", "").lower()
 
-        # Core auto-applicable types (can be applied with one click)
-        if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads', 'starter_negative_keywords']:
-            return True
+            # Core auto-applicable types (can be applied with one click)
+            if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads', 'starter_negative_keywords']:
+                return True
 
-        # AI-generated ad content (auto-complete with AI)
-        if opt_type in ['pmax_headlines', 'pmax_descriptions', 'rsa_headline_variations', 'create_rsa_ads']:
-            return True
+            # AI-generated ad content (auto-complete with AI)
+            if opt_type in ['pmax_headlines', 'pmax_descriptions', 'rsa_headline_variations', 'create_rsa_ads']:
+                return True
 
-        # AI-assisted campaign creation (auto-complete with AI)
-        if decision_type == 'create_search_campaign':
-            return True
-
-        # Extension types - ALL extensions are now auto-applicable (including location)
-        if opt_type == 'extension':
-            ext_type = opp.get("optimization_data", {}).get("type", "").lower()
-            return ("callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
-                    or "sitelink" in ext_type or "call" in ext_type or "price" in ext_type
-                    or "location" in ext_type)
-
-        # Agent-generated optimizations - check if they're auto-executable
-        if opp.get('agent_generated'):
-            # Search campaign creation is now auto-applicable
+            # AI-assisted campaign creation (auto-complete with AI)
             if decision_type == 'create_search_campaign':
                 return True
-            requires_approval = opp.get('optimization_data', {}).get('requires_approval', True)
-            return not requires_approval  # Auto-applicable if doesn't require approval
 
-        # Agent decision types that are auto-executable
-        agent_auto_types = [
-            'pause_keyword',           # Pause underperformers
-            'adjust_keyword_bid',      # Bid adjustments
-            'add_negative_keyword',    # Block waste
-            'adjust_bids',             # Campaign-level bid adjustments
-            'adjust_daily_budget',     # Budget pacing
-            'create_search_campaign',  # AI-assisted Search campaign creation
-            'add_pmax_assets',         # AI-generated PMax headlines and descriptions
-            'improve_asset_variety',   # AI-generated additional headline variations
-            'add_asset_groups',        # AI-generated asset groups with themes
-            'create_asset_groups',     # AI-generated asset groups for new campaigns
-        ]
-        if opt_type in agent_auto_types or decision_type in agent_auto_types:
-            return True
+            # Extension types - ALL extensions are now auto-applicable (including location)
+            if opt_type == 'extension':
+                ext_type = opp.get("optimization_data", {}).get("type", "").lower()
+                return ("callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
+                        or "sitelink" in ext_type or "call" in ext_type or "price" in ext_type
+                        or "location" in ext_type)
 
-        # Flexible matching based on title/description for common auto-applicable actions
-        # This catches variations in naming conventions
-        if any(keyword in title for keyword in ['create', 'add'] + ['ad', 'ads', 'rsa']):
-            # Ad creation is auto-applicable
-            return True
+            # Agent-generated optimizations - check if they're auto-executable
+            if opp.get('agent_generated'):
+                # Search campaign creation is now auto-applicable
+                if decision_type == 'create_search_campaign':
+                    return True
+                requires_approval = opp.get('optimization_data', {}).get('requires_approval', True)
+                return not requires_approval  # Auto-applicable if doesn't require approval
 
-        if any(keyword in title for keyword in ['reallocate', 'adjust', 'increase', 'decrease'] + ['budget']):
-            # Budget adjustments are auto-applicable
-            return True
+            # Agent decision types that are auto-executable
+            agent_auto_types = [
+                'pause_keyword',           # Pause underperformers
+                'adjust_keyword_bid',      # Bid adjustments
+                'add_negative_keyword',    # Block waste
+                'adjust_bids',             # Campaign-level bid adjustments
+                'adjust_daily_budget',     # Budget pacing
+                'create_search_campaign',  # AI-assisted Search campaign creation
+                'add_pmax_assets',         # AI-generated PMax headlines and descriptions
+                'improve_asset_variety',   # AI-generated additional headline variations
+                'add_asset_groups',        # AI-generated asset groups with themes
+                'create_asset_groups',     # AI-generated asset groups for new campaigns
+            ]
+            if opt_type in agent_auto_types or decision_type in agent_auto_types:
+                return True
 
-        if 'pause' in title and any(keyword in title for keyword in ['keyword', 'ad', 'campaign']):
-            # Pausing underperformers is auto-applicable
-            return True
+            # Flexible matching based on title/description for common auto-applicable actions
+            # This catches variations in naming conventions
+            if any(keyword in title for keyword in ['create', 'add'] + ['ad', 'ads', 'rsa']):
+                # Ad creation is auto-applicable
+                return True
 
-        return False
+            if any(keyword in title for keyword in ['reallocate', 'adjust', 'increase', 'decrease'] + ['budget']):
+                # Budget adjustments are auto-applicable
+                return True
 
-    # Get already-applied optimizations to filter them out
-    try:
-        from app.models_google import AppliedOptimization, CompletedManualTask, ensure_google_tables
-        applied_optimization_titles = set()
+            if 'pause' in title and any(keyword in title for keyword in ['keyword', 'ad', 'campaign']):
+                # Pausing underperformers is auto-applicable
+                return True
 
-        def _fetch_applied_opts():
-            """Fetch applied optimizations from database."""
-            from datetime import datetime, timedelta
-            thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-            applied_opts = AppliedOptimization.query.filter(
-                AppliedOptimization.account_id == aid,
-                AppliedOptimization.status == 'applied',
-                AppliedOptimization.created_at >= thirty_days_ago
-            ).all()
-            return {opt.optimization_title for opt in applied_opts}
+            return False
 
-        # Use safe query wrapper with automatic table creation
-        result = _safe_db_query(_fetch_applied_opts)
-        if result is not None:
-            applied_optimization_titles = result
-            current_app.logger.info(f"Found {len(applied_optimization_titles)} applied optimizations in last 30 days")
-        else:
-            current_app.logger.warning("Could not fetch applied optimizations, proceeding without filter")
+        # Get already-applied optimizations to filter them out
+        try:
+            from app.models_google import AppliedOptimization, CompletedManualTask, ensure_google_tables
+            applied_optimization_titles = set()
 
-        # Filter out already-applied optimizations from auto-applicable list
-        auto_applicable_opps = [opp for opp in all_opportunities if is_auto_applicable(opp)]
-        analysis["opportunities"] = [
-            opp for opp in auto_applicable_opps
-            if opp.get("title") not in applied_optimization_titles
-        ]
+            def _fetch_applied_opts():
+                """Fetch applied optimizations from database."""
+                from datetime import datetime, timedelta
+                thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+                applied_opts = AppliedOptimization.query.filter(
+                    AppliedOptimization.account_id == aid,
+                    AppliedOptimization.status == 'applied',
+                    AppliedOptimization.created_at >= thirty_days_ago
+                ).all()
+                return {opt.optimization_title for opt in applied_opts}
 
-        all_manual_tasks = [opp for opp in all_opportunities if not is_auto_applicable(opp)]
+            # Use safe query wrapper with automatic table creation
+            result = _safe_db_query(_fetch_applied_opts)
+            if result is not None:
+                applied_optimization_titles = result
+                current_app.logger.info(f"Found {len(applied_optimization_titles)} applied optimizations in last 30 days")
+            else:
+                current_app.logger.warning("Could not fetch applied optimizations, proceeding without filter")
 
-        # Filter out completed manual tasks
-        completed_task_ids = set()
+            # Filter out already-applied optimizations from auto-applicable list
+            auto_applicable_opps = [opp for opp in all_opportunities if is_auto_applicable(opp)]
+            analysis["opportunities"] = [
+                opp for opp in auto_applicable_opps
+                if opp.get("title") not in applied_optimization_titles
+            ]
 
-        def _fetch_completed_tasks():
-            """Fetch completed manual tasks from database."""
-            return {task.task_id for task in CompletedManualTask.query.filter_by(account_id=aid).all()}
+            all_manual_tasks = [opp for opp in all_opportunities if not is_auto_applicable(opp)]
 
-        # Use safe query wrapper with automatic table creation
-        result = _safe_db_query(_fetch_completed_tasks)
-        if result is not None:
-            completed_task_ids = result
-        else:
-            current_app.logger.warning("Could not fetch completed manual tasks, proceeding without filter")
+            # Filter out completed manual tasks
+            completed_task_ids = set()
 
-        analysis["manual_tasks"] = [
-            task for task in all_manual_tasks
-            if task.get("id") not in completed_task_ids
-        ]
+            def _fetch_completed_tasks():
+                """Fetch completed manual tasks from database."""
+                return {task.task_id for task in CompletedManualTask.query.filter_by(account_id=aid).all()}
 
-        current_app.logger.info(
-            f"ads_ui: Split {len(all_opportunities)} total into {len(auto_applicable_opps)} auto-applicable "
-            f"({len(applied_optimization_titles)} already applied, {len(analysis['opportunities'])} remaining) "
-            f"and {len(all_manual_tasks)} manual tasks ({len(completed_task_ids)} completed, {len(analysis['manual_tasks'])} remaining). "
-            f"Auto types: {[o.get('title') for o in analysis['opportunities']]}"
-        )
+            # Use safe query wrapper with automatic table creation
+            result = _safe_db_query(_fetch_completed_tasks)
+            if result is not None:
+                completed_task_ids = result
+            else:
+                current_app.logger.warning("Could not fetch completed manual tasks, proceeding without filter")
 
-        # TEMPLATE DEBUG: Log what's being passed to template
-        current_app.logger.info(
-            f"TEMPLATE DEBUG - Passing to template: "
-            f"opportunities={len(analysis.get('opportunities', []))}, "
-            f"manual_tasks={len(analysis.get('manual_tasks', []))}, "
-            f"manual_task_titles={[t.get('title') for t in analysis.get('manual_tasks', [])]}"
-        )
+            analysis["manual_tasks"] = [
+                task for task in all_manual_tasks
+                if task.get("id") not in completed_task_ids
+            ]
 
+            current_app.logger.info(
+                f"ads_ui: Split {len(all_opportunities)} total into {len(auto_applicable_opps)} auto-applicable "
+                f"({len(applied_optimization_titles)} already applied, {len(analysis['opportunities'])} remaining) "
+                f"and {len(all_manual_tasks)} manual tasks ({len(completed_task_ids)} completed, {len(analysis['manual_tasks'])} remaining). "
+                f"Auto types: {[o.get('title') for o in analysis['opportunities']]}"
+            )
+
+            # TEMPLATE DEBUG: Log what's being passed to template
+            current_app.logger.info(
+                f"TEMPLATE DEBUG - Passing to template: "
+                f"opportunities={len(analysis.get('opportunities', []))}, "
+                f"manual_tasks={len(analysis.get('manual_tasks', []))}, "
+                f"manual_task_titles={[t.get('title') for t in analysis.get('manual_tasks', [])]}"
+            )
+
+            return render_template(
+                "google/ads_opportunities.html",
+                connected=connected,
+                ads_data=ads_data,
+                analysis=analysis,
+                epn=request.endpoint,
+                is_demo=False,
+            )
+
+        except Exception as e:
+            # Catch any errors in the database query or template rendering phase
+            current_app.logger.error(f"Error in ads_ui post-analysis phase: {e}", exc_info=True)
+            flash(f"Error displaying Google Ads data: {str(e)}", "error")
+
+            # Fallback to minimal template with demo data
+            return render_template(
+                "google/ads_opportunities.html",
+                connected=connected,
+                ads_data={"campaigns": [], "ad_groups": [], "keywords": [], "ads": []},
+                analysis={"opportunities": [], "manual_tasks": [], "account_score": 0, "top_opportunities": []},
+                epn=request.endpoint,
+                is_demo=False,
+            )
+
+    except MemoryError:
+        # Handle out of memory errors gracefully
+        current_app.logger.error(f"Memory error in ads_ui for account {aid}")
+        flash("Unable to load full analysis due to server constraints. Showing simplified view.", "warning")
         return render_template(
             "google/ads_opportunities.html",
             connected=connected,
@@ -2322,14 +2350,12 @@ def ads_ui():
         )
 
     except Exception as e:
-        # Catch any errors in the database query or template rendering phase
-        current_app.logger.error(f"Error in ads_ui post-analysis phase: {e}", exc_info=True)
-        flash(f"Error displaying Google Ads data: {str(e)}", "error")
-
-        # Fallback to minimal template with demo data
+        # Catch-all for any other errors in the entire route
+        current_app.logger.error(f"Unexpected error in ads_ui for account {aid}: {e}", exc_info=True)
+        flash(f"Error loading Google Ads page: {str(e)}", "error")
         return render_template(
             "google/ads_opportunities.html",
-            connected=connected,
+            connected=False,
             ads_data={"campaigns": [], "ad_groups": [], "keywords": [], "ads": []},
             analysis={"opportunities": [], "manual_tasks": [], "account_score": 0, "top_opportunities": []},
             epn=request.endpoint,

@@ -2153,10 +2153,14 @@ def ads_ui():
                         if analysis_key in session:
                             analysis = session.get(analysis_key)
                         else:
-                            # Generate analysis from cached data
-                            analysis = _analyze_ads_opportunities(aid, ads_data)
-                            # Only make analysis JSON serializable (contains enums)
-                            session[analysis_key] = _make_json_serializable(analysis)
+                            # DISABLE analysis - too memory-intensive for shared hosting
+                            analysis = {
+                                "opportunities": [],
+                                "manual_tasks": [],
+                                "account_score": 0,
+                                "top_opportunities": [],
+                            }
+                            session[analysis_key] = analysis
                 except (ValueError, TypeError):
                     # Invalid cache timestamp, fetch fresh
                     use_cache = False
@@ -2170,10 +2174,15 @@ def ads_ui():
             # Store directly - ads_data doesn't contain enums, no need to deep copy
             session[sess_key] = ads_data
 
-            # Generate comprehensive analysis using the opportunities analyzer
-            analysis = _analyze_ads_opportunities(aid, ads_data)
-            # Only make analysis JSON serializable (it contains enums like DecisionRiskLevel)
-            session[analysis_key] = _make_json_serializable(analysis)
+            # DISABLE analysis - too memory-intensive for shared hosting (causes OOM kills)
+            # Return minimal structure for template compatibility
+            analysis = {
+                "opportunities": [],
+                "manual_tasks": [],
+                "account_score": 0,
+                "top_opportunities": [],
+            }
+            session[analysis_key] = analysis
 
         # Split opportunities into auto-applicable and manual tasks
         # Auto-applicable: Can be applied with one click or AI agent

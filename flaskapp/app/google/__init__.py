@@ -2153,16 +2153,10 @@ def ads_ui():
                         if analysis_key in session:
                             analysis = session.get(analysis_key)
                         else:
-                            # SKIP ANALYSIS to prevent OOM - use minimal demo data
-                            current_app.logger.info(f"Skipping analysis for cached data (account {aid}) to prevent OOM")
-                            analysis = {
-                                "opportunities": [],
-                                "manual_tasks": [],
-                                "account_score": 75,
-                                "top_opportunities": [],
-                                "performance": {"monthly_spend": 0, "clicks": 0, "conversions": 0}
-                            }
-                            session[analysis_key] = analysis
+                            # Generate analysis from cached data
+                            analysis = _analyze_ads_opportunities(aid, ads_data)
+                            # Only make analysis JSON serializable (contains enums)
+                            session[analysis_key] = _make_json_serializable(analysis)
                 except (ValueError, TypeError):
                     # Invalid cache timestamp, fetch fresh
                     use_cache = False
@@ -2173,25 +2167,13 @@ def ads_ui():
 
             # Add timestamp to cache
             ads_data["__cached_at"] = datetime.utcnow().isoformat()
-            # Make JSON serializable before storing in session
-            session[sess_key] = _make_json_serializable(ads_data)
+            # Store directly - ads_data doesn't contain enums, no need to deep copy
+            session[sess_key] = ads_data
 
-            # SKIP ANALYSIS to prevent OOM on shared hosting
-            # Analysis is too memory intensive for shared hosting environments
-            # Use minimal demo analysis instead
-            current_app.logger.info(f"Skipping analysis for account {aid} to prevent OOM")
-            analysis = {
-                "opportunities": [],
-                "manual_tasks": [],
-                "account_score": 75,
-                "top_opportunities": [],
-                "performance": {
-                    "monthly_spend": 0,
-                    "clicks": 0,
-                    "conversions": 0,
-                }
-            }
-            session[analysis_key] = analysis
+            # Generate comprehensive analysis using the opportunities analyzer
+            analysis = _analyze_ads_opportunities(aid, ads_data)
+            # Only make analysis JSON serializable (it contains enums like DecisionRiskLevel)
+            session[analysis_key] = _make_json_serializable(analysis)
 
         # Split opportunities into auto-applicable and manual tasks
         # Auto-applicable: Can be applied with one click or AI agent

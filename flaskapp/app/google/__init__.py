@@ -2171,9 +2171,24 @@ def ads_ui():
             session[sess_key] = ads_data
 
             # Generate comprehensive analysis using the opportunities analyzer
-            analysis = _analyze_ads_opportunities(aid, ads_data)
-            # Efficiently serialize enums using json dumps/loads (no deep copy overhead)
-            session[analysis_key] = _make_json_serializable(analysis)
+            try:
+                current_app.logger.info(f"Starting analysis for account {aid}")
+                analysis = _analyze_ads_opportunities(aid, ads_data)
+                current_app.logger.info(f"Analysis completed, serializing...")
+                # Efficiently serialize enums using json dumps/loads (no deep copy overhead)
+                serialized_analysis = _make_json_serializable(analysis)
+                session[analysis_key] = serialized_analysis
+                current_app.logger.info(f"Analysis stored in session successfully")
+            except Exception as e:
+                current_app.logger.error(f"Error during analysis for account {aid}: {e}", exc_info=True)
+                # Fallback to minimal analysis on error
+                analysis = {
+                    "opportunities": [],
+                    "manual_tasks": [],
+                    "account_score": 0,
+                    "top_opportunities": [],
+                }
+                session[analysis_key] = analysis
 
         # Split opportunities into auto-applicable and manual tasks
         # Auto-applicable: Can be applied with one click or AI agent

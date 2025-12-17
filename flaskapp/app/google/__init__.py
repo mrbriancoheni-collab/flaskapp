@@ -2148,15 +2148,6 @@ def ads_ui():
                         current_app.logger.info(f"Using cached ads data for account {aid}")
                         ads_data = cached_state
                         use_cache = True
-
-                        # Use cached analysis if available
-                        if analysis_key in session:
-                            analysis = session.get(analysis_key)
-                        else:
-                            # Generate analysis from cached data
-                            analysis = _analyze_ads_opportunities(aid, ads_data)
-                            # Efficiently serialize enums without deep copy overhead
-                            session[analysis_key] = _make_json_serializable(analysis)
                 except (ValueError, TypeError):
                     # Invalid cache timestamp, fetch fresh
                     use_cache = False
@@ -2167,28 +2158,24 @@ def ads_ui():
 
             # Add timestamp to cache
             ads_data["__cached_at"] = datetime.utcnow().isoformat()
-            # Store directly - ads_data doesn't contain enums, no need to deep copy
+            # Store directly - ads_data doesn't contain enums
             session[sess_key] = ads_data
 
-            # Generate comprehensive analysis using the opportunities analyzer
-            try:
-                current_app.logger.info(f"Starting analysis for account {aid}")
-                analysis = _analyze_ads_opportunities(aid, ads_data)
-                current_app.logger.info(f"Analysis completed, serializing...")
-                # Efficiently serialize enums using json dumps/loads (no deep copy overhead)
-                serialized_analysis = _make_json_serializable(analysis)
-                session[analysis_key] = serialized_analysis
-                current_app.logger.info(f"Analysis stored in session successfully")
-            except Exception as e:
-                current_app.logger.error(f"Error during analysis for account {aid}: {e}", exc_info=True)
-                # Fallback to minimal analysis on error
-                analysis = {
-                    "opportunities": [],
-                    "manual_tasks": [],
-                    "account_score": 0,
-                    "top_opportunities": [],
-                }
-                session[analysis_key] = analysis
+        # Generate analysis fresh each time (don't cache in session to reduce memory pressure)
+        # The ads_data is cached for 1 hour, so analysis reuses that cached data
+        try:
+            current_app.logger.info(f"Generating analysis for account {aid}")
+            analysis = _analyze_ads_opportunities(aid, ads_data)
+            current_app.logger.info(f"Analysis completed successfully")
+        except Exception as e:
+            current_app.logger.error(f"Error during analysis for account {aid}: {e}", exc_info=True)
+            # Fallback to minimal analysis on error
+            analysis = {
+                "opportunities": [],
+                "manual_tasks": [],
+                "account_score": 0,
+                "top_opportunities": [],
+            }
 
         # Split opportunities into auto-applicable and manual tasks
         # Auto-applicable: Can be applied with one click or AI agent

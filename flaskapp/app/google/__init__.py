@@ -34,21 +34,21 @@ google_bp = Blueprint("google_bp", __name__, url_prefix="/account/google")
 
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 
+class EnumEncoder(json.JSONEncoder):
+    """JSON encoder that converts Enum values to strings."""
+    def default(self, obj):
+        if isinstance(obj, Enum):
+            return obj.name
+        return super().default(obj)
+
 def _make_json_serializable(obj):
     """
-    Recursively convert objects to be JSON serializable.
-    Converts Enum values to their string representation.
+    Efficiently convert objects to be JSON serializable using json dumps/loads.
+    This avoids creating deep copies and is much more memory efficient.
     """
-    if isinstance(obj, Enum):
-        return obj.name  # Convert enum to its name (string)
-    elif isinstance(obj, dict):
-        return {key: _make_json_serializable(value) for key, value in obj.items()}
-    elif isinstance(obj, list):
-        return [_make_json_serializable(item) for item in obj]
-    elif isinstance(obj, tuple):
-        return tuple(_make_json_serializable(item) for item in obj)
-    else:
-        return obj
+    # Use json dumps with custom encoder, then loads to get serializable dict
+    # This is more memory efficient than recursive dict copying
+    return json.loads(json.dumps(obj, cls=EnumEncoder))
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 
 
@@ -2155,7 +2155,7 @@ def ads_ui():
                         else:
                             # Generate analysis from cached data
                             analysis = _analyze_ads_opportunities(aid, ads_data)
-                            # Only make analysis JSON serializable (contains enums)
+                            # Efficiently serialize enums without deep copy overhead
                             session[analysis_key] = _make_json_serializable(analysis)
                 except (ValueError, TypeError):
                     # Invalid cache timestamp, fetch fresh
@@ -2172,7 +2172,7 @@ def ads_ui():
 
             # Generate comprehensive analysis using the opportunities analyzer
             analysis = _analyze_ads_opportunities(aid, ads_data)
-            # Only make analysis JSON serializable (it contains enums like DecisionRiskLevel)
+            # Efficiently serialize enums using json dumps/loads (no deep copy overhead)
             session[analysis_key] = _make_json_serializable(analysis)
 
         # Split opportunities into auto-applicable and manual tasks

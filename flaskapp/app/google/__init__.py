@@ -1320,6 +1320,7 @@ def _fetch_ads_snapshot_from_google(aid: int) -> dict:
         return svc.search(customer_id=customer_id, query=q)
 
     campaigns = []
+    # Reduced LIMIT to prevent OOM - focus on top spending campaigns
     for r in _gaql("""
         SELECT campaign.id, campaign.name, campaign.status,
                campaign.advertising_channel_type, campaign.bidding_strategy_type,
@@ -1329,7 +1330,7 @@ def _fetch_ads_snapshot_from_google(aid: int) -> dict:
         WHERE campaign.status != 'REMOVED'
           AND segments.date DURING LAST_30_DAYS
         ORDER BY metrics.cost_micros DESC
-        LIMIT 50
+        LIMIT 25
     """):
         c = r.campaign
         metrics = r.metrics
@@ -1354,12 +1355,13 @@ def _fetch_ads_snapshot_from_google(aid: int) -> dict:
         })
 
     ad_groups = []
+    # Reduced LIMIT to prevent OOM
     for r in _gaql("""
         SELECT ad_group.id, ad_group.name, ad_group.status, ad_group.campaign
         FROM ad_group
         WHERE ad_group.status != 'REMOVED'
         ORDER BY ad_group.id
-        LIMIT 100
+        LIMIT 50
     """):
         ag = r.ad_group
         ad_groups.append({
@@ -1486,13 +1488,14 @@ def _fetch_ads_snapshot_from_google(aid: int) -> dict:
         current_app.logger.info(f"Found {len(pmax_campaigns)} Performance Max campaigns, fetching asset groups...")
         try:
             # Fetch asset groups for Performance Max campaigns
+            # Reduced LIMIT to prevent OOM
             for r in _gaql("""
                 SELECT asset_group.id, asset_group.name, asset_group.status,
                        asset_group.campaign, asset_group.final_urls,
                        asset_group.final_mobile_urls
                 FROM asset_group
                 WHERE asset_group.status != 'REMOVED'
-                LIMIT 100
+                LIMIT 50
             """):
                 ag = r.asset_group
                 asset_groups.append({
@@ -1509,13 +1512,14 @@ def _fetch_ads_snapshot_from_google(aid: int) -> dict:
 
         try:
             # Fetch assets for Performance Max campaigns
+            # Reduced LIMIT to prevent OOM - focus on text assets (headlines/descriptions) over images
             for r in _gaql("""
                 SELECT asset_group_asset.field_type, asset_group_asset.asset_group,
                        asset.type, asset.name, asset.text_asset.text,
                        asset.image_asset.full_size.url, asset.youtube_video_asset.youtube_video_id
                 FROM asset_group_asset
                 WHERE asset_group_asset.status != 'REMOVED'
-                LIMIT 500
+                LIMIT 100
             """):
                 aga = r.asset_group_asset
                 asset = r.asset

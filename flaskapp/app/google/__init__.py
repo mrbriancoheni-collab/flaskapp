@@ -2174,8 +2174,29 @@ def ads_ui():
 
         # Fetch fresh if no cache or force refresh
         if ads_data is None:
-            current_app.logger.info(f"⚠️  FETCHING FRESH DATA (expensive!) - Cache was empty/expired for account {aid}")
-            ads_data = _get_ads_state(aid)
+            if force_refresh:
+                current_app.logger.info(f"⚠️  FETCHING FRESH DATA (expensive!) - Force refresh requested for account {aid}")
+                ads_data = _get_ads_state(aid)
+            else:
+                # On shared hosting, NEVER fetch during page load - show empty state instead
+                current_app.logger.warning(f"No cache found for account {aid} - showing empty state (use ?refresh=1 to fetch)")
+                ads_data = {
+                    "account_name": "Google Ads Account",
+                    "campaigns": [],
+                    "ad_groups": [],
+                    "keywords": [],
+                    "negatives": [],
+                    "ads": [],
+                    "extensions": [],
+                    "landing_pages": [],
+                    "asset_groups": [],
+                    "pmax_assets": [],
+                    "__source": "empty",
+                    "__cache_missing": True
+                }
+
+        # Only try to cache if we actually fetched fresh data
+        if ads_data and ads_data.get("__source") == "live":
 
             # Store in database cache
             try:

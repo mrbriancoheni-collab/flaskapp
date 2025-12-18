@@ -2161,15 +2161,20 @@ def ads_ui():
             # Store directly - ads_data doesn't contain enums
             session[sess_key] = ads_data
 
-        # TEMPORARILY DISABLE analysis to restore site functionality
-        # The analysis function causes OOM on shared hosting - needs optimization
-        current_app.logger.info(f"Analysis disabled for account {aid} - preventing OOM")
-        analysis = {
-            "opportunities": [],
-            "manual_tasks": [],
-            "account_score": 0,
-            "top_opportunities": [],
-        }
+        # Generate analysis with optimized memory usage (agents run one at a time)
+        try:
+            current_app.logger.info(f"Starting memory-optimized analysis for account {aid}")
+            analysis = _analyze_ads_opportunities(aid, ads_data)
+            current_app.logger.info(f"Analysis completed successfully for account {aid}")
+        except Exception as e:
+            current_app.logger.error(f"Error during analysis for account {aid}: {e}", exc_info=True)
+            # Fallback to minimal analysis on error
+            analysis = {
+                "opportunities": [],
+                "manual_tasks": [],
+                "account_score": 0,
+                "top_opportunities": [],
+            }
 
         # Split opportunities into auto-applicable and manual tasks
         # Auto-applicable: Can be applied with one click or AI agent
@@ -6217,27 +6222,33 @@ def _run_ai_agents_for_opportunities(aid: int, ads_data: dict, customer_id: str 
             }
         }
 
-        # Initialize all 11 agents (8 Search + 3 Performance Max)
-        agents = [
+        # Initialize agent classes (lazy - don't instantiate yet)
+        agent_classes = [
             # Strategic Layer
-            StrategicDirectorAgent(event_bus=event_bus, decision_log=decision_log),
+            (StrategicDirectorAgent, "Strategic"),
             # Operational Layer
-            CampaignManagerAgent(event_bus=event_bus, decision_log=decision_log),
-            BudgetGuardianAgent(event_bus=event_bus, decision_log=decision_log),
-            QualityScoreAgent(event_bus=event_bus, decision_log=decision_log),
+            (CampaignManagerAgent, "Campaign Manager"),
+            (BudgetGuardianAgent, "Budget Guardian"),
+            (QualityScoreAgent, "Quality Score"),
             # Tactical Layer (Search campaigns)
-            KeywordOptimizerAgent(event_bus=event_bus, decision_log=decision_log),
-            NegativeKeywordAgent(event_bus=event_bus, decision_log=decision_log),
-            AdCopyAgent(event_bus=event_bus, decision_log=decision_log),
-            LandingPageAnalystAgent(event_bus=event_bus, decision_log=decision_log),
+            (KeywordOptimizerAgent, "Keyword Optimizer"),
+            (NegativeKeywordAgent, "Negative Keyword"),
+            (AdCopyAgent, "Ad Copy"),
+            (LandingPageAnalystAgent, "Landing Page"),
             # Performance Max Layer
-            AssetPerformanceAgent(event_bus=event_bus, decision_log=decision_log),
-            AudienceSignalAgent(event_bus=event_bus, decision_log=decision_log),
-            PMaxCampaignStructureAgent(event_bus=event_bus, decision_log=decision_log),
+            (AssetPerformanceAgent, "Asset Performance"),
+            (AudienceSignalAgent, "Audience Signal"),
+            (PMaxCampaignStructureAgent, "PMax Structure"),
         ]
 
-        # Run each agent and collect opportunities
-        for agent in agents:
+        # Run agents ONE AT A TIME with explicit memory cleanup
+        import gc
+        for agent_class, agent_name in agent_classes:
+            agent = None  # Ensure no reference from previous iteration
+            current_app.logger.info(f"Running {agent_name} agent...")
+
+            # Instantiate ONLY this agent
+            agent = agent_class(event_bus=event_bus, decision_log=decision_log)
             try:
                 # Each agent runs analyze() -> decide() cycle
                 agent_opportunities = agent.analyze(context)
@@ -6283,11 +6294,16 @@ def _run_ai_agents_for_opportunities(aid: int, ads_data: dict, customer_id: str 
 
                     opportunities.append(opportunity)
 
-                current_app.logger.info(f"Agent {agent.agent_id} generated {len(agent_decisions)} opportunities")
+                current_app.logger.info(f"Agent {agent_name} generated {len(agent_decisions)} opportunities")
 
             except Exception as e:
-                current_app.logger.error(f"Error running agent {agent.agent_id}: {e}", exc_info=True)
-                continue
+                current_app.logger.error(f"Error running agent {agent_name}: {e}", exc_info=True)
+            finally:
+                # Explicitly delete agent and force garbage collection
+                # This frees memory immediately before the next agent runs
+                del agent
+                gc.collect()
+                current_app.logger.debug(f"Memory cleanup completed for {agent_name}")
 
         current_app.logger.info(f"11 AI Agents (8 Search + 3 PMax) generated {len(opportunities)} total opportunities for account {aid}")
 

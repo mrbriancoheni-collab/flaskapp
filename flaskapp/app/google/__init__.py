@@ -2131,9 +2131,60 @@ def ads_ui():
             current_app.logger.error(f"Error checking connection status: {e}")
             connected = False
 
-        # Always fetch fresh ads_data (don't cache in session - causes 4KB cookie limit overflow)
-        # Google Ads API has its own caching, so fetching is still fast
-        ads_data = _get_ads_state(aid)
+        # Database-backed caching for ads_data (1 hour TTL)
+        # Prevents: cookie overflow, excessive API calls, memory issues
+        cache_ttl_hours = 1
+        force_refresh = request.args.get('refresh') == '1'
+
+        ads_data = None
+        if not force_refresh:
+            # Try to get from database cache
+            try:
+                cache_cutoff = datetime.utcnow() - timedelta(hours=cache_ttl_hours)
+
+                with db.engine.connect() as conn:
+                    result = conn.execute(
+                        text("""
+                            SELECT ads_data_cache, ads_data_cached_at
+                            FROM accounts
+                            WHERE id = :aid
+                            AND ads_data_cached_at > :cutoff
+                        """),
+                        {"aid": aid, "cutoff": cache_cutoff}
+                    ).first()
+
+                    if result and result[0]:
+                        ads_data = json.loads(result[0])
+                        cache_age = datetime.utcnow() - result[1] if result[1] else "unknown"
+                        current_app.logger.info(f"Using cached ads_data (age: {cache_age})")
+            except Exception as e:
+                current_app.logger.warning(f"Could not load cached ads_data: {e}")
+
+        # Fetch fresh if no cache or force refresh
+        if ads_data is None:
+            current_app.logger.info(f"Fetching fresh ads_data for account {aid}")
+            ads_data = _get_ads_state(aid)
+
+            # Store in database cache
+            try:
+                with db.engine.connect() as conn:
+                    conn.execute(
+                        text("""
+                            UPDATE accounts
+                            SET ads_data_cache = :cache,
+                                ads_data_cached_at = :now
+                            WHERE id = :aid
+                        """),
+                        {
+                            "aid": aid,
+                            "cache": json.dumps(ads_data),
+                            "now": datetime.utcnow()
+                        }
+                    )
+                    conn.commit()
+                current_app.logger.info(f"Cached ads_data in database")
+            except Exception as e:
+                current_app.logger.error(f"Could not cache ads_data: {e}")
 
         # Generate analysis with optimized memory usage (agents run one at a time)
         try:

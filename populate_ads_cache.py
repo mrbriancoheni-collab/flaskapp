@@ -49,33 +49,46 @@ def populate_cache(account_id: int):
             print(f"Keywords: {len(ads_data.get('keywords', []))}")
             print(f"Ads: {len(ads_data.get('ads', []))}")
 
-            # Save to database
-            print(f"\nSaving to database cache...")
+            # Calculate metrics for quick querying
+            campaigns = ads_data.get("campaigns", [])
+            campaigns_count = len(campaigns)
+            ad_groups_count = len(ads_data.get("ad_groups", []))
+            keywords_count = len(ads_data.get("keywords", []))
+            total_cost = sum(c.get("cost_30d", 0) or 0 for c in campaigns)
+            total_conversions = sum(c.get("conversions", 0) or 0 for c in campaigns)
+
+            # Save to historical snapshots database
+            print(f"\nSaving to historical snapshots database...")
             with db.engine.begin() as conn:
-                result = conn.execute(
+                conn.execute(
                     text("""
-                        UPDATE accounts
-                        SET ads_data_cache = :cache,
-                            ads_data_cached_at = :now
-                        WHERE id = :aid
+                        INSERT INTO google_ads_snapshots
+                        (account_id, fetched_at, snapshot_data, campaigns_count, ad_groups_count,
+                         keywords_count, total_cost_30d, total_conversions_30d)
+                        VALUES (:aid, :fetched_at, :snapshot, :campaigns, :ad_groups,
+                                :keywords, :cost, :conversions)
                     """),
                     {
                         "aid": account_id,
-                        "cache": cache_json,
-                        "now": now
+                        "fetched_at": now,
+                        "snapshot": cache_json,
+                        "campaigns": campaigns_count,
+                        "ad_groups": ad_groups_count,
+                        "keywords": keywords_count,
+                        "cost": total_cost,
+                        "conversions": int(total_conversions)
                     }
                 )
-                rows_updated = result.rowcount
 
-            if rows_updated > 0:
-                print(f"✓ Successfully cached {cache_size_kb:.1f}KB in database")
-                print(f"✓ Cache timestamp: {now}")
-                print(f"✓ Cache will expire in 1 hour")
-                print(f"\nYou can now load the Google Ads page without API calls!")
-                return True
-            else:
-                print(f"ERROR: Account {account_id} not found in accounts table")
-                return False
+            print(f"✓ Successfully stored snapshot: {cache_size_kb:.1f}KB")
+            print(f"✓ Timestamp: {now}")
+            print(f"✓ Campaigns: {campaigns_count}")
+            print(f"✓ Ad Groups: {ad_groups_count}")
+            print(f"✓ Keywords: {keywords_count}")
+            print(f"✓ Cost (30d): ${total_cost:.2f}")
+            print(f"✓ Conversions (30d): {int(total_conversions)}")
+            print(f"\nYou can now load the Google Ads page - it will use this snapshot!")
+            return True
 
         except Exception as e:
             print(f"ERROR: {e}")

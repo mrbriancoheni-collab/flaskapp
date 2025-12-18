@@ -2136,100 +2136,104 @@ def ads_ui():
             current_app.logger.error(f"Error checking connection status: {e}")
             connected = False
 
-        # Database-backed caching for ads_data (1 hour TTL)
-        # Prevents: cookie overflow, excessive API calls, memory issues
-        cache_ttl_hours = 1
+        # Load from historical snapshots database (not just cache)
+        # This allows tracking changes over time and building historical views
         force_refresh = request.args.get('refresh') == '1'
 
         ads_data = None
-        if not force_refresh:
-            # Try to get from database cache
-            try:
-                cache_cutoff = datetime.utcnow() - timedelta(hours=cache_ttl_hours)
-                current_app.logger.info(f"Cache lookup: aid={aid}, cutoff={cache_cutoff}")
+        snapshot_age = None
 
-                with db.engine.connect() as conn:
-                    result = conn.execute(
-                        text("""
-                            SELECT ads_data_cache, ads_data_cached_at
-                            FROM accounts
-                            WHERE id = :aid
-                            AND ads_data_cached_at > :cutoff
-                        """),
-                        {"aid": aid, "cutoff": cache_cutoff}
-                    ).first()
+        # Try to load latest snapshot from database
+        try:
+            current_app.logger.info(f"Loading latest Google Ads snapshot for account {aid}")
 
-                    if result:
-                        current_app.logger.info(f"Cache row found: cached_at={result[1]}, has_data={result[0] is not None}")
-                        if result[0]:
-                            ads_data = json.loads(result[0])
-                            cache_age = datetime.utcnow() - result[1] if result[1] else "unknown"
-                            current_app.logger.info(f"✓ Using cached ads_data (age: {cache_age})")
-                        else:
-                            current_app.logger.info(f"Cache row exists but ads_data_cache is NULL")
-                    else:
-                        current_app.logger.info(f"No cache found (either doesn't exist or expired)")
-            except Exception as e:
-                current_app.logger.warning(f"Could not load cached ads_data: {e}", exc_info=True)
+            with db.engine.connect() as conn:
+                result = conn.execute(
+                    text("""
+                        SELECT snapshot_data, fetched_at
+                        FROM google_ads_snapshots
+                        WHERE account_id = :aid
+                        ORDER BY fetched_at DESC
+                        LIMIT 1
+                    """),
+                    {"aid": aid}
+                ).first()
 
-        # Fetch fresh if no cache or force refresh
-        if ads_data is None:
-            if force_refresh:
-                current_app.logger.info(f"⚠️  FETCHING FRESH DATA (expensive!) - Force refresh requested for account {aid}")
-                ads_data = _get_ads_state(aid)
-            else:
-                # On shared hosting, NEVER fetch during page load - show empty state instead
-                current_app.logger.warning(f"No cache found for account {aid} - showing empty state (use ?refresh=1 to fetch)")
-                ads_data = {
-                    "account_name": "Google Ads Account",
-                    "campaigns": [],
-                    "ad_groups": [],
-                    "keywords": [],
-                    "negatives": [],
-                    "ads": [],
-                    "extensions": [],
-                    "landing_pages": [],
-                    "asset_groups": [],
-                    "pmax_assets": [],
-                    "__source": "empty",
-                    "__cache_missing": True
-                }
-
-        # Only try to cache if we actually fetched fresh data
-        if ads_data and ads_data.get("__source") == "live":
-
-            # Store in database cache
-            try:
-                cache_json = json.dumps(ads_data)
-                cache_size_kb = len(cache_json) / 1024
-                now = datetime.utcnow()
-
-                current_app.logger.info(f"Attempting to cache ads_data: size={cache_size_kb:.1f}KB, aid={aid}")
-
-                # Use begin() for proper transaction handling in SQLAlchemy 2.0
-                with db.engine.begin() as conn:
-                    result = conn.execute(
-                        text("""
-                            UPDATE accounts
-                            SET ads_data_cache = :cache,
-                                ads_data_cached_at = :now
-                            WHERE id = :aid
-                        """),
-                        {
-                            "aid": aid,
-                            "cache": cache_json,
-                            "now": now
-                        }
-                    )
-                    rows_updated = result.rowcount
-                    # No need to call commit() - begin() auto-commits on context exit
-
-                if rows_updated > 0:
-                    current_app.logger.info(f"✓ Successfully cached ads_data in database (aid={aid}, size={cache_size_kb:.1f}KB, timestamp={now})")
+                if result and result[0]:
+                    ads_data = json.loads(result[0])
+                    snapshot_age = datetime.utcnow() - result[1] if result[1] else None
+                    current_app.logger.info(f"✓ Loaded snapshot from DB (age: {snapshot_age}, fetched: {result[1]})")
+                    ads_data["__snapshot_age"] = str(snapshot_age) if snapshot_age else "unknown"
+                    ads_data["__fetched_at"] = result[1].isoformat() if result[1] else None
                 else:
-                    current_app.logger.warning(f"Cache UPDATE returned 0 rows - account {aid} may not exist in accounts table")
+                    current_app.logger.info(f"No snapshots found in database for account {aid}")
+        except Exception as e:
+            current_app.logger.warning(f"Could not load snapshot from DB: {e}", exc_info=True)
+
+        # Fetch fresh data if requested (only via ?refresh=1 to prevent OOM on shared hosting)
+        if force_refresh and ads_data is None:
+            current_app.logger.info(f"⚠️  FETCHING FRESH DATA (expensive!) - Force refresh requested for account {aid}")
+            try:
+                ads_data = _get_ads_state(aid)
+
+                # Store as new historical snapshot
+                if ads_data and ads_data.get("__source") == "live":
+                    snapshot_json = json.dumps(ads_data)
+                    snapshot_size_kb = len(snapshot_json) / 1024
+                    now = datetime.utcnow()
+
+                    # Calculate metrics for quick querying
+                    campaigns = ads_data.get("campaigns", [])
+                    campaigns_count = len(campaigns)
+                    ad_groups_count = len(ads_data.get("ad_groups", []))
+                    keywords_count = len(ads_data.get("keywords", []))
+                    total_cost = sum(c.get("cost_30d", 0) or 0 for c in campaigns)
+                    total_conversions = sum(c.get("conversions", 0) or 0 for c in campaigns)
+
+                    current_app.logger.info(f"Storing snapshot: {snapshot_size_kb:.1f}KB, {campaigns_count} campaigns")
+
+                    with db.engine.begin() as conn:
+                        conn.execute(
+                            text("""
+                                INSERT INTO google_ads_snapshots
+                                (account_id, fetched_at, snapshot_data, campaigns_count, ad_groups_count,
+                                 keywords_count, total_cost_30d, total_conversions_30d)
+                                VALUES (:aid, :fetched_at, :snapshot, :campaigns, :ad_groups,
+                                        :keywords, :cost, :conversions)
+                            """),
+                            {
+                                "aid": aid,
+                                "fetched_at": now,
+                                "snapshot": snapshot_json,
+                                "campaigns": campaigns_count,
+                                "ad_groups": ad_groups_count,
+                                "keywords": keywords_count,
+                                "cost": total_cost,
+                                "conversions": int(total_conversions)
+                            }
+                        )
+                    current_app.logger.info(f"✓ Stored historical snapshot in database")
+
             except Exception as e:
-                current_app.logger.error(f"Could not cache ads_data: {e}", exc_info=True)
+                current_app.logger.error(f"Failed to fetch and store snapshot: {e}", exc_info=True)
+
+        # If still no data, show empty state
+        if ads_data is None:
+            current_app.logger.warning(f"No data available for account {aid} - showing empty state")
+            ads_data = {
+                "account_name": "Google Ads Account",
+                "campaigns": [],
+                "ad_groups": [],
+                "keywords": [],
+                "negatives": [],
+                "ads": [],
+                "extensions": [],
+                "landing_pages": [],
+                "asset_groups": [],
+                "pmax_assets": [],
+                "__source": "empty",
+                "__no_data": True
+            }
 
         # Generate analysis with optimized memory usage (agents run one at a time)
         try:

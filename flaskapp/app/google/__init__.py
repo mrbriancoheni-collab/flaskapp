@@ -2173,7 +2173,7 @@ def ads_ui():
 
         # Fetch fresh if no cache or force refresh
         if ads_data is None:
-            current_app.logger.info(f"Fetching fresh ads_data for account {aid}")
+            current_app.logger.info(f"⚠️  FETCHING FRESH DATA (expensive!) - Cache was empty/expired for account {aid}")
             ads_data = _get_ads_state(aid)
 
             # Store in database cache
@@ -2184,7 +2184,8 @@ def ads_ui():
 
                 current_app.logger.info(f"Attempting to cache ads_data: size={cache_size_kb:.1f}KB, aid={aid}")
 
-                with db.engine.connect() as conn:
+                # Use begin() for proper transaction handling in SQLAlchemy 2.0
+                with db.engine.begin() as conn:
                     result = conn.execute(
                         text("""
                             UPDATE accounts
@@ -2199,7 +2200,7 @@ def ads_ui():
                         }
                     )
                     rows_updated = result.rowcount
-                    conn.commit()
+                    # No need to call commit() - begin() auto-commits on context exit
 
                 if rows_updated > 0:
                     current_app.logger.info(f"✓ Successfully cached ads_data in database (aid={aid}, size={cache_size_kb:.1f}KB, timestamp={now})")

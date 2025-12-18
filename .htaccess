@@ -1,0 +1,21 @@
+# LiteSpeed Configuration for Flask App
+# Increase PHP worker processes to handle concurrent requests
+
+<IfModule Litespeed>
+    # Increase max children processes (default is 6, we need more for concurrent requests)
+    php_value lsapi_children 10
+
+    # Max time a process can run before being killed (5 minutes)
+    php_value lsapi_max_process_time 300
+
+    # How long an idle process stays alive (60 seconds)
+    php_value lsapi_max_idle 60
+
+    # Max requests per process before restart (helps prevent memory leaks)
+    php_value lsapi_max_requests 500
+</IfModule>
+
+# Alternative: If the above doesn't work, try environment variables
+# SetEnv LSAPI_CHILDREN 10
+# SetEnv LSAPI_MAX_PROCESS_TIME 300
+# SetEnv LSAPI_MAX_IDLE 60

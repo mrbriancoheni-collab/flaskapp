@@ -2271,14 +2271,18 @@ def ads_ui():
                 'adjust_daily_budget',     # Budget pacing
                 'create_search_campaign',  # AI-assisted Search campaign creation
                 'add_pmax_assets',         # AI-generated PMax headlines and descriptions
-                'add_asset_groups',        # AI-generated asset groups with themes
-                'create_asset_groups',     # AI-generated asset groups for new campaigns
+                # NOTE: asset groups removed - requires manual review
             ]
             if opt_type in agent_auto_types or decision_type in agent_auto_types:
                 return True
 
             # Flexible matching based on title/description for common auto-applicable actions
             # This catches variations in naming conventions
+
+            # Asset groups are always manual (require manual review)
+            if 'asset group' in title.lower() or opt_type in ['add_asset_groups', 'create_asset_groups']:
+                return False
+
             if any(keyword in title for keyword in ['create', 'add'] + ['ad', 'ads', 'rsa']):
                 # Ad creation is auto-applicable
                 return True
@@ -2891,6 +2895,43 @@ def ads_opportunities():
             return True
 
         return False
+
+    # Filter out suggestions for paused campaigns (except reactivation/enable suggestions)
+    def should_include_opportunity(opp):
+        """
+        Filter out optimizations for paused campaigns, EXCEPT for suggestions to enable/reactivate them.
+        """
+        title_lower = opp.get('title', '').lower()
+
+        # Always include reactivation suggestions
+        if any(keyword in title_lower for keyword in ['enable', 'activate', 'resume', 'turn on', 'unpause']):
+            return True
+
+        # Check if this optimization references a specific campaign
+        campaign_id = None
+        opt_data = opp.get('optimization_data', {})
+
+        # Try to get campaign ID from various sources
+        if 'campaign_id' in opt_data:
+            campaign_id = str(opt_data['campaign_id'])
+        elif 'campaign' in opt_data and isinstance(opt_data['campaign'], dict):
+            campaign_id = str(opt_data['campaign'].get('id', ''))
+
+        # If we found a campaign ID, check if it's paused
+        if campaign_id:
+            campaigns = ads_data.get('campaigns', [])
+            for campaign in campaigns:
+                if str(campaign.get('id', '')) == campaign_id:
+                    # Skip if campaign is paused (unless it's a reactivation suggestion)
+                    if campaign.get('status', '').upper() in ['PAUSED', 'REMOVED']:
+                        current_app.logger.info(f"Skipping optimization '{opp.get('title')}' for paused campaign {campaign.get('name')}")
+                        return False
+                    break
+
+        return True
+
+    # Filter opportunities to exclude paused campaign suggestions
+    all_opportunities = [opp for opp in all_opportunities if should_include_opportunity(opp)]
 
     analysis["opportunities"] = [opp for opp in all_opportunities if is_auto_applicable(opp)]
     analysis["manual_tasks"] = [opp for opp in all_opportunities if not is_auto_applicable(opp)]

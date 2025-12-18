@@ -2145,6 +2145,7 @@ def ads_ui():
             # Try to get from database cache
             try:
                 cache_cutoff = datetime.utcnow() - timedelta(hours=cache_ttl_hours)
+                current_app.logger.info(f"Cache lookup: aid={aid}, cutoff={cache_cutoff}")
 
                 with db.engine.connect() as conn:
                     result = conn.execute(
@@ -2157,22 +2158,35 @@ def ads_ui():
                         {"aid": aid, "cutoff": cache_cutoff}
                     ).first()
 
-                    if result and result[0]:
-                        ads_data = json.loads(result[0])
-                        cache_age = datetime.utcnow() - result[1] if result[1] else "unknown"
-                        current_app.logger.info(f"Using cached ads_data (age: {cache_age})")
+                    if result:
+                        current_app.logger.info(f"Cache row found: cached_at={result[1]}, has_data={result[0] is not None}")
+                        if result[0]:
+                            ads_data = json.loads(result[0])
+                            cache_age = datetime.utcnow() - result[1] if result[1] else "unknown"
+                            current_app.logger.info(f"✓ Using cached ads_data (age: {cache_age})")
+                        else:
+                            current_app.logger.info(f"Cache row exists but ads_data_cache is NULL")
+                    else:
+                        current_app.logger.info(f"No cache found (either doesn't exist or expired)")
             except Exception as e:
-                current_app.logger.warning(f"Could not load cached ads_data: {e}")
+                current_app.logger.warning(f"Could not load cached ads_data: {e}", exc_info=True)
 
         # Fetch fresh if no cache or force refresh
         if ads_data is None:
-            current_app.logger.info(f"Fetching fresh ads_data for account {aid}")
+            current_app.logger.info(f"⚠️  FETCHING FRESH DATA (expensive!) - Cache was empty/expired for account {aid}")
             ads_data = _get_ads_state(aid)
 
             # Store in database cache
             try:
-                with db.engine.connect() as conn:
-                    conn.execute(
+                cache_json = json.dumps(ads_data)
+                cache_size_kb = len(cache_json) / 1024
+                now = datetime.utcnow()
+
+                current_app.logger.info(f"Attempting to cache ads_data: size={cache_size_kb:.1f}KB, aid={aid}")
+
+                # Use begin() for proper transaction handling in SQLAlchemy 2.0
+                with db.engine.begin() as conn:
+                    result = conn.execute(
                         text("""
                             UPDATE accounts
                             SET ads_data_cache = :cache,
@@ -2181,14 +2195,19 @@ def ads_ui():
                         """),
                         {
                             "aid": aid,
-                            "cache": json.dumps(ads_data),
-                            "now": datetime.utcnow()
+                            "cache": cache_json,
+                            "now": now
                         }
                     )
-                    conn.commit()
-                current_app.logger.info(f"Cached ads_data in database")
+                    rows_updated = result.rowcount
+                    # No need to call commit() - begin() auto-commits on context exit
+
+                if rows_updated > 0:
+                    current_app.logger.info(f"✓ Successfully cached ads_data in database (aid={aid}, size={cache_size_kb:.1f}KB, timestamp={now})")
+                else:
+                    current_app.logger.warning(f"Cache UPDATE returned 0 rows - account {aid} may not exist in accounts table")
             except Exception as e:
-                current_app.logger.error(f"Could not cache ads_data: {e}")
+                current_app.logger.error(f"Could not cache ads_data: {e}", exc_info=True)
 
         # Generate analysis with optimized memory usage (agents run one at a time)
         try:

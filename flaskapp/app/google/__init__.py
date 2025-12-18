@@ -2216,6 +2216,7 @@ def ads_ui():
                 return True
 
             # AI-generated ad content (auto-complete with AI)
+            # NOTE: pmax_images removed - requires manual upload
             if opt_type in ['pmax_headlines', 'pmax_descriptions', 'rsa_headline_variations', 'create_rsa_ads']:
                 return True
 
@@ -2247,7 +2248,6 @@ def ads_ui():
                 'adjust_daily_budget',     # Budget pacing
                 'create_search_campaign',  # AI-assisted Search campaign creation
                 'add_pmax_assets',         # AI-generated PMax headlines and descriptions
-                # NOTE: 'improve_asset_variety' removed - requires manual implementation
                 'add_asset_groups',        # AI-generated asset groups with themes
                 'create_asset_groups',     # AI-generated asset groups for new campaigns
             ]
@@ -3329,6 +3329,19 @@ def _apply_optimization(aid: int, customer_id: str, opt_type: str, opt_data: dic
             return _apply_create_search_campaign(aid, customer_id, opt_data, refresh_token)
         elif decision_type in ['add_asset_groups', 'create_asset_groups']:
             return _apply_add_asset_groups(aid, customer_id, opt_data, refresh_token)
+        elif decision_type == 'add_pmax_assets':
+            # Route to appropriate handler based on asset_type
+            action_data = opt_data.get('action_data', {})
+            asset_type = action_data.get('asset_type', '')
+            if asset_type == 'HEADLINE':
+                return _apply_pmax_headlines(aid, customer_id, opt_data, refresh_token)
+            elif asset_type == 'DESCRIPTION':
+                return _apply_pmax_descriptions(aid, customer_id, opt_data, refresh_token)
+            else:
+                return {
+                    "success": False,
+                    "error": f"Unsupported asset type '{asset_type}' for PMax. Supported: HEADLINE, DESCRIPTION"
+                }
 
         # Apply based on optimization type
         if opt_type == "negative_keyword":

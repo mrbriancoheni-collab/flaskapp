@@ -194,9 +194,9 @@ class AssetPerformanceAgent(BaseAgent):
                 decisions.append(AgentDecision(
                     agent_id=self.agent_id,
                     agent_type=self.agent_type,
-                    decision_type='improve_asset_variety',
-                    title="Add more headline variations for better testing",
-                    description=f"You have {opp['current_count']} headlines. Adding {opp['recommended_count'] - opp['current_count']} more gives Google's AI more combinations to test.",
+                    decision_type='add_pmax_assets',  # Changed from 'improve_asset_variety' to use existing handler
+                    title="Add more headline variations to Performance Max for better testing",  # Clarified campaign type
+                    description=f"You have {opp['current_count']} Performance Max headlines. Adding {opp['recommended_count'] - opp['current_count']} more gives Google's AI more combinations to test.",
                     reasoning="More asset variety = more testing combinations. With 10+ headlines, Google can find optimal combinations for different audiences and contexts.",
                     account_id=self.account_id or 0,
                     customer_id='',
@@ -207,7 +207,8 @@ class AssetPerformanceAgent(BaseAgent):
                     action_data={
                         'asset_type': 'HEADLINE',
                         'current_count': opp['current_count'],
-                        'recommended_count': opp['recommended_count']
+                        'recommended_count': opp['recommended_count'],
+                        'gap': opp['recommended_count'] - opp['current_count']  # Add gap for consistency
                     },
                 ))
 

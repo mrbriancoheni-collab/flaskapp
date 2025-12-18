@@ -2247,7 +2247,7 @@ def ads_ui():
                 'adjust_daily_budget',     # Budget pacing
                 'create_search_campaign',  # AI-assisted Search campaign creation
                 'add_pmax_assets',         # AI-generated PMax headlines and descriptions
-                'improve_asset_variety',   # AI-generated additional headline variations
+                # NOTE: 'improve_asset_variety' removed - requires manual implementation
                 'add_asset_groups',        # AI-generated asset groups with themes
                 'create_asset_groups',     # AI-generated asset groups for new campaigns
             ]
@@ -3986,21 +3986,21 @@ def _apply_rsa_headline_variations(aid: int, customer_id: str, opt_data: dict, r
             slots_available = 15 - len(current_headlines)
             headlines_to_add = new_headlines[:min(slots_available, len(new_headlines))]
 
-            # Create updated ad
+            # CREATE new RSA ad (can't UPDATE existing RSA ads per Google Ads API)
             ad_group_ad_operation = client.get_type("AdGroupAdOperation")
-            updated_ad = ad_group_ad_operation.update
+            new_ad_group_ad = ad_group_ad_operation.create
 
-            # Build resource name
-            updated_ad.resource_name = client.get_service("AdGroupAdService").ad_group_ad_path(
-                customer_id, row.ad_group.id, row.ad_group_ad.ad.id
+            # Set ad group
+            new_ad_group_ad.ad_group = client.get_service("AdGroupService").ad_group_path(
+                customer_id, row.ad_group.id
             )
+            new_ad_group_ad.status = client.enums.AdGroupAdStatusEnum.ENABLED
 
-            # Copy existing ad settings
-            updated_ad.ad.id = ad.id
-            updated_ad.ad.final_urls.extend([str(url) for url in ad.final_urls])
+            # Copy final URLs from existing ad
+            new_ad_group_ad.ad.final_urls.extend([str(url) for url in ad.final_urls])
 
             # Set RSA
-            rsa = updated_ad.ad.responsive_search_ad
+            rsa = new_ad_group_ad.ad.responsive_search_ad
 
             # Add existing headlines
             for headline in current_headlines:
@@ -4020,10 +4020,7 @@ def _apply_rsa_headline_variations(aid: int, customer_id: str, opt_data: dict, r
                 description_asset.text = description
                 rsa.descriptions.append(description_asset)
 
-            # Set update mask - only update the ad fields we're changing
-            ad_group_ad_operation.update_mask.CopyFrom(
-                field_mask_pb2.FieldMask(paths=["ad.responsive_search_ad.headlines", "ad.responsive_search_ad.descriptions"])
-            )
+            # No update_mask needed for CREATE operation
 
             operations.append(ad_group_ad_operation)
             updated_ads += 1

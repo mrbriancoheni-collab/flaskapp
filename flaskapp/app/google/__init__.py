@@ -2170,9 +2170,11 @@ def ads_ui():
         except Exception as e:
             current_app.logger.warning(f"Could not load snapshot from DB: {e}", exc_info=True)
 
-        # Fetch fresh data if requested (only via ?refresh=1 to prevent OOM on shared hosting)
-        if force_refresh and ads_data is None:
-            current_app.logger.info(f"⚠️  FETCHING FRESH DATA (expensive!) - Force refresh requested for account {aid}")
+        # Fetch fresh data if needed
+        # - First time (no snapshot): fetch immediately for connected accounts
+        # - Force refresh (?refresh=1): fetch new snapshot
+        if ads_data is None and (force_refresh or connected):
+            current_app.logger.info(f"⚠️  FETCHING FRESH DATA - {'Force refresh' if force_refresh else 'First time setup'} for account {aid}")
             try:
                 ads_data = _get_ads_state(aid)
 
@@ -3009,17 +3011,52 @@ def ads_structure():
 @google_bp.route("/ads/campaigns/paused", methods=["GET"], endpoint="get_paused_campaigns")
 @login_required
 def get_paused_campaigns():
-    """Get all paused campaigns with details."""
-    aid = current_account_id()
-    ads_data = _get_ads_state(aid)
+    """Get all paused campaigns with details (lazy loaded)."""
+    try:
+        aid = current_account_id()
 
-    # Filter for paused campaigns
-    paused = [c for c in ads_data.get('campaigns', []) if c.get('status', '').lower() == 'paused']
+        # Load from latest snapshot (not live data)
+        ads_data = None
+        try:
+            with db.engine.connect() as conn:
+                result = conn.execute(
+                    text("""
+                        SELECT snapshot_data
+                        FROM google_ads_snapshots
+                        WHERE account_id = :aid
+                        ORDER BY fetched_at DESC
+                        LIMIT 1
+                    """),
+                    {"aid": aid}
+                ).first()
 
-    return jsonify({
-        'success': True,
-        'campaigns': paused
-    })
+                if result and result[0]:
+                    ads_data = json.loads(result[0])
+        except Exception as e:
+            current_app.logger.error(f"Failed to load snapshot for paused campaigns: {e}")
+
+        if not ads_data:
+            return jsonify({
+                'success': False,
+                'error': 'No data available. Please refresh Google Ads data first.',
+                'campaigns': []
+            })
+
+        # Filter for paused campaigns
+        paused = [c for c in ads_data.get('campaigns', []) if c.get('status', '').upper() == 'PAUSED']
+
+        return jsonify({
+            'success': True,
+            'campaigns': paused
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Error in get_paused_campaigns: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'campaigns': []
+        }), 500
 
 
 @google_bp.route("/ads/campaigns/<campaign_id>/details", methods=["GET"], endpoint="get_campaign_details")

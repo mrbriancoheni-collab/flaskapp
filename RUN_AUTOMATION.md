@@ -97,6 +97,15 @@ python3 check_lead_automation_status.py
 
 ## Common Errors
 
+### Error: "No module named 'bs4'" or similar import errors
+**Solution:** Install dependencies:
+```bash
+source /home/fieljtgr/virtualenv/flaskapp/3.9/bin/activate
+cd /home/fieljtgr/flaskapp
+pip install -r flaskapp/requirements.txt
+```
+**See:** `INSTALL_DEPENDENCIES.md` for detailed instructions
+
 ### Error: "SQLALCHEMY_DATABASE_URI must be set"
 **Solution:** Set the environment variable before running (see Option 1 above)
 

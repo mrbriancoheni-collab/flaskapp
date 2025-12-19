@@ -86,18 +86,18 @@ SELECT '============================================================' as '';
 SELECT '' as '';
 
 SELECT 'Emails sent today:' as '', COUNT(*) as count
-FROM lead_emails
+FROM lead_emails_sent
 WHERE DATE(sent_at) = CURDATE();
 
 SELECT 'Daily limit: 250' as '';
 SELECT '' as '';
 
 SELECT CONCAT('Remaining capacity: ', 250 - COUNT(*)) as ''
-FROM lead_emails
+FROM lead_emails_sent
 WHERE DATE(sent_at) = CURDATE();
 
 SELECT CONCAT('WARNING: Only ', COUNT(*), ' emails sent, target minimum is 50!') as ''
-FROM lead_emails
+FROM lead_emails_sent
 WHERE DATE(sent_at) = CURDATE()
 HAVING COUNT(*) < 50;
 
@@ -182,7 +182,7 @@ SELECT
     l.company_name,
     l.decision_maker_email,
     lc.name
-FROM lead_emails le
+FROM lead_emails_sent le
 JOIN leads l ON l.id = le.lead_id
 LEFT JOIN lead_campaigns lc ON lc.id = le.campaign_id
 ORDER BY le.sent_at DESC

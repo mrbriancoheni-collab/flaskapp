@@ -782,6 +782,21 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register lead_campaigns_bp")
 
+    try:
+        from app.admin.conversations_routes import conversations_bp
+        app.register_blueprint(conversations_bp)  # url_prefix=/admin/conversations
+        app.logger.info("conversations_bp registered at /admin/conversations")
+    except Exception:
+        app.logger.exception("Failed to register conversations_bp")
+
+    # --- Email Webhooks (AI auto-responses for inbound emails) -------------
+    try:
+        from app.email_webhooks import email_webhook_bp
+        app.register_blueprint(email_webhook_bp)  # url_prefix=/api/email
+        app.logger.info("email_webhook_bp registered at /api/email")
+    except Exception:
+        app.logger.exception("Failed to register email_webhook_bp")
+
     # --- Email Tracking (public endpoints for pixel and click tracking) ----
     try:
         from app.email_tracking_routes import email_tracking_bp

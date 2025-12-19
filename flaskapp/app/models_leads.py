@@ -348,3 +348,126 @@ class EmailUnsubscribe(db.Model):
 
     def __repr__(self) -> str:
         return f"<EmailUnsubscribe email={self.email!r}>"
+
+
+# ==============================================================================
+# Email Conversation Tracking (AI Auto-Responses)
+# ==============================================================================
+
+class EmailConversation(db.Model):
+    """Email conversation threads for AI auto-responses"""
+    __tablename__ = "email_conversations"
+
+    id = db.Column(Integer, primary_key=True)
+
+    # Link to lead/contact
+    lead_contact_id = db.Column(Integer, ForeignKey("lead_contacts.id"), nullable=False)
+
+    # Thread identification
+    thread_id = db.Column(String(255), unique=True, index=True)
+    subject = db.Column(String(500))
+
+    # Status tracking
+    status = db.Column(String(50), default='active')  # active, closed, escalated, spam
+    ai_handled = db.Column(Boolean, default=True)
+    requires_human = db.Column(Boolean, default=False)
+
+    # Metrics
+    total_messages = db.Column(Integer, default=0)
+    ai_messages = db.Column(Integer, default=0)
+    human_messages = db.Column(Integer, default=0)
+    prospect_messages = db.Column(Integer, default=0)
+
+    # Sentiment analysis
+    last_sentiment = db.Column(String(50))  # positive, negative, neutral, interested
+    lead_score = db.Column(Integer, default=0)  # 0-100
+
+    # Timestamps
+    last_message_at = db.Column(DateTime, nullable=False)
+    last_prospect_reply_at = db.Column(DateTime)
+    last_ai_reply_at = db.Column(DateTime)
+    escalated_at = db.Column(DateTime)
+    created_at = db.Column(DateTime, server_default=func.now(), nullable=False)
+
+    # Relationships
+    contact = relationship("LeadContact", backref="conversations")
+    messages = relationship("EmailConversationMessage", back_populates="conversation", cascade="all, delete-orphan")
+    alerts = relationship("ConversationAlert", back_populates="conversation", cascade="all, delete-orphan")
+
+    def __repr__(self) -> str:
+        return f"<EmailConversation id={self.id} contact_id={self.lead_contact_id} status={self.status}>"
+
+
+class EmailConversationMessage(db.Model):
+    """Individual messages within conversation threads"""
+    __tablename__ = "email_conversation_messages"
+
+    id = db.Column(Integer, primary_key=True)
+
+    # Link to conversation
+    conversation_id = db.Column(Integer, ForeignKey("email_conversations.id"), nullable=False)
+
+    # Message details
+    direction = db.Column(String(50), nullable=False)  # inbound, outbound
+    from_email = db.Column(String(255), nullable=False)
+    to_email = db.Column(String(255), nullable=False)
+    subject = db.Column(Text)
+    body_text = db.Column(Text)
+    body_html = db.Column(Text)
+
+    # AI handling
+    is_ai_generated = db.Column(Boolean, default=False)
+    ai_model = db.Column(String(100))
+    ai_prompt_used = db.Column(Text)
+    ai_confidence = db.Column(db.Numeric(3, 2))
+
+    # Provider details
+    message_id = db.Column(String(255), index=True)
+    in_reply_to = db.Column(String(255))
+    references = db.Column(Text)
+
+    # Sentiment & analysis
+    sentiment = db.Column(String(50))
+    contains_question = db.Column(Boolean, default=False)
+    urgency_level = db.Column(String(50))
+
+    # Timestamps
+    received_at = db.Column(DateTime)
+    sent_at = db.Column(DateTime)
+    created_at = db.Column(DateTime, server_default=func.now(), nullable=False)
+
+    # Relationships
+    conversation = relationship("EmailConversation", back_populates="messages")
+
+    def __repr__(self) -> str:
+        return f"<EmailConversationMessage id={self.id} direction={self.direction} from={self.from_email}>"
+
+
+class ConversationAlert(db.Model):
+    """Notifications for admin about conversation activity"""
+    __tablename__ = "conversation_alerts"
+
+    id = db.Column(Integer, primary_key=True)
+
+    # Link to conversation
+    conversation_id = db.Column(Integer, ForeignKey("email_conversations.id"), nullable=False)
+
+    # Alert details
+    alert_type = db.Column(String(50), nullable=False)  # new_reply, needs_human, interested, negative, question
+    message = db.Column(Text)
+    severity = db.Column(String(50), default='info')  # info, warning, urgent
+
+    # Status
+    is_read = db.Column(Boolean, default=False, index=True)
+    read_at = db.Column(DateTime)
+    dismissed = db.Column(Boolean, default=False)
+    dismissed_at = db.Column(DateTime)
+
+    # Timestamps
+    created_at = db.Column(DateTime, server_default=func.now(), nullable=False, index=True)
+
+    # Relationships
+    conversation = relationship("EmailConversation", back_populates="alerts")
+
+    def __repr__(self) -> str:
+        return f"<ConversationAlert id={self.id} type={self.alert_type} read={self.is_read}>"

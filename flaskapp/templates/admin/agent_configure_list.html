@@ -3,38 +3,126 @@
 {% block title %}AI Agents Configuration{% endblock %}
 
 {% block content %}
+
+{# Agent display names and descriptions #}
+{% set agent_info = {
+    'strategic_director': {
+        'name': 'Strategic Director',
+        'description': 'Campaign-level strategy, goal setting, and performance forecasting',
+        'layer': 'Strategic',
+        'icon': '🎯',
+        'frequency': 'Daily'
+    },
+    'campaign_manager': {
+        'name': 'Campaign Manager',
+        'description': 'Campaign structure optimization, settings, and asset group management',
+        'layer': 'Strategic',
+        'icon': '📊',
+        'frequency': 'Daily'
+    },
+    'budget_guardian': {
+        'name': 'Budget Guardian',
+        'description': 'Budget allocation, pacing control, and spend optimization',
+        'layer': 'Strategic',
+        'icon': '💰',
+        'frequency': 'Daily'
+    },
+    'quality_score_agent': {
+        'name': 'Quality Score Optimizer',
+        'description': 'Keyword and ad quality improvements, relevance scoring',
+        'layer': 'Operational',
+        'icon': '⭐',
+        'frequency': '4 hours'
+    },
+    'keyword_optimizer': {
+        'name': 'Keyword & Bid Optimizer',
+        'description': 'Bid adjustments, keyword expansion, and match type optimization',
+        'layer': 'Operational',
+        'icon': '🔑',
+        'frequency': '4 hours'
+    },
+    'negative_keyword_agent': {
+        'name': 'Negative Keyword Hunter',
+        'description': 'Identifies and blocks wasteful search terms automatically',
+        'layer': 'Tactical',
+        'icon': '🛡️',
+        'frequency': 'Hourly'
+    },
+    'ad_copy_agent': {
+        'name': 'Ad Copy Optimizer',
+        'description': 'Ad creative testing, headline optimization, and copy generation',
+        'layer': 'Tactical',
+        'icon': '✍️',
+        'frequency': 'Hourly'
+    },
+    'landing_page_analyst': {
+        'name': 'Landing Page Analyst',
+        'description': 'Landing page quality review and conversion optimization recommendations',
+        'layer': 'Tactical',
+        'icon': '📄',
+        'frequency': 'Hourly'
+    }
+} %}
+
 <div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold mb-6">
+    <h1 class="text-3xl font-bold mb-2">
         <i class="fa-solid fa-robot text-indigo-600 mr-2"></i>
         AI Agent Configuration
     </h1>
+    <p class="text-gray-600 mb-6">Configure the 8 AI agents that optimize your Google Ads campaigns 24/7</p>
 
     <!-- Global Configurations -->
     <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
-        <h2 class="text-2xl font-bold mb-4">Global Default Settings</h2>
+        <h2 class="text-2xl font-bold mb-2">Global Default Settings</h2>
+        <p class="text-sm text-gray-600 mb-4">These settings apply to all accounts unless overridden</p>
+
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
                     <tr class="border-b-2 border-gray-200">
                         <th class="text-left py-3 px-4">Agent</th>
+                        <th class="text-left py-3 px-4">Layer / Frequency</th>
                         <th class="text-center py-3 px-4">Enabled</th>
-                        <th class="text-center py-3 px-4">Auto-Execute Threshold</th>
+                        <th class="text-center py-3 px-4">Auto-Execute</th>
                         <th class="text-right py-3 px-4">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for config in global_configs %}
-                    <tr class="border-b border-gray-100">
-                        <td class="py-4 px-4 font-semibold">{{ config.agent_id }}</td>
+                    {% set info = agent_info.get(config.agent_id, {
+                        'name': config.agent_id,
+                        'description': 'No description available',
+                        'layer': 'Unknown',
+                        'icon': '🤖',
+                        'frequency': 'Unknown'
+                    }) %}
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="py-4 px-4">
+                            <div class="flex items-start gap-3">
+                                <span class="text-2xl">{{ info.icon }}</span>
+                                <div>
+                                    <div class="font-bold text-gray-900">{{ info.name }}</div>
+                                    <div class="text-sm text-gray-600">{{ info.description }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-4 px-4">
+                            <div class="text-sm">
+                                <div class="font-semibold text-indigo-600">{{ info.layer }}</div>
+                                <div class="text-gray-500">Runs {{ info.frequency }}</div>
+                            </div>
+                        </td>
                         <td class="text-center py-4 px-4">
-                            <span class="px-2 py-1 rounded text-xs {% if config.enabled %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold {% if config.enabled %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
                                 {{ 'Enabled' if config.enabled else 'Disabled' }}
                             </span>
                         </td>
-                        <td class="text-center py-4 px-4">{{ "%.0f"|format(config.auto_execute_threshold * 100) }}%</td>
+                        <td class="text-center py-4 px-4">
+                            <span class="font-semibold">{{ "%.0f"|format(config.auto_execute_threshold * 100) }}%</span>
+                        </td>
                         <td class="text-right py-4 px-4">
-                            <a href="{{ url_for('agent_config_bp.configure_global', agent_id=config.agent_id) }}" class="text-indigo-600 hover:text-indigo-800">
-                                <i class="fa-solid fa-edit"></i> Configure
+                            <a href="{{ url_for('agent_config_bp.configure_global', agent_id=config.agent_id) }}" class="inline-flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700 transition">
+                                <i class="fa-solid fa-cog"></i> Configure
                             </a>
                         </td>
                     </tr>

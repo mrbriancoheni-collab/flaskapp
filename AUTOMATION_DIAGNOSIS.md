@@ -30,36 +30,60 @@ Since there are no enriched leads yet, the `send-pending-emails` command has not
 
 ---
 
-## The Fix (Already Provided)
+## The Fix
 
-Update cron job command from:
+The cron job should be simplified to use environment variables (from cPanel or .env file) instead of exporting them inline.
+
+**Current cron job (too complex):**
 ```bash
+cd /home/fieljtgr/flaskapp && \
+export EMAIL_PROVIDER="brevo" && \
+export BREVO_API_KEY="..." && \
+... (many exports) ... \
 /home/fieljtgr/virtualenv/flaskapp/3.9/bin/python -m flask send-pending-emails
 ```
 
-To:
+**Should be (clean):**
 ```bash
-/home/fieljtgr/virtualenv/flaskapp/3.9/bin/python -m flask run-lead-automation
+cd /home/fieljtgr/flaskapp && /home/fieljtgr/virtualenv/flaskapp/3.9/bin/python -m flask run-lead-automation >> logs/automation.log 2>&1
 ```
+
+**Key changes:**
+1. ✅ Use `run-lead-automation` (not `send-pending-emails`)
+2. ✅ Remove all inline `export` statements
+3. ✅ Let environment variables load from system/cPanel/.env
+
+**Environment variables should be set in ONE of these places:**
+- **Option A:** cPanel → Setup Python App → Environment Variables (recommended)
+- **Option B:** `/home/fieljtgr/flaskapp/flaskapp/.env` file
+- **Option C:** System environment (already configured via Passenger)
+
+Required environment variables (should already be set):
+- `EMAIL_PROVIDER=brevo`
+- `BREVO_API_KEY`
+- `BREVO_FROM_EMAIL=hi@fieldsprout.io`
+- `BREVO_FROM_NAME=FieldSprout`
+- `SERPAPI_API_KEY`
+- `SQLALCHEMY_DATABASE_URI`
 
 ---
 
 ## Manual Test (Run This Now)
 
-Don't wait until 9 AM tomorrow. Test the automation manually via SSH:
+Don't wait until 9 AM tomorrow. Test if environment variables are properly configured:
 
 ```bash
-# Dry run (preview only, makes no changes)
-# Note: Replace with your actual API keys and database credentials
-cd /home/fieljtgr/flaskapp && \
-export EMAIL_PROVIDER="brevo" && \
-export BREVO_API_KEY="YOUR_BREVO_API_KEY" && \
-export BREVO_FROM_EMAIL="hi@fieldsprout.io" && \
-export BREVO_FROM_NAME="FieldSprout" && \
-export SERPAPI_API_KEY="YOUR_SERPAPI_KEY" && \
-export SQLALCHEMY_DATABASE_URI="mysql+pymysql://USERNAME:PASSWORD@localhost/DATABASE?charset=utf8mb4" && \
+# Test dry run (uses environment variables)
+cd /home/fieljtgr/flaskapp
 /home/fieljtgr/virtualenv/flaskapp/3.9/bin/python -m flask run-lead-automation --dry-run
 ```
+
+This will verify:
+- ✅ Flask command works
+- ✅ Environment variables are loaded correctly
+- ✅ Database connection works
+- ✅ API keys are configured
+- Shows preview of what automation would do
 
 This will show you:
 - How many campaigns will be created

@@ -6956,10 +6956,11 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
             estimated_clicks_wasted = int(estimated_waste / avg_cpc)
             campaign_names = [c.get("name", "Campaign") for c in campaigns[:2]] if campaigns else ["All Campaigns"]
             # Get first enabled campaign ID for applying the optimization
-            first_campaign_id = next((c.get("id") for c in campaigns if c.get("status", "").lower() in ("enabled", "active")),
-                                    campaigns[0].get("id") if campaigns else None)
+            # IMPORTANT: Only use enabled/active campaigns, not paused ones
+            first_campaign_id = next((c.get("id") for c in campaigns if c.get("status", "").lower() in ("enabled", "active")), None)
 
-            # Skip if no campaign available to apply to
+            # Skip if no ENABLED campaign available to apply to
+            # (Don't create opportunities for paused campaigns as they'll be filtered out)
             if not first_campaign_id:
                 neg_opps_skipped_no_campaign += 1
                 continue

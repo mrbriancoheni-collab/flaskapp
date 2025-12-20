@@ -7002,6 +7002,16 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
             f"skipped_no_campaign={neg_opps_skipped_no_campaign}"
         )
 
+        # Warn if opportunities were skipped due to paused campaigns
+        if neg_opps_skipped_no_campaign > 0 and len(enabled_campaigns) == 0:
+            current_app.logger.warning(
+                f"⚠️  All campaigns are PAUSED/DISABLED. "
+                f"Skipped {neg_opps_skipped_no_campaign} cost-saving opportunities "
+                f"(estimated ${total_estimated_waste:.2f}/month in savings) "
+                f"because there are no enabled campaigns to apply them to. "
+                f"Enable campaigns to see actionable cost savings."
+            )
+
     # Ad Extensions - Create individual line item for each extension type
     # Calculate potential leads based on REAL traffic volume
     # CTR lift translates to more clicks → more conversions at current conversion rate
@@ -7927,6 +7937,18 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
     # SMART BUNDLING: Group complementary optimizations that work better together
     bundles = _create_optimization_bundles(opportunities)
 
+    # Add campaign status warning if all campaigns are paused
+    campaign_status_warning = None
+    if len(campaigns) > 0 and len(enabled_campaigns) == 0:
+        paused_count = len([c for c in campaigns if c.get("status", "").lower() == "paused"])
+        campaign_status_warning = {
+            "type": "all_campaigns_paused",
+            "message": f"All {len(campaigns)} campaigns are currently PAUSED. Enable campaigns to see cost-saving opportunities and revenue growth recommendations.",
+            "total_campaigns": len(campaigns),
+            "paused_campaigns": paused_count,
+            "action": "Enable at least one campaign to unlock optimization recommendations",
+        }
+
     return {
         "scores": scores,
         "grade": grade,
@@ -7939,6 +7961,9 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
         "bundles": bundles,  # Smart bundling recommendations
         "total_opportunities": len(opportunities),
         "performance": performance,
+        "campaign_status_warning": campaign_status_warning,
+        "total_campaigns": len(campaigns),
+        "enabled_campaigns": len(enabled_campaigns),
     }
 
 

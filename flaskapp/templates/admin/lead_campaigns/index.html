@@ -153,9 +153,15 @@
 
                     <!-- Dates -->
                     <div class="text-xs text-gray-500 space-y-1">
-                        <div>Created: {{ stat.campaign.created_at.strftime('%b %d, %Y %I:%M %p') }}</div>
-                        {% if stat.campaign.scraping_completed_at %}
-                        <div>Scraped: {{ stat.campaign.scraping_completed_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+                        <div><strong>Created:</strong> {{ stat.campaign.created_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+                        {% if stat.last_scrape_at %}
+                        <div><strong>Last Scrape:</strong> <span class="text-blue-600 font-semibold">{{ stat.last_scrape_at.strftime('%b %d, %Y %I:%M %p') }}</span></div>
+                        {% endif %}
+                        {% if stat.last_enrichment_at %}
+                        <div><strong>Last Enrichment:</strong> <span class="text-green-600 font-semibold">{{ stat.last_enrichment_at.strftime('%b %d, %Y %I:%M %p') }}</span></div>
+                        {% endif %}
+                        {% if stat.last_email_sent_at %}
+                        <div><strong>Last Email Sent:</strong> <span class="text-purple-600 font-semibold">{{ stat.last_email_sent_at.strftime('%b %d, %Y %I:%M %p') }}</span></div>
                         {% endif %}
                     </div>
                 </div>

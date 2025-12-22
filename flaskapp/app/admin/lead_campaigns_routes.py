@@ -431,6 +431,31 @@ def index():
             leads_enriched = Lead.query.filter_by(campaign_id=campaign.id, enrichment_status='completed').count()
             sequence_count = EmailSequence.query.filter_by(campaign_id=campaign.id).count()
 
+            # Get last activity timestamps
+            last_scrape = Lead.query.filter_by(campaign_id=campaign.id).order_by(Lead.created_at.desc()).first()
+            last_enrichment = Lead.query.filter_by(
+                campaign_id=campaign.id,
+                enrichment_status='completed'
+            ).order_by(Lead.enriched_at.desc()).first()
+
+            # Get last email sent from both tables
+            last_legacy_email = LeadEmail.query.join(Lead).filter(
+                Lead.campaign_id == campaign.id
+            ).order_by(LeadEmail.sent_at.desc()).first()
+
+            last_contact_email = LeadContactEmail.query.filter_by(
+                campaign_id=campaign.id
+            ).order_by(LeadContactEmail.sent_at.desc()).first()
+
+            # Determine most recent email
+            last_email_sent = None
+            if last_legacy_email and last_contact_email:
+                last_email_sent = last_legacy_email if last_legacy_email.sent_at > last_contact_email.sent_at else last_contact_email
+            elif last_legacy_email:
+                last_email_sent = last_legacy_email
+            elif last_contact_email:
+                last_email_sent = last_contact_email
+
             logger.info(f"Campaign '{campaign.name}' (ID:{campaign.id}): "
                        f"leads={leads_total}, enriched={leads_enriched}, "
                        f"emails={total_emails_sent} (legacy={legacy_emails_sent}, contact={contact_emails_sent}), "
@@ -443,6 +468,9 @@ def index():
                 'emails_sent': total_emails_sent,
                 'emails_opened': total_emails_opened,
                 'sequence_count': sequence_count,
+                'last_scrape_at': last_scrape.created_at if last_scrape else None,
+                'last_enrichment_at': last_enrichment.enriched_at if last_enrichment else None,
+                'last_email_sent_at': last_email_sent.sent_at if last_email_sent else None,
             }
             campaign_stats.append(stats)
 

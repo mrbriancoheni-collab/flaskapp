@@ -402,68 +402,89 @@ def test_button():
 @require_admin
 def index():
     """List all lead campaigns"""
-    # Show all campaigns - consolidation to 100 hasn't been executed yet
-    # Current system has individual campaigns per keyword/location
-    campaigns = LeadCampaign.query.order_by(desc(LeadCampaign.created_at)).all()
-
-    logger.info(f"Found {len(campaigns)} campaigns")
-
-    # Get stats for each campaign
-    campaign_stats = []
-    for campaign in campaigns:
-        # Count emails from both legacy (LeadEmail) and new (LeadContactEmail) tables
-        legacy_emails_sent = LeadEmail.query.join(Lead).filter(Lead.campaign_id == campaign.id).count()
-        contact_emails_sent = LeadContactEmail.query.filter_by(campaign_id=campaign.id).count()
-        total_emails_sent = legacy_emails_sent + contact_emails_sent
-
-        legacy_emails_opened = LeadEmail.query.join(Lead).filter(
-            Lead.campaign_id == campaign.id,
-            LeadEmail.opened_at.isnot(None)
-        ).count()
-        contact_emails_opened = LeadContactEmail.query.filter(
-            LeadContactEmail.campaign_id == campaign.id,
-            LeadContactEmail.opened_at.isnot(None)
-        ).count()
-        total_emails_opened = legacy_emails_opened + contact_emails_opened
-
-        leads_total = Lead.query.filter_by(campaign_id=campaign.id).count()
-        leads_enriched = Lead.query.filter_by(campaign_id=campaign.id, enrichment_status='completed').count()
-        sequence_count = EmailSequence.query.filter_by(campaign_id=campaign.id).count()
-
-        logger.info(f"Campaign '{campaign.name}' (ID:{campaign.id}): "
-                   f"leads={leads_total}, enriched={leads_enriched}, "
-                   f"emails={total_emails_sent} (legacy={legacy_emails_sent}, contact={contact_emails_sent}), "
-                   f"opened={total_emails_opened}, sequences={sequence_count}")
-
-        stats = {
-            'campaign': campaign,
-            'leads_total': leads_total,
-            'leads_enriched': leads_enriched,
-            'emails_sent': total_emails_sent,
-            'emails_opened': total_emails_opened,
-            'sequence_count': sequence_count,
-        }
-        campaign_stats.append(stats)
-
-    # Get automation progress
-    from app.services.lead_automation_service import LeadAutomationService
     try:
-        service = LeadAutomationService()
-        automation_progress = service.get_progress_report()
-    except Exception as e:
-        logger.error(f"Error getting automation progress: {e}")
-        automation_progress = {
-            'campaigns_created': 0,
-            'leads_enriched': 0,
-            'emails_sent': 0,
-            'progress_percent': 0,
-            'current_index': 0,
-            'daily_stats': {'scrapes': 0, 'enrichments': 0, 'emails': 0}
-        }
+        # Show all campaigns - consolidation to 100 hasn't been executed yet
+        # Current system has individual campaigns per keyword/location
+        campaigns = LeadCampaign.query.order_by(desc(LeadCampaign.created_at)).all()
 
-    return render_template('admin/lead_campaigns/index.html',
-                         campaign_stats=campaign_stats,
-                         automation_progress=automation_progress)
+        logger.info(f"Found {len(campaigns)} campaigns")
+
+        # Get stats for each campaign
+        campaign_stats = []
+        for campaign in campaigns:
+            # Count emails from both legacy (LeadEmail) and new (LeadContactEmail) tables
+            legacy_emails_sent = LeadEmail.query.join(Lead).filter(Lead.campaign_id == campaign.id).count()
+            contact_emails_sent = LeadContactEmail.query.filter_by(campaign_id=campaign.id).count()
+            total_emails_sent = legacy_emails_sent + contact_emails_sent
+
+            legacy_emails_opened = LeadEmail.query.join(Lead).filter(
+                Lead.campaign_id == campaign.id,
+                LeadEmail.opened_at.isnot(None)
+            ).count()
+            contact_emails_opened = LeadContactEmail.query.filter(
+                LeadContactEmail.campaign_id == campaign.id,
+                LeadContactEmail.opened_at.isnot(None)
+            ).count()
+            total_emails_opened = legacy_emails_opened + contact_emails_opened
+
+            leads_total = Lead.query.filter_by(campaign_id=campaign.id).count()
+            leads_enriched = Lead.query.filter_by(campaign_id=campaign.id, enrichment_status='completed').count()
+            sequence_count = EmailSequence.query.filter_by(campaign_id=campaign.id).count()
+
+            logger.info(f"Campaign '{campaign.name}' (ID:{campaign.id}): "
+                       f"leads={leads_total}, enriched={leads_enriched}, "
+                       f"emails={total_emails_sent} (legacy={legacy_emails_sent}, contact={contact_emails_sent}), "
+                       f"opened={total_emails_opened}, sequences={sequence_count}")
+
+            stats = {
+                'campaign': campaign,
+                'leads_total': leads_total,
+                'leads_enriched': leads_enriched,
+                'emails_sent': total_emails_sent,
+                'emails_opened': total_emails_opened,
+                'sequence_count': sequence_count,
+            }
+            campaign_stats.append(stats)
+
+        # Get automation progress
+        try:
+            from app.services.lead_automation_service import LeadAutomationService
+            service = LeadAutomationService()
+            automation_progress = service.get_progress_report()
+        except ImportError as e:
+            logger.error(f"Error importing LeadAutomationService (likely missing dependencies): {e}")
+            automation_progress = {
+                'campaigns_created': 0,
+                'leads_enriched': 0,
+                'emails_sent': 0,
+                'progress_percent': 0,
+                'current_index': 0,
+                'daily_stats': {'scrapes': 0, 'enrichments': 0, 'emails': 0},
+                'error': 'Import error - install dependencies'
+            }
+        except Exception as e:
+            logger.error(f"Error getting automation progress: {e}")
+            automation_progress = {
+                'campaigns_created': 0,
+                'leads_enriched': 0,
+                'emails_sent': 0,
+                'progress_percent': 0,
+                'current_index': 0,
+                'daily_stats': {'scrapes': 0, 'enrichments': 0, 'emails': 0},
+                'error': str(e)
+            }
+
+        return render_template('admin/lead_campaigns/index.html',
+                             campaign_stats=campaign_stats,
+                             automation_progress=automation_progress)
+
+    except Exception as e:
+        logger.exception(f"Critical error in lead campaigns index page: {e}")
+        # Return error page with details
+        return render_template('admin/error.html',
+                             error_title="Lead Campaigns Page Error",
+                             error_message=str(e),
+                             error_details=f"Error type: {type(e).__name__}"), 500
 
 
 @lead_campaigns_bp.route('/new', methods=['GET', 'POST'])

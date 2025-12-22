@@ -2263,7 +2263,7 @@ def ads_ui():
             title = opp.get("title", "").lower()
 
             # Core auto-applicable types (can be applied with one click)
-            if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads', 'starter_negative_keywords']:
+            if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads', 'starter_negative_keywords', 'keyword_bid_increase']:
                 return True
 
             # AI-generated ad content (auto-complete with AI)
@@ -7002,6 +7002,16 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
             f"skipped_no_campaign={neg_opps_skipped_no_campaign}"
         )
 
+        # Warn if opportunities were skipped due to paused campaigns
+        if neg_opps_skipped_no_campaign > 0 and len(enabled_campaigns) == 0:
+            current_app.logger.warning(
+                f"⚠️  All campaigns are PAUSED/DISABLED. "
+                f"Skipped {neg_opps_skipped_no_campaign} cost-saving opportunities "
+                f"(estimated ${total_estimated_waste:.2f}/month in savings) "
+                f"because there are no enabled campaigns to apply them to. "
+                f"Enable campaigns to see actionable cost savings."
+            )
+
     # Ad Extensions - Create individual line item for each extension type
     # Calculate potential leads based on REAL traffic volume
     # CTR lift translates to more clicks → more conversions at current conversion rate
@@ -7182,6 +7192,126 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
                     "optimization_type": "quality_score",
                     "optimization_data": {"keyword": kw_text, "estimated_qs": estimated_qs, "cpa": kw_cpa, "potential_savings": monthly_savings},
                 })
+
+    # Keyword Bid Optimization - Increase bids for keywords below first page
+    # Keywords with low avg_position or low impression share need higher bids
+    if len(keywords) > 0 and len(enabled_campaigns) > 0:
+        # Get first enabled campaign for applying bid adjustments
+        first_campaign_id = next(
+            (c.get("id") for c in campaigns if c.get("status", "").lower() in ("enabled", "active")),
+            None
+        )
+
+        if first_campaign_id:
+            # Find keywords with low position/impression share that need bid increases
+            low_bid_keywords = []
+
+            for kw in keywords:
+                kw_text = kw.get("text", "")
+                kw_cpc = kw.get("cpc", 0) or 0
+                kw_clicks = kw.get("clicks", 0) or 0
+                kw_impressions = kw.get("impressions", 0) or 0
+                kw_avg_position = kw.get("avg_position") or kw.get("position", 0)
+                kw_impression_share = kw.get("search_impression_share", 0) or 0
+
+                # Skip if no data
+                if not kw_text or kw_cpc == 0:
+                    continue
+
+                # Identify keywords below first page based on:
+                # 1. Low average position (> 4.0 = likely not on first page)
+                # 2. Low impression share (< 50% = missing opportunities)
+                # 3. Has some impressions (showing but not competitive)
+                is_below_first_page = (
+                    (kw_avg_position > 4.0 if kw_avg_position else False) or
+                    (kw_impression_share < 0.50 if kw_impression_share else False)
+                ) and kw_impressions > 10
+
+                if is_below_first_page:
+                    # Estimate first page CPC (industry benchmark: 1.5-2x current CPC to reach first page)
+                    if kw_avg_position > 4.0:
+                        bid_increase_multiplier = 1.8  # Need ~80% increase for first page
+                    else:
+                        bid_increase_multiplier = 1.4  # Need ~40% increase to improve position
+
+                    suggested_bid = kw_cpc * bid_increase_multiplier
+                    bid_increase_amount = suggested_bid - kw_cpc
+                    bid_increase_pct = ((suggested_bid / kw_cpc) - 1) * 100 if kw_cpc > 0 else 0
+
+                    # Estimate potential impression increase (conservative: 50% more impressions)
+                    estimated_impression_increase = int(kw_impressions * 0.5)
+                    estimated_click_increase = int(estimated_impression_increase * avg_ctr)
+                    estimated_conversion_increase = max(1, int(estimated_click_increase * conversion_rate))
+
+                    # Calculate potential value
+                    lead_value = cost_per_conversion if cost_per_conversion > 0 else 100
+                    monthly_value = estimated_conversion_increase * lead_value
+
+                    # Only recommend if value > cost
+                    additional_monthly_cost = bid_increase_amount * estimated_click_increase
+                    if monthly_value > additional_monthly_cost * 1.5:  # Need at least 1.5x ROI
+                        low_bid_keywords.append({
+                            "keyword": kw_text,
+                            "current_bid": kw_cpc,
+                            "suggested_bid": suggested_bid,
+                            "bid_increase_pct": bid_increase_pct,
+                            "avg_position": kw_avg_position,
+                            "impression_share": kw_impression_share,
+                            "estimated_leads": estimated_conversion_increase,
+                            "monthly_value": monthly_value,
+                            "additional_cost": additional_monthly_cost,
+                            "roi": monthly_value / additional_monthly_cost if additional_monthly_cost > 0 else 3.0,
+                            "keyword_id": kw.get("id"),
+                            "ad_group_id": kw.get("ad_group_id"),
+                        })
+
+            # Sort by ROI and create opportunities for top keywords
+            low_bid_keywords.sort(key=lambda x: x["roi"], reverse=True)
+
+            for kw_data in low_bid_keywords[:8]:  # Top 8 highest ROI keywords
+                opportunities.append({
+                    "title": f"Increase bid for \"{kw_data['keyword']}\" to reach first page",
+                    "description": f"Currently averaging position {kw_data['avg_position']:.1f} with ${kw_data['current_bid']:.2f} CPC. Increase to ${kw_data['suggested_bid']:.2f} (+{kw_data['bid_increase_pct']:.0f}%) to compete for first page positions.",
+                    "priority": "high" if kw_data['estimated_leads'] >= 2 else "medium",
+                    "impact_score": min(100, int((kw_data['monthly_value'] / (total_monthly_spend * 0.1)) * 80)),
+                    "monthly_leads": kw_data['estimated_leads'],
+                    "annual_leads": kw_data['estimated_leads'] * 12,
+                    "monthly_value": round(kw_data['monthly_value'], 0),
+                    "icon": "fa-arrow-trend-up",
+                    "color": "blue",
+                    "category": "keyword_bid",
+                    "action": f"Increase bid from ${kw_data['current_bid']:.2f} to ${kw_data['suggested_bid']:.2f} for '{kw_data['keyword']}'",
+                    "estimated_time": "5 min",
+                    "quick_win": True,
+                    "confidence_score": 80,
+                    "risk_level": "medium",
+                    "before_state": f"Bid: ${kw_data['current_bid']:.2f}, Avg Position: {kw_data['avg_position']:.1f}, IS: {kw_data['impression_share']*100:.0f}%",
+                    "after_state": f"Bid: ${kw_data['suggested_bid']:.2f}, Est. Position: 2-3, +{kw_data['estimated_leads']} leads/mo",
+                    "success_metrics": [
+                        f"Improved avg position to 2-3",
+                        f"+{kw_data['estimated_leads']} leads/month",
+                        f"${kw_data['monthly_value']:.0f}/mo revenue potential"
+                    ],
+                    "benefit_explanation": "First page visibility dramatically increases click-through rate. Keywords off first page miss 90% of potential traffic.",
+                    "optimization_type": "keyword_bid_increase",
+                    "optimization_data": {
+                        "keyword": kw_data['keyword'],
+                        "keyword_id": kw_data.get('keyword_id'),
+                        "ad_group_id": kw_data.get('ad_group_id'),
+                        "campaign_id": first_campaign_id,
+                        "current_bid": kw_data['current_bid'],
+                        "suggested_bid": kw_data['suggested_bid'],
+                        "bid_increase_pct": kw_data['bid_increase_pct'],
+                        "estimated_leads": kw_data['estimated_leads'],
+                        "roi": kw_data['roi'],
+                    },
+                    "decision_type": "adjust_keyword_bid",
+                })
+
+            current_app.logger.info(
+                f"Keyword bid optimization: found {len(low_bid_keywords)} keywords below first page, "
+                f"created {min(8, len(low_bid_keywords))} opportunities"
+            )
 
     # Mobile Optimization - Calculate based on actual traffic
     # Mobile typically represents 60%+ of local service searches
@@ -7927,6 +8057,18 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
     # SMART BUNDLING: Group complementary optimizations that work better together
     bundles = _create_optimization_bundles(opportunities)
 
+    # Add campaign status warning if all campaigns are paused
+    campaign_status_warning = None
+    if len(campaigns) > 0 and len(enabled_campaigns) == 0:
+        paused_count = len([c for c in campaigns if c.get("status", "").lower() == "paused"])
+        campaign_status_warning = {
+            "type": "all_campaigns_paused",
+            "message": f"All {len(campaigns)} campaigns are currently PAUSED. Enable campaigns to see cost-saving opportunities and revenue growth recommendations.",
+            "total_campaigns": len(campaigns),
+            "paused_campaigns": paused_count,
+            "action": "Enable at least one campaign to unlock optimization recommendations",
+        }
+
     return {
         "scores": scores,
         "grade": grade,
@@ -7939,6 +8081,9 @@ def _analyze_ads_opportunities(aid: int, ads_data: dict) -> dict:
         "bundles": bundles,  # Smart bundling recommendations
         "total_opportunities": len(opportunities),
         "performance": performance,
+        "campaign_status_warning": campaign_status_warning,
+        "total_campaigns": len(campaigns),
+        "enabled_campaigns": len(enabled_campaigns),
     }
 
 

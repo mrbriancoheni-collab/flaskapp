@@ -101,38 +101,54 @@
     </h2>
     <div class="grid md:grid-cols-5 gap-4 mb-6">
       <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-        <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Health Score</div>
+        <div class="text-xs text-gray-600 uppercase font-semibold mb-1">
+          <span data-tooltip="health_score">Health Score</span>
+        </div>
         <div class="text-3xl font-bold {% if analysis.scores.overall >= 80 %}text-green-600{% elif analysis.scores.overall >= 60 %}text-yellow-600{% else %}text-red-600{% endif %}">
           {{ analysis.scores.overall }}
         </div>
         <div class="text-xs text-gray-500 mt-1">Grade: {{ analysis.grade }}</div>
       </div>
       <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-        <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Monthly Spend</div>
+        <div class="text-xs text-gray-600 uppercase font-semibold mb-1">
+          <span data-tooltip="monthly_spend">Monthly Spend</span>
+        </div>
         <div class="text-2xl font-bold text-gray-900">${{ "{:,.0f}".format(analysis.performance.monthly_spend) }}</div>
         <div class="text-xs text-gray-500 mt-1">${{ "{:,.0f}".format(analysis.performance.daily_spend) }}/day</div>
       </div>
       <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-        <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Impressions</div>
+        <div class="text-xs text-gray-600 uppercase font-semibold mb-1">
+          <span data-tooltip="impressions">Impressions</span>
+        </div>
         <div class="text-2xl font-bold text-gray-900">{{ "{:,.0f}".format(analysis.performance.impressions) }}</div>
         <div class="text-xs text-gray-500 mt-1">Last 30 days</div>
       </div>
       <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-        <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Clicks</div>
+        <div class="text-xs text-gray-600 uppercase font-semibold mb-1">
+          <span data-tooltip="clicks">Clicks</span>
+        </div>
         <div class="text-2xl font-bold text-gray-900">{{ "{:,.0f}".format(analysis.performance.clicks) }}</div>
-        <div class="text-xs text-gray-500 mt-1">{{ "%.2f"|format(analysis.performance.ctr * 100) }}% CTR</div>
+        <div class="text-xs text-gray-500 mt-1">
+          <span data-tooltip="ctr">{{ "%.2f"|format(analysis.performance.ctr * 100) }}% CTR</span>
+        </div>
       </div>
       <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-        <div class="text-xs text-gray-600 uppercase font-semibold mb-1">Conversions</div>
+        <div class="text-xs text-gray-600 uppercase font-semibold mb-1">
+          <span data-tooltip="conversions">Conversions</span>
+        </div>
         <div class="text-2xl font-bold text-gray-900">{{ "{:,.0f}".format(analysis.performance.conversions) }}</div>
-        <div class="text-xs text-gray-500 mt-1">${{ "{:,.0f}".format(analysis.performance.cost_per_conversion) }}/lead</div>
+        <div class="text-xs text-gray-500 mt-1">
+          <span data-tooltip="cost_per_conversion">${{ "{:,.0f}".format(analysis.performance.cost_per_conversion) }}/lead</span>
+        </div>
       </div>
     </div>
 
     <!-- Key Scores -->
     <div class="grid md:grid-cols-3 gap-4">
       <div class="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-lg p-4">
-        <div class="text-sm text-gray-600 mb-1">💸 Wasted Spend Prevention</div>
+        <div class="text-sm text-gray-600 mb-1">
+          💸 <span data-tooltip="wasted_spend">Wasted Spend Prevention</span>
+        </div>
         <div class="text-3xl font-bold text-red-700">{{ analysis.scores.wasted_spend|int }}%</div>
         <div class="text-xs text-red-600 mt-1 font-semibold">
           {% if analysis.scores.wasted_spend < 30 %}Critical - High waste detected
@@ -142,7 +158,9 @@
         </div>
       </div>
       <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-4">
-        <div class="text-sm text-gray-600 mb-1">⭐ Quality Score Health</div>
+        <div class="text-sm text-gray-600 mb-1">
+          ⭐ <span data-tooltip="quality_score">Quality Score Health</span>
+        </div>
         <div class="text-3xl font-bold text-yellow-700">{{ analysis.scores.quality_score|int }}%</div>
         <div class="text-xs text-yellow-700 mt-1 font-semibold">
           {% if analysis.scores.quality_score < 40 %}Poor QS - High CPCs
@@ -152,7 +170,9 @@
         </div>
       </div>
       <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
-        <div class="text-sm text-gray-600 mb-1">🧩 Ad Extensions</div>
+        <div class="text-sm text-gray-600 mb-1">
+          🧩 <span data-tooltip="extensions">Ad Extensions</span>
+        </div>
         <div class="text-3xl font-bold text-blue-700">{{ analysis.scores.extensions|int }}%</div>
         <div class="text-xs text-blue-600 mt-1 font-semibold">
           {% if analysis.scores.extensions < 40 %}Critical - Missing key extensions
@@ -531,14 +551,62 @@
 
       <div class="grid md:grid-cols-2 gap-6">
         <div>
-          {{ score_bar("Wasted Spend Prevention", analysis.scores.wasted_spend, "fa-solid fa-ban") }}
-          {{ score_bar("Quality Score Optimization", analysis.scores.quality_score, "fa-solid fa-star") }}
-          {{ score_bar("Click-Through Rate", analysis.scores.ctr, "fa-solid fa-mouse-pointer") }}
+          <div class="mb-4">
+            <div class="flex justify-between items-center text-sm mb-2">
+              <span class="font-medium"><i class="fa-solid fa-ban mr-2 text-gray-400"></i><span data-tooltip="wasted_spend">Wasted Spend Prevention</span></span>
+              <span class="font-bold {% if analysis.scores.wasted_spend < 40 %}text-red-600{% elif analysis.scores.wasted_spend < 70 %}text-yellow-600{% else %}text-green-600{% endif %}">{{ analysis.scores.wasted_spend|int }}%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3">
+              <div class="{% if analysis.scores.wasted_spend < 40 %}bg-red-500{% elif analysis.scores.wasted_spend < 70 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-3 rounded-full transition-all duration-500" style="width: {{ analysis.scores.wasted_spend|int }}%"></div>
+            </div>
+          </div>
+          <div class="mb-4">
+            <div class="flex justify-between items-center text-sm mb-2">
+              <span class="font-medium"><i class="fa-solid fa-star mr-2 text-gray-400"></i><span data-tooltip="quality_score">Quality Score Optimization</span></span>
+              <span class="font-bold {% if analysis.scores.quality_score < 40 %}text-red-600{% elif analysis.scores.quality_score < 70 %}text-yellow-600{% else %}text-green-600{% endif %}">{{ analysis.scores.quality_score|int }}%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3">
+              <div class="{% if analysis.scores.quality_score < 40 %}bg-red-500{% elif analysis.scores.quality_score < 70 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-3 rounded-full transition-all duration-500" style="width: {{ analysis.scores.quality_score|int }}%"></div>
+            </div>
+          </div>
+          <div class="mb-4">
+            <div class="flex justify-between items-center text-sm mb-2">
+              <span class="font-medium"><i class="fa-solid fa-mouse-pointer mr-2 text-gray-400"></i><span data-tooltip="ctr">Click-Through Rate</span></span>
+              <span class="font-bold {% if analysis.scores.ctr < 40 %}text-red-600{% elif analysis.scores.ctr < 70 %}text-yellow-600{% else %}text-green-600{% endif %}">{{ analysis.scores.ctr|int }}%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3">
+              <div class="{% if analysis.scores.ctr < 40 %}bg-red-500{% elif analysis.scores.ctr < 70 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-3 rounded-full transition-all duration-500" style="width: {{ analysis.scores.ctr|int }}%"></div>
+            </div>
+          </div>
         </div>
         <div>
-          {{ score_bar("Account Structure", analysis.scores.account_structure, "fa-solid fa-folder-tree") }}
-          {{ score_bar("Mobile Optimization", analysis.scores.mobile, "fa-solid fa-mobile-screen") }}
-          {{ score_bar("Ad Extensions", analysis.scores.extensions, "fa-solid fa-puzzle-piece") }}
+          <div class="mb-4">
+            <div class="flex justify-between items-center text-sm mb-2">
+              <span class="font-medium"><i class="fa-solid fa-folder-tree mr-2 text-gray-400"></i><span data-tooltip="account_structure">Account Structure</span></span>
+              <span class="font-bold {% if analysis.scores.account_structure < 40 %}text-red-600{% elif analysis.scores.account_structure < 70 %}text-yellow-600{% else %}text-green-600{% endif %}">{{ analysis.scores.account_structure|int }}%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3">
+              <div class="{% if analysis.scores.account_structure < 40 %}bg-red-500{% elif analysis.scores.account_structure < 70 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-3 rounded-full transition-all duration-500" style="width: {{ analysis.scores.account_structure|int }}%"></div>
+            </div>
+          </div>
+          <div class="mb-4">
+            <div class="flex justify-between items-center text-sm mb-2">
+              <span class="font-medium"><i class="fa-solid fa-mobile-screen mr-2 text-gray-400"></i><span data-tooltip="mobile_optimization">Mobile Optimization</span></span>
+              <span class="font-bold {% if analysis.scores.mobile < 40 %}text-red-600{% elif analysis.scores.mobile < 70 %}text-yellow-600{% else %}text-green-600{% endif %}">{{ analysis.scores.mobile|int }}%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3">
+              <div class="{% if analysis.scores.mobile < 40 %}bg-red-500{% elif analysis.scores.mobile < 70 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-3 rounded-full transition-all duration-500" style="width: {{ analysis.scores.mobile|int }}%"></div>
+            </div>
+          </div>
+          <div class="mb-4">
+            <div class="flex justify-between items-center text-sm mb-2">
+              <span class="font-medium"><i class="fa-solid fa-puzzle-piece mr-2 text-gray-400"></i><span data-tooltip="extensions">Ad Extensions</span></span>
+              <span class="font-bold {% if analysis.scores.extensions < 40 %}text-red-600{% elif analysis.scores.extensions < 70 %}text-yellow-600{% else %}text-green-600{% endif %}">{{ analysis.scores.extensions|int }}%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3">
+              <div class="{% if analysis.scores.extensions < 40 %}bg-red-500{% elif analysis.scores.extensions < 70 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-3 rounded-full transition-all duration-500" style="width: {{ analysis.scores.extensions|int }}%"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -744,6 +812,9 @@
 
 <!-- Google Ads Onboarding Wizard -->
 <script src="{{ url_for('static', filename='js/google-ads-onboarding.js') }}"></script>
+
+<!-- Metric Tooltips System -->
+<script src="{{ url_for('static', filename='js/metric-tooltips.js') }}"></script>
 
 <!-- JavaScript -->
 <script nonce="{{ g.csp_nonce }}">

@@ -76,6 +76,9 @@
       </div>
       {% if not is_demo %}
       <div class="flex-shrink-0 flex gap-2">
+        <a href="{{ url_for('google_bp.ads_campaign_wizard') }}" class="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-700 transition text-sm shadow-lg">
+          <i class="fa-solid fa-plus-circle"></i> Create Campaign
+        </a>
         <a href="{{ url_for('agents_bp.dashboard') }}" class="inline-flex items-center gap-2 bg-white text-indigo-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-50 transition text-sm">
           <i class="fa-solid fa-chart-line"></i> Dashboard
         </a>

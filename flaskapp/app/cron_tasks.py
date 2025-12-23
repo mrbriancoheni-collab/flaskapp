@@ -67,6 +67,12 @@ def run_daily(app, db):
     except Exception:
         app.logger.exception("[CRON] Lead automation run failed")
 
+    # Send monthly Google Ads performance reports
+    try:
+        _run_monthly_google_ads_performance_emails(app)
+    except Exception:
+        app.logger.exception("[CRON] Google Ads monthly performance emails failed")
+
     # TODO: email digests, cleanups, churn pings, etc.
 
 
@@ -524,6 +530,85 @@ def _run_daily_google_ads_intelligence(app) -> None:
             app.logger.exception(f"[CRON] Error processing intelligence for account {account_id}: {e}")
 
     app.logger.info("[CRON] Google Ads intelligence processing completed")
+
+
+def _run_monthly_google_ads_performance_emails(app) -> None:
+    """
+    Send monthly performance report emails to users with Google Ads accounts.
+    Runs on the 1st day of each month.
+    """
+    # Only run on the 1st of the month
+    now = datetime.utcnow()
+    if now.day != 1:
+        app.logger.debug(f"[CRON] Skipping monthly Google Ads emails (not 1st of month, today is {now.day})")
+        return
+
+    enabled = app.config.get("GOOGLE_ADS_MONTHLY_EMAILS_ENABLED", True)
+    if not enabled:
+        app.logger.info("[CRON] Google Ads monthly emails disabled")
+        return
+
+    # Get list of active Google Ads accounts
+    accounts = _accounts_with_google_ads_tokens(max_candidates=100)
+    if not accounts:
+        app.logger.info("[CRON] No Google Ads accounts to send monthly emails to")
+        return
+
+    app.logger.info(f"[CRON] Sending monthly performance emails to {len(accounts)} Google Ads accounts")
+
+    from flask import render_template
+    from app.services.email_service import send_email
+    from app.models import Account
+
+    emails_sent = 0
+    errors = 0
+
+    for account_id in accounts:
+        try:
+            # Get account and user email
+            account = Account.query.get(account_id)
+            if not account or not account.user:
+                app.logger.warning(f"[CRON] Account {account_id} or user not found")
+                continue
+
+            user_email = account.user.email
+            if not user_email:
+                app.logger.warning(f"[CRON] Account {account_id} has no email address")
+                continue
+
+            # Get ads data and analysis
+            from app.google import _get_ads_state, _analyze_ads_opportunities
+            ads_data = _get_ads_state(account_id)
+            analysis = _analyze_ads_opportunities(account_id, ads_data)
+
+            # Generate email content
+            email_html = render_template(
+                'google/emails/monthly_performance.html',
+                analysis=analysis,
+                account_name=account.name or "Your Account",
+                now=now
+            )
+
+            # Send email
+            success = send_email(
+                to=user_email,
+                subject=f"📊 Google Ads Monthly Performance Report - {analysis.get('grade', 'N/A')} Grade",
+                html_body=email_html,
+                from_name="FieldSprout Google Ads AI"
+            )
+
+            if success:
+                emails_sent += 1
+                app.logger.info(f"[CRON] Monthly report sent to {user_email} for account {account_id}")
+            else:
+                errors += 1
+                app.logger.error(f"[CRON] Failed to send monthly report to {user_email} for account {account_id}")
+
+        except Exception as e:
+            errors += 1
+            app.logger.exception(f"[CRON] Error sending monthly report for account {account_id}: {e}")
+
+    app.logger.info(f"[CRON] Monthly Google Ads emails completed: {emails_sent} sent, {errors} errors")
 
 
 # =========================

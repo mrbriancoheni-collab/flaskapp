@@ -8872,6 +8872,56 @@ def ads_campaign_create():
         current_app.logger.error(f"Error creating campaign: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+@google_bp.route("/ads/email-performance", methods=["POST"], endpoint="ads_email_performance")
+@login_required
+def ads_email_performance():
+    """Email monthly performance synopsis to user"""
+    from flask import render_template
+    from app.services.email_service import send_email
+    from app.models import Account
+
+    aid = current_account_id()
+
+    try:
+        # Get user email
+        account = Account.query.get(aid)
+        if not account or not account.user:
+            return jsonify({"success": False, "error": "Account not found"}), 404
+
+        user_email = account.user.email
+        if not user_email:
+            return jsonify({"success": False, "error": "No email address found"}), 400
+
+        # Get ads data and analysis
+        ads_data = _get_ads_state(aid)
+        analysis = _analyze_ads_opportunities(aid, ads_data)
+
+        # Generate email content
+        email_html = render_template(
+            'google/emails/monthly_performance.html',
+            analysis=analysis,
+            account_name=account.name or "Your Account"
+        )
+
+        # Send email
+        success = send_email(
+            to=user_email,
+            subject=f"Google Ads Monthly Performance Report - {analysis.get('grade', 'N/A')} Grade",
+            html_body=email_html,
+            from_name="FieldSprout Google Ads AI"
+        )
+
+        if success:
+            current_app.logger.info(f"Performance report sent to {user_email} for account {aid}")
+            return jsonify({"success": True, "message": "Performance report sent successfully"})
+        else:
+            return jsonify({"success": False, "error": "Failed to send email"}), 500
+
+    except Exception as e:
+        current_app.logger.error(f"Error sending performance report: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @google_bp.route("/ads/campaign/new", methods=["POST"], endpoint="ads_campaign_new")
 @login_required
 def ads_campaign_new():

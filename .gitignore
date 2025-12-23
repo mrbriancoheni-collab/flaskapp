@@ -1,3 +1,8 @@
+# Environment files with secrets
+.env.automation
+run_daily_automation_production.sh
+ACTUAL_CREDENTIALS.txt
+
 # Python
 __pycache__/
 *.py[cod]
@@ -20,11 +25,10 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual environments
+# Virtual Environment
 venv/
 ENV/
 env/
-.venv
 
 # IDE
 .vscode/
@@ -33,32 +37,16 @@ env/
 *.swo
 *~
 
-# Environment variables
-.env
-.env.local
+# OS
+.DS_Store
+Thumbs.db
 
-# Flask
-instance/
-.webassets-cache
+# Logs
+*.log
+logs/
+automation_state.json
 
 # Database
 *.db
 *.sqlite
-*.sqlite3
 
-# Logs
-*.log
-
-# OS
-.DS_Store
-Thumbs.db
-.env.ads_grader
-.env
-/tmp/
-
-# Media files (videos are too large for git, managed on server)
-flaskapp/static/video/*.mp4
-flaskapp/static/video/*.mov
-flaskapp/static/video/*.avi
-flaskapp/static/video/*.webm
-!flaskapp/static/video/.gitkeep

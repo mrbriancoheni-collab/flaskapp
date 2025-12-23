@@ -8631,10 +8631,252 @@ def ads_pick_account():
             return redirect(url_for("google_bp.ads_ui"))
     return render_template("google/ads_account_pick.html", ids=ids)
 
+@google_bp.route("/ads/campaign/wizard", methods=["GET"], endpoint="ads_campaign_wizard")
+@login_required
+def ads_campaign_wizard():
+    """Show campaign creation wizard"""
+    return render_template("google/campaign_wizard.html")
+
+@google_bp.route("/ads/campaign/create", methods=["POST"], endpoint="ads_campaign_create")
+@login_required
+def ads_campaign_create():
+    """Create new Google Ads campaign from wizard data"""
+    try:
+        data = request.get_json()
+        aid = current_user.account_id
+
+        # Get Google Ads credentials
+        account = _get_google_account(aid, "ads")
+        if not account:
+            return jsonify({"success": False, "error": "Google Ads not connected"}), 400
+
+        customer_id = account.customer_id
+        refresh_token = account.refresh_token
+
+        # Import required Google Ads modules
+        from google.ads.googleads.client import GoogleAdsClient
+        from google.ads.googleads.errors import GoogleAdsException
+        from datetime import datetime, timedelta
+        import uuid
+
+        # Create Google Ads client
+        client_id, client_secret = _client_info("ads")
+        credentials = {
+            "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "use_proto_plus": True
+        }
+
+        client = GoogleAdsClient.load_from_dict(credentials)
+
+        # Create campaign budget
+        budget_service = client.get_service("CampaignBudgetService")
+        budget_operation = client.get_type("CampaignBudgetOperation")
+        budget = budget_operation.create
+
+        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        unique_id = str(uuid.uuid4())[:8]
+        budget.name = f"Budget for {data['campaign_name']} {timestamp}-{unique_id}"
+        budget.amount_micros = int(float(data['daily_budget']) * 1_000_000)
+        budget.delivery_method = client.enums.BudgetDeliveryMethodEnum.STANDARD
+
+        budget_response = budget_service.mutate_campaign_budgets(
+            customer_id=customer_id,
+            operations=[budget_operation]
+        )
+        budget_resource_name = budget_response.results[0].resource_name
+
+        # Create campaign
+        campaign_service = client.get_service("CampaignService")
+        campaign_operation = client.get_type("CampaignOperation")
+        campaign = campaign_operation.create
+
+        campaign.name = data['campaign_name']
+        campaign.campaign_budget = budget_resource_name
+
+        # Set campaign type
+        if data['campaign_type'] == 'SEARCH':
+            campaign.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
+        else:
+            campaign.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.DISPLAY
+
+        # Start paused if requested
+        if data.get('start_paused', True):
+            campaign.status = client.enums.CampaignStatusEnum.PAUSED
+        else:
+            campaign.status = client.enums.CampaignStatusEnum.ENABLED
+
+        # Set EU political advertising declaration
+        campaign.contains_eu_political_advertising = (
+            client.enums.EuPoliticalAdvertisingStatusEnum.DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING
+        )
+
+        # Set dates
+        start_date = (datetime.utcnow() + timedelta(days=1)).strftime("%Y%m%d")
+        end_date = (datetime.utcnow() + timedelta(days=365)).strftime("%Y%m%d")
+        campaign.start_date = start_date
+        campaign.end_date = end_date
+
+        # Network settings (for Search campaigns)
+        if data['campaign_type'] == 'SEARCH':
+            campaign.network_settings.target_google_search = True
+            campaign.network_settings.target_search_network = True
+            campaign.network_settings.target_content_network = False
+            campaign.network_settings.target_partner_search_network = False
+
+        # Set bidding strategy
+        bidding_strategy = data.get('bidding_strategy', 'MANUAL_CPC')
+        if bidding_strategy == 'MANUAL_CPC':
+            campaign.manual_cpc = client.get_type("ManualCpc")
+            if data.get('enhanced_cpc'):
+                campaign.manual_cpc.enhanced_cpc_enabled = True
+        elif bidding_strategy == 'MAXIMIZE_CLICKS':
+            campaign.maximize_clicks = client.get_type("MaximizeClicks")
+        elif bidding_strategy == 'MAXIMIZE_CONVERSIONS':
+            campaign.maximize_conversions = client.get_type("MaximizeConversions")
+        elif bidding_strategy == 'TARGET_CPA':
+            campaign.target_cpa = client.get_type("TargetCpa")
+
+        # Create campaign
+        campaign_response = campaign_service.mutate_campaigns(
+            customer_id=customer_id,
+            operations=[campaign_operation]
+        )
+        campaign_resource_name = campaign_response.results[0].resource_name
+        campaign_id = campaign_resource_name.split('/')[-1]
+
+        current_app.logger.info(f"Created campaign: {data['campaign_name']} (ID: {campaign_id})")
+
+        # Create ad groups with keywords and ads
+        ad_group_service = client.get_service("AdGroupService")
+        ad_group_ad_service = client.get_service("AdGroupAdService")
+        keyword_service = client.get_service("AdGroupCriterionService")
+
+        for idx, ad_group_data in enumerate(data.get('ad_groups', [])):
+            # Create ad group
+            ad_group_operation = client.get_type("AdGroupOperation")
+            ad_group = ad_group_operation.create
+            ad_group.name = ad_group_data['name']
+            ad_group.campaign = campaign_resource_name
+            ad_group.type_ = client.enums.AdGroupTypeEnum.SEARCH_STANDARD
+            ad_group.status = client.enums.AdGroupStatusEnum.ENABLED
+            ad_group.cpc_bid_micros = 1_000_000  # $1 default bid
+
+            ad_group_response = ad_group_service.mutate_ad_groups(
+                customer_id=customer_id,
+                operations=[ad_group_operation]
+            )
+            ad_group_resource_name = ad_group_response.results[0].resource_name
+
+            # Add keywords
+            keywords_text = ad_group_data.get('keywords', '').strip()
+            if keywords_text:
+                keyword_operations = []
+                match_type = ad_group_data.get('match_type', 'PHRASE')
+
+                for keyword_text in keywords_text.split('\n'):
+                    keyword_text = keyword_text.strip()
+                    if not keyword_text:
+                        continue
+
+                    keyword_operation = client.get_type("AdGroupCriterionOperation")
+                    keyword = keyword_operation.create
+                    keyword.ad_group = ad_group_resource_name
+                    keyword.status = client.enums.AdGroupCriterionStatusEnum.ENABLED
+                    keyword.keyword.text = keyword_text
+
+                    if match_type == 'EXACT':
+                        keyword.keyword.match_type = client.enums.KeywordMatchTypeEnum.EXACT
+                    elif match_type == 'PHRASE':
+                        keyword.keyword.match_type = client.enums.KeywordMatchTypeEnum.PHRASE
+                    else:
+                        keyword.keyword.match_type = client.enums.KeywordMatchTypeEnum.BROAD
+
+                    keyword_operations.append(keyword_operation)
+
+                if keyword_operations:
+                    keyword_service.mutate_ad_group_criteria(
+                        customer_id=customer_id,
+                        operations=keyword_operations
+                    )
+
+            # Add negative keywords
+            negative_keywords_text = ad_group_data.get('negative_keywords', '').strip()
+            if negative_keywords_text:
+                negative_operations = []
+                for neg_kw in negative_keywords_text.split(','):
+                    neg_kw = neg_kw.strip()
+                    if not neg_kw:
+                        continue
+
+                    neg_operation = client.get_type("AdGroupCriterionOperation")
+                    neg_criterion = neg_operation.create
+                    neg_criterion.ad_group = ad_group_resource_name
+                    neg_criterion.negative = True
+                    neg_criterion.keyword.text = neg_kw
+                    neg_criterion.keyword.match_type = client.enums.KeywordMatchTypeEnum.BROAD
+                    negative_operations.append(neg_operation)
+
+                if negative_operations:
+                    keyword_service.mutate_ad_group_criteria(
+                        customer_id=customer_id,
+                        operations=negative_operations
+                    )
+
+            # Create Responsive Search Ad
+            headlines = [h for h in ad_group_data.get('headlines', []) if h]
+            descriptions = [d for d in ad_group_data.get('descriptions', []) if d]
+            final_url = ad_group_data.get('final_url', data.get('website_url', ''))
+
+            if headlines and descriptions and final_url:
+                ad_operation = client.get_type("AdGroupAdOperation")
+                ad_group_ad = ad_operation.create
+                ad_group_ad.ad_group = ad_group_resource_name
+                ad_group_ad.status = client.enums.AdGroupAdStatusEnum.ENABLED
+
+                ad = ad_group_ad.ad
+                ad.final_urls.append(final_url)
+
+                # Create RSA
+                rsa = ad.responsive_search_ad
+                for headline in headlines[:15]:  # Max 15 headlines
+                    headline_asset = client.get_type("AdTextAsset")
+                    headline_asset.text = headline[:30]  # Max 30 chars
+                    rsa.headlines.append(headline_asset)
+
+                for description in descriptions[:4]:  # Max 4 descriptions
+                    desc_asset = client.get_type("AdTextAsset")
+                    desc_asset.text = description[:90]  # Max 90 chars
+                    rsa.descriptions.append(desc_asset)
+
+                ad_group_ad_service.mutate_ad_group_ads(
+                    customer_id=customer_id,
+                    operations=[ad_operation]
+                )
+
+        return jsonify({
+            "success": True,
+            "campaign_name": data['campaign_name'],
+            "campaign_id": campaign_id,
+            "message": "Campaign created successfully"
+        })
+
+    except GoogleAdsException as ex:
+        current_app.logger.error(f"Google Ads API error creating campaign: {ex}")
+        error_msg = f"Google Ads API Error: {ex.failure.errors[0].message if ex.failure.errors else str(ex)}"
+        return jsonify({"success": False, "error": error_msg}), 400
+    except Exception as e:
+        current_app.logger.error(f"Error creating campaign: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @google_bp.route("/ads/campaign/new", methods=["POST"], endpoint="ads_campaign_new")
 @login_required
 def ads_campaign_new():
-    return _ads_not_implemented()
+    """Legacy endpoint - redirects to wizard"""
+    return redirect(url_for('google_bp.ads_campaign_wizard'))
 
 @google_bp.route("/ads/campaign/<int:cid>/edit", methods=["POST"], endpoint="ads_campaign_edit")
 @login_required

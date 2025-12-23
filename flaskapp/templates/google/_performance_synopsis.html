@@ -1,0 +1,261 @@
+<!-- Performance Synopsis Component -->
+{% if analysis.opportunities|length > 0 %}
+<div class="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-300 rounded-xl shadow-lg p-6 mb-6">
+  <div class="flex items-start gap-4 mb-4">
+    <div class="flex-shrink-0 text-4xl">📊</div>
+    <div class="flex-1">
+      <h2 class="text-2xl font-bold text-gray-900 mb-2">Performance Synopsis</h2>
+      <p class="text-gray-700">Quick overview of your account's key metrics and performance trends.</p>
+    </div>
+    <div class="flex-shrink-0">
+      <button
+        onclick="emailPerformanceReport()"
+        class="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 transition text-sm shadow-lg"
+      >
+        <i class="fa-solid fa-envelope"></i> Email Report
+      </button>
+    </div>
+  </div>
+
+  <!-- Key Performance Indicators -->
+  <div class="grid md:grid-cols-4 gap-4 mb-4">
+    <!-- Spend Performance -->
+    <div class="bg-white border-2 border-gray-200 rounded-lg p-4">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-sm font-semibold text-gray-600">💰 Total Spend</div>
+      </div>
+      <div class="text-2xl font-bold text-gray-900">${{ "{:,.0f}".format(analysis.performance.monthly_spend) }}</div>
+      <div class="text-xs text-gray-500 mt-1">Last 30 days</div>
+      <div class="text-xs text-gray-600 mt-2">
+        <span class="font-medium">${{ "{:,.0f}".format(analysis.performance.daily_spend) }}/day</span> average
+      </div>
+    </div>
+
+    <!-- Traffic Performance -->
+    <div class="bg-white border-2 border-gray-200 rounded-lg p-4">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-sm font-semibold text-gray-600">👥 Traffic</div>
+      </div>
+      <div class="text-2xl font-bold text-gray-900">{{ "{:,.0f}".format(analysis.performance.clicks) }}</div>
+      <div class="text-xs text-gray-500 mt-1">Clicks (30 days)</div>
+      <div class="text-xs text-gray-600 mt-2">
+        <span class="font-medium">{{ "%.2f"|format(analysis.performance.ctr * 100) }}% CTR</span>
+        {% if analysis.performance.ctr >= 0.05 %}
+        <span class="text-green-600 ml-1">✓ Excellent</span>
+        {% elif analysis.performance.ctr >= 0.035 %}
+        <span class="text-blue-600 ml-1">✓ Good</span>
+        {% elif analysis.performance.ctr >= 0.02 %}
+        <span class="text-yellow-600 ml-1">⚠ Average</span>
+        {% else %}
+        <span class="text-red-600 ml-1">⚠ Low</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Conversion Performance -->
+    <div class="bg-white border-2 border-gray-200 rounded-lg p-4">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-sm font-semibold text-gray-600">🎯 Conversions</div>
+      </div>
+      <div class="text-2xl font-bold text-gray-900">{{ "{:,.0f}".format(analysis.performance.conversions) }}</div>
+      <div class="text-xs text-gray-500 mt-1">Total leads (30 days)</div>
+      <div class="text-xs text-gray-600 mt-2">
+        {% if analysis.performance.cost_per_conversion > 0 %}
+        <span class="font-medium">${{ "{:,.0f}".format(analysis.performance.cost_per_conversion) }}/lead</span>
+        {% if analysis.performance.cost_per_conversion <= 50 %}
+        <span class="text-green-600 ml-1">✓ Great</span>
+        {% elif analysis.performance.cost_per_conversion <= 80 %}
+        <span class="text-blue-600 ml-1">✓ Good</span>
+        {% elif analysis.performance.cost_per_conversion <= 120 %}
+        <span class="text-yellow-600 ml-1">⚠ Average</span>
+        {% else %}
+        <span class="text-red-600 ml-1">⚠ High</span>
+        {% endif %}
+        {% else %}
+        <span class="text-gray-500">No conversion data</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Efficiency Score -->
+    <div class="bg-white border-2 border-gray-200 rounded-lg p-4">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-sm font-semibold text-gray-600">⚡ Efficiency</div>
+      </div>
+      <div class="text-2xl font-bold {% if analysis.scores.overall >= 80 %}text-green-600{% elif analysis.scores.overall >= 60 %}text-yellow-600{% else %}text-red-600{% endif %}">
+        {{ analysis.scores.overall }}%
+      </div>
+      <div class="text-xs text-gray-500 mt-1">Health Score</div>
+      <div class="text-xs text-gray-600 mt-2">
+        <span class="font-medium">{{ analysis.grade }}</span> grade
+        {% if analysis.scores.overall >= 80 %}
+        <span class="text-green-600 ml-1">✓ Excellent</span>
+        {% elif analysis.scores.overall >= 60 %}
+        <span class="text-yellow-600 ml-1">⚠ Good</span>
+        {% else %}
+        <span class="text-red-600 ml-1">⚠ Needs work</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Performance Highlights -->
+  <div class="bg-white border border-blue-200 rounded-lg p-4">
+    <h3 class="font-bold text-gray-900 mb-3 flex items-center gap-2">
+      <i class="fa-solid fa-lightbulb text-yellow-500"></i>
+      Key Insights
+    </h3>
+    <div class="grid md:grid-cols-2 gap-4">
+      <!-- Left Column: Positive Highlights -->
+      <div>
+        <div class="text-sm font-semibold text-green-700 mb-2">✅ What's Working</div>
+        <div class="space-y-2">
+          {% if analysis.scores.wasted_spend >= 70 %}
+          <div class="text-sm text-gray-700">
+            <i class="fa-solid fa-check-circle text-green-600 mr-1"></i>
+            Strong waste prevention ({{ analysis.scores.wasted_spend|int }}%)
+          </div>
+          {% endif %}
+          {% if analysis.scores.quality_score >= 70 %}
+          <div class="text-sm text-gray-700">
+            <i class="fa-solid fa-check-circle text-green-600 mr-1"></i>
+            Good quality scores driving lower costs
+          </div>
+          {% endif %}
+          {% if analysis.scores.extensions >= 70 %}
+          <div class="text-sm text-gray-700">
+            <i class="fa-solid fa-check-circle text-green-600 mr-1"></i>
+            Well-configured ad extensions
+          </div>
+          {% endif %}
+          {% if analysis.performance.ctr >= 0.04 %}
+          <div class="text-sm text-gray-700">
+            <i class="fa-solid fa-check-circle text-green-600 mr-1"></i>
+            Above-average click-through rate
+          </div>
+          {% endif %}
+          {% if analysis.scores.wasted_spend < 70 and analysis.scores.quality_score < 70 and analysis.scores.extensions < 70 and analysis.performance.ctr < 0.04 %}
+          <div class="text-sm text-gray-500 italic">
+            Opportunities available for improvement below
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Right Column: Areas for Improvement -->
+      <div>
+        <div class="text-sm font-semibold text-orange-700 mb-2">🔧 Improvement Opportunities</div>
+        <div class="space-y-2">
+          {% set critical_count = analysis.opportunities | selectattr('priority', 'defined') | selectattr('priority', 'equalto', 'critical') | list | length %}
+          {% set high_count = analysis.opportunities | selectattr('priority', 'defined') | selectattr('priority', 'equalto', 'high') | list | length %}
+
+          {% if critical_count > 0 %}
+          <div class="text-sm text-gray-700">
+            <i class="fa-solid fa-exclamation-triangle text-red-600 mr-1"></i>
+            {{ critical_count }} critical issue{{ 's' if critical_count > 1 else '' }} to fix
+          </div>
+          {% endif %}
+          {% if high_count > 0 %}
+          <div class="text-sm text-gray-700">
+            <i class="fa-solid fa-star text-orange-600 mr-1"></i>
+            {{ high_count }} high-value optimization{{ 's' if high_count > 1 else '' }}
+          </div>
+          {% endif %}
+          {% if analysis.scores.wasted_spend < 60 %}
+          <div class="text-sm text-gray-700">
+            <i class="fa-solid fa-alert-triangle text-yellow-600 mr-1"></i>
+            Add negative keywords to reduce waste
+          </div>
+          {% endif %}
+          {% if analysis.scores.quality_score < 60 %}
+          <div class="text-sm text-gray-700">
+            <i class="fa-solid fa-alert-triangle text-yellow-600 mr-1"></i>
+            Improve ad relevance to lower costs
+          </div>
+          {% endif %}
+          {% if critical_count == 0 and high_count == 0 and analysis.scores.wasted_spend >= 60 and analysis.scores.quality_score >= 60 %}
+          <div class="text-sm text-green-600">
+            <i class="fa-solid fa-check-circle mr-1"></i>
+            No urgent issues - account is well-optimized!
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Potential Savings Summary -->
+  {% set total_savings = analysis.opportunities | map(attribute='monthly_savings') | select('defined') | sum %}
+  {% if total_savings > 0 %}
+  <div class="mt-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="font-bold text-green-900 text-lg">💵 Potential Monthly Savings</div>
+        <div class="text-sm text-green-700">By implementing all recommended optimizations</div>
+      </div>
+      <div class="text-right">
+        <div class="text-3xl font-bold text-green-600">${{ "{:,.0f}".format(total_savings) }}/mo</div>
+        <div class="text-xs text-green-600">
+          {{ "%.1f"|format((total_savings / analysis.performance.monthly_spend * 100) if analysis.performance.monthly_spend > 0 else 0) }}% of current spend
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script nonce="{{ g.csp_nonce }}">
+/**
+ * Email performance report to user
+ */
+function emailPerformanceReport() {
+  // Show loading state
+  const button = event.target.closest('button');
+  const originalContent = button.innerHTML;
+  button.disabled = true;
+  button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Sending...';
+
+  // Send request to backend
+  fetch('/account/google/ads/email-performance', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({})
+  })
+  .then(response => response.json())
+  .then(data => {
+    button.disabled = false;
+    button.innerHTML = originalContent;
+
+    if (data.success) {
+      // Show success message
+      showNotification('✅ Performance report sent to your email!', 'success');
+    } else {
+      showNotification('❌ Failed to send report: ' + (data.error || 'Unknown error'), 'error');
+    }
+  })
+  .catch(error => {
+    button.disabled = false;
+    button.innerHTML = originalContent;
+    showNotification('❌ Failed to send report. Please try again.', 'error');
+  });
+}
+
+/**
+ * Show notification message
+ */
+function showNotification(message, type) {
+  const notification = document.createElement('div');
+  notification.className = `fixed top-24 right-4 ${type === 'success' ? 'bg-green-600' : 'bg-red-600'} text-white px-6 py-3 rounded-lg shadow-xl z-50 animate-fade-in`;
+  notification.textContent = message;
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.style.opacity = '0';
+    notification.style.transition = 'opacity 0.3s';
+    setTimeout(() => notification.remove(), 300);
+  }, 4000);
+}
+</script>
+{% endif %}

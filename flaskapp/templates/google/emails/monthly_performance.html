@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Ads Monthly Performance Report</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .header p {
+            margin: 0;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 30px 20px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 8px;
+        }
+        .metrics-grid {
+            display: table;
+            width: 100%;
+            margin: 20px 0;
+        }
+        .metric-row {
+            display: table-row;
+        }
+        .metric-cell {
+            display: table-cell;
+            width: 50%;
+            padding: 15px;
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        .metric-subtext {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+        .score-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 18px;
+        }
+        .score-excellent {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .score-good {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        .score-poor {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .insight-box {
+            background-color: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .insight-box h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #1e40af;
+        }
+        .insight-list {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .insight-list li {
+            margin: 8px 0;
+            color: #374151;
+        }
+        .opportunity-highlight {
+            background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .opportunity-highlight h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #92400e;
+        }
+        .savings-banner {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .savings-amount {
+            font-size: 36px;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #4f46e5;
+            color: white;
+            padding: 14px 28px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 10px 5px;
+        }
+        .footer {
+            background-color: #f9fafb;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .footer a {
+            color: #4f46e5;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📊 Google Ads Performance Report</h1>
+            <p>{{ account_name }}</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- Overall Health Score -->
+            <div class="section">
+                <div class="section-title">Overall Account Health</div>
+                <div style="text-align: center; padding: 20px;">
+                    {% if analysis.scores.overall >= 80 %}
+                    <span class="score-badge score-excellent">{{ analysis.scores.overall }}% - {{ analysis.grade }}</span>
+                    {% elif analysis.scores.overall >= 60 %}
+                    <span class="score-badge score-good">{{ analysis.scores.overall }}% - {{ analysis.grade }}</span>
+                    {% else %}
+                    <span class="score-badge score-poor">{{ analysis.scores.overall }}% - {{ analysis.grade }}</span>
+                    {% endif %}
+                    <p style="margin-top: 15px; color: #6b7280;">
+                        {% if analysis.scores.overall >= 80 %}
+                        Excellent! Your account is performing very well.
+                        {% elif analysis.scores.overall >= 60 %}
+                        Good performance with room for optimization.
+                        {% else %}
+                        Significant opportunities for improvement identified.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Key Performance Metrics -->
+            <div class="section">
+                <div class="section-title">Last 30 Days Performance</div>
+                <div class="metrics-grid">
+                    <div class="metric-row">
+                        <div class="metric-cell">
+                            <div class="metric-label">💰 Total Spend</div>
+                            <div class="metric-value">${{ "{:,.0f}".format(analysis.performance.monthly_spend) }}</div>
+                            <div class="metric-subtext">${{ "{:,.0f}".format(analysis.performance.daily_spend) }}/day average</div>
+                        </div>
+                        <div class="metric-cell">
+                            <div class="metric-label">👥 Total Clicks</div>
+                            <div class="metric-value">{{ "{:,.0f}".format(analysis.performance.clicks) }}</div>
+                            <div class="metric-subtext">{{ "%.2f"|format(analysis.performance.ctr * 100) }}% CTR</div>
+                        </div>
+                    </div>
+                    <div class="metric-row">
+                        <div class="metric-cell">
+                            <div class="metric-label">🎯 Conversions</div>
+                            <div class="metric-value">{{ "{:,.0f}".format(analysis.performance.conversions) }}</div>
+                            {% if analysis.performance.cost_per_conversion > 0 %}
+                            <div class="metric-subtext">${{ "{:,.0f}".format(analysis.performance.cost_per_conversion) }} per lead</div>
+                            {% else %}
+                            <div class="metric-subtext">Set up conversion tracking</div>
+                            {% endif %}
+                        </div>
+                        <div class="metric-cell">
+                            <div class="metric-label">👁️ Impressions</div>
+                            <div class="metric-value">{{ "{:,.0f}".format(analysis.performance.impressions) }}</div>
+                            <div class="metric-subtext">Last 30 days</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Health Scores Breakdown -->
+            <div class="section">
+                <div class="section-title">Performance Breakdown</div>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">
+                            <strong>💸 Wasted Spend Prevention</strong>
+                        </td>
+                        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                            <strong style="{% if analysis.scores.wasted_spend >= 70 %}color: #059669{% elif analysis.scores.wasted_spend >= 50 %}color: #d97706{% else %}color: #dc2626{% endif %}">
+                                {{ analysis.scores.wasted_spend|int }}%
+                            </strong>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">
+                            <strong>⭐ Quality Score Health</strong>
+                        </td>
+                        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                            <strong style="{% if analysis.scores.quality_score >= 70 %}color: #059669{% elif analysis.scores.quality_score >= 50 %}color: #d97706{% else %}color: #dc2626{% endif %}">
+                                {{ analysis.scores.quality_score|int }}%
+                            </strong>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">
+                            <strong>🧩 Ad Extensions</strong>
+                        </td>
+                        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                            <strong style="{% if analysis.scores.extensions >= 70 %}color: #059669{% elif analysis.scores.extensions >= 50 %}color: #d97706{% else %}color: #dc2626{% endif %}">
+                                {{ analysis.scores.extensions|int }}%
+                            </strong>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Key Insights -->
+            <div class="section">
+                <div class="section-title">What's Working Well</div>
+                <div class="insight-box">
+                    <h3>✅ Positive Highlights</h3>
+                    <ul class="insight-list">
+                        {% if analysis.scores.wasted_spend >= 70 %}
+                        <li>Strong waste prevention with {{ analysis.scores.wasted_spend|int }}% coverage</li>
+                        {% endif %}
+                        {% if analysis.scores.quality_score >= 70 %}
+                        <li>Good quality scores driving lower costs</li>
+                        {% endif %}
+                        {% if analysis.scores.extensions >= 70 %}
+                        <li>Well-configured ad extensions increasing visibility</li>
+                        {% endif %}
+                        {% if analysis.performance.ctr >= 0.04 %}
+                        <li>Above-average click-through rate ({{ "%.2f"|format(analysis.performance.ctr * 100) }}%)</li>
+                        {% endif %}
+                        {% if analysis.scores.wasted_spend < 70 and analysis.scores.quality_score < 70 and analysis.scores.extensions < 70 and analysis.performance.ctr < 0.04 %}
+                        <li>Account is actively being monitored by AI agents</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Optimization Opportunities -->
+            {% set critical_count = analysis.opportunities | selectattr('priority', 'defined') | selectattr('priority', 'equalto', 'critical') | list | length %}
+            {% set high_count = analysis.opportunities | selectattr('priority', 'defined') | selectattr('priority', 'equalto', 'high') | list | length %}
+            {% set total_savings = analysis.opportunities | map(attribute='monthly_savings') | select('defined') | sum %}
+
+            {% if critical_count > 0 or high_count > 0 %}
+            <div class="section">
+                <div class="section-title">Improvement Opportunities</div>
+                <div class="opportunity-highlight">
+                    <h3>🔧 Action Required</h3>
+                    <ul class="insight-list">
+                        {% if critical_count > 0 %}
+                        <li><strong>{{ critical_count }} critical issue{{ 's' if critical_count > 1 else '' }}</strong> need immediate attention</li>
+                        {% endif %}
+                        {% if high_count > 0 %}
+                        <li><strong>{{ high_count }} high-value optimization{{ 's' if high_count > 1 else '' }}</strong> available</li>
+                        {% endif %}
+                        {% if analysis.scores.wasted_spend < 60 %}
+                        <li>Add negative keywords to reduce wasted spend</li>
+                        {% endif %}
+                        {% if analysis.scores.quality_score < 60 %}
+                        <li>Improve ad relevance and landing pages to lower costs</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Potential Savings -->
+            {% if total_savings > 0 %}
+            <div class="savings-banner">
+                <div style="font-size: 18px; margin-bottom: 10px;">💵 Potential Monthly Savings</div>
+                <div class="savings-amount">${{ "{:,.0f}".format(total_savings) }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">
+                    By implementing AI-recommended optimizations
+                    ({{ "%.1f"|format((total_savings / analysis.performance.monthly_spend * 100) if analysis.performance.monthly_spend > 0 else 0) }}% of current spend)
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Call to Action -->
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="https://fieldsprout.io/account/google/ads" class="cta-button">
+                    View Full Dashboard
+                </a>
+                {% if critical_count > 0 or high_count > 0 %}
+                <a href="https://fieldsprout.io/agents/approval-queue" class="cta-button">
+                    Review & Approve Optimizations
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>
+                This automated report was generated by your FieldSprout AI agents.<br>
+                <a href="https://fieldsprout.io/account/google/ads">Manage your Google Ads</a> |
+                <a href="https://fieldsprout.io/account/settings">Update preferences</a>
+            </p>
+            <p style="margin-top: 15px; color: #9ca3af;">
+                FieldSprout &copy; {{ now.year if now else 2024 }}. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

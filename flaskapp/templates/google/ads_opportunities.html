@@ -280,8 +280,11 @@
   </div>
   {% endif %}
 
+  <!-- Start Here Workflow -->
+  {% include 'google/_start_here_workflow.html' %}
+
   <!-- Optimization Opportunities (Main Section) -->
-  <div class="bg-white rounded-xl shadow-lg p-6">
+  <div class="bg-white rounded-xl shadow-lg p-6" id="opportunities">
     <div class="mb-6">
       <h2 class="text-2xl font-bold">
         <i class="fa-solid fa-list-check text-indigo-600 mr-2"></i>
@@ -331,6 +334,7 @@
                class="optimization-checkbox w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 flex-shrink-0"
                data-opp-id="{{ loop.index }}"
                data-title="{{ opp.title }}"
+               data-priority="{{ opp.priority }}"
                data-savings="{{ opp.monthly_savings or 0 }}"
                data-leads="{{ opp.monthly_leads or 0 }}"
                data-optimization-type="{{ opp.optimization_type | default('') }}"

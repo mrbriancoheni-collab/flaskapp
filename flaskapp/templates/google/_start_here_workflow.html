@@ -1,0 +1,167 @@
+<!-- Start Here Workflow (Priority Guidance) -->
+{% if analysis.opportunities|length > 0 %}
+<div class="bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-xl shadow-lg p-6 mb-6">
+  <div class="flex items-start gap-4 mb-4">
+    <div class="flex-shrink-0 text-4xl">🎯</div>
+    <div class="flex-1">
+      <h2 class="text-2xl font-bold text-gray-900 mb-2">Start Here: Priority Workflow</h2>
+      <p class="text-gray-700">Follow this step-by-step guide to optimize your account systematically.</p>
+    </div>
+  </div>
+
+  <!-- Priority Steps -->
+  <div class="space-y-3">
+    <!-- Step 1: Critical Issues -->
+    {% set critical_opps = analysis.opportunities | selectattr('priority', 'equalto', 'critical') | list %}
+    {% if critical_opps|length > 0 %}
+    <div class="bg-white border-2 border-red-300 rounded-lg p-4">
+      <div class="flex items-start gap-3">
+        <div class="flex-shrink-0 w-8 h-8 bg-red-600 text-white rounded-full flex items-center justify-center font-bold text-sm">1</div>
+        <div class="flex-1">
+          <h3 class="font-bold text-red-900 mb-1">Fix {{ critical_opps|length }} Critical Issue{{ 's' if critical_opps|length > 1 else '' }} First</h3>
+          <p class="text-sm text-gray-700 mb-2">These are urgent problems causing significant waste. Fix these before anything else.</p>
+          <div class="bg-red-50 border border-red-200 rounded-lg p-3 space-y-2">
+            {% for opp in critical_opps[:3] %}
+            <div class="text-sm">
+              <i class="fa-solid fa-exclamation-triangle text-red-600 mr-2"></i>
+              <span class="font-medium text-gray-900">{{ opp.title }}</span>
+              <span class="text-gray-600">— Potential value: <strong class="text-green-600">${{ "{:,.0f}".format(opp.value) }}/mo</strong></span>
+            </div>
+            {% endfor %}
+            {% if critical_opps|length > 3 %}
+            <div class="text-sm text-gray-600 italic">+ {{ critical_opps|length - 3 }} more critical issue{{ 's' if critical_opps|length - 3 > 1 else '' }}</div>
+            {% endif %}
+          </div>
+          <div class="mt-2 text-xs text-red-700">
+            <i class="fa-solid fa-clock mr-1"></i>Estimated time: {{ critical_opps|length * 3 }} minutes
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Step 2: High Priority Issues -->
+    {% set high_opps = analysis.opportunities | selectattr('priority', 'equalto', 'high') | list %}
+    {% if high_opps|length > 0 %}
+    <div class="bg-white border-2 border-orange-300 rounded-lg p-4">
+      <div class="flex items-start gap-3">
+        <div class="flex-shrink-0 w-8 h-8 bg-orange-600 text-white rounded-full flex items-center justify-center font-bold text-sm">2</div>
+        <div class="flex-1">
+          <h3 class="font-bold text-orange-900 mb-1">Then Review {{ high_opps|length }} High-Priority Item{{ 's' if high_opps|length > 1 else '' }}</h3>
+          <p class="text-sm text-gray-700 mb-2">Important improvements that will significantly boost performance.</p>
+          <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-2">
+            {% for opp in high_opps[:5] %}
+            <div class="text-sm">
+              <i class="fa-solid fa-star text-orange-600 mr-2"></i>
+              <span class="font-medium text-gray-900">{{ opp.title }}</span>
+              <span class="text-gray-600">— Impact: <strong class="text-green-600">${{ "{:,.0f}".format(opp.value) }}/mo</strong></span>
+            </div>
+            {% endfor %}
+            {% if high_opps|length > 5 %}
+            <div class="text-sm text-gray-600 italic">+ {{ high_opps|length - 5 }} more high-priority item{{ 's' if high_opps|length - 5 > 1 else '' }}</div>
+            {% endif %}
+          </div>
+          <div class="mt-2 text-xs text-orange-700">
+            <i class="fa-solid fa-clock mr-1"></i>Estimated time: {{ high_opps|length * 5 }} minutes
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Step 3: Medium Priority Optimizations -->
+    {% set medium_opps = analysis.opportunities | selectattr('priority', 'equalto', 'medium') | list %}
+    {% if medium_opps|length > 0 %}
+    <div class="bg-white border-2 border-yellow-300 rounded-lg p-4">
+      <div class="flex items-start gap-3">
+        <div class="flex-shrink-0 w-8 h-8 bg-yellow-600 text-white rounded-full flex items-center justify-center font-bold text-sm">3</div>
+        <div class="flex-1">
+          <h3 class="font-bold text-yellow-900 mb-1">Finally, Optimize {{ medium_opps|length }} Medium-Priority Item{{ 's' if medium_opps|length > 1 else '' }}</h3>
+          <p class="text-sm text-gray-700 mb-2">Worthwhile enhancements for fine-tuning account performance.</p>
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <div class="text-sm text-gray-700">
+              These optimizations will further improve your account but aren't urgent. Review after fixing critical and high-priority items.
+            </div>
+          </div>
+          <div class="mt-2 text-xs text-yellow-700">
+            <i class="fa-solid fa-clock mr-1"></i>Estimated time: {{ medium_opps|length * 3 }} minutes
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Step 4: Low Priority (Optional) -->
+    {% set low_opps = analysis.opportunities | selectattr('priority', 'equalto', 'low') | list %}
+    {% if low_opps|length > 0 %}
+    <div class="bg-white border-2 border-gray-300 rounded-lg p-4">
+      <div class="flex items-start gap-3">
+        <div class="flex-shrink-0 w-8 h-8 bg-gray-600 text-white rounded-full flex items-center justify-center font-bold text-sm">4</div>
+        <div class="flex-1">
+          <h3 class="font-bold text-gray-900 mb-1">{{ low_opps|length }} Low-Priority Item{{ 's' if low_opps|length > 1 else '' }} (Optional)</h3>
+          <p class="text-sm text-gray-700">Small tweaks that may provide marginal improvements. Consider these when you have extra time.</p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Total Time Estimate -->
+  {% set total_time = (critical_opps|length * 3) + (high_opps|length * 5) + (medium_opps|length * 3) %}
+  <div class="mt-4 bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="font-bold text-indigo-900">Total Workflow Time</div>
+        <div class="text-sm text-indigo-700">Complete all steps for maximum impact</div>
+      </div>
+      <div class="text-right">
+        <div class="text-3xl font-bold text-indigo-600">~{{ total_time }} min</div>
+        <div class="text-xs text-indigo-600">{{ "%.1f"|format(total_time / 60) }} hours</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="mt-4 flex gap-3">
+    <button
+      onclick="document.getElementById('opportunities').scrollIntoView({behavior: 'smooth'})"
+      class="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-bold text-sm"
+    >
+      <i class="fa-solid fa-play mr-2"></i>Start Workflow
+    </button>
+    <button
+      onclick="selectAllPriority('critical')"
+      class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm"
+    >
+      <i class="fa-solid fa-check-double mr-2"></i>Select All Critical
+    </button>
+  </div>
+</div>
+
+<script nonce="{{ g.csp_nonce }}">
+// Helper function to select all opportunities of a given priority
+function selectAllPriority(priority) {
+  const checkboxes = document.querySelectorAll(`input[type="checkbox"][data-priority="${priority}"]`);
+  checkboxes.forEach(cb => {
+    cb.checked = true;
+    cb.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
+  // Scroll to opportunities section
+  document.getElementById('opportunities').scrollIntoView({behavior: 'smooth'});
+
+  // Show success message
+  const count = checkboxes.length;
+  const message = document.createElement('div');
+  message.className = 'fixed top-24 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-xl z-50 animate-fade-in';
+  message.innerHTML = `<i class="fa-solid fa-check-circle mr-2"></i>Selected ${count} ${priority} priority item${count > 1 ? 's' : ''}`;
+  document.body.appendChild(message);
+
+  setTimeout(() => {
+    message.style.opacity = '0';
+    message.style.transition = 'opacity 0.3s';
+    setTimeout(() => message.remove(), 300);
+  }, 3000);
+}
+</script>
+{% endif %}

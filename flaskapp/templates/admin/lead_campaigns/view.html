@@ -203,16 +203,22 @@ function startScraping(btn) {
     })
     .then(r => {
         console.log('Response status:', r.status);
-        // Check if response is OK before parsing JSON
-        if (!r.ok) {
-            throw new Error(`Server error: ${r.status} ${r.statusText}`);
-        }
         // Check if response is JSON
         const contentType = r.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
-            return r.json();
+            return r.json().then(data => {
+                // If request failed, throw with the actual error message
+                if (!r.ok) {
+                    throw new Error(data.error || `Server error: ${r.status} ${r.statusText}`);
+                }
+                return data;
+            });
         } else {
-            throw new Error('Server returned non-JSON response (possible error page)');
+            // Non-JSON response (HTML error page)
+            if (!r.ok) {
+                throw new Error(`Server error: ${r.status} ${r.statusText} (non-JSON response)`);
+            }
+            throw new Error('Server returned non-JSON response');
         }
     })
     .then(data => {
@@ -248,11 +254,14 @@ function enrichLeads(btn) {
         }
     })
     .then(r => {
-        if (!r.ok) throw new Error(`Server error: ${r.status} ${r.statusText}`);
         const contentType = r.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
-            return r.json();
+            return r.json().then(data => {
+                if (!r.ok) throw new Error(data.error || `Server error: ${r.status} ${r.statusText}`);
+                return data;
+            });
         } else {
+            if (!r.ok) throw new Error(`Server error: ${r.status} ${r.statusText} (non-JSON response)`);
             throw new Error('Server returned non-JSON response');
         }
     })
@@ -287,11 +296,14 @@ function sendEmails(btn) {
         }
     })
     .then(r => {
-        if (!r.ok) throw new Error(`Server error: ${r.status} ${r.statusText}`);
         const contentType = r.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
-            return r.json();
+            return r.json().then(data => {
+                if (!r.ok) throw new Error(data.error || `Server error: ${r.status} ${r.statusText}`);
+                return data;
+            });
         } else {
+            if (!r.ok) throw new Error(`Server error: ${r.status} ${r.statusText} (non-JSON response)`);
             throw new Error('Server returned non-JSON response');
         }
     })

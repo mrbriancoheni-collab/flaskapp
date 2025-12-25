@@ -7,7 +7,8 @@ from datetime import datetime, date, timedelta
 
 from app import db
 from app.auth.utils import current_account_id
-from app.models_linkedin import LinkedInScheduledPost
+from app.models_linkedin import LinkedInScheduledPost, LinkedInCategory, LinkedInCategoryTopic, LinkedInCampaign
+from app.services.ai_prompts_init import get_prompt_for_service
 
 logger = logging.getLogger(__name__)
 
@@ -208,14 +209,19 @@ def post_generator():
 @linkedin_bp.route("/post-generator/generate", methods=["POST"])
 @login_required
 def generate_post():
-    """Generate thought leader post using AI"""
+    """Generate thought leader post using AI with category/POV support"""
     if not _AI_OK:
         return jsonify({
             "error": "AI not configured. Please add ANTHROPIC_API_KEY to environment."
         }), 400
 
+    account_id = current_account_id()
+    if not account_id:
+        return jsonify({"error": "Unable to determine account"}), 400
+
     try:
         # Extract form data
+        category_id = request.form.get("category_id", "")
         expertise = request.form.get("expertise", "")
         industry = request.form.get("industry", "home services")
         topic = request.form.get("topic", "")
@@ -223,6 +229,23 @@ def generate_post():
         include_hashtags = request.form.get("include_hashtags") == "on"
         include_cta = request.form.get("include_cta") == "on"
 
+        # Get category POV if provided
+        category_name = ""
+        pov_statement = ""
+
+        if category_id:
+            category = LinkedInCategory.query.filter_by(
+                id=int(category_id),
+                account_id=account_id
+            ).first()
+
+            if category:
+                category_name = category.name
+                pov_statement = category.pov_statement
+                if not expertise and category.unique_expertise:
+                    expertise = category.unique_expertise
+
+        # Fallback validation
         if not expertise or not topic:
             return jsonify({"error": "Expertise and topic are required"}), 400
 
@@ -232,36 +255,62 @@ def generate_post():
 
         client = anthropic.Anthropic(api_key=api_key)
 
-        # Build the prompt
-        prompt = f"""You are a LinkedIn thought leader post writer for professionals in the {industry} industry.
+        # Get the LinkedIn prompt template from database (admin-editable)
+        linkedin_prompt_config = get_prompt_for_service('linkedin_thought_leadership')
 
-User's unique expertise: {expertise}
+        if linkedin_prompt_config:
+            # Use admin-editable prompt template
+            prompt_template = linkedin_prompt_config['prompt_template']
 
-Topic to write about: {topic}
+            # Fill in the template
+            prompt = prompt_template.format(
+                industry=industry,
+                category_name=category_name or "General",
+                pov_statement=pov_statement or "Unique perspective based on expertise",
+                expertise=expertise,
+                topic=topic,
+                tone=tone,
+                include_hashtags="yes" if include_hashtags else "no",
+                include_cta="yes" if include_cta else "no"
+            )
 
-Tone: {tone}
+            model = linkedin_prompt_config['model']
+            temperature = linkedin_prompt_config['temperature']
+            max_tokens = linkedin_prompt_config['max_tokens']
+        else:
+            # Fallback to hardcoded prompt if not in database
+            prompt = f"""You are a LinkedIn thought leader post writer for professionals in the {industry} industry.
+
+{"CATEGORY & POV:" if category_name else ""}
+{f"- Content Category: {category_name}" if category_name else ""}
+{f"- Unique Point of View: {pov_statement}" if pov_statement else ""}
+- User's Expertise: {expertise}
+
+TOPIC FOR THIS POST:
+{topic}
+
+CONTENT STRATEGY:
+- Tone: {tone}
+- Post Length: 150-300 words
 
 Write a compelling LinkedIn post that:
 1. Hooks readers in the first line
 2. Demonstrates unique expertise and insights
 3. Provides actionable value
 4. Uses short paragraphs for mobile readability
-5. Is 150-300 words (optimal LinkedIn length)
-{"6. Includes 3-5 relevant hashtags at the end" if include_hashtags else ""}
-{"7. Ends with a clear call-to-action (question, comment prompt, or DM invitation)" if include_cta else ""}
-
-Important:
-- Start strong - first line should make people want to read more
-- Use personal stories or specific examples when relevant
-- Break up text with line breaks for readability
-- Don't use emojis unless the tone is casual
-- Sound like a real person, not a corporate account
+{"5. Includes 3-5 relevant hashtags at the end" if include_hashtags else ""}
+{"6. Ends with a clear call-to-action" if include_cta else ""}
 
 Generate the post now:"""
 
+            model = "claude-3-5-sonnet-20241022"
+            temperature = 0.7
+            max_tokens = 1000
+
         message = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=1000,
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
             messages=[{"role": "user", "content": prompt}]
         )
 
@@ -271,6 +320,7 @@ Generate the post now:"""
         return jsonify({
             "post": post_text,
             "metadata": {
+                "category": category_name if category_name else None,
                 "expertise": expertise,
                 "topic": topic,
                 "tone": tone,
@@ -508,4 +558,272 @@ def schedule_update(post_id):
     except Exception as e:
         db.session.rollback()
         logger.exception("Error updating scheduled post")
+        return jsonify({"error": str(e)}), 500
+
+
+# ==================== Category Management Routes ====================
+
+@linkedin_bp.route("/categories")
+@login_required
+def categories():
+    """View and manage thought leadership categories"""
+    account_id = current_account_id()
+    if not account_id:
+        flash("Unable to determine account", "error")
+        return redirect(url_for("linkedin_bp.index"))
+
+    # Get all categories for this account
+    categories_list = LinkedInCategory.query.filter_by(
+        account_id=account_id
+    ).order_by(LinkedInCategory.priority.asc(), LinkedInCategory.name.asc()).all()
+
+    return render_template(
+        "linkedin/categories.html",
+        categories=categories_list,
+        ai_available=_AI_OK,
+    )
+
+
+@linkedin_bp.route("/categories/new", methods=["GET", "POST"])
+@login_required
+def category_new():
+    """Create a new thought leadership category"""
+    account_id = current_account_id()
+    if not account_id:
+        flash("Unable to determine account", "error")
+        return redirect(url_for("linkedin_bp.index"))
+
+    if request.method == "POST":
+        try:
+            # Get form data
+            name = request.form.get("name", "").strip()
+            description = request.form.get("description", "").strip()
+            pov_statement = request.form.get("pov_statement", "").strip()
+            unique_expertise = request.form.get("unique_expertise", "").strip()
+            post_frequency = request.form.get("post_frequency", "weekly")
+            priority = int(request.form.get("priority", "1"))
+            is_active = request.form.get("is_active") == "on"
+
+            # Validation
+            if not name:
+                flash("Category name is required", "error")
+                return redirect(url_for("linkedin_bp.category_new"))
+
+            if not pov_statement:
+                flash("Point of View statement is required", "error")
+                return redirect(url_for("linkedin_bp.category_new"))
+
+            # Check category limit (recommend 3-5)
+            category_count = LinkedInCategory.count_for_account(account_id)
+            if category_count >= 10:
+                flash("Maximum 10 categories allowed. Consider consolidating or removing inactive categories.", "warning")
+                return redirect(url_for("linkedin_bp.categories"))
+
+            # Create category
+            category = LinkedInCategory(
+                account_id=account_id,
+                name=name,
+                description=description,
+                pov_statement=pov_statement,
+                unique_expertise=unique_expertise,
+                post_frequency=post_frequency,
+                priority=priority,
+                is_active=is_active
+            )
+
+            db.session.add(category)
+            db.session.commit()
+
+            flash(f"Category '{name}' created successfully!", "success")
+            return redirect(url_for("linkedin_bp.category_edit", category_id=category.id))
+
+        except Exception as e:
+            db.session.rollback()
+            logger.exception("Error creating category")
+            flash(f"Error creating category: {str(e)}", "error")
+            return redirect(url_for("linkedin_bp.category_new"))
+
+    # GET request - show form
+    return render_template(
+        "linkedin/category_form.html",
+        category=None,
+        ai_available=_AI_OK,
+    )
+
+
+@linkedin_bp.route("/categories/<int:category_id>/edit", methods=["GET", "POST"])
+@login_required
+def category_edit(category_id):
+    """Edit an existing thought leadership category"""
+    account_id = current_account_id()
+    if not account_id:
+        flash("Unable to determine account", "error")
+        return redirect(url_for("linkedin_bp.index"))
+
+    # Find the category
+    category = LinkedInCategory.query.filter_by(
+        id=category_id,
+        account_id=account_id
+    ).first()
+
+    if not category:
+        flash("Category not found", "error")
+        return redirect(url_for("linkedin_bp.categories"))
+
+    if request.method == "POST":
+        try:
+            # Get form data
+            category.name = request.form.get("name", "").strip()
+            category.description = request.form.get("description", "").strip()
+            category.pov_statement = request.form.get("pov_statement", "").strip()
+            category.unique_expertise = request.form.get("unique_expertise", "").strip()
+            category.post_frequency = request.form.get("post_frequency", "weekly")
+            category.priority = int(request.form.get("priority", "1"))
+            category.is_active = request.form.get("is_active") == "on"
+
+            # Validation
+            if not category.name:
+                flash("Category name is required", "error")
+                return render_template("linkedin/category_form.html", category=category, ai_available=_AI_OK)
+
+            if not category.pov_statement:
+                flash("Point of View statement is required", "error")
+                return render_template("linkedin/category_form.html", category=category, ai_available=_AI_OK)
+
+            db.session.commit()
+
+            flash(f"Category '{category.name}' updated successfully!", "success")
+            return redirect(url_for("linkedin_bp.categories"))
+
+        except Exception as e:
+            db.session.rollback()
+            logger.exception("Error updating category")
+            flash(f"Error updating category: {str(e)}", "error")
+
+    # GET request - show form with existing data
+    # Get topics for this category
+    topics = LinkedInCategoryTopic.query.filter_by(category_id=category_id).order_by(
+        LinkedInCategoryTopic.used.asc(),
+        LinkedInCategoryTopic.created_at.desc()
+    ).all()
+
+    return render_template(
+        "linkedin/category_form.html",
+        category=category,
+        topics=topics,
+        ai_available=_AI_OK,
+    )
+
+
+@linkedin_bp.route("/categories/<int:category_id>/delete", methods=["POST", "DELETE"])
+@login_required
+def category_delete(category_id):
+    """Delete a thought leadership category"""
+    account_id = current_account_id()
+    if not account_id:
+        return jsonify({"error": "Unable to determine account"}), 400
+
+    try:
+        # Find the category
+        category = LinkedInCategory.query.filter_by(
+            id=category_id,
+            account_id=account_id
+        ).first()
+
+        if not category:
+            return jsonify({"error": "Category not found"}), 404
+
+        category_name = category.name
+
+        # Delete the category (topics will cascade delete)
+        db.session.delete(category)
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": f"Category '{category_name}' deleted successfully"
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Error deleting category")
+        return jsonify({"error": str(e)}), 500
+
+
+@linkedin_bp.route("/categories/<int:category_id>/topics/add", methods=["POST"])
+@login_required
+def category_topic_add(category_id):
+    """Add a topic idea to a category"""
+    account_id = current_account_id()
+    if not account_id:
+        return jsonify({"error": "Unable to determine account"}), 400
+
+    try:
+        # Verify category belongs to account
+        category = LinkedInCategory.query.filter_by(
+            id=category_id,
+            account_id=account_id
+        ).first()
+
+        if not category:
+            return jsonify({"error": "Category not found"}), 404
+
+        # Get form data
+        topic_idea = request.form.get("topic_idea", "").strip()
+        tone = request.form.get("tone", "professional")
+
+        if not topic_idea:
+            return jsonify({"error": "Topic idea is required"}), 400
+
+        # Create topic
+        topic = LinkedInCategoryTopic(
+            category_id=category_id,
+            topic_idea=topic_idea,
+            tone=tone
+        )
+
+        db.session.add(topic)
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Topic added successfully",
+            "topic": topic.to_dict()
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Error adding topic")
+        return jsonify({"error": str(e)}), 500
+
+
+@linkedin_bp.route("/categories/topics/<int:topic_id>/delete", methods=["POST", "DELETE"])
+@login_required
+def category_topic_delete(topic_id):
+    """Delete a topic idea"""
+    account_id = current_account_id()
+    if not account_id:
+        return jsonify({"error": "Unable to determine account"}), 400
+
+    try:
+        # Find the topic and verify it belongs to user's category
+        topic = LinkedInCategoryTopic.query.join(LinkedInCategory).filter(
+            LinkedInCategoryTopic.id == topic_id,
+            LinkedInCategory.account_id == account_id
+        ).first()
+
+        if not topic:
+            return jsonify({"error": "Topic not found"}), 404
+
+        db.session.delete(topic)
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Topic deleted successfully"
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Error deleting topic")
         return jsonify({"error": str(e)}), 500

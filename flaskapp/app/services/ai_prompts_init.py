@@ -535,6 +535,62 @@ GOAL: Create a campaign that drives qualified leads while maintaining CPL ≤ $5
         google_ads_campaign_creation_prompt.is_active = True
         count += 1
 
+    # LinkedIn Thought Leadership Post Generation Prompt
+    linkedin_prompt = AIPrompt.query.filter_by(prompt_key='linkedin_thought_leadership').first()
+    if not linkedin_prompt or force:
+        if not linkedin_prompt:
+            linkedin_prompt = AIPrompt(prompt_key='linkedin_thought_leadership')
+            db.session.add(linkedin_prompt)
+
+        linkedin_prompt.name = 'LinkedIn Thought Leadership Post Generation'
+        linkedin_prompt.description = 'Generates strategic LinkedIn posts aligned with user POV and expertise for thought leadership'
+        linkedin_prompt.system_message = 'You are a LinkedIn thought leadership content strategist. Generate posts that demonstrate unique expertise, provide actionable value, and build professional authority.'
+        linkedin_prompt.prompt_template = '''You are a LinkedIn thought leadership writer creating a post for a professional in the {industry} industry.
+
+CATEGORY & POV:
+- Content Category: {category_name}
+- Unique Point of View: {pov_statement}
+- User's Expertise: {expertise}
+
+TOPIC FOR THIS POST:
+{topic}
+
+CONTENT STRATEGY:
+- Tone: {tone}
+- Post Length: 150-300 words
+- Include hashtags: {include_hashtags}
+- Include CTA: {include_cta}
+
+WRITING GUIDELINES:
+1. HOOK (First 2 lines): Start with a bold statement, surprising stat, or provocative question that aligns with the POV
+2. UNIQUE PERSPECTIVE: Demonstrate expertise through specific examples, numbers, or insights
+3. ACTIONABLE VALUE: Provide 2-3 tactical takeaways readers can implement
+4. READABILITY: Use short paragraphs (1-2 sentences), line breaks, and mobile-friendly formatting
+5. AUTHENTICITY: Sound like a real person, not a corporate account
+6. POV CONSISTENCY: Reinforce the unique perspective throughout
+
+FORMAT REQUIREMENTS:
+- Start strong - first line should hook readers immediately
+- Use personal stories or specific client examples when relevant
+- Break up text with strategic line breaks
+- No emojis unless tone is "conversational" or "casual"
+- End with engagement (question, comment prompt, or clear CTA)
+- If including hashtags: Add 3-5 relevant hashtags at the end, industry-specific and trending
+
+AVOID:
+- Generic advice that could apply to any industry
+- Corporate speak or jargon without explanation
+- Clickbait without delivering value
+- Overly promotional content
+- Being too salesy or self-promotional
+
+Generate the LinkedIn post now (just the post text, no additional commentary):'''
+        linkedin_prompt.model = 'claude-3-5-sonnet-20241022'
+        linkedin_prompt.temperature = 0.7
+        linkedin_prompt.max_tokens = 1000
+        linkedin_prompt.is_active = True
+        count += 1
+
     db.session.commit()
     return count
 

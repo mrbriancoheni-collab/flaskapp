@@ -50,3 +50,5 @@ automation_state.json
 *.db
 *.sqlite
 
+/check_imports.py
+/tmp/

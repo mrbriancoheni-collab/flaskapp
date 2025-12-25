@@ -2125,7 +2125,28 @@ def ads_ui():
     # Initialize defaults in case of early error
     connected = False
     ads_data = {"campaigns": [], "ad_groups": [], "keywords": [], "ads": []}
-    analysis = {"opportunities": [], "manual_tasks": [], "account_score": 0, "top_opportunities": []}
+    analysis = {
+        "opportunities": [],
+        "manual_tasks": [],
+        "account_score": 0,
+        "top_opportunities": [],
+        "scores": {
+            "overall": 0,
+            "wasted_spend": 0,
+            "quality_score": 0,
+            "ctr": 0,
+            "account_structure": 0,
+            "mobile": 0,
+            "extensions": 0,
+        },
+        "grade": "N/A",
+        "performance": {
+            "monthly_spend": 0,
+            "ctr": 0,
+            "avg_cpc": 0,
+            "conversions": 0
+        }
+    }
 
     # Wrap entire route in comprehensive error handling
     try:
@@ -2250,6 +2271,22 @@ def ads_ui():
                 "manual_tasks": [],
                 "account_score": 0,
                 "top_opportunities": [],
+                "scores": {
+                    "overall": 0,
+                    "wasted_spend": 0,
+                    "quality_score": 0,
+                    "ctr": 0,
+                    "account_structure": 0,
+                    "mobile": 0,
+                    "extensions": 0,
+                },
+                "grade": "N/A",
+                "performance": {
+                    "monthly_spend": 0,
+                    "ctr": 0,
+                    "avg_cpc": 0,
+                    "conversions": 0
+                }
             }
 
         # Split opportunities into auto-applicable and manual tasks
@@ -2411,7 +2448,28 @@ def ads_ui():
                 "google/ads_opportunities.html",
                 connected=connected,
                 ads_data={"campaigns": [], "ad_groups": [], "keywords": [], "ads": []},
-                analysis={"opportunities": [], "manual_tasks": [], "account_score": 0, "top_opportunities": []},
+                analysis={
+                    "opportunities": [],
+                    "manual_tasks": [],
+                    "account_score": 0,
+                    "top_opportunities": [],
+                    "scores": {
+                        "overall": 0,
+                        "wasted_spend": 0,
+                        "quality_score": 0,
+                        "ctr": 0,
+                        "account_structure": 0,
+                        "mobile": 0,
+                        "extensions": 0,
+                    },
+                    "grade": "N/A",
+                    "performance": {
+                        "monthly_spend": 0,
+                        "ctr": 0,
+                        "avg_cpc": 0,
+                        "conversions": 0
+                    }
+                },
                 epn=request.endpoint,
                 is_demo=False,
             )
@@ -2437,7 +2495,28 @@ def ads_ui():
             "google/ads_opportunities.html",
             connected=False,
             ads_data={"campaigns": [], "ad_groups": [], "keywords": [], "ads": []},
-            analysis={"opportunities": [], "manual_tasks": [], "account_score": 0, "top_opportunities": []},
+            analysis={
+                "opportunities": [],
+                "manual_tasks": [],
+                "account_score": 0,
+                "top_opportunities": [],
+                "scores": {
+                    "overall": 0,
+                    "wasted_spend": 0,
+                    "quality_score": 0,
+                    "ctr": 0,
+                    "account_structure": 0,
+                    "mobile": 0,
+                    "extensions": 0,
+                },
+                "grade": "N/A",
+                "performance": {
+                    "monthly_spend": 0,
+                    "ctr": 0,
+                    "avg_cpc": 0,
+                    "conversions": 0
+                }
+            },
             epn=request.endpoint,
             is_demo=False,
         )

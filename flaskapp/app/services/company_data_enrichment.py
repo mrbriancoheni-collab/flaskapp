@@ -24,7 +24,11 @@ import logging
 import requests
 from typing import Dict, List, Optional
 from datetime import datetime
-import whois
+
+try:
+    import whois
+except ImportError:
+    whois = None
 
 logger = logging.getLogger(__name__)
 
@@ -327,6 +331,9 @@ class CompanyDataEnrichmentService:
 
     def _get_domain_age(self, domain: str) -> Optional[int]:
         """Get domain age in years using WHOIS"""
+        if not whois:
+            return None
+
         try:
             domain_info = whois.whois(domain)
 

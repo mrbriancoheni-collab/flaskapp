@@ -1,0 +1,387 @@
+{# templates/linkedin/category_form.html #}
+{% extends "base_app.html" %}
+{% set SECTION = 'linkedin' %}
+{% block title %}{{ 'Edit' if category else 'New' }} Category{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <a href="{{ url_for('linkedin_bp.categories') }}" class="text-sm text-blue-600 hover:text-blue-700 mb-2 inline-block">
+        <i class="fa-solid fa-arrow-left mr-1"></i>Back to Categories
+      </a>
+      <h1 class="text-2xl font-semibold">{{ 'Edit Category' if category else 'New Category' }}</h1>
+      <p class="text-gray-500 mt-1">
+        Define your unique perspective and expertise for this content category.
+      </p>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <form method="POST" class="space-y-6">
+    {% if csrf_token is defined %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
+
+    <!-- Category Details Card -->
+    <div class="bg-white rounded-lg border shadow-sm p-6">
+      <h2 class="font-semibold mb-4">
+        <i class="fa-solid fa-tag mr-2 text-blue-600"></i>Category Details
+      </h2>
+
+      <div class="space-y-4">
+        <!-- Name -->
+        <div>
+          <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
+            Category Name *
+          </label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            required
+            maxlength="100"
+            value="{{ category.name if category else '' }}"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="e.g., Google Ads Optimization, Home Services Marketing"
+          />
+          <p class="text-xs text-gray-500 mt-1">
+            Clear, specific name for this content pillar
+          </p>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
+            Description (optional)
+          </label>
+          <textarea
+            id="description"
+            name="description"
+            rows="2"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Brief overview of what this category covers"
+          >{{ category.description if category else '' }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- POV Card -->
+    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-6">
+      <h2 class="font-semibold mb-1 text-indigo-900">
+        <i class="fa-solid fa-lightbulb mr-2"></i>Your Unique Point of View (POV)
+      </h2>
+      <p class="text-sm text-indigo-700 mb-4">
+        This is what makes your perspective different. Be specific and opinionated.
+      </p>
+
+      <div class="space-y-4">
+        <!-- POV Statement -->
+        <div>
+          <label for="pov_statement" class="block text-sm font-medium text-indigo-900 mb-1">
+            POV Statement *
+          </label>
+          <textarea
+            id="pov_statement"
+            name="pov_statement"
+            rows="3"
+            required
+            class="w-full px-3 py-2 border border-indigo-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+            placeholder="Example: Most HVAC companies waste 40% of their Google Ads budget because they don't segment campaigns by service type and season"
+          >{{ category.pov_statement if category else '' }}</textarea>
+          <p class="text-xs text-indigo-600 mt-1">
+            <i class="fa-solid fa-info-circle mr-1"></i>
+            What common mistake do you see? What do most people get wrong? What's your contrarian take?
+          </p>
+        </div>
+
+        <!-- Unique Expertise -->
+        <div>
+          <label for="unique_expertise" class="block text-sm font-medium text-indigo-900 mb-1">
+            Your Unique Expertise
+          </label>
+          <textarea
+            id="unique_expertise"
+            name="unique_expertise"
+            rows="3"
+            class="w-full px-3 py-2 border border-indigo-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+            placeholder="Example: 15+ years optimizing Google Ads specifically for seasonal HVAC campaigns, helped 200+ contractors reduce CPL by 30%+"
+          >{{ category.unique_expertise if category else '' }}</textarea>
+          <p class="text-xs text-indigo-600 mt-1">
+            What specific experience or credentials back up your POV?
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Strategy Settings Card -->
+    <div class="bg-white rounded-lg border shadow-sm p-6">
+      <h2 class="font-semibold mb-4">
+        <i class="fa-solid fa-sliders mr-2 text-blue-600"></i>Strategy Settings
+      </h2>
+
+      <div class="grid md:grid-cols-3 gap-4">
+        <!-- Post Frequency -->
+        <div>
+          <label for="post_frequency" class="block text-sm font-medium text-gray-700 mb-1">
+            Post Frequency
+          </label>
+          <select
+            id="post_frequency"
+            name="post_frequency"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="daily" {{ 'selected' if category and category.post_frequency == 'daily' else '' }}>Daily</option>
+            <option value="weekly" {{ 'selected' if (not category) or (category and category.post_frequency == 'weekly') else '' }}>Weekly</option>
+            <option value="biweekly" {{ 'selected' if category and category.post_frequency == 'biweekly' else '' }}>Bi-weekly</option>
+            <option value="monthly" {{ 'selected' if category and category.post_frequency == 'monthly' else '' }}>Monthly</option>
+          </select>
+          <p class="text-xs text-gray-500 mt-1">Recommended posting cadence</p>
+        </div>
+
+        <!-- Priority -->
+        <div>
+          <label for="priority" class="block text-sm font-medium text-gray-700 mb-1">
+            Priority
+          </label>
+          <select
+            id="priority"
+            name="priority"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            {% for i in range(1, 11) %}
+            <option value="{{ i }}" {{ 'selected' if (category and category.priority == i) or (not category and i == 1) else '' }}>
+              {{ i }} {{ '(Highest)' if i == 1 else '(Lowest)' if i == 10 else '' }}
+            </option>
+            {% endfor %}
+          </select>
+          <p class="text-xs text-gray-500 mt-1">1 = highest priority</p>
+        </div>
+
+        <!-- Status -->
+        <div>
+          <label for="is_active" class="block text-sm font-medium text-gray-700 mb-1">
+            Status
+          </label>
+          <div class="flex items-center h-10">
+            <input
+              type="checkbox"
+              id="is_active"
+              name="is_active"
+              {{ 'checked' if (not category) or (category and category.is_active) else '' }}
+              class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+            />
+            <label for="is_active" class="ml-2 text-sm text-gray-700">
+              Active (generate posts from this category)
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Topic Ideas Card (Edit mode only) -->
+    {% if category %}
+    <div class="bg-white rounded-lg border shadow-sm p-6">
+      <h2 class="font-semibold mb-1">
+        <i class="fa-solid fa-list mr-2 text-blue-600"></i>Topic Ideas
+      </h2>
+      <p class="text-sm text-gray-600 mb-4">
+        Add specific topics you want to write about in this category. AI will use these as inspiration.
+      </p>
+
+      <!-- Add Topic Form -->
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+        <h3 class="text-sm font-semibold text-blue-900 mb-3">Add New Topic</h3>
+        <div class="flex gap-2">
+          <input
+            type="text"
+            id="newTopicIdea"
+            placeholder="e.g., Why broad match kills HVAC budgets in summer"
+            class="flex-1 px-3 py-2 border border-blue-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+          />
+          <select
+            id="newTopicTone"
+            class="px-3 py-2 border border-blue-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+          >
+            <option value="professional">Professional</option>
+            <option value="conversational">Conversational</option>
+            <option value="storytelling">Storytelling</option>
+            <option value="educational">Educational</option>
+            <option value="provocative">Provocative</option>
+          </select>
+          <button
+            type="button"
+            id="addTopicBtn"
+            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+          >
+            <i class="fa-solid fa-plus mr-1"></i>Add
+          </button>
+        </div>
+      </div>
+
+      <!-- Topics List -->
+      <div id="topicsList" class="space-y-2">
+        {% if topics and topics|length > 0 %}
+          {% for topic in topics %}
+          <div class="flex items-start gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg topic-item" data-topic-id="{{ topic.id }}">
+            <div class="flex-1">
+              <p class="text-sm text-gray-900">{{ topic.topic_idea }}</p>
+              <div class="flex items-center gap-3 mt-1 text-xs text-gray-600">
+                <span><i class="fa-solid fa-volume-low mr-1"></i>{{ topic.tone|title }}</span>
+                {% if topic.used %}
+                  <span class="text-green-600">
+                    <i class="fa-solid fa-check-circle mr-1"></i>Used {{ topic.used_date.strftime('%b %d, %Y') if topic.used_date else '' }}
+                  </span>
+                {% else %}
+                  <span class="text-gray-500">
+                    <i class="fa-regular fa-circle mr-1"></i>Not used yet
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+            <button
+              type="button"
+              class="text-red-600 hover:text-red-700 delete-topic"
+              data-topic-id="{{ topic.id }}">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-center py-8 text-gray-500 text-sm" id="noTopics">
+            <i class="fa-solid fa-lightbulb text-3xl mb-2 opacity-20"></i>
+            <p>No topic ideas yet. Add your first topic above!</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Form Actions -->
+    <div class="flex items-center justify-between bg-white rounded-lg border shadow-sm p-4">
+      <a href="{{ url_for('linkedin_bp.categories') }}" class="text-sm text-gray-600 hover:text-gray-800">
+        Cancel
+      </a>
+      <button
+        type="submit"
+        class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+      >
+        <i class="fa-solid fa-save mr-2"></i>Save Category
+      </button>
+    </div>
+  </form>
+
+  <!-- Help Tips -->
+  <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
+    <h3 class="font-semibold text-gray-900 mb-3">
+      <i class="fa-solid fa-lightbulb mr-2 text-yellow-500"></i>POV Development Tips
+    </h3>
+    <div class="grid md:grid-cols-2 gap-4 text-sm text-gray-700">
+      <div>
+        <h4 class="font-semibold mb-2">Strong POV Examples</h4>
+        <ul class="space-y-2">
+          <li class="bg-green-50 border border-green-200 rounded p-2">
+            <div class="font-medium text-green-900">✓ Specific & Opinionated</div>
+            <div class="text-xs text-gray-700 mt-1">"Most contractors lose 40% of leads because they wait 2+ hours to respond"</div>
+          </li>
+          <li class="bg-green-50 border border-green-200 rounded p-2">
+            <div class="font-medium text-green-900">✓ Backed by Experience</div>
+            <div class="text-xs text-gray-700 mt-1">"After 500+ HVAC audits, I've found the #1 waste is mismatched ad copy"</div>
+          </li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-semibold mb-2">Weak POV Examples</h4>
+        <ul class="space-y-2">
+          <li class="bg-red-50 border border-red-200 rounded p-2">
+            <div class="font-medium text-red-900">✗ Too Generic</div>
+            <div class="text-xs text-gray-700 mt-1">"Digital marketing is important for businesses"</div>
+          </li>
+          <li class="bg-red-50 border border-red-200 rounded p-2">
+            <div class="font-medium text-red-900">✗ No Unique Angle</div>
+            <div class="text-xs text-gray-700 mt-1">"Google Ads can help you get more customers"</div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if category %}
+<script>
+// Add topic functionality
+document.getElementById('addTopicBtn')?.addEventListener('click', async function() {
+  const topicIdea = document.getElementById('newTopicIdea').value.trim();
+  const tone = document.getElementById('newTopicTone').value;
+
+  if (!topicIdea) {
+    alert('Please enter a topic idea');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('topic_idea', topicIdea);
+  formData.append('tone', tone);
+
+  try {
+    const response = await fetch('{{ url_for("linkedin_bp.category_topic_add", category_id=category.id) }}', {
+      method: 'POST',
+      body: formData,
+      credentials: 'same-origin'
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Reload page to show new topic
+      window.location.reload();
+    } else {
+      alert('Error: ' + (data.error || 'Failed to add topic'));
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Failed to add topic. Please try again.');
+  }
+});
+
+// Delete topic functionality
+document.querySelectorAll('.delete-topic').forEach(btn => {
+  btn.addEventListener('click', async function() {
+    if (!confirm('Are you sure you want to delete this topic idea?')) {
+      return;
+    }
+
+    const topicId = this.dataset.topicId;
+
+    try {
+      const response = await fetch(`{{ url_for('linkedin_bp.category_topic_delete', topic_id=0) }}`.replace('/0', `/${topicId}`), {
+        method: 'DELETE',
+        credentials: 'same-origin'
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Remove the topic from DOM
+        this.closest('.topic-item').remove();
+
+        // Show "no topics" message if all topics deleted
+        if (document.querySelectorAll('.topic-item').length === 0) {
+          document.getElementById('topicsList').innerHTML = `
+            <div class="text-center py-8 text-gray-500 text-sm" id="noTopics">
+              <i class="fa-solid fa-lightbulb text-3xl mb-2 opacity-20"></i>
+              <p>No topic ideas yet. Add your first topic above!</p>
+            </div>
+          `;
+        }
+      } else {
+        alert('Error: ' + (data.error || 'Failed to delete topic'));
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to delete topic. Please try again.');
+    }
+  });
+});
+</script>
+{% endif %}
+{% endblock %}

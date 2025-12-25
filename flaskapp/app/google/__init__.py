@@ -2142,9 +2142,14 @@ def ads_ui():
         "grade": "N/A",
         "performance": {
             "monthly_spend": 0,
+            "daily_spend": 0,
+            "impressions": 0,
+            "clicks": 0,
             "ctr": 0,
-            "avg_cpc": 0,
-            "conversions": 0
+            "conversions": 0,
+            "cost_per_conversion": 0,
+            "conversion_rate": 0,
+            "has_historical_data": False,
         }
     }
 
@@ -2283,9 +2288,14 @@ def ads_ui():
                 "grade": "N/A",
                 "performance": {
                     "monthly_spend": 0,
+                    "daily_spend": 0,
+                    "impressions": 0,
+                    "clicks": 0,
                     "ctr": 0,
-                    "avg_cpc": 0,
-                    "conversions": 0
+                    "conversions": 0,
+                    "cost_per_conversion": 0,
+                    "conversion_rate": 0,
+                    "has_historical_data": False,
                 }
             }
 
@@ -2465,9 +2475,14 @@ def ads_ui():
                     "grade": "N/A",
                     "performance": {
                         "monthly_spend": 0,
+                        "daily_spend": 0,
+                        "impressions": 0,
+                        "clicks": 0,
                         "ctr": 0,
-                        "avg_cpc": 0,
-                        "conversions": 0
+                        "conversions": 0,
+                        "cost_per_conversion": 0,
+                        "conversion_rate": 0,
+                        "has_historical_data": False,
                     }
                 },
                 epn=request.endpoint,
@@ -2512,9 +2527,14 @@ def ads_ui():
                 "grade": "N/A",
                 "performance": {
                     "monthly_spend": 0,
+                    "daily_spend": 0,
+                    "impressions": 0,
+                    "clicks": 0,
                     "ctr": 0,
-                    "avg_cpc": 0,
-                    "conversions": 0
+                    "conversions": 0,
+                    "cost_per_conversion": 0,
+                    "conversion_rate": 0,
+                    "has_historical_data": False,
                 }
             },
             epn=request.endpoint,

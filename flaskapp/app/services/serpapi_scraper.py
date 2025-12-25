@@ -135,6 +135,9 @@ class SerpAPIScraperService:
                 try:
                     response = requests.get(self.base_url, params=params, timeout=30)
 
+                    # Log response details for debugging
+                    logger.info(f"SerpAPI response status: {response.status_code}")
+
                     # Check for rate limiting
                     if response.status_code == 429:
                         if attempt < max_retries - 1:
@@ -143,10 +146,28 @@ class SerpAPIScraperService:
                             time.sleep(wait_time)
                             continue
                         else:
+                            # Log the actual response for debugging
+                            try:
+                                error_data = response.json()
+                                logger.error(f"SerpAPI 429 response: {error_data}")
+                            except:
+                                logger.error(f"SerpAPI 429 response body: {response.text[:500]}")
+
                             raise requests.RequestException(
                                 "SerpAPI rate limit exceeded. Please wait a few minutes before trying again, "
                                 "or upgrade your SerpAPI plan for higher rate limits."
                             )
+
+                    # Check for other error status codes
+                    if response.status_code != 200:
+                        try:
+                            error_data = response.json()
+                            error_msg = error_data.get('error', 'Unknown error')
+                            logger.error(f"SerpAPI error {response.status_code}: {error_msg}")
+                            raise requests.RequestException(f"SerpAPI error: {error_msg}")
+                        except ValueError:
+                            logger.error(f"SerpAPI error {response.status_code}: {response.text[:500]}")
+                            response.raise_for_status()
 
                     response.raise_for_status()
                     break  # Success, exit retry loop

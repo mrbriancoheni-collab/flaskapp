@@ -10,6 +10,7 @@ Uses the official SerpAPI service to scrape Google search results for:
 """
 import os
 import logging
+import time
 from typing import List, Dict, Any, Optional
 import requests
 
@@ -111,7 +112,7 @@ class SerpAPIScraperService:
         }
 
         try:
-            # Make SerpAPI request
+            # Make SerpAPI request with retry logic for rate limiting
             params = {
                 'api_key': self.api_key,
                 'engine': 'google',
@@ -124,8 +125,36 @@ class SerpAPIScraperService:
                 'no_cache': 'false',  # Use cache when available to save credits
             }
 
-            response = requests.get(self.base_url, params=params, timeout=30)
-            response.raise_for_status()
+            # Retry logic for rate limiting (429 errors)
+            # Limited to 3 retries to avoid HTTP timeout (max wait: 2+4+8 = 14 seconds)
+            max_retries = 3
+            retry_delay = 2  # Start with 2 seconds
+            response = None
+
+            for attempt in range(max_retries):
+                try:
+                    response = requests.get(self.base_url, params=params, timeout=30)
+
+                    # Check for rate limiting
+                    if response.status_code == 429:
+                        if attempt < max_retries - 1:
+                            wait_time = retry_delay * (2 ** attempt)  # Exponential backoff
+                            logger.warning(f"SerpAPI rate limit hit. Waiting {wait_time}s before retry {attempt + 1}/{max_retries}")
+                            time.sleep(wait_time)
+                            continue
+                        else:
+                            raise requests.RequestException(
+                                "SerpAPI rate limit exceeded. Please wait a few minutes before trying again, "
+                                "or upgrade your SerpAPI plan for higher rate limits."
+                            )
+
+                    response.raise_for_status()
+                    break  # Success, exit retry loop
+
+                except requests.RequestException as e:
+                    if attempt < max_retries - 1 and response and response.status_code == 429:
+                        continue  # Retry
+                    raise  # Re-raise if not a rate limit error or last attempt
 
             data = response.json()
 

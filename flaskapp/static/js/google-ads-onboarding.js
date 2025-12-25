@@ -304,28 +304,53 @@
         <!-- Footer -->
         <div class="onboarding-footer">
           <div class="onboarding-footer-left">
-            <button class="onboarding-btn-skip" onclick="GoogleAdsOnboarding.skip()">
+            <button class="onboarding-btn-skip" data-action="skip">
               <i class="fa-solid fa-times mr-2"></i>Skip Tutorial
             </button>
           </div>
           <div class="onboarding-footer-right">
             ${this.currentStep > 0 ? `
-              <button class="onboarding-btn-secondary" onclick="GoogleAdsOnboarding.previous()">
+              <button class="onboarding-btn-secondary" data-action="previous">
                 <i class="fa-solid fa-arrow-left mr-2"></i>Back
               </button>
             ` : ''}
             ${!isLastStep ? `
-              <button class="onboarding-btn-primary" onclick="GoogleAdsOnboarding.next()">
+              <button class="onboarding-btn-primary" data-action="next">
                 Next<i class="fa-solid fa-arrow-right ml-2"></i>
               </button>
             ` : `
-              <button class="onboarding-btn-primary" onclick="GoogleAdsOnboarding.complete()">
+              <button class="onboarding-btn-primary" data-action="complete">
                 <i class="fa-solid fa-check mr-2"></i>Get Started!
               </button>
             `}
           </div>
         </div>
       `;
+
+      // Attach event listeners after rendering
+      this.attachEventListeners();
+    },
+
+    /**
+     * Attach event listeners to buttons
+     */
+    attachEventListeners: function() {
+      const buttons = this.wizardElement.querySelectorAll('[data-action]');
+      buttons.forEach(button => {
+        const action = button.getAttribute('data-action');
+        button.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (action === 'skip') {
+            this.skip();
+          } else if (action === 'next') {
+            this.next();
+          } else if (action === 'previous') {
+            this.previous();
+          } else if (action === 'complete') {
+            this.complete();
+          }
+        });
+      });
     },
 
     /**

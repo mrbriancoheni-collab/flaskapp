@@ -12,7 +12,6 @@ Features:
 - Memory-efficient streaming
 """
 import asyncio
-import aiohttp
 import logging
 from typing import List, Dict, Optional
 from datetime import datetime

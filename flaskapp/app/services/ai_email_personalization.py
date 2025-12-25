@@ -20,9 +20,21 @@ import os
 import logging
 import requests
 from typing import Dict, List, Optional
-import anthropic
-import openai
-from bs4 import BeautifulSoup
+
+try:
+    import anthropic
+except ImportError:
+    anthropic = None
+
+try:
+    import openai
+except ImportError:
+    openai = None
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    BeautifulSoup = None
 
 logger = logging.getLogger(__name__)
 
@@ -34,12 +46,12 @@ class AIEmailPersonalizationService:
         self.anthropic_key = os.getenv('ANTHROPIC_API_KEY')
         self.openai_key = os.getenv('OPENAI_API_KEY')
 
-        if self.anthropic_key:
+        if self.anthropic_key and anthropic:
             self.anthropic_client = anthropic.Anthropic(api_key=self.anthropic_key)
         else:
             self.anthropic_client = None
 
-        if self.openai_key:
+        if self.openai_key and openai:
             openai.api_key = self.openai_key
 
     def personalize_email(

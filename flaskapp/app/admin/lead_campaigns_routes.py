@@ -690,7 +690,18 @@ def start_scraping(campaign_id: int):
         # Save leads
         leads_created = 0
 
+        # Map scraper source types (plural) to database enum values (singular)
+        source_type_mapping = {
+            'ads': 'ad',
+            'maps': 'map',
+            'lsa': 'lsa',
+            'organic': 'organic'
+        }
+
         for source_type, items in results.items():
+            # Convert plural to singular for database enum
+            db_source_type = source_type_mapping.get(source_type, source_type)
+
             for item in items:
                 # Check if lead already exists (by company name + campaign)
                 existing = Lead.query.filter_by(
@@ -707,7 +718,7 @@ def start_scraping(campaign_id: int):
                     website=item.get('website'),
                     phone=item.get('phone'),
                     address=item.get('address'),
-                    source_type=source_type,
+                    source_type=db_source_type,
                     source_url=item.get('source_url'),
                     serp_position=item.get('position'),
                     enrichment_status='pending',

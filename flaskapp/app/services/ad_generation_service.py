@@ -157,19 +157,21 @@ class AdGenerationService:
     def generate_image(
         self,
         prompt: str,
-        style: str = 'natural',
-        size: str = '1024x1024'
+        style: str = 'vivid',
+        size: str = '1024x1024',
+        variations: int = 1
     ) -> Dict:
         """
-        Generate ad image using DALL-E 3
+        Generate ad image using DALL-E 3 with support for multiple variations
 
         Args:
             prompt: Image generation prompt
-            style: Image style ('natural', 'vivid')
+            style: Image style ('natural', 'vivid') - vivid is better for ads
             size: Image size ('1024x1024', '1024x1792', '1792x1024')
+            variations: Number of variations to generate (1-3 recommended)
 
         Returns:
-            Dict with image_url, revised_prompt
+            Dict with image_url(s), revised_prompt
         """
         if not self.openai_api_key:
             return {
@@ -178,20 +180,43 @@ class AdGenerationService:
             }
 
         try:
-            response = openai.images.generate(
-                model="dall-e-3",
-                prompt=prompt,
-                size=size,
-                quality="hd",
-                style=style,
-                n=1
-            )
+            # DALL-E 3 only supports n=1, so we need multiple API calls for variations
+            results = []
+
+            for i in range(min(variations, 3)):  # Max 3 variations to control costs
+                # Add variation seed to prompt for diversity
+                variation_prompt = prompt
+                if variations > 1:
+                    variation_suffixes = [
+                        "",  # Original
+                        " Variation with different angle and lighting setup.",
+                        " Alternative composition with different focal point and depth."
+                    ]
+                    variation_prompt = prompt + variation_suffixes[i]
+
+                response = openai.images.generate(
+                    model="dall-e-3",
+                    prompt=variation_prompt,
+                    size=size,
+                    quality="hd",
+                    style=style,
+                    n=1
+                )
+
+                results.append({
+                    'image_url': response.data[0].url,
+                    'revised_prompt': response.data[0].revised_prompt
+                })
 
             return {
                 'success': True,
-                'image_url': response.data[0].url,
-                'revised_prompt': response.data[0].revised_prompt,
-                'model': 'dall-e-3'
+                'images': results if variations > 1 else None,
+                'image_url': results[0]['image_url'],  # Primary image
+                'revised_prompt': results[0]['revised_prompt'],
+                'all_variations': results,
+                'model': 'dall-e-3',
+                'size': size,
+                'style': style
             }
 
         except Exception as e:
@@ -201,6 +226,76 @@ class AdGenerationService:
                 'error': str(e)
             }
 
+    def get_size_specs(self, size_name: str) -> Tuple[str, str]:
+        """
+        Get DALL-E size string and description from friendly name
+
+        Args:
+            size_name: Friendly size name ('square', 'story', 'banner', 'portrait', 'landscape')
+
+        Returns:
+            Tuple of (dalle_size_string, description)
+        """
+        size_map = {
+            'square': ('1024x1024', 'Square (1:1) - Facebook/Instagram Feed'),
+            'story': ('1024x1792', 'Story (9:16) - Instagram Stories/Reels'),
+            'banner': ('1792x1024', 'Banner (16:9) - Facebook Cover/LinkedIn'),
+            'portrait': ('1024x1792', 'Portrait (9:16) - Vertical ads'),
+            'landscape': ('1792x1024', 'Landscape (16:9) - Horizontal ads')
+        }
+
+        return size_map.get(size_name, ('1024x1024', 'Square (1:1) - Default'))
+
+    def generate_multi_size_images(
+        self,
+        prompt: str,
+        sizes: List[str] = None,
+        style: str = 'vivid'
+    ) -> Dict:
+        """
+        Generate images in multiple sizes for different platforms
+
+        Args:
+            prompt: Image generation prompt
+            sizes: List of size names (['square', 'story', 'banner'])
+            style: Image style
+
+        Returns:
+            Dict with images for each size
+        """
+        if sizes is None:
+            sizes = ['square']  # Default to square only
+
+        results = {}
+
+        for size_name in sizes:
+            dalle_size, description = self.get_size_specs(size_name)
+
+            result = self.generate_image(
+                prompt=prompt,
+                style=style,
+                size=dalle_size,
+                variations=1
+            )
+
+            if result.get('success'):
+                results[size_name] = {
+                    'image_url': result['image_url'],
+                    'size': dalle_size,
+                    'description': description,
+                    'revised_prompt': result.get('revised_prompt')
+                }
+            else:
+                results[size_name] = {
+                    'error': result.get('error'),
+                    'success': False
+                }
+
+        return {
+            'success': len([r for r in results.values() if r.get('image_url')]) > 0,
+            'images': results
+        }
+
     def generate_image_prompt(
         self,
         business_context: Dict,
@@ -209,7 +304,7 @@ class AdGenerationService:
         style_preference: str = 'professional'
     ) -> str:
         """
-        Generate an optimized DALL-E prompt for the ad image
+        Generate an optimized DALL-E prompt for the ad image with enhanced quality
 
         Args:
             business_context: Business info
@@ -218,48 +313,139 @@ class AdGenerationService:
             style_preference: Desired style
 
         Returns:
-            Optimized DALL-E prompt
+            Enhanced DALL-E prompt optimized for ad quality
         """
         business_name = business_context.get('business_name', 'a local service business')
         industry = business_context.get('industry', 'service')
 
-        # Build context-aware prompt
-        base_elements = []
-
-        if style_preference == 'professional':
-            base_elements.append("professional, high-quality photograph")
-        elif style_preference == 'lifestyle':
-            base_elements.append("lifestyle photography, authentic moment")
-        elif style_preference == 'modern':
-            base_elements.append("modern, clean design, minimalist")
-        elif style_preference == 'dramatic':
-            base_elements.append("dramatic lighting, bold composition")
-
-        # Industry-specific elements
-        industry_elements = {
-            'plumbing': 'modern plumbing tools, pipes, professional plumber at work',
-            'hvac': 'air conditioning unit, HVAC technician, temperature control',
-            'electrical': 'electrical panel, licensed electrician, modern lighting',
-            'roofing': 'roof installation, roofing materials, professional roofer',
-            'landscaping': 'beautiful landscape, lawn care, professional landscaper',
-            'cleaning': 'sparkling clean home, professional cleaners, organized space',
+        # Enhanced style definitions with professional photography terminology
+        style_configs = {
+            'professional': {
+                'base': 'Professional commercial photography',
+                'lighting': 'bright natural lighting, well-balanced exposure',
+                'composition': 'rule of thirds composition, shallow depth of field',
+                'quality': 'shot with 50mm f/1.8 lens, photorealistic, 4K quality',
+                'aesthetic': 'clean, polished, corporate-ready'
+            },
+            'lifestyle': {
+                'base': 'Authentic lifestyle photography',
+                'lighting': 'soft natural window light, golden hour warmth',
+                'composition': 'candid moment, environmental portrait',
+                'quality': 'shot with 35mm f/2.0 lens, film-like aesthetic, high resolution',
+                'aesthetic': 'warm, inviting, relatable, human-centered'
+            },
+            'modern': {
+                'base': 'Contemporary minimalist photography',
+                'lighting': 'clean studio lighting, high-key exposure',
+                'composition': 'geometric balance, negative space, centered subject',
+                'quality': 'shot with 85mm f/1.4 lens, ultra-sharp, crisp detail',
+                'aesthetic': 'sleek, minimal, modern design, white/neutral tones'
+            },
+            'dramatic': {
+                'base': 'Cinematic dramatic photography',
+                'lighting': 'dramatic side lighting, rim light, high contrast',
+                'composition': 'dynamic angle, bold perspective, strong leading lines',
+                'quality': 'shot with 24mm f/1.4 lens, cinema-grade, HDR',
+                'aesthetic': 'bold, impactful, magazine-quality, editorial style'
+            },
+            'cinematic': {
+                'base': 'Cinematic commercial production',
+                'lighting': 'three-point lighting setup, volumetric atmosphere',
+                'composition': 'wide-angle establishing shot, Hollywood aesthetic',
+                'quality': 'anamorphic lens, bokeh, film grain, 6K resolution',
+                'aesthetic': 'epic, premium, luxury brand feel'
+            }
         }
 
-        if industry in industry_elements:
-            base_elements.append(industry_elements[industry])
-        else:
-            base_elements.append(f"{industry} professional service provider at work")
+        style_config = style_configs.get(style_preference, style_configs['professional'])
 
-        # Platform-specific considerations
-        if platform == 'instagram':
-            base_elements.append("Instagram-style, visually striking, bold colors")
-        elif platform == 'linkedin':
-            base_elements.append("professional business setting, corporate aesthetic")
+        # Enhanced industry-specific scenarios with detail
+        industry_scenarios = {
+            'plumbing': {
+                'subject': 'skilled plumber in crisp uniform',
+                'action': 'installing premium chrome faucet in upscale residential bathroom',
+                'environment': 'modern marble bathroom, organized tools on clean drop cloth',
+                'details': 'professional tool kit, copper pipes, stainless fixtures'
+            },
+            'hvac': {
+                'subject': 'HVAC technician in branded uniform',
+                'action': 'servicing modern air conditioning system',
+                'environment': 'residential home exterior or clean mechanical room',
+                'details': 'diagnostic tools, modern HVAC unit, temperature gauges'
+            },
+            'electrical': {
+                'subject': 'licensed electrician in safety gear',
+                'action': 'working on modern electrical panel or smart home installation',
+                'environment': 'contemporary home interior, organized workspace',
+                'details': 'voltage meters, circuit breakers, LED fixtures, wire management'
+            },
+            'roofing': {
+                'subject': 'professional roofer with safety equipment',
+                'action': 'installing high-quality roofing materials',
+                'environment': 'residential rooftop, blue sky background',
+                'details': 'premium shingles, professional tools, safety harness'
+            },
+            'landscaping': {
+                'subject': 'professional landscaper in work attire',
+                'action': 'creating beautiful outdoor space',
+                'environment': 'upscale residential yard, manicured lawn',
+                'details': 'modern landscaping equipment, vibrant plants, pristine results'
+            },
+            'cleaning': {
+                'subject': 'professional cleaner in uniform',
+                'action': 'cleaning modern kitchen or living space',
+                'environment': 'sparkling clean upscale home interior',
+                'details': 'eco-friendly products, organized supplies, spotless surfaces'
+            },
+            'painting': {
+                'subject': 'professional painter in clean whites',
+                'action': 'applying perfect finish to interior wall',
+                'environment': 'contemporary home, protected floors',
+                'details': 'premium paint cans, professional rollers, crisp painter\'s tape'
+            },
+            'garage door': {
+                'subject': 'garage door technician in uniform',
+                'action': 'installing or servicing modern garage door system',
+                'environment': 'upscale residential garage',
+                'details': 'sleek garage door, professional tools, clean workspace'
+            }
+        }
 
-        # Combine elements
-        prompt = f"Create a {', '.join(base_elements)}. The image should be suitable for a {platform} ad about {business_name}. High resolution, no text overlay, professional quality."
+        # Get scenario or create generic
+        scenario = industry_scenarios.get(industry, {
+            'subject': f'professional {industry} service provider',
+            'action': f'performing expert {industry} work',
+            'environment': 'clean professional setting',
+            'details': 'high-quality tools and equipment'
+        })
 
-        return prompt
+        # Platform-specific optimizations
+        platform_specs = {
+            'facebook': 'social media advertising, engaging and scroll-stopping',
+            'instagram': 'Instagram-optimized, bold colors, visually striking, feed-stopping',
+            'linkedin': 'professional business aesthetic, corporate credibility, B2B appeal',
+            'twitter': 'attention-grabbing, news-worthy quality, shareable'
+        }
+
+        platform_style = platform_specs.get(platform, 'social media ready')
+
+        # Build comprehensive enhanced prompt
+        enhanced_prompt = f"""{style_config['base']}: {scenario['subject']} {scenario['action']}.
+{scenario['environment']}. {scenario['details']}.
+
+Photography specs: {style_config['lighting']}, {style_config['composition']}.
+{style_config['quality']}.
+
+Style: {style_config['aesthetic']}, {platform_style}.
+
+Requirements: Commercial-grade quality, brand-safe content, no text overlay, no watermarks,
+photorealistic, suitable for professional advertising, high-end production value,
+magazine-quality finish. Perfect for {platform} advertising campaign."""
+
+        # Clean up extra whitespace
+        enhanced_prompt = ' '.join(enhanced_prompt.split())
+
+        return enhanced_prompt
 
     def generate_full_creative(
         self,
@@ -268,10 +454,12 @@ class AdGenerationService:
         platform: str = 'facebook',
         objective: str = 'leads',
         industry: Optional[str] = None,
-        style_preference: str = 'professional'
+        style_preference: str = 'professional',
+        image_variations: int = 1,
+        image_size: str = 'square'
     ) -> Dict:
         """
-        Generate a complete ad creative (image + copy)
+        Generate a complete ad creative (image + copy) with enhanced quality
 
         Args:
             website_url: Website to scan for context
@@ -279,10 +467,12 @@ class AdGenerationService:
             platform: Target platform
             objective: Ad objective
             industry: Business industry
-            style_preference: Image style preference
+            style_preference: Image style preference (professional, lifestyle, modern, dramatic, cinematic)
+            image_variations: Number of image variations (1-3)
+            image_size: Image size ('square', 'story', 'banner')
 
         Returns:
-            Dict with image_url, headline, primary_text, description, cta
+            Dict with image_url(s), headline, primary_text, description, cta, variations
         """
         # Get business context
         if website_url:
@@ -312,7 +502,7 @@ class AdGenerationService:
         if not copy_result.get('success'):
             return copy_result
 
-        # Generate image prompt
+        # Generate enhanced image prompt
         image_prompt = self.generate_image_prompt(
             business_context=context,
             copy=copy_result,
@@ -320,8 +510,16 @@ class AdGenerationService:
             style_preference=style_preference
         )
 
-        # Generate image
-        image_result = self.generate_image(prompt=image_prompt)
+        # Get size specs
+        dalle_size, size_description = self.get_size_specs(image_size)
+
+        # Generate image with variations using 'vivid' style for more impactful ads
+        image_result = self.generate_image(
+            prompt=image_prompt,
+            style='vivid',  # Vivid produces more vibrant, ad-optimized images
+            size=dalle_size,
+            variations=image_variations
+        )
 
         if not image_result.get('success'):
             # Return copy even if image fails
@@ -332,7 +530,7 @@ class AdGenerationService:
             }
 
         # Combine results
-        return {
+        result = {
             'success': True,
             'headline': copy_result.get('headline'),
             'primary_text': copy_result.get('primary_text'),
@@ -343,8 +541,17 @@ class AdGenerationService:
             'revised_image_prompt': image_result.get('revised_prompt'),
             'copy_model': copy_result.get('model_used'),
             'image_model': 'dall-e-3',
+            'image_size': image_size,
+            'size_description': size_description,
+            'style_preference': style_preference,
             'business_context': context
         }
+
+        # Add variations if generated
+        if image_variations > 1 and image_result.get('all_variations'):
+            result['image_variations'] = image_result.get('all_variations')
+
+        return result
 
     def generate_variations(
         self,

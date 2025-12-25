@@ -52,6 +52,8 @@ def generate_from_website():
     objective = data.get('objective', 'leads')
     industry = data.get('industry')
     style = data.get('style', 'professional')
+    image_variations = data.get('image_variations', 1)  # 1-3 variations
+    image_size = data.get('image_size', 'square')  # square, story, banner
 
     if not website_url:
         return jsonify({'success': False, 'error': 'Website URL required'}), 400
@@ -65,13 +67,15 @@ def generate_from_website():
             platform=platform,
             objective=objective,
             industry=industry,
-            style_preference=style
+            style_preference=style,
+            image_variations=image_variations,
+            image_size=image_size
         )
 
         if not result.get('success'):
             return jsonify(result), 400
 
-        # Save to database
+        # Save to database (primary variation)
         creative = AdCreative(
             user_id=current_user.id,
             account_id=current_user.account_id if hasattr(current_user, 'account_id') else None,
@@ -95,7 +99,7 @@ def generate_from_website():
         db.session.add(creative)
         db.session.commit()
 
-        return jsonify({
+        response_data = {
             'success': True,
             'creative_id': creative.id,
             'creative': {
@@ -106,7 +110,13 @@ def generate_from_website():
                 'description': creative.description,
                 'call_to_action': creative.call_to_action
             }
-        })
+        }
+
+        # Include image variations if generated
+        if result.get('image_variations'):
+            response_data['image_variations'] = result['image_variations']
+
+        return jsonify(response_data)
 
     except Exception as e:
         logger.error(f"Error generating from website: {e}")
@@ -158,15 +168,21 @@ def generate_image():
     data = request.get_json()
 
     prompt = data.get('prompt')
-    style = data.get('style', 'natural')
+    style = data.get('style', 'vivid')
     size = data.get('size', '1024x1024')
+    variations = data.get('variations', 1)
 
     if not prompt:
         return jsonify({'success': False, 'error': 'Image prompt required'}), 400
 
     try:
         service = AdGenerationService()
-        result = service.generate_image(prompt=prompt, style=style, size=size)
+        result = service.generate_image(
+            prompt=prompt,
+            style=style,
+            size=size,
+            variations=variations
+        )
         return jsonify(result)
 
     except Exception as e:

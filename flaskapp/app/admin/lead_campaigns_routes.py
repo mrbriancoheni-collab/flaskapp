@@ -747,7 +747,7 @@ def start_scraping(campaign_id: int):
         return jsonify({'success': True, 'leads_created': leads_created})
 
     except Exception as e:
-        logger.error(f"Scraping error: {e}")
+        logger.exception(f"Scraping error for campaign {campaign_id}: {e}")
         campaign.status = 'draft'
         db.session.commit()
         return jsonify({'success': False, 'error': str(e)}), 500

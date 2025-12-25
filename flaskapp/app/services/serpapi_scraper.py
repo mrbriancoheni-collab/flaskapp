@@ -126,7 +126,8 @@ class SerpAPIScraperService:
             }
 
             # Retry logic for rate limiting (429 errors)
-            max_retries = 5
+            # Limited to 3 retries to avoid HTTP timeout (max wait: 2+4+8 = 14 seconds)
+            max_retries = 3
             retry_delay = 2  # Start with 2 seconds
             response = None
 

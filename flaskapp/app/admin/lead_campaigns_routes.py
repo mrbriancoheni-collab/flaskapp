@@ -656,6 +656,14 @@ def start_scraping(campaign_id: int):
     """Start scraping for a campaign"""
     campaign = LeadCampaign.query.get_or_404(campaign_id)
 
+    # Reset campaigns stuck in 'scraping' status for more than 5 minutes
+    if campaign.status == 'scraping' and campaign.scraping_started_at:
+        time_stuck = datetime.now() - campaign.scraping_started_at
+        if time_stuck.total_seconds() > 300:  # 5 minutes
+            logger.warning(f"Campaign {campaign_id} stuck in scraping for {time_stuck.total_seconds()}s, resetting to draft")
+            campaign.status = 'draft'
+            db.session.commit()
+
     if campaign.status not in ['draft', 'ready']:
         return jsonify({'success': False, 'error': 'Campaign is already running or completed'}), 400
 

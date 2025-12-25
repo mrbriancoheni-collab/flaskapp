@@ -150,13 +150,13 @@ class SerpAPIScraperService:
                             try:
                                 error_data = response.json()
                                 logger.error(f"SerpAPI 429 response: {error_data}")
-                            except:
+                                actual_error = error_data.get('error', 'Rate limit exceeded')
+                                raise requests.RequestException(f"SerpAPI error: {actual_error}")
+                            except ValueError:
                                 logger.error(f"SerpAPI 429 response body: {response.text[:500]}")
-
-                            raise requests.RequestException(
-                                "SerpAPI rate limit exceeded. Please wait a few minutes before trying again, "
-                                "or upgrade your SerpAPI plan for higher rate limits."
-                            )
+                                raise requests.RequestException(
+                                    "SerpAPI rate limit exceeded. Please wait a few minutes before trying again."
+                                )
 
                     # Check for other error status codes
                     if response.status_code != 200:

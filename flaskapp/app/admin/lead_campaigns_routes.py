@@ -575,25 +575,32 @@ def new_campaign():
 @require_admin
 def view_campaign(campaign_id: int):
     """View campaign details and leads"""
-    campaign = LeadCampaign.query.get_or_404(campaign_id)
+    try:
+        campaign = LeadCampaign.query.get_or_404(campaign_id)
 
-    # Get leads with pagination
-    page = request.args.get('page', 1, type=int)
-    per_page = 50
+        # Get leads with pagination
+        page = request.args.get('page', 1, type=int)
+        per_page = 50
 
-    leads_query = Lead.query.filter_by(campaign_id=campaign_id).order_by(desc(Lead.created_at))
-    leads_pagination = leads_query.paginate(page=page, per_page=per_page, error_out=False)
+        leads_query = Lead.query.filter_by(campaign_id=campaign_id).order_by(desc(Lead.created_at))
+        leads_pagination = leads_query.paginate(page=page, per_page=per_page, error_out=False)
 
-    # Get sequences
-    sequences = EmailSequence.query.filter_by(campaign_id=campaign_id).order_by(EmailSequence.step_number).all()
+        # Get sequences
+        sequences = EmailSequence.query.filter_by(campaign_id=campaign_id).order_by(EmailSequence.step_number).all()
 
-    return render_template(
-        'admin/lead_campaigns/view.html',
-        campaign=campaign,
-        leads=leads_pagination.items,
-        pagination=leads_pagination,
-        sequences=sequences
-    )
+        return render_template(
+            'admin/lead_campaigns/view.html',
+            campaign=campaign,
+            leads=leads_pagination.items,
+            pagination=leads_pagination,
+            sequences=sequences
+        )
+    except Exception as e:
+        logger.exception(f"Error loading campaign {campaign_id} view: {e}")
+        return render_template('admin/error.html',
+                             error_title="Campaign View Error",
+                             error_message=str(e),
+                             error_details=f"Campaign ID: {campaign_id}"), 500
 
 
 @lead_campaigns_bp.route('/<int:campaign_id>/edit', methods=['GET', 'POST'])

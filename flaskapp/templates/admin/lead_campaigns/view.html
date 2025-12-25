@@ -203,7 +203,17 @@ function startScraping(btn) {
     })
     .then(r => {
         console.log('Response status:', r.status);
-        return r.json();
+        // Check if response is OK before parsing JSON
+        if (!r.ok) {
+            throw new Error(`Server error: ${r.status} ${r.statusText}`);
+        }
+        // Check if response is JSON
+        const contentType = r.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return r.json();
+        } else {
+            throw new Error('Server returned non-JSON response (possible error page)');
+        }
     })
     .then(data => {
         console.log('Response data:', data);
@@ -237,7 +247,15 @@ function enrichLeads(btn) {
             'X-CSRFToken': getCSRFToken()
         }
     })
-    .then(r => r.json())
+    .then(r => {
+        if (!r.ok) throw new Error(`Server error: ${r.status} ${r.statusText}`);
+        const contentType = r.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return r.json();
+        } else {
+            throw new Error('Server returned non-JSON response');
+        }
+    })
     .then(data => {
         if (data.success) {
             alert(`Enriched ${data.enriched_count} leads!`);
@@ -268,7 +286,15 @@ function sendEmails(btn) {
             'X-CSRFToken': getCSRFToken()
         }
     })
-    .then(r => r.json())
+    .then(r => {
+        if (!r.ok) throw new Error(`Server error: ${r.status} ${r.statusText}`);
+        const contentType = r.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return r.json();
+        } else {
+            throw new Error('Server returned non-JSON response');
+        }
+    })
     .then(data => {
         if (data.success) {
             alert(`Sent ${data.sent_count} emails!`);

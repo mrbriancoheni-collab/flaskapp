@@ -1,5 +1,5 @@
 <!-- Performance Synopsis Component -->
-{% if analysis.opportunities|length > 0 %}
+{% if analysis and analysis.performance %}
 <div class="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-300 rounded-xl shadow-lg p-6 mb-6">
   <div class="flex items-start gap-4 mb-4">
     <div class="flex-shrink-0 text-4xl">📊</div>
@@ -146,8 +146,8 @@
       <div>
         <div class="text-sm font-semibold text-orange-700 mb-2">🔧 Improvement Opportunities</div>
         <div class="space-y-2">
-          {% set critical_count = analysis.opportunities | selectattr('priority', 'defined') | selectattr('priority', 'equalto', 'critical') | list | length %}
-          {% set high_count = analysis.opportunities | selectattr('priority', 'defined') | selectattr('priority', 'equalto', 'high') | list | length %}
+          {% set critical_count = analysis.opportunities | default([]) | selectattr('priority', 'defined') | selectattr('priority', 'equalto', 'critical') | list | length %}
+          {% set high_count = analysis.opportunities | default([]) | selectattr('priority', 'defined') | selectattr('priority', 'equalto', 'high') | list | length %}
 
           {% if critical_count > 0 %}
           <div class="text-sm text-gray-700">
@@ -185,7 +185,7 @@
   </div>
 
   <!-- Potential Savings Summary -->
-  {% set total_savings = analysis.opportunities | map(attribute='monthly_savings') | select('defined') | sum %}
+  {% set total_savings = analysis.opportunities | default([]) | map(attribute='monthly_savings') | select('defined') | sum %}
   {% if total_savings > 0 %}
   <div class="mt-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-4">
     <div class="flex items-center justify-between">

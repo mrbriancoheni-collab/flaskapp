@@ -1,11 +1,5 @@
 import os, sys
 
-# Set LSAPI configuration BEFORE app loads
-os.environ['LSAPI_CHILDREN'] = '20'
-os.environ['LSAPI_MAX_PROCESS_TIME'] = '300'
-os.environ['LSAPI_MAX_IDLE'] = '120'
-os.environ['LSAPI_MAX_REQUESTS'] = '1000'
-
 # Ensure we import from this app root
 APP_ROOT = os.path.dirname(__file__)
 if APP_ROOT not in sys.path:

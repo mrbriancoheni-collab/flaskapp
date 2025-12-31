@@ -207,7 +207,7 @@ class LeadAutomationService:
     def _process_campaign_scraping(self) -> int:
         """Create and scrape campaigns up to daily limit
 
-        Each campaign scrapes ALL keywords for one city
+        Each campaign scrapes one keyword across all 100 cities
         """
         scraped_count = 0
         campaign_queue = get_campaign_queue()
@@ -237,8 +237,8 @@ class LeadAutomationService:
                 if not existing:
                     campaign = LeadCampaign(
                         name=campaign_config["name"],
-                        industry_service="Home Services",  # Generic since we scrape all keywords
-                        location=campaign_config["city"],
+                        industry_service=campaign_config["business_type"],
+                        location="USA - Top 100 Cities",  # Multi-city campaign
                         scrape_ads=AUTOMATION_CONFIG["scrape_sources"]["scrape_ads"],
                         scrape_maps=AUTOMATION_CONFIG["scrape_sources"]["scrape_maps"],
                         scrape_lsa=AUTOMATION_CONFIG["scrape_sources"]["scrape_lsa"],
@@ -255,22 +255,25 @@ class LeadAutomationService:
                 else:
                     campaign = existing
 
-                # Track leads found by each keyword (for deduplication within campaign)
+                # Track leads found (for deduplication within campaign)
                 campaign_leads = {}  # {domain: lead_object}
                 total_leads_created = 0
 
-                # Loop through all keywords for this city
-                keywords = campaign_config["keywords"]
-                logger.info(f"Scraping {len(keywords)} keywords for {campaign.location}")
+                # Get the keyword for this business type
+                keyword = campaign_config["keyword"]
+                cities = campaign_config["cities"]
 
-                for keyword in keywords:
-                    # Scrape leads for this keyword
-                    query = f"{keyword} {campaign.location}"
+                logger.info(f"Scraping '{keyword}' across {len(cities)} cities")
+
+                # Loop through all cities for this keyword
+                for city in cities:
+                    # Scrape leads for this city
+                    query = f"{keyword} {city}"
 
                     try:
                         results = self.scraper.scrape_campaign(
                             query=query,
-                            location=campaign.location,
+                            location=city,
                             scrape_ads=campaign.scrape_ads,
                             scrape_maps=campaign.scrape_maps,
                             scrape_lsa=campaign.scrape_lsa,
@@ -278,7 +281,9 @@ class LeadAutomationService:
                             max_organic=campaign.max_organic_results
                         )
 
-                        # Process leads from this keyword
+                        city_leads_count = 0
+
+                        # Process leads from this city
                         for source_type, items in results.items():
                             for item in items:
                                 domain = item.get('website')
@@ -291,15 +296,15 @@ class LeadAutomationService:
                                 # Clean domain for comparison
                                 domain_clean = domain.lower().replace("http://", "").replace("https://", "").replace("www.", "").split("/")[0] if domain else None
 
-                                # Check if this lead already exists in this campaign (from another keyword)
+                                # Check if this lead already exists in this campaign (from another city)
                                 if domain_clean and domain_clean in campaign_leads:
-                                    # Add this keyword to the existing lead's keywords list
+                                    # Add this city to the existing lead's cities list
                                     existing_lead = campaign_leads[domain_clean]
-                                    if 'keywords' not in existing_lead.extra_data:
-                                        existing_lead.extra_data['keywords'] = []
-                                    if keyword not in existing_lead.extra_data['keywords']:
-                                        existing_lead.extra_data['keywords'].append(keyword)
-                                    logger.debug(f"Lead {item['company_name']} also found for keyword: {keyword}")
+                                    if 'cities' not in existing_lead.extra_data:
+                                        existing_lead.extra_data['cities'] = []
+                                    if city not in existing_lead.extra_data['cities']:
+                                        existing_lead.extra_data['cities'].append(city)
+                                    logger.debug(f"Lead {item['company_name']} also found in: {city}")
                                     continue
 
                                 # Check if lead already exists in database
@@ -309,17 +314,18 @@ class LeadAutomationService:
                                 ).first()
 
                                 if existing_lead:
-                                    # Update existing lead with new keyword
-                                    if 'keywords' not in existing_lead.extra_data:
-                                        existing_lead.extra_data['keywords'] = []
-                                    if keyword not in existing_lead.extra_data['keywords']:
-                                        existing_lead.extra_data['keywords'].append(keyword)
+                                    # Update existing lead with new city
+                                    if 'cities' not in existing_lead.extra_data:
+                                        existing_lead.extra_data['cities'] = []
+                                    if city not in existing_lead.extra_data['cities']:
+                                        existing_lead.extra_data['cities'].append(city)
                                     campaign_leads[domain_clean] = existing_lead
                                     continue
 
                                 # Create new lead
                                 extra_data = item.get('extra_data', {})
-                                extra_data['keywords'] = [keyword]  # Track which keyword(s) found this lead
+                                extra_data['cities'] = [city]  # Track which city/cities found this lead
+                                extra_data['keyword'] = keyword  # Track the keyword used
 
                                 lead = Lead(
                                     campaign_id=campaign.id,
@@ -337,6 +343,7 @@ class LeadAutomationService:
 
                                 db.session.add(lead)
                                 total_leads_created += 1
+                                city_leads_count += 1
 
                                 # Track in campaign_leads for deduplication
                                 if domain_clean:
@@ -345,10 +352,10 @@ class LeadAutomationService:
                                 # Mark domain as processed globally
                                 self._mark_domain_processed(domain)
 
-                        logger.info(f"  - Keyword '{keyword}': found {len(items)} items from {source_type}")
+                        logger.info(f"  - City '{city}': found {city_leads_count} new leads")
 
                     except Exception as e:
-                        logger.error(f"Error scraping keyword '{keyword}' for {campaign.location}: {e}")
+                        logger.error(f"Error scraping '{keyword}' in {city}: {e}")
                         continue
 
                 # Update campaign
@@ -362,7 +369,7 @@ class LeadAutomationService:
                 self.state["daily_stats"]["scrapes"] += 1
                 scraped_count += 1
 
-                logger.info(f"Scraped campaign {campaign.name}: {total_leads_created} unique leads across {len(keywords)} keywords")
+                logger.info(f"Scraped campaign {campaign.name}: {total_leads_created} unique leads across {len(cities)} cities")
 
             except Exception as e:
                 logger.error(f"Error scraping campaign {campaign_config['name']}: {e}")

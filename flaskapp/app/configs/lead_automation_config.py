@@ -29,83 +29,28 @@ TOP_CITIES = [
     "Hialeah, FL", "Richmond, VA", "Boise, ID", "Spokane, WA", "Baton Rouge, LA"
 ]
 
-# Top 15 home service categories with 3 keywords each
+# Top 20 home service categories with primary keyword for each
 HOME_SERVICE_CATEGORIES = {
-    "Plumbing": [
-        "plumber",
-        "plumbing services",
-        "emergency plumber"
-    ],
-    "HVAC": [
-        "hvac repair",
-        "air conditioning repair",
-        "heating and cooling"
-    ],
-    "Electrical": [
-        "electrician",
-        "electrical services",
-        "emergency electrician"
-    ],
-    "Roofing": [
-        "roofing contractor",
-        "roof repair",
-        "roof replacement"
-    ],
-    "Landscaping": [
-        "landscaping services",
-        "lawn care",
-        "landscape design"
-    ],
-    "Pest Control": [
-        "pest control",
-        "exterminator",
-        "termite control"
-    ],
-    "Cleaning": [
-        "house cleaning",
-        "maid service",
-        "cleaning services"
-    ],
-    "Painting": [
-        "house painter",
-        "interior painting",
-        "painting contractor"
-    ],
-    "Locksmith": [
-        "locksmith",
-        "emergency locksmith",
-        "locksmith services"
-    ],
-    "Garage Door": [
-        "garage door repair",
-        "garage door installation",
-        "garage door services"
-    ],
-    "Handyman": [
-        "handyman",
-        "handyman services",
-        "home repair"
-    ],
-    "Window Cleaning": [
-        "window cleaning",
-        "window washing",
-        "window cleaning services"
-    ],
-    "Pool Service": [
-        "pool cleaning",
-        "pool maintenance",
-        "pool service"
-    ],
-    "Tree Service": [
-        "tree removal",
-        "tree trimming",
-        "tree service"
-    ],
-    "Carpet Cleaning": [
-        "carpet cleaning",
-        "carpet cleaner",
-        "rug cleaning"
-    ]
+    "Plumbing": "plumber",
+    "HVAC": "hvac repair",
+    "Electrical": "electrician",
+    "Roofing": "roofing contractor",
+    "Landscaping": "landscaping services",
+    "Pest Control": "pest control",
+    "Cleaning": "house cleaning",
+    "Painting": "painting contractor",
+    "Locksmith": "locksmith",
+    "Garage Door": "garage door repair",
+    "Handyman": "handyman",
+    "Window Cleaning": "window cleaning",
+    "Pool Service": "pool service",
+    "Tree Service": "tree service",
+    "Carpet Cleaning": "carpet cleaning",
+    "Flooring": "flooring contractor",
+    "Concrete": "concrete contractor",
+    "Fencing": "fence installation",
+    "Gutter": "gutter installation",
+    "Appliance Repair": "appliance repair"
 }
 
 # Automation settings
@@ -128,31 +73,28 @@ AUTOMATION_CONFIG = {
 
 def get_all_keywords():
     """Get flat list of all keywords across all categories"""
-    keywords = []
-    for category_keywords in HOME_SERVICE_CATEGORIES.values():
-        keywords.extend(category_keywords)
-    return keywords
+    return list(HOME_SERVICE_CATEGORIES.values())
 
 
 def get_total_campaign_count():
-    """Calculate total number of campaigns to create (one per city)"""
-    return len(TOP_CITIES)
+    """Calculate total number of campaigns to create (one per business type)"""
+    return len(HOME_SERVICE_CATEGORIES)
 
 
 def get_campaign_queue():
     """
     Generate queue of all campaigns to create
 
-    Returns list of dicts with: city, keywords (all keywords for that city)
-    Each campaign will scrape all 45 keywords for one city
+    Returns list of dicts with: business_type, keyword, cities
+    Each campaign will scrape one keyword across all 100 cities
     """
     queue = []
-    all_keywords = get_all_keywords()
 
-    for city in TOP_CITIES:
+    for business_type, keyword in HOME_SERVICE_CATEGORIES.items():
         queue.append({
-            "city": city,
-            "keywords": all_keywords,  # All 45 keywords
-            "name": f"Auto: Home Services - {city}"
+            "business_type": business_type,
+            "keyword": keyword,
+            "cities": TOP_CITIES,  # All 100 cities
+            "name": f"Auto: {business_type}"
         })
     return queue

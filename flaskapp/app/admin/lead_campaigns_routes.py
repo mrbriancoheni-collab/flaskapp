@@ -1120,6 +1120,77 @@ def send_emails(campaign_id: int):
 
 # ==================== Bulk Actions ====================
 
+def _save_bulk_stats(action_type: str, stats: dict):
+    """Save bulk action statistics to file"""
+    import os
+    import json
+
+    stats_file = os.getenv('BULK_STATS_FILE', 'bulk_action_stats.json')
+
+    # Load existing stats
+    if os.path.exists(stats_file):
+        with open(stats_file, 'r') as f:
+            all_stats = json.load(f)
+    else:
+        all_stats = {}
+
+    # Add timestamp
+    stats['completed_at'] = datetime.now().isoformat()
+
+    # Save stats for this action type
+    all_stats[action_type] = stats
+
+    # Write back to file
+    with open(stats_file, 'w') as f:
+        json.dump(all_stats, f, indent=2)
+
+    logger.info(f"Saved bulk stats for {action_type}")
+
+
+def _get_bulk_stats():
+    """Get bulk action statistics from file"""
+    import os
+    import json
+
+    stats_file = os.getenv('BULK_STATS_FILE', 'bulk_action_stats.json')
+
+    if not os.path.exists(stats_file):
+        return {}
+
+    with open(stats_file, 'r') as f:
+        return json.load(f)
+
+
+@lead_campaigns_bp.route('/bulk/stats', methods=['GET'])
+@require_admin
+def bulk_stats():
+    """Get statistics for all bulk actions"""
+    try:
+        stats = _get_bulk_stats()
+
+        # Add counts of pending work
+        draft_campaigns = LeadCampaign.query.filter_by(status='draft').count()
+        pending_enrichment = Lead.query.filter_by(enrichment_status='pending').count()
+        ready_for_email = Lead.query.filter_by(
+            enrichment_status='completed',
+            email_status='pending'
+        ).filter(Lead.decision_maker_email.isnot(None)).count()
+
+        return jsonify({
+            'success': True,
+            'stats': stats,
+            'pending': {
+                'draft_campaigns': draft_campaigns,
+                'pending_enrichment': pending_enrichment,
+                'ready_for_email': ready_for_email
+            }
+        })
+
+    except Exception as e:
+        logger.exception(f"Error getting bulk stats: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @lead_campaigns_bp.route('/bulk/scrape-all', methods=['POST'])
 @require_admin
 def bulk_scrape_all():
@@ -1225,15 +1296,27 @@ def bulk_scrape_all():
                 db.session.commit()
                 continue
 
+        # Save stats
+        _save_bulk_stats('scrape', {
+            'campaigns_scraped': campaigns_scraped,
+            'total_leads_created': total_leads_created,
+            'success': True
+        })
+
         return jsonify({
             'success': True,
             'campaigns_scraped': campaigns_scraped,
             'total_leads_created': total_leads_created,
-            'message': f'Scraped {campaigns_scraped} campaigns, created {total_leads_created} leads'
+            'message': f'Scraped {campaigns_scraped} campaigns, created {total_leads_created} leads',
+            'completed_at': datetime.now().isoformat()
         })
 
     except Exception as e:
         logger.exception(f"Bulk scrape error: {e}")
+        _save_bulk_stats('scrape', {
+            'success': False,
+            'error': str(e)
+        })
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -1296,15 +1379,27 @@ def bulk_enrich_all():
                 ).count()
         db.session.commit()
 
+        # Save stats
+        _save_bulk_stats('enrich', {
+            'enriched_count': enriched_count,
+            'failed_count': failed_count,
+            'success': True
+        })
+
         return jsonify({
             'success': True,
             'enriched_count': enriched_count,
             'failed_count': failed_count,
-            'message': f'Enriched {enriched_count} leads, {failed_count} failed'
+            'message': f'Enriched {enriched_count} leads, {failed_count} failed',
+            'completed_at': datetime.now().isoformat()
         })
 
     except Exception as e:
         logger.exception(f"Bulk enrichment error: {e}")
+        _save_bulk_stats('enrich', {
+            'success': False,
+            'error': str(e)
+        })
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -1443,15 +1538,27 @@ def bulk_send_emails_all():
 
         db.session.commit()
 
+        # Save stats
+        _save_bulk_stats('send_emails', {
+            'sent_count': sent_count,
+            'failed_count': failed_count,
+            'success': True
+        })
+
         return jsonify({
             'success': True,
             'sent_count': sent_count,
             'failed_count': failed_count,
-            'message': f'Sent {sent_count} emails, {failed_count} failed'
+            'message': f'Sent {sent_count} emails, {failed_count} failed',
+            'completed_at': datetime.now().isoformat()
         })
 
     except Exception as e:
         logger.exception(f"Bulk email send error: {e}")
+        _save_bulk_stats('send_emails', {
+            'success': False,
+            'error': str(e)
+        })
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

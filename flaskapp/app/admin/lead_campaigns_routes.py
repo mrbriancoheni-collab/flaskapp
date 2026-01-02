@@ -1118,6 +1118,343 @@ def send_emails(campaign_id: int):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# ==================== Bulk Actions ====================
+
+@lead_campaigns_bp.route('/bulk/scrape-all', methods=['POST'])
+@require_admin
+def bulk_scrape_all():
+    """Bulk scrape all campaigns that haven't been scraped yet (status='draft')"""
+    try:
+        import os
+
+        # Check if SerpAPI key is configured
+        if not os.getenv('SERPAPI_API_KEY'):
+            return jsonify({
+                'success': False,
+                'error': 'SERPAPI_API_KEY not configured'
+            }), 400
+
+        # Get all draft campaigns (not yet scraped)
+        draft_campaigns = LeadCampaign.query.filter_by(status='draft').limit(20).all()
+
+        if not draft_campaigns:
+            return jsonify({
+                'success': True,
+                'message': 'No draft campaigns to scrape',
+                'scraped_count': 0
+            })
+
+        logger.info(f"Starting bulk scrape for {len(draft_campaigns)} draft campaigns")
+
+        scraper = SerpAPIScraperService()
+        total_leads_created = 0
+        campaigns_scraped = 0
+
+        for campaign in draft_campaigns:
+            try:
+                # Update status
+                campaign.status = 'scraping'
+                campaign.scraping_started_at = datetime.now()
+                db.session.commit()
+
+                # Scrape
+                query = f"{campaign.industry_service} {campaign.location}"
+                results = scraper.scrape_campaign(
+                    query=query,
+                    location=campaign.location,
+                    scrape_ads=campaign.scrape_ads,
+                    scrape_maps=campaign.scrape_maps,
+                    scrape_lsa=campaign.scrape_lsa,
+                    scrape_organic=campaign.scrape_organic,
+                    max_organic=campaign.max_organic_results
+                )
+
+                # Save leads
+                leads_created = 0
+                source_type_mapping = {
+                    'ads': 'ad',
+                    'maps': 'map',
+                    'lsa': 'lsa',
+                    'organic': 'organic'
+                }
+
+                for source_type, items in results.items():
+                    db_source_type = source_type_mapping.get(source_type, source_type)
+
+                    for item in items:
+                        # Check if lead already exists
+                        existing = Lead.query.filter_by(
+                            campaign_id=campaign.id,
+                            company_name=item['company_name']
+                        ).first()
+
+                        if existing:
+                            continue
+
+                        lead = Lead(
+                            campaign_id=campaign.id,
+                            company_name=item['company_name'],
+                            website=item.get('website'),
+                            phone=item.get('phone'),
+                            address=item.get('address'),
+                            source_type=db_source_type,
+                            source_url=item.get('source_url'),
+                            serp_position=item.get('position'),
+                            enrichment_status='pending',
+                            email_status='pending',
+                            extra_data=item.get('extra_data', {})
+                        )
+
+                        db.session.add(lead)
+                        leads_created += 1
+
+                # Update campaign
+                campaign.status = 'ready'
+                campaign.scraping_completed_at = datetime.now()
+                campaign.leads_scraped = leads_created
+                db.session.commit()
+
+                total_leads_created += leads_created
+                campaigns_scraped += 1
+
+                logger.info(f"Scraped campaign {campaign.name}: {leads_created} leads")
+
+            except Exception as e:
+                logger.error(f"Error scraping campaign {campaign.id}: {e}")
+                campaign.status = 'draft'
+                db.session.commit()
+                continue
+
+        return jsonify({
+            'success': True,
+            'campaigns_scraped': campaigns_scraped,
+            'total_leads_created': total_leads_created,
+            'message': f'Scraped {campaigns_scraped} campaigns, created {total_leads_created} leads'
+        })
+
+    except Exception as e:
+        logger.exception(f"Bulk scrape error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@lead_campaigns_bp.route('/bulk/enrich-all', methods=['POST'])
+@require_admin
+def bulk_enrich_all():
+    """Bulk enrich all leads that are pending enrichment"""
+    try:
+        from app.services.lead_enrichment import LeadEnrichmentService
+
+        # Get pending leads across all campaigns (limit to avoid timeout)
+        pending_leads = Lead.query.filter_by(
+            enrichment_status='pending'
+        ).limit(100).all()
+
+        if not pending_leads:
+            return jsonify({
+                'success': True,
+                'message': 'No pending leads to enrich',
+                'enriched_count': 0
+            })
+
+        logger.info(f"Starting bulk enrichment for {len(pending_leads)} pending leads")
+
+        enrichment_service = LeadEnrichmentService()
+        enriched_count = 0
+        failed_count = 0
+
+        for lead in pending_leads:
+            try:
+                lead.enrichment_status = 'in_progress'
+                lead.enrichment_attempts += 1
+                db.session.commit()
+
+                result = enrichment_service.enrich_lead(lead.company_name, lead.website)
+
+                lead.email_format = result.get('email_format')
+                lead.decision_maker_name = result.get('decision_maker_name')
+                lead.decision_maker_title = result.get('decision_maker_title')
+                lead.decision_maker_email = result.get('decision_maker_email')
+                lead.decision_maker_linkedin = result.get('decision_maker_linkedin')
+                lead.enrichment_status = 'completed'
+                lead.enriched_at = datetime.now()
+
+                enriched_count += 1
+
+            except Exception as e:
+                logger.error(f"Error enriching lead {lead.id}: {e}")
+                lead.enrichment_status = 'failed'
+                failed_count += 1
+
+            db.session.commit()
+
+        # Update campaign stats
+        for lead in pending_leads:
+            if lead.campaign:
+                lead.campaign.leads_enriched = Lead.query.filter_by(
+                    campaign_id=lead.campaign_id,
+                    enrichment_status='completed'
+                ).count()
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'enriched_count': enriched_count,
+            'failed_count': failed_count,
+            'message': f'Enriched {enriched_count} leads, {failed_count} failed'
+        })
+
+    except Exception as e:
+        logger.exception(f"Bulk enrichment error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@lead_campaigns_bp.route('/bulk/send-emails-all', methods=['POST'])
+@require_admin
+def bulk_send_emails_all():
+    """Bulk send emails to all leads ready to be contacted"""
+    try:
+        import os
+
+        # Get email provider
+        email_provider = os.getenv('EMAIL_PROVIDER', 'brevo').lower()
+
+        # Initialize appropriate email service
+        if email_provider == 'brevo':
+            from app.services.brevo_outreach import BrevoOutreachService
+            outreach_service = BrevoOutreachService()
+        else:
+            from app.services.mailgun_outreach import MailgunOutreachService
+            outreach_service = MailgunOutreachService()
+
+        # Get leads ready to send (enriched, have email, not sent yet)
+        # Limit to 100 to avoid timeout
+        ready_leads = Lead.query.filter_by(
+            enrichment_status='completed',
+            email_status='pending'
+        ).filter(
+            Lead.decision_maker_email.isnot(None)
+        ).limit(100).all()
+
+        if not ready_leads:
+            return jsonify({
+                'success': True,
+                'message': 'No leads ready to email',
+                'sent_count': 0
+            })
+
+        logger.info(f"Starting bulk email send for {len(ready_leads)} ready leads")
+
+        sent_count = 0
+        failed_count = 0
+
+        for lead in ready_leads:
+            try:
+                campaign = lead.campaign
+                if not campaign:
+                    continue
+
+                # Check unsubscribe list
+                if EmailUnsubscribe.query.filter_by(email=lead.decision_maker_email).first():
+                    lead.email_status = 'unsubscribed'
+                    db.session.commit()
+                    continue
+
+                # Get first sequence step for this campaign
+                sequence = EmailSequence.query.filter_by(
+                    campaign_id=campaign.id,
+                    step_number=1,
+                    is_active=True
+                ).first()
+
+                if not sequence:
+                    logger.warning(f"No active sequence for campaign {campaign.id}")
+                    continue
+
+                # Personalize email
+                variables = {
+                    'company_name': lead.company_name,
+                    'decision_maker_name': lead.decision_maker_name or 'there',
+                    'decision_maker_title': lead.decision_maker_title or '',
+                    'service_type': campaign.industry_service,
+                    'location': campaign.location,
+                }
+
+                subject = outreach_service.personalize_template(sequence.subject, variables)
+                body_html = outreach_service.personalize_template(sequence.body_html, variables)
+
+                # Send email
+                result = outreach_service.send_email(
+                    to_email=lead.decision_maker_email,
+                    subject=subject,
+                    body_html=body_html,
+                    tags=[f'campaign-{campaign.id}', f'sequence-{sequence.id}', 'bulk-send'],
+                    custom_vars={'lead_id': lead.id, 'sequence_id': sequence.id}
+                )
+
+                if result.get('success'):
+                    # Record sent email
+                    email_sent = LeadEmail(
+                        lead_id=lead.id,
+                        sequence_id=sequence.id,
+                        to_email=lead.decision_maker_email,
+                        subject=subject,
+                        body_html=body_html,
+                        mailgun_message_id=result.get('message_id') if email_provider == 'mailgun' else None,
+                        status='sent',
+                        sent_at=datetime.now(),
+                        email_provider=email_provider
+                    )
+
+                    # Set brevo_message_id if using Brevo
+                    if email_provider == 'brevo' and result.get('message_id'):
+                        email_sent.brevo_message_id = result.get('message_id')
+
+                    db.session.add(email_sent)
+
+                    # Update lead
+                    lead.email_status = 'sent'
+                    lead.current_sequence_step = 1
+                    lead.last_email_sent_at = datetime.now()
+                    lead.auto_delete_at = datetime.now() + timedelta(days=30)
+
+                    sent_count += 1
+                else:
+                    logger.error(f"Failed to send to {lead.decision_maker_email}: {result.get('error')}")
+                    failed_count += 1
+
+                db.session.commit()
+
+            except Exception as e:
+                logger.error(f"Error sending email to lead {lead.id}: {e}")
+                failed_count += 1
+                continue
+
+        # Update campaign stats
+        campaigns_updated = set()
+        for lead in ready_leads:
+            if lead.campaign_id and lead.campaign_id not in campaigns_updated:
+                campaign = LeadCampaign.query.get(lead.campaign_id)
+                if campaign:
+                    campaign.emails_sent = LeadEmail.query.join(Lead).filter(
+                        Lead.campaign_id == campaign.id
+                    ).count()
+                    campaign.sending_started_at = campaign.sending_started_at or datetime.now()
+                    campaigns_updated.add(lead.campaign_id)
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'sent_count': sent_count,
+            'failed_count': failed_count,
+            'message': f'Sent {sent_count} emails, {failed_count} failed'
+        })
+
+    except Exception as e:
+        logger.exception(f"Bulk email send error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # ==================== Unsubscribe ====================
 
 @lead_campaigns_bp.route('/unsubscribe', methods=['GET', 'POST'])

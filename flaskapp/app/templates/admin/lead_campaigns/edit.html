@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Campaign - {{ campaign.name }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        header {
+            background: white;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { color: #2c3e50; margin-bottom: 10px; }
+        .breadcrumb {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .breadcrumb a {
+            color: #2196F3;
+            text-decoration: none;
+        }
+        .form-section {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1em;
+        }
+        input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        .checkbox-label {
+            font-weight: normal;
+            display: inline;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #45a049;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            margin-left: 10px;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .help-text {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="breadcrumb">
+                <a href="{{ url_for('lead_campaigns_bp.index') }}">Campaigns</a> /
+                <a href="{{ url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign.id) }}">{{ campaign.name }}</a> /
+                Edit
+            </div>
+            <h1>Edit Campaign</h1>
+        </header>
+
+        <div class="form-section">
+            <form method="POST">
+                <div class="form-group">
+                    <label for="name">Campaign Name</label>
+                    <input type="text" id="name" name="name" value="{{ campaign.name }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="industry_service">Service/Industry</label>
+                    <input type="text" id="industry_service" name="industry_service" value="{{ campaign.industry_service }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="location">Location</label>
+                    <input type="text" id="location" name="location" value="{{ campaign.location }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Scraping Options</label>
+                    <div>
+                        <input type="checkbox" id="scrape_ads" name="scrape_ads" {% if campaign.scrape_ads %}checked{% endif %}>
+                        <label for="scrape_ads" class="checkbox-label">Scrape Google Ads</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="scrape_maps" name="scrape_maps" {% if campaign.scrape_maps %}checked{% endif %}>
+                        <label for="scrape_maps" class="checkbox-label">Scrape Google Maps</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="scrape_lsa" name="scrape_lsa" {% if campaign.scrape_lsa %}checked{% endif %}>
+                        <label for="scrape_lsa" class="checkbox-label">Scrape Local Service Ads</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="scrape_organic" name="scrape_organic" {% if campaign.scrape_organic %}checked{% endif %}>
+                        <label for="scrape_organic" class="checkbox-label">Scrape Organic Results</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="max_organic_results">Max Organic Results</label>
+                    <input type="number" id="max_organic_results" name="max_organic_results" value="{{ campaign.max_organic_results }}" min="0" max="20">
+                </div>
+
+                <div class="form-group">
+                    <label for="daily_email_limit">Daily Email Limit</label>
+                    <input type="number" id="daily_email_limit" name="daily_email_limit" value="{{ campaign.daily_email_limit }}" min="1" max="1000">
+                </div>
+
+                <div class="form-group">
+                    <label for="sequence_delay_days">Sequence Delay (days)</label>
+                    <input type="number" id="sequence_delay_days" name="sequence_delay_days" value="{{ campaign.sequence_delay_days }}" min="1" max="30">
+                </div>
+
+                <div style="margin-top: 30px;">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <a href="{{ url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign.id) }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

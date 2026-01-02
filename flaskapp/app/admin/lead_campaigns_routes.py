@@ -403,9 +403,8 @@ def test_button():
 def index():
     """List all lead campaigns"""
     try:
-        # Show all campaigns - consolidation to 100 hasn't been executed yet
-        # Current system has individual campaigns per keyword/location
-        campaigns = LeadCampaign.query.order_by(desc(LeadCampaign.created_at)).all()
+        # Show only the newest 20 campaigns (one per business type from our new structure)
+        campaigns = LeadCampaign.query.order_by(desc(LeadCampaign.created_at)).limit(20).all()
 
         logger.info(f"Found {len(campaigns)} campaigns")
 

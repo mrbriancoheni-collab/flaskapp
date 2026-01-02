@@ -55,5 +55,14 @@ class Config:
     PASSWORD_REQUIRE_SPECIAL = True
     PASSWORD_USE_ZXCVBN = False  # set True if you install zxcvbn
 
+    # Email provider configuration
+    EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "brevo")  # Use Brevo as default provider
+    BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
+    BREVO_FROM_EMAIL = os.environ.get("BREVO_FROM_EMAIL", "noreply@fieldsprout.io")
+    BREVO_FROM_NAME = os.environ.get("BREVO_FROM_NAME", "FieldSprout")
+
+    # Lead automation enabled by default
+    LEAD_AUTOMATION_ENABLED = os.environ.get("LEAD_AUTOMATION_ENABLED", "True").lower() == "true"
+
     # Optional
     BASE_URL = os.environ.get("BASE_URL", "")

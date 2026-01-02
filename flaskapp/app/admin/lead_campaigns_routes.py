@@ -15,7 +15,7 @@ from app.auth.decorators import require_admin_cloaked as require_admin
 from app.models_leads import LeadCampaign, Lead, EmailSequence, LeadEmail, LeadContactEmail, EmailUnsubscribe
 from app.services.serpapi_scraper import SerpAPIScraperService
 from app.services.lead_enrichment import LeadEnrichmentService
-from app.services.mailgun_outreach import MailgunOutreachService
+from app.services.brevo_outreach import BrevoOutreachService
 
 logger = logging.getLogger(__name__)
 
@@ -1006,7 +1006,7 @@ def send_emails(campaign_id: int):
     campaign = LeadCampaign.query.get_or_404(campaign_id)
 
     try:
-        mailgun = MailgunOutreachService()
+        brevo = BrevoOutreachService()
 
         # Check daily limit
         today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -1060,16 +1060,11 @@ def send_emails(campaign_id: int):
                 'location': campaign.location,
             }
 
-            subject = mailgun.personalize_template(sequence.subject, variables)
-            body_html = mailgun.personalize_template(sequence.body_html, variables)
-
-            # Add unsubscribe link
-            unsubscribe_url = mailgun.get_unsubscribe_url(lead.decision_maker_email, campaign_id)
-            variables['unsubscribe_url'] = unsubscribe_url
-            body_html = mailgun.add_unsubscribe_footer(body_html, unsubscribe_url)
+            subject = brevo.personalize_template(sequence.subject, variables)
+            body_html = brevo.personalize_template(sequence.body_html, variables)
 
             # Send email
-            result = mailgun.send_email(
+            result = brevo.send_email(
                 to_email=lead.decision_maker_email,
                 subject=subject,
                 body_html=body_html,
@@ -1077,7 +1072,7 @@ def send_emails(campaign_id: int):
                 custom_vars={'lead_id': lead.id, 'sequence_id': sequence.id}
             )
 
-            if result['success']:
+            if result.get('success'):
                 # Record sent email
                 email_sent = LeadEmail(
                     lead_id=lead.id,
@@ -1085,7 +1080,8 @@ def send_emails(campaign_id: int):
                     to_email=lead.decision_maker_email,
                     subject=subject,
                     body_html=body_html,
-                    mailgun_message_id=result.get('message_id'),
+                    brevo_message_id=result.get('message_id'),
+                    email_provider='brevo',
                     status='sent',
                     sent_at=datetime.now()
                 )
@@ -1408,18 +1404,8 @@ def bulk_enrich_all():
 def bulk_send_emails_all():
     """Bulk send emails to all leads ready to be contacted"""
     try:
-        import os
-
-        # Get email provider
-        email_provider = os.getenv('EMAIL_PROVIDER', 'brevo').lower()
-
-        # Initialize appropriate email service
-        if email_provider == 'brevo':
-            from app.services.brevo_outreach import BrevoOutreachService
-            outreach_service = BrevoOutreachService()
-        else:
-            from app.services.mailgun_outreach import MailgunOutreachService
-            outreach_service = MailgunOutreachService()
+        # Initialize Brevo email service
+        outreach_service = BrevoOutreachService()
 
         # Get leads ready to send (enriched, have email, not sent yet)
         # Limit to 100 to avoid timeout
@@ -1494,15 +1480,11 @@ def bulk_send_emails_all():
                         to_email=lead.decision_maker_email,
                         subject=subject,
                         body_html=body_html,
-                        mailgun_message_id=result.get('message_id') if email_provider == 'mailgun' else None,
+                        brevo_message_id=result.get('message_id'),
                         status='sent',
                         sent_at=datetime.now(),
-                        email_provider=email_provider
+                        email_provider='brevo'
                     )
-
-                    # Set brevo_message_id if using Brevo
-                    if email_provider == 'brevo' and result.get('message_id'):
-                        email_sent.brevo_message_id = result.get('message_id')
 
                     db.session.add(email_sent)
 

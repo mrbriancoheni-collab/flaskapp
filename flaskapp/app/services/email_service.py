@@ -3,17 +3,22 @@
 Email service for sending transactional emails.
 
 Supports multiple providers:
-- Mailgun API (default, recommended)
+- Brevo API (default, recommended for lead campaigns)
 - SendGrid API
+- Mailgun API (legacy)
 - SMTP (legacy, not recommended)
 
 Configuration via environment variables:
-- EMAIL_PROVIDER: 'mailgun' (default), 'sendgrid', or 'smtp'
-- For Mailgun (default):
-  - MAILGUN_API_KEY (required)
-  - MAILGUN_DOMAIN (default: fieldsprout.io)
+- EMAIL_PROVIDER: 'brevo' (default), 'sendgrid', 'mailgun', or 'smtp'
+- For Brevo (default):
+  - BREVO_API_KEY (required)
+  - BREVO_FROM_EMAIL
+  - BREVO_FROM_NAME
 - For SendGrid:
   - SENDGRID_API_KEY
+- For Mailgun (legacy):
+  - MAILGUN_API_KEY (required)
+  - MAILGUN_DOMAIN (default: fieldsprout.io)
 - For SMTP (legacy):
   - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_USE_TLS
 """
@@ -44,7 +49,7 @@ def get_email_config() -> Dict[str, Any]:
                  'noreply@fieldsprout.com')
 
     return {
-        'provider': current_app.config.get('EMAIL_PROVIDER', os.getenv('EMAIL_PROVIDER', 'mailgun')),
+        'provider': current_app.config.get('EMAIL_PROVIDER', os.getenv('EMAIL_PROVIDER', 'brevo')),
         'from_email': from_email,
         'from_name': current_app.config.get('EMAIL_FROM_NAME', os.getenv('EMAIL_FROM_NAME', 'FieldSprout')),
 

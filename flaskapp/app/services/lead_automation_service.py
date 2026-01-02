@@ -29,7 +29,6 @@ from app.configs.lead_automation_config import (
 from app.services.serpapi_scraper import SerpAPIScraperService
 from app.services.lead_enrichment import LeadEnrichmentService
 from app.services.domain_crawler import DomainCrawler
-from app.services.mailgun_outreach import MailgunOutreachService
 from app.services.brevo_outreach import BrevoOutreachService
 from app.services.crm_sync_service import CRMSyncService
 
@@ -530,17 +529,12 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
 
         sent_count = 0
 
-        # Initialize outreach service (Brevo or Mailgun)
-        email_provider = os.getenv('EMAIL_PROVIDER', 'mailgun').lower()
+        # Initialize Brevo outreach service
         try:
-            if email_provider == 'brevo':
-                logger.info("Using Brevo email service")
-                self.outreach = BrevoOutreachService()
-            else:
-                logger.info("Using Mailgun email service")
-                self.outreach = MailgunOutreachService()
+            logger.info("Using Brevo email service")
+            self.outreach = BrevoOutreachService()
         except Exception as e:
-            logger.error(f"Cannot initialize {email_provider} outreach service: {e}")
+            logger.error(f"Cannot initialize Brevo outreach service: {e}")
             return 0
 
         # Get ALL ready campaigns (we'll create sequences if missing)
@@ -604,7 +598,7 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                         # Check for rate limiting
                         if result.get('rate_limited'):
                             retry_after = result.get('retry_after', 300)
-                            logger.warning(f"Mailgun rate limit hit. Stopping email sending. Retry after {retry_after} seconds ({retry_after/3600:.1f} hours)")
+                            logger.warning(f"Email rate limit hit. Stopping email sending. Retry after {retry_after} seconds ({retry_after/3600:.1f} hours)")
                             return sent_count
 
                         if result.get('success'):
@@ -661,7 +655,7 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                         # Check for rate limiting
                         if result.get('rate_limited'):
                             retry_after = result.get('retry_after', 300)
-                            logger.warning(f"Mailgun rate limit hit. Stopping email sending. Retry after {retry_after} seconds ({retry_after/3600:.1f} hours)")
+                            logger.warning(f"Email rate limit hit. Stopping email sending. Retry after {retry_after} seconds ({retry_after/3600:.1f} hours)")
                             return sent_count
 
                         if result.get('success'):
@@ -674,16 +668,14 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                                 subject=subject,
                                 body=body,
                                 to_email=contact.email,
-                                email_provider=email_provider,
+                                email_provider='brevo',
                                 sent_at=datetime.utcnow(),
                                 status='sent'
                             )
 
-                            # Store provider-specific message ID
-                            if email_provider == 'brevo' and result.get('message_id'):
+                            # Store Brevo message ID
+                            if result.get('message_id'):
                                 email_record.brevo_message_id = result.get('message_id')
-                            elif result.get('message_id'):
-                                email_record.mailgun_message_id = result.get('message_id')
 
                             db.session.add(email_record)
 

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Sequences - Lead Campaigns</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header {
+            background: white;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { color: #2c3e50; margin-bottom: 10px; }
+        .breadcrumb {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .breadcrumb a {
+            color: #2196F3;
+            text-decoration: none;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95em;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #4CAF50; color: white; }
+        .btn-primary:hover { background: #45a049; }
+        .btn-secondary { background: #2196F3; color: white; }
+        .btn-secondary:hover { background: #0b7dda; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        tr:hover { background: #f8f9fa; }
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+        .badge-active { background: #d4edda; color: #155724; }
+        .badge-inactive { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="breadcrumb">
+                <a href="{{ url_for('lead_campaigns_bp.index') }}">Campaigns</a> / Email Sequences
+            </div>
+            <h1>Email Sequences</h1>
+            <p>Manage automated email sequences for all campaigns</p>
+        </header>
+
+        <div class="section">
+            <div class="section-header">
+                <h2>All Sequences</h2>
+                <a href="{{ url_for('lead_campaigns_bp.sequences_new') }}" class="btn btn-primary">New Sequence</a>
+            </div>
+
+            {% if sequences %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Campaign</th>
+                        <th>Step</th>
+                        <th>Name</th>
+                        <th>Subject</th>
+                        <th>Delay (days)</th>
+                        <th>Active</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for seq in sequences %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('lead_campaigns_bp.view_campaign', campaign_id=seq.campaign_id) }}" style="color: #2196F3; text-decoration: none;">
+                                {{ seq.campaign.name }}
+                            </a>
+                        </td>
+                        <td><strong>{{ seq.step_number }}</strong></td>
+                        <td>{{ seq.name }}</td>
+                        <td>{{ seq.subject }}</td>
+                        <td>{{ seq.delay_days }}</td>
+                        <td>
+                            <span class="badge {% if seq.is_active %}badge-active{% else %}badge-inactive{% endif %}">
+                                {{ 'Active' if seq.is_active else 'Inactive' }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('lead_campaigns_bp.sequences_edit', sequence_id=seq.id) }}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85em;">Edit</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="text-align: center; color: #999; padding: 40px;">No email sequences configured yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

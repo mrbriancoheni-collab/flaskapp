@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ campaign.name }} - Lead Campaigns</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        header {
+            background: white;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { color: #2c3e50; margin-bottom: 10px; }
+        .breadcrumb {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .breadcrumb a {
+            color: #2196F3;
+            text-decoration: none;
+        }
+        .campaign-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .info-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+        }
+        .info-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .info-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95em;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #4CAF50; color: white; }
+        .btn-primary:hover { background: #45a049; }
+        .btn-secondary { background: #2196F3; color: white; }
+        .btn-secondary:hover { background: #0b7dda; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        tr:hover { background: #f8f9fa; }
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+        .badge-pending { background: #fff3cd; color: #856404; }
+        .badge-completed { background: #d4edda; color: #155724; }
+        .badge-failed { background: #f8d7da; color: #721c24; }
+        .pagination {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .pagination a {
+            padding: 8px 12px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-decoration: none;
+            color: #333;
+        }
+        .pagination a.active {
+            background: #2196F3;
+            color: white;
+            border-color: #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="breadcrumb">
+                <a href="{{ url_for('lead_campaigns_bp.index') }}">Campaigns</a> / {{ campaign.name }}
+            </div>
+            <h1>{{ campaign.name }}</h1>
+            <p>{{ campaign.industry_service }} in {{ campaign.location }}</p>
+
+            <div class="campaign-info">
+                <div class="info-card">
+                    <div class="info-label">Status</div>
+                    <div class="info-value">{{ campaign.status }}</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-label">Total Leads</div>
+                    <div class="info-value">{{ leads|length }}</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-label">Leads Enriched</div>
+                    <div class="info-value">{{ campaign.leads_enriched or 0 }}</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-label">Emails Sent</div>
+                    <div class="info-value">{{ campaign.emails_sent or 0 }}</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="section">
+            <div class="section-header">
+                <h2>Leads</h2>
+                <div>
+                    <a href="{{ url_for('lead_campaigns_bp.edit_campaign', campaign_id=campaign.id) }}" class="btn btn-secondary">Edit Campaign</a>
+                </div>
+            </div>
+
+            {% if leads %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Company</th>
+                        <th>Website</th>
+                        <th>Phone</th>
+                        <th>Source</th>
+                        <th>Enrichment</th>
+                        <th>Email Status</th>
+                        <th>Contact</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lead in leads %}
+                    <tr>
+                        <td>
+                            <strong>{{ lead.company_name }}</strong>
+                            {% if lead.address %}<br><small style="color: #666;">{{ lead.address }}</small>{% endif %}
+                        </td>
+                        <td>
+                            {% if lead.website %}
+                            <a href="{{ lead.website }}" target="_blank" style="color: #2196F3;">{{ lead.website[:30] }}...</a>
+                            {% else %}
+                            <span style="color: #999;">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ lead.phone or '-' }}</td>
+                        <td>
+                            <span class="badge" style="background: #e0e0e0;">{{ lead.source_type }}</span>
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ lead.enrichment_status }}">{{ lead.enrichment_status }}</span>
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ lead.email_status }}">{{ lead.email_status }}</span>
+                        </td>
+                        <td>
+                            {% if lead.decision_maker_name %}
+                            <strong>{{ lead.decision_maker_name }}</strong><br>
+                            <small>{{ lead.decision_maker_email }}</small>
+                            {% else %}
+                            <span style="color: #999;">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {% if pagination and pagination.pages > 1 %}
+            <div class="pagination">
+                {% if pagination.has_prev %}
+                <a href="{{ url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign.id, page=pagination.prev_num) }}">Previous</a>
+                {% endif %}
+
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                    {% if page_num %}
+                    <a href="{{ url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign.id, page=page_num) }}"
+                       class="{% if page_num == pagination.page %}active{% endif %}">{{ page_num }}</a>
+                    {% else %}
+                    <span>...</span>
+                    {% endif %}
+                {% endfor %}
+
+                {% if pagination.has_next %}
+                <a href="{{ url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign.id, page=pagination.next_num) }}">Next</a>
+                {% endif %}
+            </div>
+            {% endif %}
+            {% else %}
+            <p style="text-align: center; color: #999; padding: 40px;">No leads yet. Start scraping to find leads.</p>
+            {% endif %}
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2>Email Sequences</h2>
+                <div>
+                    <a href="{{ url_for('lead_campaigns_bp.new_sequence', campaign_id=campaign.id) }}" class="btn btn-primary">Add Sequence Step</a>
+                </div>
+            </div>
+
+            {% if sequences %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Step</th>
+                        <th>Name</th>
+                        <th>Subject</th>
+                        <th>Delay (days)</th>
+                        <th>Active</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for seq in sequences %}
+                    <tr>
+                        <td><strong>{{ seq.step_number }}</strong></td>
+                        <td>{{ seq.name }}</td>
+                        <td>{{ seq.subject }}</td>
+                        <td>{{ seq.delay_days }}</td>
+                        <td>
+                            <span class="badge {% if seq.is_active %}badge-completed{% else %}badge-pending{% endif %}">
+                                {{ 'Yes' if seq.is_active else 'No' }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('lead_campaigns_bp.sequences_edit', sequence_id=seq.id) }}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85em;">Edit</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="text-align: center; color: #999; padding: 40px;">No email sequences configured.</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

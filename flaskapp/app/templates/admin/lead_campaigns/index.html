@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead Campaigns - FieldSprout Admin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: white;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .automation-status {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+        .automation-status h3 {
+            color: #2e7d32;
+            margin-bottom: 10px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #4CAF50;
+        }
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .campaigns-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95em;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #45a049;
+        }
+        .btn-secondary {
+            background: #2196F3;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #0b7dda;
+        }
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #da190b;
+        }
+        .bulk-actions {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ffc107;
+        }
+        .bulk-actions h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        .bulk-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        tr:hover {
+            background: #f8f9fa;
+        }
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+        .badge-draft { background: #e0e0e0; color: #424242; }
+        .badge-scraping { background: #fff3cd; color: #856404; }
+        .badge-ready { background: #d1ecf1; color: #0c5460; }
+        .badge-active { background: #d4edda; color: #155724; }
+        .badge-completed { background: #d1ecf1; color: #0c5460; }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Lead Generation Campaigns</h1>
+            <p>Automated lead scraping, enrichment, and outreach for home service businesses</p>
+
+            {% if automation_progress %}
+            <div class="automation-status">
+                <h3>Automation Progress</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Campaigns Created</div>
+                        <div class="stat-value">{{ automation_progress.campaigns_created }}/20</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Leads Enriched</div>
+                        <div class="stat-value">{{ automation_progress.leads_enriched }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Emails Sent</div>
+                        <div class="stat-value">{{ automation_progress.emails_sent }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Progress</div>
+                        <div class="stat-value">{{ automation_progress.progress_percent }}%</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </header>
+
+        <div class="campaigns-section">
+            <div class="section-header">
+                <h2>Campaigns (Top 20)</h2>
+                <div>
+                    <a href="{{ url_for('lead_campaigns_bp.sequences_list') }}" class="btn btn-secondary">Email Sequences</a>
+                    <a href="{{ url_for('lead_campaigns_bp.new_campaign') }}" class="btn btn-primary">New Campaign</a>
+                </div>
+            </div>
+
+            <div class="bulk-actions">
+                <h3>Bulk Actions</h3>
+                <p>Process incomplete tasks across all campaigns</p>
+                <div class="bulk-buttons">
+                    <button onclick="bulkScrapeAll()" class="btn btn-primary">Scrape All Draft Campaigns</button>
+                    <button onclick="bulkEnrichAll()" class="btn btn-secondary">Enrich All Pending Leads</button>
+                    <button onclick="bulkSendEmails()" class="btn btn-danger">Send Emails to Ready Leads</button>
+                </div>
+                <div id="bulk-result" style="margin-top: 10px;"></div>
+            </div>
+
+            {% if campaign_stats %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Campaign</th>
+                        <th>Status</th>
+                        <th>Leads</th>
+                        <th>Enriched</th>
+                        <th>Emails Sent</th>
+                        <th>Opened</th>
+                        <th>Sequences</th>
+                        <th>Last Activity</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in campaign_stats %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('lead_campaigns_bp.view_campaign', campaign_id=stat.campaign.id) }}" style="color: #2196F3; text-decoration: none;">
+                                <strong>{{ stat.campaign.name }}</strong>
+                            </a>
+                            <br>
+                            <small style="color: #666;">{{ stat.campaign.industry_service }} - {{ stat.campaign.location }}</small>
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ stat.campaign.status }}">{{ stat.campaign.status }}</span>
+                        </td>
+                        <td>{{ stat.leads_total }}</td>
+                        <td>{{ stat.leads_enriched }}</td>
+                        <td>{{ stat.emails_sent }}</td>
+                        <td>{{ stat.emails_opened }}</td>
+                        <td>{{ stat.sequence_count }}</td>
+                        <td>
+                            {% if stat.last_scrape_at %}
+                            <small>Scraped: {{ stat.last_scrape_at.strftime('%Y-%m-%d %H:%M') }}</small><br>
+                            {% endif %}
+                            {% if stat.last_enrichment_at %}
+                            <small>Enriched: {{ stat.last_enrichment_at.strftime('%Y-%m-%d %H:%M') }}</small><br>
+                            {% endif %}
+                            {% if stat.last_email_sent_at %}
+                            <small>Email: {{ stat.last_email_sent_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('lead_campaigns_bp.view_campaign', campaign_id=stat.campaign.id) }}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85em;">View</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                <h3>No Campaigns Yet</h3>
+                <p>Create your first lead generation campaign to get started</p>
+                <a href="{{ url_for('lead_campaigns_bp.new_campaign') }}" class="btn btn-primary" style="margin-top: 20px;">Create Campaign</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        function showMessage(message, isError = false) {
+            const resultDiv = document.getElementById('bulk-result');
+            resultDiv.className = isError ? 'alert alert-error' : 'alert alert-success';
+            resultDiv.textContent = message;
+            setTimeout(() => {
+                resultDiv.textContent = '';
+                resultDiv.className = '';
+            }, 5000);
+        }
+
+        async function bulkScrapeAll() {
+            if (!confirm('Scrape all draft campaigns? This will create leads for campaigns that haven\'t been scraped yet.')) {
+                return;
+            }
+
+            const resultDiv = document.getElementById('bulk-result');
+            resultDiv.innerHTML = '<span class="loading"></span> Scraping campaigns...';
+
+            try {
+                const response = await fetch('{{ url_for("lead_campaigns_bp.bulk_scrape_all") }}', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(`Success! Scraped ${data.campaigns_scraped} campaigns, created ${data.total_leads_created} leads`);
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showMessage(`Error: ${data.error}`, true);
+                }
+            } catch (error) {
+                showMessage(`Network error: ${error.message}`, true);
+            }
+        }
+
+        async function bulkEnrichAll() {
+            if (!confirm('Enrich all pending leads? This will find contact information for leads that haven\'t been enriched yet.')) {
+                return;
+            }
+
+            const resultDiv = document.getElementById('bulk-result');
+            resultDiv.innerHTML = '<span class="loading"></span> Enriching leads...';
+
+            try {
+                const response = await fetch('{{ url_for("lead_campaigns_bp.bulk_enrich_all") }}', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(`Success! Enriched ${data.enriched_count} leads, ${data.failed_count} failed`);
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showMessage(`Error: ${data.error}`, true);
+                }
+            } catch (error) {
+                showMessage(`Network error: ${error.message}`, true);
+            }
+        }
+
+        async function bulkSendEmails() {
+            if (!confirm('Send emails to all ready leads? This will send initial outreach emails to enriched leads.')) {
+                return;
+            }
+
+            const resultDiv = document.getElementById('bulk-result');
+            resultDiv.innerHTML = '<span class="loading"></span> Sending emails...';
+
+            try {
+                const response = await fetch('{{ url_for("lead_campaigns_bp.bulk_send_emails_all") }}', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(`Success! Sent ${data.sent_count} emails, ${data.failed_count} failed`);
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showMessage(`Error: ${data.error}`, true);
+                }
+            } catch (error) {
+                showMessage(`Network error: ${error.message}`, true);
+            }
+        }
+    </script>
+</body>
+</html>

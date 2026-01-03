@@ -1,24 +1,30 @@
 # Run Lead Automation in Production
 
-## Quick Start
+## Quick Start (Recommended)
 
 1. **SSH into your production server**
 
-2. **Navigate to the application directory:**
+2. **Run the automation script from anywhere:**
    ```bash
-   cd /home/fieljtgr/flaskapp
+   /home/fieljtgr/flaskapp/run_automation_production.sh
    ```
 
-3. **Run the automation script:**
-   ```bash
-   ./force_complete_automation.sh
-   ```
-
-This will:
+This script will:
+- Automatically load environment variables from `/home/fieljtgr/.env`
+- Navigate to the correct app directory
 - Check current automation status
 - Ask for confirmation
 - Run scraping, enrichment, and emailing in batches
-- Continue until daily limits are hit or all work is complete
+- Continue until all 20 campaigns are processed or daily limits are hit
+
+## Alternative Method
+
+If you prefer to run from the app directory:
+
+```bash
+cd /home/fieljtgr/flaskapp
+./force_complete_automation.sh
+```
 
 ## Manual Run (Alternative)
 

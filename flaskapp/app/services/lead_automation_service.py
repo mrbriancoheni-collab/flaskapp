@@ -605,10 +605,11 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                             # Record email sent
                             email_record = LeadEmail(
                                 lead_id=lead.id,
-                                campaign_id=campaign.id,
-                                sequence_step=1,
+                                sequence_id=email_sequence.id,
+                                to_email=lead.decision_maker_email,
                                 subject=subject,
-                                body=body,
+                                body_text=body,
+                                body_html=body.replace('\n', '<br>'),
                                 sent_at=datetime.utcnow(),
                                 status='sent'
                             )

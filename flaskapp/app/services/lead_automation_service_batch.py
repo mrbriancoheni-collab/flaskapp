@@ -101,7 +101,8 @@ def process_email_sending_batch(automation_service) -> int:
                     'type': 'lead',
                     'lead_id': lead.id,
                     'campaign_id': campaign.id,
-                    'email': lead.decision_maker_email,
+                    'sequence_id': email_sequence.id,
+                    'to_email': lead.decision_maker_email,
                     'subject': subject,
                     'body': body
                 })
@@ -130,7 +131,8 @@ def process_email_sending_batch(automation_service) -> int:
                     'lead_id': lead.id,
                     'contact_id': contact.id,
                     'campaign_id': campaign.id,
-                    'email': contact.email,
+                    'sequence_id': email_sequence.id,
+                    'to_email': contact.email,
                     'subject': subject,
                     'body': body
                 })
@@ -172,10 +174,11 @@ def process_email_sending_batch(automation_service) -> int:
                         # Record email sent to lead
                         email_record = LeadEmail(
                             lead_id=metadata['lead_id'],
-                            campaign_id=metadata['campaign_id'],
-                            sequence_step=1,
+                            sequence_id=metadata['sequence_id'],
+                            to_email=metadata['to_email'],
                             subject=metadata['subject'],
-                            body=metadata['body'],
+                            body_text=metadata['body'],
+                            body_html=metadata['body'].replace('\n', '<br>'),
                             sent_at=datetime.utcnow(),
                             status='sent'
                         )

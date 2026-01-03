@@ -298,6 +298,112 @@ class BrevoOutreachService:
             logger.error(f"Error fetching Brevo events: {e}")
             return []
 
+    def send_batch_emails(
+        self,
+        recipients: List[Dict],
+        subject_template: str,
+        body_html_template: str,
+        body_text_template: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        batch_size: int = 500
+    ) -> Dict:
+        """
+        Send personalized emails to multiple recipients in batches
+
+        This is MUCH faster than sending emails one-by-one!
+        Brevo supports up to 500 recipients per batch API call.
+
+        Args:
+            recipients: List of dicts with 'email' and 'params' (for personalization)
+                Example: [
+                    {'email': 'john@example.com', 'params': {'company_name': 'Acme Corp'}},
+                    {'email': 'jane@example.com', 'params': {'company_name': 'XYZ Inc'}}
+                ]
+            subject_template: Email subject with {{variables}}
+            body_html_template: HTML email body with {{variables}}
+            body_text_template: Optional plain text version
+            tags: Optional tags for tracking
+            batch_size: Max recipients per API call (default 500, Brevo's max)
+
+        Returns:
+            Dict with success count, failed count, and errors
+        """
+        if not self.api_key:
+            logger.error("Cannot send batch emails: BREVO_API_KEY not configured")
+            return {
+                'success': False,
+                'sent': 0,
+                'failed': len(recipients),
+                'error': 'BREVO_API_KEY not configured'
+            }
+
+        total_sent = 0
+        total_failed = 0
+        errors = []
+
+        # Process in batches
+        for i in range(0, len(recipients), batch_size):
+            batch = recipients[i:i + batch_size]
+
+            try:
+                # Build recipient list with personalization
+                to_list = []
+                for recipient in batch:
+                    to_entry = {
+                        "email": recipient['email']
+                    }
+                    if 'params' in recipient:
+                        to_entry['params'] = recipient['params']
+                    if 'name' in recipient:
+                        to_entry['name'] = recipient['name']
+                    to_list.append(to_entry)
+
+                payload = {
+                    "sender": {
+                        "name": self.from_name,
+                        "email": self.from_email
+                    },
+                    "to": to_list,
+                    "subject": subject_template,
+                    "htmlContent": body_html_template,
+                }
+
+                if body_text_template:
+                    payload["textContent"] = body_text_template
+
+                if tags:
+                    payload["tags"] = tags
+
+                response = requests.post(
+                    f'{self.base_url}/smtp/email',
+                    headers=self.headers,
+                    json=payload,
+                    timeout=60  # Longer timeout for batch
+                )
+
+                if response.status_code == 201:
+                    total_sent += len(batch)
+                    logger.info(f"Sent batch of {len(batch)} emails successfully")
+                else:
+                    total_failed += len(batch)
+                    error_msg = f"Batch send failed: {response.status_code}"
+                    errors.append(error_msg)
+                    logger.error(error_msg)
+
+            except Exception as e:
+                total_failed += len(batch)
+                error_msg = f"Batch send error: {str(e)}"
+                errors.append(error_msg)
+                logger.error(error_msg)
+
+        return {
+            'success': total_failed == 0,
+            'sent': total_sent,
+            'failed': total_failed,
+            'errors': errors,
+            'total': len(recipients)
+        }
+
     def personalize_template(
         self,
         template: str,

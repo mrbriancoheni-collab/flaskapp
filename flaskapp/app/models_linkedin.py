@@ -281,3 +281,36 @@ class LinkedInCampaign(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
+def ensure_linkedin_tables():
+    """
+    Ensure all LinkedIn tables exist in the database.
+    This function creates tables if they don't exist.
+    """
+    try:
+        from app import db
+        
+        # Create all LinkedIn tables
+        db.create_all()
+        
+        # Specifically check for LinkedIn tables
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        
+        linkedin_tables = [
+            'linkedin_scheduled_posts',
+            'linkedin_categories',
+            'linkedin_category_topics',
+            'linkedin_campaigns'
+        ]
+        
+        missing_tables = [t for t in linkedin_tables if t not in tables]
+        
+        if missing_tables:
+            raise Exception(f"Failed to create LinkedIn tables: {', '.join(missing_tables)}")
+        
+        return True
+    except Exception as e:
+        raise Exception(f"Error ensuring LinkedIn tables: {e}")

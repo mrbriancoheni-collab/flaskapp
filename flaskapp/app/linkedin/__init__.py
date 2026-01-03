@@ -196,13 +196,43 @@ Format as a JSON object with:
         return jsonify({"error": str(e)}), 500
 
 
-@linkedin_bp.route("/post-generator")
+@linkedin_bp.route("/post-generator", methods=["GET", "POST"])
 @login_required
 def post_generator():
     """LinkedIn Thought Leader Post Generator"""
+    account_id = current_account_id()
+
+    # Get query parameters to pre-fill the form
+    prefill_data = {
+        'category_id': request.args.get('category_id', ''),
+        'expertise': request.args.get('expertise', ''),
+        'industry': request.args.get('industry', 'digital marketing'),
+        'topic': request.args.get('topic', ''),
+        'tone': request.args.get('tone', 'professional'),
+        'include_hashtags': request.args.get('include_hashtags', ''),
+        'include_cta': request.args.get('include_cta', ''),
+    }
+
+    # Auto-generate if all required fields are present in URL
+    auto_generate = bool(prefill_data['expertise'] and prefill_data['topic'])
+
+    # Get available categories for the dropdown
+    categories = []
+    if account_id:
+        try:
+            categories = LinkedInCategory.query.filter_by(
+                account_id=account_id
+            ).order_by(LinkedInCategory.priority.asc()).all()
+        except Exception as e:
+            logger.error(f"Error loading categories: {e}")
+            categories = []
+
     return render_template(
         "linkedin/post_generator.html",
         ai_available=_AI_OK,
+        prefill=prefill_data,
+        auto_generate=auto_generate,
+        categories=categories,
     )
 
 
@@ -572,16 +602,35 @@ def categories():
         flash("Unable to determine account", "error")
         return redirect(url_for("linkedin_bp.index"))
 
-    # Get all categories for this account
-    categories_list = LinkedInCategory.query.filter_by(
-        account_id=account_id
-    ).order_by(LinkedInCategory.priority.asc(), LinkedInCategory.name.asc()).all()
+    try:
+        # Get all categories for this account
+        categories_list = LinkedInCategory.query.filter_by(
+            account_id=account_id
+        ).order_by(LinkedInCategory.priority.asc(), LinkedInCategory.name.asc()).all()
 
-    return render_template(
-        "linkedin/categories.html",
-        categories=categories_list,
-        ai_available=_AI_OK,
-    )
+        return render_template(
+            "linkedin/categories.html",
+            categories=categories_list,
+            ai_available=_AI_OK,
+        )
+    except Exception as e:
+        logger.error(f"Error loading LinkedIn categories: {e}", exc_info=True)
+
+        # Check if it's a table doesn't exist error
+        error_msg = str(e).lower()
+        if "doesn't exist" in error_msg or "no such table" in error_msg:
+            # Try to create the tables
+            try:
+                from app.models_linkedin import ensure_linkedin_tables
+                ensure_linkedin_tables()
+                flash("LinkedIn tables created. Please refresh the page.", "success")
+            except Exception as create_error:
+                logger.error(f"Failed to create LinkedIn tables: {create_error}", exc_info=True)
+                flash(f"Database error: LinkedIn tables don't exist. Please contact support.", "error")
+        else:
+            flash(f"Error loading categories: {str(e)}", "error")
+
+        return redirect(url_for("linkedin_bp.index"))
 
 
 @linkedin_bp.route("/categories/new", methods=["GET", "POST"])

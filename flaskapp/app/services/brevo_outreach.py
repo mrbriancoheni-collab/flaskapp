@@ -30,12 +30,12 @@ class BrevoOutreachService:
         self.from_name = os.getenv('BREVO_FROM_NAME', 'FieldSprout')
 
         if not self.api_key:
-            raise ValueError("BREVO_API_KEY environment variable must be set")
+            logger.warning("BREVO_API_KEY environment variable not set - email sending will not work")
 
         self.base_url = "https://api.brevo.com/v3"
         self.headers = {
             'accept': 'application/json',
-            'api-key': self.api_key,
+            'api-key': self.api_key or '',
             'content-type': 'application/json'
         }
 
@@ -59,6 +59,14 @@ class BrevoOutreachService:
         - error: str (if failed)
         - retry_after: int (seconds to wait if rate limited)
         """
+        # Check if API key is configured
+        if not self.api_key:
+            logger.error("Cannot send email: BREVO_API_KEY not configured")
+            return {
+                'success': False,
+                'error': 'BREVO_API_KEY environment variable not set'
+            }
+
         try:
             payload = {
                 "sender": {

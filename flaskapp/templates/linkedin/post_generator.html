@@ -82,7 +82,7 @@
             required
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="Example: 15+ years optimizing Google Ads for home services businesses, specialized in seasonal HVAC campaigns and emergency plumbing PPC"
-          ></textarea>
+          >{{ prefill.expertise if prefill else '' }}</textarea>
           <p class="text-xs text-gray-500 mt-1">
             What makes you different? What specific knowledge or experience do you bring?
           </p>
@@ -123,6 +123,7 @@
             required
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="Example: Why most HVAC companies waste 40% of their ad spend in summer"
+            value="{{ prefill.topic if prefill else '' }}"
           />
           <p class="text-xs text-gray-500 mt-1">
             What specific insight, lesson, or opinion do you want to share?
@@ -646,5 +647,17 @@ document.getElementById('saveScheduleBtn')?.addEventListener('click', async func
     btn.innerHTML = originalText;
   }
 });
+
+// Auto-generate post if URL parameters are present
+{% if auto_generate %}
+window.addEventListener('DOMContentLoaded', function() {
+  // Wait a moment for the page to fully load
+  setTimeout(() => {
+    console.log('Auto-generating post from URL parameters...');
+    generatePost();
+  }, 500);
+});
+{% endif %}
+
 </script>
 {% endblock %}

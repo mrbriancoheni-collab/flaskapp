@@ -580,6 +580,17 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
 
                 # If no contacts, fall back to legacy decision_maker_email
                 if not pending_contacts and lead.email_status == 'pending' and lead.decision_maker_email:
+                    # DUPLICATE PREVENTION: Check if we've already sent this sequence to this email
+                    already_sent = LeadEmail.query.filter_by(
+                        lead_id=lead.id,
+                        sequence_id=email_sequence.id,
+                        to_email=lead.decision_maker_email
+                    ).first()
+
+                    if already_sent:
+                        logger.debug(f"Skipping {lead.decision_maker_email} - already sent sequence step {email_sequence.step_number}")
+                        continue
+
                     # Send using legacy method (use the sequence we ensured exists)
                     try:
 
@@ -639,6 +650,17 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                 for contact in pending_contacts:
                     if not self._can_send_email_today():
                         break
+
+                    # DUPLICATE PREVENTION: Check if we've already sent this sequence to this contact
+                    already_sent = LeadContactEmail.query.filter_by(
+                        contact_id=contact.id,
+                        sequence_step=email_sequence.step_number,
+                        to_email=contact.email
+                    ).first()
+
+                    if already_sent:
+                        logger.debug(f"Skipping {contact.email} ({contact.name}) - already sent sequence step {email_sequence.step_number}")
+                        continue
 
                     try:
                         # Prepare email content with contact variables (use the sequence we ensured exists)

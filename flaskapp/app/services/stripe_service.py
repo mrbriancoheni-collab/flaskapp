@@ -840,6 +840,110 @@ def _sync_subscription_status_to_account(user_id: str, stripe_status: str):
         )
 
 
+def handle_checkout_session_completed(event_data: Dict[str, Any]):
+    """
+    Handle checkout.session.completed webhook event.
+
+    Sends notification email when customer completes payment setup.
+    """
+    session = event_data["object"]
+
+    customer_email = session.get("customer_email")
+    customer_name = session.get("customer_details", {}).get("name", "Unknown")
+    subscription_id = session.get("subscription")
+
+    # Get user account details
+    customer = StripeCustomer.query.filter_by(
+        stripe_customer_id=session.get("customer")
+    ).first()
+
+    if customer:
+        user = User.query.get(customer.user_id)
+        account = Account.query.get(customer.account_id)
+
+        # Send notification email to Brian
+        try:
+            from app.services.email_service import send_email
+
+            subject = f"🎉 New FieldSprout Customer: {customer_name}"
+
+            body_html = f"""
+            <h2>New Stripe Payment Setup Completed</h2>
+
+            <p>A customer has successfully set up payment on FieldSprout!</p>
+
+            <h3>Customer Details:</h3>
+            <ul>
+                <li><strong>Name:</strong> {customer_name}</li>
+                <li><strong>Email:</strong> {customer_email or 'N/A'}</li>
+                <li><strong>Stripe Customer ID:</strong> {session.get("customer")}</li>
+                <li><strong>Subscription ID:</strong> {subscription_id or 'N/A'}</li>
+            </ul>
+
+            <h3>Account Information:</h3>
+            <ul>
+                <li><strong>User ID:</strong> {user.id if user else 'N/A'}</li>
+                <li><strong>User Email:</strong> {user.email if user else 'N/A'}</li>
+                <li><strong>Account ID:</strong> {account.id if account else 'N/A'}</li>
+                <li><strong>Account Name:</strong> {account.company_name if account else 'N/A'}</li>
+            </ul>
+
+            <h3>Session Details:</h3>
+            <ul>
+                <li><strong>Session ID:</strong> {session.get("id")}</li>
+                <li><strong>Payment Status:</strong> {session.get("payment_status")}</li>
+                <li><strong>Mode:</strong> {session.get("mode")}</li>
+            </ul>
+
+            <p><em>This is an automated notification from FieldSprout</em></p>
+            """
+
+            body_text = f"""
+            New Stripe Payment Setup Completed
+
+            Customer Details:
+            - Name: {customer_name}
+            - Email: {customer_email or 'N/A'}
+            - Stripe Customer ID: {session.get("customer")}
+            - Subscription ID: {subscription_id or 'N/A'}
+
+            Account Information:
+            - User ID: {user.id if user else 'N/A'}
+            - User Email: {user.email if user else 'N/A'}
+            - Account ID: {account.id if account else 'N/A'}
+            - Account Name: {account.company_name if account else 'N/A'}
+
+            Session Details:
+            - Session ID: {session.get("id")}
+            - Payment Status: {session.get("payment_status")}
+            - Mode: {session.get("mode")}
+
+            This is an automated notification from FieldSprout
+            """
+
+            send_email(
+                to_email="mrbriancoheni@gmail.com",
+                subject=subject,
+                body_html=body_html,
+                body_text=body_text
+            )
+
+            current_app.logger.info(
+                f"Sent payment setup notification to Brian for customer {customer_name}",
+                extra={
+                    "metric": "stripe.notification.sent",
+                    "customer_id": session.get("customer"),
+                    "session_id": session.get("id")
+                }
+            )
+
+        except Exception as e:
+            current_app.logger.error(f"Failed to send payment notification email: {e}")
+            # Don't fail the webhook if email fails
+    else:
+        current_app.logger.warning(f"No StripeCustomer found for session {session.get('id')}")
+
+
 # Event handler mapping
 WEBHOOK_HANDLERS = {
     "customer.subscription.created": handle_customer_subscription_created,
@@ -847,6 +951,7 @@ WEBHOOK_HANDLERS = {
     "customer.subscription.deleted": handle_customer_subscription_deleted,
     "invoice.paid": handle_invoice_paid,
     "invoice.payment_failed": handle_invoice_payment_failed,
+    "checkout.session.completed": handle_checkout_session_completed,
 }
 
 

@@ -86,6 +86,17 @@ def process_email_sending_batch(automation_service) -> int:
 
             # If no contacts, fall back to legacy decision_maker_email
             if not pending_contacts and lead.email_status == 'pending' and lead.decision_maker_email:
+                # DUPLICATE PREVENTION: Check if we've already sent this sequence to this email
+                already_sent = LeadEmail.query.filter_by(
+                    lead_id=lead.id,
+                    sequence_id=email_sequence.id,
+                    to_email=lead.decision_maker_email
+                ).first()
+
+                if already_sent:
+                    logger.debug(f"Batch: Skipping {lead.decision_maker_email} - already sent sequence step {email_sequence.step_number}")
+                    continue
+
                 subject = automation_service._replace_variables(email_sequence.subject, lead, campaign)
                 body = automation_service._replace_variables(email_sequence.body_text, lead, campaign)
 
@@ -113,6 +124,17 @@ def process_email_sending_batch(automation_service) -> int:
                 remaining = AUTOMATION_CONFIG["daily_email_limit"] - automation_service.state["daily_stats"]["emails"]
                 if len(emails_to_send) >= remaining:
                     break
+
+                # DUPLICATE PREVENTION: Check if we've already sent this sequence to this contact
+                already_sent = LeadContactEmail.query.filter_by(
+                    contact_id=contact.id,
+                    sequence_step=email_sequence.step_number,
+                    to_email=contact.email
+                ).first()
+
+                if already_sent:
+                    logger.debug(f"Batch: Skipping {contact.email} ({contact.name}) - already sent sequence step {email_sequence.step_number}")
+                    continue
 
                 subject = automation_service._replace_contact_variables(email_sequence.subject, lead, contact, campaign)
                 body = automation_service._replace_contact_variables(email_sequence.body_text, lead, contact, campaign)

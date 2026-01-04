@@ -418,8 +418,99 @@ def _gbp_access_token_for(aid: int) -> Optional[str]:
     return _refresh_token(aid)
 
 
+def _gbp_list_all_accounts_and_locations(access_token: str) -> List[Dict[str, Any]]:
+    """
+    List ALL accounts and locations the user has access to.
+
+    Returns list of dicts with structure:
+    [
+        {
+            'account_name': 'accounts/123',
+            'account_display_name': 'My Business Account',
+            'locations': [
+                {
+                    'location_name': 'locations/456',
+                    'title': 'Main Street Location',
+                    'address': '123 Main St, City, ST'
+                },
+                ...
+            ]
+        },
+        ...
+    ]
+    """
+    result = []
+    try:
+        # Get ALL accounts
+        acc = requests.get(
+            "https://mybusinessaccountmanagement.googleapis.com/v1/accounts",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=(3, 20),
+        )
+        acc.raise_for_status()
+        accounts = acc.json().get("accounts") or []
+
+        # For each account, get all locations
+        for account in accounts:
+            account_name = account.get("name")  # 'accounts/XXXX'
+            account_display_name = account.get("accountName", account_name)
+
+            try:
+                # List ALL locations for this account (not just first one)
+                resp = requests.get(
+                    f"https://mybusinessbusinessinformation.googleapis.com/v1/{account_name}/locations?pageSize=100",
+                    headers={"Authorization": f"Bearer {access_token}"},
+                    timeout=(3, 30),
+                )
+                resp.raise_for_status()
+                locs = resp.json().get("locations") or []
+
+                locations = []
+                for loc in locs:
+                    location_name = loc.get("name")  # 'locations/XXXXXXXX'
+                    title = loc.get("title", "Untitled Location")
+
+                    # Get address for display
+                    address_obj = loc.get("address", {})
+                    address_lines = address_obj.get("addressLines", [])
+                    locality = address_obj.get("locality", "")
+                    admin_area = address_obj.get("administrativeArea", "")
+
+                    if address_lines:
+                        address = f"{', '.join(address_lines)}, {locality}, {admin_area}"
+                    else:
+                        address = f"{locality}, {admin_area}" if locality else "No address"
+
+                    locations.append({
+                        'location_name': location_name,
+                        'title': title,
+                        'address': address.strip(', ')
+                    })
+
+                result.append({
+                    'account_name': account_name,
+                    'account_display_name': account_display_name,
+                    'locations': locations
+                })
+
+            except Exception as e:
+                current_app.logger.warning(f"Failed to fetch locations for account {account_name}: {e}")
+                # Still add the account even if locations fail
+                result.append({
+                    'account_name': account_name,
+                    'account_display_name': account_display_name,
+                    'locations': []
+                })
+
+        return result
+
+    except Exception:
+        current_app.logger.exception("GBP list all accounts and locations failed")
+        return []
+
+
 def _gbp_list_first_location_name(access_token: str) -> Optional[str]:
-    """Get first location resource name, e.g. 'locations/1234567890'."""
+    """Get first location resource name, e.g. 'locations/1234567890' (LEGACY - use _gbp_list_all_accounts_and_locations instead)."""
     try:
         # Find an account
         acc = requests.get(
@@ -616,6 +707,18 @@ def index():
     connected = _is_connected(aid)
     profile = _get_session_profile() if connected else None
 
+    # Fetch ALL accounts and locations if connected
+    all_accounts = []
+    if connected:
+        try:
+            at = _get_access_token(aid)
+            if at:
+                all_accounts = _gbp_list_all_accounts_and_locations(at)
+                current_app.logger.info(f"Loaded {len(all_accounts)} GMB accounts with locations")
+        except Exception as e:
+            current_app.logger.error(f"Failed to fetch GMB accounts/locations: {e}")
+            flash("Could not load your Google Business accounts. Please try reconnecting.", "warning")
+
     return render_template(
         "gmb/index.html",
         connected=connected,
@@ -623,6 +726,7 @@ def index():
         sample_profile=_SAMPLE_PROFILE,
         suggestions=_get_suggestions(),
         ai_connected=_ai_is_connected(),
+        all_accounts=all_accounts,
     )
 
 

@@ -71,6 +71,66 @@
     </div>
   {% endif %}
 
+  {# Account & Location Selector - shown when connected and has accounts #}
+  {% if connected and all_accounts and all_accounts|length > 0 %}
+    <div class="rounded-lg border bg-white">
+      <div class="p-6 border-b">
+        <h2 class="text-lg font-medium">Your Google Business Accounts & Locations</h2>
+        <p class="text-sm text-gray-500 mt-1">Select an account and location to manage</p>
+      </div>
+
+      <div class="p-6 space-y-4">
+        {% for account in all_accounts %}
+          <div class="rounded-md border border-gray-200 overflow-hidden">
+            {# Account header #}
+            <div class="bg-gray-50 px-4 py-3 border-b">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-building text-gray-600"></i>
+                <span class="font-medium text-gray-900">{{ account.account_display_name }}</span>
+                <span class="text-xs text-gray-500">({{ account.locations|length }} location{{ 's' if account.locations|length != 1 else '' }})</span>
+              </div>
+            </div>
+
+            {# Locations list #}
+            <div class="divide-y">
+              {% for location in account.locations %}
+                <div class="px-4 py-3 hover:bg-gray-50 flex items-start gap-3">
+                  <i class="fa-solid fa-location-dot text-indigo-600 mt-1"></i>
+                  <div class="flex-1">
+                    <div class="font-medium text-gray-900">{{ location.title }}</div>
+                    {% if location.address %}
+                      <div class="text-sm text-gray-500 mt-0.5">{{ location.address }}</div>
+                    {% endif %}
+                    <div class="text-xs text-gray-400 mt-1 font-mono">{{ location.location_name }}</div>
+                  </div>
+                  <a href="{{ url_for('gmb_bp.index', location=location.location_name) }}"
+                     class="rounded-md border border-indigo-600 bg-white px-3 py-1.5 text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-1">
+                    <i class="fa-solid fa-pen-to-square text-xs"></i>
+                    Edit
+                  </a>
+                </div>
+              {% endfor %}
+
+              {% if account.locations|length == 0 %}
+                <div class="px-4 py-3 text-sm text-gray-500 italic">
+                  No locations found for this account
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      {# Summary footer #}
+      <div class="px-6 py-3 bg-gray-50 border-t text-sm text-gray-600">
+        <i class="fa-solid fa-info-circle mr-1"></i>
+        Showing {{ all_accounts|length }} account{{ 's' if all_accounts|length != 1 else '' }} with
+        {% set total_locations = all_accounts|sum(attribute='locations')|length %}
+        {{ all_accounts|map(attribute='locations')|map('length')|sum }} total location{{ 's' if all_accounts|map(attribute='locations')|map('length')|sum != 1 else '' }}
+      </div>
+    </div>
+  {% endif %}
+
   {# Profile section #}
   <div class="rounded-lg border bg-white">
     <div class="flex items-center justify-between p-6 border-b">

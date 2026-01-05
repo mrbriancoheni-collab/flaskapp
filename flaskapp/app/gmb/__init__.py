@@ -710,13 +710,20 @@ def index():
     # Fetch ALL accounts and locations if connected
     all_accounts = []
     if connected:
+        current_app.logger.info(f"GMB connected for account {aid}, fetching accounts and locations...")
         try:
             at = _get_access_token(aid)
+            current_app.logger.info(f"Access token retrieved: {'Yes' if at else 'No'}")
             if at:
                 all_accounts = _gbp_list_all_accounts_and_locations(at)
-                current_app.logger.info(f"Loaded {len(all_accounts)} GMB accounts with locations")
+                current_app.logger.info(f"Successfully loaded {len(all_accounts)} GMB accounts with locations")
+                for i, acc in enumerate(all_accounts):
+                    current_app.logger.info(f"  Account {i+1}: {acc['account_display_name']} ({len(acc['locations'])} locations)")
+            else:
+                current_app.logger.warning("No access token available - user may need to reconnect")
+                flash("Could not retrieve access token. Please reconnect your Google Business account.", "warning")
         except Exception as e:
-            current_app.logger.error(f"Failed to fetch GMB accounts/locations: {e}")
+            current_app.logger.exception(f"Failed to fetch GMB accounts/locations")
             flash("Could not load your Google Business accounts. Please try reconnecting.", "warning")
 
     return render_template(

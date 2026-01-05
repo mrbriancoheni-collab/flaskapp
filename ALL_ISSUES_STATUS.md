@@ -34,13 +34,22 @@ python3 cleanup_old_campaigns.py
 ### 4. LinkedIn Post Generator ✓
 **Files Modified:**
 - `flaskapp/app/linkedin/__init__.py` - Added form pre-fill and auto-generation
-- `flaskapp/templates/linkedin/post_generator.html` - Added auto-generation script
+- `flaskapp/templates/linkedin/post_generator.html` - Fixed form pre-filling for all fields
+- Installed `anthropic==0.75.0` library
+- Created `LINKEDIN_AI_SETUP.md` documentation
 
 **Fixes:**
-- Form now pre-fills from URL parameters
+- Form now pre-fills ALL fields from URL parameters (expertise, topic, industry, tone, hashtags, CTA)
+- Fixed dropdown selections not being pre-selected from URL
+- Fixed checkbox states not reflecting URL parameters
 - Auto-generates post when all required fields are in URL
 - Posts display correctly after form submission
 - Added categories dropdown support
+
+**Setup Required:**
+- Add `ANTHROPIC_API_KEY` to `/home/fieljtgr/.env` on production server
+- Restart Flask application after adding API key
+- See `LINKEDIN_AI_SETUP.md` for complete setup instructions
 
 ### 5. Batch Email Sending (100x Performance Improvement) ✓
 **Files Created/Modified:**
@@ -142,26 +151,32 @@ All requested issues have been completed! 🎉
 ### Files Modified
 - 8 Python files edited
 - 3 HTML templates updated
-- 6 documentation files created
+- 7 documentation files created
 - 1 cleanup script added
+- 1 Python library installed (anthropic)
 
 ### Lines of Code
-- ~700 lines added
-- ~80 lines modified
-- ~250 lines of documentation
+- ~720 lines added
+- ~100 lines modified
+- ~360 lines of documentation
 
 ---
 
 ## 🚀 **DEPLOYMENT CHECKLIST**
 
 - [ ] Pull latest code from `claude/limit-scraping-campaigns-0JNOv` branch
+- [ ] Install anthropic library: `pip install anthropic`
+- [ ] Add `ANTHROPIC_API_KEY` to `/home/fieljtgr/.env` (see LINKEDIN_AI_SETUP.md)
+- [ ] Restart Flask application
 - [ ] Run database migrations if needed
 - [ ] Test LinkedIn categories page
 - [ ] Test LinkedIn post generator with URL parameters
+- [ ] Verify AI post generation is working (green banner)
 - [ ] Run `cleanup_old_campaigns.py` to remove old campaigns
 - [ ] Enable batch email sending in production
 - [ ] Test Google Ads page buttons in browser
-- [ ] Review GMB API integration requirements
+- [ ] Test GMB account/location listing
+- [ ] Configure Stripe webhook for payment notifications
 - [ ] Monitor error logs after deployment
 
 ---
@@ -193,6 +208,8 @@ ISSUES_TO_FIX.md
 FIX_EMAIL_ISSUES.md
 DEPLOY_TO_PRODUCTION.md
 RUN_IN_PRODUCTION.md
+DUPLICATE_PREVENTION_AND_NOTIFICATIONS.md
+LINKEDIN_AI_SETUP.md
 ALL_ISSUES_STATUS.md (this file)
 ```
 

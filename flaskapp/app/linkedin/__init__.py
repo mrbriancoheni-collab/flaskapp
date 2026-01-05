@@ -16,7 +16,7 @@ linkedin_bp = Blueprint("linkedin_bp", __name__, url_prefix="/account/linkedin")
 
 # Check if AI is available
 try:
-    import anthropic
+    import openai
     _AI_OK = True
 except Exception:
     _AI_OK = False
@@ -127,18 +127,18 @@ def ads_optimize():
     """Generate AI optimization suggestions for LinkedIn Ads"""
     if not _AI_OK:
         return jsonify({
-            "error": "AI not configured. Please add ANTHROPIC_API_KEY to environment."
+            "error": "AI not configured. Please add OPENAI_API_KEY to environment."
         }), 400
 
     try:
         # Get the current ads data (in real implementation, fetch from LinkedIn API)
         # For now, we'll use mock data
 
-        api_key = os.getenv("ANTHROPIC_API_KEY")
+        api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
-            return jsonify({"error": "Missing ANTHROPIC_API_KEY"}), 400
+            return jsonify({"error": "Missing OPENAI_API_KEY"}), 400
 
-        client = anthropic.Anthropic(api_key=api_key)
+        client = openai.OpenAI(api_key=api_key)
 
         prompt = """You are a LinkedIn Ads expert helping home services businesses optimize their campaigns.
 
@@ -164,14 +164,14 @@ Format as a JSON object with:
 - recommendations: Array of objects with {title, description, priority (high/medium/low)}
 """
 
-        message = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+        response = client.chat.completions.create(
+            model="gpt-4-turbo-preview",
             max_tokens=1500,
             messages=[{"role": "user", "content": prompt}]
         )
 
         # Extract the response text
-        response_text = message.content[0].text
+        response_text = response.choices[0].message.content
 
         # Try to parse as JSON, otherwise wrap it
         import json
@@ -242,7 +242,7 @@ def generate_post():
     """Generate thought leader post using AI with category/POV support"""
     if not _AI_OK:
         return jsonify({
-            "error": "AI not configured. Please add ANTHROPIC_API_KEY to environment."
+            "error": "AI not configured. Please add OPENAI_API_KEY to environment."
         }), 400
 
     account_id = current_account_id()
@@ -279,11 +279,11 @@ def generate_post():
         if not expertise or not topic:
             return jsonify({"error": "Expertise and topic are required"}), 400
 
-        api_key = os.getenv("ANTHROPIC_API_KEY")
+        api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
-            return jsonify({"error": "Missing ANTHROPIC_API_KEY"}), 400
+            return jsonify({"error": "Missing OPENAI_API_KEY"}), 400
 
-        client = anthropic.Anthropic(api_key=api_key)
+        client = openai.OpenAI(api_key=api_key)
 
         # Get the LinkedIn prompt template from database (admin-editable)
         linkedin_prompt_config = get_prompt_for_service('linkedin_thought_leadership')
@@ -333,11 +333,11 @@ Write a compelling LinkedIn post that:
 
 Generate the post now:"""
 
-            model = "claude-3-5-sonnet-20241022"
+            model = "gpt-4-turbo-preview"
             temperature = 0.7
             max_tokens = 1000
 
-        message = client.messages.create(
+        response = client.chat.completions.create(
             model=model,
             max_tokens=max_tokens,
             temperature=temperature,
@@ -345,7 +345,7 @@ Generate the post now:"""
         )
 
         # Extract the response text
-        post_text = message.content[0].text.strip()
+        post_text = response.choices[0].message.content.strip()
 
         return jsonify({
             "post": post_text,

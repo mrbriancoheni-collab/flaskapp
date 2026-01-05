@@ -16,6 +16,7 @@ from app.models_leads import LeadCampaign, Lead, EmailSequence, LeadEmail, LeadC
 from app.services.serpapi_scraper import SerpAPIScraperService
 from app.services.lead_enrichment import LeadEnrichmentService
 from app.services.brevo_outreach import BrevoOutreachService
+from app.configs.lead_automation_config import HOME_SERVICE_CATEGORIES
 
 logger = logging.getLogger(__name__)
 
@@ -309,26 +310,22 @@ def scheduler_status():
 @lead_campaigns_bp.route('/cleanup/delete-old-campaigns', methods=['POST'])
 @require_admin
 def delete_old_campaigns():
-    """Delete old individual campaigns (Auto: {keyword} - {city} pattern)"""
+    """Delete old individual campaigns - keep only the core 20 campaigns"""
     logger.info("Delete endpoint called - starting deletion process")
 
     try:
-        # Find campaigns with old naming pattern
-        # Old: "Auto: {keyword} - {city}" (e.g., "Auto: plumber - New York, NY")
-        # New: "Auto: Home Services - {city}" (keep these)
+        # Get the core 20 campaign names (e.g., "Auto: Plumbing", "Auto: HVAC", etc.)
+        core_campaign_names = [f"Auto: {business_type}" for business_type in HOME_SERVICE_CATEGORIES.keys()]
 
-        # Get all campaigns with Auto: prefix
-        all_auto_campaigns = LeadCampaign.query.filter(
-            LeadCampaign.name.like('Auto:%')
-        ).all()
+        logger.info(f"Core campaigns to keep: {core_campaign_names}")
 
-        logger.info(f"Found {len(all_auto_campaigns)} campaigns with Auto: prefix")
+        # Get all campaigns
+        all_campaigns = LeadCampaign.query.all()
 
-        # Filter out the new consolidated ones
-        old_campaigns = [
-            c for c in all_auto_campaigns
-            if not c.name.startswith('Auto: Home Services -')
-        ]
+        logger.info(f"Found {len(all_campaigns)} total campaigns in database")
+
+        # Filter out the core campaigns - delete everything else
+        old_campaigns = [c for c in all_campaigns if c.name not in core_campaign_names]
 
         logger.info(f"Identified {len(old_campaigns)} old campaigns to delete")
 

@@ -98,16 +98,16 @@
             name="industry"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="home services">Home Services</option>
-            <option value="digital marketing">Digital Marketing</option>
-            <option value="SaaS">SaaS</option>
-            <option value="construction">Construction</option>
-            <option value="HVAC">HVAC</option>
-            <option value="plumbing">Plumbing</option>
-            <option value="electrical">Electrical</option>
-            <option value="roofing">Roofing</option>
-            <option value="landscaping">Landscaping</option>
-            <option value="general">General Business</option>
+            <option value="home services" {{ 'selected' if prefill and prefill.industry == 'home services' else '' }}>Home Services</option>
+            <option value="digital marketing" {{ 'selected' if prefill and prefill.industry == 'digital marketing' else '' }}>Digital Marketing</option>
+            <option value="SaaS" {{ 'selected' if prefill and prefill.industry == 'SaaS' else '' }}>SaaS</option>
+            <option value="construction" {{ 'selected' if prefill and prefill.industry == 'construction' else '' }}>Construction</option>
+            <option value="HVAC" {{ 'selected' if prefill and prefill.industry == 'HVAC' else '' }}>HVAC</option>
+            <option value="plumbing" {{ 'selected' if prefill and prefill.industry == 'plumbing' else '' }}>Plumbing</option>
+            <option value="electrical" {{ 'selected' if prefill and prefill.industry == 'electrical' else '' }}>Electrical</option>
+            <option value="roofing" {{ 'selected' if prefill and prefill.industry == 'roofing' else '' }}>Roofing</option>
+            <option value="landscaping" {{ 'selected' if prefill and prefill.industry == 'landscaping' else '' }}>Landscaping</option>
+            <option value="general" {{ 'selected' if prefill and prefill.industry == 'general' else '' }}>General Business</option>
           </select>
         </div>
 
@@ -140,11 +140,11 @@
             name="tone"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="professional">Professional & Authoritative</option>
-            <option value="conversational">Conversational & Friendly</option>
-            <option value="storytelling">Storytelling & Personal</option>
-            <option value="educational">Educational & Helpful</option>
-            <option value="provocative">Provocative & Debate-Starting</option>
+            <option value="professional" {{ 'selected' if prefill and prefill.tone == 'professional' else '' }}>Professional & Authoritative</option>
+            <option value="conversational" {{ 'selected' if prefill and prefill.tone == 'conversational' else '' }}>Conversational & Friendly</option>
+            <option value="storytelling" {{ 'selected' if prefill and prefill.tone == 'storytelling' else '' }}>Storytelling & Personal</option>
+            <option value="educational" {{ 'selected' if prefill and prefill.tone == 'educational' else '' }}>Educational & Helpful</option>
+            <option value="provocative" {{ 'selected' if prefill and prefill.tone == 'provocative' else '' }}>Provocative & Debate-Starting</option>
           </select>
         </div>
 
@@ -154,7 +154,7 @@
             type="checkbox"
             id="include_hashtags"
             name="include_hashtags"
-            checked
+            {{ 'checked' if not prefill or prefill.include_hashtags == 'on' or prefill.include_hashtags == '' else '' }}
             class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
           />
           <label for="include_hashtags" class="text-sm font-medium text-gray-700">
@@ -168,7 +168,7 @@
             type="checkbox"
             id="include_cta"
             name="include_cta"
-            checked
+            {{ 'checked' if not prefill or prefill.include_cta == 'on' or prefill.include_cta == '' else '' }}
             class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
           />
           <label for="include_cta" class="text-sm font-medium text-gray-700">

@@ -311,75 +311,108 @@ def scheduler_status():
 @require_admin
 def delete_old_campaigns():
     """Delete old individual campaigns - keep only the core 20 campaigns"""
-    logger.info("Delete endpoint called - starting deletion process")
+    logger.info("=" * 80)
+    logger.info("DELETE OLD CAMPAIGNS - Starting deletion process")
+    logger.info("=" * 80)
 
     try:
         # Get the core 20 campaign names (e.g., "Auto: Plumbing", "Auto: HVAC", etc.)
         core_campaign_names = [f"Auto: {business_type}" for business_type in HOME_SERVICE_CATEGORIES.keys()]
 
-        logger.info(f"Core campaigns to keep: {core_campaign_names}")
+        logger.info(f"Core campaigns to keep ({len(core_campaign_names)}):")
+        for i, name in enumerate(core_campaign_names, 1):
+            logger.info(f"  {i:2d}. {name}")
 
         # Get all campaigns
         all_campaigns = LeadCampaign.query.all()
 
-        logger.info(f"Found {len(all_campaigns)} total campaigns in database")
+        logger.info(f"\nFound {len(all_campaigns)} total campaigns in database:")
+        for i, campaign in enumerate(all_campaigns[:10], 1):  # Show first 10
+            logger.info(f"  {i:2d}. ID={campaign.id}, Name='{campaign.name}'")
+        if len(all_campaigns) > 10:
+            logger.info(f"  ... and {len(all_campaigns) - 10} more campaigns")
 
         # Filter out the core campaigns - delete everything else
         old_campaigns = [c for c in all_campaigns if c.name not in core_campaign_names]
 
-        logger.info(f"Identified {len(old_campaigns)} old campaigns to delete")
+        logger.info(f"\nIdentified {len(old_campaigns)} old campaigns to DELETE:")
+        for i, campaign in enumerate(old_campaigns[:20], 1):  # Show first 20
+            logger.info(f"  {i:2d}. ID={campaign.id}, Name='{campaign.name}'")
+        if len(old_campaigns) > 20:
+            logger.info(f"  ... and {len(old_campaigns) - 20} more campaigns to delete")
+
+        # Check which core campaigns exist
+        existing_core = [c for c in all_campaigns if c.name in core_campaign_names]
+        logger.info(f"\nExisting CORE campaigns to KEEP ({len(existing_core)}):")
+        for i, campaign in enumerate(existing_core, 1):
+            logger.info(f"  {i:2d}. ID={campaign.id}, Name='{campaign.name}'")
 
         if len(old_campaigns) == 0:
+            logger.info("\n✓ No old campaigns to delete - database is clean!")
             return jsonify({
                 'success': True,
                 'deleted_count': 0,
-                'message': 'No old campaigns to delete'
+                'message': 'No old campaigns to delete. Database is clean!'
             })
+
+        logger.info(f"\nStarting deletion of {len(old_campaigns)} campaigns...")
 
         deleted_count = 0
 
         # Delete associated data first (due to foreign key constraints)
         for idx, campaign in enumerate(old_campaigns):
             try:
+                campaign_id = campaign.id
+                campaign_name = campaign.name
+
                 # Delete associated leads and their emails
-                leads = Lead.query.filter_by(campaign_id=campaign.id).all()
+                leads = Lead.query.filter_by(campaign_id=campaign_id).all()
+                lead_count = len(leads)
+
                 for lead in leads:
                     LeadEmail.query.filter_by(lead_id=lead.id).delete()
-                Lead.query.filter_by(campaign_id=campaign.id).delete()
+                Lead.query.filter_by(campaign_id=campaign_id).delete()
 
                 # Delete associated contact emails
-                LeadContactEmail.query.filter_by(campaign_id=campaign.id).delete()
+                contact_emails_count = LeadContactEmail.query.filter_by(campaign_id=campaign_id).delete()
 
                 # Delete email sequences
-                EmailSequence.query.filter_by(campaign_id=campaign.id).delete()
+                sequences_count = EmailSequence.query.filter_by(campaign_id=campaign_id).delete()
 
                 # Delete campaign
                 db.session.delete(campaign)
                 deleted_count += 1
 
+                logger.info(f"  [{idx+1}/{len(old_campaigns)}] Deleted: ID={campaign_id}, Name='{campaign_name}' "
+                          f"({lead_count} leads, {contact_emails_count} contact emails, {sequences_count} sequences)")
+
                 # Commit every 100 campaigns to avoid long transactions
                 if (idx + 1) % 100 == 0:
                     db.session.commit()
-                    logger.info(f"Deleted {idx + 1}/{len(old_campaigns)} campaigns")
+                    logger.info(f"  ✓ COMMITTED: {idx + 1}/{len(old_campaigns)} campaigns deleted so far")
 
             except Exception as e:
-                logger.error(f"Error deleting campaign {campaign.id}: {str(e)}")
+                logger.error(f"  ✗ ERROR deleting campaign ID={campaign.id} Name='{campaign.name}': {str(e)}")
+                db.session.rollback()
                 continue
 
         # Final commit
         db.session.commit()
 
-        logger.info(f"Successfully deleted {deleted_count} old campaigns and associated data")
+        logger.info("=" * 80)
+        logger.info(f"✓ SUCCESS: Deleted {deleted_count} old campaigns and associated data")
+        logger.info("=" * 80)
 
         return jsonify({
             'success': True,
             'deleted_count': deleted_count,
-            'message': f'Successfully deleted {deleted_count} old campaigns'
+            'message': f'Successfully deleted {deleted_count} old campaigns. Keeping {len(existing_core)} core campaigns.'
         })
 
     except Exception as e:
         db.session.rollback()
-        logger.exception("Error deleting old campaigns")
+        logger.exception("✗ CRITICAL ERROR during campaign deletion:")
+        logger.error("=" * 80)
         return jsonify({
             'success': False,
             'error': str(e)

@@ -707,6 +707,9 @@ def index():
     connected = _is_connected(aid)
     profile = _get_session_profile() if connected else None
 
+    # Get selected location from query parameter
+    selected_location = request.args.get('selected_location', '')
+
     # Fetch ALL accounts and locations if connected
     all_accounts = []
     if connected:
@@ -734,6 +737,7 @@ def index():
         suggestions=_get_suggestions(),
         ai_connected=_ai_is_connected(),
         all_accounts=all_accounts,
+        selected_location=selected_location,
     )
 
 

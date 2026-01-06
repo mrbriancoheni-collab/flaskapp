@@ -76,57 +76,121 @@
     <div class="rounded-lg border bg-white">
       <div class="p-6 border-b">
         <h2 class="text-lg font-medium">Your Google Business Accounts & Locations</h2>
-        <p class="text-sm text-gray-500 mt-1">Select an account and location to manage</p>
+        <p class="text-sm text-gray-500 mt-1">Select a location to manage</p>
       </div>
 
-      <div class="p-6 space-y-4">
-        {% for account in all_accounts %}
-          <div class="rounded-md border border-gray-200 overflow-hidden">
-            {# Account header #}
-            <div class="bg-gray-50 px-4 py-3 border-b">
-              <div class="flex items-center gap-2">
-                <i class="fa-solid fa-building text-gray-600"></i>
-                <span class="font-medium text-gray-900">{{ account.account_display_name }}</span>
-                <span class="text-xs text-gray-500">({{ account.locations|length }} location{{ 's' if account.locations|length != 1 else '' }})</span>
+      <div class="p-6">
+        <form method="get" action="{{ url_for('gmb_bp.index') }}" class="space-y-4">
+          <div>
+            <label for="location_selector" class="block text-sm font-medium text-gray-700 mb-2">
+              <i class="fa-solid fa-location-dot mr-2 text-indigo-600"></i>Select Location
+            </label>
+            <select
+              id="location_selector"
+              name="selected_location"
+              class="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base"
+              onchange="this.form.submit()"
+            >
+              <option value="">-- Select a Location --</option>
+              {% for account in all_accounts %}
+                {% if account.locations|length > 0 %}
+                  <optgroup label="{{ account.account_display_name }}">
+                    {% for location in account.locations %}
+                      <option value="{{ location.location_name }}"
+                              {% if selected_location == location.location_name %}selected{% endif %}>
+                        {{ location.title }}{% if location.address %} - {{ location.address }}{% endif %}
+                      </option>
+                    {% endfor %}
+                  </optgroup>
+                {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+
+          {% if selected_location %}
+          <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-check-circle text-green-600"></i>
+              <div>
+                <div class="text-sm font-medium text-green-900">Location Selected</div>
+                <div class="text-xs text-green-700 mt-1">
+                  Currently managing:
+                  {% for account in all_accounts %}
+                    {% for location in account.locations %}
+                      {% if location.location_name == selected_location %}
+                        <strong>{{ location.title }}</strong>
+                        {% if location.address %}<br><span class="text-green-600">{{ location.address }}</span>{% endif %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endfor %}
+                </div>
               </div>
             </div>
-
-            {# Locations list #}
-            <div class="divide-y">
-              {% for location in account.locations %}
-                <div class="px-4 py-3 hover:bg-gray-50 flex items-start gap-3">
-                  <i class="fa-solid fa-location-dot text-indigo-600 mt-1"></i>
-                  <div class="flex-1">
-                    <div class="font-medium text-gray-900">{{ location.title }}</div>
-                    {% if location.address %}
-                      <div class="text-sm text-gray-500 mt-0.5">{{ location.address }}</div>
-                    {% endif %}
-                    <div class="text-xs text-gray-400 mt-1 font-mono">{{ location.location_name }}</div>
-                  </div>
-                  <a href="{{ url_for('gmb_bp.index', location=location.location_name) }}"
-                     class="rounded-md border border-indigo-600 bg-white px-3 py-1.5 text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-1">
-                    <i class="fa-solid fa-pen-to-square text-xs"></i>
-                    Edit
-                  </a>
-                </div>
-              {% endfor %}
-
-              {% if account.locations|length == 0 %}
-                <div class="px-4 py-3 text-sm text-gray-500 italic">
-                  No locations found for this account
-                </div>
-              {% endif %}
+          </div>
+          {% else %}
+          <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-exclamation-triangle text-amber-600"></i>
+              <div class="text-sm text-amber-900">
+                <strong>No location selected.</strong> Please select a location from the dropdown above to manage your Business Profile.
+              </div>
             </div>
           </div>
-        {% endfor %}
-      </div>
+          {% endif %}
+        </form>
 
-      {# Summary footer #}
-      <div class="px-6 py-3 bg-gray-50 border-t text-sm text-gray-600">
-        <i class="fa-solid fa-info-circle mr-1"></i>
-        Showing {{ all_accounts|length }} account{{ 's' if all_accounts|length != 1 else '' }} with
-        {% set total_locations = all_accounts|sum(attribute='locations')|length %}
-        {{ all_accounts|map(attribute='locations')|map('length')|sum }} total location{{ 's' if all_accounts|map(attribute='locations')|map('length')|sum != 1 else '' }}
+        {# Show all locations in collapsed view #}
+        <div class="mt-6 pt-6 border-t">
+          <button
+            type="button"
+            onclick="document.getElementById('allLocationsList').classList.toggle('hidden')"
+            class="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+          >
+            <i class="fa-solid fa-list mr-2"></i>View All Locations ({{ all_accounts|map(attribute='locations')|map('length')|sum }})
+          </button>
+
+          <div id="allLocationsList" class="hidden mt-4 space-y-4">
+            {% for account in all_accounts %}
+              <div class="rounded-md border border-gray-200 overflow-hidden">
+                {# Account header #}
+                <div class="bg-gray-50 px-4 py-3 border-b">
+                  <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-building text-gray-600"></i>
+                    <span class="font-medium text-gray-900">{{ account.account_display_name }}</span>
+                    <span class="text-xs text-gray-500">({{ account.locations|length }} location{{ 's' if account.locations|length != 1 else '' }})</span>
+                  </div>
+                </div>
+
+                {# Locations list #}
+                <div class="divide-y">
+                  {% for location in account.locations %}
+                    <div class="px-4 py-3 hover:bg-gray-50 flex items-start gap-3">
+                      <i class="fa-solid fa-location-dot text-indigo-600 mt-1"></i>
+                      <div class="flex-1">
+                        <div class="font-medium text-gray-900">{{ location.title }}</div>
+                        {% if location.address %}
+                          <div class="text-sm text-gray-500 mt-0.5">{{ location.address }}</div>
+                        {% endif %}
+                        <div class="text-xs text-gray-400 mt-1 font-mono">{{ location.location_name }}</div>
+                      </div>
+                      {% if selected_location == location.location_name %}
+                        <span class="rounded-md bg-green-100 text-green-700 px-3 py-1.5 text-sm font-medium">
+                          <i class="fa-solid fa-check mr-1"></i>Selected
+                        </span>
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+
+                  {% if account.locations|length == 0 %}
+                    <div class="px-4 py-3 text-sm text-gray-500 italic">
+                      No locations found for this account
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
       </div>
     </div>
   {% endif %}

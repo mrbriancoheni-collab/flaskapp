@@ -1,0 +1,275 @@
+{# templates/google/ai_change_log.html - TRANSPARENCY & TRUST #}
+{% extends "base_app.html" %}
+{% set SECTION = 'google' %}
+{% block title %}AI Change Log - What Your AI Has Done{% endblock %}
+
+{% block content %}
+{% set _industry = (current_account.industry if current_account and current_account.industry else 'home services') %}
+
+<div class="max-w-5xl mx-auto space-y-6">
+
+  {# HEADER #}
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">AI Change Log</h1>
+      <p class="text-gray-600 mt-1">Complete history of AI actions on your account</p>
+    </div>
+    <a href="{{ url_for('google_bp.ads_decision_screen') }}"
+       class="rounded-md border px-4 py-2 text-gray-700 hover:bg-gray-50">
+      <i class="fa-solid fa-arrow-left mr-2"></i>Back to Dashboard
+    </a>
+  </div>
+
+  {# SUMMARY STATS #}
+  <div class="grid grid-cols-4 gap-4">
+    <div class="rounded-lg border bg-white p-4">
+      <div class="text-2xl font-bold text-gray-900">{{total_actions | default(127)}}</div>
+      <div class="text-sm text-gray-500">Total Actions</div>
+    </div>
+    <div class="rounded-lg border bg-white p-4">
+      <div class="text-2xl font-bold text-red-600">${{total_saved | default('3,247')}}</div>
+      <div class="text-sm text-gray-500">Waste Prevented</div>
+    </div>
+    <div class="rounded-lg border bg-white p-4">
+      <div class="text-2xl font-bold text-green-600">{{total_optimizations | default(47)}}</div>
+      <div class="text-sm text-gray-500">Optimizations</div>
+    </div>
+    <div class="rounded-lg border bg-white p-4">
+      <div class="text-2xl font-bold text-purple-600">{{total_blocks | default(80)}}</div>
+      <div class="text-sm text-gray-500">Blocks Applied</div>
+    </div>
+  </div>
+
+  {# FILTER OPTIONS #}
+  <div class="rounded-lg border bg-white p-4">
+    <div class="flex items-center gap-4">
+      <div class="text-sm font-medium text-gray-700">Filter by:</div>
+      <button class="px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-sm font-medium">
+        All Actions
+      </button>
+      <button class="px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-sm hover:bg-gray-200">
+        Blocks
+      </button>
+      <button class="px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-sm hover:bg-gray-200">
+        Budget Changes
+      </button>
+      <button class="px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-sm hover:bg-gray-200">
+        Bid Adjustments
+      </button>
+      <button class="px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-sm hover:bg-gray-200">
+        Pauses
+      </button>
+    </div>
+  </div>
+
+  {# TIMELINE - LAST 30 DAYS #}
+  <div class="rounded-lg border bg-white">
+    <div class="p-6 border-b">
+      <h2 class="font-bold text-gray-900">Last 30 Days</h2>
+    </div>
+
+    <div class="p-6">
+      <div class="space-y-6">
+
+        {# TODAY #}
+        <div>
+          <div class="text-sm font-bold text-gray-900 mb-3">Today - January 7, 2026</div>
+
+          <div class="space-y-4 ml-4">
+            {# Action 1 #}
+            <div class="flex gap-4 pb-4 border-b">
+              <div class="flex-shrink-0 w-12 h-12 rounded-lg bg-red-100 text-red-600 flex items-center justify-center">
+                <i class="fa-solid fa-ban text-xl"></i>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <div class="font-semibold text-gray-900">Blocked 12 Irrelevant Searches</div>
+                  <div class="text-sm text-gray-500">2:14 PM</div>
+                </div>
+                <div class="text-sm text-gray-600 mt-1">
+                  AI detected and blocked searches with no conversion intent:
+                </div>
+                <div class="mt-2 space-y-1">
+                  <div class="text-sm text-gray-700 flex items-center gap-2">
+                    <i class="fa-solid fa-circle text-[6px] text-gray-400"></i>
+                    <span class="font-mono bg-gray-100 px-2 py-0.5 rounded text-xs">"plumbing schools"</span>
+                    <span class="text-xs text-gray-500">- job seeking, not customers</span>
+                  </div>
+                  <div class="text-sm text-gray-700 flex items-center gap-2">
+                    <i class="fa-solid fa-circle text-[6px] text-gray-400"></i>
+                    <span class="font-mono bg-gray-100 px-2 py-0.5 rounded text-xs">"diy plumbing repairs"</span>
+                    <span class="text-xs text-gray-500">- DIY intent, won't convert</span>
+                  </div>
+                  <div class="text-sm text-gray-700 flex items-center gap-2">
+                    <i class="fa-solid fa-circle text-[6px] text-gray-400"></i>
+                    <span class="font-mono bg-gray-100 px-2 py-0.5 rounded text-xs">"how to fix a leaky faucet"</span>
+                    <span class="text-xs text-gray-500">- informational, not ready to hire</span>
+                  </div>
+                  <div class="text-xs text-gray-500 ml-5">+ 9 more similar searches</div>
+                </div>
+                <div class="mt-3 inline-flex items-center gap-2">
+                  <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
+                    <i class="fa-solid fa-dollar-sign text-[10px] mr-1"></i>$47 saved
+                  </span>
+                  <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs">
+                    12 blocks applied
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {# Action 2 #}
+            <div class="flex gap-4 pb-4 border-b">
+              <div class="flex-shrink-0 w-12 h-12 rounded-lg bg-green-100 text-green-600 flex items-center justify-center">
+                <i class="fa-solid fa-arrows-rotate text-xl"></i>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <div class="font-semibold text-gray-900">Reallocated Budget to High-Intent Keywords</div>
+                  <div class="text-sm text-gray-500">9:03 AM</div>
+                </div>
+                <div class="text-sm text-gray-600 mt-1">
+                  AI moved $47 from underperforming keywords to better opportunities:
+                </div>
+                <div class="mt-2 grid grid-cols-2 gap-3 text-sm">
+                  <div class="bg-red-50 border border-red-200 rounded p-2">
+                    <div class="text-red-800 font-medium mb-1">Reduced</div>
+                    <div class="text-xs text-red-700">"plumber near me" - $8.50 CPC</div>
+                    <div class="text-xs text-red-600">0.8% conversion rate</div>
+                  </div>
+                  <div class="bg-green-50 border border-green-200 rounded p-2">
+                    <div class="text-green-800 font-medium mb-1">Increased</div>
+                    <div class="text-xs text-green-700">"emergency plumber" - $6.20 CPC</div>
+                    <div class="text-xs text-green-600">2.3% conversion rate (2.9x better)</div>
+                  </div>
+                </div>
+                <div class="mt-3 inline-flex items-center gap-2">
+                  <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-medium">
+                    Expected +18% more calls
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {# Action 3 #}
+            <div class="flex gap-4">
+              <div class="flex-shrink-0 w-12 h-12 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center">
+                <i class="fa-solid fa-chart-line text-xl"></i>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <div class="font-semibold text-gray-900">Optimized Bids for 8 Keywords</div>
+                  <div class="text-sm text-gray-500">6:42 AM</div>
+                </div>
+                <div class="text-sm text-gray-600 mt-1">
+                  AI adjusted bids based on conversion performance and time-of-day patterns
+                </div>
+                <div class="mt-2 text-xs text-gray-500">
+                  Increased bids during peak hours (8 AM - 6 PM), reduced overnight bids by 40%
+                </div>
+                <div class="mt-3 inline-flex items-center gap-2">
+                  <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-medium">
+                    8 bid adjustments
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# YESTERDAY #}
+        <div>
+          <div class="text-sm font-bold text-gray-900 mb-3">Yesterday - January 6, 2026</div>
+
+          <div class="space-y-4 ml-4">
+            {# Action 4 #}
+            <div class="flex gap-4 pb-4 border-b">
+              <div class="flex-shrink-0 w-12 h-12 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center">
+                <i class="fa-solid fa-pause text-xl"></i>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <div class="font-semibold text-gray-900">Paused 2 Underperforming ZIP Codes</div>
+                  <div class="text-sm text-gray-500">3:41 PM</div>
+                </div>
+                <div class="text-sm text-gray-600 mt-1">
+                  AI paused campaigns in areas with zero conversions after significant spend:
+                </div>
+                <div class="mt-2 space-y-2">
+                  <div class="text-sm bg-gray-50 border rounded p-2">
+                    <span class="font-medium text-gray-900">ZIP 94103:</span>
+                    <span class="text-gray-600">$156 spent, 0 calls, 47 clicks</span>
+                  </div>
+                  <div class="text-sm bg-gray-50 border rounded p-2">
+                    <span class="font-medium text-gray-900">ZIP 94110:</span>
+                    <span class="text-gray-600">$89 spent, 0 calls, 29 clicks</span>
+                  </div>
+                </div>
+                <div class="mt-3 inline-flex items-center gap-2">
+                  <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
+                    $245 saved
+                  </span>
+                  <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs">
+                    Budget moved to better areas
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {# Action 5 #}
+            <div class="flex gap-4">
+              <div class="flex-shrink-0 w-12 h-12 rounded-lg bg-red-100 text-red-600 flex items-center justify-center">
+                <i class="fa-solid fa-ban text-xl"></i>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <div class="font-semibold text-gray-900">Blocked 8 New Negative Keywords</div>
+                  <div class="text-sm text-gray-500">10:22 AM</div>
+                </div>
+                <div class="text-sm text-gray-600 mt-1">
+                  AI identified waste from "free", "cheap", and other low-value modifiers
+                </div>
+                <div class="mt-3 inline-flex items-center gap-2">
+                  <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
+                    $31 saved
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# LOAD MORE #}
+        <div class="text-center pt-4">
+          <button class="text-indigo-600 hover:text-indigo-700 font-medium text-sm">
+            Load More Actions <i class="fa-solid fa-chevron-down ml-1 text-xs"></i>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  {# INSIGHTS #}
+  <div class="rounded-lg border bg-gradient-to-br from-purple-50 to-indigo-50 p-6">
+    <h3 class="font-bold text-purple-900 mb-3">
+      <i class="fa-solid fa-lightbulb mr-2"></i>How AI Protects Your Budget
+    </h3>
+    <div class="grid md:grid-cols-3 gap-4 text-sm">
+      <div class="bg-white rounded p-3">
+        <div class="font-semibold text-gray-900 mb-1">Real-Time Monitoring</div>
+        <div class="text-gray-600 text-xs">AI checks your account every 15 minutes for waste and inefficiencies</div>
+      </div>
+      <div class="bg-white rounded p-3">
+        <div class="font-semibold text-gray-900 mb-1">Automatic Blocking</div>
+        <div class="text-gray-600 text-xs">Low-intent searches are blocked immediately - no budget wasted</div>
+      </div>
+      <div class="bg-white rounded p-3">
+        <div class="font-semibold text-gray-900 mb-1">Smart Reallocation</div>
+        <div class="text-gray-600 text-xs">Budget automatically moves from poor performers to winners</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

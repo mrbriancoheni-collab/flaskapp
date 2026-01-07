@@ -45,6 +45,7 @@ class Account(db.Model):
 
     id = db.Column(Integer, primary_key=True)
     name = db.Column(String(150), nullable=False)
+    industry = db.Column(String(100), nullable=True)  # e.g., 'plumbing', 'hvac', 'pest control', etc.
 
     # Optional metadata for plan/billing state
     status = db.Column(String(32), nullable=False, server_default="active")  # active|past_due|canceled

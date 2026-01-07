@@ -361,6 +361,16 @@ def create_app():
                     return val
             return None
 
+        def get_current_account():
+            """Get the current account object for the logged-in user."""
+            try:
+                from flask_login import current_user
+                if current_user and current_user.is_authenticated:
+                    return current_user.account
+            except Exception:
+                pass
+            return None
+
         def _variants(name: str):
             return (
                 name,
@@ -399,6 +409,7 @@ def create_app():
             "csp_nonce": csp_nonce,
             "is_logged_in": is_logged_in,
             "current_user_id": current_user_id,
+            "current_account": get_current_account(),
             "has_endpoint": has_endpoint,
             "ep": ep,
         }

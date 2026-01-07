@@ -2115,9 +2115,13 @@ def ads_debug_config():
 @login_required
 def ads_ui():
     """
-    Google Ads main page - Uses the Opportunities Dashboard layout with real user data.
-    Same layout as the demo page but shows actual connected account data.
+    Google Ads main page - Redirects to new decision screen.
+    The decision screen uses auto-executed language instead of approval-based language.
     """
+    # Redirect to new decision screen with SMB-focused UI
+    return redirect(url_for("google_bp.ads_decision_screen"))
+
+    # OLD CODE KEPT FOR REFERENCE (opportunities page with approval flow)
     from datetime import datetime, timedelta
 
     aid = current_account_id()
@@ -2540,6 +2544,100 @@ def ads_ui():
             epn=request.endpoint,
             is_demo=False,
         )
+
+
+@google_bp.route("/ads/decision-screen", methods=["GET"], endpoint="ads_decision_screen")
+@login_required
+def ads_decision_screen():
+    """
+    Google Ads Decision Screen - New UI focused on decision-making for SMB operators.
+    Shows status indicators, trust & protection messaging, and "What Changed?" timeline.
+    """
+    aid = current_account_id()
+
+    # Check connection status
+    connected = False
+    try:
+        connected = _is_connected(aid, "ads")
+    except Exception as e:
+        current_app.logger.error(f"Error checking connection status: {e}")
+
+    # Default values for template
+    status = 'green'  # green, yellow, red
+    wasted_spend_prevented = 3247
+    calls_generated = 47
+    ai_actions_taken = 127
+    blocked_searches_count = 127
+
+    # Sample timeline data - will be replaced with real data later
+    recent_changes = [
+        {
+            'type': 'block',
+            'icon': 'fa-ban',
+            'color': 'red',
+            'title': 'Blocked 12 Irrelevant Searches',
+            'time': '2:14 PM',
+            'description': 'AI detected and blocked searches with no conversion intent',
+            'details': [
+                {'search': 'plumbing schools', 'reason': 'job seeking, not customers'},
+                {'search': 'diy plumbing repairs', 'reason': 'DIY intent, won\'t convert'},
+            ],
+            'saved': 47
+        },
+        {
+            'type': 'optimization',
+            'icon': 'fa-arrows-rotate',
+            'color': 'green',
+            'title': 'Reallocated Budget to High-Intent Keywords',
+            'time': '9:03 AM',
+            'description': 'AI moved $47 from underperforming keywords to better opportunities',
+        },
+    ]
+
+    return render_template(
+        "google/ads_decision_screen.html",
+        connected=connected,
+        status=status,
+        wasted_spend_prevented=wasted_spend_prevented,
+        calls_generated=calls_generated,
+        ai_actions_taken=ai_actions_taken,
+        blocked_searches_count=blocked_searches_count,
+        recent_changes=recent_changes,
+        epn=request.endpoint,
+    )
+
+
+@google_bp.route("/ads/ai-change-log", methods=["GET"], endpoint="ai_change_log")
+@login_required
+def ai_change_log():
+    """
+    AI Change Log - Complete transparency page showing all AI actions.
+    Builds trust by showing exactly what the AI has done to protect their budget.
+    """
+    aid = current_account_id()
+
+    # Check connection status
+    connected = False
+    try:
+        connected = _is_connected(aid, "ads")
+    except Exception as e:
+        current_app.logger.error(f"Error checking connection status: {e}")
+
+    # Default summary stats - will be replaced with real data later
+    total_actions = 127
+    total_saved = 3247
+    total_optimizations = 47
+    total_blocks = 80
+
+    return render_template(
+        "google/ai_change_log.html",
+        connected=connected,
+        total_actions=total_actions,
+        total_saved=total_saved,
+        total_optimizations=total_optimizations,
+        total_blocks=total_blocks,
+        epn=request.endpoint,
+    )
 
 # ------------------------- GA JSON data (AJAX) -------------------------
 

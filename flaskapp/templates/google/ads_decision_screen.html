@@ -130,6 +130,68 @@
     </div>
   </div>
 
+  {# LSA MISSED CALL ALERT - HIGH PRIORITY #}
+  {% if lsa_missed_calls and lsa_missed_calls.total_missed > 0 %}
+  <div class="rounded-xl border-2 border-red-300 bg-gradient-to-br from-red-50 to-orange-50 p-6 shadow-lg animate-pulse-slow">
+    <div class="flex items-start gap-4">
+      <div class="text-red-600 text-4xl animate-bounce-slow">
+        <i class="fa-solid fa-phone-slash"></i>
+      </div>
+      <div class="flex-1">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xl font-bold text-red-900">
+            🚨 Missed LSA Calls - Follow Up Now!
+          </h2>
+          <span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+            {{lsa_missed_calls.total_missed}} Missed
+          </span>
+        </div>
+        <p class="text-red-800 mb-4">
+          These potential customers tried to reach you but didn't connect. Call them back ASAP to capture these opportunities!
+        </p>
+
+        {# Show high priority missed calls #}
+        {% if lsa_missed_calls.high_priority > 0 %}
+        <div class="bg-white rounded-lg border-2 border-red-200 p-4 mb-3">
+          <div class="flex items-center gap-2 mb-2">
+            <i class="fa-solid fa-fire text-red-600"></i>
+            <span class="font-bold text-red-900">{{lsa_missed_calls.high_priority}} High Priority (Last 24 Hours)</span>
+          </div>
+          <div class="space-y-2">
+            {% for call in lsa_missed_calls.missed_calls[:3] %}
+            {% if call.severity == 'high' %}
+            <div class="flex items-center justify-between text-sm bg-red-50 p-2 rounded">
+              <div>
+                <div class="font-semibold text-gray-900">{{call.lead_name}}</div>
+                <div class="text-gray-600">
+                  {{call.job_type}} • {{call.city}} • {{call.created_at}}
+                </div>
+              </div>
+              <div class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
+                {{call.duration_sec}}s call
+              </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="flex items-center gap-3">
+          <a href="#" class="bg-red-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-red-700 inline-flex items-center gap-2 shadow-lg">
+            <i class="fa-solid fa-phone"></i>
+            View All Missed Calls
+          </a>
+          <span class="text-sm text-red-700">
+            <i class="fa-solid fa-clock"></i>
+            Response within 5 minutes = 400% better conversion
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   {# THIS MONTH'S PERFORMANCE - KEY METRICS #}
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 

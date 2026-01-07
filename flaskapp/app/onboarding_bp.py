@@ -184,3 +184,29 @@ def complete():
         return jsonify({"error": "complete_failed"}), 400
 
     return jsonify({"ok": True})
+
+
+@onboarding_bp.route("/quick-setup", methods=["GET"], endpoint="quick_setup")
+@login_required
+def quick_setup():
+    """
+    5-minute onboarding flow for new users.
+    Focuses on essentials: business name, industry, phone, service area, and connecting Google Ads.
+    """
+    from app.google.utils_ads import _is_connected
+    from app.auth.utils import current_account_id
+
+    # Check if Google Ads is already connected
+    aid = current_account_id()
+    google_ads_connected = False
+    try:
+        from app.google import _is_connected as google_is_connected
+        google_ads_connected = google_is_connected(aid, "ads")
+    except Exception:
+        pass
+
+    return render_template(
+        "onboarding/quick_setup.html",
+        google_ads_connected=google_ads_connected,
+    )
+

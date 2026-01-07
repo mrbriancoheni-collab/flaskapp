@@ -2562,12 +2562,24 @@ def ads_decision_screen():
     except Exception as e:
         current_app.logger.error(f"Error checking connection status: {e}")
 
+    # Check for LSA missed calls
+    lsa_missed_calls = None
+    try:
+        from app.services.lsa_missed_call_service import get_recent_missed_calls_summary
+        lsa_missed_calls = get_recent_missed_calls_summary(aid, days=7)
+    except Exception as e:
+        current_app.logger.warning(f"Could not load LSA missed calls: {e}")
+
     # Default values for template
     status = 'green'  # green, yellow, red
     wasted_spend_prevented = 3247
     calls_generated = 47
     ai_actions_taken = 127
     blocked_searches_count = 127
+
+    # If there are high-priority missed calls, change status to red
+    if lsa_missed_calls and lsa_missed_calls.get('high_priority', 0) > 0:
+        status = 'red'
 
     # Sample timeline data - will be replaced with real data later
     recent_changes = [
@@ -2602,6 +2614,7 @@ def ads_decision_screen():
         calls_generated=calls_generated,
         ai_actions_taken=ai_actions_taken,
         blocked_searches_count=blocked_searches_count,
+        lsa_missed_calls=lsa_missed_calls,
         recent_changes=recent_changes,
         epn=request.endpoint,
     )

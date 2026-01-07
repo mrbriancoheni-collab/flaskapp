@@ -1,0 +1,405 @@
+{% extends "base_app.html" %}
+
+{% block title %}Quick Setup - FieldSprout{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 py-12">
+  <div class="max-w-2xl mx-auto px-4">
+    <!-- Progress Bar -->
+    <div class="mb-8">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-sm font-medium text-gray-700">Setup Progress</span>
+        <span class="text-sm font-medium text-indigo-600"><span id="progress-percent">0</span>% Complete</span>
+      </div>
+      <div class="w-full bg-gray-200 rounded-full h-3">
+        <div id="progress-bar" class="bg-gradient-to-r from-indigo-500 to-purple-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-full mb-4">
+        <i class="fa-solid fa-rocket text-3xl text-indigo-600"></i>
+      </div>
+      <h1 class="text-4xl font-bold text-gray-900 mb-2">Let's Get You Started</h1>
+      <p class="text-lg text-gray-600">Just 3 quick steps • Takes less than 5 minutes</p>
+    </div>
+
+    <!-- Onboarding Form -->
+    <div class="bg-white rounded-2xl shadow-xl p-8">
+      <form id="onboarding-form">
+
+        <!-- Step 1: Business Basics -->
+        <div id="step-1" class="onboarding-step">
+          <div class="mb-6">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="flex items-center justify-center w-10 h-10 bg-indigo-100 rounded-full">
+                <span class="text-indigo-600 font-bold">1</span>
+              </div>
+              <h2 class="text-2xl font-bold text-gray-900">Tell us about your business</h2>
+            </div>
+          </div>
+
+          <div class="space-y-5">
+            <div>
+              <label for="business_name" class="block text-sm font-semibold text-gray-700 mb-2">
+                Business Name <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="business_name"
+                name="business_name"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg"
+                placeholder="e.g., Austin Plumbing Pros"
+              >
+            </div>
+
+            <div>
+              <label for="industry" class="block text-sm font-semibold text-gray-700 mb-2">
+                What type of business are you? <span class="text-red-500">*</span>
+              </label>
+              <select
+                id="industry"
+                name="industry"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg"
+              >
+                <option value="">-- Select Industry --</option>
+                <option value="plumbing">Plumbing</option>
+                <option value="hvac">HVAC (Heating & Cooling)</option>
+                <option value="electrical">Electrical</option>
+                <option value="pest control">Pest Control</option>
+                <option value="landscaping">Landscaping / Lawn Care</option>
+                <option value="roofing">Roofing</option>
+                <option value="locksmith">Locksmith</option>
+                <option value="garage door">Garage Door Repair</option>
+                <option value="cleaning">Cleaning Services</option>
+                <option value="other">Other Home Services</option>
+              </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label for="phone" class="block text-sm font-semibold text-gray-700 mb-2">
+                  Phone Number <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  required
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="(555) 123-4567"
+                >
+              </div>
+
+              <div>
+                <label for="website" class="block text-sm font-semibold text-gray-700 mb-2">
+                  Website
+                </label>
+                <input
+                  type="url"
+                  id="website"
+                  name="website"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="https://example.com"
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-8 flex justify-end">
+            <button type="button" onclick="nextStep(2)" class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:from-indigo-600 hover:to-purple-700 transform hover:scale-105 transition-all shadow-lg">
+              Continue
+              <i class="fa-solid fa-arrow-right ml-2"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: Service Area -->
+        <div id="step-2" class="onboarding-step hidden">
+          <div class="mb-6">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="flex items-center justify-center w-10 h-10 bg-indigo-100 rounded-full">
+                <span class="text-indigo-600 font-bold">2</span>
+              </div>
+              <h2 class="text-2xl font-bold text-gray-900">Where do you serve customers?</h2>
+            </div>
+          </div>
+
+          <div class="space-y-5">
+            <div>
+              <label for="service_area" class="block text-sm font-semibold text-gray-700 mb-2">
+                Service Area <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="service_area"
+                name="service_area"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg"
+                placeholder="e.g., Austin, TX and surrounding areas"
+              >
+              <p class="text-sm text-gray-500 mt-2">
+                <i class="fa-solid fa-info-circle mr-1"></i>
+                Examples: "Austin, TX metro", "Orange County, CA", "Phoenix, AZ within 25 miles"
+              </p>
+            </div>
+
+            <div>
+              <label for="primary_goal" class="block text-sm font-semibold text-gray-700 mb-2">
+                What's your main goal? <span class="text-red-500">*</span>
+              </label>
+              <select
+                id="primary_goal"
+                name="primary_goal"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg"
+              >
+                <option value="">-- Select Goal --</option>
+                <option value="more_calls">Get more phone calls</option>
+                <option value="reduce_waste">Stop wasting money on bad clicks</option>
+                <option value="both">Both - more calls AND less waste</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mt-8 flex justify-between">
+            <button type="button" onclick="prevStep(1)" class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg font-semibold hover:bg-gray-300 transition">
+              <i class="fa-solid fa-arrow-left mr-2"></i>
+              Back
+            </button>
+            <button type="button" onclick="nextStep(3)" class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:from-indigo-600 hover:to-purple-700 transform hover:scale-105 transition-all shadow-lg">
+              Continue
+              <i class="fa-solid fa-arrow-right ml-2"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 3: Connect Google Ads -->
+        <div id="step-3" class="onboarding-step hidden">
+          <div class="mb-6">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="flex items-center justify-center w-10 h-10 bg-indigo-100 rounded-full">
+                <span class="text-indigo-600 font-bold">3</span>
+              </div>
+              <h2 class="text-2xl font-bold text-gray-900">Connect your Google Ads</h2>
+            </div>
+            <p class="text-gray-600 ml-13">
+              This lets our AI protect your budget automatically
+            </p>
+          </div>
+
+          <div class="space-y-6">
+            <!-- Google Ads Connection Card -->
+            <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-indigo-500 transition-colors">
+              <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-50 rounded-full mb-4">
+                <i class="fab fa-google text-3xl text-blue-600"></i>
+              </div>
+              <h3 class="text-xl font-bold text-gray-900 mb-2">Google Ads</h3>
+              <p class="text-gray-600 mb-4">
+                Let AI monitor and optimize your campaigns 24/7
+              </p>
+              {% if google_ads_connected %}
+              <div class="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-lg font-semibold">
+                <i class="fa-solid fa-check-circle"></i>
+                Connected
+              </div>
+              {% else %}
+              <a href="{{ url_for('google_bp.connect_ads', next=url_for('onboarding_bp.quick_setup')) }}"
+                 class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all shadow-lg">
+                <i class="fab fa-google mr-2"></i>
+                Connect Google Ads
+              </a>
+              {% endif %}
+            </div>
+
+            <!-- Optional: Skip for Now -->
+            <div class="text-center">
+              <p class="text-sm text-gray-500 mb-3">
+                You can connect more platforms later from your dashboard
+              </p>
+            </div>
+          </div>
+
+          <div class="mt-8 flex justify-between">
+            <button type="button" onclick="prevStep(2)" class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg font-semibold hover:bg-gray-300 transition">
+              <i class="fa-solid fa-arrow-left mr-2"></i>
+              Back
+            </button>
+            <button type="submit" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-3 rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transform hover:scale-105 transition-all shadow-lg">
+              <i class="fa-solid fa-check mr-2"></i>
+              Complete Setup
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Benefits Footer -->
+    <div class="mt-8 grid grid-cols-3 gap-4 text-center">
+      <div class="bg-white rounded-lg p-4 shadow-sm">
+        <div class="text-3xl mb-2">🤖</div>
+        <p class="text-sm font-semibold text-gray-700">AI Auto-Protection</p>
+      </div>
+      <div class="bg-white rounded-lg p-4 shadow-sm">
+        <div class="text-3xl mb-2">📞</div>
+        <p class="text-sm font-semibold text-gray-700">More Quality Calls</p>
+      </div>
+      <div class="bg-white rounded-lg p-4 shadow-sm">
+        <div class="text-3xl mb-2">💰</div>
+        <p class="text-sm font-semibold text-gray-700">Stop Wasted Spend</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentStep = 1;
+const formData = {};
+
+function updateProgress() {
+  const progress = ((currentStep - 1) / 2) * 100;
+  document.getElementById('progress-bar').style.width = progress + '%';
+  document.getElementById('progress-percent').textContent = Math.round(progress);
+}
+
+function saveStepData(stepNumber) {
+  const step = document.getElementById(`step-${stepNumber}`);
+  const inputs = step.querySelectorAll('input, select, textarea');
+
+  inputs.forEach(input => {
+    if (input.value) {
+      formData[input.name] = input.value;
+    }
+  });
+}
+
+function nextStep(step) {
+  // Validate current step
+  const currentStepEl = document.getElementById(`step-${currentStep}`);
+  const requiredInputs = currentStepEl.querySelectorAll('[required]');
+  let valid = true;
+
+  requiredInputs.forEach(input => {
+    if (!input.value || input.value === '') {
+      valid = false;
+      input.classList.add('border-red-500');
+      input.classList.add('ring-red-500');
+    } else {
+      input.classList.remove('border-red-500');
+      input.classList.remove('ring-red-500');
+    }
+  });
+
+  if (!valid) {
+    alert('Please fill in all required fields');
+    return;
+  }
+
+  // Save data
+  saveStepData(currentStep);
+
+  // Hide current step
+  document.getElementById(`step-${currentStep}`).classList.add('hidden');
+
+  // Show next step
+  currentStep = step;
+  document.getElementById(`step-${currentStep}`).classList.remove('hidden');
+
+  // Update progress
+  updateProgress();
+
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function prevStep(step) {
+  // Save current step data
+  saveStepData(currentStep);
+
+  // Hide current step
+  document.getElementById(`step-${currentStep}`).classList.add('hidden');
+
+  // Show previous step
+  currentStep = step;
+  document.getElementById(`step-${currentStep}`).classList.remove('hidden');
+
+  // Update progress
+  updateProgress();
+
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.getElementById('onboarding-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  // Save final step data
+  saveStepData(currentStep);
+
+  // Update account industry in database
+  if (formData.industry) {
+    try {
+      const response = await fetch('/api/account/update-industry', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ industry: formData.industry })
+      });
+    } catch (error) {
+      console.error('Error updating industry:', error);
+    }
+  }
+
+  // Save to onboarding API
+  try {
+    const response = await fetch('/onboarding/save', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ data: formData })
+    });
+
+    if (response.ok) {
+      // Mark as complete
+      await fetch('/onboarding/complete', { method: 'POST' });
+
+      // Redirect to dashboard
+      window.location.href = '{{ url_for("google_bp.ads_decision_screen") }}';
+    }
+  } catch (error) {
+    console.error('Error saving onboarding:', error);
+    alert('There was an error saving your information. Please try again.');
+  }
+});
+
+// Initialize progress
+updateProgress();
+</script>
+
+<style>
+.onboarding-step {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+}
+</style>
+{% endblock %}

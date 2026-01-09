@@ -16,6 +16,7 @@ from app import create_app, db
 from app.models import User
 from app.models_alerts import Alert, AlertSettings
 from app.services.alert_detection_service import AlertDetectionService
+from app.services.alert_throttle_service import AlertThrottleService
 from app.services.email_service import send_email
 
 logger = logging.getLogger(__name__)
@@ -95,6 +96,11 @@ def send_alert_notifications():
 
                 if not settings.email_notifications_enabled:
                     alert.mark_notified()  # Mark as notified even if disabled
+                    continue
+
+                # Check throttling (cooldown periods, etc.)
+                if not AlertThrottleService.should_send_notification(alert):
+                    logger.info(f"Notification throttled for alert {alert.id} (cooldown active)")
                     continue
 
                 # Send email notification

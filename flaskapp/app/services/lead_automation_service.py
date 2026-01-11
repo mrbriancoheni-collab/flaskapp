@@ -161,15 +161,90 @@ class LeadAutomationService:
         if domain_clean not in self.state["processed_domains"]:
             self.state["processed_domains"].append(domain_clean)
 
-    def run_daily_automation(self):
+    def run_scraping(self) -> Dict:
         """
-        Run daily automation cycle:
-        1. Create/scrape campaigns (up to daily limit)
-        2. Enrich leads (up to daily limit)
-        3. Send emails (up to daily limit, skip Sundays)
+        Run scraping ONLY (independent operation).
+        Can be triggered on-demand or via cron.
+
+        Returns dict with scraping results.
         """
         logger.info("=" * 80)
-        logger.info("STARTING DAILY LEAD AUTOMATION")
+        logger.info("STARTING LEAD SCRAPING")
+        logger.info("=" * 80)
+
+        self._reset_daily_stats_if_new_day()
+        scraped = self._process_campaign_scraping()
+        self._save_state()
+
+        logger.info("=" * 80)
+        logger.info(f"SCRAPING COMPLETE: {scraped} campaigns scraped")
+        logger.info("=" * 80)
+
+        return {
+            "scraped": scraped,
+            "total_campaigns": self.state['campaigns_created']
+        }
+
+    def run_enrichment(self) -> Dict:
+        """
+        Run enrichment ONLY (independent operation).
+        Can be triggered on-demand or via cron.
+
+        Returns dict with enrichment results.
+        """
+        logger.info("=" * 80)
+        logger.info("STARTING LEAD ENRICHMENT")
+        logger.info("=" * 80)
+
+        self._reset_daily_stats_if_new_day()
+        enriched = self._process_lead_enrichment()
+        self._save_state()
+
+        logger.info("=" * 80)
+        logger.info(f"ENRICHMENT COMPLETE: {enriched} leads enriched")
+        logger.info("=" * 80)
+
+        return {
+            "enriched": enriched,
+            "total_enriched": self.state['leads_enriched']
+        }
+
+    def run_email_outreach(self) -> Dict:
+        """
+        Run email outreach ONLY (independent operation).
+        Can be triggered on-demand or via cron.
+
+        Returns dict with email results.
+        """
+        logger.info("=" * 80)
+        logger.info("STARTING EMAIL OUTREACH")
+        logger.info("=" * 80)
+
+        self._reset_daily_stats_if_new_day()
+        sent = self._process_email_sending()
+        self._save_state()
+
+        logger.info("=" * 80)
+        logger.info(f"EMAIL OUTREACH COMPLETE: {sent} emails sent")
+        logger.info("=" * 80)
+
+        return {
+            "sent": sent,
+            "total_emails": self.state['emails_sent']
+        }
+
+    def run_daily_automation(self):
+        """
+        Run ALL operations in sequence (scrape → enrich → email).
+        This is for backwards compatibility and scheduled automation.
+
+        For independent operations, use:
+        - run_scraping()
+        - run_enrichment()
+        - run_email_outreach()
+        """
+        logger.info("=" * 80)
+        logger.info("STARTING DAILY LEAD AUTOMATION (ALL OPERATIONS)")
         logger.info("=" * 80)
 
         self._reset_daily_stats_if_new_day()

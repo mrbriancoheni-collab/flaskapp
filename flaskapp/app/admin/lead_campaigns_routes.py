@@ -1144,6 +1144,86 @@ def send_emails(campaign_id: int):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# ==================== Individual Operation Triggers ====================
+
+@lead_campaigns_bp.route('/trigger-scraping', methods=['POST'])
+@require_admin
+def trigger_scraping():
+    """
+    Trigger scraping operation independently.
+    Runs daily scraping up to configured limits.
+    """
+    try:
+        from app.services.lead_automation_service import LeadAutomationService
+
+        logger.info("Manual trigger: Starting scraping operation")
+        service = LeadAutomationService()
+        result = service.run_scraping()
+
+        return jsonify({
+            'success': True,
+            'scraped': result['scraped'],
+            'total_campaigns': result['total_campaigns'],
+            'message': f"Scraped {result['scraped']} campaigns"
+        })
+
+    except Exception as e:
+        logger.exception(f"Error triggering scraping: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@lead_campaigns_bp.route('/trigger-enrichment', methods=['POST'])
+@require_admin
+def trigger_enrichment():
+    """
+    Trigger enrichment operation independently.
+    Enriches pending leads up to configured limits.
+    """
+    try:
+        from app.services.lead_automation_service import LeadAutomationService
+
+        logger.info("Manual trigger: Starting enrichment operation")
+        service = LeadAutomationService()
+        result = service.run_enrichment()
+
+        return jsonify({
+            'success': True,
+            'enriched': result['enriched'],
+            'total_enriched': result['total_enriched'],
+            'message': f"Enriched {result['enriched']} leads"
+        })
+
+    except Exception as e:
+        logger.exception(f"Error triggering enrichment: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@lead_campaigns_bp.route('/trigger-outreach', methods=['POST'])
+@require_admin
+def trigger_outreach():
+    """
+    Trigger email outreach operation independently.
+    Sends emails to enriched leads up to configured limits.
+    """
+    try:
+        from app.services.lead_automation_service import LeadAutomationService
+
+        logger.info("Manual trigger: Starting email outreach operation")
+        service = LeadAutomationService()
+        result = service.run_email_outreach()
+
+        return jsonify({
+            'success': True,
+            'sent': result['sent'],
+            'total_emails': result['total_emails'],
+            'message': f"Sent {result['sent']} emails"
+        })
+
+    except Exception as e:
+        logger.exception(f"Error triggering outreach: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # ==================== Bulk Actions ====================
 
 def _save_bulk_stats(action_type: str, stats: dict):

@@ -20,6 +20,7 @@ from app import db
 from app.models import Account
 from app.models_alerts import Alert, AlertSettings
 from app.services.google_ads_service import client_from_refresh
+from app.services.alert_throttle_service import AlertThrottleService
 
 logger = logging.getLogger(__name__)
 
@@ -184,6 +185,34 @@ class AlertDetectionService:
                 if existing_alert:
                     continue  # Don't create duplicate alerts
 
+                # Prepare alert data
+                alert_data = {
+                    "campaign_id": str(campaign_id),
+                    "campaign_name": campaign_name,
+                    "channel_type": row.campaign.advertising_channel_type.name,
+                    "last_7_days_impressions": metrics.impressions,
+                    "last_7_days_clicks": metrics.clicks,
+                    "last_7_days_conversions": metrics.conversions,
+                    "detected_at": datetime.utcnow().isoformat()
+                }
+
+                # Check if we should create this alert (throttling)
+                if not AlertThrottleService.should_create_alert(
+                    alert_type="paused_campaign",
+                    account_id=account.id,
+                    user_id=user_id,
+                    data=alert_data
+                ):
+                    logger.info(f"Throttled paused campaign alert for {campaign_name}")
+                    continue
+
+                # Add alert hash for deduplication
+                alert_data["alert_hash"] = AlertThrottleService.generate_alert_hash(
+                    "paused_campaign",
+                    account.id,
+                    alert_data
+                )
+
                 # Create alert
                 alert = Alert(
                     account_id=account.id,
@@ -192,15 +221,7 @@ class AlertDetectionService:
                     severity="warning",
                     title=f"Campaign Paused: {campaign_name}",
                     description=f"The campaign '{campaign_name}' is currently paused and not receiving traffic.",
-                    data={
-                        "campaign_id": str(campaign_id),
-                        "campaign_name": campaign_name,
-                        "channel_type": row.campaign.advertising_channel_type.name,
-                        "last_7_days_impressions": metrics.impressions,
-                        "last_7_days_clicks": metrics.clicks,
-                        "last_7_days_conversions": metrics.conversions,
-                        "detected_at": datetime.utcnow().isoformat()
-                    },
+                    data=alert_data,
                     action_url=f"/account/google/ads/campaigns/{campaign_id}",
                     action_text="Enable Campaign"
                 )

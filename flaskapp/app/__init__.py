@@ -283,6 +283,14 @@ def create_app():
             from app import models_fbads  # noqa: F401
         except Exception:
             app.logger.debug("models_fbads not loaded (optional)")
+        try:
+            from app import models_alerts  # noqa: F401
+        except Exception:
+            app.logger.debug("models_alerts not loaded (optional)")
+        try:
+            from app import models_ai_actions  # noqa: F401
+        except Exception:
+            app.logger.debug("models_ai_actions not loaded (optional)")
     except Exception:
         app.logger.exception("Failed to import app.models early")
 

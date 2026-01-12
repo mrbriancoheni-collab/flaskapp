@@ -2553,6 +2553,10 @@ def ads_decision_screen():
     Google Ads Decision Screen - New UI focused on decision-making for SMB operators.
     Shows status indicators, trust & protection messaging, and "What Changed?" timeline.
     """
+    from app.models_ai_actions import AIAction
+    from sqlalchemy import func, desc
+    from datetime import datetime, timedelta
+
     aid = current_account_id()
 
     # Check connection status
@@ -2570,47 +2574,87 @@ def ads_decision_screen():
     except Exception as e:
         current_app.logger.warning(f"Could not load LSA missed calls: {e}")
 
-    # Default values for template
+    # Get real AI action data
     status = 'green'  # green, yellow, red
-    wasted_spend_prevented = 3247
-    calls_generated = 47
-    ai_actions_taken = 127
-    blocked_searches_count = 127
+
+    # Get total executed actions
+    ai_actions_taken = AIAction.query.filter_by(
+        account_id=aid,
+        status='executed'
+    ).count()
+
+    # Get total estimated savings
+    wasted_spend_prevented = db.session.query(
+        func.sum(AIAction.estimated_monthly_savings)
+    ).filter_by(
+        account_id=aid,
+        status='executed'
+    ).scalar() or 0
+
+    # Count blocked searches (negative keywords added)
+    blocked_searches_count = AIAction.query.filter_by(
+        account_id=aid,
+        status='executed',
+        action_type='negative_keyword_added'
+    ).count()
+
+    # Calls generated from LSA (if available)
+    calls_generated = 0
+    if lsa_missed_calls:
+        calls_generated = lsa_missed_calls.get('total_calls', 0)
 
     # If there are high-priority missed calls, change status to red
     if lsa_missed_calls and lsa_missed_calls.get('high_priority', 0) > 0:
         status = 'red'
 
-    # Sample timeline data - will be replaced with real data later
-    recent_changes = [
-        {
-            'type': 'block',
-            'icon': 'fa-ban',
-            'color': 'red',
-            'title': 'Blocked 12 Irrelevant Searches',
-            'time': '2:14 PM',
-            'description': 'AI detected and blocked searches with no conversion intent',
-            'details': [
-                {'search': 'plumbing schools', 'reason': 'job seeking, not customers'},
-                {'search': 'diy plumbing repairs', 'reason': 'DIY intent, won\'t convert'},
-            ],
-            'saved': 47
-        },
-        {
-            'type': 'optimization',
-            'icon': 'fa-arrows-rotate',
-            'color': 'green',
-            'title': 'Reallocated Budget to High-Intent Keywords',
-            'time': '9:03 AM',
-            'description': 'AI moved $47 from underperforming keywords to better opportunities',
-        },
-    ]
+    # Get recent AI actions for timeline (last 10)
+    recent_actions = AIAction.query.filter_by(
+        account_id=aid,
+        status='executed'
+    ).order_by(desc(AIAction.executed_at)).limit(10).all()
+
+    # Transform actions into timeline format
+    recent_changes = []
+    for action in recent_actions:
+        # Determine icon and color based on action type
+        if action.action_type == 'negative_keyword_added':
+            icon = 'fa-ban'
+            color = 'red'
+        elif action.action_type in ['bid_adjusted', 'budget_reallocated']:
+            icon = 'fa-arrows-rotate'
+            color = 'green'
+        elif action.action_type in ['keyword_paused', 'ad_paused']:
+            icon = 'fa-pause-circle'
+            color = 'yellow'
+        else:
+            icon = 'fa-robot'
+            color = 'blue'
+
+        # Format time
+        if action.executed_at:
+            time_str = action.executed_at.strftime('%-I:%M %p')
+        else:
+            time_str = 'Unknown'
+
+        recent_changes.append({
+            'type': action.action_type,
+            'icon': icon,
+            'color': color,
+            'title': action.title,
+            'time': time_str,
+            'description': action.description,
+            'reasoning': action.reasoning,
+            'saved': action.estimated_monthly_savings or 0,
+            'confidence': action.confidence_score,
+            'can_undo': action.is_undoable,
+            'action_id': action.id,
+        })
 
     return render_template(
         "google/ads_decision_screen.html",
         connected=connected,
         status=status,
-        wasted_spend_prevented=wasted_spend_prevented,
+        wasted_spend_prevented=round(wasted_spend_prevented, 2),
         calls_generated=calls_generated,
         ai_actions_taken=ai_actions_taken,
         blocked_searches_count=blocked_searches_count,
@@ -2626,7 +2670,12 @@ def ai_change_log():
     """
     AI Change Log - Complete transparency page showing all AI actions.
     Builds trust by showing exactly what the AI has done to protect their budget.
+
+    This page shows ALL AI actions with filtering and undo capabilities.
     """
+    from app.models_ai_actions import AIAction
+    from sqlalchemy import func
+
     aid = current_account_id()
 
     # Check connection status
@@ -2636,17 +2685,41 @@ def ai_change_log():
     except Exception as e:
         current_app.logger.error(f"Error checking connection status: {e}")
 
-    # Default summary stats - will be replaced with real data later
-    total_actions = 127
-    total_saved = 3247
-    total_optimizations = 47
-    total_blocks = 80
+    # Get real summary stats from database
+
+    # Total executed actions
+    total_actions = AIAction.query.filter_by(
+        account_id=aid,
+        status='executed'
+    ).count()
+
+    # Total estimated savings
+    total_saved = db.session.query(
+        func.sum(AIAction.estimated_monthly_savings)
+    ).filter_by(
+        account_id=aid,
+        status='executed'
+    ).scalar() or 0
+
+    # Total blocks (negative keywords)
+    total_blocks = AIAction.query.filter_by(
+        account_id=aid,
+        status='executed',
+        action_type='negative_keyword_added'
+    ).count()
+
+    # Total optimizations (everything except blocks)
+    total_optimizations = AIAction.query.filter(
+        AIAction.account_id == aid,
+        AIAction.status == 'executed',
+        AIAction.action_type != 'negative_keyword_added'
+    ).count()
 
     return render_template(
         "google/ai_change_log.html",
         connected=connected,
         total_actions=total_actions,
-        total_saved=total_saved,
+        total_saved=round(total_saved, 2),
         total_optimizations=total_optimizations,
         total_blocks=total_blocks,
         epn=request.endpoint,
@@ -2816,6 +2889,187 @@ def ads_list_customers():
         return jsonify({"ok": False, "error": str(e), "error_type": "access_issue"}), 400
     except Exception as e:
         current_app.logger.exception("Failed to list Google Ads customers")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+# ------------------------- AI Actions API -------------------------
+
+@google_bp.route("/ads/ai-actions", methods=["GET"], endpoint="get_ai_actions")
+@ajax_login_required
+def get_ai_actions():
+    """
+    API endpoint to fetch AI actions with filtering and pagination.
+
+    Query params:
+    - status: filter by status (pending, executed, failed, undone)
+    - action_type: filter by action type
+    - limit: number of results (default 50, max 200)
+    - offset: pagination offset
+    """
+    try:
+        from app.models_ai_actions import AIAction
+        from sqlalchemy import desc
+
+        aid = current_account_id()
+
+        # Get filters from query params
+        status = request.args.get('status')
+        action_type = request.args.get('action_type')
+        limit = min(int(request.args.get('limit', 50)), 200)
+        offset = int(request.args.get('offset', 0))
+
+        # Build query
+        query = AIAction.query.filter_by(account_id=aid)
+
+        if status:
+            query = query.filter_by(status=status)
+        if action_type:
+            query = query.filter_by(action_type=action_type)
+
+        # Get total count for pagination
+        total = query.count()
+
+        # Get paginated results
+        actions = query.order_by(desc(AIAction.created_at)).offset(offset).limit(limit).all()
+
+        # Convert to dict
+        actions_data = [action.to_dict() for action in actions]
+
+        return jsonify({
+            "ok": True,
+            "actions": actions_data,
+            "total": total,
+            "limit": limit,
+            "offset": offset
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Error fetching AI actions")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@google_bp.route("/ads/ai-actions/summary", methods=["GET"], endpoint="get_ai_actions_summary")
+@ajax_login_required
+def get_ai_actions_summary():
+    """
+    Get summary statistics for AI actions.
+
+    Returns:
+    - Total actions taken
+    - Total estimated savings
+    - Actions by type
+    - Recent actions (last 7 days)
+    """
+    try:
+        from app.models_ai_actions import AIAction
+        from sqlalchemy import func
+        from datetime import datetime, timedelta
+
+        aid = current_account_id()
+
+        # Get all executed actions
+        executed_query = AIAction.query.filter_by(
+            account_id=aid,
+            status='executed'
+        )
+
+        # Total actions
+        total_actions = executed_query.count()
+
+        # Total savings (sum of estimated_monthly_savings)
+        total_savings = db.session.query(
+            func.sum(AIAction.estimated_monthly_savings)
+        ).filter_by(
+            account_id=aid,
+            status='executed'
+        ).scalar() or 0
+
+        # Actions by type
+        actions_by_type = db.session.query(
+            AIAction.action_type,
+            func.count(AIAction.id)
+        ).filter_by(
+            account_id=aid,
+            status='executed'
+        ).group_by(AIAction.action_type).all()
+
+        # Recent actions (last 7 days)
+        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        recent_count = AIAction.query.filter(
+            AIAction.account_id == aid,
+            AIAction.status == 'executed',
+            AIAction.executed_at >= seven_days_ago
+        ).count()
+
+        # Get most recent actions for timeline
+        recent_actions = AIAction.query.filter_by(
+            account_id=aid,
+            status='executed'
+        ).order_by(desc(AIAction.executed_at)).limit(10).all()
+
+        return jsonify({
+            "ok": True,
+            "summary": {
+                "total_actions": total_actions,
+                "total_savings": round(total_savings, 2),
+                "recent_actions_7d": recent_count,
+                "actions_by_type": {
+                    action_type: count
+                    for action_type, count in actions_by_type
+                },
+                "recent_timeline": [action.to_dict() for action in recent_actions]
+            }
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Error fetching AI actions summary")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@google_bp.route("/ads/ai-actions/<int:action_id>/undo", methods=["POST"], endpoint="undo_ai_action")
+@login_required
+def undo_ai_action(action_id: int):
+    """
+    Undo an AI action by reversing the change in Google Ads.
+
+    This calls the undo method on the GoogleAdsAutoExecutor service.
+    """
+    try:
+        from app.models_ai_actions import AIAction
+        from app.services.google_ads_auto_executor import GoogleAdsAutoExecutor
+
+        aid = current_account_id()
+
+        # Get the action
+        action = AIAction.query.filter_by(id=action_id, account_id=aid).first()
+
+        if not action:
+            return jsonify({"ok": False, "error": "Action not found"}), 404
+
+        if not action.is_undoable:
+            return jsonify({
+                "ok": False,
+                "error": "Action cannot be undone (already undone or not executed)"
+            }), 400
+
+        # Create executor and undo the action
+        executor = GoogleAdsAutoExecutor(aid)
+        success, message = executor.undo_action(action)
+
+        if success:
+            return jsonify({
+                "ok": True,
+                "message": message,
+                "action": action.to_dict()
+            })
+        else:
+            return jsonify({
+                "ok": False,
+                "error": message
+            }), 400
+
+    except Exception as e:
+        current_app.logger.exception(f"Error undoing AI action {action_id}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
 

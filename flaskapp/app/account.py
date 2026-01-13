@@ -42,7 +42,7 @@ def account_cancel():
 @api_bp.route('/account/update-industry', methods=['POST'])
 @login_required
 def update_industry():
-    """Update account industry field (used by onboarding)"""
+    """Update account industry field (used by onboarding) - DEPRECATED: industry field removed"""
     try:
         data = request.get_json() or {}
         industry = data.get('industry', '').strip()
@@ -50,11 +50,11 @@ def update_industry():
         if not industry:
             return jsonify({"error": "Industry is required"}), 400
 
-        account = current_user.account
-        account.industry = industry
-        db.session.commit()
+        # NOTE: Industry field has been removed from the database
+        # This endpoint is kept for backward compatibility but doesn't save anything
+        # The industry is now stored in BusinessProfile model instead
 
-        return jsonify({"ok": True, "industry": industry})
+        return jsonify({"ok": True, "industry": industry, "note": "Industry field deprecated"})
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500

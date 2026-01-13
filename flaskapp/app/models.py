@@ -16,7 +16,6 @@ from sqlalchemy import (
 from sqlalchemy.sql import func
 from sqlalchemy import JSON as SAJSON  # generic JSON fallback
 from sqlalchemy.dialects.mysql import LONGTEXT
-from sqlalchemy.ext.hybrid import hybrid_property
 from flask_login import UserMixin  # Add Flask-Login mixin
 
 try:
@@ -45,7 +44,6 @@ class Account(db.Model):
 
     id = db.Column(Integer, primary_key=True)
     name = db.Column(String(150), nullable=False)
-    # NOTE: industry column removed - not present in production DB
 
     # Optional metadata for plan/billing state
     status = db.Column(String(32), nullable=False, server_default="active")  # active|past_due|canceled
@@ -53,31 +51,25 @@ class Account(db.Model):
     # Your schema has `plan` (not `plan_code`)
     plan = db.Column(String(50), nullable=True, index=True)
 
-    # NOTE: DB does NOT have this column. Provide a compatibility shim so any
-    # code that accesses Account.owner_user_id won’t crash, but SQL never selects it.
-    @hybrid_property
-    def owner_user_id(self):
-        return None
-
-    @owner_user_id.setter
-    def owner_user_id(self, _value):
-        # no-op: keep setter to avoid AttributeErrors if something assigns to it
-        pass
-
     created_at = db.Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = db.Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
     # Relationships
     users = db.relationship("User", back_populates="account", cascade="all, delete-orphan")
 
-    # --- Compatibility shim: code can read/write account.plan_code but it hits `plan`
-    @hybrid_property
+    # --- Compatibility properties (using @property instead of @hybrid_property)
+    @property
+    def owner_user_id(self):
+        return None
+
+    @property
     def plan_code(self):
         return self.plan
 
-    @plan_code.setter
-    def plan_code(self, value):
-        self.plan = value
+    @property
+    def industry(self):
+        """Compatibility shim - industry field removed from DB"""
+        return None
 
     def __repr__(self) -> str:
         return f"<Account id={self.id} name={self.name!r} status={self.status!r} plan={self.plan!r}>"
@@ -116,19 +108,19 @@ class User(UserMixin, db.Model):
     account = db.relationship("Account", back_populates="users", lazy="joined")
 
     # ---- Google Search Console compatibility shims (NOT mapped columns) ----
-    @hybrid_property
+    @property
     def gsc_connected(self):
         return False
 
-    @hybrid_property
+    @property
     def gsc_property_id(self):
         return None
 
-    @hybrid_property
+    @property
     def gsc_site_url(self):
         return None
 
-    @hybrid_property
+    @property
     def gsc_token_json(self):
         return None
 

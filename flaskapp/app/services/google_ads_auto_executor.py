@@ -19,7 +19,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from sqlalchemy import func, and_
 
 from app import db
-from app.models import Account
+from app.models import Account, GoogleAdsAuth
 from app.models_ai_actions import AIAction, AIActionRule
 from app.google.utils_ads import client_from_refresh
 
@@ -84,16 +84,20 @@ class GoogleAdsAutoExecutor:
             raise ValueError(f"Account {account_id} not found")
 
         self.google_ads_client = None
+        self.google_auth = None
 
     def _get_google_ads_client(self):
         """Get Google Ads API client."""
         if not self.google_ads_client:
-            if not self.account.google_refresh_token:
+            # Get Google Ads auth from GoogleAdsAuth table
+            self.google_auth = GoogleAdsAuth.query.filter_by(account_id=self.account_id).first()
+
+            if not self.google_auth or not self.google_auth.refresh_token:
                 raise ValueError(f"Account {self.account_id} has no Google Ads connection")
 
-            login_customer_id = self.account.google_login_customer_id or self.account.google_customer_id
+            login_customer_id = self.google_auth.manager_customer_id or self.google_auth.customer_id
             self.google_ads_client = client_from_refresh(
-                self.account.google_refresh_token,
+                self.google_auth.refresh_token,
                 login_customer_id
             )
 
@@ -137,11 +141,13 @@ class GoogleAdsAutoExecutor:
 
         try:
             client = self._get_google_ads_client()
-            customer_id = self.account.google_customer_id
 
-            if not customer_id:
+            # Get customer ID from cached google_auth (set by _get_google_ads_client)
+            if not self.google_auth or not self.google_auth.customer_id:
                 logger.warning(f"No customer ID for account {self.account_id}")
                 return []
+
+            customer_id = self.google_auth.customer_id
 
             # Query search terms from last N days
             query = f"""

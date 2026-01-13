@@ -451,3 +451,38 @@ def fetch_leads_last_30d(
         login_customer_id=login_customer_id,  # None => direct mode
         stream=True,
     )
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Google Ads Client builder from refresh token
+# ────────────────────────────────────────────────────────────────────────────
+
+def client_from_refresh(refresh_token: str, login_customer_id: Optional[str] = None):
+    """
+    Create a Google Ads API client from a refresh token.
+
+    Args:
+        refresh_token: OAuth2 refresh token
+        login_customer_id: Optional manager/MCC customer ID
+
+    Returns:
+        GoogleAdsClient instance configured for API calls
+    """
+    from google.ads.googleads.client import GoogleAdsClient
+
+    dev_token = _dev_token()
+    client_id = current_app.config.get("GOOGLE_ADS_CLIENT_ID") or os.getenv("GOOGLE_ADS_CLIENT_ID")
+    client_secret = current_app.config.get("GOOGLE_ADS_CLIENT_SECRET") or os.getenv("GOOGLE_ADS_CLIENT_SECRET")
+
+    config = {
+        "developer_token": dev_token,
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "refresh_token": refresh_token,
+        "use_proto_plus": True,
+    }
+
+    if login_customer_id:
+        config["login_customer_id"] = _digits_only(login_customer_id)
+
+    return GoogleAdsClient.load_from_dict(config)

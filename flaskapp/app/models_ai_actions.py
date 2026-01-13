@@ -98,8 +98,13 @@ class AIAction(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationships (using foreign_keys since no FK constraint)
-    account = db.relationship("Account", foreign_keys=[account_id], backref=db.backref("ai_actions", lazy="dynamic"))
+    # Relationships (using primaryjoin since no FK constraint)
+    account = db.relationship(
+        "Account",
+        primaryjoin="AIAction.account_id == Account.id",
+        foreign_keys=[account_id],
+        backref=db.backref("ai_actions", lazy="dynamic")
+    )
 
     def __repr__(self) -> str:
         return f"<AIAction id={self.id} type={self.action_type} status={self.status}>"
@@ -195,8 +200,13 @@ class AIActionRule(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationships (using foreign_keys since no FK constraint)
-    account = db.relationship("Account", foreign_keys=[account_id], backref=db.backref("ai_action_rules", lazy="dynamic"))
+    # Relationships (using primaryjoin since no FK constraint)
+    account = db.relationship(
+        "Account",
+        primaryjoin="AIActionRule.account_id == Account.id",
+        foreign_keys=[account_id],
+        backref=db.backref("ai_action_rules", lazy="dynamic")
+    )
 
     def __repr__(self) -> str:
         return f"<AIActionRule id={self.id} name={self.rule_name!r} enabled={self.enabled}>"

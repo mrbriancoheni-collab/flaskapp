@@ -45,17 +45,7 @@ class Account(db.Model):
 
     id = db.Column(Integer, primary_key=True)
     name = db.Column(String(150), nullable=False)
-
-    # NOTE: DB does NOT have this column in production. Provide a compatibility shim.
-    @hybrid_property
-    def industry(self):
-        """Industry field - not present in production DB."""
-        return None
-
-    @industry.setter
-    def industry(self, _value):
-        # no-op: keep setter to avoid AttributeErrors if something assigns to it
-        pass
+    # NOTE: industry column removed - not present in production DB
 
     # Optional metadata for plan/billing state
     status = db.Column(String(32), nullable=False, server_default="active")  # active|past_due|canceled

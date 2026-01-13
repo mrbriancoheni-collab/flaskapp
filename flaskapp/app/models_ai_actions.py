@@ -26,7 +26,7 @@ class AIAction(db.Model):
     __tablename__ = "ai_actions"
 
     id = db.Column(db.Integer, primary_key=True)
-    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False, index=True)
+    account_id = db.Column(db.Integer, nullable=False, index=True)  # No FK to avoid MySQL constraint issues
 
     # Action classification
     action_type = db.Column(
@@ -98,8 +98,8 @@ class AIAction(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationships
-    account = db.relationship("Account", backref=db.backref("ai_actions", lazy="dynamic"))
+    # Relationships (using foreign_keys since no FK constraint)
+    account = db.relationship("Account", foreign_keys=[account_id], backref=db.backref("ai_actions", lazy="dynamic"))
 
     def __repr__(self) -> str:
         return f"<AIAction id={self.id} type={self.action_type} status={self.status}>"
@@ -170,7 +170,7 @@ class AIActionRule(db.Model):
     __tablename__ = "ai_action_rules"
 
     id = db.Column(db.Integer, primary_key=True)
-    account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=False, index=True)
+    account_id = db.Column(db.Integer, nullable=False, index=True)  # No FK to avoid MySQL constraint issues
 
     # Rule identification
     rule_name = db.Column(db.String(255), nullable=False)
@@ -195,8 +195,8 @@ class AIActionRule(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationships
-    account = db.relationship("Account", backref=db.backref("ai_action_rules", lazy="dynamic"))
+    # Relationships (using foreign_keys since no FK constraint)
+    account = db.relationship("Account", foreign_keys=[account_id], backref=db.backref("ai_action_rules", lazy="dynamic"))
 
     def __repr__(self) -> str:
         return f"<AIActionRule id={self.id} name={self.rule_name!r} enabled={self.enabled}>"

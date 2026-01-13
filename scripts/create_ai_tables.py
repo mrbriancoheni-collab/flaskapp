@@ -36,8 +36,10 @@ def main():
         print("Creating tables...")
 
         try:
-            # Create all tables (only new ones will be created)
-            db.create_all()
+            # Create only the AI action tables (not all tables)
+            # This avoids foreign key constraint errors from other pending migrations
+            AIAction.__table__.create(db.engine, checkfirst=True)
+            AIActionRule.__table__.create(db.engine, checkfirst=True)
 
             print("✓ Tables created successfully!")
             print()
@@ -53,6 +55,8 @@ def main():
 
         except Exception as e:
             print(f"✗ Error creating tables: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
 

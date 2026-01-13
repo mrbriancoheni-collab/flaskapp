@@ -29,49 +29,61 @@ def load_environment(project_root=None):
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
 
-    # Try to load .env file using python-dotenv
-    env_path = os.path.join(project_root, '.env')
+    # Check multiple possible .env file locations
+    env_paths = [
+        os.path.join(project_root, '.env'),           # /home/fieljtgr/flaskapp/.env
+        os.path.join(os.path.dirname(project_root), '.env'),  # /home/fieljtgr/.env
+        os.path.expanduser('~/.env'),                  # /home/fieljtgr/.env (home directory)
+    ]
 
+    # Try to load .env file using python-dotenv
+    env_loaded = False
     try:
         from dotenv import load_dotenv
-        if os.path.exists(env_path):
-            load_dotenv(env_path)
-            print(f"✓ Loaded environment from {env_path}")
-            return True
-        else:
-            print(f"ℹ No .env file at {env_path}")
+        for env_path in env_paths:
+            if os.path.exists(env_path):
+                load_dotenv(env_path)
+                print(f"✓ Loaded environment from {env_path}")
+                env_loaded = True
+                break
+
+        if not env_loaded:
+            print(f"ℹ No .env file found at any of: {', '.join(env_paths)}")
     except ImportError:
         print("ℹ python-dotenv not available, using manual loader")
 
-    # Manual .env loader (fallback if python-dotenv not installed)
-    if os.path.exists(env_path):
-        loaded_count = 0
-        with open(env_path, 'r') as f:
-            for line in f:
-                line = line.strip()
-                # Skip comments and empty lines
-                if not line or line.startswith('#'):
-                    continue
+    # Manual .env loader (fallback if python-dotenv not installed or failed)
+    if not env_loaded:
+        for env_path in env_paths:
+            if os.path.exists(env_path):
+                loaded_count = 0
+                with open(env_path, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        # Skip comments and empty lines
+                        if not line or line.startswith('#'):
+                            continue
 
-                # Parse KEY=VALUE
-                if '=' in line:
-                    key, value = line.split('=', 1)
-                    key = key.strip()
-                    value = value.strip()
+                        # Parse KEY=VALUE
+                        if '=' in line:
+                            key, value = line.split('=', 1)
+                            key = key.strip()
+                            value = value.strip()
 
-                    # Remove quotes if present
-                    if value.startswith('"') and value.endswith('"'):
-                        value = value[1:-1]
-                    elif value.startswith("'") and value.endswith("'"):
-                        value = value[1:-1]
+                            # Remove quotes if present
+                            if value.startswith('"') and value.endswith('"'):
+                                value = value[1:-1]
+                            elif value.startswith("'") and value.endswith("'"):
+                                value = value[1:-1]
 
-                    # Only set if not already in environment
-                    if key not in os.environ:
-                        os.environ[key] = value
-                        loaded_count += 1
+                            # Only set if not already in environment
+                            if key not in os.environ:
+                                os.environ[key] = value
+                                loaded_count += 1
 
-        print(f"✓ Manually loaded {loaded_count} variables from {env_path}")
-        return True
+                print(f"✓ Manually loaded {loaded_count} variables from {env_path}")
+                env_loaded = True
+                break
 
     # Check if critical environment variables are already set
     critical_vars = ['SQLALCHEMY_DATABASE_URI']
@@ -79,11 +91,17 @@ def load_environment(project_root=None):
 
     if missing:
         print(f"⚠ Warning: Missing environment variables: {', '.join(missing)}")
-        print(f"⚠ Looked for .env at: {env_path}")
+        print(f"⚠ Searched for .env at:")
+        for path in env_paths:
+            exists = "✓" if os.path.exists(path) else "✗"
+            print(f"   {exists} {path}")
         print(f"⚠ Please ensure environment variables are set or create a .env file")
         return False
     else:
-        print(f"✓ Using existing environment variables")
+        if env_loaded:
+            print(f"✓ Environment loaded successfully")
+        else:
+            print(f"✓ Using existing environment variables")
         return True
 
 

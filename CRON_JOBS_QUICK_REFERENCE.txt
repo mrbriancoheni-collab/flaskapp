@@ -1,0 +1,68 @@
+========================================
+LEAD AUTOMATION CRON JOBS - QUICK COPY
+========================================
+
+RECOMMENDED CONFIGURATION (Balanced)
+====================================
+
+1. Lead Scraping - Every 4 Hours
+---------------------------------
+0 */4 * * * cd /home/fieljtgr/flaskapp && /usr/local/bin/python3 scripts/run_lead_scraping.py >> /home/fieljtgr/logs/lead_scraping.log 2>&1
+
+
+2. Lead Enrichment - Every 4 Hours (30 min offset)
+---------------------------------------------------
+30 */4 * * * cd /home/fieljtgr/flaskapp && /usr/local/bin/python3 scripts/run_lead_enrichment.py >> /home/fieljtgr/logs/lead_enrichment.log 2>&1
+
+
+3. Email Outreach - 3x Daily (Business Hours)
+----------------------------------------------
+0 9,13,17 * * * cd /home/fieljtgr/flaskapp && /usr/local/bin/python3 scripts/run_lead_outreach.py >> /home/fieljtgr/logs/lead_outreach.log 2>&1
+
+
+LOG ROTATION (Optional - Weekly)
+=================================
+0 2 * * 0 find /home/fieljtgr/logs/lead_*.log -type f -exec sh -c 'mv "$1" "$1.$(date +\%Y\%m\%d)"' _ {} \; && find /home/fieljtgr/logs/lead_*.log.* -mtime +30 -delete
+
+
+BEFORE ADDING TO CRON
+=====================
+1. Create logs directory:
+   mkdir -p /home/fieljtgr/logs
+
+2. Test scripts manually:
+   cd /home/fieljtgr/flaskapp
+   python3 scripts/run_lead_scraping.py
+   python3 scripts/run_lead_enrichment.py
+   python3 scripts/run_lead_outreach.py
+
+
+VIEW LOGS
+=========
+tail -f /home/fieljtgr/logs/lead_scraping.log
+tail -f /home/fieljtgr/logs/lead_enrichment.log
+tail -f /home/fieljtgr/logs/lead_outreach.log
+
+
+ALTERNATIVE: HIGH FREQUENCY
+===========================
+# Scraping - Every 2 hours
+0 */2 * * * cd /home/fieljtgr/flaskapp && /usr/local/bin/python3 scripts/run_lead_scraping.py >> /home/fieljtgr/logs/lead_scraping.log 2>&1
+
+# Enrichment - Every 2 hours (20 min offset)
+20 */2 * * * cd /home/fieljtgr/flaskapp && /usr/local/bin/python3 scripts/run_lead_enrichment.py >> /home/fieljtgr/logs/lead_enrichment.log 2>&1
+
+# Outreach - Every 2 hours (business hours, weekdays)
+0 9-17/2 * * 1-5 cd /home/fieljtgr/flaskapp && /usr/local/bin/python3 scripts/run_lead_outreach.py >> /home/fieljtgr/logs/lead_outreach.log 2>&1
+
+
+ALTERNATIVE: LOW FREQUENCY (Budget Saver)
+==========================================
+# Scraping - Twice daily
+0 8,16 * * * cd /home/fieljtgr/flaskapp && /usr/local/bin/python3 scripts/run_lead_scraping.py >> /home/fieljtgr/logs/lead_scraping.log 2>&1
+
+# Enrichment - Twice daily
+0 9,17 * * * cd /home/fieljtgr/flaskapp && /usr/local/bin/python3 scripts/run_lead_enrichment.py >> /home/fieljtgr/logs/lead_enrichment.log 2>&1
+
+# Outreach - Once daily
+0 10 * * * cd /home/fieljtgr/flaskapp && /usr/local/bin/python3 scripts/run_lead_outreach.py >> /home/fieljtgr/logs/lead_outreach.log 2>&1

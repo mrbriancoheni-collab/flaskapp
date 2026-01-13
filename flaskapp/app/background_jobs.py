@@ -215,10 +215,18 @@ def cleanup_expired_invites(app: Flask):
     Marks expired invitations as 'expired' status.
     """
     with app.app_context():
-        from app.models_team import TeamInvite
         from app import db
+        from sqlalchemy import inspect
 
         try:
+            # Check if team_invites table exists before querying
+            inspector = inspect(db.engine)
+            if 'team_invites' not in inspector.get_table_names():
+                # Table doesn't exist yet - skip this job silently
+                return
+
+            from app.models_team import TeamInvite
+
             now = datetime.utcnow()
             expired_invites = TeamInvite.query.filter(
                 TeamInvite.status == 'pending',

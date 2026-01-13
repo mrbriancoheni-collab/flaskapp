@@ -17,6 +17,7 @@ from sqlalchemy.sql import func
 from sqlalchemy import JSON as SAJSON  # generic JSON fallback
 from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import deferred
 from flask_login import UserMixin  # Add Flask-Login mixin
 
 try:
@@ -45,7 +46,8 @@ class Account(db.Model):
 
     id = db.Column(Integer, primary_key=True)
     name = db.Column(String(150), nullable=False)
-    industry = db.Column(String(100), nullable=True)  # e.g., 'plumbing', 'hvac', 'pest control', etc.
+    # NOTE: DB may not have this column in production. Deferred to avoid loading errors.
+    industry = deferred(db.Column(String(100), nullable=True))  # e.g., 'plumbing', 'hvac', 'pest control', etc.
 
     # Optional metadata for plan/billing state
     status = db.Column(String(32), nullable=False, server_default="active")  # active|past_due|canceled

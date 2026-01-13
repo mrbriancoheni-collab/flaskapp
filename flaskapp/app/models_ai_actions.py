@@ -91,7 +91,7 @@ class AIAction(db.Model):
     # Undo tracking
     can_undo = db.Column(db.Boolean, nullable=False, default=True)
     undone_at = db.Column(db.DateTime, nullable=True)
-    undone_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    undone_by = db.Column(db.Integer, nullable=True)  # User ID who undid the action (no FK to avoid constraint issues)
     undo_reason = db.Column(db.String(255), nullable=True)
 
     # Timestamps

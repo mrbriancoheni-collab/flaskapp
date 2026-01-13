@@ -54,9 +54,14 @@ def print_header(text):
 
 def get_active_google_ads_accounts():
     """Get all accounts with active Google Ads connections."""
-    accounts = Account.query.filter(
-        Account.google_refresh_token.isnot(None),
-        Account.google_customer_id.isnot(None)
+    from app.models import GoogleAdsAuth
+
+    # Query accounts that have GoogleAdsAuth records
+    accounts = db.session.query(Account).join(
+        GoogleAdsAuth, Account.id == GoogleAdsAuth.account_id
+    ).filter(
+        GoogleAdsAuth.refresh_token.isnot(None),
+        GoogleAdsAuth.customer_id.isnot(None)
     ).all()
 
     logger.info(f"Found {len(accounts)} accounts with Google Ads connections")

@@ -8,28 +8,19 @@ Can be run on-demand or via cron.
 
 import sys
 import os
-import logging
 
-# Add parent directory to path
+# Load environment BEFORE importing anything from app
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
-sys.path.insert(0, PROJECT_ROOT)
+sys.path.insert(0, SCRIPT_DIR)
 
-# Change to project root directory
-os.chdir(PROJECT_ROOT)
+from load_env import load_environment, ensure_app_can_initialize
 
-# Load environment variables from .env file
-try:
-    from dotenv import load_dotenv
-    env_path = os.path.join(PROJECT_ROOT, '.env')
-    if os.path.exists(env_path):
-        load_dotenv(env_path)
-        print(f"Loaded environment from {env_path}")
-    else:
-        print(f"Warning: .env file not found at {env_path}")
-except ImportError:
-    print("Warning: python-dotenv not installed, environment variables must be set manually")
+# Load environment and ensure app can initialize
+load_environment()
+ensure_app_can_initialize()
 
+# NOW we can safely import the app
+import logging
 from app import create_app
 from app.services.lead_automation_service import LeadAutomationService
 

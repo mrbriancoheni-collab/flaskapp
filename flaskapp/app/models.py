@@ -71,6 +71,16 @@ class Account(db.Model):
         """Compatibility shim - industry field removed from DB"""
         return None
 
+    @property
+    def google_ads_connected(self):
+        """
+        Compatibility shim - deprecated property.
+        NOTE: This property should NOT be used in SQLAlchemy queries.
+        Instead, join with GoogleAdsAuth table in your query.
+        Returns False to avoid breaking existing code.
+        """
+        return False
+
     def __repr__(self) -> str:
         return f"<Account id={self.id} name={self.name!r} status={self.status!r} plan={self.plan!r}>"
 

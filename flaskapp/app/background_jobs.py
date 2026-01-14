@@ -380,8 +380,10 @@ def generate_google_ads_insights_weekly(app: Flask):
             current_app.logger.info("Starting weekly Google Ads insights generation")
 
             # Get all accounts with Google Ads connected
-            accounts = Account.query.filter(
-                Account.google_ads_connected == True,
+            from app.models import GoogleAdsAuth
+            accounts = Account.query.join(
+                GoogleAdsAuth, Account.id == GoogleAdsAuth.account_id
+            ).filter(
                 Account.status == 'active'
             ).all()
 
@@ -536,8 +538,10 @@ def generate_google_ads_insights_daily(app: Flask):
             current_app.logger.info("Starting daily Google Ads insights generation for high-spend accounts")
 
             # Get all accounts with Google Ads connected
-            accounts = Account.query.filter(
-                Account.google_ads_connected == True,
+            from app.models import GoogleAdsAuth
+            accounts = Account.query.join(
+                GoogleAdsAuth, Account.id == GoogleAdsAuth.account_id
+            ).filter(
                 Account.status == 'active'
             ).all()
 

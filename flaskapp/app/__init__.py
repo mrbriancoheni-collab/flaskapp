@@ -117,11 +117,19 @@ def create_app():
     if _os.getenv("HTTPS", "on").lower() in ("on", "1", "true", "yes"):
         app.config["SESSION_COOKIE_SECURE"] = True
 
-    # (Optional) .env
+    # (Optional) .env - load from explicit path for Passenger/production compatibility
     try:
         from dotenv import load_dotenv
-        load_dotenv()
-    except Exception:
+        # Look for .env in the parent directory of this file (flaskapp root)
+        env_path = Path(__file__).resolve().parent.parent / '.env'
+        if env_path.exists():
+            load_dotenv(env_path)
+            app.logger.debug(f"Loaded .env from {env_path}")
+        else:
+            # Fallback to current directory
+            load_dotenv()
+    except Exception as e:
+        # Don't fail if dotenv isn't installed
         pass
 
     # ---- Load config.py if present -----------------------------------------

@@ -4,7 +4,18 @@
 {% block title %}{% if is_demo %}Opportunities Dashboard - Google Ads{% else %}Google Ads{% endif %}{% endblock %}
 
 {% block content %}
+{% from "components/breadcrumbs.html" import render as render_breadcrumbs %}
+
 <div class="max-w-7xl mx-auto space-y-6">
+  <!-- Breadcrumbs -->
+  {% if not is_demo %}
+  {{ render_breadcrumbs([
+    {'name': 'Dashboard', 'url': url_for('account_bp.dashboard'), 'icon': 'fa-solid fa-home'},
+    {'name': 'Google Ads', 'url': url_for('google_bp.ads_decision_screen'), 'icon': 'fa-brands fa-google'},
+    {'name': 'Opportunities', 'url': ''}
+  ]) }}
+  {% endif %}
+
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
@@ -329,6 +340,7 @@
       <p class="text-sm text-gray-600 mt-1">{{ analysis.opportunities|length }} specific optimizations identified - select items to implement</p>
     </div>
 
+    {% if analysis.opportunities and analysis.opportunities|length > 0 %}
     <!-- Filter/Sort Controls -->
     <div class="flex items-center justify-end gap-2 text-sm mb-6">
       <select id="filterPriority" class="border border-gray-300 rounded px-3 py-1 text-sm">
@@ -523,6 +535,31 @@
         <i class="fa-solid fa-info-circle"></i> Select optimizations above and click to approve
       </p>
     </div>
+
+    {% else %}
+    <!-- Empty State - No Manual Tasks -->
+    <div class="text-center py-16 text-gray-500">
+      <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-4">
+        <i class="fa-solid fa-circle-check text-4xl text-green-500"></i>
+      </div>
+      <h3 class="text-xl font-semibold text-gray-900 mb-2">All Set!</h3>
+      <p class="text-gray-600 mb-2">No manual optimization tasks found at this time.</p>
+      <p class="text-sm text-gray-500 mb-6">
+        AI Auto-Protection is handling negative keywords automatically.<br>
+        New manual tasks will appear here when they need your attention.
+      </p>
+      <div class="flex items-center justify-center gap-4">
+        <a href="{{ url_for('google_bp.ai_change_log') }}"
+           class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+          <i class="fa-solid fa-robot"></i> View AI Actions
+        </a>
+        <a href="{{ url_for('google_bp.ads_structure') }}"
+           class="inline-flex items-center gap-2 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
+          <i class="fa-solid fa-sitemap"></i> View Account Structure
+        </a>
+      </div>
+    </div>
+    {% endif %}
   </div>
 
   <!-- Manual Tasks Section -->

@@ -4,13 +4,19 @@
 {% block title %}Account Structure - Google Ads{% endblock %}
 
 {% block content %}
+{% from "components/breadcrumbs.html" import render as render_breadcrumbs %}
+
 <div class="max-w-7xl mx-auto space-y-6">
+  <!-- Breadcrumbs -->
+  {{ render_breadcrumbs([
+    {'name': 'Dashboard', 'url': url_for('account_bp.dashboard'), 'icon': 'fa-solid fa-home'},
+    {'name': 'Google Ads', 'url': url_for('google_bp.ads_decision_screen'), 'icon': 'fa-brands fa-google'},
+    {'name': 'Account Structure', 'url': ''}
+  ]) }}
+
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
-      <a href="{{ url_for('google_bp.ads_ui') }}" class="text-sm text-indigo-600 hover:text-indigo-800 mb-2 inline-block">
-        <i class="fa-solid fa-arrow-left mr-1"></i> Back to Opportunities Dashboard
-      </a>
       <h1 class="text-3xl font-bold">Account Structure</h1>
       <p class="text-gray-600 mt-1">{{ ads_data.account_name or 'Google Ads Account' }}</p>
     </div>

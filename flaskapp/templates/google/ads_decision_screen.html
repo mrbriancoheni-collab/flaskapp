@@ -40,6 +40,14 @@
 
 <div class="max-w-7xl mx-auto space-y-6">
 
+  {# BREADCRUMBS #}
+  {% from "components/breadcrumbs.html" import render as render_breadcrumbs %}
+  {{ render_breadcrumbs([
+    {'name': 'Dashboard', 'url': url_for('account_bp.dashboard'), 'icon': 'fa-solid fa-home'},
+    {'name': 'Google Ads', 'url': url_for('google_bp.ads_decision_screen')},
+    {'name': 'Decision Screen', 'url': ''}
+  ]) }}
+
   {# HEADER WITH BACK LINK #}
   <div class="flex items-center justify-between">
     <div>
@@ -348,33 +356,45 @@
   </div>
 
   {# QUICK ACTIONS #}
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <a href="{{ url_for('google_bp.ads_ui') }}"
-       class="rounded-lg border-2 border-gray-200 bg-white p-6 hover:border-indigo-400 hover:shadow-md transition">
-      <div class="text-gray-400 text-3xl mb-3">
-        <i class="fa-solid fa-bullhorn"></i>
-      </div>
-      <div class="font-semibold text-gray-900">Campaigns & Ad Groups</div>
-      <div class="text-sm text-gray-600 mt-1">View all active campaigns and performance</div>
-    </a>
+  <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+      <h2 class="text-xl font-bold text-white">
+        <i class="fa-solid fa-bolt mr-2"></i>What would you like to do?
+      </h2>
+    </div>
+    <div class="p-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {# Manual Tasks #}
+        <a href="{{ url_for('google_bp.ads_opportunities') }}"
+           class="rounded-lg border-2 border-gray-200 bg-white p-5 hover:border-purple-400 hover:shadow-md transition group">
+          <div class="text-purple-500 text-3xl mb-3 group-hover:scale-110 transition-transform">
+            <i class="fa-solid fa-tasks"></i>
+          </div>
+          <div class="font-semibold text-gray-900 mb-1">Review Manual Tasks</div>
+          <div class="text-sm text-gray-600">Tasks that need your decision and approval</div>
+        </a>
 
-    <a href="{{ url_for('google_bp.ads_opportunities') }}"
-       class="rounded-lg border-2 border-gray-200 bg-white p-6 hover:border-purple-400 hover:shadow-md transition">
-      <div class="text-gray-400 text-3xl mb-3">
-        <i class="fa-solid fa-lightbulb"></i>
-      </div>
-      <div class="font-semibold text-gray-900">Optimization Opportunities</div>
-      <div class="text-sm text-gray-600 mt-1">AI-recommended improvements</div>
-    </a>
+        {# AI Change Log #}
+        <a href="{{ url_for('google_bp.ai_change_log') }}"
+           class="rounded-lg border-2 border-gray-200 bg-white p-5 hover:border-blue-400 hover:shadow-md transition group">
+          <div class="text-blue-500 text-3xl mb-3 group-hover:scale-110 transition-transform">
+            <i class="fa-solid fa-robot"></i>
+          </div>
+          <div class="font-semibold text-gray-900 mb-1">View AI Actions</div>
+          <div class="text-sm text-gray-600">See what AI has done and undo if needed</div>
+        </a>
 
-    <a href="{{ url_for('google_bp.ads_structure') }}"
-       class="rounded-lg border-2 border-gray-200 bg-white p-6 hover:border-blue-400 hover:shadow-md transition">
-      <div class="text-gray-400 text-3xl mb-3">
-        <i class="fa-solid fa-sitemap"></i>
+        {# Account Structure #}
+        <a href="{{ url_for('google_bp.ads_structure') }}"
+           class="rounded-lg border-2 border-gray-200 bg-white p-5 hover:border-green-400 hover:shadow-md transition group">
+          <div class="text-green-500 text-3xl mb-3 group-hover:scale-110 transition-transform">
+            <i class="fa-solid fa-sitemap"></i>
+          </div>
+          <div class="font-semibold text-gray-900 mb-1">Explore Structure</div>
+          <div class="text-sm text-gray-600">View campaigns, ad groups, and keywords</div>
+        </a>
       </div>
-      <div class="font-semibold text-gray-900">Account Structure</div>
-      <div class="text-sm text-gray-600 mt-1">Full account hierarchy and settings</div>
-    </a>
+    </div>
   </div>
 
 </div>

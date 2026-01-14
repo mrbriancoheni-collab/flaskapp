@@ -40,6 +40,14 @@
 
 <div class="max-w-7xl mx-auto space-y-6">
 
+  {# BREADCRUMBS #}
+  {% from "components/breadcrumbs.html" import render as render_breadcrumbs %}
+  {{ render_breadcrumbs([
+    {'name': 'Dashboard', 'url': url_for('account_bp.dashboard'), 'icon': 'fa-solid fa-home'},
+    {'name': 'Google Ads', 'url': url_for('google_bp.ads_decision_screen')},
+    {'name': 'Decision Screen', 'url': ''}
+  ]) }}
+
   {# HEADER WITH BACK LINK #}
   <div class="flex items-center justify-between">
     <div>
@@ -111,7 +119,7 @@
         <div class="grid grid-cols-2 gap-3">
           <div class="flex items-center gap-2 text-blue-800">
             <i class="fa-solid fa-check-circle text-blue-600"></i>
-            <span class="text-sm font-medium">Auto-blocked {{blocked_searches_count | default(127)}} irrelevant searches</span>
+            <span class="text-sm font-medium">Auto-blocked {{ blocked_searches_count if connected else 127 }} irrelevant searches</span>
           </div>
           <div class="flex items-center gap-2 text-blue-800">
             <i class="fa-solid fa-check-circle text-blue-600"></i>
@@ -203,21 +211,21 @@
         </div>
         <div>
           <div class="text-sm text-gray-500 font-medium">Wasted Spend Prevented</div>
-          <div class="text-3xl font-bold text-gray-900">${{wasted_spend_prevented | default(842)}}</div>
+          <div class="text-3xl font-bold text-gray-900">${{ wasted_spend_prevented if connected else 842 }}</div>
         </div>
       </div>
       <div class="text-sm text-gray-600 space-y-1">
         <div class="flex justify-between">
           <span>{{industry_language.waste_example}} blocked:</span>
-          <span class="font-medium">${{diy_blocked | default(312)}}</span>
+          <span class="font-medium">${{ "N/A" if connected else 312 }}</span>
         </div>
         <div class="flex justify-between">
           <span>Job searches blocked:</span>
-          <span class="font-medium">${{jobs_blocked | default(287)}}</span>
+          <span class="font-medium">${{ "N/A" if connected else 287 }}</span>
         </div>
         <div class="flex justify-between">
           <span>Low-quality clicks avoided:</span>
-          <span class="font-medium">${{low_quality_avoided | default(243)}}</span>
+          <span class="font-medium">${{ "N/A" if connected else 243 }}</span>
         </div>
       </div>
     </div>
@@ -230,27 +238,27 @@
         </div>
         <div>
           <div class="text-sm text-gray-500 font-medium">{{industry_language.call_type}}</div>
-          <div class="text-3xl font-bold text-gray-900">{{calls_generated | default(23)}}</div>
+          <div class="text-3xl font-bold text-gray-900">{{ calls_generated if connected else 23 }}</div>
         </div>
       </div>
       <div class="text-sm text-gray-600 space-y-2">
         <div class="flex items-center justify-between pb-2 border-b">
           <span>Total calls received</span>
-          <span class="font-bold text-gray-900">{{calls_generated | default(23)}}</span>
+          <span class="font-bold text-gray-900">{{ calls_generated if connected else 23 }}</span>
         </div>
         <div class="flex items-center justify-between text-green-700">
           <span class="flex items-center gap-1">
             <i class="fa-solid fa-check-circle text-xs"></i>
             Qualified leads
           </span>
-          <span class="font-bold">{{qualified_leads | default(14)}}</span>
+          <span class="font-bold">{{ qualified_leads if connected else 14 }}</span>
         </div>
         <div class="flex items-center justify-between text-blue-700">
           <span class="flex items-center gap-1">
             <i class="fa-solid fa-calendar-check text-xs"></i>
             Booked jobs
           </span>
-          <span class="font-bold">{{booked_jobs | default(9)}}</span>
+          <span class="font-bold">{{ booked_jobs if connected else 9 }}</span>
         </div>
       </div>
     </div>
@@ -263,21 +271,21 @@
         </div>
         <div>
           <div class="text-sm text-gray-500 font-medium">AI Actions Taken</div>
-          <div class="text-3xl font-bold text-gray-900">{{ai_actions_count | default(47)}}</div>
+          <div class="text-3xl font-bold text-gray-900">{{ ai_actions_taken if connected else 47 }}</div>
         </div>
       </div>
       <div class="text-sm text-gray-600 space-y-1">
         <div class="flex justify-between">
           <span>Bad searches blocked:</span>
-          <span class="font-medium">{{bad_searches_blocked | default(19)}}</span>
+          <span class="font-medium">{{ blocked_searches_count if connected else 19 }}</span>
         </div>
         <div class="flex justify-between">
           <span>Budget reallocated:</span>
-          <span class="font-medium">{{budget_reallocations | default(12)}}</span>
+          <span class="font-medium">{{ budget_reallocations if connected else 12 }}</span>
         </div>
         <div class="flex justify-between">
           <span>Bids optimized:</span>
-          <span class="font-medium">{{bids_optimized | default(16)}}</span>
+          <span class="font-medium">{{ bids_optimized if connected else 16 }}</span>
         </div>
       </div>
       <a href="{{ url_for('google_bp.ai_change_log') }}"
@@ -348,33 +356,45 @@
   </div>
 
   {# QUICK ACTIONS #}
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <a href="{{ url_for('google_bp.ads_ui') }}"
-       class="rounded-lg border-2 border-gray-200 bg-white p-6 hover:border-indigo-400 hover:shadow-md transition">
-      <div class="text-gray-400 text-3xl mb-3">
-        <i class="fa-solid fa-bullhorn"></i>
-      </div>
-      <div class="font-semibold text-gray-900">Campaigns & Ad Groups</div>
-      <div class="text-sm text-gray-600 mt-1">View all active campaigns and performance</div>
-    </a>
+  <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+      <h2 class="text-xl font-bold text-white">
+        <i class="fa-solid fa-bolt mr-2"></i>What would you like to do?
+      </h2>
+    </div>
+    <div class="p-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {# Manual Tasks #}
+        <a href="{{ url_for('google_bp.ads_opportunities') }}"
+           class="rounded-lg border-2 border-gray-200 bg-white p-5 hover:border-purple-400 hover:shadow-md transition group">
+          <div class="text-purple-500 text-3xl mb-3 group-hover:scale-110 transition-transform">
+            <i class="fa-solid fa-tasks"></i>
+          </div>
+          <div class="font-semibold text-gray-900 mb-1">Review Manual Tasks</div>
+          <div class="text-sm text-gray-600">Tasks that need your decision and approval</div>
+        </a>
 
-    <a href="{{ url_for('google_bp.ads_opportunities') }}"
-       class="rounded-lg border-2 border-gray-200 bg-white p-6 hover:border-purple-400 hover:shadow-md transition">
-      <div class="text-gray-400 text-3xl mb-3">
-        <i class="fa-solid fa-lightbulb"></i>
-      </div>
-      <div class="font-semibold text-gray-900">Optimization Opportunities</div>
-      <div class="text-sm text-gray-600 mt-1">AI-recommended improvements</div>
-    </a>
+        {# AI Change Log #}
+        <a href="{{ url_for('google_bp.ai_change_log') }}"
+           class="rounded-lg border-2 border-gray-200 bg-white p-5 hover:border-blue-400 hover:shadow-md transition group">
+          <div class="text-blue-500 text-3xl mb-3 group-hover:scale-110 transition-transform">
+            <i class="fa-solid fa-robot"></i>
+          </div>
+          <div class="font-semibold text-gray-900 mb-1">View AI Actions</div>
+          <div class="text-sm text-gray-600">See what AI has done and undo if needed</div>
+        </a>
 
-    <a href="{{ url_for('google_bp.ads_structure') }}"
-       class="rounded-lg border-2 border-gray-200 bg-white p-6 hover:border-blue-400 hover:shadow-md transition">
-      <div class="text-gray-400 text-3xl mb-3">
-        <i class="fa-solid fa-sitemap"></i>
+        {# Account Structure #}
+        <a href="{{ url_for('google_bp.ads_structure') }}"
+           class="rounded-lg border-2 border-gray-200 bg-white p-5 hover:border-green-400 hover:shadow-md transition group">
+          <div class="text-green-500 text-3xl mb-3 group-hover:scale-110 transition-transform">
+            <i class="fa-solid fa-sitemap"></i>
+          </div>
+          <div class="font-semibold text-gray-900 mb-1">Explore Structure</div>
+          <div class="text-sm text-gray-600">View campaigns, ad groups, and keywords</div>
+        </a>
       </div>
-      <div class="font-semibold text-gray-900">Account Structure</div>
-      <div class="text-sm text-gray-600 mt-1">Full account hierarchy and settings</div>
-    </a>
+    </div>
   </div>
 
 </div>

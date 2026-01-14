@@ -4,9 +4,17 @@
 {% block title %}AI Change Log - What Your AI Has Done{% endblock %}
 
 {% block content %}
+{% from "components/breadcrumbs.html" import render as render_breadcrumbs %}
 {% set _industry = (current_account.industry if current_account and current_account.industry else 'home services') %}
 
 <div class="max-w-5xl mx-auto space-y-6">
+
+  {# BREADCRUMBS #}
+  {{ render_breadcrumbs([
+    {'name': 'Dashboard', 'url': url_for('account_bp.dashboard'), 'icon': 'fa-solid fa-home'},
+    {'name': 'Google Ads', 'url': url_for('google_bp.ads_decision_screen'), 'icon': 'fa-brands fa-google'},
+    {'name': 'AI Change Log', 'url': ''}
+  ]) }}
 
   {# HEADER #}
   <div class="flex items-center justify-between">
@@ -23,19 +31,19 @@
   {# SUMMARY STATS #}
   <div class="grid grid-cols-4 gap-4">
     <div class="rounded-lg border bg-white p-4">
-      <div class="text-2xl font-bold text-gray-900">{{total_actions | default(127)}}</div>
+      <div class="text-2xl font-bold text-gray-900">{{ total_actions if connected else 127 }}</div>
       <div class="text-sm text-gray-500">Total Actions</div>
     </div>
     <div class="rounded-lg border bg-white p-4">
-      <div class="text-2xl font-bold text-red-600">${{total_saved | default('3,247')}}</div>
+      <div class="text-2xl font-bold text-red-600">${{ total_saved if connected else '3,247' }}</div>
       <div class="text-sm text-gray-500">Waste Prevented</div>
     </div>
     <div class="rounded-lg border bg-white p-4">
-      <div class="text-2xl font-bold text-green-600">{{total_optimizations | default(47)}}</div>
+      <div class="text-2xl font-bold text-green-600">{{ total_optimizations if connected else 47 }}</div>
       <div class="text-sm text-gray-500">Optimizations</div>
     </div>
     <div class="rounded-lg border bg-white p-4">
-      <div class="text-2xl font-bold text-purple-600">{{total_blocks | default(80)}}</div>
+      <div class="text-2xl font-bold text-purple-600">{{ total_blocks if connected else 80 }}</div>
       <div class="text-sm text-gray-500">Blocks Applied</div>
     </div>
   </div>
@@ -69,6 +77,17 @@
     </div>
 
     <div class="p-6">
+      {% if connected and total_actions > 0 %}
+      {# Real AI actions will be shown here when implemented #}
+      <div class="text-center py-12 text-gray-500">
+        <i class="fa-solid fa-code text-4xl mb-4"></i>
+        <p class="font-semibold mb-2">AI Actions Log Coming Soon</p>
+        <p class="text-sm">Dynamic action log display is being built.</p>
+        <p class="text-sm mt-1">For now, {{ total_actions }} actions have been recorded.</p>
+      </div>
+
+      {% elif not connected %}
+      {# Demo/placeholder data for non-connected accounts #}
       <div class="space-y-6">
 
         {# TODAY #}
@@ -247,6 +266,25 @@
         </div>
 
       </div>
+
+      {% else %}
+      {# Empty State - No actions yet #}
+      <div class="text-center py-16 text-gray-500">
+        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-purple-100 mb-4">
+          <i class="fa-solid fa-robot text-4xl text-purple-500"></i>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-900 mb-2">AI Protection is Active</h3>
+        <p class="text-gray-600 mb-4">Auto-executor is monitoring your account every 4 hours.</p>
+        <p class="text-sm text-gray-500 mb-6">
+          Actions will appear here when AI detects opportunities to<br>
+          block wasteful searches and optimize your budget.
+        </p>
+        <a href="{{ url_for('google_bp.ads_decision_screen') }}"
+           class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+          <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+        </a>
+      </div>
+      {% endif %}
     </div>
   </div>
 

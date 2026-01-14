@@ -3352,6 +3352,29 @@ def ads_opportunities():
     # Manual tasks: Require manual setup (setup, quality_score, account_structure, location extensions)
     all_opportunities = analysis.get("opportunities", [])
 
+    def is_auto_executed(opp):
+        """
+        Determine if this optimization is handled automatically by the auto-executor.
+        These should NOT show on opportunities page since they're done automatically every 4 hours.
+        """
+        opt_type = opp.get("optimization_type", "")
+        title = opp.get("title", "").lower()
+
+        # Auto-executor handles these automatically (see background_jobs.py)
+        AUTO_EXECUTOR_TYPES = [
+            'negative_keyword',           # Auto-added every 4 hours based on non-purchase intent
+            'starter_negative_keywords',  # Auto-added for new campaigns
+        ]
+
+        if opt_type in AUTO_EXECUTOR_TYPES:
+            return True
+
+        # Check for negative keyword variations in title
+        if 'negative keyword' in title or 'block search' in title or 'add negative' in title:
+            return True
+
+        return False
+
     def is_auto_applicable(opp):
         opt_type = opp.get("optimization_type", "")
         decision_type = opp.get('decision_type', '')
@@ -3425,12 +3448,20 @@ def ads_opportunities():
     # Filter opportunities to exclude paused campaign suggestions
     all_opportunities = [opp for opp in all_opportunities if should_include_opportunity(opp)]
 
-    analysis["opportunities"] = [opp for opp in all_opportunities if is_auto_applicable(opp)]
-    analysis["manual_tasks"] = [opp for opp in all_opportunities if not is_auto_applicable(opp)]
+    # NEW: Filter out tasks handled by auto-executor (they run automatically every 4 hours)
+    auto_executed_tasks = [opp for opp in all_opportunities if is_auto_executed(opp)]
+    remaining_opportunities = [opp for opp in all_opportunities if not is_auto_executed(opp)]
+
+    # Split remaining opportunities into auto-applicable (one-click) and manual tasks
+    analysis["opportunities"] = [opp for opp in remaining_opportunities if is_auto_applicable(opp)]
+    analysis["manual_tasks"] = [opp for opp in remaining_opportunities if not is_auto_applicable(opp)]
+    analysis["auto_executed_count"] = len(auto_executed_tasks)
 
     current_app.logger.info(
-        f"ads_opportunities: Split {len(all_opportunities)} total into {len(analysis['opportunities'])} auto-applicable "
-        f"and {len(analysis['manual_tasks'])} manual tasks. Auto types: {[o.get('title') for o in analysis['opportunities']]}"
+        f"ads_opportunities: {len(all_opportunities)} total → "
+        f"{len(auto_executed_tasks)} auto-executed (hidden), "
+        f"{len(analysis['opportunities'])} auto-applicable, "
+        f"{len(analysis['manual_tasks'])} manual tasks"
     )
 
     # TEMPLATE DEBUG: Log what's being passed to template

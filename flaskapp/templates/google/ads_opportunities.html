@@ -4,7 +4,18 @@
 {% block title %}{% if is_demo %}Opportunities Dashboard - Google Ads{% else %}Google Ads{% endif %}{% endblock %}
 
 {% block content %}
+{% from "components/breadcrumbs.html" import render as render_breadcrumbs %}
+
 <div class="max-w-7xl mx-auto space-y-6">
+  <!-- Breadcrumbs -->
+  {% if not is_demo %}
+  {{ render_breadcrumbs([
+    {'name': 'Dashboard', 'url': url_for('account_bp.dashboard'), 'icon': 'fa-solid fa-home'},
+    {'name': 'Google Ads', 'url': url_for('google_bp.ads_decision_screen'), 'icon': 'fa-brands fa-google'},
+    {'name': 'Opportunities', 'url': ''}
+  ]) }}
+  {% endif %}
+
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
@@ -95,6 +106,39 @@
       {% endif %}
     </div>
   </div>
+
+  <!-- Auto-Executor Active Banner -->
+  {% if connected and analysis.auto_executed_count and analysis.auto_executed_count > 0 %}
+  <div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-5">
+    <div class="flex items-start justify-between">
+      <div class="flex items-start gap-4">
+        <div class="flex-shrink-0">
+          <i class="fa-solid fa-shield-check text-blue-600 text-3xl"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-blue-900 mb-1">
+            <i class="fa-solid fa-robot mr-1"></i> AI Auto-Protection Active
+          </h3>
+          <p class="text-blue-800 mb-2">
+            Auto-executor is handling <strong>{{ analysis.auto_executed_count }} optimization{{ 's' if analysis.auto_executed_count != 1 else '' }}</strong> automatically every 4 hours.
+            Below are tasks that need your review and decision.
+          </p>
+          <p class="text-sm text-blue-700">
+            <i class="fa-solid fa-info-circle mr-1"></i>
+            Auto-blocked searches (jobs, DIY, how-to, reviews) are managed 24/7. You'll see those actions in the AI log.
+          </p>
+        </div>
+      </div>
+      <div class="flex-shrink-0">
+        <a href="{{ url_for('google_bp.ai_change_log') }}"
+           class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition shadow">
+          <i class="fa-solid fa-list-check"></i>
+          View AI Actions
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   <!-- Performance Dashboard -->
   <div class="bg-white rounded-xl shadow-lg p-6">
@@ -296,6 +340,7 @@
       <p class="text-sm text-gray-600 mt-1">{{ analysis.opportunities|length }} specific optimizations identified - select items to implement</p>
     </div>
 
+    {% if analysis.opportunities and analysis.opportunities|length > 0 %}
     <!-- Filter/Sort Controls -->
     <div class="flex items-center justify-end gap-2 text-sm mb-6">
       <select id="filterPriority" class="border border-gray-300 rounded px-3 py-1 text-sm">
@@ -490,6 +535,31 @@
         <i class="fa-solid fa-info-circle"></i> Select optimizations above and click to approve
       </p>
     </div>
+
+    {% else %}
+    <!-- Empty State - No Manual Tasks -->
+    <div class="text-center py-16 text-gray-500">
+      <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-4">
+        <i class="fa-solid fa-circle-check text-4xl text-green-500"></i>
+      </div>
+      <h3 class="text-xl font-semibold text-gray-900 mb-2">All Set!</h3>
+      <p class="text-gray-600 mb-2">No manual optimization tasks found at this time.</p>
+      <p class="text-sm text-gray-500 mb-6">
+        AI Auto-Protection is handling negative keywords automatically.<br>
+        New manual tasks will appear here when they need your attention.
+      </p>
+      <div class="flex items-center justify-center gap-4">
+        <a href="{{ url_for('google_bp.ai_change_log') }}"
+           class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+          <i class="fa-solid fa-robot"></i> View AI Actions
+        </a>
+        <a href="{{ url_for('google_bp.ads_structure') }}"
+           class="inline-flex items-center gap-2 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
+          <i class="fa-solid fa-sitemap"></i> View Account Structure
+        </a>
+      </div>
+    </div>
+    {% endif %}
   </div>
 
   <!-- Manual Tasks Section -->

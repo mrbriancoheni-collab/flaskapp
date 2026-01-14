@@ -191,9 +191,9 @@
       <a class="block px-3 py-3 rounded nav-link min-h-12" href="{{ url_for('google_bp.index') }}">
         <i class="fa-solid fa-gauge"></i><span>Overview / Connect</span>
       </a>
-      {% if has_endpoint('google_bp.ads_ui') %}
-        <a href="{{ url_for('google_bp.ads_ui') }}" class="block px-3 py-3 nav-link min-h-12">
-          <i class="fa-solid fa-bullseye"></i><span>Google Ads</span>
+      {% if has_endpoint('google_bp.ads_decision_screen') %}
+        <a href="{{ url_for('google_bp.ads_decision_screen') }}" class="block px-3 py-3 nav-link min-h-12">
+          <i class="fa-brands fa-google"></i><span>Google Ads</span>
         </a>
       {% endif %}
       {% if has_endpoint('google_bp.gsc_ui') %}
@@ -435,11 +435,11 @@
         <div class="sidebar-label"><i class="fa-brands fa-google"></i>Google</div>
 
         {% set g_items = [
-          ('google_bp.index',  'Overview / Connect', 'fa-solid fa-gauge'),
-          ('google_bp.ads_ui', 'Google Ads',         'fa-solid fa-bullseye'),
-          ('google_bp.gsc_ui', 'Search Console',     'fa-solid fa-magnifying-glass'),
-          ('google_bp.ga_ui',  'Analytics',          'fa-solid fa-chart-line'),
-          ('gmb_bp.index',     'Google Business',    'fa-brands fa-google'),
+          ('google_bp.index',              'Overview / Connect', 'fa-solid fa-gauge'),
+          ('google_bp.ads_decision_screen', 'Google Ads',         'fa-brands fa-google'),
+          ('google_bp.gsc_ui',             'Search Console',     'fa-solid fa-magnifying-glass'),
+          ('google_bp.ga_ui',              'Analytics',          'fa-solid fa-chart-line'),
+          ('gmb_bp.index',                 'Google Business',    'fa-brands fa-google'),
         ] %}
 
         {% for ep, label, icon in g_items %}
@@ -790,8 +790,8 @@
             {% if has_endpoint('google_bp.index') %}
             { name: 'Google Overview', icon: 'fa-gauge', url: '{{ url_for("google_bp.index") }}', keywords: ['google', 'connect'] },
             {% endif %}
-            {% if has_endpoint('google_bp.ads_ui') %}
-            { name: 'Google Ads', icon: 'fa-bullseye', url: '{{ url_for("google_bp.ads_ui") }}', keywords: ['ads', 'ppc', 'search'] },
+            {% if has_endpoint('google_bp.ads_decision_screen') %}
+            { name: 'Google Ads', icon: 'fa-google', url: '{{ url_for("google_bp.ads_decision_screen") }}', keywords: ['ads', 'ppc', 'search', 'adwords'] },
             {% endif %}
             {% if has_endpoint('gmb_bp.index') %}
             { name: 'Google Business', icon: 'fa-google', url: '{{ url_for("gmb_bp.index") }}', keywords: ['gmb', 'business', 'profile'] },

@@ -3196,136 +3196,12 @@ def ads_optimize():
 @google_bp.route("/ads/opportunities/demo", methods=["GET"], endpoint="ads_opportunities_demo")
 def ads_opportunities_demo():
     """
-    Demo version of Opportunities Dashboard for showing to potential customers.
-    Does not require login or connected account - uses mock data.
+    DEPRECATED: This route is deprecated and redirects to the main decision screen.
+    The decision screen now handles demo data for non-connected accounts.
     """
-    from flask import current_app, render_template
-
-    try:
-        current_app.logger.info("Demo route accessed - starting")
-
-        # Generate mock ads data for demo
-        mock_ads_data = {
-            "account_name": "ABC Plumbing & HVAC (Demo)",
-            "campaigns": [
-                {"name": "Emergency Services", "status": "enabled", "daily_budget": 150, "conversions": 45},
-                {"name": "Main Campaign", "status": "enabled", "daily_budget": 200, "conversions": 62},
-                {"name": "Water Heater Services", "status": "enabled", "daily_budget": 100, "conversions": 28},
-                {"name": "Seasonal Campaign", "status": "paused", "daily_budget": 75, "conversions": 12},
-            ],
-            "ad_groups": [
-                {"name": "Emergency Plumbing", "status": "enabled"},
-                {"name": "HVAC Repair", "status": "enabled"},
-                {"name": "Water Heater", "status": "enabled"},
-                {"name": "AC Installation", "status": "enabled"},
-                {"name": "Heating Services", "status": "enabled"},
-            ],
-            "keywords": [
-                {"keyword": "emergency plumber", "cpa": 45, "conv": 15},
-                {"keyword": "24/7 plumbing", "cpa": 38, "conv": 12},
-                {"keyword": "hvac repair", "cpa": 52, "conv": 18},
-                {"keyword": "water heater repair", "cpa": 41, "conv": 10},
-                {"keyword": "ac installation", "cpa": 65, "conv": 8},
-            ],
-            "negatives": [
-                {"keyword": "diy"},
-                {"keyword": "training"},
-            ],
-            "ads": [
-                {"headline": "24/7 Emergency Plumber", "status": "enabled"},
-                {"headline": "Licensed HVAC Repair", "status": "enabled"},
-                {"headline": "Water Heater Installation", "status": "enabled"},
-            ],
-            "extensions": [
-                {"type": "call", "phone": "555-123-4567"},
-            ],
-        }
-
-        current_app.logger.info("Mock data created - generating analysis")
-        # Generate comprehensive analysis using the same function as the real version
-        analysis = _analyze_ads_opportunities(0, mock_ads_data)  # aid=0 for demo
-        current_app.logger.info(f"Analysis completed - opportunities count: {len(analysis.get('opportunities', []))}")
-
-        # Split opportunities into auto-applicable and manual tasks
-        # Auto-applicable: Can be applied with one click (negative_keyword, mobile_bid, mobile_ads, PMax AI content, extensions)
-        # Manual tasks: Require manual setup (setup, quality_score, account_structure, location extensions)
-        all_opportunities = analysis.get("opportunities", [])
-
-        def is_auto_applicable(opp):
-            opt_type = opp.get("optimization_type", "")
-            decision_type = opp.get('decision_type', '')
-            title = opp.get("title", "").lower()
-
-            # Core auto-applicable types
-            if opt_type in ['negative_keyword', 'mobile_bid', 'mobile_ads', 'starter_negative_keywords']:
-                return True
-
-            # AI-generated ad content
-            if opt_type in ['pmax_headlines', 'pmax_descriptions', 'rsa_headline_variations', 'create_rsa_ads']:
-                return True
-
-            # AI-assisted campaign creation
-            if decision_type == 'create_search_campaign':
-                return True
-
-            # Extensions
-            if opt_type == 'extension':
-                # Callout, structured snippet, sitelink, call, and price extensions are auto-applicable
-                ext_type = opp.get("optimization_data", {}).get("type", "").lower()
-                return ("callout" in ext_type or "snippet" in ext_type or "structured" in ext_type
-                        or "sitelink" in ext_type or "call" in ext_type or "price" in ext_type)
-
-            # Flexible matching based on title/description for common auto-applicable actions
-            if any(keyword in title for keyword in ['create', 'add'] + ['ad', 'ads', 'rsa']):
-                return True
-
-            if any(keyword in title for keyword in ['reallocate', 'adjust', 'increase', 'decrease'] + ['budget']):
-                return True
-
-            if 'pause' in title and any(keyword in title for keyword in ['keyword', 'ad', 'campaign']):
-                return True
-
-            return False
-
-        analysis["opportunities"] = [opp for opp in all_opportunities if is_auto_applicable(opp)]
-        analysis["manual_tasks"] = [opp for opp in all_opportunities if not is_auto_applicable(opp)]
-
-        # Note: Demo mode doesn't filter completed tasks since it's not tied to a real account
-
-        current_app.logger.info(
-            f"ads_opportunities_demo: Split {len(all_opportunities)} total into {len(analysis['opportunities'])} auto-applicable "
-            f"and {len(analysis['manual_tasks'])} manual tasks. Auto types: {[o.get('title') for o in analysis['opportunities']]}"
-        )
-
-        # TEMPLATE DEBUG: Log what's being passed to template
-        current_app.logger.info(
-            f"TEMPLATE DEBUG - Passing to template: "
-            f"opportunities={len(analysis.get('opportunities', []))}, "
-            f"manual_tasks={len(analysis.get('manual_tasks', []))}, "
-            f"manual_task_titles={[t.get('title') for t in analysis.get('manual_tasks', [])]}"
-        )
-
-        current_app.logger.info("Rendering template")
-        return render_template(
-            "google/ads_opportunities.html",
-            connected=True,  # Show as connected for demo purposes
-            ads_data=mock_ads_data,
-            analysis=analysis,
-            epn="ads_opportunities_demo",
-            is_demo=True,  # Flag to indicate this is a demo
-        )
-    except Exception as e:
-        current_app.logger.exception(f"Error in demo route: {str(e)}")
-        # Return detailed error for debugging
-        import traceback
-        return f"""
-        <html><body>
-        <h1>Demo Error Debug Info</h1>
-        <p><strong>Error:</strong> {str(e)}</p>
-        <p><strong>Type:</strong> {type(e).__name__}</p>
-        <pre>{traceback.format_exc()}</pre>
-        </body></html>
-        """, 500
+    from flask import redirect, url_for, current_app
+    current_app.logger.warning("DEPRECATED: /ads/opportunities/demo accessed - redirecting to decision screen")
+    return redirect(url_for('google_bp.ads_decision_screen'), code=301)
 
 
 @google_bp.route("/ads/opportunities", methods=["GET"], endpoint="ads_opportunities")
@@ -6621,70 +6497,12 @@ def approve_optimizations():
 @login_required
 def get_applied_optimizations():
     """
-    Get history of applied optimizations for confirmation.
-    Allows user to verify what changes were pushed to Google Ads.
+    DEPRECATED: This endpoint is deprecated and redirects to the AI Change Log page.
+    The AI Change Log provides a better UX for viewing applied optimizations.
     """
-    try:
-        from flask import jsonify
-        from app.models_google import AppliedOptimization
-
-        aid = current_account_id()
-        customer_id = request.args.get("customer_id")
-        status_filter = request.args.get("status")  # applied, failed, pending
-
-        # Build query
-        query = AppliedOptimization.query.filter_by(account_id=aid)
-
-        if customer_id:
-            query = query.filter_by(customer_id=customer_id)
-
-        if status_filter:
-            query = query.filter_by(status=status_filter)
-
-        # Get recent optimizations (last 30 days)
-        from datetime import datetime, timedelta
-        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-        query = query.filter(AppliedOptimization.created_at >= thirty_days_ago)
-
-        # Order by most recent first
-        optimizations = query.order_by(AppliedOptimization.created_at.desc()).limit(100).all()
-
-        # Format response
-        results = []
-        for opt in optimizations:
-            results.append({
-                "id": opt.id,
-                "customer_id": opt.customer_id,
-                "campaign_id": opt.campaign_id,
-                "type": opt.optimization_type,
-                "title": opt.optimization_title,
-                "status": opt.status,
-                "resource_name": opt.resource_name,
-                "error": opt.error_message,
-                "applied_at": opt.applied_at.isoformat() if opt.applied_at else None,
-                "created_at": opt.created_at.isoformat(),
-            })
-
-        # Summary stats
-        stats = {
-            "total": len(results),
-            "applied": sum(1 for r in results if r["status"] == "applied"),
-            "failed": sum(1 for r in results if r["status"] == "failed"),
-            "pending": sum(1 for r in results if r["status"] == "pending"),
-        }
-
-        return jsonify({
-            "success": True,
-            "optimizations": results,
-            "stats": stats
-        })
-
-    except Exception as e:
-        current_app.logger.exception("Error fetching applied optimizations")
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
+    from flask import redirect, url_for, current_app
+    current_app.logger.warning("DEPRECATED: /ads/applied-optimizations accessed - redirecting to AI Change Log")
+    return redirect(url_for('google_bp.ai_change_log'), code=301)
 
 
 @google_bp.route("/ads/mark-manual-task-complete", methods=["POST"], endpoint="mark_manual_task_complete")

@@ -49,18 +49,18 @@
   ]) }}
 
   {# HEADER WITH BACK LINK #}
-  <div class="flex items-center justify-between">
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
     <div>
-      <h1 class="text-3xl font-bold text-gray-900">Your Ad Performance</h1>
-      <p class="text-gray-600 mt-1">AI-protected spend • Real-time monitoring</p>
+      <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Your Ad Performance</h1>
+      <p class="text-sm md:text-base text-gray-600 mt-1">AI-protected spend • Real-time monitoring</p>
     </div>
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-2 md:gap-3 flex-wrap">
       <a href="{{ url_for('google_bp.ads_structure') }}"
-         class="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
-        <i class="fa-solid fa-sitemap mr-1"></i>View Account Structure
+         class="text-sm text-indigo-600 hover:text-indigo-700 font-medium whitespace-nowrap">
+        <i class="fa-solid fa-sitemap mr-1"></i><span class="hidden sm:inline">View </span>Account Structure
       </a>
       <a href="{{ url_for('account_bp.dashboard') }}"
-         class="rounded-md border px-4 py-2 text-gray-700 hover:bg-gray-50">
+         class="rounded-md border px-3 md:px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 whitespace-nowrap">
         <i class="fa-solid fa-arrow-left mr-2"></i>Dashboard
       </a>
     </div>
@@ -91,17 +91,17 @@
     {% set status_detail = 'Your campaigns are performing well - no action needed' %}
   {% endif %}
 
-  <div class="{{status_bg}} border-2 rounded-xl p-6 shadow-sm">
-    <div class="flex items-center gap-4">
-      <div class="text-{{status_color}}-600 text-5xl">
+  <div class="{{status_bg}} border-2 rounded-xl p-4 md:p-6 shadow-sm">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 md:gap-4">
+      <div class="text-{{status_color}}-600 text-4xl md:text-5xl">
         <i class="fa-solid {{status_icon}}"></i>
       </div>
       <div class="flex-1">
-        <div class="text-2xl font-bold {{status_text}}">{{status_message}}</div>
-        <div class="text-sm {{status_text}} opacity-80 mt-1">{{status_detail}}</div>
+        <div class="text-xl md:text-2xl font-bold {{status_text}}">{{status_message}}</div>
+        <div class="text-xs md:text-sm {{status_text}} opacity-80 mt-1">{{status_detail}}</div>
       </div>
       {% if status != 'green' %}
-      <a href="#issues" class="rounded-lg bg-{{status_color}}-600 text-white px-6 py-3 font-semibold hover:bg-{{status_color}}-700">
+      <a href="#issues" class="w-full sm:w-auto text-center rounded-lg bg-{{status_color}}-600 text-white px-4 md:px-6 py-2 md:py-3 text-sm md:text-base font-semibold hover:bg-{{status_color}}-700">
         View Issues
       </a>
       {% endif %}
@@ -109,29 +109,29 @@
   </div>
 
   {# TRUST & PROTECTION SECTION #}
-  <div class="rounded-xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
-    <div class="flex items-start gap-4">
-      <div class="text-blue-600 text-3xl">
+  <div class="rounded-xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-4 md:p-6">
+    <div class="flex flex-col sm:flex-row items-start gap-3 md:gap-4">
+      <div class="text-blue-600 text-2xl md:text-3xl">
         <i class="fa-solid fa-shield-halved"></i>
       </div>
       <div class="flex-1">
-        <h2 class="text-xl font-bold text-blue-900 mb-3">Your Spend Is Protected</h2>
-        <div class="grid grid-cols-2 gap-3">
-          <div class="flex items-center gap-2 text-blue-800">
-            <i class="fa-solid fa-check-circle text-blue-600"></i>
-            <span class="text-sm font-medium">Auto-blocked {{ blocked_searches_count if connected else 127 }} irrelevant searches</span>
+        <h2 class="text-lg md:text-xl font-bold text-blue-900 mb-3">Your Spend Is Protected</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
+          <div class="flex items-start gap-2 text-blue-800">
+            <i class="fa-solid fa-check-circle text-blue-600 mt-0.5 flex-shrink-0"></i>
+            <span class="text-xs md:text-sm font-medium">Auto-blocked {{ blocked_searches_count if connected else 127 }} irrelevant searches</span>
           </div>
-          <div class="flex items-center gap-2 text-blue-800">
-            <i class="fa-solid fa-check-circle text-blue-600"></i>
-            <span class="text-sm font-medium">Budget caps enforced across all campaigns</span>
+          <div class="flex items-start gap-2 text-blue-800">
+            <i class="fa-solid fa-check-circle text-blue-600 mt-0.5 flex-shrink-0"></i>
+            <span class="text-xs md:text-sm font-medium">Budget caps enforced across all campaigns</span>
           </div>
-          <div class="flex items-center gap-2 text-blue-800">
-            <i class="fa-solid fa-check-circle text-blue-600"></i>
-            <span class="text-sm font-medium">No broad match creep - AI monitors daily</span>
+          <div class="flex items-start gap-2 text-blue-800">
+            <i class="fa-solid fa-check-circle text-blue-600 mt-0.5 flex-shrink-0"></i>
+            <span class="text-xs md:text-sm font-medium">No broad match creep - AI monitors daily</span>
           </div>
-          <div class="flex items-center gap-2 text-blue-800">
-            <i class="fa-solid fa-check-circle text-blue-600"></i>
-            <span class="text-sm font-medium">No auto-applied Google changes allowed</span>
+          <div class="flex items-start gap-2 text-blue-800">
+            <i class="fa-solid fa-check-circle text-blue-600 mt-0.5 flex-shrink-0"></i>
+            <span class="text-xs md:text-sm font-medium">No auto-applied Google changes allowed</span>
           </div>
         </div>
       </div>

@@ -111,7 +111,7 @@
         <div class="grid grid-cols-2 gap-3">
           <div class="flex items-center gap-2 text-blue-800">
             <i class="fa-solid fa-check-circle text-blue-600"></i>
-            <span class="text-sm font-medium">Auto-blocked {{blocked_searches_count | default(127)}} irrelevant searches</span>
+            <span class="text-sm font-medium">Auto-blocked {{ blocked_searches_count if connected else 127 }} irrelevant searches</span>
           </div>
           <div class="flex items-center gap-2 text-blue-800">
             <i class="fa-solid fa-check-circle text-blue-600"></i>
@@ -203,21 +203,21 @@
         </div>
         <div>
           <div class="text-sm text-gray-500 font-medium">Wasted Spend Prevented</div>
-          <div class="text-3xl font-bold text-gray-900">${{wasted_spend_prevented | default(842)}}</div>
+          <div class="text-3xl font-bold text-gray-900">${{ wasted_spend_prevented if connected else 842 }}</div>
         </div>
       </div>
       <div class="text-sm text-gray-600 space-y-1">
         <div class="flex justify-between">
           <span>{{industry_language.waste_example}} blocked:</span>
-          <span class="font-medium">${{diy_blocked | default(312)}}</span>
+          <span class="font-medium">${{ "N/A" if connected else 312 }}</span>
         </div>
         <div class="flex justify-between">
           <span>Job searches blocked:</span>
-          <span class="font-medium">${{jobs_blocked | default(287)}}</span>
+          <span class="font-medium">${{ "N/A" if connected else 287 }}</span>
         </div>
         <div class="flex justify-between">
           <span>Low-quality clicks avoided:</span>
-          <span class="font-medium">${{low_quality_avoided | default(243)}}</span>
+          <span class="font-medium">${{ "N/A" if connected else 243 }}</span>
         </div>
       </div>
     </div>
@@ -230,27 +230,27 @@
         </div>
         <div>
           <div class="text-sm text-gray-500 font-medium">{{industry_language.call_type}}</div>
-          <div class="text-3xl font-bold text-gray-900">{{calls_generated | default(23)}}</div>
+          <div class="text-3xl font-bold text-gray-900">{{ calls_generated if connected else 23 }}</div>
         </div>
       </div>
       <div class="text-sm text-gray-600 space-y-2">
         <div class="flex items-center justify-between pb-2 border-b">
           <span>Total calls received</span>
-          <span class="font-bold text-gray-900">{{calls_generated | default(23)}}</span>
+          <span class="font-bold text-gray-900">{{ calls_generated if connected else 23 }}</span>
         </div>
         <div class="flex items-center justify-between text-green-700">
           <span class="flex items-center gap-1">
             <i class="fa-solid fa-check-circle text-xs"></i>
             Qualified leads
           </span>
-          <span class="font-bold">{{qualified_leads | default(14)}}</span>
+          <span class="font-bold">{{ qualified_leads if connected else 14 }}</span>
         </div>
         <div class="flex items-center justify-between text-blue-700">
           <span class="flex items-center gap-1">
             <i class="fa-solid fa-calendar-check text-xs"></i>
             Booked jobs
           </span>
-          <span class="font-bold">{{booked_jobs | default(9)}}</span>
+          <span class="font-bold">{{ booked_jobs if connected else 9 }}</span>
         </div>
       </div>
     </div>
@@ -263,21 +263,21 @@
         </div>
         <div>
           <div class="text-sm text-gray-500 font-medium">AI Actions Taken</div>
-          <div class="text-3xl font-bold text-gray-900">{{ai_actions_count | default(47)}}</div>
+          <div class="text-3xl font-bold text-gray-900">{{ ai_actions_taken if connected else 47 }}</div>
         </div>
       </div>
       <div class="text-sm text-gray-600 space-y-1">
         <div class="flex justify-between">
           <span>Bad searches blocked:</span>
-          <span class="font-medium">{{bad_searches_blocked | default(19)}}</span>
+          <span class="font-medium">{{ blocked_searches_count if connected else 19 }}</span>
         </div>
         <div class="flex justify-between">
           <span>Budget reallocated:</span>
-          <span class="font-medium">{{budget_reallocations | default(12)}}</span>
+          <span class="font-medium">{{ budget_reallocations if connected else 12 }}</span>
         </div>
         <div class="flex justify-between">
           <span>Bids optimized:</span>
-          <span class="font-medium">{{bids_optimized | default(16)}}</span>
+          <span class="font-medium">{{ bids_optimized if connected else 16 }}</span>
         </div>
       </div>
       <a href="{{ url_for('google_bp.ai_change_log') }}"

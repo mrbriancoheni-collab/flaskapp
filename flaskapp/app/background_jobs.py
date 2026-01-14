@@ -203,7 +203,19 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
-    app.logger.info("Registered 10 scheduled background jobs")
+    # Google Ads Auto-Executor (every 4 hours)
+    # Automatically adds negative keywords, pauses low performers, adjusts bids
+    # All actions logged with full audit trail and undo capability
+    scheduler.add_job(
+        func=run_google_ads_auto_executor,
+        trigger='interval',
+        hours=4,
+        id='run_google_ads_auto_executor',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    app.logger.info("Registered 11 scheduled background jobs")
 
 
 # ===== Scheduled Job Functions =====
@@ -711,6 +723,76 @@ def run_strategic_agents(app: Flask):
 
         except Exception as e:
             current_app.logger.error(f"Error running strategic agents: {e}", exc_info=True)
+
+
+def run_google_ads_auto_executor(app: Flask):
+    """
+    Run Google Ads Auto-Executor for all active accounts.
+
+    Automatically executes safe optimizations:
+    - Auto-adds negative keywords for non-purchase intent searches
+    - Auto-pauses low-performing keywords (future)
+    - Auto-adjusts bids based on performance (future)
+
+    All actions are logged to AIAction table with full audit trail and undo capability.
+
+    Runs every 4 hours to catch wasteful spend quickly.
+    """
+    with app.app_context():
+        try:
+            current_app.logger.info("[JOB] Starting Google Ads Auto-Executor for all accounts")
+
+            from app.services.google_ads_auto_executor import GoogleAdsAutoExecutor
+            from app.models import Account, GoogleAdsAuth
+            from app import db
+
+            # Get all accounts with Google Ads connected
+            accounts = Account.query.join(
+                GoogleAdsAuth, Account.id == GoogleAdsAuth.account_id
+            ).filter(
+                Account.status == 'active'
+            ).all()
+
+            if not accounts:
+                current_app.logger.info("No active Google Ads accounts found")
+                return
+
+            total_actions = 0
+            success_count = 0
+            error_count = 0
+
+            for account in accounts:
+                try:
+                    current_app.logger.info(f"Running auto-executor for account {account.id}")
+
+                    executor = GoogleAdsAutoExecutor(account.id)
+
+                    # Auto-add negative keywords (30 day lookback, execute mode)
+                    actions = executor.auto_add_negative_keywords(lookback_days=30, dry_run=False)
+
+                    total_actions += len(actions)
+                    success_count += 1
+
+                    if actions:
+                        current_app.logger.info(
+                            f"Account {account.id}: Created {len(actions)} negative keyword actions"
+                        )
+
+                except Exception as e:
+                    current_app.logger.error(
+                        f"Error running auto-executor for account {account.id}: {e}",
+                        exc_info=True
+                    )
+                    error_count += 1
+                    continue
+
+            current_app.logger.info(
+                f"[JOB] Google Ads Auto-Executor complete: "
+                f"{total_actions} actions created, {success_count} accounts succeeded, {error_count} errors"
+            )
+
+        except Exception as e:
+            current_app.logger.error(f"Error in Google Ads Auto-Executor job: {e}", exc_info=True)
 
 
 # ===== Manual Job Execution =====

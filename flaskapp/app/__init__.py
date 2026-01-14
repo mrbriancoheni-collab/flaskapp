@@ -521,10 +521,9 @@ def create_app():
         app.logger.exception("Failed to import main_bp")
 
     try:
-        from app.account import account_bp, api_bp, stripe_webhook
+        from app.account import account_bp, stripe_webhook
         app.register_blueprint(account_bp)
-        app.register_blueprint(api_bp)
-        app.logger.info("account_bp and api_bp registered")
+        app.logger.info("account_bp registered")
         try:
             csrf.exempt(stripe_webhook)
         except Exception as e:

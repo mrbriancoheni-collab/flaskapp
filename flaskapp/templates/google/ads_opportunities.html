@@ -96,6 +96,39 @@
     </div>
   </div>
 
+  <!-- Auto-Executor Active Banner -->
+  {% if connected and analysis.auto_executed_count and analysis.auto_executed_count > 0 %}
+  <div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-5">
+    <div class="flex items-start justify-between">
+      <div class="flex items-start gap-4">
+        <div class="flex-shrink-0">
+          <i class="fa-solid fa-shield-check text-blue-600 text-3xl"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-blue-900 mb-1">
+            <i class="fa-solid fa-robot mr-1"></i> AI Auto-Protection Active
+          </h3>
+          <p class="text-blue-800 mb-2">
+            Auto-executor is handling <strong>{{ analysis.auto_executed_count }} optimization{{ 's' if analysis.auto_executed_count != 1 else '' }}</strong> automatically every 4 hours.
+            Below are tasks that need your review and decision.
+          </p>
+          <p class="text-sm text-blue-700">
+            <i class="fa-solid fa-info-circle mr-1"></i>
+            Auto-blocked searches (jobs, DIY, how-to, reviews) are managed 24/7. You'll see those actions in the AI log.
+          </p>
+        </div>
+      </div>
+      <div class="flex-shrink-0">
+        <a href="{{ url_for('google_bp.ai_change_log') }}"
+           class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition shadow">
+          <i class="fa-solid fa-list-check"></i>
+          View AI Actions
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Performance Dashboard -->
   <div class="bg-white rounded-xl shadow-lg p-6">
     <h2 class="text-xl font-bold text-gray-900 mb-4">

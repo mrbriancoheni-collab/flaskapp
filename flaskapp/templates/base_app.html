@@ -57,12 +57,14 @@
 
     /* Expandable navigation sections */
     .nav-section{margin:.25rem 0;}
-    .nav-section-header{display:flex;align-items:center;gap:.5rem;padding:.625rem .625rem;border-radius:.5rem;color:#374151;font-size:.875rem;cursor:pointer;transition:background-color .15s;}
+    .nav-section-header{display:flex;align-items:center;gap:.5rem;padding:.625rem .625rem;border-radius:.5rem;color:#374151;font-size:.875rem;cursor:pointer;transition:background-color .15s;user-select:none;}
     .nav-section-header:hover{background-color:#f3f4f6;}
+    .nav-section-header:active{background-color:#e5e7eb;}
     .nav-section-header i:first-child{width:1.125rem;text-align:center;flex:0 0 auto;}
-    .nav-section-header .fa-chevron-down{font-size:.625rem;color:#9ca3af;}
+    .nav-section-header .fa-chevron-down{font-size:.625rem;color:#9ca3af;transition:transform .2s ease;}
     .nav-section-header.expanded .fa-chevron-down{transform:rotate(180deg);}
-    .nav-section-content{padding-left:.625rem;overflow:hidden;transition:max-height .3s ease-out;}
+    .nav-section-content{max-height:0;overflow:hidden;transition:max-height .3s ease-out;}
+    .nav-section-content.expanded{max-height:500px;}
     .sub-link{display:flex;align-items:center;gap:.5rem;padding:.5rem .625rem .5rem 1.875rem;border-radius:.5rem;color:#4b5563;font-size:.875rem;position:relative;}
     .sub-link:before{content:'';position:absolute;left:.875rem;width:2px;height:100%;background-color:#e5e7eb;}
     .sub-link:hover{background-color:#eef2ff;color:#4f46e5;}
@@ -468,34 +470,52 @@
 
       <!-- Contextual Navigation -->
       <div class="mt-4 pt-4 border-t">
-      {% if SECTION == 'strategy' %}
-        <!-- strategy links placeholder -->
-      {% elif SECTION == 'google' %}
-        <div class="sidebar-label"><i class="fa-brands fa-google"></i>Google</div>
+
+      {# GOOGLE SERVICES NAVIGATION #}
+      {% set google_endpoints = [
+        'google_bp.index', 'google_bp.ads_decision_screen', 'google_bp.ads_campaigns',
+        'google_bp.ads_opportunities', 'google_bp.gsc_ui', 'google_bp.ga_ui',
+        'budget_bp.budget_groups', 'forecasting_bp.forecasting_dashboard',
+        'competitive_bp.competitive_dashboard', 'gmb_bp.index', 'gmb_bp.reviews',
+        'gmb_bp.ai_responses', 'gmb_bp.requests_email'
+      ] %}
+      {% set glsa_endpoints = ['glsa_bp.index', 'glsa_bp.dashboard', 'glsa_bp.select_account',
+                               'glsa_bp.leads_page', 'glsa_bp.optimize'] %}
+
+      {% set is_google_section = epn in google_endpoints or SECTION == 'google' or SECTION == 'gmb' %}
+      {% set is_glsa_section = epn in glsa_endpoints or SECTION == 'glsa' %}
+
+      {% if is_google_section or is_glsa_section %}
+        <div class="sidebar-label"><i class="fa-brands fa-google"></i>Google Services</div>
 
         {# Google Overview #}
         {% if has_endpoint('google_bp.index') %}
         <a class="secondary-link {% if epn=='google_bp.index' %}active{% endif %}" href="{{ url_for('google_bp.index') }}">
-          <i class="fa-solid fa-gauge"></i><span>Overview / Connect</span>
+          <i class="fa-solid fa-link"></i><span>Connect Account</span>
         </a>
         {% endif %}
 
-        {# Google Ads - Expandable Section #}
+        {# Google Ads - Expandable #}
         <div class="nav-section">
-          <div class="nav-section-header" onclick="toggleNavSection('google-ads-section')">
+          <div class="nav-section-header" onclick="toggleNavSection('google-ads-section')" id="google-ads-header">
             <i class="fa-brands fa-google text-blue-600"></i>
             <span class="font-semibold">Google Ads</span>
-            <i class="fa-solid fa-chevron-down text-xs ml-auto transition-transform" id="google-ads-section-icon"></i>
+            <i class="fa-solid fa-chevron-down text-xs ml-auto transition-transform duration-200" id="google-ads-section-icon"></i>
           </div>
-          <div class="nav-section-content" id="google-ads-section" style="display: none;">
+          <div class="nav-section-content" id="google-ads-section">
             {% if has_endpoint('google_bp.ads_decision_screen') %}
             <a class="sub-link {% if epn=='google_bp.ads_decision_screen' %}active{% endif %}" href="{{ url_for('google_bp.ads_decision_screen') }}">
               <i class="fa-solid fa-chart-line"></i><span>Performance</span>
             </a>
             {% endif %}
+            {% if has_endpoint('google_bp.ads_campaigns') %}
+            <a class="sub-link {% if epn=='google_bp.ads_campaigns' %}active{% endif %}" href="{{ url_for('google_bp.ads_campaigns') }}">
+              <i class="fa-solid fa-bullseye"></i><span>Campaigns</span>
+            </a>
+            {% endif %}
             {% if has_endpoint('budget_bp.budget_groups') %}
             <a class="sub-link {% if epn=='budget_bp.budget_groups' %}active{% endif %}" href="{{ url_for('budget_bp.budget_groups') }}">
-              <i class="fa-solid fa-wallet"></i><span>Budget Management</span>
+              <i class="fa-solid fa-wallet"></i><span>Budget Manager</span>
             </a>
             {% endif %}
             {% if has_endpoint('forecasting_bp.forecasting_dashboard') %}
@@ -505,12 +525,7 @@
             {% endif %}
             {% if has_endpoint('competitive_bp.competitive_dashboard') %}
             <a class="sub-link {% if epn=='competitive_bp.competitive_dashboard' %}active{% endif %}" href="{{ url_for('competitive_bp.competitive_dashboard') }}">
-              <i class="fa-solid fa-users"></i><span>Competitive Analysis</span>
-            </a>
-            {% endif %}
-            {% if has_endpoint('google_bp.ads_campaigns') %}
-            <a class="sub-link {% if epn=='google_bp.ads_campaigns' %}active{% endif %}" href="{{ url_for('google_bp.ads_campaigns') }}">
-              <i class="fa-solid fa-bullseye"></i><span>Campaigns</span>
+              <i class="fa-solid fa-users"></i><span>Competitors</span>
             </a>
             {% endif %}
             {% if has_endpoint('google_bp.ads_opportunities') %}
@@ -521,42 +536,36 @@
           </div>
         </div>
 
-        {# Google Local Services Ads #}
+        {# Local Services Ads #}
         {% if has_endpoint('glsa_bp.dashboard') %}
-        <a class="secondary-link {% if SECTION=='glsa' %}active{% endif %}" href="{{ url_for('glsa_bp.dashboard') }}">
+        <a class="secondary-link {% if is_glsa_section %}active{% endif %}" href="{{ url_for('glsa_bp.dashboard') }}">
           <i class="fa-solid fa-bullhorn"></i><span>Local Services Ads</span>
         </a>
         {% endif %}
 
-        {# Google Search Console #}
+        {# Search Console #}
         {% if has_endpoint('google_bp.gsc_ui') %}
         <a class="secondary-link {% if epn=='google_bp.gsc_ui' %}active{% endif %}" href="{{ url_for('google_bp.gsc_ui') }}">
           <i class="fa-solid fa-magnifying-glass"></i><span>Search Console</span>
         </a>
         {% endif %}
 
-        {# Google Analytics #}
+        {# Analytics #}
         {% if has_endpoint('google_bp.ga_ui') %}
         <a class="secondary-link {% if epn=='google_bp.ga_ui' %}active{% endif %}" href="{{ url_for('google_bp.ga_ui') }}">
           <i class="fa-solid fa-chart-line"></i><span>Analytics</span>
         </a>
         {% endif %}
 
-        {# Google Business Profile #}
+        {# Business Profile #}
         {% if has_endpoint('gmb_bp.index') %}
         <a class="secondary-link {% if SECTION=='gmb' %}active{% endif %}" href="{{ url_for('gmb_bp.index') }}">
           <i class="fa-solid fa-store"></i><span>Business Profile</span>
         </a>
         {% endif %}
 
-      {% elif SECTION == 'glsa' %}
-        <div class="sidebar-label"><i class="fa-solid fa-bullhorn"></i>Local Services Ads</div>
-        <a class="secondary-link {% if epn=='glsa_bp.dashboard' or epn=='glsa_bp.index' %}active{% endif %}" href="{{ url_for('glsa_bp.dashboard') }}"><i class="fa-solid fa-gauge"></i><span>Dashboard</span></a>
-        {% if has_endpoint('glsa_bp.select_account') %}
-          <a class="secondary-link {% if epn=='glsa_bp.select_account' or epn=='glsa_bp.select_account_post' %}active{% endif %}" href="{{ url_for('glsa_bp.select_account') }}"><i class="fa-solid fa-building"></i><span>Select Account</span></a>
-        {% endif %}
-        <a class="secondary-link {% if epn=='glsa_bp.leads_page' %}active{% endif %}" href="{{ url_for('glsa_bp.leads_page') }}"><i class="fa-solid fa-inbox"></i><span>Review Leads</span></a>
-        <a class="secondary-link {% if epn=='glsa_bp.optimize' %}active{% endif %} {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" href="{{ url_for('glsa_bp.optimize') if is_paid else '#' }}" {% if not is_paid %}onclick="alert('This feature requires a paid plan. Please upgrade.'); return false;"{% endif %}><i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimize Profile</span>{% if not is_paid %}<i class="fa-solid fa-lock ml-1 text-xs"></i>{% endif %}</a>
+      {% elif SECTION == 'strategy' %}
+        <!-- strategy links placeholder -->
       {% elif SECTION == 'fbads' %}
         <div class="sidebar-label"><i class="fa-brands fa-facebook"></i>Facebook Ads</div>
         <a class="secondary-link {% if epn=='fbads_bp.index' %}active{% endif %}" href="{{ url_for('fbads_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview / Connect</span></a>
@@ -572,12 +581,6 @@
         {% if has_endpoint('fbads_bp.leads') %}
           <a class="secondary-link {% if epn=='fbads_bp.leads' %}active{% endif %}" href="{{ url_for('fbads_bp.leads') }}"><i class="fa-solid fa-inbox"></i><span>Review Leads</span></a>
         {% endif %}
-      {% elif SECTION == 'gmb' %}
-        <div class="sidebar-label"><i class="fa-brands fa-google"></i>Google Business</div>
-        <a class="secondary-link {% if epn=='gmb_bp.index' %}active{% endif %}" href="{{ url_for('gmb_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview</span></a>
-        <a class="secondary-link {% if epn=='gmb_bp.reviews' %}active{% endif %}" href="{{ url_for('gmb_bp.reviews') }}"><i class="fa-regular fa-file-lines"></i><span>Profile Review</span></a>
-        <a class="secondary-link {% if epn=='gmb_bp.ai_responses' %}active{% endif %}" href="{{ url_for('gmb_bp.ai_responses') }}"><i class="fa-solid fa-robot"></i><span>AI Review Responses</span></a>
-        <a class="secondary-link {% if epn=='gmb_bp.requests_email' %}active{% endif %}" href="{{ url_for('gmb_bp.requests_email') }}"><i class="fa-regular fa-envelope"></i><span>Review Requests (Email)</span></a>
       {% elif SECTION == 'linkedin' %}
         <div class="sidebar-label"><i class="fa-brands fa-linkedin"></i>LinkedIn</div>
         <a class="secondary-link {% if epn=='linkedin_bp.index' %}active{% endif %}" href="{{ url_for('linkedin_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview</span></a>
@@ -1422,20 +1425,18 @@
   <script>
     function toggleNavSection(sectionId) {
       const content = document.getElementById(sectionId);
-      const header = content.previousElementSibling;
-      const icon = document.getElementById(sectionId + '-icon');
+      const header = document.getElementById(sectionId.replace('-section', '-header'));
 
-      if (content.style.display === 'none' || content.style.display === '') {
-        // Expand
-        content.style.display = 'block';
-        header.classList.add('expanded');
-        // Store state in localStorage
-        localStorage.setItem('nav-' + sectionId, 'open');
-      } else {
+      if (content.classList.contains('expanded')) {
         // Collapse
-        content.style.display = 'none';
+        content.classList.remove('expanded');
         header.classList.remove('expanded');
         localStorage.setItem('nav-' + sectionId, 'closed');
+      } else {
+        // Expand
+        content.classList.add('expanded');
+        header.classList.add('expanded');
+        localStorage.setItem('nav-' + sectionId, 'open');
       }
     }
 
@@ -1453,17 +1454,19 @@
       ];
 
       const googleAdsSection = document.getElementById('google-ads-section');
+      const googleAdsHeader = document.getElementById('google-ads-header');
+
       if (googleAdsSection) {
         // Check if we're on a Google Ads page
         if (googleAdsEndpoints.includes(currentEndpoint)) {
-          googleAdsSection.style.display = 'block';
-          googleAdsSection.previousElementSibling.classList.add('expanded');
+          googleAdsSection.classList.add('expanded');
+          googleAdsHeader.classList.add('expanded');
         } else {
           // Restore from localStorage
           const savedState = localStorage.getItem('nav-google-ads-section');
           if (savedState === 'open') {
-            googleAdsSection.style.display = 'block';
-            googleAdsSection.previousElementSibling.classList.add('expanded');
+            googleAdsSection.classList.add('expanded');
+            googleAdsHeader.classList.add('expanded');
           }
         }
       }

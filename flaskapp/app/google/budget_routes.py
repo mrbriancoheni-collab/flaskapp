@@ -27,6 +27,10 @@ def budget_groups():
             cbg.id,
             cbg.name,
             cbg.description,
+            cbg.target_location,
+            cbg.location_type,
+            cbg.location_radius_miles,
+            cbg.location_criteria_ids,
             cbg.monthly_budget_cents,
             cbg.daily_budget_cents,
             cbg.status,
@@ -110,6 +114,10 @@ def create_group():
 
     name = data.get('name', '').strip()
     description = data.get('description', '').strip()
+    target_location = data.get('target_location', '').strip() or None
+    location_type = data.get('location_type', None)
+    location_radius_miles = data.get('location_radius_miles', None)
+    location_criteria_ids = data.get('location_criteria_ids', '').strip() or None
     monthly_budget = data.get('monthly_budget', 0)  # In dollars
     priority = data.get('priority', 0)
     auto_pause = data.get('auto_pause_on_overspend', True)
@@ -125,10 +133,12 @@ def create_group():
 
     insert_query = text("""
         INSERT INTO campaign_budget_groups
-            (account_id, name, description, monthly_budget_cents, priority,
+            (account_id, name, description, target_location, location_type,
+             location_radius_miles, location_criteria_ids, monthly_budget_cents, priority,
              auto_pause_on_overspend, alert_threshold_pct)
         VALUES
-            (:account_id, :name, :description, :monthly_budget_cents, :priority,
+            (:account_id, :name, :description, :target_location, :location_type,
+             :location_radius_miles, :location_criteria_ids, :monthly_budget_cents, :priority,
              :auto_pause, :alert_threshold)
     """)
 
@@ -137,6 +147,10 @@ def create_group():
             "account_id": account_id,
             "name": name,
             "description": description,
+            "target_location": target_location,
+            "location_type": location_type,
+            "location_radius_miles": location_radius_miles,
+            "location_criteria_ids": location_criteria_ids,
             "monthly_budget_cents": monthly_budget_cents,
             "priority": priority,
             "auto_pause": auto_pause,
@@ -160,6 +174,10 @@ def update_group(group_id):
 
     name = data.get('name', '').strip()
     description = data.get('description', '').strip()
+    target_location = data.get('target_location', '').strip() or None
+    location_type = data.get('location_type', None)
+    location_radius_miles = data.get('location_radius_miles', None)
+    location_criteria_ids = data.get('location_criteria_ids', '').strip() or None
     monthly_budget = data.get('monthly_budget', 0)
     priority = data.get('priority', 0)
     status = data.get('status', 'active')
@@ -175,6 +193,10 @@ def update_group(group_id):
         UPDATE campaign_budget_groups
         SET name = :name,
             description = :description,
+            target_location = :target_location,
+            location_type = :location_type,
+            location_radius_miles = :location_radius_miles,
+            location_criteria_ids = :location_criteria_ids,
             monthly_budget_cents = :monthly_budget_cents,
             priority = :priority,
             status = :status,
@@ -189,6 +211,10 @@ def update_group(group_id):
             "account_id": account_id,
             "name": name,
             "description": description,
+            "target_location": target_location,
+            "location_type": location_type,
+            "location_radius_miles": location_radius_miles,
+            "location_criteria_ids": location_criteria_ids,
             "monthly_budget_cents": monthly_budget_cents,
             "priority": priority,
             "status": status,
@@ -347,3 +373,229 @@ def get_group_spend(group_id):
         spend_history = [dict(row._mapping) for row in spend_result]
 
     return jsonify({"success": True, "spend_history": spend_history})
+
+
+@budget_bp.route("/api/groups/<int:group_id>/locations")
+@login_required
+def get_location_performance(group_id):
+    """Get location-based performance breakdown for a budget group."""
+    account_id = current_account_id()
+
+    # Verify ownership
+    verify_query = text("""
+        SELECT id, target_location, location_type
+        FROM campaign_budget_groups
+        WHERE id = :group_id AND account_id = :account_id
+    """)
+
+    with db.engine.connect() as conn:
+        result = conn.execute(verify_query, {
+            "group_id": group_id,
+            "account_id": account_id
+        })
+        group = result.first()
+
+        if not group:
+            return jsonify({"success": False, "error": "Budget group not found"}), 404
+
+        group = dict(group._mapping)
+
+        # Get current month location performance
+        current_month = date.today().replace(day=1)
+        location_query = text("""
+            SELECT
+                location_name,
+                spend_cents,
+                impressions,
+                clicks,
+                conversions,
+                calls,
+                ctr,
+                cpc_cents,
+                cpl_cents,
+                conversion_rate,
+                pacing_status
+            FROM budget_group_location_performance
+            WHERE budget_group_id = :group_id
+              AND period_month = :period_month
+            ORDER BY spend_cents DESC
+        """)
+
+        location_result = conn.execute(location_query, {
+            "group_id": group_id,
+            "period_month": current_month
+        })
+        locations = [dict(row._mapping) for row in location_result]
+
+    return jsonify({
+        "success": True,
+        "group": group,
+        "locations": locations,
+        "period": current_month.strftime('%Y-%m')
+    })
+
+
+@budget_bp.route("/api/campaigns/by-location", methods=["POST"])
+@login_required
+def filter_campaigns_by_location():
+    """Filter campaigns by their location targeting."""
+    account_id = current_account_id()
+    data = request.get_json()
+
+    location_name = data.get('location_name', '').strip()
+    if not location_name:
+        return jsonify({"success": False, "error": "Location name required"}), 400
+
+    # Find campaigns targeting this location
+    query = text("""
+        SELECT DISTINCT
+            c.id,
+            c.name,
+            c.status,
+            c.daily_budget_cents,
+            c.google_campaign_id,
+            cba.budget_group_id,
+            cbg.name as group_name
+        FROM ads_campaigns c
+        LEFT JOIN campaign_location_targets clt ON c.id = clt.campaign_id
+        LEFT JOIN campaign_budget_assignments cba ON c.id = cba.campaign_id
+        LEFT JOIN campaign_budget_groups cbg ON cba.budget_group_id = cbg.id
+        WHERE c.account_id = :account_id
+          AND (
+            clt.location_name LIKE :location_pattern
+            OR clt.canonical_name LIKE :location_pattern
+          )
+          AND clt.target_type = 'included'
+        ORDER BY c.name
+    """)
+
+    with db.engine.connect() as conn:
+        result = conn.execute(query, {
+            "account_id": account_id,
+            "location_pattern": f"%{location_name}%"
+        })
+        campaigns = [dict(row._mapping) for row in result]
+
+    return jsonify({
+        "success": True,
+        "location": location_name,
+        "campaigns": campaigns,
+        "count": len(campaigns)
+    })
+
+
+@budget_bp.route("/api/location-rules", methods=["POST"])
+@login_required
+def create_location_rule():
+    """Create a location-specific budget rule."""
+    account_id = current_account_id()
+    data = request.get_json()
+
+    budget_group_id = data.get('budget_group_id')
+    location_name = data.get('location_name', '').strip()
+    monthly_budget = data.get('monthly_budget', 0)
+    priority = data.get('priority', 0)
+    max_cpl_cents = data.get('max_cpl_cents', None)
+    auto_pause = data.get('auto_pause_on_threshold', False)
+
+    if not location_name or not budget_group_id:
+        return jsonify({"success": False, "error": "Location name and budget group required"}), 400
+
+    if monthly_budget <= 0:
+        return jsonify({"success": False, "error": "Monthly budget must be greater than 0"}), 400
+
+    # Verify group ownership
+    verify_query = text("""
+        SELECT id FROM campaign_budget_groups
+        WHERE id = :group_id AND account_id = :account_id
+    """)
+
+    monthly_budget_cents = int(monthly_budget * 100)
+    max_cpl_cents = int(max_cpl_cents * 100) if max_cpl_cents else None
+
+    with db.engine.begin() as conn:
+        result = conn.execute(verify_query, {
+            "group_id": budget_group_id,
+            "account_id": account_id
+        })
+
+        if not result.first():
+            return jsonify({"success": False, "error": "Budget group not found"}), 404
+
+        # Insert location rule
+        insert_query = text("""
+            INSERT INTO budget_group_location_rules
+                (budget_group_id, location_name, monthly_budget_cents, priority,
+                 max_cpl_cents, auto_pause_on_threshold)
+            VALUES
+                (:group_id, :location_name, :monthly_budget_cents, :priority,
+                 :max_cpl_cents, :auto_pause)
+            ON DUPLICATE KEY UPDATE
+                monthly_budget_cents = VALUES(monthly_budget_cents),
+                priority = VALUES(priority),
+                max_cpl_cents = VALUES(max_cpl_cents),
+                auto_pause_on_threshold = VALUES(auto_pause_on_threshold)
+        """)
+
+        conn.execute(insert_query, {
+            "group_id": budget_group_id,
+            "location_name": location_name,
+            "monthly_budget_cents": monthly_budget_cents,
+            "priority": priority,
+            "max_cpl_cents": max_cpl_cents,
+            "auto_pause": auto_pause
+        })
+
+    return jsonify({
+        "success": True,
+        "message": f"Location rule created for {location_name}"
+    })
+
+
+@budget_bp.route("/api/location-alerts/<int:group_id>", methods=["GET"])
+@login_required
+def get_location_alerts(group_id):
+    """Get location-specific alerts for a budget group."""
+    account_id = current_account_id()
+
+    # Verify ownership
+    verify_query = text("""
+        SELECT id FROM campaign_budget_groups
+        WHERE id = :group_id AND account_id = :account_id
+    """)
+
+    with db.engine.connect() as conn:
+        result = conn.execute(verify_query, {
+            "group_id": group_id,
+            "account_id": account_id
+        })
+
+        if not result.first():
+            return jsonify({"success": False, "error": "Budget group not found"}), 404
+
+        # Get unacknowledged alerts
+        alerts_query = text("""
+            SELECT
+                id,
+                location_name,
+                alert_type,
+                severity,
+                message,
+                current_value,
+                threshold_value,
+                action_taken,
+                alert_date
+            FROM budget_group_location_alerts
+            WHERE budget_group_id = :group_id
+              AND is_acknowledged = FALSE
+            ORDER BY severity DESC, alert_date DESC
+            LIMIT 50
+        """)
+
+        alert_result = conn.execute(alerts_query, {"group_id": group_id})
+        alerts = [dict(row._mapping) for row in alert_result]
+
+    return jsonify({
+        "success": True,
+        "alerts": alerts
+    })

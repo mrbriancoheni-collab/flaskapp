@@ -1423,25 +1423,39 @@
   {% include 'includes/page_view_tracking.html' %}
   <!-- Navigation Section Toggle -->
   <script>
-    function toggleNavSection(sectionId) {
+    // Define toggle function globally
+    window.toggleNavSection = function(sectionId) {
+      console.log('Toggling section:', sectionId);
       const content = document.getElementById(sectionId);
       const header = document.getElementById(sectionId.replace('-section', '-header'));
+
+      console.log('Content element:', content);
+      console.log('Header element:', header);
+
+      if (!content || !header) {
+        console.error('Elements not found!');
+        return;
+      }
 
       if (content.classList.contains('expanded')) {
         // Collapse
         content.classList.remove('expanded');
         header.classList.remove('expanded');
         localStorage.setItem('nav-' + sectionId, 'closed');
+        console.log('Collapsed');
       } else {
         // Expand
         content.classList.add('expanded');
         header.classList.add('expanded');
         localStorage.setItem('nav-' + sectionId, 'open');
+        console.log('Expanded');
       }
-    }
+    };
 
     // Restore navigation state on page load
     document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOMContentLoaded - Initializing navigation');
+
       // Auto-expand Google Ads section if on a Google Ads page
       const currentEndpoint = '{{ epn }}';
       const googleAdsEndpoints = [
@@ -1456,19 +1470,23 @@
       const googleAdsSection = document.getElementById('google-ads-section');
       const googleAdsHeader = document.getElementById('google-ads-header');
 
-      if (googleAdsSection) {
+      if (googleAdsSection && googleAdsHeader) {
         // Check if we're on a Google Ads page
         if (googleAdsEndpoints.includes(currentEndpoint)) {
+          console.log('Auto-expanding Google Ads section (current page:', currentEndpoint, ')');
           googleAdsSection.classList.add('expanded');
           googleAdsHeader.classList.add('expanded');
         } else {
           // Restore from localStorage
           const savedState = localStorage.getItem('nav-google-ads-section');
           if (savedState === 'open') {
+            console.log('Restoring Google Ads section from localStorage');
             googleAdsSection.classList.add('expanded');
             googleAdsHeader.classList.add('expanded');
           }
         }
+      } else {
+        console.warn('Google Ads navigation elements not found');
       }
     });
   </script>

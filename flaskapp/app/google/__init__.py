@@ -2561,7 +2561,7 @@ def _calculate_historical_improvement(account_id, connected):
     try:
         account = Account.query.get(account_id)
         if not account:
-            return None
+            return _get_demo_improvement_data()
 
         # Determine "before FieldSprout" baseline period
         # Option 1: Use account creation date (when they signed up)
@@ -2757,6 +2757,10 @@ def ads_decision_screen():
 
     # Calculate historical improvement metrics
     historical_improvement = _calculate_historical_improvement(aid, connected)
+
+    # Ensure we always have data to display (fallback to demo if function returned None)
+    if not historical_improvement:
+        historical_improvement = _get_demo_improvement_data()
 
     # Transform actions into timeline format
     recent_changes = []

@@ -202,10 +202,10 @@
         <i class="fa-solid fa-house"></i>
       </a>
 
-      <!-- Flat Google submenu items for mobile -->
-      <div class="pt-2 text-sm font-semibold text-gray-600 uppercase">Google</div>
+      <!-- Google Services (unified) -->
+      <div class="pt-2 text-sm font-semibold text-gray-600 uppercase"><i class="fa-brands fa-google mr-1"></i>Google Services</div>
       <a class="block px-3 py-3 rounded nav-link min-h-12" href="{{ url_for('google_bp.index') }}">
-        <i class="fa-solid fa-gauge"></i><span>Overview / Connect</span>
+        <i class="fa-solid fa-link"></i><span>Connect Account</span>
       </a>
 
       {# Google Ads submenu #}
@@ -215,9 +215,14 @@
           <i class="fa-solid fa-chart-line"></i><span>Performance</span>
         </a>
       {% endif %}
+      {% if has_endpoint('google_bp.ads_campaigns') %}
+        <a href="{{ url_for('google_bp.ads_campaigns') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+          <i class="fa-solid fa-bullseye"></i><span>Campaigns</span>
+        </a>
+      {% endif %}
       {% if has_endpoint('budget_bp.budget_groups') %}
         <a href="{{ url_for('budget_bp.budget_groups') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
-          <i class="fa-solid fa-wallet"></i><span>Budget Management</span>
+          <i class="fa-solid fa-wallet"></i><span>Budget Manager</span>
         </a>
       {% endif %}
       {% if has_endpoint('forecasting_bp.forecasting_dashboard') %}
@@ -227,50 +232,72 @@
       {% endif %}
       {% if has_endpoint('competitive_bp.competitive_dashboard') %}
         <a href="{{ url_for('competitive_bp.competitive_dashboard') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
-          <i class="fa-solid fa-users"></i><span>Competitive Analysis</span>
+          <i class="fa-solid fa-users"></i><span>Competitors</span>
         </a>
       {% endif %}
-      {% if has_endpoint('google_bp.ads_campaigns') %}
-        <a href="{{ url_for('google_bp.ads_campaigns') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
-          <i class="fa-solid fa-bullseye"></i><span>Campaigns</span>
-        </a>
-      {% endif %}
-
-      {# Other Google Services #}
-      {% if has_endpoint('google_bp.gsc_ui') %}
-        <a href="{{ url_for('google_bp.gsc_ui') }}" class="block px-3 py-3 nav-link min-h-12">
-          <i class="fa-solid fa-magnifying-glass"></i><span>Search Console</span>
-        </a>
-      {% endif %}
-      {% if has_endpoint('google_bp.ga_ui') %}
-        <a href="{{ url_for('google_bp.ga_ui') }}" class="block px-3 py-3 nav-link min-h-12">
-          <i class="fa-solid fa-chart-line"></i><span>Analytics</span>
-        </a>
-      {% endif %}
-      {% if has_endpoint('gmb_bp.index') %}
-        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('gmb_bp.index') }}">
-          <i class="fa-solid fa-store"></i><span>Business Profile</span>
+      {% if has_endpoint('google_bp.ads_opportunities') %}
+        <a href="{{ url_for('google_bp.ads_opportunities') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+          <i class="fa-solid fa-lightbulb"></i><span>Opportunities</span>
         </a>
       {% endif %}
 
-      {% if has_endpoint('glsa_bp.index') %}
-        <a href="{{ url_for('glsa_bp.index') }}" class="block px-3 py-3 nav-link min-h-12">
-          <i class="fa-solid fa-bullhorn"></i><span>Local Services Ads</span>
+      {# Local Services Ads submenu #}
+      {% if has_endpoint('glsa_bp.dashboard') %}
+      <div class="pt-2 pl-3 text-xs font-semibold text-gray-500 uppercase">Local Services Ads</div>
+        <a href="{{ url_for('glsa_bp.dashboard') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+          <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
         </a>
         {% if has_endpoint('glsa_bp.select_account') %}
-          <a href="{{ url_for('glsa_bp.select_account') }}" class="block px-3 py-3 nav-link min-h-12">
+          <a href="{{ url_for('glsa_bp.select_account') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
             <i class="fa-solid fa-building"></i><span>Select Account</span>
           </a>
         {% endif %}
         {% if has_endpoint('glsa_bp.leads_page') %}
-          <a href="{{ url_for('glsa_bp.leads_page') }}" class="block px-3 py-3 nav-link min-h-12">
-              <i class="fa-solid fa-inbox"></i><span>Review Leads</span>
-            </a>
+          <a href="{{ url_for('glsa_bp.leads_page') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-inbox"></i><span>Review Leads</span>
+          </a>
         {% endif %}
         {% if has_endpoint('glsa_bp.optimize') %}
           <a href="{{ url_for('glsa_bp.optimize') if is_paid else '#' }}" class="block pl-6 pr-3 py-3 nav-link min-h-12 {% if not is_paid %}opacity-40 cursor-not-allowed{% endif %}" {% if not is_paid %}onclick="alert('This feature requires a paid plan. Please upgrade.'); return false;"{% endif %}>
-            <i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimize Profiles</span>
+            <i class="fa-solid fa-wand-magic-sparkles"></i><span>Optimize</span>
             {% if not is_paid %}<i class="fa-solid fa-lock ml-auto text-xs"></i>{% endif %}
+          </a>
+        {% endif %}
+      {% endif %}
+
+      {# Other Google Services #}
+      {% if has_endpoint('google_bp.gsc_ui') %}
+      <div class="pt-2 pl-3 text-xs font-semibold text-gray-500 uppercase">Search Console</div>
+        <a href="{{ url_for('google_bp.gsc_ui') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+          <i class="fa-solid fa-magnifying-glass"></i><span>Overview</span>
+        </a>
+      {% endif %}
+      {% if has_endpoint('google_bp.ga_ui') %}
+      <div class="pt-2 pl-3 text-xs font-semibold text-gray-500 uppercase">Analytics</div>
+        <a href="{{ url_for('google_bp.ga_ui') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+          <i class="fa-solid fa-chart-line"></i><span>Overview</span>
+        </a>
+      {% endif %}
+
+      {# Business Profile submenu #}
+      {% if has_endpoint('gmb_bp.index') %}
+      <div class="pt-2 pl-3 text-xs font-semibold text-gray-500 uppercase">Business Profile</div>
+        <a class="block pl-6 pr-3 py-3 nav-link min-h-12" href="{{ url_for('gmb_bp.index') }}">
+          <i class="fa-solid fa-store"></i><span>Overview</span>
+        </a>
+        {% if has_endpoint('gmb_bp.reviews') %}
+          <a href="{{ url_for('gmb_bp.reviews') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-star"></i><span>Reviews</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('gmb_bp.ai_responses') %}
+          <a href="{{ url_for('gmb_bp.ai_responses') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-robot"></i><span>AI Responses</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('gmb_bp.requests_email') %}
+          <a href="{{ url_for('gmb_bp.requests_email') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-envelope"></i><span>Review Requests</span>
           </a>
         {% endif %}
       {% endif %}
@@ -300,19 +327,6 @@
           <a href="{{ url_for('fbads_bp.leads') }}" class="block px-3 py-3 nav-link min-h-12">
             <i class="fa-solid fa-inbox"></i><span>Review Leads</span>
           </a>
-        {% endif %}
-      {% endif %}
-
-      {% if has_endpoint('gmb_bp.index') %}
-        <a href="{{ url_for('gmb_bp.index') }}" class="block px-3 py-3 nav-link min-h-12"><i class="fa-brands fa-google"></i><span>Google Business</span></a>
-        {% if has_endpoint('gmb_bp.reviews') %}
-          <a href="{{ url_for('gmb_bp.reviews') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">Profile Review</a>
-        {% endif %}
-        {% if has_endpoint('gmb_bp.ai_responses') %}
-          <a href="{{ url_for('gmb_bp.ai_responses') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">AI Review Responses</a>
-        {% endif %}
-        {% if has_endpoint('gmb_bp.requests_email') %}
-          <a href="{{ url_for('gmb_bp.requests_email') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">Review Requests (Email)</a>
         {% endif %}
       {% endif %}
 
@@ -371,11 +385,9 @@
       </a>
 
       {# <a href="{{ url_for('strategy_bp.index') }}" class="primary-btn {% if SECTION=='strategy' %}active{% endif %}" title="Strategy"><i class="fa-solid fa-lightbulb"></i></a> #}
-      <a href="{{ url_for('google_bp.index') }}" class="primary-btn {% if SECTION=='google' %}active{% endif %}" title="Google"><i class="fa-brands fa-google"></i></a>
-      <a href="{{ url_for('glsa_bp.index') }}" class="primary-btn {% if SECTION=='glsa' %}active{% endif %}" title="Local Services Ads"><i class="fa-solid fa-bullhorn"></i></a>
+      <a href="{{ url_for('google_bp.index') }}" class="primary-btn {% if SECTION in ['google', 'glsa', 'gmb'] %}active{% endif %}" title="Google Services"><i class="fa-brands fa-google"></i></a>
       <a href="{{ url_for('fbads_bp.index') }}" class="primary-btn {% if SECTION=='fbads' %}active{% endif %}" title="Facebook Ads"><i class="fa-brands fa-facebook-f"></i></a>
       {# <a href="{{ url_for('yelp_bp.index') }}" class="primary-btn {% if SECTION=='yelp' %}active{% endif %}" title="Yelp"><i class="fa-brands fa-yelp"></i></a> #}
-      <a href="{{ url_for('gmb_bp.index') }}" class="primary-btn {% if SECTION=='gmb' %}active{% endif %}" title="Google Business"><i class="fa-brands fa-google"></i></a>
       {% if has_endpoint('linkedin_bp.index') %}
         <a href="{{ url_for('linkedin_bp.index') }}" class="primary-btn {% if SECTION=='linkedin' %}active{% endif %}" title="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
       {% endif %}

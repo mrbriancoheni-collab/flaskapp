@@ -476,28 +476,38 @@ def generate_google_ads_insights_weekly(app: Flask):
 
 def send_to_all_unsent_today(app: Flask):
     """
-    Send emails to ALL contacts who have NEVER received an email.
+    Smart delay-based email sequencing system.
 
-    This runs daily (2 PM UTC) to ensure maximum coverage.
-    Uses the same 250 emails/day limit, sending to any enriched contact
-    who has never been emailed and is not unsubscribed.
+    This runs daily (2 PM UTC) to progress contacts through multi-step email sequences.
+
+    For each contact, this:
+    1. Finds which sequence steps they've already received
+    2. Determines the next step in their campaign's sequence
+    3. Checks if enough delay_days have passed since last email
+    4. Sends the next step if eligible
+
+    This automatically handles multi-step nurture campaigns:
+    - Step 1 (initial outreach) → wait X days → Step 2 (follow-up) → wait Y days → Step 3, etc.
+    - Respects delay_days configured in each EmailSequence
+    - Respects daily limit (250 emails/day)
+    - Respects unsubscribe list (CAN-SPAM compliance)
     """
     with app.app_context():
         try:
             # Check if automation is enabled
             enabled = current_app.config.get("LEAD_AUTOMATION_ENABLED", True)
             if not enabled:
-                current_app.logger.info("[JOB] Lead automation disabled - skipping daily email blast")
+                current_app.logger.info("[JOB] Lead automation disabled - skipping smart sequence progression")
                 return
 
-            from app.cron_tasks import _send_to_all_unsent_ever
+            from app.cron_tasks import _send_next_sequence_steps
 
-            current_app.logger.info("[JOB] Starting daily email blast to never-emailed contacts")
-            _send_to_all_unsent_ever(current_app)
-            current_app.logger.info("[JOB] Daily email blast completed")
+            current_app.logger.info("[JOB] Starting smart sequence progression")
+            _send_next_sequence_steps(current_app)
+            current_app.logger.info("[JOB] Smart sequence progression completed")
 
         except Exception as e:
-            current_app.logger.error(f"Error in daily email blast job: {e}", exc_info=True)
+            current_app.logger.error(f"Error in smart sequence progression job: {e}", exc_info=True)
 
 
 def process_email_queue(app: Flask):

@@ -583,7 +583,7 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
         sequence = EmailSequence(
             campaign_id=campaign.id,
             step_number=1,
-            name="Initial Outreach",
+            name="Auto Campaign",  # Standardized name for all campaigns
             subject=default_subject,
             body_text=default_body,
             body_html=default_body.replace('\n', '<br>'),
@@ -594,7 +594,7 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
         db.session.add(sequence)
         db.session.commit()
 
-        logger.info(f"Created default email sequence for campaign '{campaign.name}'")
+        logger.info(f"Created 'Auto Campaign' email sequence for campaign '{campaign.name}'")
         return sequence
 
     def _process_email_sending(self) -> int:
@@ -802,6 +802,150 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                         db.session.rollback()
 
         return sent_count
+
+    def send_to_all_unsent_today(self) -> Dict:
+        """
+        Send emails to ALL contacts who haven't received an email TODAY.
+
+        This method:
+        1. Finds all enriched contacts across all campaigns
+        2. Checks if they received an email today
+        3. Sends to those who haven't (up to daily limit)
+
+        Returns: Dict with sent count and details
+        """
+        logger.info("=" * 80)
+        logger.info("SENDING TO ALL CONTACTS NOT EMAILED TODAY")
+        logger.info("=" * 80)
+
+        self._reset_daily_stats_if_new_day()
+
+        if not self._can_send_email_today():
+            logger.info("Daily email limit already reached")
+            return {"sent": 0, "reason": "daily_limit_reached"}
+
+        sent_count = 0
+
+        # Initialize Brevo outreach service
+        try:
+            self.outreach = BrevoOutreachService()
+        except Exception as e:
+            logger.error(f"Cannot initialize Brevo outreach service: {e}")
+            return {"sent": 0, "error": str(e)}
+
+        # Get today's start time
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Get ALL enriched contacts across all campaigns
+        all_contacts = db.session.query(LeadContact).join(
+            Lead, LeadContact.lead_id == Lead.id
+        ).filter(
+            Lead.enrichment_status == 'completed',
+            LeadContact.email.isnot(None),
+            LeadContact.email != ''
+        ).all()
+
+        logger.info(f"Found {len(all_contacts)} total enriched contacts")
+
+        # Filter out those who received email today
+        contacts_to_email = []
+        for contact in all_contacts:
+            # Check if this contact received an email today
+            emailed_today = db.session.query(LeadContactEmail).filter(
+                LeadContactEmail.to_email == contact.email,
+                LeadContactEmail.sent_at >= today_start
+            ).first()
+
+            if not emailed_today:
+                contacts_to_email.append(contact)
+
+        logger.info(f"Found {len(contacts_to_email)} contacts who haven't received email today")
+
+        # Send to each contact
+        for contact in contacts_to_email:
+            if not self._can_send_email_today():
+                logger.info(f"Daily email limit reached after sending {sent_count} emails")
+                break
+
+            try:
+                # Get the lead and campaign
+                lead = Lead.query.get(contact.lead_id)
+                if not lead:
+                    continue
+
+                campaign = LeadCampaign.query.get(lead.campaign_id)
+                if not campaign:
+                    continue
+
+                # Get or create the email sequence for this campaign
+                email_sequence = self._ensure_campaign_has_sequence(campaign)
+                if not email_sequence:
+                    logger.warning(f"No email sequence for campaign '{campaign.name}'")
+                    continue
+
+                # Prepare email content
+                subject = self._replace_contact_variables(email_sequence.subject, lead, contact, campaign)
+                body = self._replace_contact_variables(email_sequence.body_text, lead, contact, campaign)
+
+                # Send email
+                result = self.outreach.send_email(
+                    to_email=contact.email,
+                    subject=subject,
+                    body_html=body.replace('\n', '<br>'),
+                    body_text=body
+                )
+
+                # Check for rate limiting
+                if result.get('rate_limited'):
+                    retry_after = result.get('retry_after', 300)
+                    logger.warning(f"Email rate limit hit. Stopping. Retry after {retry_after} seconds")
+                    break
+
+                if result.get('success'):
+                    # Record email sent
+                    email_record = LeadContactEmail(
+                        contact_id=contact.id,
+                        lead_id=lead.id,
+                        sequence_step=email_sequence.step_number,
+                        to_email=contact.email,
+                        subject=subject,
+                        body_text=body,
+                        body_html=body.replace('\n', '<br>'),
+                        sent_at=datetime.utcnow(),
+                        status='sent'
+                    )
+                    db.session.add(email_record)
+
+                    # Update contact status
+                    contact.email_status = 'sent'
+                    contact.last_email_sent_at = datetime.utcnow()
+
+                    # Update campaign stats
+                    campaign.emails_sent = (campaign.emails_sent or 0) + 1
+
+                    db.session.commit()
+
+                    self.state["emails_sent"] += 1
+                    self.state["daily_stats"]["emails"] += 1
+                    sent_count += 1
+
+                    logger.info(f"✓ Sent to {contact.email} ({contact.name} at {lead.company_name})")
+
+            except Exception as e:
+                logger.error(f"Error sending email to contact {contact.id}: {e}")
+                db.session.rollback()
+
+        self._save_state()
+
+        logger.info("=" * 80)
+        logger.info(f"COMPLETE: Sent {sent_count} emails to contacts not emailed today")
+        logger.info("=" * 80)
+
+        return {
+            "sent": sent_count,
+            "total_contacts_checked": len(all_contacts),
+            "eligible_contacts": len(contacts_to_email)
+        }
 
     def _replace_variables(self, text: str, lead: Lead, campaign: LeadCampaign) -> str:
         """Replace template variables in email text"""

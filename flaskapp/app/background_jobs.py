@@ -159,6 +159,18 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
+    # Daily email blast to all unsent contacts (daily at 2 PM UTC)
+    # Runs 4 hours after main automation to catch any remaining contacts
+    scheduler.add_job(
+        func=send_to_all_unsent_today,
+        trigger='cron',
+        hour=14,
+        minute=0,
+        id='send_to_all_unsent_today',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
     # Process email queue (every 1 minute)
     scheduler.add_job(
         func=process_email_queue,
@@ -460,6 +472,32 @@ def generate_google_ads_insights_weekly(app: Flask):
 
         except Exception as e:
             current_app.logger.error(f"Error in weekly Google Ads insights job: {e}", exc_info=True)
+
+
+def send_to_all_unsent_today(app: Flask):
+    """
+    Send emails to ALL contacts who haven't received an email today.
+
+    This runs daily (2 PM UTC) to ensure maximum coverage.
+    Uses the same 250 emails/day limit, sending to any enriched contact
+    who hasn't been emailed today regardless of status.
+    """
+    with app.app_context():
+        try:
+            # Check if automation is enabled
+            enabled = current_app.config.get("LEAD_AUTOMATION_ENABLED", True)
+            if not enabled:
+                current_app.logger.info("[JOB] Lead automation disabled - skipping daily email blast")
+                return
+
+            from app.cron_tasks import _send_to_all_unsent_today
+
+            current_app.logger.info("[JOB] Starting daily email blast to unsent contacts")
+            _send_to_all_unsent_today(current_app)
+            current_app.logger.info("[JOB] Daily email blast completed")
+
+        except Exception as e:
+            current_app.logger.error(f"Error in daily email blast job: {e}", exc_info=True)
 
 
 def process_email_queue(app: Flask):

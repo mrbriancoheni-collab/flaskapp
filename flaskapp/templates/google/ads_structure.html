@@ -154,6 +154,7 @@
                           {% if group_keywords[0].conv is not none %}
                           <th class="py-1 px-2">Conv</th>
                           {% endif %}
+                          <th class="py-1 px-2">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -185,6 +186,13 @@
                           {% if kw.conv is not none %}
                           <td class="py-1 px-2">{{ kw.conv }}</td>
                           {% endif %}
+                          <td class="py-1 px-2">
+                            <button
+                              onclick="editKeywordMatchType('{{ kw.id }}', '{{ kw.text }}', '{{ kw.match }}')"
+                              class="text-indigo-600 hover:text-indigo-800 text-xs font-medium">
+                              <i class="fa-solid fa-edit mr-1"></i>Edit Type
+                            </button>
+                          </td>
                         </tr>
                         {% endfor %}
                       </tbody>
@@ -273,5 +281,108 @@
   {% endif %}
 
   {% endif %}
+
+  <!-- Edit Keyword Match Type Modal -->
+  <div id="editMatchTypeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4">
+      <div class="px-6 py-4 border-b">
+        <h3 class="text-xl font-bold text-gray-900">Edit Keyword Match Type</h3>
+      </div>
+      <div class="p-6">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Keyword</label>
+          <div id="modalKeywordText" class="text-lg font-semibold text-gray-900 bg-gray-50 px-4 py-2 rounded"></div>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Match Type</label>
+          <select id="modalMatchType" class="w-full border border-gray-300 rounded-lg px-4 py-2">
+            <option value="EXACT">Exact Match</option>
+            <option value="PHRASE">Phrase Match</option>
+            <option value="BROAD">Broad Match</option>
+            <option value="NEGATIVE">Negative Keyword</option>
+          </select>
+        </div>
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+          <div class="text-sm text-blue-800">
+            <p class="font-semibold mb-1">Match Type Guide:</p>
+            <ul class="text-xs space-y-1">
+              <li><strong>Exact:</strong> Only exact searches (e.g., [plumber])</li>
+              <li><strong>Phrase:</strong> Phrase with words before/after (e.g., "emergency plumber")</li>
+              <li><strong>Broad:</strong> Related searches (e.g., plumber, plumbing services)</li>
+              <li><strong>Negative:</strong> Exclude this term from triggering ads</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t flex justify-end gap-3">
+        <button onclick="closeMatchTypeModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+          Cancel
+        </button>
+        <button onclick="saveMatchType()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+          Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+
 </div>
+
+<script>
+let currentKeywordId = null;
+
+function editKeywordMatchType(keywordId, keywordText, currentMatch) {
+  currentKeywordId = keywordId;
+  document.getElementById('modalKeywordText').textContent = keywordText;
+  document.getElementById('modalMatchType').value = currentMatch.toUpperCase();
+  document.getElementById('editMatchTypeModal').classList.remove('hidden');
+  document.getElementById('editMatchTypeModal').classList.add('flex');
+}
+
+function closeMatchTypeModal() {
+  document.getElementById('editMatchTypeModal').classList.add('hidden');
+  document.getElementById('editMatchTypeModal').classList.remove('flex');
+  currentKeywordId = null;
+}
+
+async function saveMatchType() {
+  const newMatchType = document.getElementById('modalMatchType').value;
+
+  try {
+    const response = await fetch(`/account/google/ads/keywords/${currentKeywordId}/match-type`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify({
+        match_type: newMatchType
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Show success message
+      alert('Keyword match type updated successfully!');
+      // Reload the page to show updated data
+      window.location.reload();
+    } else {
+      alert('Error: ' + (data.error || 'Failed to update keyword'));
+    }
+  } catch (error) {
+    console.error('Error updating keyword:', error);
+    alert('An error occurred while updating the keyword');
+  }
+
+  closeMatchTypeModal();
+}
+
+// Close modal on outside click
+document.getElementById('editMatchTypeModal')?.addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeMatchTypeModal();
+  }
+});
+</script>
+
 {% endblock %}

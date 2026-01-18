@@ -2865,6 +2865,16 @@ def ai_change_log():
         AIAction.action_type != 'negative_keyword_added'
     ).count()
 
+    # Get recent AI actions (last 30 days)
+    from datetime import datetime, timedelta
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+
+    recent_actions = AIAction.query.filter(
+        AIAction.account_id == aid,
+        AIAction.status == 'executed',
+        AIAction.created_at >= thirty_days_ago
+    ).order_by(AIAction.created_at.desc()).limit(100).all()
+
     return render_template(
         "google/ai_change_log.html",
         connected=connected,
@@ -2872,6 +2882,7 @@ def ai_change_log():
         total_saved=round(total_saved, 2),
         total_optimizations=total_optimizations,
         total_blocks=total_blocks,
+        recent_actions=recent_actions,
         epn=request.endpoint,
     )
 
@@ -3527,6 +3538,59 @@ def ads_structure():
         ads_data=ads_data,
         epn=request.endpoint,
     )
+
+
+@google_bp.route("/ads/keywords/<keyword_id>/match-type", methods=["POST"], endpoint="update_keyword_match_type")
+@login_required
+def update_keyword_match_type(keyword_id):
+    """
+    API endpoint to update a keyword's match type.
+    Supports: EXACT, PHRASE, BROAD, NEGATIVE
+    """
+    try:
+        data = request.get_json()
+        new_match_type = data.get('match_type', '').upper()
+
+        # Validate match type
+        valid_types = ['EXACT', 'PHRASE', 'BROAD', 'NEGATIVE']
+        if new_match_type not in valid_types:
+            return jsonify({'success': False, 'error': 'Invalid match type'}), 400
+
+        aid = current_account_id()
+
+        # Import keyword model
+        from app.models import Keyword
+
+        # Find the keyword
+        keyword = Keyword.query.filter_by(
+            id=keyword_id,
+            account_id=aid
+        ).first()
+
+        if not keyword:
+            return jsonify({'success': False, 'error': 'Keyword not found'}), 404
+
+        # Update the match type
+        old_match_type = keyword.match_type
+        keyword.match_type = new_match_type
+        db.session.commit()
+
+        # Log the action
+        current_app.logger.info(
+            f"Updated keyword '{keyword.text}' match type from {old_match_type} to {new_match_type} for account {aid}"
+        )
+
+        return jsonify({
+            'success': True,
+            'keyword_id': keyword_id,
+            'new_match_type': new_match_type,
+            'old_match_type': old_match_type
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Error updating keyword match type: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @google_bp.route("/ads/campaigns/paused", methods=["GET"], endpoint="get_paused_campaigns")

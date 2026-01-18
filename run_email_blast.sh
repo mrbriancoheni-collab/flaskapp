@@ -43,22 +43,24 @@ from app import create_app
 from app.services.lead_automation_service import LeadAutomationService
 
 def run_email_blast():
-    """Run email blast to all unsent contacts today"""
+    """Run email blast to all contacts who have never been emailed"""
     app = create_app()
 
     with app.app_context():
         print("=" * 80)
-        print("STARTING EMAIL BLAST TO ALL UNSENT CONTACTS TODAY")
+        print("SENDING TO ALL CONTACTS WHO HAVE NEVER BEEN EMAILED")
         print("=" * 80)
 
         service = LeadAutomationService()
-        result = service.send_to_all_unsent_today()
+        result = service.send_to_all_unsent_ever()
 
         print("\n" + "=" * 80)
         print(f"COMPLETE:")
         print(f"  - Emails sent: {result['sent']}")
-        print(f"  - Eligible contacts: {result.get('eligible_contacts', 0)}")
+        print(f"  - Eligible contacts (never emailed): {result.get('eligible_contacts', 0)}")
         print(f"  - Total contacts checked: {result.get('total_contacts_checked', 0)}")
+        print(f"  - Skipped (unsubscribed): {result.get('skipped_unsubscribed', 0)}")
+        print(f"  - Skipped (already emailed): {result.get('skipped_already_emailed', 0)}")
         print("=" * 80)
 
         return result

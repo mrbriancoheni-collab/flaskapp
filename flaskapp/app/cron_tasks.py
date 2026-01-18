@@ -646,12 +646,13 @@ def _run_daily_lead_automation(app) -> None:
         app.logger.exception(f"[CRON] Error running lead automation: {e}")
 
 
-def _send_to_all_unsent_today(app):
+def _send_to_all_unsent_ever(app):
     """
-    Send emails to ALL contacts who haven't received an email today.
+    Send emails to ALL contacts who have NEVER received an email.
 
     This is a separate task that runs daily to ensure maximum email coverage.
-    Uses the same daily limit (250 emails/day) but focuses on contacts not yet emailed today.
+    Uses the same daily limit (250 emails/day) but focuses on contacts never emailed.
+    Respects unsubscribes for CAN-SPAM compliance.
     """
     enabled = app.config.get("LEAD_AUTOMATION_ENABLED", True)
     if not enabled:
@@ -662,11 +663,12 @@ def _send_to_all_unsent_today(app):
         from app.services.lead_automation_service import LeadAutomationService
 
         service = LeadAutomationService()
-        result = service.send_to_all_unsent_today()
+        result = service.send_to_all_unsent_ever()
 
         app.logger.info(
-            "[CRON] Daily email blast completed: %d emails sent (%d eligible out of %d total contacts)",
-            result['sent'], result.get('eligible_contacts', 0), result.get('total_contacts_checked', 0)
+            "[CRON] Daily email blast completed: %d emails sent (%d eligible, %d unsubscribed, %d already emailed)",
+            result['sent'], result.get('eligible_contacts', 0),
+            result.get('skipped_unsubscribed', 0), result.get('skipped_already_emailed', 0)
         )
 
     except Exception as e:

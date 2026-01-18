@@ -803,19 +803,20 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
 
         return sent_count
 
-    def send_to_all_unsent_today(self) -> Dict:
+    def send_to_all_unsent_ever(self) -> Dict:
         """
-        Send emails to ALL contacts who haven't received an email TODAY.
+        Send emails to ALL contacts who have NEVER received an email.
 
         This method:
         1. Finds all enriched contacts across all campaigns
-        2. Checks if they received an email today
-        3. Sends to those who haven't (up to daily limit)
+        2. Checks if they've EVER received an email
+        3. Checks if they're unsubscribed
+        4. Sends to those who have never been emailed and are not unsubscribed (up to daily limit)
 
         Returns: Dict with sent count and details
         """
         logger.info("=" * 80)
-        logger.info("SENDING TO ALL CONTACTS NOT EMAILED TODAY")
+        logger.info("SENDING TO ALL CONTACTS WHO HAVE NEVER BEEN EMAILED")
         logger.info("=" * 80)
 
         self._reset_daily_stats_if_new_day()
@@ -825,6 +826,8 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             return {"sent": 0, "reason": "daily_limit_reached"}
 
         sent_count = 0
+        skipped_unsubscribed = 0
+        skipped_already_emailed = 0
 
         # Initialize Brevo outreach service
         try:
@@ -833,8 +836,14 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             logger.error(f"Cannot initialize Brevo outreach service: {e}")
             return {"sent": 0, "error": str(e)}
 
-        # Get today's start time
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        # Import unsubscribe model
+        from app.models_leads import EmailUnsubscribe
+
+        # Get all unsubscribed emails
+        unsubscribed_emails = set(
+            email[0].lower() for email in db.session.query(EmailUnsubscribe.email).all()
+        )
+        logger.info(f"Found {len(unsubscribed_emails)} unsubscribed email addresses")
 
         # Get ALL enriched contacts across all campaigns
         all_contacts = db.session.query(LeadContact).join(
@@ -847,19 +856,37 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
 
         logger.info(f"Found {len(all_contacts)} total enriched contacts")
 
-        # Filter out those who received email today
+        # Filter out those who have EVER received an email or are unsubscribed
         contacts_to_email = []
         for contact in all_contacts:
-            # Check if this contact received an email today
-            emailed_today = db.session.query(LeadContactEmail).filter(
-                LeadContactEmail.to_email == contact.email,
-                LeadContactEmail.sent_at >= today_start
+            # Check if unsubscribed
+            if contact.email.lower() in unsubscribed_emails:
+                skipped_unsubscribed += 1
+                logger.debug(f"Skipping {contact.email} - unsubscribed")
+                continue
+
+            # Check if this contact has EVER received an email
+            ever_emailed = db.session.query(LeadContactEmail).filter(
+                LeadContactEmail.to_email == contact.email
             ).first()
 
-            if not emailed_today:
+            # Also check legacy emails
+            if not ever_emailed:
+                ever_emailed_legacy = db.session.query(LeadEmail).filter(
+                    LeadEmail.to_email == contact.email
+                ).first()
+                if ever_emailed_legacy:
+                    ever_emailed = ever_emailed_legacy
+
+            if ever_emailed:
+                skipped_already_emailed += 1
+                logger.debug(f"Skipping {contact.email} - already emailed previously")
+            else:
                 contacts_to_email.append(contact)
 
-        logger.info(f"Found {len(contacts_to_email)} contacts who haven't received email today")
+        logger.info(f"Found {len(contacts_to_email)} contacts who have NEVER been emailed")
+        logger.info(f"Skipped {skipped_unsubscribed} unsubscribed contacts")
+        logger.info(f"Skipped {skipped_already_emailed} previously emailed contacts")
 
         # Send to each contact
         for contact in contacts_to_email:
@@ -938,13 +965,17 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
         self._save_state()
 
         logger.info("=" * 80)
-        logger.info(f"COMPLETE: Sent {sent_count} emails to contacts not emailed today")
+        logger.info(f"COMPLETE: Sent {sent_count} emails to contacts never emailed before")
+        logger.info(f"Total checked: {len(all_contacts)}, Eligible: {len(contacts_to_email)}")
+        logger.info(f"Skipped - Unsubscribed: {skipped_unsubscribed}, Already emailed: {skipped_already_emailed}")
         logger.info("=" * 80)
 
         return {
             "sent": sent_count,
             "total_contacts_checked": len(all_contacts),
-            "eligible_contacts": len(contacts_to_email)
+            "eligible_contacts": len(contacts_to_email),
+            "skipped_unsubscribed": skipped_unsubscribed,
+            "skipped_already_emailed": skipped_already_emailed
         }
 
     def _replace_variables(self, text: str, lead: Lead, campaign: LeadCampaign) -> str:

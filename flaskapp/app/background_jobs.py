@@ -476,11 +476,11 @@ def generate_google_ads_insights_weekly(app: Flask):
 
 def send_to_all_unsent_today(app: Flask):
     """
-    Send emails to ALL contacts who haven't received an email today.
+    Send emails to ALL contacts who have NEVER received an email.
 
     This runs daily (2 PM UTC) to ensure maximum coverage.
     Uses the same 250 emails/day limit, sending to any enriched contact
-    who hasn't been emailed today regardless of status.
+    who has never been emailed and is not unsubscribed.
     """
     with app.app_context():
         try:
@@ -490,10 +490,10 @@ def send_to_all_unsent_today(app: Flask):
                 current_app.logger.info("[JOB] Lead automation disabled - skipping daily email blast")
                 return
 
-            from app.cron_tasks import _send_to_all_unsent_today
+            from app.cron_tasks import _send_to_all_unsent_ever
 
-            current_app.logger.info("[JOB] Starting daily email blast to unsent contacts")
-            _send_to_all_unsent_today(current_app)
+            current_app.logger.info("[JOB] Starting daily email blast to never-emailed contacts")
+            _send_to_all_unsent_ever(current_app)
             current_app.logger.info("[JOB] Daily email blast completed")
 
         except Exception as e:

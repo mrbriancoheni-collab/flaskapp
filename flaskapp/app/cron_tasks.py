@@ -644,3 +644,53 @@ def _run_daily_lead_automation(app) -> None:
 
     except Exception as e:
         app.logger.exception(f"[CRON] Error running lead automation: {e}")
+
+
+def _send_to_all_unsent_ever(app):
+    """
+    DEPRECATED: Use _send_next_sequence_steps instead.
+
+    This function is kept for backwards compatibility but now calls the smart sequencing system.
+    """
+    return _send_next_sequence_steps(app)
+
+
+def _send_next_sequence_steps(app):
+    """
+    Smart delay-based email sequencing system.
+
+    For each contact, this:
+    1. Finds which sequence steps they've already received
+    2. Determines the next step in their campaign's sequence
+    3. Checks if enough delay_days have passed since last email
+    4. Sends the next step if eligible
+
+    This automatically progresses contacts through multi-step sequences
+    (e.g., step 1 → wait 3 days → step 2 → wait 5 days → step 3, etc.)
+
+    Respects:
+    - Daily email limit (250 emails/day)
+    - Unsubscribe list (CAN-SPAM compliance)
+    - Sequence delay_days (configured per step)
+    """
+    enabled = app.config.get("LEAD_AUTOMATION_ENABLED", True)
+    if not enabled:
+        app.logger.info("[CRON] Lead automation disabled - skipping smart sequence progression")
+        return
+
+    try:
+        from app.services.lead_automation_service import LeadAutomationService
+
+        service = LeadAutomationService()
+        result = service.send_next_sequence_steps()
+
+        app.logger.info(
+            "[CRON] Smart sequence progression completed: %d emails sent "
+            "(%d total contacts, %d unsubscribed, %d not ready, %d completed all steps)",
+            result['sent'], result.get('total_contacts_checked', 0),
+            result.get('skipped_unsubscribed', 0), result.get('skipped_not_ready', 0),
+            result.get('skipped_complete', 0)
+        )
+
+    except Exception as e:
+        app.logger.exception(f"[CRON] Error running smart sequence progression: {e}")

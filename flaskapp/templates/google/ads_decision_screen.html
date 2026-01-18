@@ -434,52 +434,90 @@
     </div>
 
     <div class="space-y-4">
-      {# Today #}
-      <div class="flex gap-4">
-        <div class="flex flex-col items-center">
-          <div class="w-3 h-3 bg-purple-600 rounded-full"></div>
-          <div class="w-0.5 h-full bg-gray-200"></div>
-        </div>
-        <div class="flex-1 pb-4">
-          <div class="text-sm text-gray-500">Today, 2:14 PM</div>
-          <div class="font-semibold text-gray-900 mt-1">🚫 Blocked 12 irrelevant searches</div>
-          <div class="text-sm text-gray-600 mt-1">
-            AI blocked "{{industry_language.waste_example}}" and other low-intent searches to prevent waste.
+      {% if connected and recent_changes %}
+        {# Real AI actions from database #}
+        {% for change in recent_changes %}
+        <div class="flex gap-4">
+          <div class="flex flex-col items-center">
+            <div class="w-3 h-3 bg-{{change.color}}-600 rounded-full"></div>
+            {% if not loop.last %}<div class="w-0.5 h-full bg-gray-200"></div>{% endif %}
           </div>
-          <div class="mt-2 inline-flex items-center gap-2 text-xs text-gray-500">
-            <span class="bg-gray-100 px-2 py-1 rounded">$47 saved</span>
+          <div class="flex-1 {% if not loop.last %}pb-4{% endif %}">
+            <div class="text-sm text-gray-500">{{ change.time }}</div>
+            <div class="font-semibold text-gray-900 mt-1">
+              <i class="fa-solid {{change.icon}} text-{{change.color}}-600 mr-1"></i>
+              {{ change.title or change.description }}
+            </div>
+            {% if change.description and change.title %}
+            <div class="text-sm text-gray-600 mt-1">
+              {{ change.description }}
+            </div>
+            {% endif %}
+            {% if change.saved > 0 %}
+            <div class="mt-2 inline-flex items-center gap-2 text-xs text-gray-500">
+              <span class="bg-green-100 text-green-700 px-2 py-1 rounded font-medium">
+                ${{ change.saved|round(2) }} saved
+              </span>
+            </div>
+            {% endif %}
           </div>
         </div>
-      </div>
+        {% endfor %}
 
-      {# This Morning #}
-      <div class="flex gap-4">
-        <div class="flex flex-col items-center">
-          <div class="w-3 h-3 bg-green-600 rounded-full"></div>
-          <div class="w-0.5 h-full bg-gray-200"></div>
+      {% elif connected and recent_changes|length == 0 %}
+        {# Connected but no actions yet #}
+        <div class="text-center py-8 text-gray-500">
+          <i class="fa-solid fa-robot text-3xl mb-3"></i>
+          <p class="font-semibold">No Recent Changes</p>
+          <p class="text-sm mt-1">Your AI agent is monitoring your campaigns</p>
         </div>
-        <div class="flex-1 pb-4">
-          <div class="text-sm text-gray-500">Today, 9:03 AM</div>
-          <div class="font-semibold text-gray-900 mt-1">💰 Reallocated budget to high-performers</div>
-          <div class="text-sm text-gray-600 mt-1">
-            Moved $47 from underperforming ZIP codes to {{industry_language.intent_type}} with 2.3x better conversion rate.
-          </div>
-        </div>
-      </div>
 
-      {# Yesterday #}
-      <div class="flex gap-4">
-        <div class="flex flex-col items-center">
-          <div class="w-3 h-3 bg-red-600 rounded-full"></div>
-        </div>
-        <div class="flex-1">
-          <div class="text-sm text-gray-500">Yesterday, 3:41 PM</div>
-          <div class="font-semibold text-gray-900 mt-1">📍 Paused 2 underperforming ZIP codes</div>
-          <div class="text-sm text-gray-600 mt-1">
-            ZIP 94103 and 94110 had $245 spent with 0 calls - budget moved to better areas.
+      {% else %}
+        {# Demo data for non-connected accounts #}
+        <div class="flex gap-4">
+          <div class="flex flex-col items-center">
+            <div class="w-3 h-3 bg-purple-600 rounded-full"></div>
+            <div class="w-0.5 h-full bg-gray-200"></div>
+          </div>
+          <div class="flex-1 pb-4">
+            <div class="text-sm text-gray-500">Today, 2:14 PM</div>
+            <div class="font-semibold text-gray-900 mt-1">🚫 Blocked 12 irrelevant searches</div>
+            <div class="text-sm text-gray-600 mt-1">
+              AI blocked "{{industry_language.waste_example}}" and other low-intent searches to prevent waste.
+            </div>
+            <div class="mt-2 inline-flex items-center gap-2 text-xs text-gray-500">
+              <span class="bg-gray-100 px-2 py-1 rounded">$47 saved</span>
+            </div>
           </div>
         </div>
-      </div>
+
+        <div class="flex gap-4">
+          <div class="flex flex-col items-center">
+            <div class="w-3 h-3 bg-green-600 rounded-full"></div>
+            <div class="w-0.5 h-full bg-gray-200"></div>
+          </div>
+          <div class="flex-1 pb-4">
+            <div class="text-sm text-gray-500">Today, 9:03 AM</div>
+            <div class="font-semibold text-gray-900 mt-1">💰 Reallocated budget to high-performers</div>
+            <div class="text-sm text-gray-600 mt-1">
+              Moved $47 from underperforming ZIP codes to {{industry_language.intent_type}} with 2.3x better conversion rate.
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-4">
+          <div class="flex flex-col items-center">
+            <div class="w-3 h-3 bg-red-600 rounded-full"></div>
+          </div>
+          <div class="flex-1">
+            <div class="text-sm text-gray-500">Yesterday, 3:41 PM</div>
+            <div class="font-semibold text-gray-900 mt-1">📍 Paused 2 underperforming ZIP codes</div>
+            <div class="text-sm text-gray-600 mt-1">
+              ZIP 94103 and 94110 had $245 spent with 0 calls - budget moved to better areas.
+            </div>
+          </div>
+        </div>
+      {% endif %}
     </div>
   </div>
 

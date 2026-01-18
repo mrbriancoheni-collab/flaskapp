@@ -44,8 +44,8 @@ cat > /tmp/email_blast_runner.py <<'EOFPYTHON'
 import sys
 import os
 
-# Add the flaskapp directory to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'flaskapp'))
+# Add the flaskapp directory to the path (use current working directory set by bash script)
+sys.path.insert(0, os.path.join(os.getcwd(), 'flaskapp'))
 
 from app import create_app
 from app.services.lead_automation_service import LeadAutomationService

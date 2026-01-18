@@ -803,20 +803,26 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
 
         return sent_count
 
-    def send_to_all_unsent_ever(self) -> Dict:
+    def send_to_all_unsent_ever(self, sequence_step: int = 1) -> Dict:
         """
-        Send emails to ALL contacts who have NEVER received an email.
+        Send emails to ALL contacts who haven't received THIS sequence step yet.
 
         This method:
         1. Finds all enriched contacts across all campaigns
-        2. Checks if they've EVER received an email
+        2. Checks if they've received THIS SPECIFIC sequence step
         3. Checks if they're unsubscribed
-        4. Sends to those who have never been emailed and are not unsubscribed (up to daily limit)
+        4. Sends to those who haven't received this step and are not unsubscribed (up to daily limit)
+
+        Args:
+            sequence_step: Which sequence step to send (default: 1 for initial outreach)
 
         Returns: Dict with sent count and details
+
+        Note: This allows sending multiple emails to same contact (different sequence steps),
+        but prevents sending the same email twice (same sequence step).
         """
         logger.info("=" * 80)
-        logger.info("SENDING TO ALL CONTACTS WHO HAVE NEVER BEEN EMAILED")
+        logger.info(f"SENDING SEQUENCE STEP {sequence_step} TO ALL WHO HAVEN'T RECEIVED IT")
         logger.info("=" * 80)
 
         self._reset_daily_stats_if_new_day()
@@ -856,7 +862,7 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
 
         logger.info(f"Found {len(all_contacts)} total enriched contacts")
 
-        # Filter out those who have EVER received an email or are unsubscribed
+        # Filter out those who have received THIS sequence step or are unsubscribed
         contacts_to_email = []
         for contact in all_contacts:
             # Check if unsubscribed
@@ -865,28 +871,29 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                 logger.debug(f"Skipping {contact.email} - unsubscribed")
                 continue
 
-            # Check if this contact has EVER received an email
-            ever_emailed = db.session.query(LeadContactEmail).filter(
-                LeadContactEmail.to_email == contact.email
+            # Check if this contact has received THIS SPECIFIC sequence step
+            received_this_step = db.session.query(LeadContactEmail).filter(
+                LeadContactEmail.to_email == contact.email,
+                LeadContactEmail.sequence_step == sequence_step
             ).first()
 
-            # Also check legacy emails
-            if not ever_emailed:
-                ever_emailed_legacy = db.session.query(LeadEmail).filter(
+            # Also check legacy emails (they don't have sequence_step, so treat as step 1)
+            if not received_this_step and sequence_step == 1:
+                received_this_step_legacy = db.session.query(LeadEmail).filter(
                     LeadEmail.to_email == contact.email
                 ).first()
-                if ever_emailed_legacy:
-                    ever_emailed = ever_emailed_legacy
+                if received_this_step_legacy:
+                    received_this_step = received_this_step_legacy
 
-            if ever_emailed:
+            if received_this_step:
                 skipped_already_emailed += 1
-                logger.debug(f"Skipping {contact.email} - already emailed previously")
+                logger.debug(f"Skipping {contact.email} - already received sequence step {sequence_step}")
             else:
                 contacts_to_email.append(contact)
 
-        logger.info(f"Found {len(contacts_to_email)} contacts who have NEVER been emailed")
+        logger.info(f"Found {len(contacts_to_email)} contacts who haven't received sequence step {sequence_step}")
         logger.info(f"Skipped {skipped_unsubscribed} unsubscribed contacts")
-        logger.info(f"Skipped {skipped_already_emailed} previously emailed contacts")
+        logger.info(f"Skipped {skipped_already_emailed} who already received this step")
 
         # Send to each contact
         for contact in contacts_to_email:
@@ -904,11 +911,20 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                 if not campaign:
                     continue
 
-                # Get or create the email sequence for this campaign
-                email_sequence = self._ensure_campaign_has_sequence(campaign)
+                # Get the email sequence for this step
+                email_sequence = EmailSequence.query.filter_by(
+                    campaign_id=campaign.id,
+                    step_number=sequence_step
+                ).first()
+
+                # If this sequence step doesn't exist, create it or skip
                 if not email_sequence:
-                    logger.warning(f"No email sequence for campaign '{campaign.name}'")
-                    continue
+                    if sequence_step == 1:
+                        # Create step 1 if missing
+                        email_sequence = self._ensure_campaign_has_sequence(campaign)
+                    if not email_sequence:
+                        logger.warning(f"No sequence step {sequence_step} for campaign '{campaign.name}'")
+                        continue
 
                 # Prepare email content
                 subject = self._replace_contact_variables(email_sequence.subject, lead, contact, campaign)
@@ -965,17 +981,18 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
         self._save_state()
 
         logger.info("=" * 80)
-        logger.info(f"COMPLETE: Sent {sent_count} emails to contacts never emailed before")
+        logger.info(f"COMPLETE: Sent {sent_count} emails (sequence step {sequence_step})")
         logger.info(f"Total checked: {len(all_contacts)}, Eligible: {len(contacts_to_email)}")
-        logger.info(f"Skipped - Unsubscribed: {skipped_unsubscribed}, Already emailed: {skipped_already_emailed}")
+        logger.info(f"Skipped - Unsubscribed: {skipped_unsubscribed}, Already got this step: {skipped_already_emailed}")
         logger.info("=" * 80)
 
         return {
             "sent": sent_count,
+            "sequence_step": sequence_step,
             "total_contacts_checked": len(all_contacts),
             "eligible_contacts": len(contacts_to_email),
             "skipped_unsubscribed": skipped_unsubscribed,
-            "skipped_already_emailed": skipped_already_emailed
+            "skipped_already_received_step": skipped_already_emailed
         }
 
     def _replace_variables(self, text: str, lead: Lead, campaign: LeadCampaign) -> str:

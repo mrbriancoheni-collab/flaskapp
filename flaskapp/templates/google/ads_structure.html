@@ -148,12 +148,8 @@
                           <th class="py-1 px-2">Keyword</th>
                           <th class="py-1 px-2">Match Type</th>
                           <th class="py-1 px-2">Status</th>
-                          {% if group_keywords[0].cpc is not none %}
                           <th class="py-1 px-2">CPC</th>
-                          {% endif %}
-                          {% if group_keywords[0].conv is not none %}
                           <th class="py-1 px-2">Conv</th>
-                          {% endif %}
                           <th class="py-1 px-2">Actions</th>
                         </tr>
                       </thead>
@@ -180,12 +176,20 @@
                               {{ kw.status }}
                             </span>
                           </td>
-                          {% if kw.cpc is not none %}
-                          <td class="py-1 px-2">${{ '%.2f'|format(kw.cpc) }}</td>
-                          {% endif %}
-                          {% if kw.conv is not none %}
-                          <td class="py-1 px-2">{{ kw.conv }}</td>
-                          {% endif %}
+                          <td class="py-1 px-2">
+                            {% if kw.cpc is not none and kw.cpc > 0 %}
+                              ${{ '%.2f'|format(kw.cpc) }}
+                            {% else %}
+                              <span class="text-gray-400">—</span>
+                            {% endif %}
+                          </td>
+                          <td class="py-1 px-2">
+                            {% if kw.conv is not none %}
+                              {{ kw.conv }}
+                            {% else %}
+                              <span class="text-gray-400">—</span>
+                            {% endif %}
+                          </td>
                           <td class="py-1 px-2">
                             <button
                               onclick="editKeywordMatchType('{{ kw.id }}', '{{ kw.text }}', '{{ kw.match }}')"
@@ -225,19 +229,49 @@
   <!-- Negative Keywords Section -->
   {% if ads_data.negatives %}
   <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-    <div class="bg-gradient-to-r from-red-500 to-orange-500 px-6 py-4">
+    <div class="bg-gradient-to-r from-red-500 to-orange-500 px-6 py-4 flex items-center justify-between">
       <h2 class="text-xl font-bold text-white">
         <i class="fa-solid fa-ban mr-2"></i> Negative Keywords ({{ ads_data.negatives|length }})
       </h2>
+      <span class="text-white text-sm opacity-90">
+        <i class="fa-solid fa-shield-halved mr-1"></i>Protecting your budget
+      </span>
     </div>
     <div class="p-6">
-      <div class="flex flex-wrap gap-2">
-        {% for neg in ads_data.negatives %}
-        <span class="inline-flex items-center gap-1 px-3 py-1 bg-red-50 text-red-700 rounded-full text-sm">
-          <i class="fa-solid fa-ban text-xs"></i> {{ neg.keyword or neg.text or neg }}
-        </span>
-        {% endfor %}
-      </div>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-gray-500 text-xs uppercase border-b-2 border-gray-200">
+            <th class="py-2 px-3">Keyword</th>
+            <th class="py-2 px-3">Level</th>
+            <th class="py-2 px-3">Match Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for neg in ads_data.negatives|sort(attribute='keyword') if neg.keyword or neg.text %}
+          <tr class="border-b border-gray-100 hover:bg-red-50">
+            <td class="py-2 px-3">
+              <span class="inline-flex items-center gap-2">
+                <i class="fa-solid fa-ban text-red-500 text-xs"></i>
+                <span class="font-medium text-gray-900">{{ neg.keyword or neg.text }}</span>
+              </span>
+            </td>
+            <td class="py-2 px-3">
+              <span class="text-xs px-2 py-1 rounded
+                {% if neg.level == 'account' %}bg-purple-100 text-purple-700
+                {% elif neg.level == 'campaign' %}bg-blue-100 text-blue-700
+                {% else %}bg-gray-100 text-gray-600{% endif %}">
+                {{ neg.level|capitalize or 'Campaign' }}
+              </span>
+            </td>
+            <td class="py-2 px-3">
+              <span class="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">
+                {{ neg.match_type or 'Broad' }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
   {% endif %}

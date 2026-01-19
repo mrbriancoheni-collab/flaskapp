@@ -1435,34 +1435,46 @@
   {% include 'includes/page_view_tracking.html' %}
   <!-- Navigation Section Toggle -->
   <script>
-    // Define toggle function globally
+    // Define toggle function globally (immediately, before DOMContentLoaded)
     window.toggleNavSection = function(sectionId) {
-      console.log('Toggling section:', sectionId);
-      const content = document.getElementById(sectionId);
-      const header = document.getElementById(sectionId.replace('-section', '-header'));
+      try {
+        console.log('[NAV] Toggling section:', sectionId);
+        const content = document.getElementById(sectionId);
+        const header = document.getElementById(sectionId.replace('-section', '-header'));
+        const icon = document.getElementById(sectionId + '-icon');
 
-      console.log('Content element:', content);
-      console.log('Header element:', header);
+        console.log('[NAV] Content:', content);
+        console.log('[NAV] Header:', header);
+        console.log('[NAV] Icon:', icon);
 
-      if (!content || !header) {
-        console.error('Elements not found!');
-        return;
-      }
+        if (!content || !header) {
+          console.error('[NAV] Elements not found! content:', !!content, 'header:', !!header);
+          return;
+        }
 
-      if (content.classList.contains('expanded')) {
-        // Collapse
-        content.classList.remove('expanded');
-        header.classList.remove('expanded');
-        localStorage.setItem('nav-' + sectionId, 'closed');
-        console.log('Collapsed');
-      } else {
-        // Expand
-        content.classList.add('expanded');
-        header.classList.add('expanded');
-        localStorage.setItem('nav-' + sectionId, 'open');
-        console.log('Expanded');
+        const isExpanded = content.classList.contains('expanded');
+
+        if (isExpanded) {
+          // Collapse
+          content.classList.remove('expanded');
+          header.classList.remove('expanded');
+          if (icon) icon.style.transform = 'rotate(0deg)';
+          localStorage.setItem('nav-' + sectionId, 'closed');
+          console.log('[NAV] Collapsed');
+        } else {
+          // Expand
+          content.classList.add('expanded');
+          header.classList.add('expanded');
+          if (icon) icon.style.transform = 'rotate(180deg)';
+          localStorage.setItem('nav-' + sectionId, 'open');
+          console.log('[NAV] Expanded');
+        }
+      } catch (error) {
+        console.error('[NAV] Error in toggleNavSection:', error);
       }
     };
+
+    console.log('[NAV] Toggle function defined:', typeof window.toggleNavSection);
 
     // Restore navigation state on page load
     document.addEventListener('DOMContentLoaded', function() {

@@ -797,40 +797,89 @@ def _build_insights_prompt(gsc: dict) -> str:
 
 def get_gsc_insights(gsc: dict) -> str:
     """
-    Calls OpenAI with the compact prompt. Returns markdown text (or empty string on failure).
-    Respects OPENAI_API_KEY and OPENAI_MODEL from app config.
+    Calls OpenAI with database-stored prompt or fallback. Returns markdown text (or empty string on failure).
+    Respects OPENAI_API_KEY and database prompt configuration.
     """
     try:
+        from app.services.ai_prompts_init import get_prompt_for_service
+
         api_key = current_app.config.get("OPENAI_API_KEY")
-        model = current_app.config.get("OPENAI_MODEL", "gpt-4o-mini")
         if not api_key:
             current_app.logger.info("AI insights skipped: OPENAI_API_KEY missing")
             return ""
 
-        client = OpenAI(api_key=api_key)
+        # Try to load database-stored prompt first
+        prompt_config = get_prompt_for_service('search_console_main')
 
-        prompt = _build_insights_prompt(gsc)
-        # Responses API (official modern surface)
-        resp = client.responses.create(
-            model=model,
-            input=prompt,
-            temperature=0.3,
-            max_output_tokens=800,
-        )
+        if prompt_config:
+            # Use database prompt (comprehensive SEO analysis)
+            client = OpenAI(api_key=api_key)
 
-        # Extract plain text
-        text = ""
-        if resp and resp.output and len(resp.output) and getattr(resp.output[0], "content", None):
-            # SDK returns a structured output list; gather all text parts
-            parts = []
-            for item in resp.output:
-                if getattr(item, "content", None):
-                    for block in item.content:
-                        if block.type == "output_text" or block.type == "text":
-                            parts.append(block.text)
-            text = "\n".join(parts).strip()
+            # Prepare data for template formatting
+            summary = gsc.get('summary', {}) or {}
+            top_pages = gsc.get('top_pages', [])[:10]
+            top_queries = gsc.get('top_queries', [])[:15]
 
-        return text or ""
+            # Calculate low CTR queries (high impressions, low CTR)
+            all_queries = gsc.get('top_queries', []) or []
+            low_ctr_queries = [
+                q for q in all_queries
+                if (q.get('impressions', 0) or 0) > 100 and (q.get('ctr_pct', 0) or 0) < 2.0
+            ][:10]
+
+            # Format prompt with actual data
+            user_prompt = prompt_config.get('prompt_template', '').format(
+                clicks=f"{summary.get('clicks', 0):,}",
+                impressions=f"{summary.get('impressions', 0):,}",
+                avg_ctr=f"{summary.get('ctr_pct', 0):.2f}%",
+                avg_position=f"{summary.get('avg_position', 0):.1f}",
+                top_pages=json.dumps(top_pages, indent=2),
+                top_queries=json.dumps(top_queries, indent=2),
+                low_ctr_queries=json.dumps(low_ctr_queries, indent=2)
+            )
+
+            # Use chat completions (database prompts use chat format)
+            response = client.chat.completions.create(
+                model=prompt_config.get('model', 'gpt-4o-mini'),
+                messages=[
+                    {"role": "system", "content": prompt_config.get('system_message', '')},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=prompt_config.get('temperature', 0.7),
+                max_tokens=prompt_config.get('max_tokens', 2000)
+            )
+
+            text = response.choices[0].message.content.strip()
+            return text or ""
+
+        else:
+            # Fallback to old inline prompt
+            current_app.logger.warning("Database prompt not found, using fallback inline prompt")
+            model = current_app.config.get("OPENAI_MODEL", "gpt-4o-mini")
+            client = OpenAI(api_key=api_key)
+
+            prompt = _build_insights_prompt(gsc)
+            # Responses API (official modern surface)
+            resp = client.responses.create(
+                model=model,
+                input=prompt,
+                temperature=0.3,
+                max_output_tokens=800,
+            )
+
+            # Extract plain text
+            text = ""
+            if resp and resp.output and len(resp.output) and getattr(resp.output[0], "content", None):
+                # SDK returns a structured output list; gather all text parts
+                parts = []
+                for item in resp.output:
+                    if getattr(item, "content", None):
+                        for block in item.content:
+                            if block.type == "output_text" or block.type == "text":
+                                parts.append(block.text)
+                text = "\n".join(parts).strip()
+
+            return text or ""
 
     except Exception as e:
         current_app.logger.exception("OpenAI insights failed: %s", e)
@@ -1892,26 +1941,83 @@ def gsc_data():
 @login_required
 def gsc_optimize():
     """
-    Stub: queue or compute Search Console optimizations.
+    Generate AI-powered SEO recommendations for Google Search Console using database-stored prompts.
     Supports form POST or JSON; returns JSON for XHR or redirects with flash.
     """
+    from app.services.gsc_insights import generate_gsc_insights
+
     # Optional scope/mode inputs
     if request.is_json:
         scope = (request.json or {}).get("scope", "all")
+        regenerate = (request.json or {}).get("regenerate", False)
     else:
         scope = (request.form.get("scope") or "all").strip().lower()
+        regenerate = request.form.get("regenerate") == "true"
 
-    # TODO: call your job/logic here (e.g., enqueue a task)
-    # e.g. optimize_gsc_for_account(current_account_id(), scope=scope)
+    aid = current_account_id()
 
-    msg = f"GSC optimization queued (scope: {scope})."
-    # XHR -> JSON
-    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
-        return jsonify({"ok": True, "message": msg})
+    # Check if Search Console is connected
+    connected = _is_connected(aid, "gsc")
+    if not connected:
+        msg = "Please connect Google Search Console first."
+        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": False, "error": msg}), 400
+        flash(msg, "error")
+        return redirect(url_for("google_bp.gsc_ui"))
 
-    # Form POST -> redirect + flash
-    flash(msg, "success")
-    return redirect(url_for("google_bp.gsc_ui"))
+    # Get current site URL from database
+    from sqlalchemy import text
+    query = text("""
+        SELECT site_url FROM google_oauth_tokens
+        WHERE account_id = :aid AND product = 'gsc'
+        LIMIT 1
+    """)
+    result = db.session.execute(query, {"aid": aid}).fetchone()
+
+    if not result or not result[0]:
+        msg = "No Search Console property selected. Please select a property first."
+        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": False, "error": msg}), 400
+        flash(msg, "error")
+        return redirect(url_for("google_bp.gsc_ui"))
+
+    site_url = result[0]
+
+    try:
+        # Generate insights using database-stored comprehensive prompt
+        insights_data = generate_gsc_insights(
+            account_id=aid,
+            site_url=site_url,
+            regenerate=regenerate
+        )
+
+        recommendations = insights_data.get('recommendations', [])
+        stats = insights_data.get('stats', {})
+
+        msg = f"Generated {stats.get('total', 0)} SEO recommendations for {site_url}"
+
+        # XHR -> JSON (return full insights)
+        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({
+                "ok": True,
+                "message": msg,
+                "insights": insights_data,
+                "recommendations_count": stats.get('total', 0)
+            })
+
+        # Form POST -> redirect + flash
+        flash(msg, "success")
+        return redirect(url_for("google_bp.gsc_ui"))
+
+    except Exception as e:
+        current_app.logger.error(f"Error generating GSC insights: {e}", exc_info=True)
+        msg = f"Failed to generate insights: {str(e)}"
+
+        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": False, "error": msg}), 500
+
+        flash(msg, "error")
+        return redirect(url_for("google_bp.gsc_ui"))
 
 @google_bp.route("/analytics/optimize", methods=["POST"], endpoint="ga_optimize")
 @login_required
@@ -9100,20 +9206,34 @@ def gsc_ui():
         # top_queries_raw = fetch_gsc_queries(property_id, start, end)
         # top_pages_raw = fetch_gsc_pages(property_id, start, end)
 
-        # For now: minimal structure so template renders the “real” block
+        # For now: minimal structure so template renders the "real" block
+        # Structure compatible with new insights system
+        clicks = 0
+        impressions = 0
+        ctr_pct = 0.0
+        avg_position = 0.0
+
         gsc = {
             "property": site_url or property_id or "Search Console property",
             "site_url": site_url,
             "period": "Last 28 days",
-            "clicks": 0,
-            "impressions": 0,
-            "ctr_pct": 0.0,
-            "avg_position": 0.0,
+            "clicks": clicks,
+            "impressions": impressions,
+            "ctr_pct": ctr_pct,
+            "avg_position": avg_position,
             "top_queries": [],
             "top_pages": [],
+            # Add summary dict for new insights system compatibility
+            "summary": {
+                "clicks": clicks,
+                "impressions": impressions,
+                "ctr_pct": ctr_pct,
+                "avg_position": avg_position,
+                "avg_ctr": ctr_pct / 100.0  # Convert percentage to decimal
+            }
         }
 
-    # Only call AI when we actually have real numbers
+        # Only call AI when we actually have real numbers
         has_real = (gsc.get("clicks", 0) or 0) > 0 or (gsc.get("impressions", 0) or 0) > 0
         insights = get_gsc_insights(gsc) if has_real else ""
     else:

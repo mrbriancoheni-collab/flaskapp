@@ -463,7 +463,7 @@ class AdComposerV2 {
     // ==================== ANALYTICS ====================
 
     trackGeneration(data) {
-        // Track analytics event
+        // Track to Google Analytics
         if (window.gtag) {
             gtag('event', 'ad_generated', {
                 platform: data.platform,
@@ -471,22 +471,68 @@ class AdComposerV2 {
                 cost: this.updateCostEstimate().totalCost
             });
         }
+
+        // Track to backend
+        this.sendAnalyticsEvent('ad_generated', {
+            creative_id: data.creative_id,
+            platform: data.platform,
+            industry: document.getElementById('industry')?.value,
+            generation_method: 'website',
+            image_count: data.image_variations?.length || 1,
+            ai_cost: this.updateCostEstimate().totalCost
+        });
     }
 
     trackSave(creativeId) {
+        // Track to Google Analytics
         if (window.gtag) {
             gtag('event', 'creative_saved', {
                 creative_id: creativeId
             });
         }
+
+        // Track to backend
+        this.sendAnalyticsEvent('creative_saved', {
+            creative_id: creativeId
+        });
     }
 
     trackDownload(format, quality) {
+        // Track to Google Analytics
         if (window.gtag) {
             gtag('event', 'image_downloaded', {
                 format,
                 quality
             });
+        }
+
+        // Track to backend
+        this.sendAnalyticsEvent('image_downloaded', {
+            creative_id: this.currentCreativeId,
+            event_data: { format, quality }
+        });
+    }
+
+    async sendAnalyticsEvent(eventType, data = {}) {
+        try {
+            const response = await fetch('/social/api/analytics/track', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: JSON.stringify({
+                    event_type: eventType,
+                    ...data
+                })
+            });
+
+            if (!response.ok) {
+                console.warn('Analytics tracking failed:', await response.text());
+            }
+        } catch (error) {
+            // Silently fail - don't disrupt user experience
+            console.warn('Analytics tracking error:', error);
         }
     }
 

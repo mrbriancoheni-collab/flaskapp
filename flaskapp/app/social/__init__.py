@@ -9,7 +9,7 @@ from flask_login import login_required, current_user
 import logging
 
 from app.extensions import db
-from app.models_social import AdCreative, AdTemplate, AdGenerationJob
+from app.models_social import AdCreative, AdTemplate, AdGenerationJob, AdAnalyticsEvent
 from app.services.ad_generation_service import AdGenerationService
 
 logger = logging.getLogger(__name__)
@@ -99,6 +99,27 @@ def generate_from_website():
         db.session.add(creative)
         db.session.commit()
 
+        # Log analytics event
+        try:
+            analytics_event = AdAnalyticsEvent(
+                user_id=current_user.id,
+                account_id=current_user.account_id if hasattr(current_user, 'account_id') else None,
+                creative_id=creative.id,
+                event_type='ad_generated',
+                platform=platform,
+                industry=industry,
+                generation_method='website',
+                image_count=image_variations,
+                ai_cost=round((image_variations * 0.08) + 0.01, 2),  # DALL-E 3 HD + Claude/GPT
+                session_id=session.get('session_id')
+            )
+            db.session.add(analytics_event)
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"Error logging analytics event: {e}")
+            # Don't fail the request if analytics logging fails
+            db.session.rollback()
+
         # Generate performance prediction
         performance_prediction = service.predict_performance(
             creative={
@@ -136,6 +157,15 @@ def generate_from_website():
                 'quality_score': performance_prediction['quality_score'],
                 'recommendations': performance_prediction['recommendations']
             }
+
+            # Update analytics event with performance metrics
+            try:
+                analytics_event.predicted_ctr = performance_prediction['predicted_ctr']
+                analytics_event.quality_score = performance_prediction['quality_score']
+                analytics_event.engagement_score = performance_prediction['engagement_score']
+                db.session.commit()
+            except:
+                pass
 
         return jsonify(response_data)
 
@@ -330,3 +360,123 @@ def delete_creative(creative_id):
     db.session.commit()
 
     return jsonify({'success': True})
+
+
+@social_bp.route("/api/analytics/track", methods=["POST"])
+@login_required
+def track_analytics_event():
+    """Track analytics event from frontend"""
+    data = request.get_json()
+
+    event_type = data.get('event_type')
+    creative_id = data.get('creative_id')
+
+    if not event_type:
+        return jsonify({'success': False, 'error': 'event_type required'}), 400
+
+    # Validate event_type
+    valid_events = [
+        'ad_generated', 'creative_saved', 'image_downloaded',
+        'creative_exported', 'creative_viewed', 'creative_edited', 'variation_created'
+    ]
+    if event_type not in valid_events:
+        return jsonify({'success': False, 'error': 'Invalid event_type'}), 400
+
+    try:
+        # Get creative if provided
+        creative = None
+        if creative_id:
+            creative = AdCreative.query.get(creative_id)
+            if not creative or creative.user_id != current_user.id:
+                return jsonify({'success': False, 'error': 'Creative not found'}), 404
+
+        # Create analytics event
+        event = AdAnalyticsEvent(
+            user_id=current_user.id,
+            account_id=current_user.account_id if hasattr(current_user, 'account_id') else None,
+            creative_id=creative_id,
+            event_type=event_type,
+            platform=data.get('platform') or (creative.platform if creative else None),
+            industry=data.get('industry') or (creative.industry if creative else None),
+            generation_method=data.get('generation_method'),
+            image_count=data.get('image_count', 0),
+            ai_cost=data.get('ai_cost'),
+            event_data=data.get('event_data'),
+            session_id=session.get('session_id')
+        )
+
+        db.session.add(event)
+        db.session.commit()
+
+        return jsonify({'success': True, 'event_id': event.id})
+
+    except Exception as e:
+        logger.error(f"Error tracking analytics event: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@social_bp.route("/api/analytics/dashboard", methods=["GET"])
+@login_required
+def analytics_dashboard():
+    """Get analytics dashboard data for user's ad creatives"""
+    # Date range filter
+    days = request.args.get('days', 30, type=int)
+    from_date = datetime.utcnow() - __import__('datetime').timedelta(days=days)
+
+    # Get user's analytics events
+    events = AdAnalyticsEvent.query.filter(
+        AdAnalyticsEvent.user_id == current_user.id,
+        AdAnalyticsEvent.created_at >= from_date
+    ).all()
+
+    # Aggregate statistics
+    total_generated = len([e for e in events if e.event_type == 'ad_generated'])
+    total_saved = len([e for e in events if e.event_type == 'creative_saved'])
+    total_downloaded = len([e for e in events if e.event_type == 'image_downloaded'])
+    total_exported = len([e for e in events if e.event_type == 'creative_exported'])
+
+    total_cost = sum([e.ai_cost for e in events if e.ai_cost])
+    avg_quality_score = sum([e.quality_score for e in events if e.quality_score]) / max(1, len([e for e in events if e.quality_score]))
+    avg_predicted_ctr = sum([e.predicted_ctr for e in events if e.predicted_ctr]) / max(1, len([e for e in events if e.predicted_ctr]))
+
+    # Platform breakdown
+    platform_counts = {}
+    for event in events:
+        if event.platform:
+            platform_counts[event.platform] = platform_counts.get(event.platform, 0) + 1
+
+    # Industry breakdown
+    industry_counts = {}
+    for event in events:
+        if event.industry:
+            industry_counts[event.industry] = industry_counts.get(event.industry, 0) + 1
+
+    # Event timeline (last 30 days)
+    timeline = []
+    for i in range(days):
+        date = (datetime.utcnow() - __import__('datetime').timedelta(days=days-i-1)).date()
+        day_events = [e for e in events if e.created_at.date() == date]
+        timeline.append({
+            'date': date.isoformat(),
+            'ad_generated': len([e for e in day_events if e.event_type == 'ad_generated']),
+            'creative_saved': len([e for e in day_events if e.event_type == 'creative_saved']),
+            'image_downloaded': len([e for e in day_events if e.event_type == 'image_downloaded'])
+        })
+
+    return jsonify({
+        'success': True,
+        'summary': {
+            'total_generated': total_generated,
+            'total_saved': total_saved,
+            'total_downloaded': total_downloaded,
+            'total_exported': total_exported,
+            'total_cost': round(total_cost, 2),
+            'avg_quality_score': round(avg_quality_score, 1),
+            'avg_predicted_ctr': round(avg_predicted_ctr, 2)
+        },
+        'platform_breakdown': platform_counts,
+        'industry_breakdown': industry_counts,
+        'timeline': timeline,
+        'period_days': days
+    })

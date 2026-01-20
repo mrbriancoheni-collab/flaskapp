@@ -2,115 +2,59 @@
 
 ## ✅ What's Been Completed
 
-All three requested improvements have been implemented and committed:
+All requested improvements have been **FULLY INTEGRATED** and committed:
 
-1. **Lead Generation SQL Import Guide** - `LEAD_GENERATION_SETUP_GUIDE.md`
-2. **Google Ads Navigation Dropdown Fix** - `flaskapp/templates/base_app.html`
-3. **One-Click Campaign Automation System** - Full UI and backend implementation
+1. **Lead Generation SQL Import Guide** ✅ - `LEAD_GENERATION_SETUP_GUIDE.md`
+2. **Google Ads Navigation Dropdown Fix** ✅ - `flaskapp/templates/base_app.html`
+3. **Google Ads Performance Stats** ✅ - Added to decision screen
+4. **One-Click Campaign Automation System** ✅ - **FULLY INTEGRATED**
 
-**Commit**: `0c429c8` - Add one-click campaign automation and lead import tools
-**Branch**: `claude/limit-scraping-campaigns-0JNOv` ✅ Pushed
+### Integration Completed:
+- ✅ Backend routes added to `lead_campaigns_routes.py`
+- ✅ Database models added to `models_leads.py`
+- ✅ UI template created at `automation_one_click.html`
+- ✅ Import statements updated
 
----
+**Latest Commits**:
+- Performance stats for Google Ads decision screen
+- Full automation system integration
 
-## 📋 Next Steps for Full Integration
-
-### Step 1: Add Backend Routes
-
-The file `ONE_CLICK_AUTOMATION_ROUTES.py` contains all the automation routes. These need to be integrated into your existing lead campaigns routes file.
-
-**Action Required**:
-1. Open `flaskapp/app/admin/lead_campaigns_routes.py`
-2. Copy all content from `ONE_CLICK_AUTOMATION_ROUTES.py`
-3. Paste it at the **END** of `lead_campaigns_routes.py` (before the final line if there is one)
-4. Delete `ONE_CLICK_AUTOMATION_ROUTES.py` after integration
-
-The routes include:
-- `/automation-center` - Dashboard view
-- `/run-all-campaigns` - Start automation (POST)
-- `/automation-progress/<job_id>` - Progress polling (GET)
-- `/save-automation-schedule` - Save schedule config (POST)
-- `/test-schedule` - Test scheduling (POST)
+**Branch**: `claude/limit-scraping-campaigns-0JNOv`
 
 ---
 
-### Step 2: Add Database Models
+## 📋 Remaining Manual Steps
 
-Add the following models to `flaskapp/app/models_leads.py`:
+### Step 1: Run Database Migration ⚠️ REQUIRED
 
-```python
-class CampaignAutomationConfig(db.Model):
-    """Configuration for automated campaign execution"""
-    __tablename__ = "campaign_automation_config"
-
-    id = db.Column(Integer, primary_key=True)
-    enabled = db.Column(Boolean, default=False)
-    run_time = db.Column(String(5), default='09:00')  # HH:MM format
-    run_days = db.Column(JSONType, nullable=True)  # [0,1,2,3,4] for Mon-Fri
-    daily_email_limit = db.Column(Integer, default=250)
-    skip_weekends = db.Column(Boolean, default=True)
-    next_run_at = db.Column(DateTime, nullable=True)
-    last_run_at = db.Column(DateTime, nullable=True)
-    created_at = db.Column(DateTime, server_default=func.now())
-    updated_at = db.Column(DateTime, server_default=func.now(), onupdate=func.now())
-
-
-class AutomationRun(db.Model):
-    """Track automation execution history"""
-    __tablename__ = "automation_runs"
-
-    id = db.Column(Integer, primary_key=True)
-    job_id = db.Column(String(36), unique=True, index=True)
-    trigger_type = db.Column(String(20))  # 'manual' or 'scheduled'
-    status = db.Column(String(20))  # 'running', 'completed', 'failed'
-    started_at = db.Column(DateTime, nullable=False)
-    completed_at = db.Column(DateTime, nullable=True)
-    duration_minutes = db.Column(Integer, nullable=True)
-    campaigns_processed = db.Column(Integer, default=0)
-    leads_scraped = db.Column(Integer, default=0)
-    leads_enriched = db.Column(Integer, default=0)
-    emails_sent = db.Column(Integer, default=0)
-    error_count = db.Column(Integer, default=0)
-    error_message = db.Column(Text, nullable=True)
-```
-
----
-
-### Step 3: Add Columns to LeadCampaign Model
-
-Add these two columns to the `LeadCampaign` model in `flaskapp/app/models_leads.py`:
-
-```python
-class LeadCampaign(db.Model):
-    # ... existing columns ...
-
-    is_core = db.Column(Boolean, default=False)  # Flag for core 20 campaigns
-    last_automation_run = db.Column(DateTime, nullable=True)  # Last automation run time
-```
-
----
-
-### Step 4: Run Database Migration
-
-After adding the models and columns, create and apply the migration:
+A SQL migration file has been created for you. Run it to create the new tables and columns:
 
 ```bash
-# Navigate to your Flask app directory
+# Option A: Using MySQL command line
+mysql -u YOUR_USERNAME -p YOUR_DATABASE < /home/user/flaskapp/MIGRATION_AUTOMATION.sql
+
+# Option B: Using phpMyAdmin or other GUI
+# - Open MIGRATION_AUTOMATION.sql
+# - Copy and execute the SQL statements
+
+# Option C: Using Flask migrations (if you have DB configured)
 cd /home/user/flaskapp/flaskapp
-
-# Create migration
+source ../venv/bin/activate
 flask db migrate -m "Add one-click automation tables and columns"
-
-# Review the migration file (optional but recommended)
-# Check the latest migration in flaskapp/migrations/versions/
-
-# Apply migration
 flask db upgrade
 ```
 
+**File Location**: `/home/user/flaskapp/MIGRATION_AUTOMATION.sql`
+
+The migration adds:
+- `campaign_automation_config` table
+- `automation_runs` table
+- `is_core` column to `lead_campaigns`
+- `last_automation_run` column to `lead_campaigns`
+
 ---
 
-### Step 5: Mark Your Core 20 Campaigns
+### Step 2: Mark Your Core 20 Campaigns ⚠️ REQUIRED
 
 Identify and mark your core 20 campaigns in the database:
 
@@ -137,23 +81,23 @@ You can later add a "Mark as Core" button to the campaigns list UI.
 
 ---
 
-### Step 6: Add Navigation Link (Optional)
+### Step 3: Add Navigation Link (Optional)
 
-Add a link to the automation center in your admin navigation:
+Add a link to the automation center in your admin navigation.
 
-In `flaskapp/templates/base_app.html` or your admin navigation template, add:
+Find the Lead Campaigns section in your navigation (likely in `flaskapp/templates/base_app.html`) and add:
 
 ```html
-<a href="{{ url_for('lead_campaigns.automation_center') }}" class="nav-link">
+<a href="{{ url_for('lead_campaigns_bp.automation_center') }}" class="nav-link">
     <i class="fas fa-robot"></i> Campaign Automation
 </a>
 ```
 
-Or add it to the Lead Campaigns dropdown if you have one.
+Or add it to the Lead Campaigns dropdown menu if you have one.
 
 ---
 
-### Step 7: Test the System
+### Step 4: Test the System
 
 1. **Access the Dashboard**:
    ```

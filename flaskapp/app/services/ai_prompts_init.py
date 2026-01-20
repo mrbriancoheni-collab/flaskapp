@@ -162,10 +162,11 @@ Return ONLY valid JSON array of recommendations, no additional text.'''
             gsc_prompt = AIPrompt(prompt_key='search_console_main')
             db.session.add(gsc_prompt)
 
-        gsc_prompt.name = 'Search Console SEO Optimization'
-        gsc_prompt.description = 'Main prompt for generating Google Search Console SEO recommendations'
-        gsc_prompt.system_message = 'You are an SEO expert providing data-driven optimization recommendations in JSON format.'
-        gsc_prompt.prompt_template = '''You are an SEO expert specializing in Google Search Console optimization. Analyze the following GSC data and provide actionable SEO recommendations.
+        gsc_prompt.name = 'Search Console Comprehensive SEO Strategy'
+        gsc_prompt.description = 'Comprehensive SEO strategist analyzing Search Console data for organic traffic growth and ranking improvements'
+        gsc_prompt.system_message = 'You are an SEO strategist. Analyze and optimize each organic search component (Content, Keywords, CTR, Rankings, Technical SEO, User Signals) independently and cohesively. Goal: increase organic traffic by ≥30% and improve average position to page 1 while maintaining quality.'
+        gsc_prompt.prompt_template = '''ROLE:
+You are an SEO strategist specializing in Google Search Console optimization. Analyze and optimize each search component (Content Quality, Keyword Targeting, CTR Optimization, Rankings, Technical SEO, User Signals) independently and cohesively. Goal: increase organic traffic by ≥30%, improve average position to top 10, and boost CTR above industry benchmarks.
 
 SITE PERFORMANCE (Last 30 Days):
 - Total Clicks: {clicks}
@@ -182,26 +183,73 @@ TOP QUERIES:
 LOW CTR QUERIES (High impressions, low clicks):
 {low_ctr_queries}
 
-Provide 5-10 specific, actionable SEO recommendations in JSON format. Each recommendation should include:
-- title: Brief, action-oriented title
-- description: Detailed explanation (2-3 sentences)
-- category: One of [keywords, content, technical_seo, ctr_optimization, rankings, schema, mobile]
-- severity: 1=critical issue, 2=high-impact opportunity, 3=quick win, 4-5=long-term SEO
-- expected_impact: Specific metric improvement (e.g., "Increase organic clicks by 15-20%")
-- data_points: Array of key metrics supporting this recommendation
-- action: Dict with implementation steps
+SEO TASKS:
+1. CONTENT AUDIT - Evaluate content depth, relevance, and search intent alignment. Compare to SERP benchmarks: Top 10 avg word count 1,447 words, avg images 7, avg internal links 8. Identify high performers (position 1-3, CTR>10%) and underperformers (position 11+, CTR<2%). Assess: Does content match user intent (informational, commercial, transactional)? Are headings optimized with target keywords? Is content comprehensive vs. thin?
 
-Focus on:
-1. High-impression, low-CTR queries (title/meta optimization)
-2. Pages ranking 4-10 (content improvement to reach page 1)
-3. Declining rankings (content refresh needed)
-4. Technical SEO issues
-5. Content gap opportunities
+2. KEYWORD ANALYSIS - Segment queries by intent, position, and CTR. Identify high-opportunity keywords (impressions>1000, position 4-10, CTR<industry average). Industry CTR benchmarks by position: #1: 27.6%, #2: 15.8%, #3: 11.0%, #4-10: 2-8%. Recommend: Target featured snippet opportunities (question queries ranking 2-5), optimize for "near me" and local intent, identify semantic keyword clusters to expand content, long-tail variations with low competition.
 
-Return ONLY valid JSON array of recommendations, no additional text.'''
-        gsc_prompt.model = 'gpt-4o-mini'
-        gsc_prompt.temperature = 0.7
-        gsc_prompt.max_tokens = 2000
+3. CTR OPTIMIZATION - Review title tags and meta descriptions for top-impression queries. Diagnose low CTR (below position-based benchmarks). Recommend: Compelling title formulas (How to, Best, Guide, Year), meta descriptions with clear value props and CTAs, use of power words (proven, expert, comprehensive, step-by-step), dynamic title testing for top queries, add schema markup (FAQ, How-To, Review stars) for enhanced snippets.
+
+4. RANKING OPPORTUNITIES - Identify "quick win" pages ranking 4-20 that can reach page 1 with targeted improvements. Analyze: Position momentum (improving/declining trends), content gaps vs. top-ranking competitors, backlink profile comparisons, E-E-A-T signals (expertise, authority, trustworthiness). Recommend: Content depth expansion (add sections, FAQs, examples), internal linking from high-authority pages, multimedia additions (images, videos, infographics), schema markup implementation.
+
+5. PAGE EXPERIENCE & TECHNICAL SEO - Evaluate pages by CTR vs. position correlation. Low CTR at good positions suggests UX issues. Recommend: Mobile optimization (responsive design, tap targets, font size), core web vitals improvements (LCP<2.5s, FID<100ms, CLS<0.1), HTTPS security, structured data validation, page speed optimization (compress images, minify CSS/JS), fix duplicate title/meta tags, improve URL structure.
+
+6. USER ENGAGEMENT SIGNALS - Assess pages with high impressions but low clicks or declining positions. These may have poor user signals (high bounce rate, low dwell time). Recommend: Improve content formatting (shorter paragraphs, bullet points, subheadings), add internal links to related content, use table of contents for long content, embed relevant videos/images, implement FAQ sections, add trust signals (reviews, credentials, awards), optimize for voice search (conversational keywords).
+
+7. CONTENT FRESHNESS & TOPICAL AUTHORITY - Review queries with declining positions or stale content dates. Recommend: Update outdated statistics and examples, add recent developments and trends, expand thin content (<300 words), build topic clusters (pillar pages + supporting content), add expert opinions and original research, refresh publish dates on evergreen content, create content calendar for trending topics.
+
+8. LOCAL & MOBILE SEO - Analyze "near me" queries and mobile performance metrics. Local SEO benchmarks: 46% of searches have local intent, 76% of mobile "near me" searches result in store visits within 24 hours. Recommend: Optimize for local keywords (city, neighborhood, "near me"), ensure Google Business Profile optimization, add location-based schema markup, improve mobile page speed (<3s load time), implement click-to-call buttons, add local landing pages for service areas.
+
+OUTPUT FORMAT (JSON):
+{
+  "summary": "Overall SEO health assessment and strategic priorities",
+  "content_audit": {"findings": "...", "high_performers": [], "underperformers": []},
+  "keyword_analysis": {"findings": "...", "opportunities": [], "intent_gaps": []},
+  "ctr_optimization": {"findings": "...", "low_ctr_pages": [], "title_recommendations": []},
+  "ranking_opportunities": {"findings": "...", "quick_wins": [], "long_term_targets": []},
+  "technical_seo": {"findings": "...", "issues": [], "improvements": []},
+  "user_signals": {"findings": "...", "engagement_issues": [], "ux_improvements": []},
+  "content_freshness": {"findings": "...", "refresh_candidates": [], "new_content_ideas": []},
+  "local_mobile": {"findings": "...", "local_opportunities": [], "mobile_issues": []},
+  "top_5_recommendations": [
+    {
+      "rank": 1,
+      "title": "...",
+      "category": "...",
+      "expected_impact": "...",
+      "implementation": "..."
+    }
+  ],
+  "recommendations": [
+    {
+      "title": "Brief, action-oriented title",
+      "description": "Detailed explanation with specific examples and metrics (2-3 sentences)",
+      "category": "One of [keywords, content, technical_seo, ctr_optimization, rankings, schema, mobile, user_experience]",
+      "severity": 1-5 (1=critical, 2=high-impact, 3=quick win, 4-5=long-term),
+      "expected_impact": "Specific metric improvement with timeframe (e.g., 'Increase organic clicks by 20-30% within 2 months')",
+      "data_points": ["key metric 1 with numbers", "key metric 2 with benchmarks"],
+      "action": {
+        "type": "optimize|create|fix|expand|update",
+        "target": "specific element",
+        "steps": ["Step 1", "Step 2", "Step 3"]
+      }
+    }
+  ]
+}
+
+BENCHMARKS TO REFERENCE:
+- Average CTR by Position: #1: 27.6%, #2: 15.8%, #3: 11.0%, #4-10: 2-8%, #11-20: <2%
+- Content Length for Top Rankings: 1,447 words average (varies by intent)
+- Core Web Vitals: LCP<2.5s, FID<100ms, CLS<0.1
+- Mobile-First: 63% of Google searches are on mobile
+- Local Intent: 46% of searches have local intent
+- Featured Snippets: Appear in 12.3% of searches
+- Schema Markup: 31.3% of top-ranking pages use structured data
+
+GOAL: Deliver a unified SEO optimization plan that captures more qualified organic traffic, improves user experience, and establishes topical authority through smarter content and technical optimization.'''
+        gsc_prompt.model = 'gpt-4o'
+        gsc_prompt.temperature = 0.4
+        gsc_prompt.max_tokens = 4000
         gsc_prompt.is_active = True
         count += 1
 

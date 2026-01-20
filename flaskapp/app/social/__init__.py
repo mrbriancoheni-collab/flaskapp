@@ -11,6 +11,7 @@ import logging
 from app.extensions import db
 from app.models_social import AdCreative, AdTemplate, AdGenerationJob, AdAnalyticsEvent
 from app.services.ad_generation_service import AdGenerationService
+from app.services.social_export_service import SocialExportService
 
 logger = logging.getLogger(__name__)
 
@@ -480,3 +481,235 @@ def analytics_dashboard():
         'timeline': timeline,
         'period_days': days
     })
+
+
+# ==================== EXPORT / OAUTH ENDPOINTS ====================
+
+@social_bp.route("/api/export/facebook/oauth-url", methods=["GET"])
+@login_required
+def get_facebook_oauth_url():
+    """Get Facebook OAuth authorization URL"""
+    try:
+        service = SocialExportService()
+
+        # Build redirect URI (must match Facebook App settings)
+        redirect_uri = request.args.get('redirect_uri') or \
+                      request.url_root.rstrip('/') + '/social/api/export/facebook/callback'
+
+        # Generate state parameter for security (store in session)
+        import secrets
+        state = secrets.token_urlsafe(32)
+        session['fb_oauth_state'] = state
+
+        oauth_url = service.get_facebook_oauth_url(
+            redirect_uri=redirect_uri,
+            state=state
+        )
+
+        return jsonify({
+            'success': True,
+            'oauth_url': oauth_url,
+            'redirect_uri': redirect_uri
+        })
+
+    except Exception as e:
+        logger.error(f"Error generating OAuth URL: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@social_bp.route("/api/export/facebook/callback", methods=["GET"])
+@login_required
+def facebook_oauth_callback():
+    """Handle Facebook OAuth callback"""
+    code = request.args.get('code')
+    state = request.args.get('state')
+    error = request.args.get('error')
+
+    if error:
+        return jsonify({'success': False, 'error': error}), 400
+
+    if not code:
+        return jsonify({'success': False, 'error': 'No authorization code provided'}), 400
+
+    # Verify state parameter
+    stored_state = session.pop('fb_oauth_state', None)
+    if not stored_state or stored_state != state:
+        return jsonify({'success': False, 'error': 'Invalid state parameter'}), 400
+
+    try:
+        service = SocialExportService()
+
+        redirect_uri = request.args.get('redirect_uri') or \
+                      request.url_root.rstrip('/') + '/social/api/export/facebook/callback'
+
+        # Exchange code for access token
+        token_result = service.exchange_code_for_token(code, redirect_uri)
+
+        if not token_result.get('success'):
+            return jsonify(token_result), 400
+
+        # Store access token in session (in production, store encrypted in database)
+        session['fb_access_token'] = token_result['access_token']
+        session['fb_token_expires_at'] = token_result['expires_at']
+
+        # Get user's ad accounts
+        accounts_result = service.get_ad_accounts(token_result['access_token'])
+
+        if accounts_result.get('success'):
+            session['fb_ad_accounts'] = accounts_result['ad_accounts']
+
+        return jsonify({
+            'success': True,
+            'message': 'Facebook account connected successfully',
+            'ad_accounts': accounts_result.get('ad_accounts', [])
+        })
+
+    except Exception as e:
+        logger.error(f"Error in OAuth callback: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@social_bp.route("/api/export/facebook/connection-status", methods=["GET"])
+@login_required
+def facebook_connection_status():
+    """Check if user has connected Facebook account"""
+    access_token = session.get('fb_access_token')
+    expires_at = session.get('fb_token_expires_at')
+    ad_accounts = session.get('fb_ad_accounts', [])
+
+    if not access_token:
+        return jsonify({
+            'success': True,
+            'connected': False
+        })
+
+    # Check if token is expired
+    from datetime import datetime
+    if expires_at:
+        try:
+            expires = datetime.fromisoformat(expires_at)
+            if datetime.utcnow() >= expires:
+                # Token expired
+                session.pop('fb_access_token', None)
+                session.pop('fb_token_expires_at', None)
+                session.pop('fb_ad_accounts', None)
+                return jsonify({
+                    'success': True,
+                    'connected': False,
+                    'message': 'Token expired'
+                })
+        except:
+            pass
+
+    return jsonify({
+        'success': True,
+        'connected': True,
+        'ad_accounts': ad_accounts,
+        'expires_at': expires_at
+    })
+
+
+@social_bp.route("/api/export/facebook/disconnect", methods=["POST"])
+@login_required
+def disconnect_facebook():
+    """Disconnect Facebook account"""
+    session.pop('fb_access_token', None)
+    session.pop('fb_token_expires_at', None)
+    session.pop('fb_ad_accounts', None)
+
+    return jsonify({
+        'success': True,
+        'message': 'Facebook account disconnected'
+    })
+
+
+@social_bp.route("/api/export/facebook", methods=["POST"])
+@login_required
+def export_to_facebook():
+    """Export creative to Facebook Ads Manager"""
+    data = request.get_json()
+
+    creative_id = data.get('creative_id')
+    ad_account_id = data.get('ad_account_id')
+    page_id = data.get('page_id')
+    destination_url = data.get('destination_url')
+
+    if not all([creative_id, ad_account_id, page_id, destination_url]):
+        return jsonify({
+            'success': False,
+            'error': 'creative_id, ad_account_id, page_id, and destination_url required'
+        }), 400
+
+    # Check if user has connected Facebook
+    access_token = session.get('fb_access_token')
+    if not access_token:
+        return jsonify({
+            'success': False,
+            'error': 'Facebook account not connected',
+            'connect_required': True
+        }), 401
+
+    # Get creative
+    creative = AdCreative.query.get(creative_id)
+    if not creative or creative.user_id != current_user.id:
+        return jsonify({'success': False, 'error': 'Creative not found'}), 404
+
+    try:
+        service = SocialExportService()
+
+        # Export creative
+        result = service.export_creative_to_facebook(
+            access_token=access_token,
+            ad_account_id=ad_account_id,
+            page_id=page_id,
+            creative={
+                'name': creative.name,
+                'headline': creative.headline,
+                'primary_text': creative.primary_text,
+                'description': creative.description,
+                'call_to_action': creative.call_to_action,
+                'image_url': creative.image_url
+            },
+            destination_url=destination_url
+        )
+
+        if result.get('success'):
+            # Update creative status
+            creative.status = 'published'
+            creative.published_at = datetime.utcnow()
+            creative.used_in_campaign = True
+            db.session.commit()
+
+            # Log analytics event
+            try:
+                analytics_event = AdAnalyticsEvent(
+                    user_id=current_user.id,
+                    account_id=current_user.account_id if hasattr(current_user, 'account_id') else None,
+                    creative_id=creative.id,
+                    event_type='creative_exported',
+                    platform='facebook',
+                    event_data={
+                        'ad_account_id': ad_account_id,
+                        'facebook_creative_id': result.get('creative_id')
+                    },
+                    session_id=session.get('session_id')
+                )
+                db.session.add(analytics_event)
+                db.session.commit()
+            except:
+                pass
+
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error(f"Error exporting to Facebook: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@social_bp.route("/api/export/instagram", methods=["POST"])
+@login_required
+def export_to_instagram():
+    """Export creative to Instagram via Facebook Marketing API"""
+    # Instagram export uses same flow as Facebook
+    # Just need to specify Instagram account ID instead of Page ID
+    return export_to_facebook()

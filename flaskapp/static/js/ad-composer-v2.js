@@ -597,6 +597,158 @@ class AdComposerV2 {
 
         container.classList.remove('hidden');
     }
+
+    // ==================== DIRECT EXPORT TO ADS MANAGER ====================
+
+    showExportModal() {
+        const modal = document.getElementById('export-modal');
+        if (!modal) return;
+
+        modal.classList.remove('hidden');
+
+        // Check connection status
+        this.checkFacebookConnection();
+    }
+
+    async checkFacebookConnection() {
+        try {
+            const response = await fetch('/social/api/export/facebook/connection-status');
+            const data = await response.json();
+
+            if (data.connected) {
+                // Show select step
+                this.showExportStep('select');
+
+                // Populate ad accounts
+                const accountSelect = document.getElementById('export-ad-account');
+                if (accountSelect && data.ad_accounts) {
+                    accountSelect.innerHTML = '<option value="">Select Ad Account</option>';
+                    data.ad_accounts.forEach(account => {
+                        accountSelect.innerHTML += `<option value="${account.id}">${account.name} (${account.account_id})</option>`;
+                    });
+                }
+            } else {
+                // Show connect step
+                this.showExportStep('connect');
+            }
+        } catch (error) {
+            console.error('Error checking connection:', error);
+            this.showExportStep('connect');
+        }
+    }
+
+    async connectFacebook() {
+        try {
+            const response = await fetch('/social/api/export/facebook/oauth-url');
+            const data = await response.json();
+
+            if (data.success) {
+                // Redirect to Facebook OAuth
+                window.location.href = data.oauth_url;
+            } else {
+                this.showToast(data.error || 'Failed to connect Facebook', 'error');
+            }
+        } catch (error) {
+            this.showToast('Error connecting to Facebook', 'error');
+        }
+    }
+
+    async disconnectFacebook() {
+        try {
+            const response = await fetch('/social/api/export/facebook/disconnect', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.showToast('Facebook disconnected', 'success');
+                this.showExportStep('connect');
+            }
+        } catch (error) {
+            this.showToast('Error disconnecting Facebook', 'error');
+        }
+    }
+
+    async exportCreative() {
+        const adAccountId = document.getElementById('export-ad-account')?.value;
+        const pageId = document.getElementById('export-page-id')?.value;
+        const destinationUrl = document.getElementById('export-destination-url')?.value;
+
+        if (!adAccountId || !pageId || !destinationUrl) {
+            this.showToast('Please fill in all fields', 'warning');
+            return;
+        }
+
+        this.showExportStep('loading');
+
+        try {
+            const response = await fetch('/social/api/export/facebook', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: JSON.stringify({
+                    creative_id: this.currentCreativeId,
+                    ad_account_id: adAccountId,
+                    page_id: pageId,
+                    destination_url: destinationUrl
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.showExportStep('success');
+
+                // Set preview URL if available
+                const successLink = document.getElementById('export-success-link');
+                if (successLink && data.preview_url) {
+                    successLink.href = data.preview_url;
+                }
+
+                // Track export event
+                this.sendAnalyticsEvent('creative_exported', {
+                    creative_id: this.currentCreativeId,
+                    platform: 'facebook',
+                    event_data: {
+                        ad_account_id: adAccountId,
+                        destination_url: destinationUrl
+                    }
+                });
+
+                // Close modal after 3 seconds
+                setTimeout(() => {
+                    document.getElementById('export-modal')?.classList.add('hidden');
+                }, 3000);
+            } else {
+                this.showExportStep('select');
+                this.showToast(data.error || 'Export failed', 'error');
+            }
+        } catch (error) {
+            this.showExportStep('select');
+            this.showToast('Error exporting creative', 'error');
+        }
+    }
+
+    showExportStep(step) {
+        const steps = ['connect', 'select', 'loading', 'success'];
+        steps.forEach(s => {
+            const el = document.getElementById(`export-step-${s}`);
+            if (el) {
+                if (s === step) {
+                    el.classList.remove('hidden');
+                } else {
+                    el.classList.add('hidden');
+                }
+            }
+        });
+    }
 }
 
 // Initialize on page load

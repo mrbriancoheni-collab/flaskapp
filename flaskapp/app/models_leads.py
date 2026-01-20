@@ -68,6 +68,10 @@ class LeadCampaign(db.Model):
     scraping_completed_at = db.Column(DateTime, nullable=True)
     sending_started_at = db.Column(DateTime, nullable=True)
 
+    # One-click automation
+    is_core = db.Column(Boolean, default=False)  # Flag for core 20 campaigns
+    last_automation_run = db.Column(DateTime, nullable=True)  # Last automation run time
+
     # Relationships
     leads = relationship("Lead", back_populates="campaign", cascade="all, delete-orphan")
     sequences = relationship("EmailSequence", back_populates="campaign", cascade="all, delete-orphan")
@@ -471,3 +475,44 @@ class ConversationAlert(db.Model):
 
     def __repr__(self) -> str:
         return f"<ConversationAlert id={self.id} type={self.alert_type} read={self.is_read}>"
+
+
+class CampaignAutomationConfig(db.Model):
+    """Configuration for automated campaign execution"""
+    __tablename__ = "campaign_automation_config"
+
+    id = db.Column(Integer, primary_key=True)
+    enabled = db.Column(Boolean, default=False)
+    run_time = db.Column(String(5), default='09:00')  # HH:MM format
+    run_days = db.Column(JSONType, nullable=True)  # [0,1,2,3,4] for Mon-Fri
+    daily_email_limit = db.Column(Integer, default=250)
+    skip_weekends = db.Column(Boolean, default=True)
+    next_run_at = db.Column(DateTime, nullable=True)
+    last_run_at = db.Column(DateTime, nullable=True)
+    created_at = db.Column(DateTime, server_default=func.now())
+    updated_at = db.Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    def __repr__(self) -> str:
+        return f"<CampaignAutomationConfig id={self.id} enabled={self.enabled} run_time={self.run_time}>"
+
+
+class AutomationRun(db.Model):
+    """Track automation execution history"""
+    __tablename__ = "automation_runs"
+
+    id = db.Column(Integer, primary_key=True)
+    job_id = db.Column(String(36), unique=True, index=True)
+    trigger_type = db.Column(String(20))  # 'manual' or 'scheduled'
+    status = db.Column(String(20))  # 'running', 'completed', 'failed'
+    started_at = db.Column(DateTime, nullable=False)
+    completed_at = db.Column(DateTime, nullable=True)
+    duration_minutes = db.Column(Integer, nullable=True)
+    campaigns_processed = db.Column(Integer, default=0)
+    leads_scraped = db.Column(Integer, default=0)
+    leads_enriched = db.Column(Integer, default=0)
+    emails_sent = db.Column(Integer, default=0)
+    error_count = db.Column(Integer, default=0)
+    error_message = db.Column(Text, nullable=True)
+
+    def __repr__(self) -> str:
+        return f"<AutomationRun id={self.id} job_id={self.job_id} status={self.status}>"

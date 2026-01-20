@@ -1441,11 +1441,6 @@
         console.log('[NAV] Toggling section:', sectionId);
         const content = document.getElementById(sectionId);
         const header = document.getElementById(sectionId.replace('-section', '-header'));
-        const icon = document.getElementById(sectionId + '-icon');
-
-        console.log('[NAV] Content:', content);
-        console.log('[NAV] Header:', header);
-        console.log('[NAV] Icon:', icon);
 
         if (!content || !header) {
           console.error('[NAV] Elements not found! content:', !!content, 'header:', !!header);
@@ -1458,14 +1453,12 @@
           // Collapse
           content.classList.remove('expanded');
           header.classList.remove('expanded');
-          if (icon) icon.style.transform = 'rotate(0deg)';
           localStorage.setItem('nav-' + sectionId, 'closed');
           console.log('[NAV] Collapsed');
         } else {
           // Expand
           content.classList.add('expanded');
           header.classList.add('expanded');
-          if (icon) icon.style.transform = 'rotate(180deg)';
           localStorage.setItem('nav-' + sectionId, 'open');
           console.log('[NAV] Expanded');
         }

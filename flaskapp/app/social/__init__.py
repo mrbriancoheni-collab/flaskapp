@@ -99,6 +99,18 @@ def generate_from_website():
         db.session.add(creative)
         db.session.commit()
 
+        # Generate performance prediction
+        performance_prediction = service.predict_performance(
+            creative={
+                'headline': creative.headline,
+                'primary_text': creative.primary_text,
+                'description': creative.description,
+                'call_to_action': creative.call_to_action
+            },
+            platform=platform,
+            industry=industry
+        )
+
         response_data = {
             'success': True,
             'creative_id': creative.id,
@@ -115,6 +127,15 @@ def generate_from_website():
         # Include image variations if generated
         if result.get('image_variations'):
             response_data['image_variations'] = result['image_variations']
+
+        # Include performance prediction
+        if performance_prediction.get('success'):
+            response_data['performance_prediction'] = {
+                'predicted_ctr': f"{performance_prediction['predicted_ctr']}%",
+                'engagement_score': performance_prediction['engagement_score'],
+                'quality_score': performance_prediction['quality_score'],
+                'recommendations': performance_prediction['recommendations']
+            }
 
         return jsonify(response_data)
 

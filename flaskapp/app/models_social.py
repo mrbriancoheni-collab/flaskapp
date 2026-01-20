@@ -195,3 +195,55 @@ class AdGenerationJob(db.Model):
 
     def __repr__(self) -> str:
         return f"<AdGenerationJob id={self.id} type={self.job_type} status={self.status}>"
+
+
+class AdAnalyticsEvent(db.Model):
+    """Track analytics events for ad composer usage and performance"""
+    __tablename__ = "ad_analytics_events"
+
+    id = db.Column(Integer, primary_key=True)
+    user_id = db.Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    account_id = db.Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
+    creative_id = db.Column(Integer, ForeignKey("ad_creatives.id"), nullable=True, index=True)
+
+    # Event details
+    event_type = db.Column(
+        SAEnum(
+            'ad_generated',
+            'creative_saved',
+            'image_downloaded',
+            'creative_exported',
+            'creative_viewed',
+            'creative_edited',
+            'variation_created',
+            name='analytics_event_type'
+        ),
+        nullable=False,
+        index=True
+    )
+
+    # Event metadata
+    platform = db.Column(String(50), nullable=True)  # facebook, instagram, etc.
+    industry = db.Column(String(100), nullable=True)
+    generation_method = db.Column(String(50), nullable=True)  # website, manual
+
+    # Cost tracking
+    image_count = db.Column(Integer, default=0)  # Number of images generated
+    ai_cost = db.Column(db.Float, nullable=True)  # Estimated cost in USD
+
+    # Performance metrics (for generated ads)
+    predicted_ctr = db.Column(db.Float, nullable=True)  # Predicted CTR %
+    quality_score = db.Column(Integer, nullable=True)  # 0-100
+    engagement_score = db.Column(Integer, nullable=True)  # 0-100
+
+    # Additional data
+    event_data = db.Column(JSONType, nullable=True)  # Format, download type, export destination, etc.
+
+    # Session tracking
+    session_id = db.Column(String(255), nullable=True, index=True)
+
+    # Timestamps
+    created_at = db.Column(DateTime, server_default=func.now(), nullable=False, index=True)
+
+    def __repr__(self) -> str:
+        return f"<AdAnalyticsEvent id={self.id} type={self.event_type} user_id={self.user_id}>"

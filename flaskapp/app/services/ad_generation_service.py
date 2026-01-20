@@ -630,6 +630,193 @@ CTA: [your call to action]
 
         return prompt
 
+    def predict_performance(
+        self,
+        creative: Dict,
+        platform: str = 'facebook',
+        industry: str = None
+    ) -> Dict:
+        """
+        Predict ad creative performance using AI analysis
+
+        Args:
+            creative: Dict with headline, primary_text, description, call_to_action
+            platform: Target platform for benchmarks
+            industry: Industry for benchmark comparison
+
+        Returns:
+            Dict with predicted_ctr, engagement_score, quality_score, recommendations
+        """
+        try:
+            # Industry benchmarks for CTR (%)
+            industry_benchmarks = {
+                'plumbing': {'ctr': 2.8, 'engagement': 3.5},
+                'hvac': {'ctr': 2.5, 'engagement': 3.2},
+                'electrical': {'ctr': 2.6, 'engagement': 3.3},
+                'roofing': {'ctr': 3.2, 'engagement': 4.0},
+                'landscaping': {'ctr': 3.5, 'engagement': 4.2},
+                'cleaning': {'ctr': 3.8, 'engagement': 4.5},
+                'painting': {'ctr': 2.9, 'engagement': 3.6},
+                'garage door': {'ctr': 2.4, 'engagement': 3.0},
+                'default': {'ctr': 2.5, 'engagement': 3.0}
+            }
+
+            # Platform multipliers
+            platform_multipliers = {
+                'facebook': 1.0,
+                'instagram': 1.15,  # Higher engagement on Instagram
+                'linkedin': 0.85,   # Lower CTR but higher quality
+                'twitter': 0.95
+            }
+
+            benchmark = industry_benchmarks.get(industry, industry_benchmarks['default'])
+            platform_mult = platform_multipliers.get(platform, 1.0)
+
+            # Build analysis prompt
+            analysis_prompt = f"""Analyze this social media ad creative for {platform} and predict its performance:
+
+HEADLINE: {creative.get('headline', '')}
+PRIMARY TEXT: {creative.get('primary_text', '')}
+DESCRIPTION: {creative.get('description', '')}
+CALL TO ACTION: {creative.get('call_to_action', '')}
+
+Industry: {industry or 'general'}
+Platform: {platform}
+
+Provide:
+1. Quality Score (0-100): Rate the overall creative quality
+2. CTR Adjustment Factor (0.7-1.3): How this compares to average ads (1.0 = average, 1.2 = 20% better)
+3. Top 3 Recommendations: Specific improvements to increase performance
+
+Format your response exactly like this:
+QUALITY_SCORE: [number 0-100]
+CTR_FACTOR: [number 0.7-1.3]
+RECOMMENDATION_1: [specific recommendation]
+RECOMMENDATION_2: [specific recommendation]
+RECOMMENDATION_3: [specific recommendation]"""
+
+            # Use Claude for analysis (faster and cheaper)
+            if self.anthropic_client:
+                response = self.anthropic_client.messages.create(
+                    model="claude-3-5-sonnet-20241022",
+                    max_tokens=512,
+                    messages=[{
+                        "role": "user",
+                        "content": analysis_prompt
+                    }]
+                )
+                analysis = response.content[0].text
+            elif self.openai_api_key:
+                response = openai.chat.completions.create(
+                    model="gpt-4o-mini",  # Faster model for analysis
+                    messages=[
+                        {"role": "system", "content": "You are an expert social media advertising analyst."},
+                        {"role": "user", "content": analysis_prompt}
+                    ],
+                    temperature=0.3  # Lower temperature for more consistent scoring
+                )
+                analysis = response.choices[0].message.content
+            else:
+                # Fallback to basic heuristics if no API available
+                return self._fallback_performance_prediction(creative, benchmark, platform_mult)
+
+            # Parse AI response
+            quality_score = 75  # Default
+            ctr_factor = 1.0    # Default
+            recommendations = []
+
+            for line in analysis.strip().split('\n'):
+                line = line.strip()
+                if line.startswith('QUALITY_SCORE:'):
+                    try:
+                        quality_score = int(line.split(':')[1].strip())
+                    except:
+                        pass
+                elif line.startswith('CTR_FACTOR:'):
+                    try:
+                        ctr_factor = float(line.split(':')[1].strip())
+                    except:
+                        pass
+                elif line.startswith('RECOMMENDATION_'):
+                    rec = line.split(':', 1)[1].strip() if ':' in line else ''
+                    if rec:
+                        recommendations.append(rec)
+
+            # Calculate predictions
+            base_ctr = benchmark['ctr'] * platform_mult
+            predicted_ctr = base_ctr * ctr_factor
+
+            # Engagement score based on quality and platform
+            base_engagement = benchmark['engagement'] * platform_mult
+            engagement_score = min(100, int(base_engagement * (quality_score / 75) * 10))
+
+            return {
+                'success': True,
+                'predicted_ctr': round(predicted_ctr, 2),
+                'predicted_ctr_range': f"{round(predicted_ctr * 0.8, 2)}-{round(predicted_ctr * 1.2, 2)}%",
+                'engagement_score': engagement_score,
+                'quality_score': quality_score,
+                'recommendations': recommendations[:3],
+                'benchmark_ctr': round(base_ctr, 2),
+                'performance_vs_benchmark': round(((predicted_ctr / base_ctr) - 1) * 100, 1)
+            }
+
+        except Exception as e:
+            logger.error(f"Error predicting performance: {e}")
+            # Return fallback prediction
+            return self._fallback_performance_prediction(
+                creative,
+                industry_benchmarks.get(industry, industry_benchmarks['default']),
+                platform_multipliers.get(platform, 1.0)
+            )
+
+    def _fallback_performance_prediction(
+        self,
+        creative: Dict,
+        benchmark: Dict,
+        platform_mult: float
+    ) -> Dict:
+        """Fallback performance prediction using heuristics"""
+
+        # Basic quality heuristics
+        quality_score = 70
+
+        headline = creative.get('headline', '')
+        primary = creative.get('primary_text', '')
+        cta = creative.get('call_to_action', '')
+
+        # Adjust quality based on content length and presence
+        if len(headline) > 20 and len(headline) < 60:
+            quality_score += 5
+        if len(primary) > 50 and len(primary) < 150:
+            quality_score += 5
+        if cta and len(cta) > 3:
+            quality_score += 5
+        if '?' in headline or '!' in headline:
+            quality_score += 3
+
+        # Calculate CTR
+        ctr_factor = 0.9 + (quality_score - 70) / 100  # Range: 0.9-1.05
+        predicted_ctr = benchmark['ctr'] * platform_mult * ctr_factor
+
+        # Engagement score
+        engagement_score = min(100, int(benchmark['engagement'] * platform_mult * (quality_score / 75) * 10))
+
+        return {
+            'success': True,
+            'predicted_ctr': round(predicted_ctr, 2),
+            'predicted_ctr_range': f"{round(predicted_ctr * 0.8, 2)}-{round(predicted_ctr * 1.2, 2)}%",
+            'engagement_score': engagement_score,
+            'quality_score': quality_score,
+            'recommendations': [
+                'Consider A/B testing different headlines',
+                'Add urgency or scarcity to your messaging',
+                'Test different call-to-action phrases'
+            ],
+            'benchmark_ctr': round(benchmark['ctr'] * platform_mult, 2),
+            'performance_vs_benchmark': round(((predicted_ctr / (benchmark['ctr'] * platform_mult)) - 1) * 100, 1)
+        }
+
     def _parse_copy_response(self, content: str, platform: str) -> Dict:
         """Parse AI response into structured format"""
 

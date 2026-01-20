@@ -486,3 +486,110 @@ def client_from_refresh(refresh_token: str, login_customer_id: Optional[str] = N
         config["login_customer_id"] = _digits_only(login_customer_id)
 
     return GoogleAdsClient.load_from_dict(config)
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Account Performance Stats
+# ────────────────────────────────────────────────────────────────────────────
+
+def fetch_account_performance_stats(
+    aid: int,
+    days: int = 30,
+    access_token: Optional[str] = None,
+) -> dict:
+    """
+    Fetch account-level performance statistics for the decision screen.
+
+    Returns aggregated metrics including:
+    - Impressions
+    - Clicks
+    - CTR
+    - Cost
+    - Conversions
+    - CPA
+    - Conversion Rate
+
+    Args:
+        aid: Account ID
+        days: Number of days to fetch (default: 30)
+        access_token: Optional access token (will resolve if not provided)
+
+    Returns:
+        Dictionary with performance metrics or None if error/not connected
+    """
+    try:
+        ctx = resolve_ads_context(aid)
+        customer_id = ctx["customer_id"]
+        if not customer_id:
+            return None
+
+        login_customer_id = ctx["login_customer_id"]
+        tok = access_token or get_stored_access_token(aid, ("ads", "lsa"))
+        if not tok:
+            return None
+
+        # Query for account-level metrics
+        query = f"""
+            SELECT
+                metrics.impressions,
+                metrics.clicks,
+                metrics.ctr,
+                metrics.cost_micros,
+                metrics.conversions,
+                metrics.conversions_value,
+                metrics.average_cpc,
+                metrics.all_conversions
+            FROM customer
+            WHERE segments.date DURING LAST_{days}_DAYS
+        """.strip()
+
+        results = google_ads_search(
+            access_token=tok,
+            customer_id=customer_id,
+            query=query,
+            login_customer_id=login_customer_id,
+            stream=True,
+        )
+
+        # Aggregate metrics
+        total_impressions = 0
+        total_clicks = 0
+        total_cost_micros = 0
+        total_conversions = 0
+        total_conversions_value = 0
+        total_all_conversions = 0
+
+        for row in results:
+            metrics = row.get("metrics", {})
+            total_impressions += int(metrics.get("impressions", 0))
+            total_clicks += int(metrics.get("clicks", 0))
+            total_cost_micros += int(metrics.get("costMicros", 0))
+            total_conversions += float(metrics.get("conversions", 0))
+            total_conversions_value += float(metrics.get("conversionsValue", 0))
+            total_all_conversions += float(metrics.get("allConversions", 0))
+
+        # Calculate derived metrics
+        total_cost = total_cost_micros / 1_000_000  # Convert micros to dollars
+        ctr = (total_clicks / total_impressions * 100) if total_impressions > 0 else 0
+        avg_cpc = (total_cost / total_clicks) if total_clicks > 0 else 0
+        conversion_rate = (total_conversions / total_clicks * 100) if total_clicks > 0 else 0
+        cost_per_conversion = (total_cost / total_conversions) if total_conversions > 0 else 0
+
+        return {
+            "impressions": total_impressions,
+            "clicks": total_clicks,
+            "ctr": round(ctr, 2),
+            "cost": round(total_cost, 2),
+            "conversions": round(total_conversions, 1),
+            "all_conversions": round(total_all_conversions, 1),
+            "conversions_value": round(total_conversions_value, 2),
+            "avg_cpc": round(avg_cpc, 2),
+            "conversion_rate": round(conversion_rate, 2),
+            "cost_per_conversion": round(cost_per_conversion, 2),
+            "days": days,
+            "has_data": len(results) > 0
+        }
+
+    except Exception as e:
+        current_app.logger.error(f"Error fetching account performance stats: {e}")
+        return None

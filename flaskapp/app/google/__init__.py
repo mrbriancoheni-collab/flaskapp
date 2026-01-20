@@ -2868,6 +2868,15 @@ def ads_decision_screen():
     if not historical_improvement:
         historical_improvement = _get_demo_improvement_data()
 
+    # Fetch account performance stats (last 30 days)
+    account_performance = None
+    if connected:
+        from app.google.utils_ads import fetch_account_performance_stats
+        try:
+            account_performance = fetch_account_performance_stats(aid, days=30)
+        except Exception as e:
+            current_app.logger.warning(f"Could not load account performance stats: {e}")
+
     # Transform actions into timeline format
     recent_changes = []
     for action in recent_actions:
@@ -2916,6 +2925,7 @@ def ads_decision_screen():
         lsa_missed_calls=lsa_missed_calls,
         recent_changes=recent_changes,
         historical_improvement=historical_improvement,
+        account_performance=account_performance,
         epn=request.endpoint,
     )
 

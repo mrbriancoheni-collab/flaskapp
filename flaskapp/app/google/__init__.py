@@ -2873,9 +2873,16 @@ def ads_decision_screen():
     if connected:
         from app.google.utils_ads import fetch_account_performance_stats
         try:
+            current_app.logger.info(f"Fetching account performance stats for account {aid}")
             account_performance = fetch_account_performance_stats(aid, days=30)
+            if account_performance:
+                current_app.logger.info(f"Account performance stats fetched successfully: {account_performance.get('has_data')}")
+            else:
+                current_app.logger.warning("Account performance stats returned None")
         except Exception as e:
-            current_app.logger.warning(f"Could not load account performance stats: {e}")
+            current_app.logger.error(f"Could not load account performance stats: {e}")
+            import traceback
+            current_app.logger.error(f"Traceback: {traceback.format_exc()}")
 
     # Transform actions into timeline format
     recent_changes = []

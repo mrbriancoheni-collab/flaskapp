@@ -592,4 +592,6 @@ def fetch_account_performance_stats(
 
     except Exception as e:
         current_app.logger.error(f"Error fetching account performance stats: {e}")
+        import traceback
+        current_app.logger.error(f"Traceback: {traceback.format_exc()}")
         return None

@@ -1817,14 +1817,64 @@ def run_automation_job(job_id, automation_run_id):
                         job['current_operation'] = f"[{idx}/20] Scraping: {campaign.name}"
                         job['recent_logs'].append(f"  → Scraping leads...")
 
-                        results = scraper.scrape_campaign(campaign.id)
-                        if results.get('success'):
-                            scraped_count = results.get('total_leads_created', 0)
-                            job['leads_scraped'] += scraped_count
-                            job['recent_logs'].append(f"  ✓ Scraped {scraped_count} leads")
+                        # Scrape campaign
+                        query = f"{campaign.industry_service} {campaign.location}"
+                        results = scraper.scrape_campaign(
+                            query=query,
+                            location=campaign.location,
+                            scrape_ads=campaign.scrape_ads,
+                            scrape_maps=campaign.scrape_maps,
+                            scrape_lsa=campaign.scrape_lsa,
+                            scrape_organic=campaign.scrape_organic,
+                            max_organic=campaign.max_organic_results
+                        )
 
-                            campaign.status = 'ready'
-                            db.session.commit()
+                        # Save leads from scraping results
+                        source_type_mapping = {
+                            'ads': 'ad',
+                            'maps': 'map',
+                            'lsa': 'lsa',
+                            'organic': 'organic'
+                        }
+
+                        leads_created = 0
+                        for source_type, items in results.items():
+                            db_source_type = source_type_mapping.get(source_type, source_type)
+
+                            for item in items:
+                                # Check if lead already exists
+                                existing = Lead.query.filter_by(
+                                    campaign_id=campaign.id,
+                                    company_name=item['company_name']
+                                ).first()
+
+                                if existing:
+                                    continue
+
+                                lead = Lead(
+                                    campaign_id=campaign.id,
+                                    company_name=item['company_name'],
+                                    website=item.get('website'),
+                                    phone=item.get('phone'),
+                                    address=item.get('address'),
+                                    source_type=db_source_type,
+                                    source_url=item.get('source_url'),
+                                    serp_position=item.get('position'),
+                                    enrichment_status='pending',
+                                    email_status='pending'
+                                )
+                                db.session.add(lead)
+                                leads_created += 1
+
+                        db.session.commit()
+
+                        job['leads_scraped'] += leads_created
+                        job['recent_logs'].append(f"  ✓ Scraped {leads_created} leads")
+
+                        campaign.status = 'ready'
+                        campaign.scraping_completed_at = datetime.now()
+                        campaign.leads_scraped = (campaign.leads_scraped or 0) + leads_created
+                        db.session.commit()
 
                     # STEP 2: Enrich (if needed)
                     pending_leads = Lead.query.filter_by(

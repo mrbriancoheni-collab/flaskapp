@@ -509,10 +509,10 @@
 
         {# Google Ads - Expandable #}
         <div class="nav-section">
-          <div class="nav-section-header" onclick="window.toggleNavSection('google-ads-section')" id="google-ads-header">
+          <div class="nav-section-header" data-section="google-ads-section" id="google-ads-header">
             <i class="fa-brands fa-google text-blue-600"></i>
             <span class="font-semibold">Google Ads</span>
-            <i class="fa-solid fa-chevron-down text-xs ml-auto transition-transform duration-200" id="google-ads-section-icon"></i>
+            <i class="fa-solid fa-chevron-down text-xs ml-auto transition-transform duration-200"></i>
           </div>
           <div class="nav-section-content" id="google-ads-section">
             {% if has_endpoint('google_bp.ads_decision_screen') %}
@@ -1435,39 +1435,44 @@
   {% include 'includes/page_view_tracking.html' %}
   <!-- Navigation Section Toggle -->
   <script>
-    // Define toggle function globally (immediately, before DOMContentLoaded)
-    window.toggleNavSection = function(sectionId) {
-      try {
-        console.log('[NAV] Toggling section:', sectionId);
-        const content = document.getElementById(sectionId);
-        const header = document.getElementById(sectionId.replace('-section', '-header'));
+    // Toggle navigation section function
+    function toggleNavSection(sectionId) {
+      console.log('[NAV] Toggling section:', sectionId);
+      const content = document.getElementById(sectionId);
+      const header = document.getElementById(sectionId.replace('-section', '-header'));
 
-        if (!content || !header) {
-          console.error('[NAV] Elements not found! content:', !!content, 'header:', !!header);
-          return;
-        }
-
-        const isExpanded = content.classList.contains('expanded');
-
-        if (isExpanded) {
-          // Collapse
-          content.classList.remove('expanded');
-          header.classList.remove('expanded');
-          localStorage.setItem('nav-' + sectionId, 'closed');
-          console.log('[NAV] Collapsed');
-        } else {
-          // Expand
-          content.classList.add('expanded');
-          header.classList.add('expanded');
-          localStorage.setItem('nav-' + sectionId, 'open');
-          console.log('[NAV] Expanded');
-        }
-      } catch (error) {
-        console.error('[NAV] Error in toggleNavSection:', error);
+      if (!content || !header) {
+        console.error('[NAV] Elements not found! content:', !!content, 'header:', !!header);
+        return;
       }
-    };
 
-    console.log('[NAV] Toggle function defined:', typeof window.toggleNavSection);
+      const isExpanded = content.classList.contains('expanded');
+
+      if (isExpanded) {
+        // Collapse
+        content.classList.remove('expanded');
+        header.classList.remove('expanded');
+        localStorage.setItem('nav-' + sectionId, 'closed');
+        console.log('[NAV] Collapsed');
+      } else {
+        // Expand
+        content.classList.add('expanded');
+        header.classList.add('expanded');
+        localStorage.setItem('nav-' + sectionId, 'open');
+        console.log('[NAV] Expanded');
+      }
+    }
+
+    // Attach click event listeners to all nav section headers
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('.nav-section-header[data-section]').forEach(function(header) {
+        header.style.cursor = 'pointer';
+        header.addEventListener('click', function() {
+          const sectionId = this.getAttribute('data-section');
+          toggleNavSection(sectionId);
+        });
+      });
+    });
 
     // Restore navigation state on page load
     document.addEventListener('DOMContentLoaded', function() {

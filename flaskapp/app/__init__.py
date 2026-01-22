@@ -857,6 +857,54 @@ def create_app():
     # except Exception:
     #     app.logger.exception("Failed to register fb_ads_grader_bp")
 
+    # --- Daily Tasks & Health Score ------------------------------------------
+    try:
+        from app.daily_tasks import daily_tasks_bp
+        app.register_blueprint(daily_tasks_bp)  # url_prefix=/account/today
+        app.logger.info("daily_tasks_bp registered at /account/today")
+    except Exception:
+        app.logger.exception("Failed to register daily_tasks_bp")
+
+    # --- Industry Presets ----------------------------------------------------
+    try:
+        from app.industry_presets import industry_bp
+        app.register_blueprint(industry_bp)  # url_prefix=/account/industry
+        app.logger.info("industry_bp registered at /account/industry")
+    except Exception:
+        app.logger.exception("Failed to register industry_bp")
+
+    # --- AI Creative Studio --------------------------------------------------
+    try:
+        from app.creative_studio import creative_bp
+        app.register_blueprint(creative_bp)  # url_prefix=/account/creative-studio
+        app.logger.info("creative_bp registered at /account/creative-studio")
+    except Exception:
+        app.logger.exception("Failed to register creative_bp")
+
+    # --- Budget Forecasting --------------------------------------------------
+    try:
+        from app.budget_forecast import budget_forecast_bp
+        app.register_blueprint(budget_forecast_bp)  # url_prefix=/account/budget-forecast
+        app.logger.info("budget_forecast_bp registered at /account/budget-forecast")
+    except Exception:
+        app.logger.exception("Failed to register budget_forecast_bp")
+
+    # --- Journey Builder -----------------------------------------------------
+    try:
+        from app.journey_builder import journey_bp
+        app.register_blueprint(journey_bp)  # url_prefix=/account/journeys
+        app.logger.info("journey_bp registered at /account/journeys")
+    except Exception:
+        app.logger.exception("Failed to register journey_bp")
+
+    # --- Report Sharing ------------------------------------------------------
+    try:
+        from app.report_sharing import report_sharing_bp
+        app.register_blueprint(report_sharing_bp)  # url_prefix=/account/reports (adds /share routes)
+        app.logger.info("report_sharing_bp registered at /account/reports")
+    except Exception:
+        app.logger.exception("Failed to register report_sharing_bp")
+
     # ---- Apply CSRF exemptions AFTER blueprints are registered -------------
     try:
         for ep in (

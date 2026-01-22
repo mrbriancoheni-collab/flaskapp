@@ -1,0 +1,90 @@
+{% extends "base_app.html" %}
+{% block title %}Choose Your Industry · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-8 px-4">
+  <!-- Header -->
+  <div class="text-center mb-10">
+    <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-full mb-4">
+      <i class="fa-solid fa-magic-wand-sparkles text-2xl text-indigo-600"></i>
+    </div>
+    <h1 class="text-3xl font-extrabold text-gray-900 mb-2">What type of business do you run?</h1>
+    <p class="text-gray-600 max-w-xl mx-auto">
+      Select your industry and we'll automatically configure your marketing with
+      optimized keywords, ad copy, and review response templates.
+    </p>
+  </div>
+
+  <!-- Industry Grid -->
+  <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+    {% for key, preset in presets.items() %}
+    <form method="post" action="{{ url_for('industry_bp.select_industry', industry_key=key) }}" class="industry-card">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit"
+              class="w-full text-left bg-white border-2 border-gray-200 rounded-xl p-5 hover:border-indigo-400 hover:shadow-lg transition-all duration-200 group">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 w-12 h-12 bg-{{ preset.color }}-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+            <i class="fa-solid {{ preset.icon }} text-{{ preset.color }}-600 text-xl"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
+              {{ preset.name }}
+            </h3>
+            <p class="text-sm text-gray-500 mt-1">{{ preset.description }}</p>
+            <div class="flex items-center gap-2 mt-3 text-xs text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
+              <span>Select this industry</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </div>
+          </div>
+        </div>
+      </button>
+    </form>
+    {% endfor %}
+  </div>
+
+  <!-- What You Get Section -->
+  <div class="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl p-6 mt-8">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">
+      <i class="fa-solid fa-gift text-indigo-600 mr-2"></i>
+      What you'll get with industry presets:
+    </h2>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="flex items-start gap-3">
+        <i class="fa-solid fa-check-circle text-green-500 mt-1"></i>
+        <div>
+          <h4 class="font-medium text-gray-900">Pre-configured Keywords</h4>
+          <p class="text-sm text-gray-600">10+ industry-specific keywords ready for your campaigns</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3">
+        <i class="fa-solid fa-check-circle text-green-500 mt-1"></i>
+        <div>
+          <h4 class="font-medium text-gray-900">Optimized Ad Copy</h4>
+          <p class="text-sm text-gray-600">Proven headlines and descriptions that convert</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3">
+        <i class="fa-solid fa-check-circle text-green-500 mt-1"></i>
+        <div>
+          <h4 class="font-medium text-gray-900">Review Response Templates</h4>
+          <p class="text-sm text-gray-600">Professional responses for positive and negative reviews</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3">
+        <i class="fa-solid fa-check-circle text-green-500 mt-1"></i>
+        <div>
+          <h4 class="font-medium text-gray-900">Seasonal Campaign Tips</h4>
+          <p class="text-sm text-gray-600">Know when to increase budget for peak seasons</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Skip Option -->
+  <div class="text-center mt-6">
+    <a href="{{ url_for('account_bp.dashboard') }}" class="text-sm text-gray-500 hover:text-gray-700">
+      Skip for now →
+    </a>
+  </div>
+</div>
+{% endblock %}

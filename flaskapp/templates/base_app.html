@@ -202,6 +202,31 @@
         <i class="fa-solid fa-house"></i>
       </a>
 
+      <!-- Today's Tasks (prominent) -->
+      {% if has_endpoint('daily_tasks_bp.index') %}
+      <a href="{{ url_for('daily_tasks_bp.index') }}" class="block px-3 py-3 rounded nav-link min-h-12 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 hover:from-indigo-100 hover:to-purple-100">
+        <i class="fa-solid fa-list-check text-indigo-600"></i><span class="font-semibold text-indigo-700">Today's Tasks</span>
+      </a>
+      {% endif %}
+
+      <!-- AI Tools Section -->
+      <div class="pt-2 text-sm font-semibold text-gray-600 uppercase"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>AI Tools</div>
+      {% if has_endpoint('creative_bp.index') %}
+      <a href="{{ url_for('creative_bp.index') }}" class="block px-3 py-3 rounded nav-link min-h-12">
+        <i class="fa-solid fa-palette"></i><span>Creative Studio</span>
+      </a>
+      {% endif %}
+      {% if has_endpoint('budget_forecast_bp.index') %}
+      <a href="{{ url_for('budget_forecast_bp.index') }}" class="block px-3 py-3 rounded nav-link min-h-12">
+        <i class="fa-solid fa-chart-line"></i><span>Budget Forecast</span>
+      </a>
+      {% endif %}
+      {% if has_endpoint('journey_bp.index') %}
+      <a href="{{ url_for('journey_bp.index') }}" class="block px-3 py-3 rounded nav-link min-h-12">
+        <i class="fa-solid fa-route"></i><span>Journeys</span>
+      </a>
+      {% endif %}
+
       <!-- Google Services (unified) -->
       <div class="pt-2 text-sm font-semibold text-gray-600 uppercase"><i class="fa-brands fa-google mr-1"></i>Google Services</div>
       <a class="block px-3 py-3 rounded nav-link min-h-12" href="{{ url_for('google_bp.index') }}">
@@ -901,6 +926,21 @@
         constructor() {
           this.commands = [
             { name: 'Dashboard', icon: 'fa-house', url: '{{ url_for("account_bp.dashboard") }}', keywords: ['home', 'overview'] },
+            {% if has_endpoint('daily_tasks_bp.index') %}
+            { name: 'Today\'s Tasks', icon: 'fa-list-check', url: '{{ url_for("daily_tasks_bp.index") }}', keywords: ['tasks', 'today', 'todo', 'daily'] },
+            {% endif %}
+            {% if has_endpoint('creative_bp.index') %}
+            { name: 'Creative Studio', icon: 'fa-palette', url: '{{ url_for("creative_bp.index") }}', keywords: ['creative', 'ads', 'copy', 'generate'] },
+            {% endif %}
+            {% if has_endpoint('budget_forecast_bp.index') %}
+            { name: 'Budget Forecast', icon: 'fa-chart-line', url: '{{ url_for("budget_forecast_bp.index") }}', keywords: ['budget', 'forecast', 'predict'] },
+            {% endif %}
+            {% if has_endpoint('journey_bp.index') %}
+            { name: 'Marketing Journeys', icon: 'fa-route', url: '{{ url_for("journey_bp.index") }}', keywords: ['journey', 'funnel', 'flow'] },
+            {% endif %}
+            {% if has_endpoint('report_sharing_bp.share_index') %}
+            { name: 'Share Reports', icon: 'fa-share', url: '{{ url_for("report_sharing_bp.share_index") }}', keywords: ['share', 'report', 'pdf'] },
+            {% endif %}
             {% if has_endpoint('google_bp.index') %}
             { name: 'Google Overview', icon: 'fa-gauge', url: '{{ url_for("google_bp.index") }}', keywords: ['google', 'connect'] },
             {% endif %}

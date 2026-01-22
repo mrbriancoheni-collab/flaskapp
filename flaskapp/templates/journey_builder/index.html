@@ -1,0 +1,102 @@
+{% extends "base_app.html" %}
+{% block title %}Marketing Journeys · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-8 px-4">
+  <!-- Header -->
+  <div class="mb-8">
+    <div class="flex items-center gap-3 mb-2">
+      <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
+        <i class="fa-solid fa-route text-white"></i>
+      </div>
+      <h1 class="text-2xl font-extrabold text-gray-900">Marketing Journeys</h1>
+    </div>
+    <p class="text-gray-600">Visualize how customers find and choose your business.</p>
+  </div>
+
+  <!-- Journey Templates -->
+  <div class="mb-8">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">
+      <i class="fa-solid fa-map text-indigo-600 mr-2"></i>
+      Journey Templates
+    </h2>
+    <p class="text-sm text-gray-600 mb-4">Choose a template that matches your marketing goal.</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      {% for key, template in templates.items() %}
+      <a href="{{ url_for('journey_bp.view_template', template_key=key) }}"
+         class="bg-white border-2 border-gray-200 rounded-xl p-5 hover:border-{{ template.color }}-400 hover:shadow-lg transition-all duration-200 group block">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 w-12 h-12 bg-{{ template.color }}-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+            <i class="fa-solid {{ template.icon }} text-{{ template.color }}-600 text-xl"></i>
+          </div>
+          <div class="flex-1">
+            <h3 class="font-semibold text-gray-900 group-hover:text-{{ template.color }}-600 transition-colors">
+              {{ template.name }}
+            </h3>
+            <p class="text-sm text-gray-500 mt-1">{{ template.description }}</p>
+            <div class="flex items-center gap-2 mt-3">
+              <span class="text-xs text-gray-400">{{ template.stages|length }} stages</span>
+              <span class="text-{{ template.color }}-600 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                View journey →
+              </span>
+            </div>
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- How It Works -->
+  <div class="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">
+      <i class="fa-solid fa-info-circle text-indigo-600 mr-2"></i>
+      How Customer Journeys Work
+    </h2>
+    <div class="grid md:grid-cols-5 gap-4">
+      <div class="text-center">
+        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+          <i class="fa-solid fa-eye text-blue-600"></i>
+        </div>
+        <h4 class="font-medium text-gray-900 text-sm">Awareness</h4>
+        <p class="text-xs text-gray-500 mt-1">They see your ad</p>
+      </div>
+      <div class="text-center">
+        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+          <i class="fa-solid fa-mouse-pointer text-green-600"></i>
+        </div>
+        <h4 class="font-medium text-gray-900 text-sm">Interest</h4>
+        <p class="text-xs text-gray-500 mt-1">They click to learn more</p>
+      </div>
+      <div class="text-center">
+        <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-2">
+          <i class="fa-solid fa-search text-yellow-600"></i>
+        </div>
+        <h4 class="font-medium text-gray-900 text-sm">Consideration</h4>
+        <p class="text-xs text-gray-500 mt-1">They research options</p>
+      </div>
+      <div class="text-center">
+        <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+          <i class="fa-solid fa-phone text-purple-600"></i>
+        </div>
+        <h4 class="font-medium text-gray-900 text-sm">Conversion</h4>
+        <p class="text-xs text-gray-500 mt-1">They call or book</p>
+      </div>
+      <div class="text-center">
+        <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
+          <i class="fa-solid fa-heart text-red-600"></i>
+        </div>
+        <h4 class="font-medium text-gray-900 text-sm">Retention</h4>
+        <p class="text-xs text-gray-500 mt-1">They become loyal</p>
+      </div>
+    </div>
+    <div class="mt-4 pt-4 border-t border-indigo-200">
+      <p class="text-sm text-gray-600">
+        <i class="fa-solid fa-lightbulb text-yellow-500 mr-1"></i>
+        <strong>Tip:</strong> Your marketing should guide customers through each stage, not just focus on one.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

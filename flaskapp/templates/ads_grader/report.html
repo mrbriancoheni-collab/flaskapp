@@ -799,7 +799,7 @@
 {% block body_extra %}
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script>
+<script nonce="{{ g.csp_nonce }}">
 // Accordion toggle functionality
 function toggleAccordion(contentId, chevronId) {
   const content = document.getElementById(contentId);

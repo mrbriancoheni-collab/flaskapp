@@ -262,7 +262,7 @@
   .animate-spin { animation: spin 1s linear infinite; }
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 </style>
-<script>
+<script nonce="{{ g.csp_nonce }}">
   (function(){
     const overlay = document.getElementById('spinner-overlay');
     document.querySelectorAll('form[data-spinner]').forEach(form => {

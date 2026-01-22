@@ -148,7 +148,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
 function fillForm(service, location) {
   document.getElementById('service_type').value = service;
   document.getElementById('location').value = location;

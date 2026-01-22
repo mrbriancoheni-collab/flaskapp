@@ -59,7 +59,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ g.csp_nonce }}">
   window.fbAsyncInit = function() {
     FB.init({
       appId      : '{{ config.get("FB_APP_ID") or "" }}',

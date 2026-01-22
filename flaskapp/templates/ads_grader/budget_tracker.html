@@ -301,7 +301,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
 function showCreateBudgetModal() {
   document.getElementById('createBudgetModal').classList.remove('hidden');
   document.body.style.overflow = 'hidden';

@@ -75,7 +75,7 @@
   </form>
 </div>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
   // Lightweight AUTOSAVE to pov_autosaves
   const form = document.getElementById('pov-form');
   const statusEl = document.getElementById('pov-status');

@@ -82,7 +82,7 @@
     </div>
     <button onclick="dismissGAPropertyNotice()" class="text-blue-600 hover:text-blue-800 text-xl leading-none" title="Dismiss">×</button>
   </div>
-  <script>
+  <script nonce="{{ g.csp_nonce }}">
     function dismissGAPropertyNotice() {
       document.getElementById('ga-property-notice')?.remove();
       document.cookie = 'ga_property_notice_seen=1; path=/; max-age=31536000'; // 1 year
@@ -401,7 +401,7 @@
   details > summary { outline: none; }
 </style>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
   window.GA_ENDPOINTS = {
     props: "{{ url_for('google_bp.ga_properties_json') }}",
     save:  "{{ url_for('google_bp.ga_select_property') }}",

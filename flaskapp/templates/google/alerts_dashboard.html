@@ -224,7 +224,7 @@
   {% endif %}
 </div>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
 async function applyRecommendation(resourceName) {
   if (!confirm('Are you sure you want to apply this recommendation?')) {
     return;

@@ -33,6 +33,7 @@
       <div class="flex items-center gap-2">
         {% if connected %}
           <form method="post" action="{{ url_for('gmb_bp.disconnect') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="rounded-md border px-3 py-2 hover:bg-gray-50" type="submit">
               <i class="fa-solid fa-plug-circle-xmark mr-2"></i>Disconnect
             </button>
@@ -242,6 +243,7 @@
           method="post"
           action="{{ url_for('gmb_bp.update_profile', demo=0 if connected else 1) }}"
           class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       {# Name #}
       <div class="col-span-1">
         <label class="block text-sm font-medium text-gray-700">Business Name</label>
@@ -381,7 +383,7 @@
 {% include 'gmb/_suggestions_modal.html' %}
 
 {# Scripts: open modal, run optimizer via JSON, show spinner, handle Turbo/HTMX #}
-<script>
+<script nonce="{{ g.csp_nonce }}">
 (function () {
   function openSuggestionsModal() {
     var modal = document.getElementById('gmbSuggestionsModal');
@@ -454,8 +456,8 @@
   window.addEventListener('pageshow', function(){ autoOpenIfQuery(); wireButtons(); });
 })();
 </script>
-        
-<script>
+
+<script nonce="{{ g.csp_nonce }}">
 document.getElementById('gmb-ai-btn')?.addEventListener('click', async () => {
   try {
     const res = await fetch("{{ url_for('gmb_bp.optimize_profile_json') }}", {
@@ -475,7 +477,7 @@ document.getElementById('gmb-ai-btn')?.addEventListener('click', async () => {
   }
 });
 </script>
-<script>
+<script nonce="{{ g.csp_nonce }}">
 async function runGmbOptimizer() {
   const btn = document.getElementById('gmb-ai-opt-btn');
   btn?.setAttribute('disabled', 'disabled');

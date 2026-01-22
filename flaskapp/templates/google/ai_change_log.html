@@ -107,15 +107,28 @@
               {{ action.details }}
             </div>
             {% endif %}
-            <div class="mt-3 inline-flex items-center gap-2">
-              {% if action.estimated_monthly_savings and action.estimated_monthly_savings > 0 %}
-              <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
-                <i class="fa-solid fa-dollar-sign text-[10px] mr-1"></i>${{ action.estimated_monthly_savings|round(2) }} saved
-              </span>
+            <div class="mt-3 flex items-center justify-between">
+              <div class="inline-flex items-center gap-2">
+                {% if action.estimated_monthly_savings and action.estimated_monthly_savings > 0 %}
+                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
+                  <i class="fa-solid fa-dollar-sign text-[10px] mr-1"></i>${{ action.estimated_monthly_savings|round(2) }} saved
+                </span>
+                {% endif %}
+                <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs">
+                  {{ action.action_type.replace('_', ' ').title() }}
+                </span>
+                {% if action.undone_at %}
+                <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-medium">
+                  <i class="fa-solid fa-undo text-[10px] mr-1"></i>Undone
+                </span>
+                {% endif %}
+              </div>
+              {% if action.is_undoable %}
+              <button onclick="undoAction({{ action.id }})"
+                      class="text-sm text-red-600 hover:text-red-800 font-medium px-3 py-1 rounded border border-red-200 hover:bg-red-50 transition">
+                <i class="fa-solid fa-undo mr-1"></i>Undo
+              </button>
               {% endif %}
-              <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs">
-                {{ action.action_type.replace('_', ' ').title() }}
-              </span>
             </div>
           </div>
         </div>
@@ -355,4 +368,34 @@
   </div>
 
 </div>
+
+<script nonce="{{ g.csp_nonce }}">
+async function undoAction(actionId) {
+  if (!confirm('Are you sure you want to undo this action? This will reverse the change in Google Ads.')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/account/google/ads/ai-actions/${actionId}/undo`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
+      }
+    });
+
+    const data = await response.json();
+
+    if (data.ok) {
+      alert('Action undone successfully!');
+      location.reload();
+    } else {
+      alert('Error: ' + (data.error || 'Failed to undo action'));
+    }
+  } catch (error) {
+    console.error('Error undoing action:', error);
+    alert('Error undoing action: ' + error.message);
+  }
+}
+</script>
 {% endblock %}

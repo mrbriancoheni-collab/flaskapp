@@ -574,6 +574,7 @@ def fetch_account_performance_stats(
         avg_cpc = (total_cost / total_clicks) if total_clicks > 0 else 0
         conversion_rate = (total_conversions / total_clicks * 100) if total_clicks > 0 else 0
         cost_per_conversion = (total_cost / total_conversions) if total_conversions > 0 else 0
+        roas = (total_conversions_value / total_cost) if total_cost > 0 else 0
 
         return {
             "impressions": total_impressions,
@@ -586,8 +587,9 @@ def fetch_account_performance_stats(
             "avg_cpc": round(avg_cpc, 2),
             "conversion_rate": round(conversion_rate, 2),
             "cost_per_conversion": round(cost_per_conversion, 2),
+            "roas": round(roas, 2),
             "days": days,
-            "has_data": len(results) > 0
+            "has_data": total_impressions > 0 or total_clicks > 0 or total_cost > 0
         }
 
     except Exception as e:

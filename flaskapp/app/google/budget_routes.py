@@ -20,88 +20,101 @@ def budget_groups():
     Budget Groups Management - Main page for creating and managing campaign budget groups.
     """
     account_id = current_account_id()
-
-    # Fetch all budget groups for this account
-    groups_query = text("""
-        SELECT
-            cbg.id,
-            cbg.name,
-            cbg.description,
-            cbg.target_location,
-            cbg.location_type,
-            cbg.location_radius_miles,
-            cbg.location_criteria_ids,
-            cbg.monthly_budget_cents,
-            cbg.daily_budget_cents,
-            cbg.status,
-            cbg.priority,
-            cbg.auto_pause_on_overspend,
-            cbg.alert_threshold_pct,
-            cbg.created_at,
-            COUNT(cba.campaign_id) as campaign_count
-        FROM campaign_budget_groups cbg
-        LEFT JOIN campaign_budget_assignments cba ON cbg.id = cba.budget_group_id
-        WHERE cbg.account_id = :account_id
-        GROUP BY cbg.id
-        ORDER BY cbg.priority DESC, cbg.name
-    """)
-
-    # Fetch all campaigns for this account with their assignments
-    campaigns_query = text("""
-        SELECT
-            c.id,
-            c.name,
-            c.status,
-            c.daily_budget_cents,
-            c.google_campaign_id,
-            cba.budget_group_id,
-            cbg.name as group_name
-        FROM ads_campaigns c
-        LEFT JOIN campaign_budget_assignments cba ON c.id = cba.campaign_id
-        LEFT JOIN campaign_budget_groups cbg ON cba.budget_group_id = cbg.id
-        WHERE c.account_id = :account_id
-        ORDER BY c.name
-    """)
-
-    # Get current month spend per group
+    budget_groups_list = []
+    campaigns = []
+    assigned_campaigns = []
+    unassigned_campaigns = []
     current_month = date.today().replace(day=1)
-    spend_query = text("""
-        SELECT
-            budget_group_id,
-            total_spend_cents,
-            budget_status
-        FROM campaign_budget_group_spend
-        WHERE period_month = :period_month
-    """)
+    setup_required = False
 
-    with db.engine.connect() as conn:
-        groups_result = conn.execute(groups_query, {"account_id": account_id})
-        budget_groups = [dict(row._mapping) for row in groups_result]
+    try:
+        # Fetch all budget groups for this account
+        groups_query = text("""
+            SELECT
+                cbg.id,
+                cbg.name,
+                cbg.description,
+                cbg.target_location,
+                cbg.location_type,
+                cbg.location_radius_miles,
+                cbg.location_criteria_ids,
+                cbg.monthly_budget_cents,
+                cbg.daily_budget_cents,
+                cbg.status,
+                cbg.priority,
+                cbg.auto_pause_on_overspend,
+                cbg.alert_threshold_pct,
+                cbg.created_at,
+                COUNT(cba.campaign_id) as campaign_count
+            FROM campaign_budget_groups cbg
+            LEFT JOIN campaign_budget_assignments cba ON cbg.id = cba.budget_group_id
+            WHERE cbg.account_id = :account_id
+            GROUP BY cbg.id
+            ORDER BY cbg.priority DESC, cbg.name
+        """)
 
-        campaigns_result = conn.execute(campaigns_query, {"account_id": account_id})
-        campaigns = [dict(row._mapping) for row in campaigns_result]
+        # Fetch all campaigns for this account with their assignments
+        campaigns_query = text("""
+            SELECT
+                c.id,
+                c.name,
+                c.status,
+                c.daily_budget_cents,
+                c.google_campaign_id,
+                cba.budget_group_id,
+                cbg.name as group_name
+            FROM ads_campaigns c
+            LEFT JOIN campaign_budget_assignments cba ON c.id = cba.campaign_id
+            LEFT JOIN campaign_budget_groups cbg ON cba.budget_group_id = cbg.id
+            WHERE c.account_id = :account_id
+            ORDER BY c.name
+        """)
 
-        spend_result = conn.execute(spend_query, {"period_month": current_month})
-        spend_data = {row.budget_group_id: dict(row._mapping) for row in spend_result}
+        # Get current month spend per group
+        spend_query = text("""
+            SELECT
+                budget_group_id,
+                total_spend_cents,
+                budget_status
+            FROM campaign_budget_group_spend
+            WHERE period_month = :period_month
+        """)
 
-    # Enrich groups with spend data
-    for group in budget_groups:
-        spend = spend_data.get(group['id'], {})
-        group['current_spend_cents'] = spend.get('total_spend_cents', 0)
-        group['budget_status'] = spend.get('budget_status', 'active')
-        group['spend_pct'] = (group['current_spend_cents'] / group['monthly_budget_cents'] * 100) if group['monthly_budget_cents'] > 0 else 0
+        with db.engine.connect() as conn:
+            groups_result = conn.execute(groups_query, {"account_id": account_id})
+            budget_groups_list = [dict(row._mapping) for row in groups_result]
 
-    # Separate assigned and unassigned campaigns
-    assigned_campaigns = [c for c in campaigns if c['budget_group_id'] is not None]
-    unassigned_campaigns = [c for c in campaigns if c['budget_group_id'] is None]
+            campaigns_result = conn.execute(campaigns_query, {"account_id": account_id})
+            campaigns = [dict(row._mapping) for row in campaigns_result]
+
+            spend_result = conn.execute(spend_query, {"period_month": current_month})
+            spend_data = {row.budget_group_id: dict(row._mapping) for row in spend_result}
+
+        # Enrich groups with spend data
+        for group in budget_groups_list:
+            spend = spend_data.get(group['id'], {})
+            group['current_spend_cents'] = spend.get('total_spend_cents', 0)
+            group['budget_status'] = spend.get('budget_status', 'active')
+            group['spend_pct'] = (group['current_spend_cents'] / group['monthly_budget_cents'] * 100) if group['monthly_budget_cents'] > 0 else 0
+
+        # Separate assigned and unassigned campaigns
+        assigned_campaigns = [c for c in campaigns if c['budget_group_id'] is not None]
+        unassigned_campaigns = [c for c in campaigns if c['budget_group_id'] is None]
+
+    except Exception as e:
+        # Database tables may not exist yet
+        import logging
+        logging.error(f"Budget groups query failed: {e}")
+        setup_required = True
 
     return render_template(
         "google/budget_groups.html",
-        budget_groups=budget_groups,
+        budget_groups=budget_groups_list,
         campaigns=campaigns,
         assigned_campaigns=assigned_campaigns,
         unassigned_campaigns=unassigned_campaigns,
-        current_month=current_month
+        current_month=current_month,
+        setup_required=setup_required
     )
 
 

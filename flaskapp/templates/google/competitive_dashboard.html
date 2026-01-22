@@ -1,0 +1,394 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'google' %}
+{% block title %}Competitive Intelligence — FieldSprout{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Header -->
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">
+      <i class="fas fa-chess text-purple-600 mr-2"></i>
+      Competitive Intelligence
+    </h1>
+    <p class="mt-2 text-sm text-gray-600">
+      Analyze your competitive landscape from Google Ads Auction Insights
+    </p>
+  </div>
+
+  <!-- Campaign Selector -->
+  <div class="bg-white shadow rounded-lg border border-gray-200 p-6 mb-8">
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Campaign</label>
+        <select id="campaignSelect" class="block w-full rounded-md border-gray-300 shadow-sm">
+          <option value="">Select campaign to analyze...</option>
+          {% for campaign in campaigns %}
+          <option value="{{ campaign.id }}" data-google-id="{{ campaign.google_campaign_id }}">{{ campaign.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Time Period</label>
+        <select id="periodSelect" class="block w-full rounded-md border-gray-300 shadow-sm">
+          <option value="7">Last 7 days</option>
+          <option value="30" selected>Last 30 days</option>
+          <option value="90">Last 90 days</option>
+        </select>
+      </div>
+    </div>
+    <div class="mt-4">
+      <button id="btnFetchInsights" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700">
+        <i class="fas fa-sync-alt mr-2"></i>
+        Fetch Latest Insights
+      </button>
+    </div>
+  </div>
+
+  <!-- Market Overview Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-lg p-6 text-white">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-blue-100 text-sm mb-1">Your Impression Share</p>
+          <p class="text-3xl font-bold" id="yourShare">--</p>
+        </div>
+        <i class="fas fa-chart-pie text-white opacity-20 text-4xl"></i>
+      </div>
+    </div>
+
+    <div class="bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg shadow-lg p-6 text-white">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-purple-100 text-sm mb-1">Your Position</p>
+          <p class="text-3xl font-bold" id="yourPosition">--</p>
+        </div>
+        <i class="fas fa-medal text-white opacity-20 text-4xl"></i>
+      </div>
+    </div>
+
+    <div class="bg-gradient-to-br from-green-500 to-teal-600 rounded-lg shadow-lg p-6 text-white">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-green-100 text-sm mb-1">Active Competitors</p>
+          <p class="text-3xl font-bold" id="numCompetitors">--</p>
+        </div>
+        <i class="fas fa-users text-white opacity-20 text-4xl"></i>
+      </div>
+    </div>
+
+    <div class="bg-gradient-to-br from-orange-500 to-red-600 rounded-lg shadow-lg p-6 text-white">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-orange-100 text-sm mb-1">Critical Threats</p>
+          <p class="text-3xl font-bold" id="numThreats">--</p>
+        </div>
+        <i class="fas fa-exclamation-triangle text-white opacity-20 text-4xl"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Competitive Alerts -->
+  {% if alerts %}
+  <div class="bg-white shadow rounded-lg border border-gray-200 p-6 mb-8">
+    <h2 class="text-xl font-semibold text-gray-900 mb-4">
+      <i class="fas fa-bell text-red-500 mr-2"></i>
+      Active Alerts ({{ alerts|length }})
+    </h2>
+    <div class="space-y-3" id="alertsContainer">
+      {% for alert in alerts %}
+      <div class="border-l-4 p-4 {% if alert.severity == 'critical' %}border-red-500 bg-red-50{% elif alert.severity == 'high' %}border-orange-500 bg-orange-50{% else %}border-yellow-500 bg-yellow-50{% endif %}">
+        <div class="flex justify-between items-start">
+          <div class="flex-1">
+            <h3 class="font-semibold text-gray-900">{{ alert.campaign_name }} - {{ alert.alert_type }}</h3>
+            <p class="text-sm text-gray-700 mt-1">{{ alert.message }}</p>
+            <p class="text-xs text-gray-500 mt-1">{{ alert.alert_date }}</p>
+          </div>
+          <button onclick="acknowledgeAlert({{ alert.id }})" class="ml-4 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md">
+            Dismiss
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Top Competitors Table -->
+  <div class="bg-white shadow rounded-lg border border-gray-200 p-6 mb-8">
+    <h2 class="text-xl font-semibold text-gray-900 mb-4">
+      <i class="fas fa-trophy text-yellow-500 mr-2"></i>
+      Top Competitors
+    </h2>
+    <div id="competitorsContainer">
+      <p class="text-gray-500">Select a campaign and fetch insights to see competitor data.</p>
+    </div>
+  </div>
+
+  <!-- Market Share Chart -->
+  <div class="bg-white shadow rounded-lg border border-gray-200 p-6 mb-8">
+    <h2 class="text-xl font-semibold text-gray-900 mb-4">
+      <i class="fas fa-chart-area text-indigo-500 mr-2"></i>
+      Market Share Analysis
+    </h2>
+    <div id="marketShareContainer">
+      <p class="text-gray-500">Select a campaign to see market share analysis.</p>
+    </div>
+  </div>
+
+  <!-- Competitor Tracking -->
+  <div class="bg-white shadow rounded-lg border border-gray-200 p-6">
+    <h2 class="text-xl font-semibold text-gray-900 mb-4">
+      <i class="fas fa-crosshairs text-green-500 mr-2"></i>
+      Track Competitor
+    </h2>
+    <div class="flex items-end gap-4">
+      <div class="flex-1">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Competitor Domain</label>
+        <input type="text" id="competitorDomain" class="block w-full rounded-md border-gray-300 shadow-sm" placeholder="competitor.com">
+      </div>
+      <button id="btnTrackCompetitor" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
+        <i class="fas fa-binoculars mr-2"></i>
+        Track
+      </button>
+    </div>
+    <div id="trackingResults" class="mt-4 hidden">
+      <!-- Tracking results will be displayed here -->
+    </div>
+  </div>
+</div>
+
+<script nonce="{{ g.csp_nonce }}">
+let selectedCampaignId = null;
+let selectedPeriod = 30;
+
+document.getElementById('campaignSelect').addEventListener('change', function() {
+  selectedCampaignId = this.value;
+  if (selectedCampaignId) {
+    loadTopCompetitors();
+    loadMarketShare();
+  }
+});
+
+document.getElementById('periodSelect').addEventListener('change', function() {
+  selectedPeriod = parseInt(this.value);
+  if (selectedCampaignId) {
+    loadTopCompetitors();
+    loadMarketShare();
+  }
+});
+
+document.getElementById('btnFetchInsights').addEventListener('click', function() {
+  if (!selectedCampaignId) {
+    alert('Please select a campaign first');
+    return;
+  }
+  fetchInsights();
+});
+
+document.getElementById('btnTrackCompetitor').addEventListener('click', function() {
+  const domain = document.getElementById('competitorDomain').value.trim();
+  if (!domain || !selectedCampaignId) {
+    alert('Please select a campaign and enter a competitor domain');
+    return;
+  }
+  trackCompetitor(domain);
+});
+
+async function fetchInsights() {
+  const btn = document.getElementById('btnFetchInsights');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Fetching...';
+
+  try {
+    const response = await fetch('/account/google/ads/competitive/api/fetch-insights', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        campaign_id: selectedCampaignId,
+        lookback_days: selectedPeriod
+      })
+    });
+    const data = await response.json();
+
+    if (data.success) {
+      alert('Insights fetched successfully! Refreshing data...');
+      loadTopCompetitors();
+      loadMarketShare();
+    } else {
+      alert('Error: ' + (data.error || 'Failed to fetch insights'));
+    }
+  } catch (error) {
+    console.error('Error fetching insights:', error);
+    alert('Error fetching insights: ' + error.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Fetch Latest Insights';
+  }
+}
+
+async function loadTopCompetitors() {
+  try {
+    const response = await fetch(`/account/google/ads/competitive/api/top-competitors?days=${selectedPeriod}`);
+    const data = await response.json();
+
+    if (data.success && data.competitors.length > 0) {
+      document.getElementById('numCompetitors').textContent = data.competitors.length;
+
+      const threats = data.competitors.filter(c => c.avg_position_above > 0.3);
+      document.getElementById('numThreats').textContent = threats.length;
+
+      let html = `
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Competitor</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Impression Share</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Position Above Rate</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Overlap Rate</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Campaigns</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Seen</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+      `;
+
+      data.competitors.forEach(comp => {
+        const shareClass = comp.avg_impression_share > 0.3 ? 'text-red-600 font-semibold' :
+                          comp.avg_impression_share > 0.2 ? 'text-orange-600 font-semibold' : 'text-gray-900';
+        const aboveClass = comp.avg_position_above > 0.3 ? 'text-red-600 font-semibold' :
+                          comp.avg_position_above > 0.2 ? 'text-orange-600 font-semibold' : 'text-gray-900';
+
+        html += `
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 whitespace-nowrap font-medium text-gray-900">${comp.competitor_domain}</td>
+            <td class="px-4 py-3 whitespace-nowrap ${shareClass}">${(comp.avg_impression_share * 100).toFixed(1)}%</td>
+            <td class="px-4 py-3 whitespace-nowrap ${aboveClass}">${(comp.avg_position_above * 100).toFixed(1)}%</td>
+            <td class="px-4 py-3 whitespace-nowrap">${(comp.avg_overlap * 100).toFixed(1)}%</td>
+            <td class="px-4 py-3 whitespace-nowrap">${comp.campaigns_competing}</td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${comp.last_seen}</td>
+          </tr>
+        `;
+      });
+
+      html += '</tbody></table>';
+      document.getElementById('competitorsContainer').innerHTML = html;
+    } else {
+      document.getElementById('competitorsContainer').innerHTML = '<p class="text-gray-500">No competitor data available. Try fetching insights first.</p>';
+    }
+  } catch (error) {
+    console.error('Error loading competitors:', error);
+    document.getElementById('competitorsContainer').innerHTML = '<p class="text-red-500">Error loading competitor data.</p>';
+  }
+}
+
+async function loadMarketShare() {
+  try {
+    const response = await fetch(`/account/google/ads/competitive/api/market-share?campaign_id=${selectedCampaignId}&days=${selectedPeriod}`);
+    const data = await response.json();
+
+    if (data.success) {
+      document.getElementById('yourShare').textContent = data.your_impression_share.toFixed(1) + '%';
+      document.getElementById('yourPosition').textContent = '#' + (data.competitor_count > 0 ? Math.ceil(data.competitor_count * (1 - data.your_market_position_pct / 100)) + 1 : 1);
+
+      const container = document.getElementById('marketShareContainer');
+      container.innerHTML = `
+        <div class="grid grid-cols-3 gap-6">
+          <div class="text-center p-4 bg-blue-50 rounded-lg">
+            <p class="text-sm text-gray-600">Your Share</p>
+            <p class="text-2xl font-bold text-blue-600">${data.your_impression_share.toFixed(1)}%</p>
+          </div>
+          <div class="text-center p-4 bg-purple-50 rounded-lg">
+            <p class="text-sm text-gray-600">Competitors' Total</p>
+            <p class="text-2xl font-bold text-purple-600">${data.competitors_total_share.toFixed(1)}%</p>
+          </div>
+          <div class="text-center p-4 bg-green-50 rounded-lg">
+            <p class="text-sm text-gray-600">Market Concentration</p>
+            <p class="text-2xl font-bold text-green-600 capitalize">${data.market_concentration}</p>
+          </div>
+        </div>
+        <div class="mt-4">
+          <div class="h-4 bg-gray-200 rounded-full overflow-hidden">
+            <div class="h-full bg-blue-600" style="width: ${data.your_market_position_pct}%"></div>
+          </div>
+          <p class="text-sm text-gray-500 mt-2">Your relative market position: ${data.your_market_position_pct.toFixed(1)}%</p>
+        </div>
+      `;
+    }
+  } catch (error) {
+    console.error('Error loading market share:', error);
+  }
+}
+
+async function trackCompetitor(domain) {
+  const container = document.getElementById('trackingResults');
+  container.classList.remove('hidden');
+  container.innerHTML = '<p class="text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading tracking data...</p>';
+
+  try {
+    const response = await fetch('/account/google/ads/competitive/api/track-competitor', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        campaign_id: selectedCampaignId,
+        competitor_domain: domain,
+        days: selectedPeriod
+      })
+    });
+    const data = await response.json();
+
+    if (data.success) {
+      container.innerHTML = `
+        <div class="bg-gray-50 rounded-lg p-4">
+          <h3 class="font-semibold text-gray-900 mb-3">Tracking: ${domain}</h3>
+          <div class="grid grid-cols-4 gap-4 text-sm">
+            <div>
+              <p class="text-gray-500">Avg Impression Share</p>
+              <p class="font-semibold">${(data.avg_impression_share * 100).toFixed(1)}%</p>
+            </div>
+            <div>
+              <p class="text-gray-500">Trend</p>
+              <p class="font-semibold ${data.trend > 0 ? 'text-red-600' : 'text-green-600'}">
+                ${data.trend > 0 ? '+' : ''}${(data.trend * 100).toFixed(1)}%
+              </p>
+            </div>
+            <div>
+              <p class="text-gray-500">Position Above Rate</p>
+              <p class="font-semibold">${(data.position_above_rate * 100).toFixed(1)}%</p>
+            </div>
+            <div>
+              <p class="text-gray-500">Data Points</p>
+              <p class="font-semibold">${data.data_points}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      container.innerHTML = `<p class="text-red-500">Error: ${data.error || 'Could not track competitor'}</p>`;
+    }
+  } catch (error) {
+    console.error('Error tracking competitor:', error);
+    container.innerHTML = `<p class="text-red-500">Error tracking competitor: ${error.message}</p>`;
+  }
+}
+
+async function acknowledgeAlert(alertId) {
+  try {
+    const response = await fetch(`/account/google/ads/competitive/api/alerts/${alertId}/acknowledge`, {
+      method: 'POST'
+    });
+    const data = await response.json();
+
+    if (data.success) {
+      location.reload();
+    }
+  } catch (error) {
+    console.error('Error acknowledging alert:', error);
+  }
+}
+
+// Auto-load top competitors on page load
+document.addEventListener('DOMContentLoaded', function() {
+  loadTopCompetitors();
+});
+</script>
+{% endblock %}

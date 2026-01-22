@@ -31,19 +31,29 @@ def forecasting_dashboard():
     """
     Budget Forecasting Dashboard - View forecasts, trends, and recommendations.
     """
+    from flask import session
     account_id = current_account_id()
 
-    # Get campaigns
-    campaigns_query = text("""
-        SELECT id, name, daily_budget_cents, google_campaign_id
-        FROM ads_campaigns
-        WHERE account_id = :account_id
-        ORDER BY name
-    """)
+    # Get campaigns from session state (synced from Google Ads)
+    campaigns = []
+    ads_state_key = f"ads_state_{account_id}"
 
-    with db.engine.connect() as conn:
-        result = conn.execute(campaigns_query, {"account_id": account_id})
-        campaigns = [dict(row._mapping) for row in result]
+    if ads_state_key in session and session[ads_state_key]:
+        ads_data = session[ads_state_key]
+        raw_campaigns = ads_data.get('campaigns', [])
+
+        # Transform campaign data to the expected format
+        for campaign in raw_campaigns:
+            campaigns.append({
+                'id': campaign.get('id'),
+                'name': campaign.get('name'),
+                'daily_budget_cents': int(float(campaign.get('daily_budget', 0)) * 100),
+                'google_campaign_id': campaign.get('google_campaign_id') or campaign.get('id'),
+                'status': campaign.get('status', 'unknown')
+            })
+
+        # Sort by name
+        campaigns.sort(key=lambda c: c.get('name', '').lower())
 
     return render_template(
         "google/forecasting_dashboard.html",

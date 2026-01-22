@@ -3625,11 +3625,26 @@ def ads_opportunities():
         f"manual_task_titles={[t.get('title') for t in analysis.get('manual_tasks', [])]}"
     )
 
+    # Fetch recent undoable AI actions for the "Recent Changes" section
+    recent_actions = []
+    try:
+        from app.models_ai_actions import AIAction
+        recent_actions = AIAction.query.filter_by(
+            account_id=aid,
+            status='executed'
+        ).filter(
+            AIAction.can_undo == True,
+            AIAction.undone_at == None
+        ).order_by(AIAction.executed_at.desc()).limit(5).all()
+    except Exception as e:
+        current_app.logger.warning(f"Could not fetch recent AI actions: {e}")
+
     return render_template(
         "google/ads_opportunities.html",
         connected=connected,
         ads_data=ads_data,
         analysis=analysis,
+        recent_actions=recent_actions,
         epn=request.endpoint,
         is_demo=False,
     )

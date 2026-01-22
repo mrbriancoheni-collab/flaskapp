@@ -307,7 +307,7 @@
 </div>
 
 {% if category %}
-<script>
+<script nonce="{{ g.csp_nonce }}">
 // Add topic functionality
 document.getElementById('addTopicBtn')?.addEventListener('click', async function() {
   const topicIdea = document.getElementById('newTopicIdea').value.trim();

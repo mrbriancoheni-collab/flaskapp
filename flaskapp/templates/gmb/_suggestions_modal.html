@@ -8,6 +8,7 @@
 
   {% if has_suggestions %}
   <form method="post" action="{{ url_for('gmb_bp.apply_suggestions') }}" class="gmb-modal__body">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <!-- TITLE -->
     {% if suggestions.title %}
       <section class="gmb-card">
@@ -128,7 +129,7 @@
   @media (max-width: 640px) { .gmb-grid { grid-template-columns: 1fr; } }
 </style>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
   (function () {
     const modal = document.getElementById('gmbSuggestionsModal');
     if (!modal) return;

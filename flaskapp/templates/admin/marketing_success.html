@@ -11,6 +11,7 @@
       <p class="mt-1 text-sm text-gray-600">Aggregate customer savings and additional leads generated</p>
     </div>
     <form method="post" action="{{ url_for('admin_bp.update_all_customer_impacts_route') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="btn-primary">
         <i class="fa-solid fa-rotate"></i> Update All Metrics
       </button>

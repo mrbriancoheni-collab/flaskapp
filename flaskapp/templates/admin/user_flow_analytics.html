@@ -379,7 +379,7 @@
 
 <!-- Chart.js Script -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script>
+<script nonce="{{ g.csp_nonce }}">
 // Parse data from backend
 const pageviewsData = {{ pageviews_over_time_json|safe }};
 const deviceTrendsData = {{ device_trends_json|safe }};

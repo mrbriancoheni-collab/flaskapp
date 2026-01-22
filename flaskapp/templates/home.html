@@ -1719,7 +1719,7 @@
 {% endblock %}
 
 {% block body_extra %}
-<script>
+<script nonce="{{ g.csp_nonce }}">
 (function() {
   // Calculate weekly signup count that climbs from 1 to 19 throughout the week
   // Sunday morning = 1, Saturday night = 19

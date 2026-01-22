@@ -318,7 +318,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
 function cancelSubscription(subscriptionId) {
   document.getElementById('cancel-sub-id').value = subscriptionId;
   document.getElementById('cancel-modal').classList.remove('hidden');

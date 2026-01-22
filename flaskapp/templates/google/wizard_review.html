@@ -388,7 +388,7 @@
     {% endif %}
 </div>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
 document.getElementById('applyForm').addEventListener('submit', function(e) {
     e.preventDefault();
 

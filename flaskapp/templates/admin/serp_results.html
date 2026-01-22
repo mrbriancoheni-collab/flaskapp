@@ -130,7 +130,7 @@
 </div>
 
 {% if not auto_added %}
-<script>
+<script nonce="{{ g.csp_nonce }}">
 // Select all functionality
 document.getElementById('select-all').addEventListener('change', function() {
   const checkboxes = document.querySelectorAll('.lead-checkbox');

@@ -197,7 +197,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
   const GSC = {
     sitesUrl: "{{ url_for('google_bp.gsc_sites_json') }}",
     selectUrl: "{{ url_for('google_bp.gsc_select_site') }}",

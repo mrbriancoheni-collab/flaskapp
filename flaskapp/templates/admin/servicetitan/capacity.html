@@ -111,6 +111,7 @@
       <i class="fa-solid fa-calendar-times text-gray-300 text-5xl mb-4"></i>
       <p class="text-gray-600 mb-4">No capacity data available yet.</p>
       <form method="post" action="{{ url_for('servicetitan_bp.sync_capacity') }}" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="days_ahead" value="30">
         <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
           <i class="fa-solid fa-calculator mr-2"></i> Calculate Capacity Now

@@ -7,7 +7,7 @@
   <title>{% block title %}{{ app_name }} – App{% endblock %}</title>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HZBKX56R65"></script>
-<script>
+<script nonce="{{ g.csp_nonce }}">
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
@@ -117,7 +117,7 @@
   <script defer src="{{ url_for('static', filename='js/app_shell.js') }}"></script>
   <script defer src="{{ url_for('static', filename='js/onboarding.js') }}"></script>
 
-  <script>
+  <script nonce="{{ g.csp_nonce }}">
   (function(){
     function openModal(){var m=document.getElementById('onboard-modal'); if(!m) return; m.classList.remove('hidden'); m.classList.add('flex');}
     function closeModal(){var m=document.getElementById('onboard-modal'); if(!m) return; m.classList.add('hidden'); m.classList.remove('flex');}
@@ -132,7 +132,7 @@
   </script>
 
   <!-- Google Tag Manager -->
-  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-T7TTGMPH');</script>
+  <script nonce="{{ g.csp_nonce }}">(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-T7TTGMPH');</script>
   <!-- End GTM -->
 </head>
 
@@ -754,7 +754,7 @@
     </div>
   </footer>
 
-  <script>
+  <script nonce="{{ g.csp_nonce }}">
     (function(){
       var btn=document.getElementById('mobile-menu-btn');
       var menu=document.getElementById('mobile-menu');
@@ -800,7 +800,7 @@
   </script>
 
   <!-- Toast notifications system -->
-  <script>
+  <script nonce="{{ g.csp_nonce }}">
     (function() {
       class ToastManager {
         constructor() {
@@ -879,7 +879,7 @@
   </script>
 
   <!-- Image lazy loading -->
-  <script>
+  <script nonce="{{ g.csp_nonce }}">
     (function() {
       // Add lazy loading to all images except those with 'no-lazy' class or above-fold images
       document.addEventListener('DOMContentLoaded', function() {
@@ -895,7 +895,7 @@
   </script>
 
   <!-- Command Palette -->
-  <script>
+  <script nonce="{{ g.csp_nonce }}">
     (function() {
       class CommandPalette {
         constructor() {
@@ -1069,7 +1069,7 @@
   </script>
 
   <!-- Service Worker Registration -->
-  <script>
+  <script nonce="{{ g.csp_nonce }}">
     (function() {
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -1099,7 +1099,7 @@
   </script>
 
   <!-- PWA Install Prompt -->
-  <script>
+  <script nonce="{{ g.csp_nonce }}">
     (function() {
       let deferredPrompt;
 
@@ -1164,7 +1164,7 @@
   </script>
 
   <!-- Keyboard Shortcuts Help Modal -->
-  <script>
+  <script nonce="{{ g.csp_nonce }}">
     (function() {
       // Create keyboard shortcuts modal
       const modal = document.createElement('div');
@@ -1262,7 +1262,7 @@
   </script>
 
   <!-- Session Timeout Warning -->
-  <script>
+  <script nonce="{{ g.csp_nonce }}">
     (function() {
       class SessionTimeout {
         constructor(timeoutMinutes = 30, warningMinutes = 5) {
@@ -1343,7 +1343,7 @@
     })();
   </script>
 
-  <script>
+  <script nonce="{{ g.csp_nonce }}">
   document.addEventListener('DOMContentLoaded', function () {
     var t=document.querySelector('meta[name="csrf-token"]')?.content;
     if(!t) return;
@@ -1355,7 +1355,7 @@
     });
   });
   </script>
-<script>
+<script nonce="{{ g.csp_nonce }}">
 (function(){
   function csrf() {
     var m = document.querySelector('meta[name="csrf-token"]');
@@ -1434,7 +1434,7 @@
   <!-- Page View Tracking -->
   {% include 'includes/page_view_tracking.html' %}
   <!-- Navigation Section Toggle -->
-  <script>
+  <script nonce="{{ g.csp_nonce }}">
     // Toggle navigation section function
     function toggleNavSection(sectionId) {
       console.log('[NAV] Toggling section:', sectionId);

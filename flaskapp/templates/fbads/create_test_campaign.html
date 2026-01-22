@@ -165,7 +165,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ g.csp_nonce }}">
 // Form validation
 document.querySelector('form').addEventListener('submit', function(e) {
     const campaignName = document.getElementById('campaign_name').value.trim();

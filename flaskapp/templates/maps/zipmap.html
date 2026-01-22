@@ -14,7 +14,7 @@
 </form>
 
 <div id="zipmap" class="h-[70vh] rounded border"></div>
-<script>
+<script nonce="{{ g.csp_nonce }}">
   const zips = {{ zips|tojson }};
   // TODO: draw zip coverage (centroids or polygons).
 </script>

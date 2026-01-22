@@ -481,7 +481,7 @@ def create_app():
             "img-src 'self' data: https:; "
             "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
             "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
-            f"script-src 'self' 'unsafe-inline' 'nonce-{nonce}' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com "
+            f"script-src 'self' 'nonce-{nonce}' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com "
             "https://www.googletagmanager.com https://www.google-analytics.com https://js.stripe.com; "
             "connect-src 'self' https://api.stripe.com https://www.google-analytics.com "
             "https://www.googletagmanager.com https://www.google.com https://*.google.com; "

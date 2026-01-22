@@ -6,6 +6,7 @@
 <div class="mb-3 space-x-2">
   <a class="px-3 py-2 rounded border" href="{{ url_for('fbads_bp.index') }}">Back</a>
   <form method="post" action="{{ url_for('fbads_bp.optimize') }}" class="inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button class="px-3 py-2 rounded text-white bg-[var(--brand)]">Generate AI Suggestions</button>
   </form>
 </div>
@@ -28,6 +29,7 @@
     <h2 class="font-semibold mb-2">AI Suggestions</h2>
     {% if suggestions %}
       <form method="post" action="{{ url_for('fbads_bp.optimize_apply') }}" class="space-y-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div>
           <label class="block text-sm mb-1">About (1â€“2 sentences)</label>
           <textarea name="about" rows="2" class="w-full border rounded px-3 py-2">{{ suggestions.about }}</textarea>

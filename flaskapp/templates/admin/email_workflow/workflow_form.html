@@ -19,6 +19,7 @@
 </div>
 
 <form method="post" class="space-y-6">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <!-- Basic Settings -->
   <div class="bg-white border rounded-xl p-6">
     <h2 class="text-lg font-semibold mb-4">Workflow Settings</h2>

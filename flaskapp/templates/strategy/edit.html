@@ -317,7 +317,7 @@
     </div>
   </div>
 
-  <script>
+  <script nonce="{{ g.csp_nonce }}">
     function addGoal() {
       const wrap = document.getElementById('goals');
       const row = document.createElement('div');

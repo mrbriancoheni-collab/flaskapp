@@ -392,7 +392,10 @@ async function saveGroup() {
   try {
     const response = await fetch(url, {
       method: method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      },
       body: JSON.stringify(data)
     });
 
@@ -416,7 +419,10 @@ async function deleteGroup(groupId) {
 
   try {
     const response = await fetch(`/account/google/ads/budget/api/groups/${groupId}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: {
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      }
     });
 
     const result = await response.json();
@@ -458,7 +464,10 @@ async function saveAssignments() {
   try {
     const response = await fetch(`/account/google/ads/budget/api/groups/${groupId}/assign`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      },
       body: JSON.stringify({ campaign_ids: selectedCampaigns })
     });
 
@@ -482,7 +491,10 @@ async function unassignCampaign(campaignId) {
 
   try {
     const response = await fetch(`/account/google/ads/budget/api/campaigns/${campaignId}/unassign`, {
-      method: 'POST'
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      }
     });
 
     const result = await response.json();

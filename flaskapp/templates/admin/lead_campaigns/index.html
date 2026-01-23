@@ -106,6 +106,33 @@
                 </div>
             </div>
         </div>
+
+        <!-- Service Configuration Status -->
+        {% if automation_progress.services_configured %}
+        <div class="mt-4 bg-white bg-opacity-10 rounded-lg p-3 text-sm">
+            <div class="font-semibold mb-2">Service Configuration:</div>
+            <div class="flex gap-4 flex-wrap">
+                <span class="{% if automation_progress.services_configured.serpapi %}text-green-200{% else %}text-red-300{% endif %}">
+                    <i class="fa-solid {% if automation_progress.services_configured.serpapi %}fa-check-circle{% else %}fa-times-circle{% endif %} mr-1"></i>
+                    SerpAPI (scraping)
+                </span>
+                <span class="{% if automation_progress.services_configured.brevo %}text-green-200{% else %}text-red-300{% endif %}">
+                    <i class="fa-solid {% if automation_progress.services_configured.brevo %}fa-check-circle{% else %}fa-times-circle{% endif %} mr-1"></i>
+                    Brevo (email)
+                </span>
+                <span class="{% if automation_progress.services_configured.hunter %}text-green-200{% else %}text-yellow-200{% endif %}">
+                    <i class="fa-solid {% if automation_progress.services_configured.hunter %}fa-check-circle{% else %}fa-exclamation-circle{% endif %} mr-1"></i>
+                    Hunter (optional)
+                </span>
+            </div>
+            {% if not automation_progress.all_services_ready %}
+            <div class="mt-2 text-red-200 text-xs">
+                <i class="fa-solid fa-warning mr-1"></i>
+                Required API keys missing. Set SERPAPI_API_KEY and BREVO_API_KEY environment variables.
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
 
     {% if campaign_stats %}

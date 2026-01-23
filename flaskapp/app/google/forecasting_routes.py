@@ -32,32 +32,46 @@ def forecasting_dashboard():
     Budget Forecasting Dashboard - View forecasts, trends, and recommendations.
     """
     from flask import session
+    import logging
     account_id = current_account_id()
 
     # Get campaigns from session state (synced from Google Ads)
     campaigns = []
     ads_state_key = f"ads_state_{account_id}"
+    is_connected = False
+    customer_id = None
 
     if ads_state_key in session and session[ads_state_key]:
         ads_data = session[ads_state_key]
         raw_campaigns = ads_data.get('campaigns', [])
+        customer_id = ads_data.get('account_name') or ads_data.get('customer_id')
+        is_connected = ads_data.get('__source') == 'live' or len(raw_campaigns) > 0
 
         # Transform campaign data to the expected format
         for campaign in raw_campaigns:
             campaigns.append({
                 'id': campaign.get('id'),
                 'name': campaign.get('name'),
-                'daily_budget_cents': int(float(campaign.get('daily_budget', 0)) * 100),
+                'daily_budget_cents': int(float(campaign.get('daily_budget') or 0) * 100),
                 'google_campaign_id': campaign.get('google_campaign_id') or campaign.get('id'),
-                'status': campaign.get('status', 'unknown')
+                'status': campaign.get('status', 'unknown'),
+                'cost_30d': campaign.get('cost_30d', 0),
+                'conversions': campaign.get('conversions', 0),
+                'clicks': campaign.get('clicks', 0),
+                'impressions': campaign.get('impressions', 0)
             })
 
         # Sort by name
         campaigns.sort(key=lambda c: c.get('name', '').lower())
+        logging.info(f"Forecasting: Found {len(campaigns)} campaigns from session for account {account_id}")
+    else:
+        logging.warning(f"Forecasting: No ads state found in session for account {account_id}")
 
     return render_template(
         "google/forecasting_dashboard.html",
-        campaigns=campaigns
+        campaigns=campaigns,
+        is_connected=is_connected,
+        customer_id=customer_id
     )
 
 

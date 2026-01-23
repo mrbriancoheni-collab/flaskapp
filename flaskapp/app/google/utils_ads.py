@@ -156,6 +156,10 @@ def ensure_account_ads_columns() -> None:
 
 def resolve_ads_context(aid: int) -> dict:
     ensure_account_ads_columns()
+    cust = None
+    mgr = None
+
+    # Try to get from database first
     try:
         with db.engine.connect() as conn:
             row = (
@@ -171,15 +175,35 @@ def resolve_ads_context(aid: int) -> dict:
                     {"aid": aid},
                 ).mappings().first()
             )
-            if not row:
-                return {"customer_id": None, "login_customer_id": _default_manager_env()}
-
-            cust = row.get("google_ads_customer_id")
-            mgr = row.get("google_ads_manager_id") or _default_manager_env()
-            return {"customer_id": cust, "login_customer_id": mgr}
+            if row:
+                cust = row.get("google_ads_customer_id")
+                mgr = row.get("google_ads_manager_id")
     except SQLAlchemyError as e:
         current_app.logger.warning("resolve_ads_context: DB error: %s", e)
-        return {"customer_id": None, "login_customer_id": _default_manager_env()}
+
+    # If not found in database, try session state
+    if not cust:
+        try:
+            from flask import session
+            ads_state_key = f"ads_state_{aid}"
+            if ads_state_key in session and session[ads_state_key]:
+                ads_data = session[ads_state_key]
+                # customer_id is stored as 'account_name' in the session data
+                account_name = ads_data.get("account_name") or ads_data.get("customer_id")
+                if account_name:
+                    # Make sure it's just digits (customer ID format)
+                    cleaned = str(account_name).replace("-", "")
+                    if cleaned.isdigit():
+                        cust = cleaned
+                        current_app.logger.info(f"Got customer_id from session state: {cust}")
+        except Exception as e:
+            current_app.logger.warning(f"resolve_ads_context: session check failed: {e}")
+
+    # If we found a customer_id in session but not in DB, save it
+    if cust and not mgr:
+        mgr = _default_manager_env()
+
+    return {"customer_id": cust, "login_customer_id": mgr or _default_manager_env()}
 
 
 def save_customer_id(aid: int, customer_id: str | int) -> None:
@@ -515,18 +539,37 @@ def fetch_account_performance_stats(
         access_token: Optional access token (will resolve if not provided)
 
     Returns:
-        Dictionary with performance metrics or None if error/not connected
+        Dictionary with performance metrics. Returns empty data structure on error.
     """
+    # Default empty result structure
+    empty_result = {
+        "impressions": 0,
+        "clicks": 0,
+        "ctr": 0,
+        "cost": 0,
+        "conversions": 0,
+        "all_conversions": 0,
+        "conversions_value": 0,
+        "avg_cpc": 0,
+        "conversion_rate": 0,
+        "cost_per_conversion": 0,
+        "roas": 0,
+        "days": days,
+        "has_data": False
+    }
+
     try:
         ctx = resolve_ads_context(aid)
         customer_id = ctx["customer_id"]
         if not customer_id:
-            return None
+            current_app.logger.warning(f"No customer_id found for account {aid}")
+            return empty_result
 
         login_customer_id = ctx["login_customer_id"]
         tok = access_token or get_stored_access_token(aid, ("ads", "lsa"))
         if not tok:
-            return None
+            current_app.logger.warning(f"No access token found for account {aid}")
+            return empty_result
 
         # Query for account-level metrics
         query = f"""
@@ -594,4 +637,4 @@ def fetch_account_performance_stats(
 
     except Exception as e:
         current_app.logger.error(f"Error fetching account performance stats: {e}")
-        return None
+        return empty_result

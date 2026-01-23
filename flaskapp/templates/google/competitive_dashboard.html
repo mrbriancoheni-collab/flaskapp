@@ -15,6 +15,27 @@
     </p>
   </div>
 
+  {% if setup_required or not campaigns %}
+  <!-- Setup Required Message -->
+  <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+    <div class="flex items-start">
+      <i class="fas fa-info-circle text-blue-600 text-xl mr-4 mt-1"></i>
+      <div>
+        <h3 class="text-lg font-semibold text-blue-900">Connect Google Ads to Get Started</h3>
+        <p class="text-blue-800 mt-2">
+          To analyze your competitive landscape, you need to connect your Google Ads account and sync your campaigns first.
+        </p>
+        <div class="mt-4">
+          <a href="{{ url_for('google_bp.ads_dashboard') }}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+            <i class="fas fa-plug mr-2"></i>
+            Go to Google Ads Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+
   <!-- Campaign Selector -->
   <div class="bg-white shadow rounded-lg border border-gray-200 p-6 mb-8">
     <div class="grid grid-cols-2 gap-4">
@@ -155,9 +176,18 @@
       <!-- Tracking results will be displayed here -->
     </div>
   </div>
+  {% endif %}
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function getCsrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  if (meta && meta.content) return meta.content;
+  const inp = document.querySelector('input[name="csrf_token"]');
+  if (inp && inp.value) return inp.value;
+  return '';
+}
+
 let selectedCampaignId = null;
 let selectedPeriod = 30;
 
@@ -200,9 +230,14 @@ async function fetchInsights() {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Fetching...';
 
   try {
+    const token = getCsrfToken();
     const response = await fetch('/account/google/ads/competitive/api/fetch-insights', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': token,
+        'X-CSRF-Token': token
+      },
       body: JSON.stringify({
         campaign_id: selectedCampaignId,
         lookback_days: selectedPeriod
@@ -325,9 +360,14 @@ async function trackCompetitor(domain) {
   container.innerHTML = '<p class="text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading tracking data...</p>';
 
   try {
+    const token = getCsrfToken();
     const response = await fetch('/account/google/ads/competitive/api/track-competitor', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': token,
+        'X-CSRF-Token': token
+      },
       body: JSON.stringify({
         campaign_id: selectedCampaignId,
         competitor_domain: domain,
@@ -373,8 +413,13 @@ async function trackCompetitor(domain) {
 
 async function acknowledgeAlert(alertId) {
   try {
+    const token = getCsrfToken();
     const response = await fetch(`/account/google/ads/competitive/api/alerts/${alertId}/acknowledge`, {
-      method: 'POST'
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': token,
+        'X-CSRF-Token': token
+      }
     });
     const data = await response.json();
 

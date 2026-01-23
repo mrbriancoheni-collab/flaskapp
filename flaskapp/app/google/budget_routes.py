@@ -102,10 +102,32 @@ def budget_groups():
         unassigned_campaigns = [c for c in campaigns if c['budget_group_id'] is None]
 
     except Exception as e:
-        # Database tables may not exist yet
+        # Database tables may not exist yet - try to get campaigns from session
         import logging
         logging.error(f"Budget groups query failed: {e}")
-        setup_required = True
+
+        # Try to get campaigns from Google Ads session state
+        try:
+            from app.google import _get_ads_state, _is_connected
+            is_connected = _is_connected(account_id, "ads")
+            if is_connected:
+                ads_data = _get_ads_state(account_id)
+                raw_campaigns = ads_data.get('campaigns', [])
+                for campaign in raw_campaigns:
+                    campaigns.append({
+                        'id': campaign.get('id'),
+                        'name': campaign.get('name'),
+                        'status': campaign.get('status', 'unknown'),
+                        'daily_budget_cents': int(float(campaign.get('daily_budget') or 0) * 100),
+                        'google_campaign_id': campaign.get('id'),
+                        'budget_group_id': None,
+                        'group_name': None
+                    })
+                unassigned_campaigns = campaigns
+                logging.info(f"Budget: Loaded {len(campaigns)} campaigns from session for account {account_id}")
+        except Exception as session_err:
+            logging.warning(f"Could not load campaigns from session: {session_err}")
+            setup_required = True
 
     return render_template(
         "google/budget_groups.html",

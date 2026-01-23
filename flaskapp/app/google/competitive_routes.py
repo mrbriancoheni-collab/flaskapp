@@ -46,21 +46,56 @@ def competitive_dashboard():
     alerts = []
     setup_required = False
 
-    # Try to get campaigns from session first (most reliable)
-    ads_state_key = f"ads_state_{account_id}"
-    if ads_state_key in session and session[ads_state_key]:
-        ads_data = session[ads_state_key]
-        raw_campaigns = ads_data.get('campaigns', [])
-        for campaign in raw_campaigns:
-            campaigns.append({
-                'id': campaign.get('id'),
-                'name': campaign.get('name'),
-                'daily_budget_cents': int(float(campaign.get('daily_budget', 0)) * 100),
-                'google_campaign_id': campaign.get('google_campaign_id') or campaign.get('id'),
-                'google_customer_id': ads_data.get('customer_id', ''),
-                'status': campaign.get('status', 'unknown')
-            })
-        campaigns.sort(key=lambda c: c.get('name', '').lower())
+    # Import the function that fetches and caches ads data
+    try:
+        from app.google import _get_ads_state, _is_connected
+    except ImportError:
+        logging.error("Could not import _get_ads_state from app.google")
+        _get_ads_state = None
+        _is_connected = None
+
+    # Check if user is connected to Google Ads
+    is_connected = False
+    if _is_connected:
+        try:
+            is_connected = _is_connected(account_id, "ads")
+        except Exception as e:
+            logging.warning(f"Error checking connection: {e}")
+
+    # Use _get_ads_state to fetch/cache the data (this populates the session)
+    if _get_ads_state and is_connected:
+        try:
+            ads_data = _get_ads_state(account_id)
+            raw_campaigns = ads_data.get('campaigns', [])
+            for campaign in raw_campaigns:
+                campaigns.append({
+                    'id': campaign.get('id'),
+                    'name': campaign.get('name'),
+                    'daily_budget_cents': int(float(campaign.get('daily_budget') or 0) * 100),
+                    'google_campaign_id': campaign.get('google_campaign_id') or campaign.get('id'),
+                    'google_customer_id': ads_data.get('account_name', ''),
+                    'status': campaign.get('status', 'unknown')
+                })
+            campaigns.sort(key=lambda c: c.get('name', '').lower())
+            logging.info(f"Competitive: Found {len(campaigns)} campaigns for account {account_id}")
+        except Exception as e:
+            logging.error(f"Error fetching ads state: {e}")
+    else:
+        # Fallback to session if _get_ads_state not available
+        ads_state_key = f"ads_state_{account_id}"
+        if ads_state_key in session and session[ads_state_key]:
+            ads_data = session[ads_state_key]
+            raw_campaigns = ads_data.get('campaigns', [])
+            for campaign in raw_campaigns:
+                campaigns.append({
+                    'id': campaign.get('id'),
+                    'name': campaign.get('name'),
+                    'daily_budget_cents': int(float(campaign.get('daily_budget') or 0) * 100),
+                    'google_campaign_id': campaign.get('google_campaign_id') or campaign.get('id'),
+                    'google_customer_id': ads_data.get('customer_id', ''),
+                    'status': campaign.get('status', 'unknown')
+                })
+            campaigns.sort(key=lambda c: c.get('name', '').lower())
 
     # If no session campaigns, try database
     if not campaigns:

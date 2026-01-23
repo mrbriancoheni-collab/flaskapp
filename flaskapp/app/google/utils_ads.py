@@ -2,14 +2,62 @@
 from __future__ import annotations
 
 import os
+import time
 from typing import Optional, Sequence, List
 
 import requests
+from requests.exceptions import RequestException, Timeout, ConnectionError as RequestsConnectionError
 from flask import current_app
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db
+
+
+# Retry configuration for API calls
+MAX_RETRIES = 3
+RETRY_BACKOFF_BASE = 2  # seconds
+RETRY_BACKOFF_MAX = 16  # max backoff seconds
+
+
+def _retry_with_backoff(func, max_retries: int = MAX_RETRIES, *args, **kwargs):
+    """
+    Execute a function with exponential backoff retry logic.
+
+    Args:
+        func: The function to execute
+        max_retries: Maximum number of retry attempts
+        *args, **kwargs: Arguments to pass to the function
+
+    Returns:
+        The result of the function
+
+    Raises:
+        The last exception if all retries fail
+    """
+    last_exception = None
+
+    for attempt in range(max_retries + 1):
+        try:
+            return func(*args, **kwargs)
+        except (Timeout, RequestsConnectionError, RequestException) as e:
+            last_exception = e
+            if attempt < max_retries:
+                backoff = min(RETRY_BACKOFF_BASE ** attempt, RETRY_BACKOFF_MAX)
+                current_app.logger.warning(
+                    f"API call failed (attempt {attempt + 1}/{max_retries + 1}), "
+                    f"retrying in {backoff}s: {type(e).__name__}: {e}"
+                )
+                time.sleep(backoff)
+            else:
+                current_app.logger.error(
+                    f"API call failed after {max_retries + 1} attempts: {type(e).__name__}: {e}"
+                )
+        except Exception as e:
+            # Non-retryable errors (auth errors, bad requests, etc.)
+            raise
+
+    raise last_exception
 
 # Google Ads API version management
 # Supported versions in order of preference (newest first)
@@ -390,43 +438,104 @@ def google_ads_search(
     query: str,
     login_customer_id: Optional[str] = None,
     stream: bool = True,
+    timeout: int = 120,
+    max_retries: int = MAX_RETRIES,
 ) -> List[dict]:
     """
-    Execute a GAQL search (REST).
+    Execute a GAQL search (REST) with retry logic.
       - stream=True uses searchStream (recommended for larger result sets).
       - stream=False uses search (paginated).
     Works with or without MCC (login_customer_id).
     Returns a list of results (combined across stream pages if stream=True).
+
+    Args:
+        access_token: OAuth access token
+        customer_id: Google Ads customer ID
+        query: GAQL query string
+        login_customer_id: Optional manager/MCC customer ID
+        stream: Use streaming API (default True)
+        timeout: Request timeout in seconds (default 120)
+        max_retries: Maximum retry attempts on transient failures (default 3)
+
+    Returns:
+        List of result dictionaries
+
+    Raises:
+        ValueError: If customer_id is missing
+        requests.HTTPError: On non-retryable HTTP errors
     """
+    if not customer_id:
+        raise ValueError("customer_id is required for Google Ads API calls")
+
+    if not access_token:
+        raise ValueError("access_token is required for Google Ads API calls")
+
     cid = _digits_only(customer_id)
+    if not cid:
+        raise ValueError(f"Invalid customer_id: {customer_id}")
+
     headers = ads_headers(access_token, login_customer_id)
     results: List[dict] = []
 
-    if stream:
+    def _make_stream_request():
+        """Make a streaming search request."""
         url = f"{_get_ads_api_base()}/customers/{cid}/googleAds:searchStream"
-        r = requests.post(url, headers=headers, json={"query": query}, timeout=60)
+        r = requests.post(url, headers=headers, json={"query": query}, timeout=timeout)
+
+        # Check for auth errors (don't retry these)
+        if r.status_code == 401:
+            current_app.logger.error(f"Google Ads API authentication failed (401)")
+            r.raise_for_status()
+
+        # Check for rate limiting (should retry)
+        if r.status_code == 429:
+            current_app.logger.warning("Google Ads API rate limited (429)")
+            raise RequestException(f"Rate limited: {r.status_code}")
+
         r.raise_for_status()
-        # searchStream returns an array of "results" batches
-        payload = r.json() or []
+        return r.json() or []
+
+    def _make_paginated_request(page_token=None):
+        """Make a paginated search request."""
+        url = f"{_get_ads_api_base()}/customers/{cid}/googleAds:search"
+        body = {"query": query}
+        if page_token:
+            body["pageToken"] = page_token
+        r = requests.post(url, headers=headers, json=body, timeout=timeout)
+
+        # Check for auth errors (don't retry these)
+        if r.status_code == 401:
+            current_app.logger.error(f"Google Ads API authentication failed (401)")
+            r.raise_for_status()
+
+        # Check for rate limiting (should retry)
+        if r.status_code == 429:
+            current_app.logger.warning("Google Ads API rate limited (429)")
+            raise RequestException(f"Rate limited: {r.status_code}")
+
+        r.raise_for_status()
+        return r.json() or {}
+
+    if stream:
+        # Streaming request with retry
+        payload = _retry_with_backoff(_make_stream_request, max_retries)
         for batch in payload:
             for row in batch.get("results", []):
                 results.append(row)
         return results
 
-    # Non-streaming (handles pagination internally)
-    url = f"{_get_ads_api_base()}/customers/{cid}/googleAds:search"
+    # Non-streaming (handles pagination internally) with retry per page
     page_token = None
     while True:
-        body = {"query": query}
-        if page_token:
-            body["pageToken"] = page_token
-        r = requests.post(url, headers=headers, json=body, timeout=60)
-        r.raise_for_status()
-        payload = r.json() or {}
+        payload = _retry_with_backoff(
+            lambda pt=page_token: _make_paginated_request(pt),
+            max_retries
+        )
         results.extend(payload.get("results", []))
         page_token = payload.get("nextPageToken")
         if not page_token:
             break
+
     return results
 
 

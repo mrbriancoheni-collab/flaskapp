@@ -1543,7 +1543,10 @@ if (typeof TutorialPopups !== 'undefined') {
     try {
       const res = await fetch('{{ url_for("google_bp.ads_select_customer") }}', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        },
         body: 'customer_id=' + encodeURIComponent(customerId),
         credentials: 'same-origin'
       });
@@ -1589,6 +1592,7 @@ async function markManualTaskComplete(taskId, taskTitle, buttonElement) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
       },
       body: JSON.stringify({
         task_id: taskId,
@@ -1891,6 +1895,9 @@ async function activateCampaign(campaignId) {
   try {
     const response = await fetch(`/account/google/ads/campaigns/${campaignId}/activate`, {
       method: 'POST',
+      headers: {
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      },
       credentials: 'same-origin'
     });
     const result = await response.json();
@@ -1928,7 +1935,8 @@ async function undoAction(actionId) {
     const response = await fetch(`/account/google/ads/ai-actions/${actionId}/undo`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
       },
       credentials: 'same-origin'
     });

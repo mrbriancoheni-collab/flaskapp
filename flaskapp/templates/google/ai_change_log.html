@@ -12,7 +12,7 @@
   {# BREADCRUMBS #}
   {{ render_breadcrumbs([
     {'name': 'Dashboard', 'url': url_for('account_bp.dashboard'), 'icon': 'fa-solid fa-home'},
-    {'name': 'Google Ads', 'url': url_for('google_bp.ads_decision_screen'), 'icon': 'fa-brands fa-google'},
+    {'name': 'Google Ads', 'url': url_for('google_bp.ads_performance'), 'icon': 'fa-brands fa-google'},
     {'name': 'AI Change Log', 'url': ''}
   ]) }}
 
@@ -22,7 +22,7 @@
       <h1 class="text-3xl font-bold text-gray-900">AI Change Log</h1>
       <p class="text-gray-600 mt-1">Complete history of AI actions on your account</p>
     </div>
-    <a href="{{ url_for('google_bp.ads_decision_screen') }}"
+    <a href="{{ url_for('google_bp.ads_performance') }}"
        class="rounded-md border px-4 py-2 text-gray-700 hover:bg-gray-50">
       <i class="fa-solid fa-arrow-left mr-2"></i>Back to Dashboard
     </a>
@@ -337,7 +337,7 @@
           Actions will appear here when AI detects opportunities to<br>
           block wasteful searches and optimize your budget.
         </p>
-        <a href="{{ url_for('google_bp.ads_decision_screen') }}"
+        <a href="{{ url_for('google_bp.ads_performance') }}"
            class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
           <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
         </a>

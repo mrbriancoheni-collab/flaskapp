@@ -235,8 +235,8 @@
 
       {# Google Ads submenu #}
       <div class="pt-2 pl-3 text-xs font-semibold text-gray-500 uppercase">Google Ads</div>
-      {% if has_endpoint('google_bp.ads_decision_screen') %}
-        <a href="{{ url_for('google_bp.ads_decision_screen') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+      {% if has_endpoint('google_bp.ads_performance') %}
+        <a href="{{ url_for('google_bp.ads_performance') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
           <i class="fa-solid fa-chart-line"></i><span>Performance</span>
         </a>
       {% endif %}
@@ -510,7 +510,7 @@
 
       {# GOOGLE SERVICES NAVIGATION #}
       {% set google_endpoints = [
-        'google_bp.index', 'google_bp.ads_decision_screen', 'google_bp.ads_campaigns',
+        'google_bp.index', 'google_bp.ads_performance', 'google_bp.ads_campaigns',
         'google_bp.ads_opportunities', 'google_bp.gsc_ui', 'google_bp.ga_ui',
         'budget_bp.budget_groups', 'forecasting_bp.forecasting_dashboard',
         'competitive_bp.competitive_dashboard', 'gmb_bp.index', 'gmb_bp.reviews',
@@ -540,8 +540,8 @@
             <i class="fa-solid fa-chevron-down text-xs ml-auto transition-transform duration-200"></i>
           </div>
           <div class="nav-section-content" id="google-ads-section">
-            {% if has_endpoint('google_bp.ads_decision_screen') %}
-            <a class="sub-link {% if epn=='google_bp.ads_decision_screen' %}active{% endif %}" href="{{ url_for('google_bp.ads_decision_screen') }}">
+            {% if has_endpoint('google_bp.ads_performance') %}
+            <a class="sub-link {% if epn=='google_bp.ads_performance' %}active{% endif %}" href="{{ url_for('google_bp.ads_performance') }}">
               <i class="fa-solid fa-chart-line"></i><span>Performance</span>
             </a>
             {% endif %}
@@ -944,8 +944,8 @@
             {% if has_endpoint('google_bp.index') %}
             { name: 'Google Overview', icon: 'fa-gauge', url: '{{ url_for("google_bp.index") }}', keywords: ['google', 'connect'] },
             {% endif %}
-            {% if has_endpoint('google_bp.ads_decision_screen') %}
-            { name: 'Google Ads', icon: 'fa-google', url: '{{ url_for("google_bp.ads_decision_screen") }}', keywords: ['ads', 'ppc', 'search', 'adwords'] },
+            {% if has_endpoint('google_bp.ads_performance') %}
+            { name: 'Google Ads', icon: 'fa-google', url: '{{ url_for("google_bp.ads_performance") }}', keywords: ['ads', 'ppc', 'search', 'adwords'] },
             {% endif %}
             {% if has_endpoint('gmb_bp.index') %}
             { name: 'Google Business', icon: 'fa-google', url: '{{ url_for("gmb_bp.index") }}', keywords: ['gmb', 'business', 'profile'] },
@@ -1521,7 +1521,7 @@
       // Auto-expand Google Ads section if on a Google Ads page
       const currentEndpoint = '{{ epn }}';
       const googleAdsEndpoints = [
-        'google_bp.ads_decision_screen',
+        'google_bp.ads_performance',
         'budget_bp.budget_groups',
         'forecasting_bp.forecasting_dashboard',
         'competitive_bp.competitive_dashboard',

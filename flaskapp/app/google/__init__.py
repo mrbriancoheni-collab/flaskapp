@@ -2221,11 +2221,9 @@ def ads_debug_config():
 @login_required
 def ads_ui():
     """
-    Google Ads main page - Redirects to new decision screen.
-    The decision screen uses auto-executed language instead of approval-based language.
+    Google Ads main page - Redirects to performance dashboard.
     """
-    # Redirect to new decision screen with SMB-focused UI
-    return redirect(url_for("google_bp.ads_decision_screen"))
+    return redirect(url_for("google_bp.ads_performance"))
 
     # OLD CODE KEPT FOR REFERENCE (opportunities page with approval flow)
     from datetime import datetime, timedelta
@@ -2796,9 +2794,16 @@ def _get_demo_improvement_data():
 
 @google_bp.route("/ads/decision-screen", methods=["GET"], endpoint="ads_decision_screen")
 @login_required
-def ads_decision_screen():
+def ads_decision_screen_redirect():
+    """Redirect old URL to new performance page."""
+    return redirect(url_for("google_bp.ads_performance"), code=301)
+
+
+@google_bp.route("/ads/performance", methods=["GET"], endpoint="ads_performance")
+@login_required
+def ads_performance():
     """
-    Google Ads Decision Screen - New UI focused on decision-making for SMB operators.
+    Google Ads Performance Dashboard - Main dashboard for SMB operators.
     Shows status indicators, trust & protection messaging, and "What Changed?" timeline.
     """
     from app.models_ai_actions import AIAction
@@ -2874,8 +2879,44 @@ def ads_decision_screen():
         from app.google.utils_ads import fetch_account_performance_stats
         try:
             account_performance = fetch_account_performance_stats(aid, days=30)
+            current_app.logger.info(f"[DECISION] Account performance fetched: has_data={account_performance.get('has_data') if account_performance else 'None'}")
         except Exception as e:
             current_app.logger.warning(f"Could not load account performance stats: {e}")
+
+    # Fallback: try to get performance data from ads_state session if fetch failed
+    if not account_performance or not account_performance.get('has_data'):
+        try:
+            ads_data = _get_ads_state(aid)
+            if ads_data and ads_data.get('campaigns'):
+                # Aggregate from campaigns
+                total_cost = sum(c.get('cost_30d', 0) or 0 for c in ads_data['campaigns'])
+                total_clicks = sum(c.get('clicks', 0) or 0 for c in ads_data['campaigns'])
+                total_conversions = sum(c.get('conversions', 0) or 0 for c in ads_data['campaigns'])
+                total_impressions = sum(c.get('impressions', 0) or 0 for c in ads_data['campaigns'])
+
+                if total_impressions > 0 or total_clicks > 0 or total_cost > 0:
+                    ctr = (total_clicks / total_impressions * 100) if total_impressions > 0 else 0
+                    avg_cpc = (total_cost / total_clicks) if total_clicks > 0 else 0
+                    conversion_rate = (total_conversions / total_clicks * 100) if total_clicks > 0 else 0
+                    cost_per_conversion = (total_cost / total_conversions) if total_conversions > 0 else 0
+
+                    account_performance = {
+                        "impressions": total_impressions,
+                        "clicks": total_clicks,
+                        "ctr": round(ctr, 2),
+                        "cost": round(total_cost, 2),
+                        "conversions": round(total_conversions, 1),
+                        "conversions_value": 0,
+                        "avg_cpc": round(avg_cpc, 2),
+                        "conversion_rate": round(conversion_rate, 2),
+                        "cost_per_conversion": round(cost_per_conversion, 2),
+                        "roas": 0,
+                        "days": 30,
+                        "has_data": True
+                    }
+                    current_app.logger.info(f"[DECISION] Used session fallback for performance data")
+        except Exception as e:
+            current_app.logger.warning(f"[DECISION] Session fallback failed: {e}")
 
     # Transform actions into timeline format
     recent_changes = []
@@ -3473,12 +3514,11 @@ def ads_optimize():
 @google_bp.route("/ads/opportunities/demo", methods=["GET"], endpoint="ads_opportunities_demo")
 def ads_opportunities_demo():
     """
-    DEPRECATED: This route is deprecated and redirects to the main decision screen.
-    The decision screen now handles demo data for non-connected accounts.
+    DEPRECATED: This route is deprecated and redirects to the performance dashboard.
     """
     from flask import redirect, url_for, current_app
-    current_app.logger.warning("DEPRECATED: /ads/opportunities/demo accessed - redirecting to decision screen")
-    return redirect(url_for('google_bp.ads_decision_screen'), code=301)
+    current_app.logger.warning("DEPRECATED: /ads/opportunities/demo accessed - redirecting to performance page")
+    return redirect(url_for('google_bp.ads_performance'), code=301)
 
 
 @google_bp.route("/ads/opportunities", methods=["GET"], endpoint="ads_opportunities")

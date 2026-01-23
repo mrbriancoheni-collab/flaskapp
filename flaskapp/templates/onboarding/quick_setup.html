@@ -370,7 +370,7 @@ document.getElementById('onboarding-form').addEventListener('submit', async func
       await fetch('/onboarding/complete', { method: 'POST' });
 
       // Redirect to dashboard
-      window.location.href = '{{ url_for("google_bp.ads_decision_screen") }}';
+      window.location.href = '{{ url_for("google_bp.ads_performance") }}';
     }
   } catch (error) {
     console.error('Error saving onboarding:', error);

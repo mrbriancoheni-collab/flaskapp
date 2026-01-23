@@ -718,83 +718,484 @@ def optimize_for_voice_search(account_id: int) -> Dict:
 
 
 def _identify_voice_search_queries(account_id: int) -> List[Dict]:
-    """Identify voice search patterns in search queries."""
-    # Simplified implementation
-    # In production, use NLP and machine learning
-    pass
+    """
+    Identify voice search patterns in search queries.
+    Voice searches typically:
+    - Are questions (who, what, where, when, why, how)
+    - Are longer (5+ words)
+    - Use natural language
+    - Have local intent ("near me", "open now")
+    """
+    voice_queries = []
+
+    # Voice search pattern indicators
+    question_starters = ['who', 'what', 'where', 'when', 'why', 'how', 'can', 'does', 'is', 'are']
+    local_indicators = ['near me', 'nearby', 'close to', 'around here', 'open now', 'hours', 'directions']
+
+    try:
+        query = text("""
+            SELECT DISTINCT search_term, impressions, clicks, conversions
+            FROM search_term_reports
+            WHERE account_id = :account_id
+              AND date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            ORDER BY impressions DESC
+            LIMIT 500
+        """)
+
+        result = db.session.execute(query, {'account_id': account_id})
+
+        for row in result:
+            search_term = (row.search_term or '').lower()
+            word_count = len(search_term.split())
+
+            # Check voice search characteristics
+            is_question = any(search_term.startswith(q) for q in question_starters)
+            has_local_intent = any(loc in search_term for loc in local_indicators)
+            is_long_query = word_count >= 5
+
+            # Consider it a voice query if it matches patterns
+            if is_question or has_local_intent or is_long_query:
+                voice_queries.append({
+                    'search_term': row.search_term,
+                    'impressions': row.impressions or 0,
+                    'clicks': row.clicks or 0,
+                    'conversions': row.conversions or 0,
+                    'is_question': is_question,
+                    'has_local_intent': has_local_intent,
+                    'word_count': word_count
+                })
+
+    except Exception as e:
+        logger.warning(f"Could not fetch voice search queries: {e}")
+
+    return voice_queries
 
 
 def _generate_voice_keywords(voice_queries: List[Dict]) -> List[str]:
-    """Generate voice-optimized keywords."""
-    # Extract question patterns and conversational phrases
-    pass
+    """Generate voice-optimized keywords from voice query patterns."""
+    if not voice_queries:
+        return [
+            "how to find [service] near me",
+            "best [service] in [city]",
+            "who does [service] on weekends",
+            "[service] open now near me"
+        ]
+
+    keywords = []
+    seen = set()
+
+    for query in voice_queries:
+        term = query.get('search_term', '')
+        if term and term not in seen:
+            # Add the original term
+            keywords.append(term)
+            seen.add(term)
+
+            # Generate variations
+            if query.get('is_question'):
+                # Convert question to phrase match
+                keywords.append(f'"{term}"')
+
+    return keywords[:20]  # Limit to top 20
 
 
 def _generate_voice_ad_copy(voice_queries: List[Dict]) -> List[Dict]:
-    """Generate voice-optimized ad copy."""
-    # Create FAQ-style ads and conversational copy
-    pass
+    """Generate voice-optimized ad copy suggestions."""
+    suggestions = []
+
+    # Generic voice-optimized suggestions
+    suggestions.append({
+        'headline': "Need Help Now? Call Us 24/7",
+        'description': "Fast response times. Local experts ready to help.",
+        'reason': "Addresses urgency common in voice searches"
+    })
+
+    suggestions.append({
+        'headline': "Find Us Near You Today",
+        'description': "Serving your area with same-day service available.",
+        'reason': "Targets local intent voice queries"
+    })
+
+    # Generate from actual queries if available
+    question_queries = [q for q in voice_queries if q.get('is_question')]
+    for query in question_queries[:3]:
+        term = query.get('search_term', '')
+        if term:
+            suggestions.append({
+                'headline': f"Answer: {term[:30]}",
+                'description': "Get your questions answered by our experts.",
+                'reason': f"Directly answers voice query: {term}"
+            })
+
+    return suggestions
 
 
-# Placeholder helper functions
 def _get_metrics_for_anomaly_detection(account_id: int, days: int) -> List[Dict]:
-    """Get metrics for anomaly detection."""
-    # TODO: Implement
-    return []
+    """Get metrics for anomaly detection from campaign performance data."""
+    metrics = []
+
+    try:
+        # Try to get data from gads_stats_daily or campaign performance tables
+        query = text("""
+            SELECT
+                'campaign' as entity_type,
+                entity_id,
+                entity_name,
+                date,
+                CASE WHEN impressions > 0 THEN clicks * 100.0 / impressions ELSE 0 END as ctr,
+                CASE WHEN clicks > 0 THEN cost_micros / 1000000.0 / clicks ELSE 0 END as cpc,
+                CASE WHEN clicks > 0 THEN conversions * 100.0 / clicks ELSE 0 END as cvr,
+                cost_micros / 1000000.0 as cost,
+                avg_position
+            FROM gads_stats_daily
+            WHERE account_id = :account_id
+              AND entity_type = 'campaign'
+              AND date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+            ORDER BY entity_id, date
+        """)
+
+        result = db.session.execute(query, {'account_id': account_id, 'days': days})
+
+        for row in result:
+            metrics.append({
+                'entity_type': row.entity_type,
+                'entity_id': row.entity_id,
+                'entity_name': row.entity_name or f'Campaign {row.entity_id}',
+                'date': row.date,
+                'ctr': float(row.ctr or 0),
+                'cpc': float(row.cpc or 0),
+                'cvr': float(row.cvr or 0),
+                'cost': float(row.cost or 0),
+                'avg_position': float(row.avg_position or 0)
+            })
+
+    except Exception as e:
+        logger.warning(f"Could not fetch metrics for anomaly detection: {e}")
+
+    return metrics
 
 
 def _check_position_change(account_id: int, entity_type: str, entity_id: int) -> Optional[Dict]:
-    """Check for position changes."""
-    # TODO: Implement
+    """Check for recent position changes for an entity."""
+    try:
+        query = text("""
+            SELECT
+                AVG(CASE WHEN date >= DATE_SUB(CURDATE(), INTERVAL 3 DAY) THEN avg_position END) as recent_position,
+                AVG(CASE WHEN date < DATE_SUB(CURDATE(), INTERVAL 3 DAY)
+                         AND date >= DATE_SUB(CURDATE(), INTERVAL 10 DAY) THEN avg_position END) as previous_position
+            FROM gads_stats_daily
+            WHERE account_id = :account_id
+              AND entity_type = :entity_type
+              AND entity_id = :entity_id
+              AND date >= DATE_SUB(CURDATE(), INTERVAL 10 DAY)
+        """)
+
+        result = db.session.execute(query, {
+            'account_id': account_id,
+            'entity_type': entity_type,
+            'entity_id': entity_id
+        }).first()
+
+        if result and result.recent_position and result.previous_position:
+            change = result.recent_position - result.previous_position
+            if abs(change) > 0.5:  # Significant position change
+                return {
+                    'old': float(result.previous_position),
+                    'new': float(result.recent_position),
+                    'change': float(change),
+                    'impact': 'Position dropped' if change > 0 else 'Position improved'
+                }
+
+    except Exception as e:
+        logger.warning(f"Could not check position change: {e}")
+
     return None
 
 
 def _check_bid_change(account_id: int, entity_type: str, entity_id: int) -> Optional[Dict]:
-    """Check for bid changes."""
-    # TODO: Implement
+    """Check for recent bid changes for an entity."""
+    try:
+        query = text("""
+            SELECT
+                AVG(CASE WHEN date >= DATE_SUB(CURDATE(), INTERVAL 3 DAY) THEN max_cpc_micros END) as recent_bid,
+                AVG(CASE WHEN date < DATE_SUB(CURDATE(), INTERVAL 3 DAY)
+                         AND date >= DATE_SUB(CURDATE(), INTERVAL 10 DAY) THEN max_cpc_micros END) as previous_bid
+            FROM gads_stats_daily
+            WHERE account_id = :account_id
+              AND entity_type = :entity_type
+              AND entity_id = :entity_id
+              AND date >= DATE_SUB(CURDATE(), INTERVAL 10 DAY)
+        """)
+
+        result = db.session.execute(query, {
+            'account_id': account_id,
+            'entity_type': entity_type,
+            'entity_id': entity_id
+        }).first()
+
+        if result and result.recent_bid and result.previous_bid:
+            old_bid = float(result.previous_bid) / 1000000
+            new_bid = float(result.recent_bid) / 1000000
+            change_pct = ((new_bid - old_bid) / old_bid * 100) if old_bid > 0 else 0
+
+            if abs(change_pct) > 10:  # Significant bid change (>10%)
+                return {
+                    'old': old_bid,
+                    'new': new_bid,
+                    'change_pct': change_pct,
+                    'impact': f"Bid {'increased' if change_pct > 0 else 'decreased'} by {abs(change_pct):.1f}%"
+                }
+
+    except Exception as e:
+        logger.warning(f"Could not check bid change: {e}")
+
     return None
 
 
 def _check_competitive_pressure(account_id: int, entity_id: int) -> Optional[Dict]:
-    """Check for competitive pressure."""
-    # TODO: Implement
+    """Check for increased competitive pressure from auction insights."""
+    try:
+        query = text("""
+            SELECT
+                COUNT(DISTINCT CASE WHEN data_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+                                    THEN competitor_domain END) as recent_competitors,
+                COUNT(DISTINCT CASE WHEN data_date < DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+                                    AND data_date >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+                                    THEN competitor_domain END) as previous_competitors
+            FROM competitive_auction_insights
+            WHERE campaign_id = :entity_id
+              AND data_date >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+        """)
+
+        result = db.session.execute(query, {'entity_id': entity_id}).first()
+
+        if result and result.recent_competitors and result.previous_competitors:
+            new_competitors = result.recent_competitors - result.previous_competitors
+            if new_competitors > 0:
+                return {
+                    'competitors': new_competitors,
+                    'recent_count': result.recent_competitors,
+                    'previous_count': result.previous_competitors
+                }
+
+    except Exception as e:
+        logger.warning(f"Could not check competitive pressure: {e}")
+
     return None
 
 
 def _check_quality_score_change(account_id: int, entity_type: str, entity_id: int) -> Optional[Dict]:
     """Check for quality score changes."""
-    # TODO: Implement
+    try:
+        query = text("""
+            SELECT
+                AVG(CASE WHEN date >= DATE_SUB(CURDATE(), INTERVAL 3 DAY) THEN quality_score END) as recent_qs,
+                AVG(CASE WHEN date < DATE_SUB(CURDATE(), INTERVAL 3 DAY)
+                         AND date >= DATE_SUB(CURDATE(), INTERVAL 10 DAY) THEN quality_score END) as previous_qs
+            FROM keyword_quality_scores
+            WHERE account_id = :account_id
+              AND date >= DATE_SUB(CURDATE(), INTERVAL 10 DAY)
+        """)
+
+        result = db.session.execute(query, {'account_id': account_id}).first()
+
+        if result and result.recent_qs and result.previous_qs:
+            change = result.recent_qs - result.previous_qs
+            if abs(change) >= 1:  # Quality score changed by 1+ point
+                return {
+                    'old': int(result.previous_qs),
+                    'new': int(result.recent_qs),
+                    'change': int(change)
+                }
+
+    except Exception as e:
+        logger.warning(f"Could not check quality score change: {e}")
+
     return None
 
 
 def _get_historical_seasonal_patterns(account_id: int, category: str) -> Dict:
-    """Get historical seasonal patterns."""
-    # TODO: Implement with real historical data
-    return {
+    """Get historical seasonal patterns from past data."""
+    default_patterns = {
         'avg_volume': 1000,
         'avg_cpc': 3.50,
         'avg_cvr': 0.03,
-        'confidence': 0.80
+        'confidence': 0.50  # Low confidence for default data
     }
+
+    try:
+        # Try to get real historical data
+        query = text("""
+            SELECT
+                AVG(impressions) as avg_volume,
+                AVG(CASE WHEN clicks > 0 THEN cost_micros / 1000000.0 / clicks ELSE NULL END) as avg_cpc,
+                AVG(CASE WHEN clicks > 0 THEN conversions / clicks ELSE NULL END) as avg_cvr,
+                COUNT(*) as data_points
+            FROM gads_stats_daily
+            WHERE account_id = :account_id
+              AND entity_type = 'campaign'
+              AND date >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
+        """)
+
+        result = db.session.execute(query, {'account_id': account_id}).first()
+
+        if result and result.data_points and result.data_points >= 30:
+            # Calculate confidence based on data availability
+            confidence = min(0.95, 0.50 + (result.data_points / 180))
+
+            return {
+                'avg_volume': int(result.avg_volume or default_patterns['avg_volume']),
+                'avg_cpc': round(float(result.avg_cpc or default_patterns['avg_cpc']), 2),
+                'avg_cvr': round(float(result.avg_cvr or default_patterns['avg_cvr']), 4),
+                'confidence': round(confidence, 2)
+            }
+
+    except Exception as e:
+        logger.warning(f"Could not get historical seasonal patterns: {e}")
+
+    return default_patterns
 
 
 def _get_base_seasonal_forecast(historical_data: Dict, forecast_date: date) -> Dict:
-    """Get base forecast from historical patterns."""
-    return historical_data
+    """Get base forecast from historical patterns adjusted for the forecast date."""
+    # Start with historical averages
+    forecast = historical_data.copy()
+
+    # Adjust based on day of week (weekdays typically have more commercial searches)
+    day_of_week = forecast_date.weekday()
+    if day_of_week >= 5:  # Weekend
+        forecast['avg_volume'] = int(forecast['avg_volume'] * 0.7)
+    elif day_of_week == 0:  # Monday
+        forecast['avg_volume'] = int(forecast['avg_volume'] * 1.1)
+
+    return forecast
 
 
 def _get_current_daily_budget(account_id: int, category: str) -> float:
-    """Get current daily budget for a category."""
-    # TODO: Implement
-    return 100.0
+    """Get current daily budget for campaigns in a category."""
+    try:
+        query = text("""
+            SELECT AVG(daily_budget_cents) / 100.0 as avg_budget
+            FROM ads_campaigns
+            WHERE account_id = :account_id
+              AND status = 'enabled'
+        """)
+
+        result = db.session.execute(query, {'account_id': account_id}).first()
+
+        if result and result.avg_budget:
+            return float(result.avg_budget)
+
+    except Exception as e:
+        logger.warning(f"Could not get current daily budget: {e}")
+
+    return 100.0  # Default budget
 
 
 def _get_current_baseline_metrics(account_id: int) -> Dict:
-    """Get current baseline metrics."""
-    # TODO: Implement
+    """Get current baseline metrics for the account."""
+    default_metrics = {
+        'total_leads': 0,
+        'avg_cpa': 0,
+        'total_spend': 0,
+        'total_clicks': 0
+    }
+
+    try:
+        query = text("""
+            SELECT
+                SUM(conversions) as total_leads,
+                CASE WHEN SUM(conversions) > 0
+                     THEN SUM(cost_micros) / 1000000.0 / SUM(conversions)
+                     ELSE 0 END as avg_cpa,
+                SUM(cost_micros) / 1000000.0 as total_spend,
+                SUM(clicks) as total_clicks
+            FROM gads_stats_daily
+            WHERE account_id = :account_id
+              AND entity_type = 'account'
+              AND date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        """)
+
+        result = db.session.execute(query, {'account_id': account_id}).first()
+
+        if result:
+            return {
+                'total_leads': int(result.total_leads or 0),
+                'avg_cpa': round(float(result.avg_cpa or 0), 2),
+                'total_spend': round(float(result.total_spend or 0), 2),
+                'total_clicks': int(result.total_clicks or 0)
+            }
+
+    except Exception as e:
+        logger.warning(f"Could not get current baseline metrics: {e}")
+
+    return default_metrics
+
+
+def _predict_bid_adjustment_impact(account_id: int, baseline: Dict, changes: Dict) -> Dict:
+    """Predict impact of bid adjustments."""
+    bid_change_pct = changes.get('bid_adjustment_pct', 0)
+
+    # Simplified model: bid changes have non-linear effect on position and traffic
+    # Higher bids generally improve position but with diminishing returns
+    if bid_change_pct > 0:
+        # Increasing bids
+        position_improvement = min(2.0, bid_change_pct / 20)  # Max 2 position improvement
+        traffic_increase_pct = bid_change_pct * 0.6  # 60% efficiency
+        cpc_increase_pct = bid_change_pct * 0.8  # CPC rises nearly proportionally
+    else:
+        # Decreasing bids
+        position_decline = min(3.0, abs(bid_change_pct) / 15)  # Position drops faster
+        traffic_increase_pct = bid_change_pct * 0.7  # Traffic drops
+        cpc_increase_pct = bid_change_pct * 0.5  # CPC savings
+
+    current_clicks = baseline.get('total_clicks', 500)
+    current_cpa = baseline.get('avg_cpa', 50.0)
+
+    new_clicks = int(current_clicks * (1 + traffic_increase_pct / 100))
+    new_cpa = current_cpa * (1 + cpc_increase_pct / 100)
+
     return {
-        'total_leads': 100,
-        'avg_cpa': 50.0,
-        'total_spend': 5000.0,
-        'total_clicks': 500
+        'predicted_clicks': new_clicks,
+        'click_change': new_clicks - current_clicks,
+        'click_change_pct': traffic_increase_pct,
+        'predicted_cpa': round(new_cpa, 2),
+        'cpa_change_pct': cpc_increase_pct,
+        'roi_change_pct': traffic_increase_pct - cpc_increase_pct,
+        'confidence': 0.70
+    }
+
+
+def _predict_keyword_change_impact(account_id: int, baseline: Dict, changes: Dict) -> Dict:
+    """Predict impact of keyword changes."""
+    keywords_to_add = changes.get('keywords_to_add', [])
+    keywords_to_remove = changes.get('keywords_to_remove', [])
+
+    # Estimate impact based on number of keywords
+    add_count = len(keywords_to_add)
+    remove_count = len(keywords_to_remove)
+
+    # Each new keyword might add ~5% incremental traffic (diminishing)
+    traffic_from_new = min(50, add_count * 5 * (1 - add_count * 0.02))
+    # Removing keywords reduces traffic
+    traffic_from_removed = -remove_count * 3
+
+    total_traffic_change = traffic_from_new + traffic_from_removed
+
+    current_leads = baseline.get('total_leads', 100)
+    current_cpa = baseline.get('avg_cpa', 50.0)
+
+    new_leads = int(current_leads * (1 + total_traffic_change / 100))
+
+    # New keywords might have higher CPA initially
+    cpa_impact = add_count * 2 if add_count > 0 else 0
+
+    return {
+        'predicted_leads': new_leads,
+        'lead_change': new_leads - current_leads,
+        'lead_change_pct': total_traffic_change,
+        'predicted_cpa': round(current_cpa + cpa_impact, 2),
+        'cpa_change_pct': (cpa_impact / current_cpa * 100) if current_cpa > 0 else 0,
+        'roi_change_pct': total_traffic_change - (cpa_impact / current_cpa * 100 if current_cpa > 0 else 0),
+        'confidence': 0.65
     }

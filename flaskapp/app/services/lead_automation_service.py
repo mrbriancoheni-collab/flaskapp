@@ -1282,5 +1282,15 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                 "scrapes": today_scrapes,
                 "enrichments": today_enrichments,
                 "emails": today_emails
-            }
+            },
+            # Service configuration status
+            "services_configured": {
+                "serpapi": bool(os.getenv('SERPAPI_API_KEY')),
+                "brevo": bool(os.getenv('BREVO_API_KEY')),
+                "hunter": bool(os.getenv('HUNTER_API_KEY')),
+            },
+            "all_services_ready": all([
+                os.getenv('SERPAPI_API_KEY'),
+                os.getenv('BREVO_API_KEY'),
+            ])
         }

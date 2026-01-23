@@ -33,15 +33,23 @@ def forecasting_dashboard():
     """
     from flask import session, current_app
     import logging
+    import importlib
     account_id = current_account_id()
 
+    # Log the request for debugging
+    current_app.logger.info(f"[FORECASTING] Loading dashboard for account {account_id}")
+
     # Import the function that fetches and caches ads data
+    _get_ads_state = None
+    _is_connected = None
     try:
-        from app.google import _get_ads_state, _is_connected
-    except ImportError:
-        logging.error("Could not import _get_ads_state from app.google")
-        _get_ads_state = None
-        _is_connected = None
+        # Use importlib for more explicit import
+        google_module = importlib.import_module('app.google')
+        _get_ads_state = getattr(google_module, '_get_ads_state', None)
+        _is_connected = getattr(google_module, '_is_connected', None)
+        current_app.logger.info(f"[FORECASTING] Import success: _get_ads_state={_get_ads_state is not None}, _is_connected={_is_connected is not None}")
+    except Exception as e:
+        current_app.logger.error(f"[FORECASTING] Import failed: {e}")
 
     # Get campaigns using the proper state function (which handles fetching + caching)
     campaigns = []
@@ -52,16 +60,21 @@ def forecasting_dashboard():
     if _is_connected:
         try:
             is_connected = _is_connected(account_id, "ads")
+            current_app.logger.info(f"[FORECASTING] Connection check: is_connected={is_connected}")
         except Exception as e:
-            logging.warning(f"Error checking connection: {e}")
+            current_app.logger.warning(f"[FORECASTING] Error checking connection: {e}")
             is_connected = False
+    else:
+        current_app.logger.warning("[FORECASTING] _is_connected function not available")
 
     # Use _get_ads_state to fetch/cache the data (this is what populates the session)
     if _get_ads_state and is_connected:
         try:
+            current_app.logger.info(f"[FORECASTING] Calling _get_ads_state for account {account_id}")
             ads_data = _get_ads_state(account_id)
             raw_campaigns = ads_data.get('campaigns', [])
             customer_id = ads_data.get('account_name') or ads_data.get('customer_id')
+            current_app.logger.info(f"[FORECASTING] Got {len(raw_campaigns)} campaigns, customer_id={customer_id}")
 
             # Transform campaign data to the expected format
             for campaign in raw_campaigns:
@@ -79,17 +92,18 @@ def forecasting_dashboard():
 
             # Sort by name
             campaigns.sort(key=lambda c: c.get('name', '').lower())
-            logging.info(f"Forecasting: Found {len(campaigns)} campaigns for account {account_id}")
         except Exception as e:
-            logging.error(f"Error fetching ads state: {e}")
-    else:
-        # Fallback to session if _get_ads_state not available
+            current_app.logger.error(f"[FORECASTING] Error fetching ads state: {e}", exc_info=True)
+    elif not is_connected:
+        current_app.logger.info(f"[FORECASTING] Not connected to Google Ads, checking session fallback")
+        # Fallback to session if not connected
         ads_state_key = f"ads_state_{account_id}"
         if ads_state_key in session and session[ads_state_key]:
             ads_data = session[ads_state_key]
             raw_campaigns = ads_data.get('campaigns', [])
             customer_id = ads_data.get('account_name') or ads_data.get('customer_id')
             is_connected = ads_data.get('__source') == 'live' or len(raw_campaigns) > 0
+            current_app.logger.info(f"[FORECASTING] Session fallback: {len(raw_campaigns)} campaigns found")
 
             for campaign in raw_campaigns:
                 campaigns.append({
@@ -104,9 +118,10 @@ def forecasting_dashboard():
                     'impressions': campaign.get('impressions', 0)
                 })
             campaigns.sort(key=lambda c: c.get('name', '').lower())
+        else:
+            current_app.logger.warning(f"[FORECASTING] No session data found for key {ads_state_key}")
 
-    if not campaigns:
-        logging.warning(f"Forecasting: No campaigns found for account {account_id}, is_connected={is_connected}")
+    current_app.logger.info(f"[FORECASTING] Final result: {len(campaigns)} campaigns, is_connected={is_connected}")
 
     return render_template(
         "google/forecasting_dashboard.html",

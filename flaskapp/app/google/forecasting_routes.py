@@ -31,41 +31,82 @@ def forecasting_dashboard():
     """
     Budget Forecasting Dashboard - View forecasts, trends, and recommendations.
     """
-    from flask import session
+    from flask import session, current_app
     import logging
     account_id = current_account_id()
 
-    # Get campaigns from session state (synced from Google Ads)
+    # Import the function that fetches and caches ads data
+    try:
+        from app.google import _get_ads_state, _is_connected
+    except ImportError:
+        logging.error("Could not import _get_ads_state from app.google")
+        _get_ads_state = None
+        _is_connected = None
+
+    # Get campaigns using the proper state function (which handles fetching + caching)
     campaigns = []
-    ads_state_key = f"ads_state_{account_id}"
     is_connected = False
     customer_id = None
 
-    if ads_state_key in session and session[ads_state_key]:
-        ads_data = session[ads_state_key]
-        raw_campaigns = ads_data.get('campaigns', [])
-        customer_id = ads_data.get('account_name') or ads_data.get('customer_id')
-        is_connected = ads_data.get('__source') == 'live' or len(raw_campaigns) > 0
+    # First check if user is connected to Google Ads
+    if _is_connected:
+        try:
+            is_connected = _is_connected(account_id, "ads")
+        except Exception as e:
+            logging.warning(f"Error checking connection: {e}")
+            is_connected = False
 
-        # Transform campaign data to the expected format
-        for campaign in raw_campaigns:
-            campaigns.append({
-                'id': campaign.get('id'),
-                'name': campaign.get('name'),
-                'daily_budget_cents': int(float(campaign.get('daily_budget') or 0) * 100),
-                'google_campaign_id': campaign.get('google_campaign_id') or campaign.get('id'),
-                'status': campaign.get('status', 'unknown'),
-                'cost_30d': campaign.get('cost_30d', 0),
-                'conversions': campaign.get('conversions', 0),
-                'clicks': campaign.get('clicks', 0),
-                'impressions': campaign.get('impressions', 0)
-            })
+    # Use _get_ads_state to fetch/cache the data (this is what populates the session)
+    if _get_ads_state and is_connected:
+        try:
+            ads_data = _get_ads_state(account_id)
+            raw_campaigns = ads_data.get('campaigns', [])
+            customer_id = ads_data.get('account_name') or ads_data.get('customer_id')
 
-        # Sort by name
-        campaigns.sort(key=lambda c: c.get('name', '').lower())
-        logging.info(f"Forecasting: Found {len(campaigns)} campaigns from session for account {account_id}")
+            # Transform campaign data to the expected format
+            for campaign in raw_campaigns:
+                campaigns.append({
+                    'id': campaign.get('id'),
+                    'name': campaign.get('name'),
+                    'daily_budget_cents': int(float(campaign.get('daily_budget') or 0) * 100),
+                    'google_campaign_id': campaign.get('google_campaign_id') or campaign.get('id'),
+                    'status': campaign.get('status', 'unknown'),
+                    'cost_30d': campaign.get('cost_30d', 0),
+                    'conversions': campaign.get('conversions', 0),
+                    'clicks': campaign.get('clicks', 0),
+                    'impressions': campaign.get('impressions', 0)
+                })
+
+            # Sort by name
+            campaigns.sort(key=lambda c: c.get('name', '').lower())
+            logging.info(f"Forecasting: Found {len(campaigns)} campaigns for account {account_id}")
+        except Exception as e:
+            logging.error(f"Error fetching ads state: {e}")
     else:
-        logging.warning(f"Forecasting: No ads state found in session for account {account_id}")
+        # Fallback to session if _get_ads_state not available
+        ads_state_key = f"ads_state_{account_id}"
+        if ads_state_key in session and session[ads_state_key]:
+            ads_data = session[ads_state_key]
+            raw_campaigns = ads_data.get('campaigns', [])
+            customer_id = ads_data.get('account_name') or ads_data.get('customer_id')
+            is_connected = ads_data.get('__source') == 'live' or len(raw_campaigns) > 0
+
+            for campaign in raw_campaigns:
+                campaigns.append({
+                    'id': campaign.get('id'),
+                    'name': campaign.get('name'),
+                    'daily_budget_cents': int(float(campaign.get('daily_budget') or 0) * 100),
+                    'google_campaign_id': campaign.get('google_campaign_id') or campaign.get('id'),
+                    'status': campaign.get('status', 'unknown'),
+                    'cost_30d': campaign.get('cost_30d', 0),
+                    'conversions': campaign.get('conversions', 0),
+                    'clicks': campaign.get('clicks', 0),
+                    'impressions': campaign.get('impressions', 0)
+                })
+            campaigns.sort(key=lambda c: c.get('name', '').lower())
+
+    if not campaigns:
+        logging.warning(f"Forecasting: No campaigns found for account {account_id}, is_connected={is_connected}")
 
     return render_template(
         "google/forecasting_dashboard.html",

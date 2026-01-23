@@ -2,19 +2,35 @@
 """
 Competitive Intelligence Routes - Dashboard and API endpoints for competitive analysis.
 """
-from flask import Blueprint, render_template, jsonify, request
+from flask import Blueprint, render_template, jsonify, request, session
 from sqlalchemy import text
 from datetime import datetime, date, timedelta
+import logging
 
 from app import db
 from app.auth.utils import login_required, current_account_id
-from app.services.competitive_intelligence_service import (
-    fetch_auction_insights,
-    analyze_competitive_landscape,
-    track_competitor_position_changes,
-    get_search_term_competitors,
-    estimate_competitor_budget
-)
+
+# Import competitive intelligence service (optional - may not exist)
+try:
+    from app.services.competitive_intelligence_service import (
+        fetch_auction_insights,
+        analyze_competitive_landscape,
+        track_competitor_position_changes,
+        get_search_term_competitors,
+        estimate_competitor_budget
+    )
+except ImportError:
+    # Service not implemented yet - provide stubs
+    def fetch_auction_insights(*args, **kwargs):
+        return {"success": False, "error": "Competitive intelligence service not configured"}
+    def analyze_competitive_landscape(*args, **kwargs):
+        return {"success": False, "error": "Competitive intelligence service not configured"}
+    def track_competitor_position_changes(*args, **kwargs):
+        return {"success": False, "error": "Competitive intelligence service not configured"}
+    def get_search_term_competitors(*args, **kwargs):
+        return {"success": False, "error": "Competitive intelligence service not configured"}
+    def estimate_competitor_budget(*args, **kwargs):
+        return 0
 
 competitive_bp = Blueprint("competitive_bp", __name__, url_prefix="/account/google/ads/competitive")
 
@@ -26,38 +42,67 @@ def competitive_dashboard():
     Competitive Intelligence Dashboard - View competitors, market position, and threats.
     """
     account_id = current_account_id()
+    campaigns = []
+    alerts = []
+    setup_required = False
 
-    # Get campaigns
-    campaigns_query = text("""
-        SELECT id, name, daily_budget_cents, google_campaign_id, google_customer_id
-        FROM ads_campaigns
-        WHERE account_id = :account_id
-        ORDER BY name
-    """)
+    # Try to get campaigns from session first (most reliable)
+    ads_state_key = f"ads_state_{account_id}"
+    if ads_state_key in session and session[ads_state_key]:
+        ads_data = session[ads_state_key]
+        raw_campaigns = ads_data.get('campaigns', [])
+        for campaign in raw_campaigns:
+            campaigns.append({
+                'id': campaign.get('id'),
+                'name': campaign.get('name'),
+                'daily_budget_cents': int(float(campaign.get('daily_budget', 0)) * 100),
+                'google_campaign_id': campaign.get('google_campaign_id') or campaign.get('id'),
+                'google_customer_id': ads_data.get('customer_id', ''),
+                'status': campaign.get('status', 'unknown')
+            })
+        campaigns.sort(key=lambda c: c.get('name', '').lower())
 
-    with db.engine.connect() as conn:
-        result = conn.execute(campaigns_query, {"account_id": account_id})
-        campaigns = [dict(row._mapping) for row in result]
+    # If no session campaigns, try database
+    if not campaigns:
+        try:
+            campaigns_query = text("""
+                SELECT id, name, daily_budget_cents, google_campaign_id, google_customer_id
+                FROM ads_campaigns
+                WHERE account_id = :account_id
+                ORDER BY name
+            """)
+            with db.engine.connect() as conn:
+                result = conn.execute(campaigns_query, {"account_id": account_id})
+                campaigns = [dict(row._mapping) for row in result]
+        except Exception as e:
+            logging.warning(f"Could not fetch campaigns from database: {e}")
+            # Session was empty and DB failed - show setup message if still no campaigns
+            if not campaigns:
+                setup_required = True
 
-    # Get recent competitive alerts
-    alerts_query = text("""
-        SELECT ca.*, ac.name as campaign_name
-        FROM competitive_alerts ca
-        JOIN ads_campaigns ac ON ac.id = ca.campaign_id
-        WHERE ca.account_id = :account_id
-          AND ca.is_acknowledged = FALSE
-        ORDER BY ca.severity DESC, ca.alert_date DESC
-        LIMIT 20
-    """)
-
-    with db.engine.connect() as conn:
-        result = conn.execute(alerts_query, {"account_id": account_id})
-        alerts = [dict(row._mapping) for row in result]
+    # Try to get recent competitive alerts (optional - may fail if tables don't exist)
+    try:
+        alerts_query = text("""
+            SELECT ca.*, ac.name as campaign_name
+            FROM competitive_alerts ca
+            JOIN ads_campaigns ac ON ac.id = ca.campaign_id
+            WHERE ca.account_id = :account_id
+              AND ca.is_acknowledged = FALSE
+            ORDER BY ca.severity DESC, ca.alert_date DESC
+            LIMIT 20
+        """)
+        with db.engine.connect() as conn:
+            result = conn.execute(alerts_query, {"account_id": account_id})
+            alerts = [dict(row._mapping) for row in result]
+    except Exception as e:
+        logging.warning(f"Could not fetch competitive alerts: {e}")
+        # Alerts are optional - continue without them
 
     return render_template(
         "google/competitive_dashboard.html",
         campaigns=campaigns,
-        alerts=alerts
+        alerts=alerts,
+        setup_required=setup_required
     )
 
 

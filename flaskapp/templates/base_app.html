@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  {% if csrf_token %}<meta name="csrf-token" content="{{ csrf_token() }}">{% endif %}
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{% block title %}{{ app_name }} – App{% endblock %}</title>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HZBKX56R65"></script>
@@ -1551,6 +1551,56 @@
         console.warn('Google Ads navigation elements not found');
       }
     });
+  </script>
+
+  <!-- Global CSRF Token Helper -->
+  <script nonce="{{ g.csp_nonce }}">
+    // Global function to get CSRF token
+    window.getCsrfToken = function() {
+      const meta = document.querySelector('meta[name="csrf-token"]');
+      if (meta && meta.content) return meta.content;
+      const inp = document.querySelector('input[name="csrf_token"]');
+      if (inp && inp.value) return inp.value;
+      return '';
+    };
+
+    // Wrapper for fetch that automatically includes CSRF token
+    window.safeFetch = async function(url, options = {}) {
+      const token = window.getCsrfToken();
+      const method = (options.method || 'GET').toUpperCase();
+
+      // Add CSRF token to headers for non-GET requests
+      if (method !== 'GET' && method !== 'HEAD') {
+        options.headers = options.headers || {};
+        if (token) {
+          options.headers['X-CSRFToken'] = token;
+          options.headers['X-CSRF-Token'] = token;
+        }
+      }
+
+      // Ensure credentials are included
+      options.credentials = options.credentials || 'same-origin';
+
+      return fetch(url, options);
+    };
+
+    // Override native fetch to add CSRF token (optional safety net)
+    const originalFetch = window.fetch;
+    window.fetch = function(url, options = {}) {
+      const method = (options.method || 'GET').toUpperCase();
+      if (method !== 'GET' && method !== 'HEAD') {
+        const token = window.getCsrfToken();
+        if (token) {
+          options.headers = options.headers || {};
+          // Only add if not already present
+          if (!options.headers['X-CSRFToken'] && !options.headers['X-CSRF-Token']) {
+            options.headers['X-CSRFToken'] = token;
+            options.headers['X-CSRF-Token'] = token;
+          }
+        }
+      }
+      return originalFetch.call(window, url, options);
+    };
   </script>
 </body>
 </html>

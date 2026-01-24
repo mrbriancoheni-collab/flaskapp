@@ -2792,19 +2792,14 @@ def _get_demo_improvement_data():
     }
 
 
-@google_bp.route("/ads/decision-screen", methods=["GET"], endpoint="ads_decision_screen")
-@login_required
-def ads_decision_screen_redirect():
-    """Redirect old URL to new performance page."""
-    return redirect(url_for("google_bp.ads_performance"), code=301)
-
-
-@google_bp.route("/ads/performance", methods=["GET"], endpoint="ads_performance")
+@google_bp.route("/ads/performance", methods=["GET"])
+@google_bp.route("/ads/decision-screen", methods=["GET"])
 @login_required
 def ads_performance():
     """
     Google Ads Performance Dashboard - Main dashboard for SMB operators.
     Shows status indicators, trust & protection messaging, and "What Changed?" timeline.
+    Accessible via both /ads/performance (new) and /ads/decision-screen (legacy).
     """
     from app.models_ai_actions import AIAction
     from sqlalchemy import func, desc

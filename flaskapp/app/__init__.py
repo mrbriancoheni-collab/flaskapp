@@ -235,7 +235,7 @@ def create_app():
         stderr_handler.setLevel(logging.INFO)
         stderr_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
 
-        log_path = _os.getenv("APP_ERROR_LOG", _os.path.join(_os.path.expanduser("~"), "app_error.log"))
+        log_path = _os.getenv("APP_ERROR_LOG", "/home/fieljtgr/flaskapp/stderr.log")
         _os.makedirs(_os.path.dirname(log_path), exist_ok=True)
         file_handler = RotatingFileHandler(log_path, maxBytes=1_000_000, backupCount=3, encoding="utf-8")
         file_handler.setLevel(logging.INFO)
@@ -1145,7 +1145,7 @@ def create_app():
     if CSRFError is not None:
         @app.errorhandler(CSRFError)
         def handle_csrf_error(e):
-            app.logger.warning(f"CSRF failed: {getattr(e, 'description', str(e))}")
+            app.logger.error(f"[CSRF ERROR] URL: {request.url}, Method: {request.method}, Referrer: {request.referrer}, Description: {getattr(e, 'description', str(e))}")
             flash("Your session expired or the form was invalid. Please try again.", "error")
             return redirect(request.referrer or url_for("main_bp.home")), 400
 
@@ -1311,6 +1311,7 @@ def create_app():
     @app.errorhandler(404)
     def _404(err):
         """Handle 404 Not Found errors with clean HTML page"""
+        app.logger.warning(f"[404 ERROR] URL: {request.url}, Method: {request.method}, Referrer: {request.referrer}")
         return render_template_string("""
 <!DOCTYPE html>
 <html lang="en">
@@ -1409,7 +1410,9 @@ def create_app():
     @app.errorhandler(500)
     def _500(err):
         """Handle 500 Internal Server Error with clean HTML page"""
-        app.logger.exception("Unhandled exception")
+        import traceback
+        app.logger.error(f"[500 ERROR] URL: {request.url}, Method: {request.method}, Error: {err}")
+        app.logger.error(f"[500 TRACEBACK]\n{traceback.format_exc()}")
         return render_template_string("""
 <!DOCTYPE html>
 <html lang="en">

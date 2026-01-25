@@ -246,10 +246,12 @@ def create_app():
         app.logger.addHandler(file_handler)
         app.logger.setLevel(logging.INFO)
         app.logger.propagate = False
-    except Exception:
+        app.logger.info(f"=== APP STARTED === Logging to: {log_path}")
+    except Exception as log_err:
         app.logger.handlers.clear()
         app.logger.addHandler(logging.StreamHandler())
         app.logger.setLevel(logging.INFO)
+        app.logger.error(f"Failed to setup file logging: {log_err}")
 
     # ---- DB / Extensions init ----------------------------------------------
     db.init_app(app)
@@ -1141,6 +1143,20 @@ def create_app():
         from app.cron_tasks import run_daily
         run_daily(app, db)
 
+    # ---- Catch-all exception handler for debugging ----------------------------------
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        import traceback
+        # Don't log HTTPException (like 404, 400) - they have their own handlers
+        from werkzeug.exceptions import HTTPException
+        if isinstance(e, HTTPException):
+            return e
+        app.logger.error(f"[UNHANDLED EXCEPTION] URL: {request.url}, Method: {request.method}")
+        app.logger.error(f"[EXCEPTION DETAIL] {type(e).__name__}: {e}")
+        app.logger.error(f"[TRACEBACK]\n{traceback.format_exc()}")
+        # Re-raise to let the 500 handler deal with it
+        raise e
+
     # ---- CSRF error handler (friendly UX) ----------------------------------
     if CSRFError is not None:
         @app.errorhandler(CSRFError)
@@ -1153,6 +1169,7 @@ def create_app():
     @app.errorhandler(400)
     def _400(err):
         """Handle 400 Bad Request errors with clean HTML page"""
+        app.logger.error(f"[400 ERROR] URL: {request.url}, Method: {request.method}, Error: {err}")
         return render_template_string("""
 <!DOCTYPE html>
 <html lang="en">

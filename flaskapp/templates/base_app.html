@@ -245,19 +245,19 @@
           <i class="fa-solid fa-bullseye"></i><span>Campaigns</span>
         </a>
       {% endif %}
-      {% if has_endpoint('budget_bp.budget_groups') %}
-        <a href="{{ url_for('budget_bp.budget_groups') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
-          <i class="fa-solid fa-wallet"></i><span>Budget Manager</span>
+      {% if has_endpoint('google_bp.ads_budget') %}
+        <a href="{{ url_for('google_bp.ads_budget') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+          <i class="fa-solid fa-wallet"></i><span>Budget Groups</span>
         </a>
       {% endif %}
-      {% if has_endpoint('forecasting_bp.forecasting_dashboard') %}
-        <a href="{{ url_for('forecasting_bp.forecasting_dashboard') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+      {% if has_endpoint('google_bp.ads_forecasting') %}
+        <a href="{{ url_for('google_bp.ads_forecasting') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
           <i class="fa-solid fa-chart-area"></i><span>Forecasting</span>
         </a>
       {% endif %}
-      {% if has_endpoint('competitive_bp.competitive_dashboard') %}
-        <a href="{{ url_for('competitive_bp.competitive_dashboard') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
-          <i class="fa-solid fa-users"></i><span>Competitors</span>
+      {% if has_endpoint('google_bp.ads_competitive') %}
+        <a href="{{ url_for('google_bp.ads_competitive') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+          <i class="fa-solid fa-chess"></i><span>Competitive</span>
         </a>
       {% endif %}
       {% if has_endpoint('google_bp.ads_opportunities') %}
@@ -550,19 +550,19 @@
               <i class="fa-solid fa-bullseye"></i><span>Campaigns</span>
             </a>
             {% endif %}
-            {% if has_endpoint('budget_bp.budget_groups') %}
-            <a class="sub-link {% if epn=='budget_bp.budget_groups' %}active{% endif %}" href="{{ url_for('budget_bp.budget_groups') }}">
-              <i class="fa-solid fa-wallet"></i><span>Budget Manager</span>
+            {% if has_endpoint('google_bp.ads_budget') %}
+            <a class="sub-link {% if epn=='google_bp.ads_budget' %}active{% endif %}" href="{{ url_for('google_bp.ads_budget') }}">
+              <i class="fa-solid fa-wallet"></i><span>Budget Groups</span>
             </a>
             {% endif %}
-            {% if has_endpoint('forecasting_bp.forecasting_dashboard') %}
-            <a class="sub-link {% if epn=='forecasting_bp.forecasting_dashboard' %}active{% endif %}" href="{{ url_for('forecasting_bp.forecasting_dashboard') }}">
+            {% if has_endpoint('google_bp.ads_forecasting') %}
+            <a class="sub-link {% if epn=='google_bp.ads_forecasting' %}active{% endif %}" href="{{ url_for('google_bp.ads_forecasting') }}">
               <i class="fa-solid fa-chart-area"></i><span>Forecasting</span>
             </a>
             {% endif %}
-            {% if has_endpoint('competitive_bp.competitive_dashboard') %}
-            <a class="sub-link {% if epn=='competitive_bp.competitive_dashboard' %}active{% endif %}" href="{{ url_for('competitive_bp.competitive_dashboard') }}">
-              <i class="fa-solid fa-users"></i><span>Competitors</span>
+            {% if has_endpoint('google_bp.ads_competitive') %}
+            <a class="sub-link {% if epn=='google_bp.ads_competitive' %}active{% endif %}" href="{{ url_for('google_bp.ads_competitive') }}">
+              <i class="fa-solid fa-chess"></i><span>Competitive</span>
             </a>
             {% endif %}
             {% if has_endpoint('google_bp.ads_opportunities') %}
@@ -1522,9 +1522,9 @@
       const currentEndpoint = '{{ epn }}';
       const googleAdsEndpoints = [
         'google_bp.ads_performance',
-        'budget_bp.budget_groups',
-        'forecasting_bp.forecasting_dashboard',
-        'competitive_bp.competitive_dashboard',
+        'google_bp.ads_budget',
+        'google_bp.ads_forecasting',
+        'google_bp.ads_competitive',
         'google_bp.ads_campaigns',
         'google_bp.ads_opportunities'
       ];

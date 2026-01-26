@@ -350,7 +350,10 @@ async function loadWeatherImpact() {
   try {
     const response = await fetch('/account/google/ads/forecasting/api/weather/current', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      },
       body: JSON.stringify({zip_code: selectedZipCode, service_type: selectedServiceType})
     });
     const data = await response.json();
@@ -370,7 +373,10 @@ async function loadWeatherForecast() {
   try {
     const response = await fetch('/account/google/ads/forecasting/api/weather/forecast', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      },
       body: JSON.stringify({zip_code: selectedZipCode, service_type: selectedServiceType})
     });
     const data = await response.json();
@@ -411,7 +417,10 @@ async function loadMonthlyForecast() {
   try {
     const response = await fetch('/account/google/ads/forecasting/api/forecast/monthly', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      },
       body: JSON.stringify({
         campaign_id: selectedCampaignId,
         service_type: selectedServiceType,

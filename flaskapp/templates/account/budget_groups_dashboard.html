@@ -429,7 +429,8 @@
 
         try {
             const response = await fetch(`/account/budget-groups/api/groups/${groupId}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''}
             });
 
             const result = await response.json();
@@ -473,7 +474,7 @@
             // Load unassigned campaigns
             const unassignedResponse = await fetch('/account/budget-groups/api/unassigned-campaigns', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''},
                 body: JSON.stringify({
                     customer_id: CUSTOMER_ID,
                     campaigns: allCampaigns
@@ -534,7 +535,7 @@
         try {
             const response = await fetch(`/account/budget-groups/api/groups/${currentGroupId}/campaigns`, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''},
                 body: JSON.stringify({
                     customer_id: CUSTOMER_ID,
                     campaign_id: campaignId,
@@ -558,7 +559,8 @@
     async function unassignCampaign(campaignId) {
         try {
             const response = await fetch(`/account/budget-groups/api/groups/${currentGroupId}/campaigns/${campaignId}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''}
             });
 
             const result = await response.json();

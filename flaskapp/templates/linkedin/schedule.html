@@ -285,6 +285,7 @@ document.getElementById('editForm')?.addEventListener('submit', async function(e
   try {
     const response = await fetch(`/account/linkedin/schedule/${postId}/update`, {
       method: 'POST',
+      headers: {'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''},
       body: formData
     });
 
@@ -315,7 +316,8 @@ document.querySelectorAll('.delete-post-btn').forEach(btn => {
 
     try {
       const response = await fetch(`/account/linkedin/schedule/${postId}/delete`, {
-        method: 'POST'
+        method: 'POST',
+        headers: {'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''}
       });
 
       const data = await response.json();

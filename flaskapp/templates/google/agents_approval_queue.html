@@ -209,6 +209,7 @@ function approveDecision(decisionId) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
         }
     })
     .then(response => response.json())
@@ -233,6 +234,7 @@ function rejectDecision(decisionId) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
         },
         body: JSON.stringify({ reason: reason || 'User rejected' })
     })
@@ -262,6 +264,7 @@ function runAgentsNow() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
         }
     })
     .then(response => response.json())

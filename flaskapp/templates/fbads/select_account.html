@@ -104,7 +104,7 @@
     </form>
 </div>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
 // Update hidden name fields when radio buttons change
 document.querySelectorAll('input[name="ad_account_id"]').forEach(radio => {
     radio.addEventListener('change', function() {

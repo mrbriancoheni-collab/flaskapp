@@ -1,12 +1,13 @@
 {% extends "base_app.html" %}
-{% block title %}Edit Existing ¨C {{ app_name }}{% endblock %}
+{% block title %}Edit Existing ï¿½C {{ app_name }}{% endblock %}
 
 {% block content %}
 <div class="space-y-4">
   <h1 class="text-2xl font-semibold">Edit Existing Page/Post</h1>
-  <p class="text-gray-600">Paste a public URL from your site. We¡¯ll analyze it and queue a draft with recommended improvements.</p>
+  <p class="text-gray-600">Paste a public URL from your site. Weï¿½ï¿½ll analyze it and queue a draft with recommended improvements.</p>
 
   <form method="post" action="{{ url_for('wp_bp.analyze_page') }}" class="grid gap-4 max-w-2xl">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div>
       <label for="url" class="block text-sm font-medium text-gray-700">URL to analyze</label>
       <input id="url" name="url" type="url" required
@@ -31,7 +32,7 @@
     </div>
 
     <p class="text-xs text-gray-500">
-      We¡¯ll email you for approval if required by your settings. Approved drafts get published by the runner.
+      Weï¿½ï¿½ll email you for approval if required by your settings. Approved drafts get published by the runner.
     </p>
   </form>
 </div>

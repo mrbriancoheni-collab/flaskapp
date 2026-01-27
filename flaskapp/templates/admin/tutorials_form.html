@@ -12,6 +12,7 @@
 </div>
 
 <form method="post" action="{{ url_for('admin_bp.tutorials_update', popup_id=popup.id) if popup else url_for('admin_bp.tutorials_create') }}" class="max-w-4xl">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
   <div class="bg-white border rounded-xl p-6 mb-6">
     <h2 class="text-lg font-semibold mb-4">Basic Information</h2>

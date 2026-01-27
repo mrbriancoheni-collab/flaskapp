@@ -620,7 +620,7 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/ad-composer-v2.js') }}"></script>
-<script>
+<script nonce="{{ g.csp_nonce }}">
 let currentCreativeId = null;
 let adComposer = null;
 

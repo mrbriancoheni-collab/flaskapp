@@ -1,4 +1,7 @@
 import os, sys
+import logging
+from logging.handlers import RotatingFileHandler
+from datetime import datetime
 
 # Ensure we import from this app root
 APP_ROOT = os.path.dirname(__file__)
@@ -8,6 +11,31 @@ if APP_ROOT not in sys.path:
 # Guard against legacy env that broke Python earlier
 os.environ.pop("PYTHONHOME", None)
 os.environ.pop("PYTHONPATH", None)
+
+# Setup early logging BEFORE importing the app
+LOG_FILE = os.path.join(APP_ROOT, 'stderr.log')
+
+# Write directly to file first to confirm we can write
+try:
+    with open(LOG_FILE, 'a') as f:
+        f.write(f"\n=== PASSENGER STARTUP {datetime.now()} ===\n")
+        f.write(f"APP_ROOT: {APP_ROOT}\n")
+        f.write(f"Python: {sys.version}\n")
+        f.flush()
+except Exception as e:
+    pass  # Can't write, will try alternate location
+
+try:
+    file_handler = RotatingFileHandler(LOG_FILE, maxBytes=1_000_000, backupCount=3)
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s'))
+
+    # Configure root logger
+    logging.basicConfig(level=logging.DEBUG, handlers=[file_handler])
+    logging.info(f"Logging initialized to: {LOG_FILE}")
+except Exception as e:
+    with open(LOG_FILE, 'a') as f:
+        f.write(f"Failed to setup logging: {e}\n")
 
 # Load environment variables from .env file
 def load_env_file(env_path):

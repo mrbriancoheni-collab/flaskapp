@@ -158,6 +158,7 @@
     <!-- Actions -->
     <div class="flex gap-4">
       <form method="post" action="{{ url_for('admin_bp.update_customer_impact_route', account_id=account.id) }}" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn-primary">
           <i class="fa-solid fa-rotate"></i> Update Metrics
         </button>
@@ -198,6 +199,7 @@
       </button>
     </div>
     <form method="post" action="{{ url_for('admin_bp.set_customer_baseline', account_id=account.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="px-6 py-4 space-y-4">
         <p class="text-sm text-gray-600">
           Select the date range for the customer's baseline (pre-FieldSprout) performance.

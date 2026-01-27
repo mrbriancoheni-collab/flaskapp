@@ -4,6 +4,7 @@
 <h1 class="text-2xl font-semibold mb-4">Data Ingest</h1>
 
 <form method="post" enctype="multipart/form-data" class="space-y-3">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div>
     <label class="block text-sm mb-1">Mode</label>
     <select name="mode" class="border rounded px-2 py-1">

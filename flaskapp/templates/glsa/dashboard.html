@@ -470,7 +470,7 @@
 </div>
 
 <!-- Sync Data JavaScript -->
-<script>
+<script nonce="{{ g.csp_nonce }}">
 async function syncLSAData() {
   const syncBtn = document.getElementById('syncBtn');
   const syncIcon = document.getElementById('syncIcon');

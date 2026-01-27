@@ -2221,11 +2221,9 @@ def ads_debug_config():
 @login_required
 def ads_ui():
     """
-    Google Ads main page - Redirects to new decision screen.
-    The decision screen uses auto-executed language instead of approval-based language.
+    Google Ads main page - Redirects to performance dashboard.
     """
-    # Redirect to new decision screen with SMB-focused UI
-    return redirect(url_for("google_bp.ads_decision_screen"))
+    return redirect(url_for("google_bp.ads_performance"))
 
     # OLD CODE KEPT FOR REFERENCE (opportunities page with approval flow)
     from datetime import datetime, timedelta
@@ -2794,12 +2792,34 @@ def _get_demo_improvement_data():
     }
 
 
-@google_bp.route("/ads/decision-screen", methods=["GET"], endpoint="ads_decision_screen")
+@google_bp.route("/ads/campaigns", methods=["GET"], endpoint="ads_campaigns")
 @login_required
-def ads_decision_screen():
+def ads_campaigns():
     """
-    Google Ads Decision Screen - New UI focused on decision-making for SMB operators.
+    Google Ads Campaigns List - Shows all campaigns with their performance.
+    """
+    aid = current_account_id()
+    connected = _is_connected(aid, "ads")
+    ads_data = _get_ads_state(aid) if connected else {}
+    ai_connected = current_app.config.get("AI_ENABLED", False)
+
+    return render_template(
+        "google/ads_campaigns.html",
+        connected=connected,
+        ads_data=ads_data,
+        ai_connected=ai_connected,
+        epn=request.endpoint
+    )
+
+
+@google_bp.route("/ads/performance", methods=["GET"])
+@google_bp.route("/ads/decision-screen", methods=["GET"])
+@login_required
+def ads_performance():
+    """
+    Google Ads Performance Dashboard - Main dashboard for SMB operators.
     Shows status indicators, trust & protection messaging, and "What Changed?" timeline.
+    Accessible via both /ads/performance (new) and /ads/decision-screen (legacy).
     """
     from app.models_ai_actions import AIAction
     from sqlalchemy import func, desc
@@ -2870,19 +2890,79 @@ def ads_decision_screen():
 
     # Fetch account performance stats (last 30 days)
     account_performance = None
+    prior_performance = None
     if connected:
         from app.google.utils_ads import fetch_account_performance_stats
         try:
             current_app.logger.info(f"Fetching account performance stats for account {aid}")
             account_performance = fetch_account_performance_stats(aid, days=30)
-            if account_performance:
-                current_app.logger.info(f"Account performance stats fetched successfully: {account_performance.get('has_data')}")
-            else:
-                current_app.logger.warning("Account performance stats returned None")
+            current_app.logger.info(f"[DECISION] Account performance fetched: has_data={account_performance.get('has_data') if account_performance else 'None'}")
+
+            # Also fetch prior 30 days (days 31-60) for comparison
+            prior_performance = fetch_account_performance_stats(aid, days=60)
+            if prior_performance and prior_performance.get('has_data') and account_performance and account_performance.get('has_data'):
+                # Subtract current period from 60-day totals to get prior period
+                prior_impressions = max(0, (prior_performance.get('impressions', 0) or 0) - (account_performance.get('impressions', 0) or 0))
+                prior_clicks = max(0, (prior_performance.get('clicks', 0) or 0) - (account_performance.get('clicks', 0) or 0))
+                prior_cost = max(0, (prior_performance.get('cost', 0) or 0) - (account_performance.get('cost', 0) or 0))
+                prior_conversions = max(0, (prior_performance.get('conversions', 0) or 0) - (account_performance.get('conversions', 0) or 0))
+
+                # Calculate percentage changes (positive = improvement for most metrics)
+                def calc_change(current, prior):
+                    if prior == 0:
+                        return 100 if current > 0 else 0
+                    return round(((current - prior) / prior) * 100, 1)
+
+                account_performance['cost_change'] = calc_change(account_performance.get('cost', 0), prior_cost)
+                account_performance['impressions_change'] = calc_change(account_performance.get('impressions', 0), prior_impressions)
+                account_performance['clicks_change'] = calc_change(account_performance.get('clicks', 0), prior_clicks)
+                account_performance['conversions_change'] = calc_change(account_performance.get('conversions', 0), prior_conversions)
+                account_performance['ctr_change'] = calc_change(account_performance.get('ctr', 0),
+                    (prior_clicks / prior_impressions * 100) if prior_impressions > 0 else 0)
+                account_performance['cpc_change'] = calc_change(account_performance.get('avg_cpc', 0),
+                    (prior_cost / prior_clicks) if prior_clicks > 0 else 0)
+                account_performance['cpa_change'] = calc_change(account_performance.get('cost_per_conversion', 0),
+                    (prior_cost / prior_conversions) if prior_conversions > 0 else 0)
+                account_performance['has_comparison'] = True
         except Exception as e:
             current_app.logger.error(f"Could not load account performance stats: {e}")
             import traceback
             current_app.logger.error(f"Traceback: {traceback.format_exc()}")
+
+    # Fallback: try to get performance data from ads_state session if fetch failed
+    if not account_performance or not account_performance.get('has_data'):
+        try:
+            ads_data = _get_ads_state(aid)
+            if ads_data and ads_data.get('campaigns'):
+                # Aggregate from campaigns
+                total_cost = sum(c.get('cost_30d', 0) or 0 for c in ads_data['campaigns'])
+                total_clicks = sum(c.get('clicks', 0) or 0 for c in ads_data['campaigns'])
+                total_conversions = sum(c.get('conversions', 0) or 0 for c in ads_data['campaigns'])
+                total_impressions = sum(c.get('impressions', 0) or 0 for c in ads_data['campaigns'])
+
+                if total_impressions > 0 or total_clicks > 0 or total_cost > 0:
+                    ctr = (total_clicks / total_impressions * 100) if total_impressions > 0 else 0
+                    avg_cpc = (total_cost / total_clicks) if total_clicks > 0 else 0
+                    conversion_rate = (total_conversions / total_clicks * 100) if total_clicks > 0 else 0
+                    cost_per_conversion = (total_cost / total_conversions) if total_conversions > 0 else 0
+
+                    account_performance = {
+                        "impressions": total_impressions,
+                        "clicks": total_clicks,
+                        "ctr": round(ctr, 2),
+                        "cost": round(total_cost, 2),
+                        "conversions": round(total_conversions, 1),
+                        "conversions_value": 0,
+                        "avg_cpc": round(avg_cpc, 2),
+                        "conversion_rate": round(conversion_rate, 2),
+                        "cost_per_conversion": round(cost_per_conversion, 2),
+                        "roas": 0,
+                        "days": 30,
+                        "has_data": True
+                    }
+                    current_app.logger.info(f"[DECISION] Used session fallback for performance data")
+        except Exception as e:
+            current_app.logger.warning(f"[DECISION] Session fallback failed: {e}")
 
     # Transform actions into timeline format
     recent_changes = []
@@ -3480,12 +3560,11 @@ def ads_optimize():
 @google_bp.route("/ads/opportunities/demo", methods=["GET"], endpoint="ads_opportunities_demo")
 def ads_opportunities_demo():
     """
-    DEPRECATED: This route is deprecated and redirects to the main decision screen.
-    The decision screen now handles demo data for non-connected accounts.
+    DEPRECATED: This route is deprecated and redirects to the performance dashboard.
     """
     from flask import redirect, url_for, current_app
-    current_app.logger.warning("DEPRECATED: /ads/opportunities/demo accessed - redirecting to decision screen")
-    return redirect(url_for('google_bp.ads_decision_screen'), code=301)
+    current_app.logger.warning("DEPRECATED: /ads/opportunities/demo accessed - redirecting to performance page")
+    return redirect(url_for('google_bp.ads_performance'), code=301)
 
 
 @google_bp.route("/ads/opportunities", methods=["GET"], endpoint="ads_opportunities")
@@ -3632,11 +3711,26 @@ def ads_opportunities():
         f"manual_task_titles={[t.get('title') for t in analysis.get('manual_tasks', [])]}"
     )
 
+    # Fetch recent undoable AI actions for the "Recent Changes" section
+    recent_actions = []
+    try:
+        from app.models_ai_actions import AIAction
+        recent_actions = AIAction.query.filter_by(
+            account_id=aid,
+            status='executed'
+        ).filter(
+            AIAction.can_undo == True,
+            AIAction.undone_at == None
+        ).order_by(AIAction.executed_at.desc()).limit(5).all()
+    except Exception as e:
+        current_app.logger.warning(f"Could not fetch recent AI actions: {e}")
+
     return render_template(
         "google/ads_opportunities.html",
         connected=connected,
         ads_data=ads_data,
         analysis=analysis,
+        recent_actions=recent_actions,
         epn=request.endpoint,
         is_demo=False,
     )
@@ -3989,6 +4083,608 @@ def activate_campaign(campaign_id):
     except Exception as e:
         current_app.logger.exception(f"Error activating campaign: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ==============================================================================
+# BUDGET GROUPS PAGE AND API ROUTES
+# ==============================================================================
+
+def _check_budget_groups_table_exists():
+    """Check if budget groups table exists in database."""
+    try:
+        with db.engine.connect() as conn:
+            result = conn.execute(text("SHOW TABLES LIKE 'campaign_budget_groups'"))
+            return result.fetchone() is not None
+    except Exception:
+        return False
+
+
+@google_bp.route("/ads/budget", methods=["GET"], endpoint="ads_budget")
+@login_required
+def ads_budget():
+    """Budget Groups page - Organize campaigns into budget-controlled groups."""
+    aid = current_account_id()
+    connected = _is_connected(aid, "ads")
+
+    # Check if database tables exist
+    setup_required = not _check_budget_groups_table_exists()
+
+    budget_groups = []
+    campaigns = []
+    unassigned_campaigns = []
+
+    if not setup_required and connected:
+        try:
+            # Fetch budget groups
+            with db.engine.connect() as conn:
+                result = conn.execute(text("""
+                    SELECT
+                        g.*,
+                        COUNT(DISTINCT cgm.campaign_id) as campaign_count,
+                        COALESCE(SUM(cgm.current_month_spend), 0) as current_spend
+                    FROM campaign_budget_groups g
+                    LEFT JOIN campaign_group_memberships cgm ON g.id = cgm.group_id
+                    WHERE g.account_id = :aid
+                    GROUP BY g.id
+                    ORDER BY g.priority DESC, g.name
+                """), {"aid": aid})
+                budget_groups = [dict(row._mapping) for row in result.fetchall()]
+
+            # Fetch all campaigns from ads data
+            ads_data = _get_ads_state(aid)
+            all_campaigns = ads_data.get("campaigns", [])
+
+            # Get assigned campaign IDs
+            with db.engine.connect() as conn:
+                result = conn.execute(text("""
+                    SELECT cgm.campaign_id, g.name as group_name
+                    FROM campaign_group_memberships cgm
+                    JOIN campaign_budget_groups g ON cgm.group_id = g.id
+                    WHERE g.account_id = :aid
+                """), {"aid": aid})
+                assigned_map = {row.campaign_id: row.group_name for row in result.fetchall()}
+
+            # Build campaigns list with group info
+            for c in all_campaigns:
+                campaign = {
+                    "id": c.get("id"),
+                    "name": c.get("name"),
+                    "status": c.get("status"),
+                    "group_name": assigned_map.get(str(c.get("id")))
+                }
+                campaigns.append(campaign)
+                if not campaign["group_name"]:
+                    unassigned_campaigns.append(campaign)
+
+        except Exception as e:
+            current_app.logger.error(f"Error loading budget groups: {e}")
+            setup_required = True
+
+    return render_template(
+        "google/budget_groups.html",
+        connected=connected,
+        setup_required=setup_required,
+        budget_groups=budget_groups,
+        campaigns=campaigns,
+        unassigned_campaigns=unassigned_campaigns,
+        epn=request.endpoint
+    )
+
+
+@google_bp.route("/ads/budget/api/groups", methods=["POST"], endpoint="budget_groups_create")
+@login_required
+def budget_groups_create():
+    """Create a new budget group."""
+    aid = current_account_id()
+    data = request.get_json()
+
+    try:
+        with db.engine.connect() as conn:
+            result = conn.execute(text("""
+                INSERT INTO campaign_budget_groups
+                (account_id, name, description, monthly_budget, priority,
+                 auto_pause_on_overspend, alert_threshold_pct, status,
+                 target_location, location_type, location_radius_miles, location_criteria_ids)
+                VALUES (:aid, :name, :description, :budget, :priority,
+                        :auto_pause, :alert_threshold, 'active',
+                        :target_location, :location_type, :location_radius, :location_criteria_ids)
+            """), {
+                "aid": aid,
+                "name": data.get("name"),
+                "description": data.get("description"),
+                "budget": data.get("monthly_budget", 0),
+                "priority": data.get("priority", 0),
+                "auto_pause": data.get("auto_pause_on_overspend", True),
+                "alert_threshold": data.get("alert_threshold_pct", 0.8),
+                "target_location": data.get("target_location"),
+                "location_type": data.get("location_type"),
+                "location_radius": data.get("location_radius_miles"),
+                "location_criteria_ids": data.get("location_criteria_ids")
+            })
+            conn.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        current_app.logger.error(f"Error creating budget group: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@google_bp.route("/ads/budget/api/groups/<int:group_id>", methods=["PUT"], endpoint="budget_groups_update")
+@login_required
+def budget_groups_update(group_id):
+    """Update a budget group."""
+    aid = current_account_id()
+    data = request.get_json()
+
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(text("""
+                UPDATE campaign_budget_groups
+                SET name = :name, description = :description, monthly_budget = :budget,
+                    priority = :priority, auto_pause_on_overspend = :auto_pause,
+                    alert_threshold_pct = :alert_threshold,
+                    target_location = :target_location, location_type = :location_type,
+                    location_radius_miles = :location_radius, location_criteria_ids = :location_criteria_ids
+                WHERE id = :group_id AND account_id = :aid
+            """), {
+                "group_id": group_id,
+                "aid": aid,
+                "name": data.get("name"),
+                "description": data.get("description"),
+                "budget": data.get("monthly_budget", 0),
+                "priority": data.get("priority", 0),
+                "auto_pause": data.get("auto_pause_on_overspend", True),
+                "alert_threshold": data.get("alert_threshold_pct", 0.8),
+                "target_location": data.get("target_location"),
+                "location_type": data.get("location_type"),
+                "location_radius": data.get("location_radius_miles"),
+                "location_criteria_ids": data.get("location_criteria_ids")
+            })
+            conn.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        current_app.logger.error(f"Error updating budget group: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@google_bp.route("/ads/budget/api/groups/<int:group_id>", methods=["DELETE"], endpoint="budget_groups_delete")
+@login_required
+def budget_groups_delete(group_id):
+    """Delete a budget group."""
+    aid = current_account_id()
+
+    try:
+        with db.engine.connect() as conn:
+            # First delete memberships
+            conn.execute(text("""
+                DELETE FROM campaign_group_memberships
+                WHERE group_id = :group_id
+            """), {"group_id": group_id})
+            # Then delete group
+            conn.execute(text("""
+                DELETE FROM campaign_budget_groups
+                WHERE id = :group_id AND account_id = :aid
+            """), {"group_id": group_id, "aid": aid})
+            conn.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        current_app.logger.error(f"Error deleting budget group: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@google_bp.route("/ads/budget/api/groups/<int:group_id>/assign", methods=["POST"], endpoint="budget_groups_assign")
+@login_required
+def budget_groups_assign(group_id):
+    """Assign campaigns to a budget group."""
+    aid = current_account_id()
+    data = request.get_json()
+    campaign_ids = data.get("campaign_ids", [])
+
+    try:
+        with db.engine.connect() as conn:
+            for campaign_id in campaign_ids:
+                # Remove from any existing group first
+                conn.execute(text("""
+                    DELETE FROM campaign_group_memberships
+                    WHERE campaign_id = :cid
+                """), {"cid": str(campaign_id)})
+                # Add to new group
+                conn.execute(text("""
+                    INSERT INTO campaign_group_memberships (group_id, campaign_id, current_month_spend)
+                    VALUES (:group_id, :cid, 0)
+                """), {"group_id": group_id, "cid": str(campaign_id)})
+            conn.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        current_app.logger.error(f"Error assigning campaigns: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@google_bp.route("/ads/budget/api/campaigns/<campaign_id>/unassign", methods=["POST"], endpoint="budget_campaigns_unassign")
+@login_required
+def budget_campaigns_unassign(campaign_id):
+    """Remove a campaign from its budget group."""
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(text("""
+                DELETE FROM campaign_group_memberships
+                WHERE campaign_id = :cid
+            """), {"cid": campaign_id})
+            conn.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        current_app.logger.error(f"Error unassigning campaign: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ==============================================================================
+# FORECASTING DASHBOARD PAGE
+# ==============================================================================
+
+@google_bp.route("/ads/forecasting", methods=["GET"], endpoint="ads_forecasting")
+@login_required
+def ads_forecasting():
+    """Budget Forecasting Dashboard - AI-powered budget forecasts."""
+    aid = current_account_id()
+    connected = _is_connected(aid, "ads")
+
+    campaigns = []
+    if connected:
+        ads_data = _get_ads_state(aid)
+        campaigns = ads_data.get("campaigns", [])
+
+    return render_template(
+        "google/forecasting_dashboard.html",
+        is_connected=connected,
+        campaigns=campaigns,
+        epn=request.endpoint
+    )
+
+
+# ==============================================================================
+# COMPETITIVE INTELLIGENCE PAGE AND API ROUTES
+# ==============================================================================
+
+def _check_competitive_tables_exist():
+    """Check if competitive insight tables exist in database."""
+    try:
+        with db.engine.connect() as conn:
+            result = conn.execute(text("SHOW TABLES LIKE 'auction_insights'"))
+            return result.fetchone() is not None
+    except Exception:
+        return False
+
+
+@google_bp.route("/ads/competitive", methods=["GET"], endpoint="ads_competitive")
+@login_required
+def ads_competitive():
+    """Competitive Intelligence Dashboard - Analyze competitive landscape."""
+    aid = current_account_id()
+    connected = _is_connected(aid, "ads")
+
+    setup_required = not _check_competitive_tables_exist()
+
+    campaigns = []
+    alerts = []
+
+    if not setup_required and connected:
+        ads_data = _get_ads_state(aid)
+        campaigns = ads_data.get("campaigns", [])
+
+        # Fetch any active alerts
+        try:
+            with db.engine.connect() as conn:
+                result = conn.execute(text("""
+                    SELECT * FROM competitive_alerts
+                    WHERE account_id = :aid AND acknowledged = 0
+                    ORDER BY alert_date DESC
+                    LIMIT 10
+                """), {"aid": aid})
+                alerts = [dict(row._mapping) for row in result.fetchall()]
+        except Exception as e:
+            current_app.logger.debug(f"Could not fetch competitive alerts: {e}")
+
+    return render_template(
+        "google/competitive_dashboard.html",
+        setup_required=setup_required or not connected,
+        campaigns=campaigns,
+        alerts=alerts,
+        epn=request.endpoint
+    )
+
+
+@google_bp.route("/ads/competitive/api/fetch-insights", methods=["POST"], endpoint="competitive_fetch_insights")
+@login_required
+def competitive_fetch_insights():
+    """Fetch auction insights from Google Ads API."""
+    aid = current_account_id()
+    data = request.get_json()
+    campaign_id = data.get("campaign_id")
+    lookback_days = data.get("lookback_days", 30)
+
+    if not campaign_id:
+        return jsonify({"success": False, "error": "Campaign ID required"}), 400
+
+    customer_id = _get_ads_customer_id(aid)
+    if not customer_id:
+        return jsonify({"success": False, "error": "No Google Ads account connected"}), 400
+
+    try:
+        from google.ads.googleads.client import GoogleAdsClient
+        from datetime import datetime, timedelta
+
+        # Get refresh token
+        tok = _get_ads_user_tokens(aid) or {}
+        refresh_token = tok.get("refresh_token")
+        if not refresh_token:
+            return jsonify({"success": False, "error": "No refresh token available"}), 400
+
+        # Create client
+        client_id, client_secret = _client_info("ads")
+        credentials = {
+            "developer_token": current_app.config.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "use_proto_plus": True
+        }
+
+        client = GoogleAdsClient.load_from_dict(credentials)
+        ga_service = client.get_service("GoogleAdsService")
+
+        # Calculate date range
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=lookback_days)
+
+        query = f"""
+            SELECT
+                segments.date,
+                auction_insight.domain,
+                auction_insight.impression_share,
+                auction_insight.overlap_rate,
+                auction_insight.position_above_rate,
+                auction_insight.top_of_page_rate,
+                auction_insight.abs_top_of_page_rate,
+                auction_insight.outranking_share
+            FROM campaign_auction_insight_view
+            WHERE campaign.id = {campaign_id}
+              AND segments.date BETWEEN '{start_date.strftime("%Y-%m-%d")}' AND '{end_date.strftime("%Y-%m-%d")}'
+        """
+
+        response = ga_service.search(customer_id=customer_id, query=query)
+
+        # Store insights in database
+        with db.engine.connect() as conn:
+            for row in response:
+                conn.execute(text("""
+                    INSERT INTO auction_insights
+                    (account_id, campaign_id, insight_date, competitor_domain,
+                     impression_share, overlap_rate, position_above_rate,
+                     top_of_page_rate, abs_top_of_page_rate, outranking_share)
+                    VALUES (:aid, :cid, :date, :domain, :imp_share, :overlap,
+                            :pos_above, :top_page, :abs_top, :outrank)
+                    ON DUPLICATE KEY UPDATE
+                    impression_share = VALUES(impression_share),
+                    overlap_rate = VALUES(overlap_rate),
+                    position_above_rate = VALUES(position_above_rate)
+                """), {
+                    "aid": aid,
+                    "cid": campaign_id,
+                    "date": row.segments.date,
+                    "domain": row.auction_insight.domain,
+                    "imp_share": row.auction_insight.impression_share,
+                    "overlap": row.auction_insight.overlap_rate,
+                    "pos_above": row.auction_insight.position_above_rate,
+                    "top_page": row.auction_insight.top_of_page_rate,
+                    "abs_top": row.auction_insight.abs_top_of_page_rate,
+                    "outrank": row.auction_insight.outranking_share
+                })
+            conn.commit()
+
+        return jsonify({"success": True, "message": "Insights fetched successfully"})
+
+    except Exception as e:
+        current_app.logger.error(f"Error fetching auction insights: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@google_bp.route("/ads/competitive/api/top-competitors", methods=["GET"], endpoint="competitive_top_competitors")
+@login_required
+def competitive_top_competitors():
+    """Get top competitors from stored auction insights."""
+    aid = current_account_id()
+    days = request.args.get("days", 30, type=int)
+
+    try:
+        with db.engine.connect() as conn:
+            result = conn.execute(text("""
+                SELECT
+                    competitor_domain,
+                    AVG(impression_share) as avg_impression_share,
+                    AVG(position_above_rate) as avg_position_above,
+                    AVG(overlap_rate) as avg_overlap,
+                    COUNT(DISTINCT campaign_id) as campaigns_competing,
+                    MAX(insight_date) as last_seen
+                FROM auction_insights
+                WHERE account_id = :aid
+                  AND insight_date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+                  AND competitor_domain != ''
+                GROUP BY competitor_domain
+                ORDER BY avg_impression_share DESC
+                LIMIT 20
+            """), {"aid": aid, "days": days})
+
+            competitors = []
+            for row in result.fetchall():
+                competitors.append({
+                    "competitor_domain": row.competitor_domain,
+                    "avg_impression_share": float(row.avg_impression_share or 0),
+                    "avg_position_above": float(row.avg_position_above or 0),
+                    "avg_overlap": float(row.avg_overlap or 0),
+                    "campaigns_competing": row.campaigns_competing,
+                    "last_seen": str(row.last_seen) if row.last_seen else None
+                })
+
+            return jsonify({"success": True, "competitors": competitors})
+
+    except Exception as e:
+        current_app.logger.error(f"Error getting top competitors: {e}")
+        return jsonify({"success": True, "competitors": []})
+
+
+@google_bp.route("/ads/competitive/api/market-share", methods=["GET"], endpoint="competitive_market_share")
+@login_required
+def competitive_market_share():
+    """Get market share analysis for a campaign."""
+    aid = current_account_id()
+    campaign_id = request.args.get("campaign_id")
+    days = request.args.get("days", 30, type=int)
+
+    try:
+        with db.engine.connect() as conn:
+            # Get your impression share
+            result = conn.execute(text("""
+                SELECT AVG(impression_share) as your_share
+                FROM auction_insights
+                WHERE account_id = :aid
+                  AND campaign_id = :cid
+                  AND competitor_domain = ''
+                  AND insight_date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+            """), {"aid": aid, "cid": campaign_id, "days": days})
+            row = result.fetchone()
+            your_share = float(row.your_share or 0) * 100 if row else 0
+
+            # Get competitor totals
+            result = conn.execute(text("""
+                SELECT
+                    COUNT(DISTINCT competitor_domain) as competitor_count,
+                    SUM(impression_share) as total_competitor_share
+                FROM (
+                    SELECT competitor_domain, AVG(impression_share) as impression_share
+                    FROM auction_insights
+                    WHERE account_id = :aid
+                      AND campaign_id = :cid
+                      AND competitor_domain != ''
+                      AND insight_date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+                    GROUP BY competitor_domain
+                ) competitors
+            """), {"aid": aid, "cid": campaign_id, "days": days})
+            row = result.fetchone()
+            competitor_count = row.competitor_count if row else 0
+            competitors_total = float(row.total_competitor_share or 0) * 100 if row else 0
+
+            # Determine market concentration
+            if competitor_count <= 3:
+                concentration = "low"
+            elif competitor_count <= 7:
+                concentration = "moderate"
+            else:
+                concentration = "high"
+
+            return jsonify({
+                "success": True,
+                "your_impression_share": your_share,
+                "competitors_total_share": min(competitors_total, 100),
+                "competitor_count": competitor_count,
+                "market_concentration": concentration,
+                "your_market_position_pct": your_share / (your_share + competitors_total) * 100 if (your_share + competitors_total) > 0 else 0
+            })
+
+    except Exception as e:
+        current_app.logger.error(f"Error getting market share: {e}")
+        return jsonify({
+            "success": True,
+            "your_impression_share": 0,
+            "competitors_total_share": 0,
+            "competitor_count": 0,
+            "market_concentration": "unknown",
+            "your_market_position_pct": 0
+        })
+
+
+@google_bp.route("/ads/competitive/api/track-competitor", methods=["POST"], endpoint="competitive_track_competitor")
+@login_required
+def competitive_track_competitor():
+    """Track a specific competitor's performance."""
+    aid = current_account_id()
+    data = request.get_json()
+    competitor_domain = data.get("competitor_domain", "").lower().strip()
+    campaign_id = data.get("campaign_id")
+    days = data.get("days", 30)
+
+    if not competitor_domain:
+        return jsonify({"success": False, "error": "Competitor domain required"}), 400
+
+    try:
+        with db.engine.connect() as conn:
+            result = conn.execute(text("""
+                SELECT
+                    AVG(impression_share) as avg_impression_share,
+                    AVG(position_above_rate) as position_above_rate,
+                    COUNT(*) as data_points,
+                    (
+                        SELECT AVG(impression_share)
+                        FROM auction_insights
+                        WHERE account_id = :aid
+                          AND competitor_domain LIKE :domain
+                          AND insight_date >= DATE_SUB(CURDATE(), INTERVAL :half_days DAY)
+                    ) - (
+                        SELECT AVG(impression_share)
+                        FROM auction_insights
+                        WHERE account_id = :aid
+                          AND competitor_domain LIKE :domain
+                          AND insight_date BETWEEN DATE_SUB(CURDATE(), INTERVAL :days DAY)
+                                               AND DATE_SUB(CURDATE(), INTERVAL :half_days DAY)
+                    ) as trend
+                FROM auction_insights
+                WHERE account_id = :aid
+                  AND competitor_domain LIKE :domain
+                  AND insight_date >= DATE_SUB(CURDATE(), INTERVAL :days DAY)
+            """), {
+                "aid": aid,
+                "domain": f"%{competitor_domain}%",
+                "days": days,
+                "half_days": days // 2
+            })
+            row = result.fetchone()
+
+            if row and row.data_points > 0:
+                return jsonify({
+                    "success": True,
+                    "avg_impression_share": float(row.avg_impression_share or 0),
+                    "position_above_rate": float(row.position_above_rate or 0),
+                    "trend": float(row.trend or 0),
+                    "data_points": row.data_points
+                })
+            else:
+                return jsonify({
+                    "success": False,
+                    "error": "No data found for this competitor. Try fetching insights first."
+                })
+
+    except Exception as e:
+        current_app.logger.error(f"Error tracking competitor: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@google_bp.route("/ads/competitive/api/alerts/<int:alert_id>/acknowledge", methods=["POST"], endpoint="competitive_acknowledge_alert")
+@login_required
+def competitive_acknowledge_alert(alert_id):
+    """Acknowledge a competitive alert."""
+    aid = current_account_id()
+
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(text("""
+                UPDATE competitive_alerts
+                SET acknowledged = 1, acknowledged_at = NOW()
+                WHERE id = :alert_id AND account_id = :aid
+            """), {"alert_id": alert_id, "aid": aid})
+            conn.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        current_app.logger.error(f"Error acknowledging alert: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 def _generate_preview(opt_type: str, opt_data: dict, opt_title: str) -> dict:

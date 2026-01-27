@@ -1,0 +1,143 @@
+{% extends "base_app.html" %}
+{% block title %}{{ template.name }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-8 px-4">
+  <!-- Back Link -->
+  <a href="{{ url_for('journey_bp.index') }}" class="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-indigo-600 mb-6">
+    <i class="fa-solid fa-arrow-left"></i>
+    Back to Journeys
+  </a>
+
+  <!-- Header -->
+  <div class="flex items-center gap-4 mb-8">
+    <div class="w-14 h-14 bg-{{ template.color }}-100 rounded-xl flex items-center justify-center">
+      <i class="fa-solid {{ template.icon }} text-{{ template.color }}-600 text-2xl"></i>
+    </div>
+    <div>
+      <h1 class="text-2xl font-extrabold text-gray-900">{{ template.name }}</h1>
+      <p class="text-gray-600">{{ template.description }}</p>
+    </div>
+  </div>
+
+  <!-- Journey Flow -->
+  <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+    <h2 class="text-lg font-semibold text-gray-900 mb-6">Customer Journey Flow</h2>
+
+    <!-- Visual Flow -->
+    <div class="relative">
+      <!-- Connection Line -->
+      <div class="absolute top-8 left-8 right-8 h-1 bg-gradient-to-r from-{{ template.color }}-200 via-{{ template.color }}-400 to-{{ template.color }}-200 rounded-full hidden md:block"></div>
+
+      <div class="grid grid-cols-1 md:grid-cols-{{ template.stages|length }} gap-4 relative">
+        {% for stage in template.stages %}
+        <div class="relative">
+          <!-- Stage Card -->
+          <div class="bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-{{ template.color }}-400 hover:shadow-lg transition-all duration-200">
+            <!-- Stage Number -->
+            <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 w-6 h-6 bg-{{ template.color }}-500 text-white rounded-full flex items-center justify-center text-xs font-bold z-10">
+              {{ loop.index }}
+            </div>
+
+            <!-- Icon -->
+            <div class="w-12 h-12 bg-{{ template.color }}-50 rounded-lg flex items-center justify-center mx-auto mt-2 mb-3">
+              <i class="fa-solid {{ stage.icon }} text-{{ template.color }}-600 text-xl"></i>
+            </div>
+
+            <!-- Content -->
+            <h3 class="font-semibold text-gray-900 text-center text-sm">{{ stage.name }}</h3>
+            <p class="text-xs text-gray-500 text-center mt-1">{{ stage.description }}</p>
+
+            <!-- Channels -->
+            <div class="mt-3 pt-3 border-t border-gray-100">
+              <div class="text-xs text-gray-400 mb-1">Channels:</div>
+              <div class="flex flex-wrap gap-1">
+                {% for channel in stage.channels %}
+                <span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">{{ channel }}</span>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Metrics -->
+            <div class="mt-2">
+              <div class="text-xs text-gray-400 mb-1">Key Metrics:</div>
+              <div class="flex flex-wrap gap-1">
+                {% for metric in stage.metrics %}
+                <span class="px-2 py-0.5 bg-{{ template.color }}-50 text-{{ template.color }}-700 rounded text-xs">{{ metric }}</span>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Arrow (between stages) -->
+          {% if not loop.last %}
+          <div class="hidden md:flex absolute top-1/2 -right-2 transform -translate-y-1/2 z-20">
+            <i class="fa-solid fa-chevron-right text-{{ template.color }}-400"></i>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Recommendations -->
+  <div class="grid md:grid-cols-2 gap-6">
+    <!-- What to Do -->
+    <div class="bg-green-50 border border-green-200 rounded-xl p-5">
+      <h3 class="font-semibold text-green-900 mb-3">
+        <i class="fa-solid fa-check-circle text-green-600 mr-2"></i>
+        What to Do at Each Stage
+      </h3>
+      <ul class="space-y-2 text-sm text-green-800">
+        {% for stage in template.stages %}
+        <li class="flex items-start gap-2">
+          <i class="fa-solid fa-check text-green-500 mt-1 flex-shrink-0"></i>
+          <span><strong>{{ stage.name }}:</strong> Use {{ stage.channels|join(', ') }} to {{ stage.description|lower }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- Tips -->
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-5">
+      <h3 class="font-semibold text-blue-900 mb-3">
+        <i class="fa-solid fa-lightbulb text-blue-600 mr-2"></i>
+        Pro Tips
+      </h3>
+      <ul class="space-y-2 text-sm text-blue-800">
+        <li class="flex items-start gap-2">
+          <i class="fa-solid fa-arrow-right text-blue-500 mt-1 flex-shrink-0"></i>
+          <span>Don't skip stages – customers need guidance through each step</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <i class="fa-solid fa-arrow-right text-blue-500 mt-1 flex-shrink-0"></i>
+          <span>Track metrics at each stage to find where customers drop off</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <i class="fa-solid fa-arrow-right text-blue-500 mt-1 flex-shrink-0"></i>
+          <span>Automate follow-ups to keep customers moving forward</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <i class="fa-solid fa-arrow-right text-blue-500 mt-1 flex-shrink-0"></i>
+          <span>Test different messages and offers at each stage</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="mt-8 flex flex-wrap gap-4 justify-center">
+    <a href="{{ url_for('daily_tasks_bp.index') }}"
+       class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+      <i class="fa-solid fa-list-check"></i>
+      View Today's Tasks
+    </a>
+    <a href="{{ url_for('account_bp.dashboard') }}"
+       class="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors">
+      <i class="fa-solid fa-gauge"></i>
+      Go to Dashboard
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -369,7 +369,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
 // Store recommendations data for JavaScript access
 const recommendations = {{ recommendations|tojson }};
 

@@ -10,7 +10,7 @@
   <!-- Breadcrumbs -->
   {{ render_breadcrumbs([
     {'name': 'Dashboard', 'url': url_for('account_bp.dashboard'), 'icon': 'fa-solid fa-home'},
-    {'name': 'Google Ads', 'url': url_for('google_bp.ads_decision_screen'), 'icon': 'fa-brands fa-google'},
+    {'name': 'Google Ads', 'url': url_for('google_bp.ads_performance'), 'icon': 'fa-brands fa-google'},
     {'name': 'Account Structure', 'url': ''}
   ]) }}
 
@@ -361,7 +361,7 @@
 
 </div>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
 let currentKeywordId = null;
 
 function editKeywordMatchType(keywordId, keywordText, currentMatch) {

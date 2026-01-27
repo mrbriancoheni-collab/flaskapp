@@ -17,13 +17,19 @@
 
   <!-- Campaign Selector -->
   <div class="bg-white shadow rounded-lg border border-gray-200 p-6 mb-8">
+    {% if campaigns and campaigns|length > 0 %}
     <div class="grid grid-cols-3 gap-4">
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-2">Campaign</label>
         <select id="campaignSelect" class="block w-full rounded-md border-gray-300 shadow-sm">
           <option value="">Select campaign...</option>
           {% for campaign in campaigns %}
-          <option value="{{ campaign.id }}">{{ campaign.name }}</option>
+          <option value="{{ campaign.id }}">
+            {{ campaign.name }}
+            {% if campaign.status and campaign.status != 'Enabled' %}
+              ({{ campaign.status }})
+            {% endif %}
+          </option>
           {% endfor %}
         </select>
       </div>
@@ -42,6 +48,43 @@
         <input type="text" id="zipCodeInput" value="10001" class="block w-full rounded-md border-gray-300 shadow-sm">
       </div>
     </div>
+    {% elif is_connected %}
+    <div class="text-center py-8">
+      <i class="fas fa-sync text-indigo-400 text-4xl mb-4"></i>
+      <h3 class="text-lg font-semibold text-gray-900 mb-2">Loading Campaign Data...</h3>
+      <p class="text-gray-600 mb-4">
+        Your Google Ads account is connected. Campaign data may take a moment to sync.
+      </p>
+      <div class="flex items-center justify-center gap-4">
+        <a href="{{ url_for('google_bp.ads_performance') }}"
+           class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+          <i class="fas fa-chart-line mr-2"></i> View Performance Dashboard
+        </a>
+        <a href="{{ request.url }}"
+           class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50">
+          <i class="fas fa-refresh mr-2"></i> Refresh Page
+        </a>
+      </div>
+    </div>
+    {% else %}
+    <div class="text-center py-8">
+      <i class="fas fa-bullhorn text-gray-300 text-4xl mb-4"></i>
+      <h3 class="text-lg font-semibold text-gray-900 mb-2">Connect Google Ads</h3>
+      <p class="text-gray-600 mb-4">
+        Connect your Google Ads account to use budget forecasting features.
+      </p>
+      <div class="flex items-center justify-center gap-4">
+        <a href="{{ url_for('google_bp.connect_ads') }}"
+           class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+          <i class="fas fa-link mr-2"></i> Connect Google Ads
+        </a>
+        <a href="{{ url_for('google_bp.ads_performance') }}"
+           class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50">
+          <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+        </a>
+      </div>
+    </div>
+    {% endif %}
   </div>
 
   <!-- Quick Stats -->
@@ -202,7 +245,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
 let selectedCampaignId = null;
 let selectedServiceType = 'hvac_ac';
 let selectedZipCode = '10001';
@@ -307,7 +350,10 @@ async function loadWeatherImpact() {
   try {
     const response = await fetch('/account/google/ads/forecasting/api/weather/current', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      },
       body: JSON.stringify({zip_code: selectedZipCode, service_type: selectedServiceType})
     });
     const data = await response.json();
@@ -327,7 +373,10 @@ async function loadWeatherForecast() {
   try {
     const response = await fetch('/account/google/ads/forecasting/api/weather/forecast', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      },
       body: JSON.stringify({zip_code: selectedZipCode, service_type: selectedServiceType})
     });
     const data = await response.json();
@@ -368,7 +417,10 @@ async function loadMonthlyForecast() {
   try {
     const response = await fetch('/account/google/ads/forecasting/api/forecast/monthly', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      },
       body: JSON.stringify({
         campaign_id: selectedCampaignId,
         service_type: selectedServiceType,

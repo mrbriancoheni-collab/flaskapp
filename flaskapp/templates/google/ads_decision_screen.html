@@ -44,8 +44,8 @@
   {% from "components/breadcrumbs.html" import render as render_breadcrumbs %}
   {{ render_breadcrumbs([
     {'name': 'Dashboard', 'url': url_for('account_bp.dashboard'), 'icon': 'fa-solid fa-home'},
-    {'name': 'Google Ads', 'url': url_for('google_bp.ads_decision_screen')},
-    {'name': 'Decision Screen', 'url': ''}
+    {'name': 'Google Ads', 'url': url_for('google_bp.ads_performance')},
+    {'name': 'Performance', 'url': ''}
   ]) }}
 
   {# HEADER WITH BACK LINK #}
@@ -108,17 +108,113 @@
     </div>
   </div>
 
-  {# ACCOUNT PERFORMANCE STATS - LAST 30 DAYS #}
+  {# HIGH-LEVEL ACCOUNT SUMMARY - KEY METRICS AT A GLANCE #}
+  {% if account_performance and account_performance.has_data %}
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+    {# Total Ad Spend #}
+    <div class="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-xl p-4 md:p-6 text-white shadow-lg">
+      <div class="flex items-center gap-2 mb-2">
+        <i class="fa-solid fa-wallet text-lg md:text-xl opacity-80"></i>
+        <span class="text-xs md:text-sm font-medium text-indigo-200">Ad Spend</span>
+      </div>
+      <div class="text-2xl md:text-4xl font-bold tracking-tight">
+        ${{ "{:,.0f}".format(account_performance.cost) }}
+      </div>
+      <div class="text-xs text-indigo-200 mt-1 flex items-center gap-2">
+        <span>Last {{ account_performance.days }} days</span>
+        {% if account_performance.has_comparison and account_performance.cost_change is defined %}
+          {% if account_performance.cost_change > 0 %}
+            <span class="text-red-300"><i class="fa-solid fa-arrow-up"></i> {{ account_performance.cost_change }}%</span>
+          {% elif account_performance.cost_change < 0 %}
+            <span class="text-green-300"><i class="fa-solid fa-arrow-down"></i> {{ account_performance.cost_change|abs }}%</span>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+
+    {# Total Leads/Conversions #}
+    <div class="bg-gradient-to-br from-green-600 to-teal-700 rounded-xl p-4 md:p-6 text-white shadow-lg">
+      <div class="flex items-center gap-2 mb-2">
+        <i class="fa-solid fa-phone-volume text-lg md:text-xl opacity-80"></i>
+        <span class="text-xs md:text-sm font-medium text-green-200">Leads Generated</span>
+      </div>
+      <div class="text-2xl md:text-4xl font-bold tracking-tight">
+        {{ "{:,.0f}".format(account_performance.conversions) }}
+      </div>
+      <div class="text-xs text-green-200 mt-1 flex items-center gap-2">
+        <span>{{ account_performance.conversion_rate }}% conversion rate</span>
+        {% if account_performance.has_comparison and account_performance.conversions_change is defined %}
+          {% if account_performance.conversions_change > 0 %}
+            <span class="text-white font-semibold"><i class="fa-solid fa-arrow-up"></i> {{ account_performance.conversions_change }}%</span>
+          {% elif account_performance.conversions_change < 0 %}
+            <span class="text-red-300"><i class="fa-solid fa-arrow-down"></i> {{ account_performance.conversions_change|abs }}%</span>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+
+    {# Cost Per Lead #}
+    <div class="bg-gradient-to-br from-orange-600 to-red-600 rounded-xl p-4 md:p-6 text-white shadow-lg">
+      <div class="flex items-center gap-2 mb-2">
+        <i class="fa-solid fa-bullseye text-lg md:text-xl opacity-80"></i>
+        <span class="text-xs md:text-sm font-medium text-orange-200">Cost Per Lead</span>
+      </div>
+      <div class="text-2xl md:text-4xl font-bold tracking-tight">
+        {% if account_performance.cost_per_conversion > 0 %}
+        ${{ "{:,.0f}".format(account_performance.cost_per_conversion) }}
+        {% else %}
+        $0
+        {% endif %}
+      </div>
+      <div class="text-xs text-orange-200 mt-1 flex items-center gap-2">
+        <span>Avg CPC: ${{ account_performance.avg_cpc }}</span>
+        {% if account_performance.has_comparison and account_performance.cpa_change is defined %}
+          {% if account_performance.cpa_change > 0 %}
+            <span class="text-red-300"><i class="fa-solid fa-arrow-up"></i> {{ account_performance.cpa_change }}%</span>
+          {% elif account_performance.cpa_change < 0 %}
+            <span class="text-green-300"><i class="fa-solid fa-arrow-down"></i> {{ account_performance.cpa_change|abs }}%</span>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+
+    {# ROAS or Revenue #}
+    <div class="bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl p-4 md:p-6 text-white shadow-lg">
+      <div class="flex items-center gap-2 mb-2">
+        <i class="fa-solid fa-chart-line text-lg md:text-xl opacity-80"></i>
+        <span class="text-xs md:text-sm font-medium text-blue-200">
+          {% if account_performance.roas > 0 %}Return on Ad Spend{% else %}Revenue{% endif %}
+        </span>
+      </div>
+      <div class="text-2xl md:text-4xl font-bold tracking-tight">
+        {% if account_performance.roas > 0 %}
+        {{ account_performance.roas }}x
+        {% else %}
+        ${{ "{:,.0f}".format(account_performance.conversions_value) }}
+        {% endif %}
+      </div>
+      <div class="text-xs text-blue-200 mt-1">
+        {% if account_performance.conversions_value > 0 %}
+        Total value: ${{ "{:,.0f}".format(account_performance.conversions_value) }}
+        {% else %}
+        Track revenue for ROAS
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ACCOUNT PERFORMANCE STATS - DETAILED BREAKDOWN #}
   {% if account_performance and account_performance.has_data %}
   <div class="rounded-xl border-2 border-gray-200 bg-white shadow-md overflow-hidden">
     <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-4 md:px-6 py-3 md:py-4">
       <div class="flex items-center justify-between">
         <h2 class="text-lg md:text-xl font-bold text-white flex items-center gap-2">
           <i class="fa-solid fa-chart-line"></i>
-          Your Account Performance
+          Detailed Performance Breakdown
         </h2>
         <span class="text-white text-xs md:text-sm bg-white/20 px-2 md:px-3 py-1 rounded-full">
-          Last {{ account_performance.days }} days
+          Last {{ account_performance.days }} days{% if account_performance.has_comparison %} vs prior 30{% endif %}
         </span>
       </div>
     </div>

@@ -224,7 +224,7 @@
   {% endif %}
 </div>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
 async function applyRecommendation(resourceName) {
   if (!confirm('Are you sure you want to apply this recommendation?')) {
     return;
@@ -233,7 +233,10 @@ async function applyRecommendation(resourceName) {
   try {
     const response = await fetch(`/account/google/ads/alerts/api/recommendations/${encodeURIComponent(resourceName)}/apply`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      }
     });
 
     const result = await response.json();
@@ -257,7 +260,10 @@ async function dismissRecommendation(resourceName) {
   try {
     const response = await fetch(`/account/google/ads/alerts/api/recommendations/${encodeURIComponent(resourceName)}/dismiss`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      }
     });
 
     const result = await response.json();
@@ -282,7 +288,10 @@ async function refreshAlerts() {
   try {
     const response = await fetch('/account/google/ads/alerts/api/refresh', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      }
     });
 
     const result = await response.json();

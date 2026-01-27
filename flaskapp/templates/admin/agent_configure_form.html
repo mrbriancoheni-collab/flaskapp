@@ -115,7 +115,7 @@
     </form>
 </div>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
 function addRule() {
     const container = document.getElementById('rules-container');
     const countInput = document.getElementById('rule_count');

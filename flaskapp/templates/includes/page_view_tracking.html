@@ -1,5 +1,5 @@
 <!-- Page View Tracking Script -->
-<script>
+<script nonce="{{ g.csp_nonce }}">
 (function() {
   'use strict';
 
@@ -37,6 +37,7 @@
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-CSRFToken': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''
       },
       body: JSON.stringify(data),
       keepalive: true

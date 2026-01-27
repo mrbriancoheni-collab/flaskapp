@@ -158,7 +158,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
 // Handle category deletion
 document.querySelectorAll('.delete-category').forEach(btn => {
   btn.addEventListener('click', async function() {

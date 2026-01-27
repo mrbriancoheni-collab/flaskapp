@@ -11,7 +11,7 @@
   {% if not is_demo %}
   {{ render_breadcrumbs([
     {'name': 'Dashboard', 'url': url_for('account_bp.dashboard'), 'icon': 'fa-solid fa-home'},
-    {'name': 'Google Ads', 'url': url_for('google_bp.ads_decision_screen'), 'icon': 'fa-brands fa-google'},
+    {'name': 'Google Ads', 'url': url_for('google_bp.ads_performance'), 'icon': 'fa-brands fa-google'},
     {'name': 'Opportunities', 'url': ''}
   ]) }}
   {% endif %}
@@ -136,6 +136,63 @@
           View AI Actions
         </a>
       </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Recent AI Actions with Undo Option -->
+  {% if connected and recent_actions and recent_actions|length > 0 %}
+  <div class="bg-white rounded-xl shadow-lg p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-bold text-gray-900">
+        <i class="fa-solid fa-clock-rotate-left text-purple-600 mr-2"></i>
+        Recent Auto-Executed Changes
+      </h2>
+      <a href="{{ url_for('google_bp.ai_change_log') }}" class="text-sm text-indigo-600 hover:text-indigo-800">
+        View All <i class="fa-solid fa-arrow-right ml-1"></i>
+      </a>
+    </div>
+    <p class="text-sm text-gray-600 mb-4">
+      These changes were made automatically. You can undo any action if needed.
+    </p>
+    <div class="space-y-3">
+      {% for action in recent_actions %}
+      <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <div class="flex items-center gap-4">
+          <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center
+            {% if 'negative' in (action.action_type or '')|lower or 'block' in (action.action_type or '')|lower %}
+            bg-red-100 text-red-600
+            {% elif 'budget' in (action.action_type or '')|lower %}
+            bg-green-100 text-green-600
+            {% elif 'bid' in (action.action_type or '')|lower %}
+            bg-purple-100 text-purple-600
+            {% else %}
+            bg-blue-100 text-blue-600
+            {% endif %}">
+            <i class="fa-solid
+              {% if 'negative' in (action.action_type or '')|lower or 'block' in (action.action_type or '')|lower %}fa-ban
+              {% elif 'budget' in (action.action_type or '')|lower %}fa-dollar-sign
+              {% elif 'bid' in (action.action_type or '')|lower %}fa-chart-line
+              {% else %}fa-robot
+              {% endif %}"></i>
+          </div>
+          <div>
+            <div class="font-medium text-gray-900">{{ action.action_description or action.action_type.replace('_', ' ').title() }}</div>
+            <div class="text-xs text-gray-500">
+              {{ action.executed_at.strftime('%b %d, %I:%M %p') if action.executed_at else 'Just now' }}
+              {% if action.estimated_monthly_savings and action.estimated_monthly_savings > 0 %}
+              <span class="ml-2 text-green-600 font-medium">${{ action.estimated_monthly_savings|round(2) }} saved/mo</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <button onclick="undoAction({{ action.id }})"
+                class="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-800 font-medium px-3 py-2 rounded border border-red-200 hover:bg-red-50 transition">
+          <i class="fa-solid fa-undo"></i>
+          Undo
+        </button>
+      </div>
+      {% endfor %}
     </div>
   </div>
   {% endif %}
@@ -1486,7 +1543,10 @@ if (typeof TutorialPopups !== 'undefined') {
     try {
       const res = await fetch('{{ url_for("google_bp.ads_select_customer") }}', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        },
         body: 'customer_id=' + encodeURIComponent(customerId),
         credentials: 'same-origin'
       });
@@ -1532,6 +1592,7 @@ async function markManualTaskComplete(taskId, taskTitle, buttonElement) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
       },
       body: JSON.stringify({
         task_id: taskId,
@@ -1834,6 +1895,9 @@ async function activateCampaign(campaignId) {
   try {
     const response = await fetch(`/account/google/ads/campaigns/${campaignId}/activate`, {
       method: 'POST',
+      headers: {
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      },
       credentials: 'same-origin'
     });
     const result = await response.json();
@@ -1860,6 +1924,49 @@ document.addEventListener('DOMContentLoaded', function() {
     refreshBtn.addEventListener('click', loadPausedCampaigns);
   }
 });
+
+// Undo AI action
+async function undoAction(actionId) {
+  if (!confirm('Are you sure you want to undo this action? This will reverse the change in Google Ads.')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/account/google/ads/ai-actions/${actionId}/undo`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      },
+      credentials: 'same-origin'
+    });
+
+    const data = await response.json();
+
+    if (data.ok) {
+      // Show success notification
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 right-4 bg-green-50 border-2 border-green-500 text-green-900 px-6 py-4 rounded-lg shadow-xl z-50 max-w-md';
+      notification.innerHTML = `
+        <div class="flex items-start gap-3">
+          <i class="fa-solid fa-check-circle text-green-600 text-2xl"></i>
+          <div class="flex-1">
+            <div class="font-bold text-lg mb-1">Action Undone</div>
+            <div class="text-sm">${data.message || 'The action has been reversed successfully.'}</div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 3000);
+      setTimeout(() => location.reload(), 2000);
+    } else {
+      alert('Error: ' + (data.error || 'Failed to undo action'));
+    }
+  } catch (error) {
+    console.error('Error undoing action:', error);
+    alert('Error undoing action: ' + error.message);
+  }
+}
 </script>
 
 {% endblock %}

@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from flask import Flask, request, abort, redirect, url_for, flash, g, render_template_string
+from flask import Flask, request, abort, redirect, url_for, flash, g, render_template_string, jsonify
 from markupsafe import escape
 from flask_login import LoginManager
 
@@ -235,7 +235,7 @@ def create_app():
         stderr_handler.setLevel(logging.INFO)
         stderr_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
 
-        log_path = _os.getenv("APP_ERROR_LOG", _os.path.join(_os.path.expanduser("~"), "app_error.log"))
+        log_path = _os.getenv("APP_ERROR_LOG", "/home/fieljtgr/flaskapp/stderr.log")
         _os.makedirs(_os.path.dirname(log_path), exist_ok=True)
         file_handler = RotatingFileHandler(log_path, maxBytes=1_000_000, backupCount=3, encoding="utf-8")
         file_handler.setLevel(logging.INFO)
@@ -246,10 +246,12 @@ def create_app():
         app.logger.addHandler(file_handler)
         app.logger.setLevel(logging.INFO)
         app.logger.propagate = False
-    except Exception:
+        app.logger.info(f"=== APP STARTED === Logging to: {log_path}")
+    except Exception as log_err:
         app.logger.handlers.clear()
         app.logger.addHandler(logging.StreamHandler())
         app.logger.setLevel(logging.INFO)
+        app.logger.error(f"Failed to setup file logging: {log_err}")
 
     # ---- DB / Extensions init ----------------------------------------------
     db.init_app(app)
@@ -481,7 +483,7 @@ def create_app():
             "img-src 'self' data: https:; "
             "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
             "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
-            f"script-src 'self' 'unsafe-inline' 'nonce-{nonce}' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com "
+            f"script-src 'self' 'nonce-{nonce}' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com "
             "https://www.googletagmanager.com https://www.google-analytics.com https://js.stripe.com; "
             "connect-src 'self' https://api.stripe.com https://www.google-analytics.com "
             "https://www.googletagmanager.com https://www.google.com https://*.google.com; "
@@ -857,6 +859,54 @@ def create_app():
     # except Exception:
     #     app.logger.exception("Failed to register fb_ads_grader_bp")
 
+    # --- Daily Tasks & Health Score ------------------------------------------
+    try:
+        from app.daily_tasks import daily_tasks_bp
+        app.register_blueprint(daily_tasks_bp)  # url_prefix=/account/today
+        app.logger.info("daily_tasks_bp registered at /account/today")
+    except Exception:
+        app.logger.exception("Failed to register daily_tasks_bp")
+
+    # --- Industry Presets ----------------------------------------------------
+    try:
+        from app.industry_presets import industry_bp
+        app.register_blueprint(industry_bp)  # url_prefix=/account/industry
+        app.logger.info("industry_bp registered at /account/industry")
+    except Exception:
+        app.logger.exception("Failed to register industry_bp")
+
+    # --- AI Creative Studio --------------------------------------------------
+    try:
+        from app.creative_studio import creative_bp
+        app.register_blueprint(creative_bp)  # url_prefix=/account/creative-studio
+        app.logger.info("creative_bp registered at /account/creative-studio")
+    except Exception:
+        app.logger.exception("Failed to register creative_bp")
+
+    # --- Budget Forecasting --------------------------------------------------
+    try:
+        from app.budget_forecast import budget_forecast_bp
+        app.register_blueprint(budget_forecast_bp)  # url_prefix=/account/budget-forecast
+        app.logger.info("budget_forecast_bp registered at /account/budget-forecast")
+    except Exception:
+        app.logger.exception("Failed to register budget_forecast_bp")
+
+    # --- Journey Builder -----------------------------------------------------
+    try:
+        from app.journey_builder import journey_bp
+        app.register_blueprint(journey_bp)  # url_prefix=/account/journeys
+        app.logger.info("journey_bp registered at /account/journeys")
+    except Exception:
+        app.logger.exception("Failed to register journey_bp")
+
+    # --- Report Sharing ------------------------------------------------------
+    try:
+        from app.report_sharing import report_sharing_bp
+        app.register_blueprint(report_sharing_bp)  # url_prefix=/account/reports (adds /share routes)
+        app.logger.info("report_sharing_bp registered at /account/reports")
+    except Exception:
+        app.logger.exception("Failed to register report_sharing_bp")
+
     # ---- Apply CSRF exemptions AFTER blueprints are registered -------------
     try:
         for ep in (
@@ -1093,11 +1143,38 @@ def create_app():
         from app.cron_tasks import run_daily
         run_daily(app, db)
 
+    # ---- Catch-all exception handler for debugging ----------------------------------
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        import traceback
+        # Don't log HTTPException (like 404, 400) - they have their own handlers
+        from werkzeug.exceptions import HTTPException
+        if isinstance(e, HTTPException):
+            return e
+        app.logger.error(f"[UNHANDLED EXCEPTION] URL: {request.url}, Method: {request.method}")
+        app.logger.error(f"[EXCEPTION DETAIL] {type(e).__name__}: {e}")
+        app.logger.error(f"[TRACEBACK]\n{traceback.format_exc()}")
+        # Re-raise to let the 500 handler deal with it
+        raise e
+
     # ---- CSRF error handler (friendly UX) ----------------------------------
     if CSRFError is not None:
         @app.errorhandler(CSRFError)
         def handle_csrf_error(e):
-            app.logger.warning(f"CSRF failed: {getattr(e, 'description', str(e))}")
+            app.logger.error(f"[CSRF ERROR] URL: {request.url}, Method: {request.method}, Referrer: {request.referrer}, Description: {getattr(e, 'description', str(e))}")
+
+            # For AJAX/API requests, return JSON instead of redirect with flash
+            if (request.headers.get('X-Requested-With') == 'XMLHttpRequest' or
+                request.accept_mimetypes.best == 'application/json' or
+                request.content_type == 'application/json' or
+                request.is_json):
+                return jsonify({
+                    'success': False,
+                    'error': 'CSRF token missing or invalid. Please refresh the page and try again.',
+                    'csrf_error': True
+                }), 400
+
+            # For regular form submissions, flash and redirect
             flash("Your session expired or the form was invalid. Please try again.", "error")
             return redirect(request.referrer or url_for("main_bp.home")), 400
 
@@ -1105,6 +1182,7 @@ def create_app():
     @app.errorhandler(400)
     def _400(err):
         """Handle 400 Bad Request errors with clean HTML page"""
+        app.logger.error(f"[400 ERROR] URL: {request.url}, Method: {request.method}, Error: {err}")
         return render_template_string("""
 <!DOCTYPE html>
 <html lang="en">
@@ -1263,6 +1341,7 @@ def create_app():
     @app.errorhandler(404)
     def _404(err):
         """Handle 404 Not Found errors with clean HTML page"""
+        app.logger.warning(f"[404 ERROR] URL: {request.url}, Method: {request.method}, Referrer: {request.referrer}")
         return render_template_string("""
 <!DOCTYPE html>
 <html lang="en">
@@ -1361,7 +1440,9 @@ def create_app():
     @app.errorhandler(500)
     def _500(err):
         """Handle 500 Internal Server Error with clean HTML page"""
-        app.logger.exception("Unhandled exception")
+        import traceback
+        app.logger.error(f"[500 ERROR] URL: {request.url}, Method: {request.method}, Error: {err}")
+        app.logger.error(f"[500 TRACEBACK]\n{traceback.format_exc()}")
         return render_template_string("""
 <!DOCTYPE html>
 <html lang="en">

@@ -9,68 +9,318 @@
   <meta name="facebook-domain-verification" content="pu3qyk43a95ad4bgi13g8wd0xn81ot" />
   <meta name="google-site-verification" content="google-site-verification=E3EM4jKlHkXc2U1-JsfrabLSb6jyGb48tGLCKy1ACVk" />
   {% if csrf_token %}<meta name="csrf-token" content="{{ csrf_token() }}">{% endif %}
+
   <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-HZBKX56R65"></script>
-<script nonce="{{ g.csp_nonce }}">
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-HZBKX56R65');
-</script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-HZBKX56R65"></script>
+  <script nonce="{{ g.csp_nonce }}">
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-HZBKX56R65');
+  </script>
+
+  <!-- Modern Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- AOS Animation Library -->
+  <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
   <!-- Tailwind via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script nonce="{{ g.csp_nonce }}">
     tailwind.config = {
       theme: {
+        fontFamily: {
+          sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        },
         extend: {
           colors: {
             primary: {
-              50:'rgb(var(--fs-primary-50)/<alpha-value>)',
-              100:'rgb(var(--fs-primary-100)/<alpha-value>)',
-              200:'rgb(var(--fs-primary-200)/<alpha-value>)',
-              300:'rgb(var(--fs-primary-300)/<alpha-value>)',
-              400:'rgb(var(--fs-primary-400)/<alpha-value>)',
-              500:'rgb(var(--fs-primary-500)/<alpha-value>)',
-              600:'rgb(var(--fs-primary-600)/<alpha-value>)',
-              700:'rgb(var(--fs-primary-700)/<alpha-value>)',
-              800:'rgb(var(--fs-primary-800)/<alpha-value>)',
-              900:'rgb(var(--fs-primary-900)/<alpha-value>)'
+              50: '#f5f3ff',
+              100: '#ede9fe',
+              200: '#ddd6fe',
+              300: '#c4b5fd',
+              400: '#a78bfa',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+              700: '#6d28d9',
+              800: '#5b21b6',
+              900: '#4c1d95',
+              950: '#2e1065',
             },
-            accent: { 500:'#7c3aed',600:'#6d28d9',700:'#5b21b6' },
-            highlight: { 400:'#facc15', 500:'#f59e0b' }
+            dark: {
+              900: '#0a0118',
+              800: '#120426',
+              700: '#1a0a30',
+            }
           },
-          boxShadow: { soft:'0 10px 30px rgba(0,0,0,0.07)' }
+          boxShadow: {
+            'soft': '0 4px 24px -2px rgba(0, 0, 0, 0.08)',
+            'glow': '0 0 40px rgba(124, 58, 237, 0.15)',
+            'glow-lg': '0 0 60px rgba(124, 58, 237, 0.25)',
+            'card': '0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.08)',
+            'card-hover': '0 4px 12px rgba(0,0,0,0.05), 0 20px 40px rgba(0,0,0,0.12)',
+          },
+          backgroundImage: {
+            'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+            'hero-gradient': 'linear-gradient(135deg, #f5f3ff 0%, #ffffff 50%, #ede9fe 100%)',
+            'dark-gradient': 'linear-gradient(180deg, #0a0118 0%, #1a0a30 100%)',
+          },
+          animation: {
+            'float': 'float 6s ease-in-out infinite',
+            'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'gradient': 'gradient 8s ease infinite',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-10px)' },
+            },
+            gradient: {
+              '0%, 100%': { backgroundPosition: '0% 50%' },
+              '50%': { backgroundPosition: '100% 50%' },
+            }
+          }
         }
       }
     }
   </script>
+
   <style>
-    :root{
-      --fs-primary-50:  245 243 255;
-      --fs-primary-100: 237 233 254;
-      --fs-primary-200: 221 214 254;
-      --fs-primary-300: 196 181 253;
-      --fs-primary-400: 167 139 250;
-      --fs-primary-500: 139 92 246;
-      --fs-primary-600: 124 58 237;
-      --fs-primary-700: 109 40 217;
-      --fs-primary-800: 91 33 182;
-      --fs-primary-900: 76 29 149;
+    /* Base styles */
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
-    .btn{display:inline-flex;align-items:center;justify-content:center;padding:.75rem 1.25rem;border-radius:.75rem;font-weight:600;text-decoration:none;transition:all .2s}
-    .btn-primary{background:rgb(var(--fs-primary-600));color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.07)}
-    .btn-primary:hover{background:rgb(var(--fs-primary-700))}
-    .btn-outline{border:1px solid rgba(var(--fs-primary-300),1);color:rgb(var(--fs-primary-700));background:transparent}
-    .btn-outline:hover{background:rgba(var(--fs-primary-50),1)}
-    .btn-ghost{border:1px solid rgba(255,255,255,.3);color:#fff;background:transparent}
-    .btn-ghost:hover{background:rgba(255,255,255,.1)}
-    .container-max{max-width:80rem;margin:0 auto;padding:0 1.5rem}
-    .badge{display:inline-flex;align-items:center;gap:.5rem;padding:.25rem .75rem;border-radius:999px;font-size:.75rem;font-weight:700;background:rgb(var(--fs-primary-50));color:rgb(var(--fs-primary-700))}
-    .section{padding:5rem 0}
-    .footer-wrap{background:#0b0720;position:relative}
-    .footer-overlay{position:absolute;inset:0;background:radial-gradient(1200px 400px at 20% -10%, rgba(124,58,237,.3), transparent), radial-gradient(900px 400px at 100% 120%, rgba(91,33,182,.35), transparent)}
-    .logo-pill{display:inline-flex;align-items:center;padding:.5rem 1rem;border-radius:999px;font-size:.875rem;font-weight:600;background:#fff;border:1px solid rgba(0,0,0,.08);box-shadow:0 2px 8px rgba(0,0,0,.04)}
-    .logo-dot{display:inline-block;width:8px;height:8px;border-radius:50%}
+
+    /* Custom container */
+    .container-lg { max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; }
+    .container-md { max-width: 1024px; margin: 0 auto; padding: 0 1.5rem; }
+    .container-sm { max-width: 768px; margin: 0 auto; padding: 0 1.5rem; }
+
+    /* Modern button styles */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.875rem 1.75rem;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.9375rem;
+      text-decoration: none;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+      color: white;
+      box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(124, 58, 237, 0.5);
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #1f2937;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .btn-secondary:hover {
+      background: #f9fafb;
+      border-color: #d1d5db;
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(8px);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: #6d28d9;
+      border: 2px solid #c4b5fd;
+    }
+
+    .btn-outline:hover {
+      background: #f5f3ff;
+      border-color: #a78bfa;
+    }
+
+    .btn-lg { padding: 1rem 2rem; font-size: 1rem; }
+    .btn-sm { padding: 0.625rem 1.25rem; font-size: 0.875rem; }
+
+    /* Badge/chip styles */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.375rem 1rem;
+      border-radius: 100px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+      color: #6d28d9;
+      border: 1px solid #ddd6fe;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: #f5f3ff;
+      color: #6d28d9;
+    }
+
+    /* Section spacing */
+    .section { padding: 6rem 0; }
+    .section-lg { padding: 8rem 0; }
+    .section-xl { padding: 10rem 0; }
+
+    /* Card styles */
+    .card {
+      background: white;
+      border-radius: 16px;
+      border: 1px solid #f3f4f6;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.08);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05), 0 20px 40px rgba(0,0,0,0.12);
+    }
+
+    /* Glass effect */
+    .glass {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .glass-dark {
+      background: rgba(10, 1, 24, 0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    /* Gradient text */
+    .gradient-text {
+      background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Nav dropdown */
+    .nav-dropdown {
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(10px);
+      transition: all 0.2s ease;
+    }
+
+    .nav-item:hover .nav-dropdown {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    /* Mobile menu animation */
+    .mobile-menu {
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+    }
+
+    .mobile-menu.open {
+      transform: translateX(0);
+    }
+
+    /* Hero patterns */
+    .hero-pattern {
+      background-image:
+        radial-gradient(circle at 20% 50%, rgba(124, 58, 237, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.06) 0%, transparent 40%),
+        radial-gradient(circle at 40% 80%, rgba(109, 40, 217, 0.05) 0%, transparent 40%);
+    }
+
+    /* Footer gradient */
+    .footer-gradient {
+      background: linear-gradient(180deg, #0a0118 0%, #120426 50%, #1a0a30 100%);
+    }
+
+    .footer-glow {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      filter: blur(100px);
+      opacity: 0.15;
+    }
+
+    /* Scroll animations */
+    [data-aos] { transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
+
+    /* Feature grid */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+
+    /* Stats */
+    .stat-number {
+      font-size: 3rem;
+      font-weight: 800;
+      line-height: 1;
+      background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Testimonial card */
+    .testimonial-card {
+      background: linear-gradient(135deg, #ffffff 0%, #faf5ff 100%);
+      border: 1px solid #ede9fe;
+    }
+
+    /* Logo marquee */
+    @keyframes scroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    .marquee {
+      animation: scroll 30s linear infinite;
+    }
+
+    .marquee:hover { animation-play-state: paused; }
   </style>
 
   <!-- Organization Schema for AI Search & Entity Recognition -->
@@ -97,311 +347,449 @@
   {% block head_extra %}{% endblock %}
 </head>
 
-<body class="antialiased text-gray-900 min-h-screen flex flex-col">
+<body class="antialiased text-gray-900 bg-white min-h-screen flex flex-col font-sans">
+
   <!-- Header -->
-  <header class="sticky top-0 z-50 bg-white/85 backdrop-blur supports-[backdrop-filter]:bg-white/65 border-b border-gray-100">
-    <nav class="container-max flex items-center justify-between h-16">
-      <a href="{{ url_for(ep('home')) }}" class="flex items-center gap-2 font-extrabold text-primary-700" aria-label="FieldSprout home">
+  <header class="fixed top-0 left-0 right-0 z-50 glass border-b border-gray-100/50">
+    <nav class="container-lg flex items-center justify-between h-16 lg:h-20">
+      <!-- Logo -->
+      <a href="{{ url_for(ep('home')) }}" class="flex items-center gap-2 font-bold text-xl" aria-label="FieldSprout home">
         <img
           src="{{ url_for('static', filename='brand/logos/fieldsprout-wordmark.svg') }}"
           alt="FieldSprout"
-          class="h-7"
+          class="h-7 lg:h-8"
           onerror="this.outerHTML=document.getElementById('fs-logo-fallback').innerHTML">
       </a>
 
-      <button class="lg:hidden p-2" id="openMenu" aria-label="Open menu">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-      </button>
-
-      <!-- Desktop nav -->
-      <ul class="hidden lg:flex items-center gap-8 text-sm">
-
-        <!-- Products (desktop dropdown) -->
-        <li class="relative group">
-          <button class="hover:text-primary-700 inline-flex items-center gap-1 py-4">
+      <!-- Desktop Navigation -->
+      <div class="hidden lg:flex items-center gap-1">
+        <!-- Products Dropdown -->
+        <div class="nav-item relative">
+          <button class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-700 rounded-lg hover:bg-gray-50 transition">
             Products
-            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
+            <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
           </button>
-          <div class="absolute left-0 top-full w-56 rounded-xl border bg-white shadow-soft invisible opacity-0 group-hover:visible group-hover:opacity-100 transition pt-2">
-            <div class="py-2 bg-white rounded-xl">
-              <a class="block px-4 py-2 hover:bg-primary-50" href="/products/ads">Ads Tool</a>
-              <a class="block px-4 py-2 hover:bg-primary-50" href="/products/reviews">Review Booster</a>
-              <a class="block px-4 py-2 hover:bg-primary-50" href="/products/listings">Local Listings</a>
-              <a class="block px-4 py-2 hover:bg-primary-50" href="/products/forms-chat">Forms &amp; Chat</a>
+          <div class="nav-dropdown absolute left-0 top-full pt-2 w-72">
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-card p-2">
+              <a class="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition group" href="/products/ads">
+                <div class="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center text-primary-600 group-hover:bg-primary-600 group-hover:text-white transition">
+                  <i class="fa-solid fa-bullseye"></i>
+                </div>
+                <div>
+                  <div class="font-semibold text-gray-900">Ads Tool</div>
+                  <div class="text-sm text-gray-500">AI-powered ad optimization</div>
+                </div>
+              </a>
+              <a class="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition group" href="/products/reviews">
+                <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition">
+                  <i class="fa-solid fa-star"></i>
+                </div>
+                <div>
+                  <div class="font-semibold text-gray-900">Review Booster</div>
+                  <div class="text-sm text-gray-500">Automate 5-star reviews</div>
+                </div>
+              </a>
+              <a class="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition group" href="/products/listings">
+                <div class="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center text-green-600 group-hover:bg-green-600 group-hover:text-white transition">
+                  <i class="fa-solid fa-location-dot"></i>
+                </div>
+                <div>
+                  <div class="font-semibold text-gray-900">Local Listings</div>
+                  <div class="text-sm text-gray-500">Get found everywhere</div>
+                </div>
+              </a>
+              <a class="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition group" href="/products/forms-chat">
+                <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition">
+                  <i class="fa-solid fa-comments"></i>
+                </div>
+                <div>
+                  <div class="font-semibold text-gray-900">Forms & Chat</div>
+                  <div class="text-sm text-gray-500">Capture every lead</div>
+                </div>
+              </a>
             </div>
           </div>
-        </li>
+        </div>
 
-        <!-- Solutions (desktop dropdown) -->
-        <li class="relative group">
-          <button class="hover:text-primary-700 inline-flex items-center gap-1 py-4">
+        <!-- Solutions Dropdown -->
+        <div class="nav-item relative">
+          <button class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-700 rounded-lg hover:bg-gray-50 transition">
             Solutions
-            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
+            <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
           </button>
-          <div class="absolute left-0 top-full w-64 rounded-xl border bg-white shadow-soft invisible opacity-0 group-hover:visible group-hover:opacity-100 transition pt-2">
-            <div class="py-2 bg-white rounded-xl">
-              <a class="block px-4 py-2 hover:bg-primary-50" href="/solutions/lower-ad-cost">Lower Ad Cost</a>
-              <a class="block px-4 py-2 hover:bg-primary-50" href="/solutions/get-more-reviews">Get More Reviews</a>
-              <a class="block px-4 py-2 hover:bg-primary-50" href="/solutions/spend-when-open">Spend When You Have Openings</a>
-              <a class="block px-4 py-2 hover:bg-primary-50" href="/solutions/see-what-works">See What Works</a>
+          <div class="nav-dropdown absolute left-0 top-full pt-2 w-72">
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-card p-2">
+              <a class="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition" href="/solutions/lower-ad-cost">
+                <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
+                  <i class="fa-solid fa-arrow-trend-down"></i>
+                </div>
+                <div>
+                  <div class="font-semibold text-gray-900">Lower Ad Cost</div>
+                  <div class="text-sm text-gray-500">Cut wasted spend by 20-30%</div>
+                </div>
+              </a>
+              <a class="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition" href="/solutions/get-more-reviews">
+                <div class="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center text-yellow-600">
+                  <i class="fa-solid fa-thumbs-up"></i>
+                </div>
+                <div>
+                  <div class="font-semibold text-gray-900">Get More Reviews</div>
+                  <div class="text-sm text-gray-500">Automate review collection</div>
+                </div>
+              </a>
+              <a class="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition" href="/solutions/spend-when-open">
+                <div class="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center text-sky-600">
+                  <i class="fa-solid fa-calendar-check"></i>
+                </div>
+                <div>
+                  <div class="font-semibold text-gray-900">Spend When Open</div>
+                  <div class="text-sm text-gray-500">Budget based on capacity</div>
+                </div>
+              </a>
+              <a class="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition" href="/solutions/see-what-works">
+                <div class="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-violet-600">
+                  <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <div>
+                  <div class="font-semibold text-gray-900">See What Works</div>
+                  <div class="text-sm text-gray-500">Track ROI across channels</div>
+                </div>
+              </a>
             </div>
           </div>
-        </li>
-
-        <!-- Free Google Ads Grader - Prominent -->
-        {% if has_endpoint('ads_grader_bp.index') %}
-        <li>
-          <a class="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 border-2 border-green-400 rounded-lg font-semibold text-green-700 transition-all hover:scale-105" href="{{ url_for('ads_grader_bp.index') }}">
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>
-            Grade Your Ads
-            <span class="text-[9px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-bold">FREE</span>
-          </a>
-        </li>
-        {% endif %}
-
-        <li>
-          {% if has_endpoint('pricing') %}
-            <a class="hover:text-primary-700" href="{{ url_for(ep('pricing')) }}">Pricing</a>
-          {% else %}
-            <a class="hover:text-primary-700" href="#pricing">Pricing</a>
-          {% endif %}
-        </li>
-
-        {% if is_logged_in() %}
-        <li>
-          <a class="btn btn-outline" href="{{ url_for('account_bp.dashboard') }}">Dashboard</a>
-        </li>
-        <li>
-          {% if has_endpoint('auth_bp.logout') %}
-            <a class="btn btn-primary" href="{{ url_for('auth_bp.logout') }}">Sign out</a>
-          {% elif has_endpoint('logout') %}
-            <a class="btn btn-primary" href="{{ url_for(ep('logout')) }}">Sign out</a>
-          {% else %}
-            <a class="btn btn-primary" href="/logout">Sign out</a>
-          {% endif %}
-        </li>
-        {% else %}
-        <li>
-          {% if has_endpoint('auth_bp.login') %}
-            <a class="btn btn-outline" href="{{ url_for('auth_bp.login') }}">Sign in</a>
-          {% elif has_endpoint('login') %}
-            <a class="btn btn-outline" href="{{ url_for(ep('login')) }}">Sign in</a>
-          {% else %}
-            <a class="btn btn-outline" href="/login">Sign in</a>
-          {% endif %}
-        </li>
-        <li>
-          {% if has_endpoint('auth_bp.register') %}
-            <a class="btn btn-primary" href="{{ url_for('auth_bp.register') }}">Start Saving Now</a>
-          {% elif has_endpoint('signup') %}
-            <a class="btn btn-primary" href="{{ url_for(ep('signup')) }}">Start Saving Now</a>
-          {% elif has_endpoint('register') %}
-            <a class="btn btn-primary" href="{{ url_for(ep('register')) }}">Start Saving Now</a>
-          {% else %}
-            <a class="btn btn-primary" href="/signup">Start Saving Now</a>
-          {% endif %}
-        </li>
-        {% endif %}
-      </ul>
-    </nav>
-
-    <!-- Mobile menu -->
-    <div id="mobileMenu" class="lg:hidden hidden border-t border-gray-100 bg-white">
-      <div class="container-max py-4">
-
-        <!-- Products (mobile) -->
-        <details class="group">
-          <summary class="cursor-pointer py-2 hover:text-primary-700 flex items-center justify-between">
-            <span>Products</span>
-            <svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
-          </summary>
-          <div class="pl-3 pt-1 pb-2 space-y-1">
-            <a class="block py-2 hover:text-primary-700" href="/products/ads">Ads Tool</a>
-            <a class="block py-2 hover:text-primary-700" href="/products/reviews">Review Booster</a>
-            <a class="block py-2 hover:text-primary-700" href="/products/listings">Local Listings</a>
-            <a class="block py-2 hover:text-primary-700" href="/products/forms-chat">Forms &amp; Chat</a>
-          </div>
-        </details>
-
-        <!-- Solutions (mobile) -->
-        <details class="group mt-1">
-          <summary class="cursor-pointer py-2 hover:text-primary-700 flex items-center justify-between">
-            <span>Solutions</span>
-            <svg class="w-4 h-4 group-open:rotate-180 transition" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
-          </summary>
-          <div class="pl-3 pt-1 pb-2 space-y-1">
-            <a class="block py-2 hover:text-primary-700" href="/solutions/lower-ad-cost">Lower Ad Cost</a>
-            <a class="block py-2 hover:text-primary-700" href="/solutions/get-more-reviews">Get More Reviews</a>
-            <a class="block py-2 hover:text-primary-700" href="/solutions/spend-when-open">Spend When You Have Openings</a>
-            <a class="block py-2 hover:text-primary-700" href="/solutions/see-what-works">See What Works</a>
-          </div>
-        </details>
-
-        <!-- Free Google Ads Grader - Prominent -->
-        {% if has_endpoint('ads_grader_bp.index') %}
-        <div class="my-3">
-          <a class="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 rounded-lg font-semibold text-green-700" href="{{ url_for('ads_grader_bp.index') }}">
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>
-            Grade Your Ads
-            <span class="ml-auto text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-bold">FREE</span>
-          </a>
         </div>
+
+        <!-- Free Grader Link -->
+        {% if has_endpoint('ads_grader_bp.index') %}
+        <a href="{{ url_for('ads_grader_bp.index') }}" class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-emerald-700 hover:text-emerald-800 rounded-lg hover:bg-emerald-50 transition">
+          <i class="fa-solid fa-clipboard-check"></i>
+          Free Ads Grader
+          <span class="px-1.5 py-0.5 text-[10px] font-bold bg-emerald-500 text-white rounded-full">FREE</span>
+        </a>
         {% endif %}
 
+        <!-- Pricing Link -->
         {% if has_endpoint('pricing') %}
-          <a class="block py-2 hover:text-primary-700" href="{{ url_for(ep('pricing')) }}">Pricing</a>
+          <a href="{{ url_for(ep('pricing')) }}" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-700 rounded-lg hover:bg-gray-50 transition">Pricing</a>
         {% else %}
-          <a class="block py-2 hover:text-primary-700" href="#pricing">Pricing</a>
+          <a href="#pricing" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-700 rounded-lg hover:bg-gray-50 transition">Pricing</a>
         {% endif %}
-
-        <div class="flex gap-3 pt-3">
-          {% if is_logged_in() %}
-            <a class="btn btn-outline flex-1 text-center" href="{{ url_for('account_bp.dashboard') }}">Dashboard</a>
-            {% if has_endpoint('auth_bp.logout') %}
-              <a class="btn btn-primary flex-1 text-center" href="{{ url_for('auth_bp.logout') }}">Sign out</a>
-            {% elif has_endpoint('logout') %}
-              <a class="btn btn-primary flex-1 text-center" href="{{ url_for(ep('logout')) }}">Sign out</a>
-            {% else %}
-              <a class="btn btn-primary flex-1 text-center" href="/logout">Sign out</a>
-            {% endif %}
-          {% else %}
-            {% if has_endpoint('auth_bp.login') %}
-              <a class="btn btn-outline flex-1 text-center" href="{{ url_for('auth_bp.login') }}">Sign in</a>
-            {% elif has_endpoint('login') %}
-              <a class="btn btn-outline flex-1 text-center" href="{{ url_for(ep('login')) }}">Sign in</a>
-            {% else %}
-              <a class="btn btn-outline flex-1 text-center" href="/login">Sign in</a>
-            {% endif %}
-            {% if has_endpoint('auth_bp.register') %}
-              <a class="btn btn-primary flex-1 text-center" href="{{ url_for('auth_bp.register') }}">Start Saving Now</a>
-            {% elif has_endpoint('signup') %}
-              <a class="btn btn-primary flex-1 text-center" href="{{ url_for(ep('signup')) }}">Start Saving Now</a>
-            {% elif has_endpoint('register') %}
-              <a class="btn btn-primary flex-1 text-center" href="{{ url_for(ep('register')) }}">Start Saving Now</a>
-            {% else %}
-              <a class="btn btn-primary flex-1 text-center" href="/signup">Start Saving Now</a>
-            {% endif %}
-          {% endif %}
-        </div>
       </div>
-    </div>
+
+      <!-- Desktop CTA -->
+      <div class="hidden lg:flex items-center gap-3">
+        {% if is_logged_in() %}
+          <a href="{{ url_for('account_bp.dashboard') }}" class="btn btn-secondary btn-sm">Dashboard</a>
+          {% if has_endpoint('auth_bp.logout') %}
+            <a href="{{ url_for('auth_bp.logout') }}" class="btn btn-primary btn-sm">Sign out</a>
+          {% elif has_endpoint('logout') %}
+            <a href="{{ url_for(ep('logout')) }}" class="btn btn-primary btn-sm">Sign out</a>
+          {% else %}
+            <a href="/logout" class="btn btn-primary btn-sm">Sign out</a>
+          {% endif %}
+        {% else %}
+          {% if has_endpoint('auth_bp.login') %}
+            <a href="{{ url_for('auth_bp.login') }}" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-700 transition">Sign in</a>
+          {% elif has_endpoint('login') %}
+            <a href="{{ url_for(ep('login')) }}" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-700 transition">Sign in</a>
+          {% else %}
+            <a href="/login" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-700 transition">Sign in</a>
+          {% endif %}
+          {% if has_endpoint('auth_bp.register') %}
+            <a href="{{ url_for('auth_bp.register') }}" class="btn btn-primary btn-sm">Get Started Free</a>
+          {% elif has_endpoint('signup') %}
+            <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary btn-sm">Get Started Free</a>
+          {% elif has_endpoint('register') %}
+            <a href="{{ url_for(ep('register')) }}" class="btn btn-primary btn-sm">Get Started Free</a>
+          {% else %}
+            <a href="/signup" class="btn btn-primary btn-sm">Get Started Free</a>
+          {% endif %}
+        {% endif %}
+      </div>
+
+      <!-- Mobile Menu Button -->
+      <button class="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition" id="mobileMenuBtn" aria-label="Open menu">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+    </nav>
   </header>
 
-  <!-- Page -->
+  <!-- Mobile Menu Overlay -->
+  <div id="mobileMenuOverlay" class="fixed inset-0 bg-black/50 z-50 hidden opacity-0 transition-opacity lg:hidden"></div>
+
+  <!-- Mobile Menu -->
+  <div id="mobileMenu" class="mobile-menu fixed top-0 right-0 bottom-0 w-80 max-w-full bg-white z-50 lg:hidden overflow-y-auto">
+    <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+      <span class="font-bold text-lg">Menu</span>
+      <button id="closeMobileMenu" class="p-2 rounded-lg hover:bg-gray-100 transition">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="p-4 space-y-2">
+      <!-- Products -->
+      <details class="group">
+        <summary class="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 cursor-pointer font-medium">
+          Products
+          <svg class="w-5 h-5 text-gray-400 transition group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </summary>
+        <div class="pl-4 pt-2 space-y-1">
+          <a href="/products/ads" class="block p-3 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50">Ads Tool</a>
+          <a href="/products/reviews" class="block p-3 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50">Review Booster</a>
+          <a href="/products/listings" class="block p-3 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50">Local Listings</a>
+          <a href="/products/forms-chat" class="block p-3 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50">Forms & Chat</a>
+        </div>
+      </details>
+
+      <!-- Solutions -->
+      <details class="group">
+        <summary class="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 cursor-pointer font-medium">
+          Solutions
+          <svg class="w-5 h-5 text-gray-400 transition group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </summary>
+        <div class="pl-4 pt-2 space-y-1">
+          <a href="/solutions/lower-ad-cost" class="block p-3 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50">Lower Ad Cost</a>
+          <a href="/solutions/get-more-reviews" class="block p-3 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50">Get More Reviews</a>
+          <a href="/solutions/spend-when-open" class="block p-3 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50">Spend When Open</a>
+          <a href="/solutions/see-what-works" class="block p-3 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50">See What Works</a>
+        </div>
+      </details>
+
+      <!-- Free Grader -->
+      {% if has_endpoint('ads_grader_bp.index') %}
+      <a href="{{ url_for('ads_grader_bp.index') }}" class="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 text-emerald-700 font-semibold">
+        <i class="fa-solid fa-clipboard-check"></i>
+        Free Ads Grader
+        <span class="ml-auto px-2 py-0.5 text-xs font-bold bg-emerald-500 text-white rounded-full">FREE</span>
+      </a>
+      {% endif %}
+
+      <!-- Pricing -->
+      {% if has_endpoint('pricing') %}
+        <a href="{{ url_for(ep('pricing')) }}" class="block p-3 rounded-xl hover:bg-gray-50 font-medium">Pricing</a>
+      {% else %}
+        <a href="#pricing" class="block p-3 rounded-xl hover:bg-gray-50 font-medium">Pricing</a>
+      {% endif %}
+    </div>
+
+    <div class="p-4 border-t border-gray-100 space-y-3">
+      {% if is_logged_in() %}
+        <a href="{{ url_for('account_bp.dashboard') }}" class="btn btn-secondary w-full">Dashboard</a>
+        {% if has_endpoint('auth_bp.logout') %}
+          <a href="{{ url_for('auth_bp.logout') }}" class="btn btn-primary w-full">Sign out</a>
+        {% elif has_endpoint('logout') %}
+          <a href="{{ url_for(ep('logout')) }}" class="btn btn-primary w-full">Sign out</a>
+        {% else %}
+          <a href="/logout" class="btn btn-primary w-full">Sign out</a>
+        {% endif %}
+      {% else %}
+        {% if has_endpoint('auth_bp.login') %}
+          <a href="{{ url_for('auth_bp.login') }}" class="btn btn-secondary w-full">Sign in</a>
+        {% elif has_endpoint('login') %}
+          <a href="{{ url_for(ep('login')) }}" class="btn btn-secondary w-full">Sign in</a>
+        {% else %}
+          <a href="/login" class="btn btn-secondary w-full">Sign in</a>
+        {% endif %}
+        {% if has_endpoint('auth_bp.register') %}
+          <a href="{{ url_for('auth_bp.register') }}" class="btn btn-primary w-full">Get Started Free</a>
+        {% elif has_endpoint('signup') %}
+          <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary w-full">Get Started Free</a>
+        {% elif has_endpoint('register') %}
+          <a href="{{ url_for(ep('register')) }}" class="btn btn-primary w-full">Get Started Free</a>
+        {% else %}
+          <a href="/signup" class="btn btn-primary w-full">Get Started Free</a>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Spacer for fixed header -->
+  <div class="h-16 lg:h-20"></div>
+
+  <!-- Main Content -->
   <main class="flex-1">{% block content %}{% endblock %}</main>
 
-  <!-- Footer -->
-  <footer class="footer-wrap text-white mt-24">
-    <div class="footer-overlay" aria-hidden="true"></div>
-    <div class="container-max relative py-16">
-      <div class="grid md:grid-cols-4 gap-10">
+  <!-- Modern Footer -->
+  <footer class="footer-gradient text-white relative overflow-hidden">
+    <!-- Decorative glows -->
+    <div class="footer-glow bg-primary-600 -left-48 top-0"></div>
+    <div class="footer-glow bg-primary-800 right-0 bottom-0"></div>
+
+    <div class="container-lg relative py-16 lg:py-24">
+      <!-- Top section -->
+      <div class="grid lg:grid-cols-2 gap-12 lg:gap-20 mb-16">
         <div>
-          <div class="flex items-center gap-2 font-extrabold">
+          <a href="{{ url_for(ep('home')) }}" class="inline-block">
             <img
               src="{{ url_for('static', filename='brand/logos/FieldSprout-White-logo.svg') }}"
               alt="FieldSprout"
-              class="h-7"
+              class="h-8"
               onerror="this.outerHTML=document.getElementById('fs-logo-fallback-white').innerHTML">
-          </div>
-          <p class="mt-4 text-white/70">Get found. Grow leads. Book jobs — with AI that works for local service pros.</p>
-          <div class="mt-6 flex gap-3">
+          </a>
+          <p class="mt-6 text-lg text-white/70 max-w-md leading-relaxed">
+            Get found. Grow leads. Book jobs — with AI that works 24/7 for local service pros.
+          </p>
+          <div class="mt-8 flex gap-4">
             {% if has_endpoint('auth_bp.register') %}
-              <a href="{{ url_for('auth_bp.register') }}" class="btn btn-ghost">Start Saving Now</a>
+              <a href="{{ url_for('auth_bp.register') }}" class="btn btn-primary">Get Started Free</a>
             {% elif has_endpoint('signup') %}
-              <a href="{{ url_for(ep('signup')) }}" class="btn btn-ghost">Start Saving Now</a>
+              <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary">Get Started Free</a>
             {% elif has_endpoint('register') %}
-              <a href="{{ url_for(ep('register')) }}" class="btn btn-ghost">Start Saving Now</a>
+              <a href="{{ url_for(ep('register')) }}" class="btn btn-primary">Get Started Free</a>
             {% else %}
-              <a href="/signup" class="btn btn-ghost">Start Saving Now</a>
+              <a href="/signup" class="btn btn-primary">Get Started Free</a>
             {% endif %}
+            <a href="https://fieldsprout.io/contact" class="btn btn-ghost">Contact Sales</a>
           </div>
         </div>
-        <div>
-          <h4 class="font-semibold mb-3">Product</h4>
-          <ul class="space-y-2 text-white/80">
-            <li><a href="#features" class="hover:text-white">Features</a></li>
-            <li><a href="#integrations" class="hover:text-white">Integrations</a></li>
-            <li>
-              {% if has_endpoint('pricing') %}
-                <a href="{{ url_for(ep('pricing')) }}" class="hover:text-white">Pricing</a>
-              {% else %}
-                <a href="#pricing" class="hover:text-white">Pricing</a>
-              {% endif %}
-            </li>
-          </ul>
-        </div>
-        <div>
-          <h4 class="font-semibold mb-3">Company</h4>
-          <ul class="space-y-2 text-white/80">
-            <li><a href="https://fieldsprout.io/about" class="hover:text-white">About</a></li>
-            <li><a href="https://fieldsprout.io/contact" class="hover:text-white">Contact</a></li>
-            <li><a href="https://fieldsprout.io/blog" class="hover:text-white">Blog</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4 class="font-semibold mb-3">Legal</h4>
-          <ul class="space-y-2 text-white/80">
-            <li><a href="https://fieldsprout.io/terms-of-service" class="hover:text-white">Terms</a></li>
-            <li><a href="https://fieldsprout.io/privacy-policy" class="hover:text-white">Privacy</a></li>
-            <li><a href="#" class="hover:text-white">Security</a></li>
-          </ul>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-8">
+          <div>
+            <h4 class="font-semibold text-white mb-4">Product</h4>
+            <ul class="space-y-3 text-white/60">
+              <li><a href="/products/ads" class="hover:text-white transition">Ads Tool</a></li>
+              <li><a href="/products/reviews" class="hover:text-white transition">Review Booster</a></li>
+              <li><a href="/products/listings" class="hover:text-white transition">Local Listings</a></li>
+              <li><a href="/products/forms-chat" class="hover:text-white transition">Forms & Chat</a></li>
+              <li>
+                {% if has_endpoint('pricing') %}
+                  <a href="{{ url_for(ep('pricing')) }}" class="hover:text-white transition">Pricing</a>
+                {% else %}
+                  <a href="#pricing" class="hover:text-white transition">Pricing</a>
+                {% endif %}
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 class="font-semibold text-white mb-4">Company</h4>
+            <ul class="space-y-3 text-white/60">
+              <li><a href="https://fieldsprout.io/about" class="hover:text-white transition">About</a></li>
+              <li><a href="https://fieldsprout.io/blog" class="hover:text-white transition">Blog</a></li>
+              <li><a href="https://fieldsprout.io/contact" class="hover:text-white transition">Contact</a></li>
+              <li><a href="https://fieldsprout.io/careers" class="hover:text-white transition">Careers</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 class="font-semibold text-white mb-4">Legal</h4>
+            <ul class="space-y-3 text-white/60">
+              <li><a href="https://fieldsprout.io/terms-of-service" class="hover:text-white transition">Terms</a></li>
+              <li><a href="https://fieldsprout.io/privacy-policy" class="hover:text-white transition">Privacy</a></li>
+              <li><a href="https://fieldsprout.io/security" class="hover:text-white transition">Security</a></li>
+            </ul>
+          </div>
         </div>
       </div>
-      <div class="mt-12 border-t border-white/10 pt-6 text-sm text-white/70 flex items-center justify-between">
-        <span>© {{ current_year }} FieldSprout. All rights reserved.</span>
-        <span>Made for local service teams.</span>
+
+      <!-- Bottom section -->
+      <div class="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <p class="text-sm text-white/50">&copy; {{ current_year }} FieldSprout. All rights reserved.</p>
+
+        <!-- Social links -->
+        <div class="flex items-center gap-4">
+          <a href="https://www.linkedin.com/company/fieldsprout" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:bg-white/20 hover:text-white transition" aria-label="LinkedIn">
+            <i class="fa-brands fa-linkedin-in"></i>
+          </a>
+          <a href="https://twitter.com/fieldsprout" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:bg-white/20 hover:text-white transition" aria-label="Twitter">
+            <i class="fa-brands fa-x-twitter"></i>
+          </a>
+          <a href="https://www.facebook.com/fieldsprout" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:bg-white/20 hover:text-white transition" aria-label="Facebook">
+            <i class="fa-brands fa-facebook-f"></i>
+          </a>
+        </div>
       </div>
     </div>
   </footer>
 
   <!-- Inline SVG fallbacks -->
   <script type="text/template" id="fs-logo-fallback">
-    <svg class="h-7 w-7" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-      <path d="M16 28c7-5.4 10.5-9.4 10.5-14.1C26.5 9 24 6.5 20.9 6.5c-2.1 0-3.8 1.1-4.9 2.8-1.1-1.7-2.8-2.8-4.9-2.8C8 6.5 5.5 9 5.5 13.9 5.5 18.6 9 22.6 16 28Z" fill="rgb(var(--fs-primary-600))"/>
-    </svg>
+    <span class="flex items-center gap-2 font-bold text-xl text-primary-700">
+      <svg class="h-8 w-8" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16 28c7-5.4 10.5-9.4 10.5-14.1C26.5 9 24 6.5 20.9 6.5c-2.1 0-3.8 1.1-4.9 2.8-1.1-1.7-2.8-2.8-4.9-2.8C8 6.5 5.5 9 5.5 13.9 5.5 18.6 9 22.6 16 28Z" fill="currentColor"/>
+      </svg>
+      FieldSprout
+    </span>
   </script>
   <script type="text/template" id="fs-logo-fallback-white">
-    <svg class="h-7 w-7" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-      <path d="M16 28c7-5.4 10.5-9.4 10.5-14.1C26.5 9 24 6.5 20.9 6.5c-2.1 0-3.8 1.1-4.9 2.8-1.1-1.7-2.8-2.8-4.9-2.8C8 6.5 5.5 9 5.5 13.9 5.5 18.6 9 22.6 16 28Z" fill="#fff"/>
-    </svg>
+    <span class="flex items-center gap-2 font-bold text-xl text-white">
+      <svg class="h-8 w-8" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16 28c7-5.4 10.5-9.4 10.5-14.1C26.5 9 24 6.5 20.9 6.5c-2.1 0-3.8 1.1-4.9 2.8-1.1-1.7-2.8-2.8-4.9-2.8C8 6.5 5.5 9 5.5 13.9 5.5 18.6 9 22.6 16 28Z" fill="currentColor"/>
+      </svg>
+      FieldSprout
+    </span>
   </script>
-  <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=AW-17616998273"></script>
-<script nonce="{{ g.csp_nonce }}">
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
 
-  gtag('config', 'AW-17616998273');
-</script>
+  <!-- Google Ads Conversion Tag -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17616998273"></script>
+  <script nonce="{{ g.csp_nonce }}">
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'AW-17616998273');
+  </script>
 
   <!-- Page View Tracking -->
   {% include 'includes/page_view_tracking.html' %}
 
-  <!-- Mobile Menu Toggle Script -->
+  <!-- AOS Animation Library -->
+  <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+  <script nonce="{{ g.csp_nonce }}">
+    AOS.init({
+      duration: 600,
+      easing: 'ease-out-cubic',
+      once: true,
+      offset: 50
+    });
+  </script>
+
+  <!-- Mobile Menu Script -->
   <script nonce="{{ g.csp_nonce }}">
     (function() {
-      var openBtn = document.getElementById('openMenu');
-      var mobileMenu = document.getElementById('mobileMenu');
+      const menuBtn = document.getElementById('mobileMenuBtn');
+      const closeBtn = document.getElementById('closeMobileMenu');
+      const menu = document.getElementById('mobileMenu');
+      const overlay = document.getElementById('mobileMenuOverlay');
 
-      if (openBtn && mobileMenu) {
-        // Toggle menu on button click
-        openBtn.addEventListener('click', function() {
-          mobileMenu.classList.toggle('hidden');
-        });
+      function openMenu() {
+        menu.classList.add('open');
+        overlay.classList.remove('hidden');
+        setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+        document.body.style.overflow = 'hidden';
+      }
 
-        // Close menu when clicking any link inside it (except details/summary)
-        mobileMenu.addEventListener('click', function(e) {
-          if (e.target.tagName === 'A') {
-            mobileMenu.classList.add('hidden');
-          }
-        });
+      function closeMenu() {
+        menu.classList.remove('open');
+        overlay.classList.add('opacity-0');
+        setTimeout(() => overlay.classList.add('hidden'), 300);
+        document.body.style.overflow = '';
+      }
 
-        // Close menu when clicking outside
-        document.addEventListener('click', function(e) {
-          if (!mobileMenu.contains(e.target) && !openBtn.contains(e.target)) {
-            mobileMenu.classList.add('hidden');
-          }
+      if (menuBtn) menuBtn.addEventListener('click', openMenu);
+      if (closeBtn) closeBtn.addEventListener('click', closeMenu);
+      if (overlay) overlay.addEventListener('click', closeMenu);
+
+      // Close on escape key
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeMenu();
+      });
+
+      // Close on link click
+      if (menu) {
+        menu.querySelectorAll('a').forEach(function(link) {
+          link.addEventListener('click', closeMenu);
         });
       }
     })();
@@ -410,4 +798,3 @@
   {% block body_extra %}{% endblock %}
 </body>
 </html>
-

@@ -3,7 +3,7 @@
 {% block content %}
 <h1 class="text-xl font-semibold mb-4">Customer/Service Heatmap</h1>
 <div id="map" class="h-[70vh] rounded border"></div>
-<script>
+<script nonce="{{ g.csp_nonce }}">
   const points = {{ points_json|safe }};
   // TODO: initialize your map lib (Leaflet/MapLibre/Google) and render points as a heat layer.
 </script>

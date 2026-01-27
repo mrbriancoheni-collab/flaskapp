@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from flask import Flask, request, abort, redirect, url_for, flash, g, render_template_string
+from flask import Flask, request, abort, redirect, url_for, flash, g, render_template_string, jsonify
 from markupsafe import escape
 from flask_login import LoginManager
 
@@ -1162,6 +1162,19 @@ def create_app():
         @app.errorhandler(CSRFError)
         def handle_csrf_error(e):
             app.logger.error(f"[CSRF ERROR] URL: {request.url}, Method: {request.method}, Referrer: {request.referrer}, Description: {getattr(e, 'description', str(e))}")
+
+            # For AJAX/API requests, return JSON instead of redirect with flash
+            if (request.headers.get('X-Requested-With') == 'XMLHttpRequest' or
+                request.accept_mimetypes.best == 'application/json' or
+                request.content_type == 'application/json' or
+                request.is_json):
+                return jsonify({
+                    'success': False,
+                    'error': 'CSRF token missing or invalid. Please refresh the page and try again.',
+                    'csrf_error': True
+                }), 400
+
+            # For regular form submissions, flash and redirect
             flash("Your session expired or the form was invalid. Please try again.", "error")
             return redirect(request.referrer or url_for("main_bp.home")), 400
 

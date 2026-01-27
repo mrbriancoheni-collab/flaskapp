@@ -45,7 +45,7 @@
   {{ render_breadcrumbs([
     {'name': 'Dashboard', 'url': url_for('account_bp.dashboard'), 'icon': 'fa-solid fa-home'},
     {'name': 'Google Ads', 'url': url_for('google_bp.ads_performance')},
-    {'name': 'Decision Screen', 'url': ''}
+    {'name': 'Performance', 'url': ''}
   ]) }}
 
   {# HEADER WITH BACK LINK #}
@@ -120,7 +120,16 @@
       <div class="text-2xl md:text-4xl font-bold tracking-tight">
         ${{ "{:,.0f}".format(account_performance.cost) }}
       </div>
-      <div class="text-xs text-indigo-200 mt-1">Last {{ account_performance.days }} days</div>
+      <div class="text-xs text-indigo-200 mt-1 flex items-center gap-2">
+        <span>Last {{ account_performance.days }} days</span>
+        {% if account_performance.has_comparison and account_performance.cost_change is defined %}
+          {% if account_performance.cost_change > 0 %}
+            <span class="text-red-300"><i class="fa-solid fa-arrow-up"></i> {{ account_performance.cost_change }}%</span>
+          {% elif account_performance.cost_change < 0 %}
+            <span class="text-green-300"><i class="fa-solid fa-arrow-down"></i> {{ account_performance.cost_change|abs }}%</span>
+          {% endif %}
+        {% endif %}
+      </div>
     </div>
 
     {# Total Leads/Conversions #}
@@ -132,7 +141,16 @@
       <div class="text-2xl md:text-4xl font-bold tracking-tight">
         {{ "{:,.0f}".format(account_performance.conversions) }}
       </div>
-      <div class="text-xs text-green-200 mt-1">{{ account_performance.conversion_rate }}% conversion rate</div>
+      <div class="text-xs text-green-200 mt-1 flex items-center gap-2">
+        <span>{{ account_performance.conversion_rate }}% conversion rate</span>
+        {% if account_performance.has_comparison and account_performance.conversions_change is defined %}
+          {% if account_performance.conversions_change > 0 %}
+            <span class="text-white font-semibold"><i class="fa-solid fa-arrow-up"></i> {{ account_performance.conversions_change }}%</span>
+          {% elif account_performance.conversions_change < 0 %}
+            <span class="text-red-300"><i class="fa-solid fa-arrow-down"></i> {{ account_performance.conversions_change|abs }}%</span>
+          {% endif %}
+        {% endif %}
+      </div>
     </div>
 
     {# Cost Per Lead #}
@@ -148,7 +166,16 @@
         $0
         {% endif %}
       </div>
-      <div class="text-xs text-orange-200 mt-1">Avg CPC: ${{ account_performance.avg_cpc }}</div>
+      <div class="text-xs text-orange-200 mt-1 flex items-center gap-2">
+        <span>Avg CPC: ${{ account_performance.avg_cpc }}</span>
+        {% if account_performance.has_comparison and account_performance.cpa_change is defined %}
+          {% if account_performance.cpa_change > 0 %}
+            <span class="text-red-300"><i class="fa-solid fa-arrow-up"></i> {{ account_performance.cpa_change }}%</span>
+          {% elif account_performance.cpa_change < 0 %}
+            <span class="text-green-300"><i class="fa-solid fa-arrow-down"></i> {{ account_performance.cpa_change|abs }}%</span>
+          {% endif %}
+        {% endif %}
+      </div>
     </div>
 
     {# ROAS or Revenue #}
@@ -187,7 +214,7 @@
           Detailed Performance Breakdown
         </h2>
         <span class="text-white text-xs md:text-sm bg-white/20 px-2 md:px-3 py-1 rounded-full">
-          Last {{ account_performance.days }} days
+          Last {{ account_performance.days }} days{% if account_performance.has_comparison %} vs prior 30{% endif %}
         </span>
       </div>
     </div>

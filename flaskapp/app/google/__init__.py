@@ -2890,11 +2890,39 @@ def ads_performance():
 
     # Fetch account performance stats (last 30 days)
     account_performance = None
+    prior_performance = None
     if connected:
         from app.google.utils_ads import fetch_account_performance_stats
         try:
             account_performance = fetch_account_performance_stats(aid, days=30)
             current_app.logger.info(f"[DECISION] Account performance fetched: has_data={account_performance.get('has_data') if account_performance else 'None'}")
+
+            # Also fetch prior 30 days (days 31-60) for comparison
+            prior_performance = fetch_account_performance_stats(aid, days=60)
+            if prior_performance and prior_performance.get('has_data') and account_performance and account_performance.get('has_data'):
+                # Subtract current period from 60-day totals to get prior period
+                prior_impressions = max(0, (prior_performance.get('impressions', 0) or 0) - (account_performance.get('impressions', 0) or 0))
+                prior_clicks = max(0, (prior_performance.get('clicks', 0) or 0) - (account_performance.get('clicks', 0) or 0))
+                prior_cost = max(0, (prior_performance.get('cost', 0) or 0) - (account_performance.get('cost', 0) or 0))
+                prior_conversions = max(0, (prior_performance.get('conversions', 0) or 0) - (account_performance.get('conversions', 0) or 0))
+
+                # Calculate percentage changes (positive = improvement for most metrics)
+                def calc_change(current, prior):
+                    if prior == 0:
+                        return 100 if current > 0 else 0
+                    return round(((current - prior) / prior) * 100, 1)
+
+                account_performance['cost_change'] = calc_change(account_performance.get('cost', 0), prior_cost)
+                account_performance['impressions_change'] = calc_change(account_performance.get('impressions', 0), prior_impressions)
+                account_performance['clicks_change'] = calc_change(account_performance.get('clicks', 0), prior_clicks)
+                account_performance['conversions_change'] = calc_change(account_performance.get('conversions', 0), prior_conversions)
+                account_performance['ctr_change'] = calc_change(account_performance.get('ctr', 0),
+                    (prior_clicks / prior_impressions * 100) if prior_impressions > 0 else 0)
+                account_performance['cpc_change'] = calc_change(account_performance.get('avg_cpc', 0),
+                    (prior_cost / prior_clicks) if prior_clicks > 0 else 0)
+                account_performance['cpa_change'] = calc_change(account_performance.get('cost_per_conversion', 0),
+                    (prior_cost / prior_conversions) if prior_conversions > 0 else 0)
+                account_performance['has_comparison'] = True
         except Exception as e:
             current_app.logger.warning(f"Could not load account performance stats: {e}")
 

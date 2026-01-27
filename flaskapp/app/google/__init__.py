@@ -2894,6 +2894,7 @@ def ads_performance():
     if connected:
         from app.google.utils_ads import fetch_account_performance_stats
         try:
+            current_app.logger.info(f"Fetching account performance stats for account {aid}")
             account_performance = fetch_account_performance_stats(aid, days=30)
             current_app.logger.info(f"[DECISION] Account performance fetched: has_data={account_performance.get('has_data') if account_performance else 'None'}")
 
@@ -2924,7 +2925,9 @@ def ads_performance():
                     (prior_cost / prior_conversions) if prior_conversions > 0 else 0)
                 account_performance['has_comparison'] = True
         except Exception as e:
-            current_app.logger.warning(f"Could not load account performance stats: {e}")
+            current_app.logger.error(f"Could not load account performance stats: {e}")
+            import traceback
+            current_app.logger.error(f"Traceback: {traceback.format_exc()}")
 
     # Fallback: try to get performance data from ads_state session if fetch failed
     if not account_performance or not account_performance.get('has_data'):

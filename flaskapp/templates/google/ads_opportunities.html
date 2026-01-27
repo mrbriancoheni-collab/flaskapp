@@ -87,6 +87,9 @@
       </div>
       {% if not is_demo %}
       <div class="flex-shrink-0 flex gap-2">
+        <button onclick="runAIAgents()" id="runAgentsBtn" class="inline-flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-purple-700 transition text-sm shadow-lg">
+          <i class="fa-solid fa-robot"></i> Run AI Agents
+        </button>
         <a href="{{ url_for('google_bp.ads_campaign_wizard') }}" class="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-700 transition text-sm shadow-lg">
           <i class="fa-solid fa-plus-circle"></i> Create Campaign
         </a>
@@ -106,6 +109,52 @@
       {% endif %}
     </div>
   </div>
+
+  <!-- Agent Status Banner -->
+  {% if connected and agent_status %}
+  <div class="bg-white rounded-xl shadow-lg p-5 border {% if agent_status.is_healthy %}border-green-200{% else %}border-amber-200{% endif %}">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center {% if agent_status.is_healthy %}bg-green-100{% else %}bg-amber-100{% endif %}">
+          <i class="fa-solid fa-robot text-xl {% if agent_status.is_healthy %}text-green-600{% else %}text-amber-600{% endif %}"></i>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-900">AI Agent Status</h3>
+          <div class="text-sm text-gray-600 flex items-center gap-4 mt-1">
+            {% if agent_status.last_run %}
+            <span>
+              <i class="fa-solid fa-clock mr-1"></i>
+              Last run: {{ agent_status.last_run.strftime('%b %d, %I:%M %p') }}
+            </span>
+            {% else %}
+            <span class="text-amber-600">
+              <i class="fa-solid fa-exclamation-triangle mr-1"></i>
+              Never run - click "Run AI Agents" to start
+            </span>
+            {% endif %}
+            <span class="{% if agent_status.is_healthy %}text-green-600{% else %}text-amber-600{% endif %}">
+              <i class="fa-solid {% if agent_status.is_healthy %}fa-check-circle{% else %}fa-clock{% endif %} mr-1"></i>
+              {% if agent_status.is_healthy %}Healthy{% else %}Needs attention{% endif %}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-6 text-sm">
+        <div class="text-center">
+          <div class="text-2xl font-bold text-gray-900">{{ agent_status.total_actions_24h }}</div>
+          <div class="text-xs text-gray-500">Actions (24h)</div>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl font-bold text-gray-900">{{ agent_status.total_actions_7d }}</div>
+          <div class="text-xs text-gray-500">Actions (7d)</div>
+        </div>
+        <button onclick="runAIAgents()" class="inline-flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition text-sm shadow">
+          <i class="fa-solid fa-play"></i> Run Now
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   <!-- Auto-Executor Active Banner -->
   {% if connected and analysis.auto_executed_count and analysis.auto_executed_count > 0 %}
@@ -1924,6 +1973,79 @@ document.addEventListener('DOMContentLoaded', function() {
     refreshBtn.addEventListener('click', loadPausedCampaigns);
   }
 });
+
+// Run AI Agents manually
+async function runAIAgents() {
+  const btn = document.getElementById('runAgentsBtn');
+  const originalText = btn.innerHTML;
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Running...';
+
+  try {
+    const response = await fetch('/account/google/ads/agents/api/run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      },
+      credentials: 'same-origin'
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Show success notification
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 right-4 bg-green-50 border-2 border-green-500 text-green-900 px-6 py-4 rounded-lg shadow-xl z-50 max-w-md';
+      notification.innerHTML = `
+        <div class="flex items-start gap-3">
+          <i class="fa-solid fa-check-circle text-green-600 text-xl"></i>
+          <div>
+            <div class="font-bold">AI Agents Completed</div>
+            <div class="text-sm mt-1">
+              ${data.summary.total_decisions} decisions made<br>
+              ${data.summary.auto_executed} auto-executed<br>
+              ${data.summary.pending_approval} pending approval
+            </div>
+            <div class="text-xs mt-2 text-green-700">Refreshing page...</div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(notification);
+
+      // Refresh page after 2 seconds to show new data
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } else {
+      throw new Error(data.error || 'Unknown error');
+    }
+  } catch (error) {
+    // Show error notification
+    const notification = document.createElement('div');
+    notification.className = 'fixed top-4 right-4 bg-red-50 border-2 border-red-500 text-red-900 px-6 py-4 rounded-lg shadow-xl z-50 max-w-md';
+    notification.innerHTML = `
+      <div class="flex items-start gap-3">
+        <i class="fa-solid fa-exclamation-circle text-red-600 text-xl"></i>
+        <div>
+          <div class="font-bold">Error Running Agents</div>
+          <div class="text-sm mt-1">${error.message}</div>
+        </div>
+        <button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-red-500 hover:text-red-700">
+          <i class="fa-solid fa-times"></i>
+        </button>
+      </div>
+    `;
+    document.body.appendChild(notification);
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => notification.remove(), 5000);
+
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
+}
 
 // Undo AI action
 async function undoAction(actionId) {

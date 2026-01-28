@@ -14,12 +14,13 @@ Features:
 """
 
 import logging
+import json
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional, Tuple
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, text
 
 from app import db
-from app.models import Account, GoogleAdsAuth
+from app.models import Account
 from app.models_ai_actions import AIAction, AIActionRule
 from app.google.utils_ads import client_from_refresh
 
@@ -89,15 +90,46 @@ class GoogleAdsAutoExecutor:
     def _get_google_ads_client(self):
         """Get Google Ads API client."""
         if not self.google_ads_client:
-            # Get Google Ads auth from GoogleAdsAuth table
-            self.google_auth = GoogleAdsAuth.query.filter_by(account_id=self.account_id).first()
+            # Get Google Ads credentials from google_oauth_tokens table
+            query = text("""
+                SELECT credentials_json, customer_id
+                FROM google_oauth_tokens
+                WHERE account_id = :aid AND product = 'ads'
+                LIMIT 1
+            """)
 
-            if not self.google_auth or not self.google_auth.refresh_token:
+            with db.engine.connect() as conn:
+                result = conn.execute(query, {"aid": self.account_id}).first()
+
+            if not result:
                 raise ValueError(f"Account {self.account_id} has no Google Ads connection")
 
-            login_customer_id = self.google_auth.manager_customer_id or self.google_auth.customer_id
+            # Parse credentials to get refresh token
+            creds = result.credentials_json
+            if isinstance(creds, str):
+                creds = json.loads(creds)
+
+            refresh_token = creds.get('refresh_token') if isinstance(creds, dict) else None
+            if not refresh_token:
+                raise ValueError(f"Account {self.account_id} has no refresh token")
+
+            # Get customer ID from oauth tokens or from accounts table
+            customer_id = result.customer_id
+            if not customer_id:
+                customer_id = self.account.google_ads_customer_id
+
+            if not customer_id:
+                raise ValueError(f"Account {self.account_id} has no Google Ads customer ID")
+
+            # Get manager ID from accounts table if available
+            login_customer_id = self.account.google_ads_manager_id or customer_id
+
+            # Store for later use
+            self._refresh_token = refresh_token
+            self._customer_id = customer_id
+
             self.google_ads_client = client_from_refresh(
-                self.google_auth.refresh_token,
+                refresh_token,
                 login_customer_id
             )
 
@@ -142,12 +174,8 @@ class GoogleAdsAutoExecutor:
         try:
             client = self._get_google_ads_client()
 
-            # Get customer ID from cached google_auth (set by _get_google_ads_client)
-            if not self.google_auth or not self.google_auth.customer_id:
-                logger.warning(f"No customer ID for account {self.account_id}")
-                return []
-
-            customer_id = self.google_auth.customer_id
+            # Get customer ID (set by _get_google_ads_client)
+            customer_id = self._customer_id
 
             # Query search terms from last N days
             query = f"""

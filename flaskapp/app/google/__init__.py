@@ -3725,12 +3725,61 @@ def ads_opportunities():
     except Exception as e:
         current_app.logger.warning(f"Could not fetch recent AI actions: {e}")
 
+    # Fetch agent execution status
+    agent_status = {
+        'last_run': None,
+        'total_actions_24h': 0,
+        'total_actions_7d': 0,
+        'is_healthy': False
+    }
+    try:
+        from datetime import timedelta
+        from sqlalchemy import func
+
+        # Get last execution time from agent_execution_log
+        last_run_query = text("""
+            SELECT MAX(cycle_start) as last_run
+            FROM agent_execution_log
+            WHERE account_id = :aid AND status = 'completed'
+        """)
+        with db.engine.connect() as conn:
+            result = conn.execute(last_run_query, {"aid": aid}).first()
+            if result and result.last_run:
+                agent_status['last_run'] = result.last_run
+
+        # Get action counts from AIAction table
+        from app.models_ai_actions import AIAction
+        now = datetime.utcnow()
+        day_ago = now - timedelta(days=1)
+        week_ago = now - timedelta(days=7)
+
+        agent_status['total_actions_24h'] = AIAction.query.filter(
+            AIAction.account_id == aid,
+            AIAction.status == 'executed',
+            AIAction.executed_at >= day_ago
+        ).count()
+
+        agent_status['total_actions_7d'] = AIAction.query.filter(
+            AIAction.account_id == aid,
+            AIAction.status == 'executed',
+            AIAction.executed_at >= week_ago
+        ).count()
+
+        # Agent is healthy if it ran in the last 8 hours (2x the 4-hour schedule)
+        if agent_status['last_run']:
+            eight_hours_ago = now - timedelta(hours=8)
+            agent_status['is_healthy'] = agent_status['last_run'] >= eight_hours_ago
+
+    except Exception as e:
+        current_app.logger.warning(f"Could not fetch agent status: {e}")
+
     return render_template(
         "google/ads_opportunities.html",
         connected=connected,
         ads_data=ads_data,
         analysis=analysis,
         recent_actions=recent_actions,
+        agent_status=agent_status,
         epn=request.endpoint,
         is_demo=False,
     )

@@ -102,6 +102,7 @@
     }
 
     /* Custom container */
+    .container-max { max-width: 1400px; margin: 0 auto; padding: 0 1.5rem; }
     .container-lg { max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; }
     .container-md { max-width: 1024px; margin: 0 auto; padding: 0 1.5rem; }
     .container-sm { max-width: 768px; margin: 0 auto; padding: 0 1.5rem; }
@@ -467,8 +468,7 @@
         {% if has_endpoint('ads_grader_bp.index') %}
         <a href="{{ url_for('ads_grader_bp.index') }}" class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-emerald-700 hover:text-emerald-800 rounded-lg hover:bg-emerald-50 transition">
           <i class="fa-solid fa-clipboard-check"></i>
-          Free Ads Grader
-          <span class="px-1.5 py-0.5 text-[10px] font-bold bg-emerald-500 text-white rounded-full">FREE</span>
+          Ads Grader
         </a>
         {% endif %}
 
@@ -500,13 +500,13 @@
             <a href="/login" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-700 transition">Sign in</a>
           {% endif %}
           {% if has_endpoint('auth_bp.register') %}
-            <a href="{{ url_for('auth_bp.register') }}" class="btn btn-primary btn-sm">Get Started Free</a>
+            <a href="{{ url_for('auth_bp.register') }}" class="btn btn-primary btn-sm">Get Started</a>
           {% elif has_endpoint('signup') %}
-            <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary btn-sm">Get Started Free</a>
+            <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary btn-sm">Get Started</a>
           {% elif has_endpoint('register') %}
-            <a href="{{ url_for(ep('register')) }}" class="btn btn-primary btn-sm">Get Started Free</a>
+            <a href="{{ url_for(ep('register')) }}" class="btn btn-primary btn-sm">Get Started</a>
           {% else %}
-            <a href="/signup" class="btn btn-primary btn-sm">Get Started Free</a>
+            <a href="/signup" class="btn btn-primary btn-sm">Get Started</a>
           {% endif %}
         {% endif %}
       </div>
@@ -571,8 +571,7 @@
       {% if has_endpoint('ads_grader_bp.index') %}
       <a href="{{ url_for('ads_grader_bp.index') }}" class="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 text-emerald-700 font-semibold">
         <i class="fa-solid fa-clipboard-check"></i>
-        Free Ads Grader
-        <span class="ml-auto px-2 py-0.5 text-xs font-bold bg-emerald-500 text-white rounded-full">FREE</span>
+        Ads Grader
       </a>
       {% endif %}
 
@@ -603,13 +602,13 @@
           <a href="/login" class="btn btn-secondary w-full">Sign in</a>
         {% endif %}
         {% if has_endpoint('auth_bp.register') %}
-          <a href="{{ url_for('auth_bp.register') }}" class="btn btn-primary w-full">Get Started Free</a>
+          <a href="{{ url_for('auth_bp.register') }}" class="btn btn-primary w-full">Get Started</a>
         {% elif has_endpoint('signup') %}
-          <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary w-full">Get Started Free</a>
+          <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary w-full">Get Started</a>
         {% elif has_endpoint('register') %}
-          <a href="{{ url_for(ep('register')) }}" class="btn btn-primary w-full">Get Started Free</a>
+          <a href="{{ url_for(ep('register')) }}" class="btn btn-primary w-full">Get Started</a>
         {% else %}
-          <a href="/signup" class="btn btn-primary w-full">Get Started Free</a>
+          <a href="/signup" class="btn btn-primary w-full">Get Started</a>
         {% endif %}
       {% endif %}
     </div>
@@ -643,13 +642,13 @@
           </p>
           <div class="mt-8 flex gap-4">
             {% if has_endpoint('auth_bp.register') %}
-              <a href="{{ url_for('auth_bp.register') }}" class="btn btn-primary">Get Started Free</a>
+              <a href="{{ url_for('auth_bp.register') }}" class="btn btn-primary">Get Started</a>
             {% elif has_endpoint('signup') %}
-              <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary">Get Started Free</a>
+              <a href="{{ url_for(ep('signup')) }}" class="btn btn-primary">Get Started</a>
             {% elif has_endpoint('register') %}
-              <a href="{{ url_for(ep('register')) }}" class="btn btn-primary">Get Started Free</a>
+              <a href="{{ url_for(ep('register')) }}" class="btn btn-primary">Get Started</a>
             {% else %}
-              <a href="/signup" class="btn btn-primary">Get Started Free</a>
+              <a href="/signup" class="btn btn-primary">Get Started</a>
             {% endif %}
             <a href="https://fieldsprout.io/contact" class="btn btn-ghost">Contact Sales</a>
           </div>

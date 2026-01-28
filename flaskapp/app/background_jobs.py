@@ -52,6 +52,23 @@ def init_scheduler(app: Flask):
         # Skip in Flask reloader parent process
         return None
 
+    # Only run scheduler in one Gunicorn worker to prevent duplicate jobs
+    # The worker that gets the lock file first becomes the scheduler worker
+    import fcntl
+    lock_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.scheduler.lock')
+
+    try:
+        # Try to acquire exclusive lock (non-blocking)
+        lock_file = open(lock_file_path, 'w')
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        # Store lock file handle to prevent garbage collection closing it
+        app._scheduler_lock = lock_file
+        app.logger.info("This worker acquired scheduler lock - will run background jobs")
+    except (IOError, OSError):
+        # Another worker already has the lock - skip scheduler initialization
+        app.logger.info("Another worker has scheduler lock - skipping scheduler in this worker")
+        return None
+
     # Configuration - use in-memory job store (simpler, no pickling issues)
     # Using 1 worker to minimize resource usage on shared hosting
     executors = {

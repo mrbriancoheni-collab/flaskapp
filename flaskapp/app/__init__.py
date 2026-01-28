@@ -1143,6 +1143,27 @@ def create_app():
         from app.cron_tasks import run_daily
         run_daily(app, db)
 
+    # ---- Health check endpoint (for load balancers / monitoring) -------------------
+    @app.route('/health')
+    def health_check():
+        """Simple health check endpoint for load balancers and monitoring."""
+        try:
+            # Quick database connectivity check
+            db.session.execute(db.text('SELECT 1'))
+            db_status = 'ok'
+        except Exception as e:
+            app.logger.error(f"Health check DB error: {e}")
+            db_status = 'error'
+
+        status = {
+            'status': 'healthy' if db_status == 'ok' else 'degraded',
+            'database': db_status,
+            'timestamp': datetime.utcnow().isoformat()
+        }
+
+        http_code = 200 if db_status == 'ok' else 503
+        return jsonify(status), http_code
+
     # ---- Catch-all exception handler for debugging ----------------------------------
     @app.errorhandler(Exception)
     def handle_exception(e):

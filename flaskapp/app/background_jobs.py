@@ -421,10 +421,11 @@ def generate_google_ads_insights_weekly(app: Flask):
             current_app.logger.info("Starting weekly Google Ads insights generation")
 
             # Get all accounts with Google Ads connected
-            from app.models import GoogleAdsAuth
+            from app.models_google import GoogleOAuthToken
             accounts = Account.query.join(
-                GoogleAdsAuth, Account.id == GoogleAdsAuth.account_id
+                GoogleOAuthToken, Account.id == GoogleOAuthToken.account_id
             ).filter(
+                GoogleOAuthToken.product == 'ads',
                 Account.status == 'active'
             ).all()
 
@@ -615,10 +616,11 @@ def generate_google_ads_insights_daily(app: Flask):
             current_app.logger.info("Starting daily Google Ads insights generation for high-spend accounts")
 
             # Get all accounts with Google Ads connected
-            from app.models import GoogleAdsAuth
+            from app.models_google import GoogleOAuthToken
             accounts = Account.query.join(
-                GoogleAdsAuth, Account.id == GoogleAdsAuth.account_id
+                GoogleOAuthToken, Account.id == GoogleOAuthToken.account_id
             ).filter(
+                GoogleOAuthToken.product == 'ads',
                 Account.status == 'active'
             ).all()
 
@@ -808,13 +810,15 @@ def run_google_ads_auto_executor(app: Flask):
             current_app.logger.info("[JOB] Starting Google Ads Auto-Executor for all accounts")
 
             from app.services.google_ads_auto_executor import GoogleAdsAutoExecutor
-            from app.models import Account, GoogleAdsAuth
+            from app.models import Account
+            from app.models_google import GoogleOAuthToken
             from app import db
 
             # Get all accounts with Google Ads connected
             accounts = Account.query.join(
-                GoogleAdsAuth, Account.id == GoogleAdsAuth.account_id
+                GoogleOAuthToken, Account.id == GoogleOAuthToken.account_id
             ).filter(
+                GoogleOAuthToken.product == 'ads',
                 Account.status == 'active'
             ).all()
 

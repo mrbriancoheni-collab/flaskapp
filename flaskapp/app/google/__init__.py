@@ -2895,6 +2895,7 @@ def ads_performance():
     # Fetch account performance stats (last 30 days)
     account_performance = None
     prior_performance = None
+    auth_error = False
     if connected:
         from app.google.utils_ads import fetch_account_performance_stats
         try:
@@ -2932,6 +2933,8 @@ def ads_performance():
             current_app.logger.error(f"Could not load account performance stats: {e}")
             import traceback
             current_app.logger.error(f"Traceback: {traceback.format_exc()}")
+            if '401' in str(e) or 'Unauthorized' in str(e):
+                auth_error = True
 
     # Fallback: try to get performance data from ads_state session if fetch failed
     if not account_performance or not account_performance.get('has_data'):
@@ -3017,6 +3020,7 @@ def ads_performance():
         recent_changes=recent_changes,
         historical_improvement=historical_improvement,
         account_performance=account_performance,
+        auth_error=auth_error,
         epn=request.endpoint,
     )
 
@@ -10639,6 +10643,9 @@ def disconnect(product: str):
     if canon == "ads":
         session.pop(f"ads_state_{aid}", None)
         session.pop(f"ads_suggestions_{aid}", None)
+
+    # Clear cached connection status so the UI updates immediately
+    session.pop(f"google_connected_{aid}", None)
 
     flash(f"Disconnected Google {canon.upper()}.", "info")
     return redirect(url_for("google_bp.index"))

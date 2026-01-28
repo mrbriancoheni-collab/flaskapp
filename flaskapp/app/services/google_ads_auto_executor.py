@@ -89,8 +89,8 @@ class GoogleAdsAutoExecutor:
         self.google_auth = None
 
         # Load business context for LLM-based relevance checks
-        self.business_description = getattr(self.account, 'business_description', None) or ''
-        self.business_services = getattr(self.account, 'business_services', None) or ''
+        self.business_description = self.account.get_business_description() or ''
+        self.business_services = self.account.get_business_services() or ''
 
     def _get_google_ads_client(self):
         """Get Google Ads API client."""

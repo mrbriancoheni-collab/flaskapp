@@ -130,8 +130,8 @@ def run_agents_for_account(
     # Load business context from Account model
     from app.models import Account as AccountModel
     account_obj = AccountModel.query.get(account_id)
-    business_description = getattr(account_obj, 'business_description', '') or '' if account_obj else ''
-    business_services = getattr(account_obj, 'business_services', '') or '' if account_obj else ''
+    business_description = account_obj.get_business_description() or '' if account_obj else ''
+    business_services = account_obj.get_business_services() or '' if account_obj else ''
 
     # Fetch REAL performance data from Google Ads
     try:

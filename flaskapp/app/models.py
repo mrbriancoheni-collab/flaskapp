@@ -51,9 +51,8 @@ class Account(db.Model):
     # Your schema has `plan` (not `plan_code`)
     plan = db.Column(String(50), nullable=True, index=True)
 
-    # Business context for AI agents (persistent, unlike session-based profile)
-    business_description = db.Column(Text, nullable=True)  # e.g. "Pool cleaning and maintenance service"
-    business_services = db.Column(Text, nullable=True)      # e.g. "pool cleaning, pool repair, water testing"
+    # NOTE: business_description and business_services columns are added via migration
+    # Access them via get_business_description() / get_business_services() methods below
 
     created_at = db.Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = db.Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
@@ -74,6 +73,34 @@ class Account(db.Model):
     def industry(self):
         """Compatibility shim - industry field removed from DB"""
         return None
+
+    def get_business_description(self):
+        """Get business_description from DB. Returns None if column doesn't exist yet."""
+        from sqlalchemy import text
+        try:
+            with db.engine.connect() as conn:
+                result = conn.execute(
+                    text("SELECT business_description FROM accounts WHERE id = :id"),
+                    {"id": self.id}
+                )
+                row = result.fetchone()
+                return row[0] if row else None
+        except Exception:
+            return None
+
+    def get_business_services(self):
+        """Get business_services from DB. Returns None if column doesn't exist yet."""
+        from sqlalchemy import text
+        try:
+            with db.engine.connect() as conn:
+                result = conn.execute(
+                    text("SELECT business_services FROM accounts WHERE id = :id"),
+                    {"id": self.id}
+                )
+                row = result.fetchone()
+                return row[0] if row else None
+        except Exception:
+            return None
 
     @property
     def google_ads_connected(self):

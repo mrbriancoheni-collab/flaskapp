@@ -29,6 +29,7 @@ def run_agents_for_all_accounts(layer: str = 'all'):
     from app import db
 
     # Get all active accounts with Google Ads connected
+    # Simplified query - just check for valid Google Ads connection
     query = text("""
         SELECT DISTINCT
             a.id as account_id,
@@ -38,8 +39,7 @@ def run_agents_for_all_accounts(layer: str = 'all'):
         JOIN google_ads_auth gaa ON a.id = gaa.account_id
         WHERE gaa.refresh_token IS NOT NULL
           AND gaa.customer_id IS NOT NULL
-          AND a.plan IN ('pro', 'team', 'enterprise')
-          AND (a.stripe_status IN ('active', 'trialing') OR a.plan = 'enterprise')
+          AND a.status = 'active'
     """)
 
     with db.engine.connect() as conn:

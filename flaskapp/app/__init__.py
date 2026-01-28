@@ -1197,7 +1197,7 @@ def create_app():
 
             # For regular form submissions, flash and redirect
             flash("Your session expired or the form was invalid. Please try again.", "error")
-            return redirect(request.referrer or url_for("main_bp.home")), 400
+            return redirect(request.referrer or url_for("main_bp.home"))
 
     # ---- General error handlers --------------------------------------------
     @app.errorhandler(400)

@@ -1,6 +1,14 @@
 // static/js/google_ads_insights.js
 // AI Optimization Insights Modal - Progressive Loading & Interaction
 
+function _getInsightsCsrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  if (meta && meta.content) return meta.content;
+  const inp = document.querySelector('input[name="csrf_token"]');
+  if (inp && inp.value) return inp.value;
+  return '';
+}
+
 /**
  * Main entry point - called when user clicks "AI Optimize" button
  */
@@ -22,7 +30,9 @@ async function aiOptimize() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-CSRFToken': _getInsightsCsrfToken(),
       },
+      credentials: 'same-origin',
       body: JSON.stringify({
         scope: 'all',
         regenerate: true
@@ -247,7 +257,9 @@ async function applyRecommendation(recommendation, cardElement) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-CSRFToken': _getInsightsCsrfToken(),
       },
+      credentials: 'same-origin',
       body: JSON.stringify({
         recommendation_id: recommendation.id,
         action: recommendation.action
@@ -321,7 +333,9 @@ async function dismissRecommendation(recommendation, cardElement) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-CSRFToken': _getInsightsCsrfToken(),
       },
+      credentials: 'same-origin',
       body: JSON.stringify({
         recommendation_id: recommendation.id,
         reason: reason

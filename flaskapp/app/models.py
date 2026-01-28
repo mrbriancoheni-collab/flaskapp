@@ -51,6 +51,10 @@ class Account(db.Model):
     # Your schema has `plan` (not `plan_code`)
     plan = db.Column(String(50), nullable=True, index=True)
 
+    # Business context for AI agents (persistent, unlike session-based profile)
+    business_description = db.Column(Text, nullable=True)  # e.g. "Pool cleaning and maintenance service"
+    business_services = db.Column(Text, nullable=True)      # e.g. "pool cleaning, pool repair, water testing"
+
     created_at = db.Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = db.Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 

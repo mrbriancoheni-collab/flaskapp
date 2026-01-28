@@ -229,7 +229,7 @@ class NegativeKeywordAgent(BaseAgent):
 
     Responsibilities:
     - Review search term reports daily
-    - Identify irrelevant searches
+    - Identify irrelevant searches using pattern matching AND LLM business-relevance analysis
     - Add negative keywords to block waste
     - Build negative keyword lists
     - Monitor negative keyword performance
@@ -263,8 +263,9 @@ class NegativeKeywordAgent(BaseAgent):
         ]
 
     def analyze(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Analyze search terms for waste."""
+        """Analyze search terms for waste using pattern matching + LLM business relevance."""
         opportunities = []
+        pattern_matched_queries = set()
 
         search_terms = context.get('search_terms', [])
 
@@ -285,23 +286,131 @@ class NegativeKeywordAgent(BaseAgent):
                         'conversions': conversions,
                         'reason': f'Contains waste pattern: {pattern}'
                     })
+                    pattern_matched_queries.add(query)
                     break
 
-            # 2. Spent money with no conversions
-            if cost > 50 and conversions == 0:
-                # Analyze if it's relevant to business
-                if self._is_irrelevant(query, context):
-                    opportunities.append({
-                        'type': 'add_negative_keyword',
-                        'severity': 'medium',
-                        'confidence': 0.85,
-                        'search_query': term['query'],
-                        'cost': cost,
-                        'conversions': conversions,
-                        'reason': 'Irrelevant to business after spending >$50'
-                    })
+        # 2. LLM-based business relevance check for remaining terms
+        business_desc = context.get('business_description', '')
+        business_services = context.get('business_services', '')
+
+        if business_desc:
+            remaining_terms = [
+                t for t in search_terms
+                if t.get('query', '').lower() not in pattern_matched_queries
+            ]
+
+            if remaining_terms:
+                llm_results = self._evaluate_terms_with_llm(
+                    remaining_terms, business_desc, business_services
+                )
+
+                for term in remaining_terms:
+                    query = term.get('query', '').lower()
+                    cost = term.get('cost', 0)
+                    conversions = term.get('conversions', 0)
+                    result = llm_results.get(query, {})
+
+                    if result.get('irrelevant', False):
+                        opportunities.append({
+                            'type': 'add_negative_keyword',
+                            'severity': 'high',
+                            'confidence': 0.92,
+                            'search_query': term['query'],
+                            'cost': cost,
+                            'conversions': conversions,
+                            'reason': f"AI: {result.get('reason', 'Irrelevant to business')}"
+                        })
+        else:
+            # Fallback: flag high-spend zero-conversion terms
+            for term in search_terms:
+                query = term.get('query', '').lower()
+                if query in pattern_matched_queries:
+                    continue
+                cost = term.get('cost', 0)
+                conversions = term.get('conversions', 0)
+                if cost > 50 and conversions == 0:
+                    if self._is_irrelevant(query, context):
+                        opportunities.append({
+                            'type': 'add_negative_keyword',
+                            'severity': 'medium',
+                            'confidence': 0.85,
+                            'search_query': term['query'],
+                            'cost': cost,
+                            'conversions': conversions,
+                            'reason': 'Irrelevant to business after spending >$50'
+                        })
 
         return opportunities
+
+    def _evaluate_terms_with_llm(
+        self,
+        search_terms: List[Dict[str, Any]],
+        business_desc: str,
+        business_services: str
+    ) -> Dict[str, Dict]:
+        """Use LLM to evaluate search term relevance to the business."""
+        import os
+        import json
+
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            return {}
+
+        terms_list = "\n".join(
+            f"- {t.get('query', '')}" for t in search_terms[:50]
+        )
+
+        business_context = f"Business: {business_desc}"
+        if business_services:
+            business_context += f"\nServices offered: {business_services}"
+
+        prompt = f"""You are a Google Ads negative keyword analyst. Analyze each search term and determine if it is RELEVANT or IRRELEVANT to this business.
+
+{business_context}
+
+A term is RELEVANT if a person searching it could reasonably become a paying customer for the specific services listed. A term is IRRELEVANT if it relates to a different service, industry, or has no purchase intent for these services.
+
+Foreign language terms that relate to the business services should be marked RELEVANT.
+
+Search terms:
+{terms_list}
+
+Respond ONLY with valid JSON — an array of objects:
+[{{"term": "the search term", "irrelevant": true/false, "reason": "brief explanation"}}]
+
+Be conservative: when in doubt, mark as RELEVANT."""
+
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=api_key)
+
+            resp = client.chat.completions.create(
+                model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=4000,
+            )
+
+            content = (resp.choices[0].message.content or "").strip()
+            if content.startswith("```"):
+                content = content.split("```")[1]
+                if content.startswith("json"):
+                    content = content[4:]
+                content = content.strip()
+
+            results_list = json.loads(content)
+            return {
+                item.get('term', '').lower().strip(): {
+                    'irrelevant': item.get('irrelevant', False),
+                    'reason': item.get('reason', '')
+                }
+                for item in results_list
+            }
+
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"NegativeKeywordAgent LLM evaluation failed: {e}")
+            return {}
 
     def decide(self, opportunities: List[Dict[str, Any]]) -> List[AgentDecision]:
         """Make negative keyword decisions."""
@@ -348,16 +457,15 @@ class NegativeKeywordAgent(BaseAgent):
         }
 
     def _is_irrelevant(self, query: str, context: Dict[str, Any]) -> bool:
-        """Determine if search query is irrelevant to business."""
-        # This would use NLP/ML in production
-        # For now, simple heuristic
-        business_type = context.get('business_type', 'hvac')
-
-        if business_type == 'hvac':
-            irrelevant_terms = ['parts', 'wholesale', 'diagram', 'manual']
-            return any(term in query for term in irrelevant_terms)
-
-        return False
+        """Determine if search query is irrelevant to business (fallback heuristic)."""
+        # Generic irrelevant terms that apply across industries
+        generic_irrelevant = [
+            'parts', 'wholesale', 'diagram', 'manual', 'catalog',
+            'near me jobs', 'intern', 'volunteer', 'degree',
+            'for kids', 'toy', 'game', 'movie', 'song',
+            'designs', 'ideas', 'inspiration', 'pinterest',
+        ]
+        return any(term in query for term in generic_irrelevant)
 
 
 class AdCopyAgent(BaseAgent):

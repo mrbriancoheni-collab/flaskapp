@@ -34,12 +34,13 @@ def run_agents_for_all_accounts(layer: str = 'all'):
     query = text("""
         SELECT DISTINCT
             a.id as account_id,
-            gaa.customer_id,
-            gaa.refresh_token as credentials_json
+            got.customer_id,
+            got.credentials_json
         FROM accounts a
-        JOIN google_ads_auth gaa ON a.id = gaa.account_id
-        WHERE gaa.refresh_token IS NOT NULL
-          AND gaa.customer_id IS NOT NULL
+        JOIN google_oauth_tokens got ON a.id = got.account_id
+        WHERE got.product = 'ads'
+          AND got.credentials_json IS NOT NULL
+          AND got.customer_id IS NOT NULL
           AND a.status IN ('active', 'trial')
     """)
 
@@ -88,11 +89,14 @@ def run_agents_for_account(
     import json
 
     # Extract refresh token from credentials
-    # Note: credentials_json is now the refresh_token directly from google_ads_auth table
+    # Note: credentials_json from google_oauth_tokens contains the full OAuth credentials JSON
     if isinstance(credentials_json, str):
-        refresh_token = credentials_json
+        try:
+            creds = json.loads(credentials_json)
+            refresh_token = creds.get('refresh_token', credentials_json)
+        except (json.JSONDecodeError, TypeError):
+            refresh_token = credentials_json
     elif isinstance(credentials_json, dict):
-        # Fallback for old format (if somehow still present)
         refresh_token = credentials_json.get('refresh_token')
     else:
         refresh_token = None

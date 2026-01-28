@@ -48,6 +48,20 @@
     {'name': 'Performance', 'url': ''}
   ]) }}
 
+  {# AUTH ERROR ALERT #}
+  {% if auth_error is defined and auth_error %}
+  <div class="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 flex items-start gap-3">
+    <i class="fa-solid fa-triangle-exclamation text-amber-600 text-xl mt-0.5"></i>
+    <div>
+      <p class="font-semibold text-amber-900">Google Ads connection expired</p>
+      <p class="text-sm text-amber-700 mt-1">Your Google Ads authorization has expired. Performance data below may be stale. AI agents cannot run until you reconnect.</p>
+      <a href="{{ url_for('google_bp.index') }}" class="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-lg transition">
+        <i class="fa-solid fa-plug"></i> Reconnect Google Ads
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
   {# HEADER WITH BACK LINK #}
   <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
     <div>

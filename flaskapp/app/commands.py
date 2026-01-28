@@ -483,6 +483,150 @@ You can now use this provider for your automated lead generation campaigns.
         return 1
 
 
+@click.command('seed-ai-actions')
+@click.option('--account', type=int, default=3, help='Account ID to seed actions for (default: 3)')
+@click.option('--count', type=int, default=15, help='Number of test actions to create (default: 15)')
+@click.option('--clear', is_flag=True, help='Clear existing test actions before seeding')
+@with_appcontext
+def seed_ai_actions_command(account, count, clear):
+    """
+    Seed test AI action data for the /performance page.
+
+    Creates realistic AI agent actions so the performance dashboard
+    shows agents running without requiring live Google Ads API access.
+
+    Examples:
+        flask seed-ai-actions                    # Seed 15 actions for account 3
+        flask seed-ai-actions --account 5        # Seed for account 5
+        flask seed-ai-actions --count 30         # Create 30 test actions
+        flask seed-ai-actions --clear            # Clear old test data first
+    """
+    from app import db
+    from app.models_ai_actions import AIAction
+    from datetime import datetime, timedelta
+    import random
+
+    click.echo(f"\n{'='*60}")
+    click.echo(f"Seeding AI actions for account {account}...")
+    click.echo(f"{'='*60}\n")
+
+    if clear:
+        deleted = AIAction.query.filter_by(account_id=account).delete()
+        db.session.commit()
+        click.echo(f"Cleared {deleted} existing actions for account {account}")
+
+    # Realistic test action templates
+    templates = [
+        {
+            "action_type": "negative_keyword_added",
+            "title": "Blocked wasteful search term: '{term}'",
+            "description": "Added negative keyword '{term}' to campaign '{campaign}' to prevent wasted spend on irrelevant searches.",
+            "reasoning": "Search term '{term}' had 0 conversions over 30 days with ${spend:.2f} spend. CTR was {ctr:.1f}% indicating low intent.",
+            "terms": ["free estimate near me", "diy plumbing repair", "plumber salary", "how to fix toilet", "plumbing school"],
+            "savings_range": (15, 120),
+            "confidence_range": (0.85, 0.98),
+        },
+        {
+            "action_type": "bid_adjusted",
+            "title": "Increased bid on high-converting keyword",
+            "description": "Raised bid on '{term}' in '{campaign}' from ${before:.2f} to ${after:.2f} to capture more converting traffic.",
+            "reasoning": "Keyword '{term}' has {conv} conversions at ${cpa:.2f} CPA, well below target. Increasing bid to gain impression share.",
+            "terms": ["emergency plumber", "ac repair near me", "roof replacement cost", "electrician nearby", "pest control service"],
+            "savings_range": (0, 50),
+            "confidence_range": (0.75, 0.95),
+        },
+        {
+            "action_type": "budget_reallocated",
+            "title": "Shifted budget to top-performing campaign",
+            "description": "Moved ${amount:.2f}/day from '{campaign_from}' to '{campaign_to}' based on conversion performance.",
+            "reasoning": "'{campaign_to}' has 2.3x higher conversion rate than '{campaign_from}'. Reallocating budget to maximize ROI.",
+            "savings_range": (50, 300),
+            "confidence_range": (0.80, 0.95),
+        },
+        {
+            "action_type": "keyword_paused",
+            "title": "Paused underperforming keyword",
+            "description": "Paused keyword '{term}' in '{campaign}' due to consistently poor performance over 30 days.",
+            "reasoning": "Keyword '{term}' spent ${spend:.2f} with 0 conversions and {ctr:.1f}% CTR. Quality Score: {qs}/10.",
+            "terms": ["general contractor", "home improvement", "handyman services", "renovation company"],
+            "savings_range": (20, 80),
+            "confidence_range": (0.82, 0.96),
+        },
+        {
+            "action_type": "quality_score_fix",
+            "title": "Improved Quality Score for '{term}'",
+            "description": "Recommended ad copy and landing page improvements for '{term}' to boost Quality Score from {qs_before}/10 to {qs_after}/10.",
+            "reasoning": "Low Quality Score on '{term}' is increasing CPC by ~40%. Ad relevance and landing page experience rated 'Below Average'.",
+            "terms": ["water heater installation", "hvac maintenance", "roof inspection", "drain cleaning"],
+            "savings_range": (30, 150),
+            "confidence_range": (0.70, 0.90),
+        },
+    ]
+
+    campaigns = [
+        "Google Ads - Emergency Services",
+        "Google Ads - Residential",
+        "Google Ads - Commercial",
+        "Google Ads - Brand",
+        "Performance Max - Local",
+    ]
+
+    now = datetime.utcnow()
+    created = 0
+
+    for i in range(count):
+        tmpl = random.choice(templates)
+        term = random.choice(tmpl.get("terms", ["service keyword"]))
+        campaign = random.choice(campaigns)
+        savings = round(random.uniform(*tmpl["savings_range"]), 2)
+        confidence = round(random.uniform(*tmpl["confidence_range"]), 3)
+        hours_ago = random.randint(1, 72)
+        executed_at = now - timedelta(hours=hours_ago)
+
+        # Build title/description with template vars
+        fmt_vars = {
+            "term": term, "campaign": campaign,
+            "spend": random.uniform(20, 200), "ctr": random.uniform(0.5, 3.0),
+            "conv": random.randint(3, 25), "cpa": random.uniform(15, 80),
+            "before": random.uniform(1.5, 4.0), "after": random.uniform(3.0, 7.0),
+            "amount": random.uniform(5, 30),
+            "campaign_from": random.choice(campaigns), "campaign_to": campaign,
+            "qs": random.randint(2, 5), "qs_before": random.randint(3, 5), "qs_after": random.randint(6, 9),
+        }
+
+        action = AIAction(
+            account_id=account,
+            action_type=tmpl["action_type"],
+            title=tmpl["title"].format(**fmt_vars),
+            description=tmpl["description"].format(**fmt_vars),
+            reasoning=tmpl["reasoning"].format(**fmt_vars),
+            campaign_name=campaign,
+            estimated_monthly_savings=savings,
+            confidence_score=confidence,
+            status="executed",
+            executed_at=executed_at,
+            executed_by="ai_agent",
+            can_undo=True,
+            created_at=executed_at,
+        )
+        db.session.add(action)
+        created += 1
+
+    db.session.commit()
+
+    # Show summary
+    total = AIAction.query.filter_by(account_id=account, status='executed').count()
+    total_savings = db.session.query(
+        db.func.sum(AIAction.estimated_monthly_savings)
+    ).filter_by(account_id=account, status='executed').scalar() or 0
+
+    click.echo(f"Created {created} test AI actions for account {account}")
+    click.echo(f"Total executed actions: {total}")
+    click.echo(f"Total estimated savings: ${total_savings:.2f}/mo")
+    click.echo(f"\nVisit /account/google/ads/performance to see them.")
+    click.echo(f"{'='*60}\n")
+
+
 def register_commands(app):
     """Register all CLI commands with the Flask app."""
     app.cli.add_command(run_agents_command)
@@ -490,3 +634,4 @@ def register_commands(app):
     app.cli.add_command(send_pending_emails_command)
     app.cli.add_command(check_email_status_command)
     app.cli.add_command(test_email_provider_command)
+    app.cli.add_command(seed_ai_actions_command)

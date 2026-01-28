@@ -1,12 +1,12 @@
 {% extends "base_app.html" %}
-{% block title %}Google Ads Inspector – Free Google Ads Performance Analyzer{% endblock %}
+{% block title %}Google Ads Inspector – Google Ads Performance Analyzer{% endblock %}
 
 {% block content %}
 <!-- Hero Section -->
 <div class="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white rounded-2xl p-8 md:p-12 mb-8 shadow-xl">
   <div class="max-w-4xl mx-auto text-center">
     <div class="inline-block mb-4 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">
-      <i class="fa-solid fa-sparkles mr-2"></i>Free for All Users
+      <i class="fa-solid fa-sparkles mr-2"></i>Google Ads Inspector
     </div>
 
     <h1 class="text-4xl md:text-5xl font-bold mb-4">
@@ -28,7 +28,7 @@
       {% if not current_user.is_authenticated %}
       <a href="{{ url_for('auth_bp.register') }}"
          class="inline-flex items-center justify-center px-8 py-4 bg-indigo-800/50 text-white font-medium text-lg rounded-xl hover:bg-indigo-800 transition border-2 border-white/30">
-        Create Free Account
+        Create Account
         <i class="fa-solid fa-arrow-right ml-3"></i>
       </a>
       {% endif %}
@@ -36,7 +36,7 @@
 
     <p class="text-sm text-blue-200">
       <i class="fa-solid fa-lock mr-1"></i>
-      No credit card required • Read-only access • 100% free
+      Read-only access • Secure analysis
     </p>
   </div>
 </div>
@@ -134,7 +134,7 @@
 <!-- What You'll Get -->
 <div class="bg-white border rounded-xl p-6 md:p-8 mb-8">
   <h2 class="text-2xl font-bold text-center mb-8">
-    What You'll Discover in Your Free Report
+    What You'll Discover in Your Report
   </h2>
 
   <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -296,7 +296,7 @@
   <div class="text-center mt-6">
     <a href="{{ url_for('ads_grader_bp.analyze') }}"
        class="inline-flex items-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition">
-      Get Your Free Report Now
+      Get Your Report Now
       <i class="fa-solid fa-arrow-right ml-2"></i>
     </a>
   </div>
@@ -438,10 +438,10 @@
     <div class="border-b pb-6">
       <h3 class="font-bold mb-2 flex items-center">
         <i class="fa-solid fa-circle-question text-indigo-600 mr-2"></i>
-        Is this really free?
+        How does the Google Ads Inspector work?
       </h3>
       <p class="text-gray-600 text-sm ml-7">
-        Yes! The Google Ads Quality Checker is completely free for all users. No credit card required, no hidden fees.
+        The Google Ads Inspector analyzes your account across multiple dimensions and provides actionable recommendations.
         We provide this tool to help businesses improve their Google Ads performance.
       </p>
     </div>
@@ -452,7 +452,7 @@
         Do I need to create an account?
       </h3>
       <p class="text-gray-600 text-sm ml-7">
-        You can run a one-time analysis without an account. However, creating a free account allows you to save your reports,
+        You can run a one-time analysis without an account. However, creating an account allows you to save your reports,
         track performance over time, and access additional features.
       </p>
     </div>
@@ -503,7 +503,7 @@
   <a href="{{ url_for('ads_grader_bp.analyze') }}"
      class="inline-flex items-center px-8 py-4 bg-white text-indigo-700 font-bold text-lg rounded-xl hover:bg-blue-50 transition shadow-lg">
     <i class="fa-brands fa-google mr-3 text-2xl"></i>
-    Start Free Analysis
+    Start Analysis
   </a>
   <p class="mt-4 text-sm text-indigo-200">
     Join thousands of businesses optimizing their Google Ads with FieldSprout

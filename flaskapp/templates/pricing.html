@@ -399,13 +399,13 @@
 
       <details class="group card p-6">
         <summary class="flex items-center justify-between cursor-pointer">
-          <span class="font-semibold text-gray-900">Is there a free trial?</span>
+          <span class="font-semibold text-gray-900">Is there a trial period?</span>
           <svg class="w-5 h-5 text-gray-400 transition group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
         </summary>
         <p class="mt-4 text-gray-600">
-          Yes! Start with our 14-day free trial. No credit card required. You'll have full access to all features.
+          Yes! Start with our 14-day trial. You'll have full access to all features.
         </p>
       </details>
 
@@ -455,22 +455,22 @@
     <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
       {% if has_endpoint('auth_bp.register') %}
         <a href="{{ url_for('auth_bp.register') }}" class="btn bg-white text-primary-700 hover:bg-gray-100 btn-lg">
-          Start Free Trial
+          Start Trial
           <i class="fa-solid fa-arrow-right"></i>
         </a>
       {% elif has_endpoint('signup') %}
         <a href="{{ url_for(ep('signup')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100 btn-lg">
-          Start Free Trial
+          Start Trial
           <i class="fa-solid fa-arrow-right"></i>
         </a>
       {% elif has_endpoint('register') %}
         <a href="{{ url_for(ep('register')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100 btn-lg">
-          Start Free Trial
+          Start Trial
           <i class="fa-solid fa-arrow-right"></i>
         </a>
       {% else %}
         <a href="/signup" class="btn bg-white text-primary-700 hover:bg-gray-100 btn-lg">
-          Start Free Trial
+          Start Trial
           <i class="fa-solid fa-arrow-right"></i>
         </a>
       {% endif %}

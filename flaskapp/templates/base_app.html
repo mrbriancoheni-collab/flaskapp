@@ -481,9 +481,9 @@
         </div>
       {% endif %}
 
-      <div class="sidebar-label">
+      <div class="space-y-1">
         {% if g.user and g.user.is_admin %}
-          <a href="{{ url_for('admin_bp.dashboard') }}" class="secondary-link mb-2" title="Admin Dashboard">
+          <a href="{{ url_for('admin_bp.dashboard') }}" class="secondary-link" title="Admin Dashboard">
             <i class="fa-solid fa-shield-halved"></i><span>Admin Dashboard</span>
           </a>
         {% endif %}
@@ -492,15 +492,14 @@
         </a>
       </div>
 
-      <!-- Free Tools Section - Prominent -->
+      <!-- Tools Section -->
       {% if has_endpoint('ads_grader_bp.index') %}
         <div class="mt-3 pt-3 border-t">
-          <div class="sidebar-label text-green-600"><i class="fa-solid fa-gift"></i>Free Tools</div>
-          <a class="secondary-link bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 hover:from-green-100 hover:to-emerald-100 transition-all"
+          <div class="sidebar-label"><i class="fa-solid fa-wrench"></i>Tools</div>
+          <a class="secondary-link bg-gradient-to-r from-green-50 to-emerald-50 border border-green-300 hover:from-green-100 hover:to-emerald-100 transition-all"
              href="{{ url_for('ads_grader_bp.index') }}">
             <i class="fa-brands fa-google text-green-600"></i>
             <span class="font-semibold text-green-700">Google Ads Inspector</span>
-            <span class="ml-auto text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-bold">FREE</span>
           </a>
         </div>
       {% endif %}

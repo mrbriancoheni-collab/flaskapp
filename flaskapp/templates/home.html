@@ -188,17 +188,17 @@
     <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-400">
       {% if has_endpoint('signup') %}
         <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
-          <span class="relative z-10">Try FieldSprout Free →</span>
+          <span class="relative z-10">Try FieldSprout →</span>
           <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
         </a>
       {% elif has_endpoint('register') %}
         <a href="{{ url_for(ep('register')) }}?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
-          <span class="relative z-10">Try FieldSprout Free →</span>
+          <span class="relative z-10">Try FieldSprout →</span>
           <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
         </a>
       {% else %}
         <a href="/signup?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
-          <span class="relative z-10">Try FieldSprout Free →</span>
+          <span class="relative z-10">Try FieldSprout →</span>
           <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
         </a>
       {% endif %}
@@ -530,7 +530,7 @@
           1
         </div>
         <h3 class="text-xl font-bold mb-3">Connect your Google Ads account</h3>
-        <p class="text-gray-600">Takes 30 seconds with one click. No credit card required, no complex setup.</p>
+        <p class="text-gray-600">Takes 30 seconds with one click. No complex setup required.</p>
         <div class="mt-4 inline-block px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
           ⚡ 30 seconds
         </div>
@@ -569,7 +569,7 @@
       {% else %}
         <a href="/signup" class="btn btn-primary btn-lg">Get Started Now →</a>
       {% endif %}
-      <p class="mt-4 text-sm text-gray-500">No credit card required • Cancel anytime • 30-day guarantee</p>
+      <p class="mt-4 text-sm text-gray-500">Cancel anytime • 30-day guarantee</p>
     </div>
   </div>
 </section>
@@ -1601,20 +1601,20 @@
 
   <div class="container-max relative py-20 text-center text-white">
     <h2 class="text-4xl md:text-6xl font-extrabold">Ready to cut wasted ad spend and book more jobs?</h2>
-    <p class="mt-4 text-xl md:text-2xl" style="color: rgba(237, 233, 254, 0.9);">Start your 14-day free trial today. No credit card required.</p>
+    <p class="mt-4 text-xl md:text-2xl" style="color: rgba(237, 233, 254, 0.9);">Start your 14-day trial today and see results in the first week.</p>
 
     <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
       {% if has_endpoint('signup') %}
         <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn bg-white hover:bg-gray-50 font-semibold px-10 py-5 text-xl shadow-2xl" style="color: #6d28d9;">
-          Start Free — No Credit Card Required →
+          Get Started →
         </a>
       {% elif has_endpoint('register') %}
         <a href="{{ url_for(ep('register')) }}?plan=annual" class="btn bg-white hover:bg-gray-50 font-semibold px-10 py-5 text-xl shadow-2xl" style="color: #6d28d9;">
-          Start Free — No Credit Card Required →
+          Get Started →
         </a>
       {% else %}
         <a href="/signup?plan=annual" class="btn bg-white hover:bg-gray-50 font-semibold px-10 py-5 text-xl shadow-2xl" style="color: #6d28d9;">
-          Start Free — No Credit Card Required →
+          Get Started →
         </a>
       {% endif %}
       <a href="/ads-grader/calculator-demo" class="btn border-2 border-white text-white hover:bg-white/10 font-semibold px-8 py-4 text-lg">

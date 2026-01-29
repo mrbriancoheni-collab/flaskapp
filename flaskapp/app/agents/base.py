@@ -458,6 +458,15 @@ class BaseAgent(ABC):
         # 2. Decide
         decisions = self.decide(opportunities)
 
+        # 2b. Fill in account_id/customer_id from context on every decision
+        ctx_account_id = context.get('account_id', 0)
+        ctx_customer_id = context.get('customer_id', '')
+        for decision in decisions:
+            if not decision.account_id or decision.account_id == 0:
+                decision.account_id = ctx_account_id
+            if not decision.customer_id:
+                decision.customer_id = str(ctx_customer_id)
+
         # 3. Auto-execute low-risk decisions
         auto_executed = []
         pending_approval = []

@@ -916,6 +916,8 @@ def create_app():
             "gmb_bp.optimize_profile_json",
             "google_bp.ads_select_customer",  # AJAX endpoint for selecting Google Ads customer
             "google_bp.ads_list_customers",   # AJAX endpoint for listing Google Ads customers
+            "page_view_tracking_bp.track_pageview",   # JS fetch + sendBeacon (no CSRF token)
+            "page_view_tracking_bp.update_page_time",  # navigator.sendBeacon on beforeunload
         ):
             fn = app.view_functions.get(ep)
             if fn:

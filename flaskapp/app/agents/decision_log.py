@@ -9,6 +9,7 @@ Provides:
 - Analytics on agent effectiveness
 """
 
+import json
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 from collections import defaultdict
@@ -114,7 +115,7 @@ class DecisionLog:
                 'customer_id': decision.customer_id,
                 'campaign_id': decision.campaign_id,
                 'ad_group_id': decision.ad_group_id,
-                'action_data': str(decision.action_data),  # JSON as string
+                'action_data': json.dumps(decision.action_data) if isinstance(decision.action_data, (dict, list)) else str(decision.action_data),
                 'risk_level': decision.risk_level.value,
                 'requires_approval': decision.requires_approval,
                 'confidence': decision.confidence,
@@ -166,7 +167,7 @@ class DecisionLog:
             self.session.execute(query, {
                 'status': decision.status,
                 'executed_at': decision.executed_at,
-                'execution_result': str(result),
+                'execution_result': json.dumps(result) if isinstance(result, (dict, list)) else str(result),
                 'agent_id': decision.agent_id,
                 'decision_type': decision.decision_type,
                 'created_at': decision.created_at,
@@ -211,8 +212,8 @@ class DecisionLog:
             """)
 
             self.session.execute(query, {
-                'predicted_outcome': str(decision.predicted_outcome),
-                'actual_outcome': str(actual_outcome),
+                'predicted_outcome': json.dumps(decision.predicted_outcome) if isinstance(decision.predicted_outcome, (dict, list)) else str(decision.predicted_outcome),
+                'actual_outcome': json.dumps(actual_outcome) if isinstance(actual_outcome, (dict, list)) else str(actual_outcome),
                 'prediction_accuracy': accuracy,
                 'agent_id': decision.agent_id,
                 'decision_type': decision.decision_type,

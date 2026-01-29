@@ -62,6 +62,9 @@ def get_account_performance_data(account_id: int, days: int = 30) -> Dict[str, A
     """
     Gather comprehensive account performance data for AI analysis.
 
+    Uses the entity-based gads_stats_daily table (entity_type + entity_id)
+    and joins to ads_campaigns/keywords for names.
+
     Args:
         account_id: Account ID
         days: Number of days of historical data
@@ -69,24 +72,49 @@ def get_account_performance_data(account_id: int, days: int = 30) -> Dict[str, A
     Returns:
         Dictionary with performance metrics
     """
-    from app.models_ads import GadsStatsDaily
-    from sqlalchemy import func
+    from app.models_ads import GadsStatsDaily, AdsCampaign
+    from sqlalchemy import func, text as sa_text
+
+    since = datetime.utcnow().date() - timedelta(days=days)
 
     with start_span("db.query", f"Fetch {days} days of Google Ads performance data"):
-        # Get aggregate stats
+        # Get campaign IDs belonging to this account
+        campaign_ids = [
+            c.id for c in
+            AdsCampaign.query.filter_by(account_id=account_id).with_entities(AdsCampaign.id).all()
+        ]
+
+        if not campaign_ids:
+            return {
+                "account_summary": {
+                    "account_id": account_id, "period_days": days,
+                    "total_spend": 0, "total_conversions": 0,
+                    "avg_cpa": 0, "avg_ctr": 0,
+                    "daily_spend_avg": 0, "days_of_data": 0,
+                },
+                "campaigns": [], "keywords": [], "search_terms": [],
+            }
+
+        # Aggregate stats for campaign-level rows
         stats = db.session.query(
-            func.sum(GadsStatsDaily.cost).label('total_spend'),
+            func.sum(GadsStatsDaily.cost_micros).label('total_cost_micros'),
             func.sum(GadsStatsDaily.conversions).label('total_conversions'),
-            func.avg(GadsStatsDaily.cost / GadsStatsDaily.conversions).label('avg_cpa'),
-            func.avg(GadsStatsDaily.ctr).label('avg_ctr'),
-            func.count(GadsStatsDaily.id).label('days_of_data')
+            func.sum(GadsStatsDaily.clicks).label('total_clicks'),
+            func.sum(GadsStatsDaily.impressions).label('total_impressions'),
+            func.count(func.distinct(GadsStatsDaily.date)).label('days_of_data')
         ).filter(
-            GadsStatsDaily.account_id == account_id,
-            GadsStatsDaily.date >= datetime.utcnow().date() - timedelta(days=days)
+            GadsStatsDaily.entity_type == 'campaign',
+            GadsStatsDaily.entity_id.in_(campaign_ids),
+            GadsStatsDaily.date >= since
         ).first()
 
-        # Get daily spend for smart scheduling
-        daily_spend_avg = (stats.total_spend or 0) / max(days, 1)
+        total_spend = float(stats.total_cost_micros or 0) / 1_000_000
+        total_conversions = float(stats.total_conversions or 0)
+        total_clicks = int(stats.total_clicks or 0)
+        total_impressions = int(stats.total_impressions or 0)
+        avg_cpa = total_spend / total_conversions if total_conversions > 0 else 0
+        avg_ctr = total_clicks / total_impressions if total_impressions > 0 else 0
+        daily_spend_avg = total_spend / max(days, 1)
 
         # Get campaigns
         campaigns = _get_campaign_summary(account_id, days)
@@ -101,10 +129,10 @@ def get_account_performance_data(account_id: int, days: int = 30) -> Dict[str, A
             "account_summary": {
                 "account_id": account_id,
                 "period_days": days,
-                "total_spend": float(stats.total_spend or 0),
-                "total_conversions": int(stats.total_conversions or 0),
-                "avg_cpa": float(stats.avg_cpa or 0),
-                "avg_ctr": float(stats.avg_ctr or 0),
+                "total_spend": total_spend,
+                "total_conversions": int(total_conversions),
+                "avg_cpa": avg_cpa,
+                "avg_ctr": avg_ctr,
                 "daily_spend_avg": daily_spend_avg,
                 "days_of_data": int(stats.days_of_data or 0),
             },
@@ -115,106 +143,161 @@ def get_account_performance_data(account_id: int, days: int = 30) -> Dict[str, A
 
 
 def _get_campaign_summary(account_id: int, days: int) -> List[Dict]:
-    """Get campaign performance summary."""
-    from app.models_ads import GadsStatsDaily
+    """Get campaign performance summary using entity-based stats table."""
+    from app.models_ads import GadsStatsDaily, AdsCampaign
     from sqlalchemy import func
 
+    since = datetime.utcnow().date() - timedelta(days=days)
+
+    campaign_ids = [
+        c.id for c in
+        AdsCampaign.query.filter_by(account_id=account_id).with_entities(AdsCampaign.id).all()
+    ]
+    if not campaign_ids:
+        return []
+
     campaigns = db.session.query(
-        GadsStatsDaily.campaign_id,
-        GadsStatsDaily.campaign_name,
-        func.sum(GadsStatsDaily.cost).label('spend'),
+        GadsStatsDaily.entity_id,
+        func.sum(GadsStatsDaily.cost_micros).label('cost_micros'),
         func.sum(GadsStatsDaily.conversions).label('conversions'),
-        func.avg(GadsStatsDaily.ctr).label('ctr'),
+        func.sum(GadsStatsDaily.clicks).label('clicks'),
+        func.sum(GadsStatsDaily.impressions).label('impressions'),
         func.count(func.distinct(GadsStatsDaily.date)).label('active_days')
     ).filter(
-        GadsStatsDaily.account_id == account_id,
-        GadsStatsDaily.date >= datetime.utcnow().date() - timedelta(days=days)
+        GadsStatsDaily.entity_type == 'campaign',
+        GadsStatsDaily.entity_id.in_(campaign_ids),
+        GadsStatsDaily.date >= since
     ).group_by(
-        GadsStatsDaily.campaign_id,
-        GadsStatsDaily.campaign_name
+        GadsStatsDaily.entity_id
     ).order_by(
-        func.sum(GadsStatsDaily.cost).desc()
+        func.sum(GadsStatsDaily.cost_micros).desc()
     ).limit(20).all()
 
-    return [
-        {
-            "id": c.campaign_id,
-            "name": c.campaign_name,
-            "spend": float(c.spend or 0),
-            "conversions": int(c.conversions or 0),
-            "cpa": float(c.spend / c.conversions) if c.conversions else 0,
-            "ctr": float(c.ctr or 0),
+    # Map campaign IDs to names
+    campaign_names = {
+        c.id: c.name
+        for c in AdsCampaign.query.filter(AdsCampaign.id.in_(campaign_ids)).all()
+    }
+
+    results = []
+    for c in campaigns:
+        spend = float(c.cost_micros or 0) / 1_000_000
+        conversions = float(c.conversions or 0)
+        clicks = int(c.clicks or 0)
+        impressions = int(c.impressions or 0)
+        results.append({
+            "id": c.entity_id,
+            "name": campaign_names.get(c.entity_id, f"Campaign {c.entity_id}"),
+            "spend": spend,
+            "conversions": int(conversions),
+            "cpa": spend / conversions if conversions > 0 else 0,
+            "ctr": clicks / impressions if impressions > 0 else 0,
             "active_days": int(c.active_days or 0),
-        }
-        for c in campaigns
-    ]
+        })
+    return results
 
 
 def _get_keyword_summary(account_id: int, days: int) -> List[Dict]:
-    """Get keyword performance summary."""
-    from app.models_ads import GadsStatsDaily
+    """Get keyword performance summary using entity-based stats table."""
+    from app.models_ads import GadsStatsDaily, AdsKeyword, AdsAdGroup, AdsCampaign
     from sqlalchemy import func
 
+    since = datetime.utcnow().date() - timedelta(days=days)
+
+    # Get keyword IDs that belong to this account (keyword -> ad_group -> campaign -> account)
+    keyword_ids_q = (
+        db.session.query(AdsKeyword.id)
+        .join(AdsAdGroup, AdsKeyword.ad_group_id == AdsAdGroup.id)
+        .join(AdsCampaign, AdsAdGroup.campaign_id == AdsCampaign.id)
+        .filter(AdsCampaign.account_id == account_id)
+        .all()
+    )
+    keyword_ids = [k.id for k in keyword_ids_q]
+    if not keyword_ids:
+        return []
+
     keywords = db.session.query(
-        GadsStatsDaily.keyword_id,
-        GadsStatsDaily.keyword_text,
-        func.sum(GadsStatsDaily.cost).label('spend'),
+        GadsStatsDaily.entity_id,
+        func.sum(GadsStatsDaily.cost_micros).label('cost_micros'),
         func.sum(GadsStatsDaily.conversions).label('conversions'),
-        func.avg(GadsStatsDaily.ctr).label('ctr'),
-        func.sum(GadsStatsDaily.clicks).label('clicks')
+        func.sum(GadsStatsDaily.clicks).label('clicks'),
+        func.sum(GadsStatsDaily.impressions).label('impressions'),
     ).filter(
-        GadsStatsDaily.account_id == account_id,
-        GadsStatsDaily.date >= datetime.utcnow().date() - timedelta(days=days),
-        GadsStatsDaily.keyword_id.isnot(None)
+        GadsStatsDaily.entity_type == 'keyword',
+        GadsStatsDaily.entity_id.in_(keyword_ids),
+        GadsStatsDaily.date >= since
     ).group_by(
-        GadsStatsDaily.keyword_id,
-        GadsStatsDaily.keyword_text
+        GadsStatsDaily.entity_id
     ).order_by(
-        func.sum(GadsStatsDaily.cost).desc()
+        func.sum(GadsStatsDaily.cost_micros).desc()
     ).limit(50).all()
 
-    return [
-        {
-            "id": k.keyword_id,
-            "text": k.keyword_text,
-            "spend": float(k.spend or 0),
-            "conversions": int(k.conversions or 0),
-            "cpa": float(k.spend / k.conversions) if k.conversions else 0,
-            "ctr": float(k.ctr or 0),
-            "clicks": int(k.clicks or 0),
-        }
-        for k in keywords
-    ]
+    # Map keyword IDs to text
+    keyword_texts = {
+        k.id: k.text
+        for k in AdsKeyword.query.filter(AdsKeyword.id.in_([kw.entity_id for kw in keywords])).all()
+    } if keywords else {}
+
+    results = []
+    for k in keywords:
+        spend = float(k.cost_micros or 0) / 1_000_000
+        conversions = float(k.conversions or 0)
+        clicks = int(k.clicks or 0)
+        impressions = int(k.impressions or 0)
+        results.append({
+            "id": k.entity_id,
+            "text": keyword_texts.get(k.entity_id, f"Keyword {k.entity_id}"),
+            "spend": spend,
+            "conversions": int(conversions),
+            "cpa": spend / conversions if conversions > 0 else 0,
+            "ctr": clicks / impressions if impressions > 0 else 0,
+            "clicks": clicks,
+        })
+    return results
 
 
 def _get_search_term_summary(account_id: int, days: int) -> List[Dict]:
     """Get search term performance summary."""
-    from app.models_ads import SearchTerm
+    from app.models_ads import SearchTerm, AdsCampaign
     from sqlalchemy import func
 
+    since = datetime.utcnow().date() - timedelta(days=days)
+
+    # Get campaign IDs for this account
+    campaign_ids = [
+        c.id for c in
+        AdsCampaign.query.filter_by(account_id=account_id).with_entities(AdsCampaign.id).all()
+    ]
+    if not campaign_ids:
+        return []
+
     search_terms = db.session.query(
-        SearchTerm.query_text,
-        func.sum(SearchTerm.cost).label('spend'),
+        SearchTerm.search_term,
+        func.sum(SearchTerm.cost_micros).label('cost_micros'),
         func.sum(SearchTerm.conversions).label('conversions'),
-        func.avg(SearchTerm.ctr).label('ctr')
+        func.sum(SearchTerm.clicks).label('clicks'),
+        func.sum(SearchTerm.impressions).label('impressions'),
     ).filter(
-        SearchTerm.account_id == account_id,
-        SearchTerm.date >= datetime.utcnow().date() - timedelta(days=days)
+        SearchTerm.campaign_id.in_(campaign_ids),
+        SearchTerm.date >= since
     ).group_by(
-        SearchTerm.query_text
+        SearchTerm.search_term
     ).order_by(
-        func.sum(SearchTerm.cost).desc()
+        func.sum(SearchTerm.cost_micros).desc()
     ).limit(30).all()
 
-    return [
-        {
-            "text": st.query_text,
-            "spend": float(st.spend or 0),
+    results = []
+    for st in search_terms:
+        spend = float(st.cost_micros or 0) / 1_000_000
+        clicks = int(st.clicks or 0)
+        impressions = int(st.impressions or 0)
+        results.append({
+            "text": st.search_term,
+            "spend": spend,
             "conversions": int(st.conversions or 0),
-            "ctr": float(st.ctr or 0),
-        }
-        for st in search_terms
-    ]
+            "ctr": clicks / impressions if impressions > 0 else 0,
+        })
+    return results
 
 
 def generate_ai_insights(account_id: int, scope: str = "all", regenerate: bool = False, customer_id: str = None) -> Dict:

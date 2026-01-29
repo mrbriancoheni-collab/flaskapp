@@ -70,6 +70,63 @@ def run_agents_for_all_accounts(layer: str = 'all'):
     return success_count, error_count
 
 
+def _ensure_agent_tables():
+    """Create agent tables if they don't exist."""
+    from app import db
+    with db.engine.begin() as conn:
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS agent_execution_log (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                account_id INT NOT NULL,
+                agent_id VARCHAR(64) NOT NULL,
+                agent_type VARCHAR(64) NOT NULL,
+                cycle_start DATETIME NOT NULL,
+                cycle_duration_seconds FLOAT NULL,
+                opportunities_found INT NULL DEFAULT 0,
+                decisions_made INT NULL DEFAULT 0,
+                auto_executed INT NULL DEFAULT 0,
+                pending_approval INT NULL DEFAULT 0,
+                status VARCHAR(32) NOT NULL DEFAULT 'running',
+                error_message TEXT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX ix_ael_account (account_id),
+                INDEX ix_ael_agent (agent_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS agent_decisions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                agent_id VARCHAR(64) NOT NULL,
+                agent_type VARCHAR(64) NOT NULL,
+                decision_type VARCHAR(64) NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                description TEXT NULL,
+                reasoning TEXT NULL,
+                account_id INT NOT NULL DEFAULT 0,
+                customer_id VARCHAR(32) NULL DEFAULT '',
+                campaign_id VARCHAR(64) NULL,
+                ad_group_id VARCHAR(64) NULL,
+                action_data JSON NULL,
+                risk_level VARCHAR(32) NOT NULL DEFAULT 'medium',
+                requires_approval TINYINT(1) NOT NULL DEFAULT 1,
+                confidence FLOAT NULL DEFAULT 0.5,
+                expected_monthly_savings FLOAT NULL,
+                expected_monthly_leads FLOAT NULL,
+                expected_improvement_pct FLOAT NULL,
+                status VARCHAR(32) NOT NULL DEFAULT 'pending',
+                executed_at DATETIME NULL,
+                execution_result JSON NULL,
+                predicted_outcome JSON NULL,
+                actual_outcome JSON NULL,
+                prediction_accuracy FLOAT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX ix_ad_account (account_id),
+                INDEX ix_ad_agent (agent_id),
+                INDEX ix_ad_status (status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """))
+
+
 def run_agents_for_account(
     account_id: int,
     customer_id: str,
@@ -87,6 +144,9 @@ def run_agents_for_account(
     """
     from app import db
     import json
+
+    # Ensure required tables exist
+    _ensure_agent_tables()
 
     # Extract refresh token from credentials
     # Note: credentials_json from google_oauth_tokens contains the full OAuth credentials JSON

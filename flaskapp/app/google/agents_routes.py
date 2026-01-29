@@ -156,10 +156,11 @@ def _execute_agent_decision(account_id: int, decision_row) -> dict:
     # Get Google Ads credentials
     try:
         creds_query = text("""
-            SELECT customer_id, credentials_json
-            FROM google_oauth_tokens
-            WHERE account_id = :account_id AND product = 'ads'
-            ORDER BY id DESC LIMIT 1
+            SELECT a.google_ads_customer_id as customer_id, got.credentials_json
+            FROM google_oauth_tokens got
+            JOIN accounts a ON a.id = got.account_id
+            WHERE got.account_id = :account_id AND got.product = 'ads'
+            ORDER BY got.id DESC LIMIT 1
         """)
 
         with db.engine.connect() as conn:
@@ -564,9 +565,10 @@ def run_agents():
 
     # Get Google Ads credentials
     creds_query = text("""
-        SELECT customer_id, credentials_json
-        FROM google_oauth_tokens
-        WHERE account_id = :account_id AND product = 'ads'
+        SELECT a.google_ads_customer_id as customer_id, got.credentials_json
+        FROM google_oauth_tokens got
+        JOIN accounts a ON a.id = got.account_id
+        WHERE got.account_id = :account_id AND got.product = 'ads'
         LIMIT 1
     """)
 

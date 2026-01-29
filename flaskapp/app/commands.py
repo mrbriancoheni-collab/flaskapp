@@ -43,7 +43,7 @@ def run_agents_command(layer, account):
             query = text("""
                 SELECT
                     a.id as account_id,
-                    got.customer_id,
+                    a.google_ads_customer_id as customer_id,
                     got.credentials_json
                 FROM accounts a
                 JOIN google_oauth_tokens got ON a.id = got.account_id

@@ -34,13 +34,13 @@ def run_agents_for_all_accounts(layer: str = 'all'):
     query = text("""
         SELECT DISTINCT
             a.id as account_id,
-            got.customer_id,
+            a.google_ads_customer_id as customer_id,
             got.credentials_json
         FROM accounts a
         JOIN google_oauth_tokens got ON a.id = got.account_id
         WHERE got.product = 'ads'
           AND got.credentials_json IS NOT NULL
-          AND got.customer_id IS NOT NULL
+          AND a.google_ads_customer_id IS NOT NULL
           AND a.status IN ('active', 'trial')
     """)
 

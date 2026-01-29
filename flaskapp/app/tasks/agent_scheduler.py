@@ -206,13 +206,12 @@ def run_agents_for_account(
     # Fetch REAL performance data from Google Ads API (live)
     try:
         from app.google.utils_ads import (
-            get_stored_access_token, google_ads_search, resolve_ads_context
+            google_ads_search, resolve_ads_context
         )
+        from app.google.token_utils import ensure_access_token
 
-        # Get a fresh access token
-        access_token = get_stored_access_token(account_id, ("ads", "lsa"))
-        if not access_token:
-            raise RuntimeError("No access token available")
+        # Get a fresh access token (auto-refreshes if expired)
+        access_token, _prod = ensure_access_token(account_id, ("ads", "lsa"))
 
         ctx = resolve_ads_context(account_id)
         login_customer_id = ctx.get("login_customer_id")

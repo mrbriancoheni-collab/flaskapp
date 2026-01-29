@@ -336,6 +336,112 @@
   </div>
   {% endif %}
 
+  {# ACCOUNT PERFORMANCE GRAPH #}
+  {% if daily_performance and daily_performance|length > 1 %}
+  <div class="rounded-xl border border-gray-200 bg-white p-4 md:p-6">
+    <h2 class="text-lg md:text-xl font-bold text-gray-900 mb-4">
+      <i class="fa-solid fa-chart-area text-indigo-600 mr-2"></i>30-Day Performance
+    </h2>
+    <canvas id="dailyPerfChart" height="260"></canvas>
+  </div>
+  <script nonce="{{ g.csp_nonce }}">
+  (function() {
+    var dailyData = {{ daily_performance|tojson }};
+    var canvas = document.getElementById('dailyPerfChart');
+    if (!canvas || !dailyData.length) return;
+    var ctx = canvas.getContext('2d');
+    var dpr = window.devicePixelRatio || 1;
+    var rect = canvas.parentElement.getBoundingClientRect();
+    var W = rect.width - 32;
+    var H = 240;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.scale(dpr, dpr);
+
+    var costs = dailyData.map(function(d){ return d.cost; });
+    var convs = dailyData.map(function(d){ return d.conversions; });
+    var labels = dailyData.map(function(d){ return d.date; });
+    var maxCost = Math.max.apply(null, costs) * 1.15 || 1;
+    var maxConv = Math.max.apply(null, convs) * 1.15 || 1;
+
+    var padL = 58, padR = 52, padT = 24, padB = 44;
+    var chartW = W - padL - padR;
+    var chartH = H - padT - padB;
+
+    function xPos(i){ return padL + (i / (labels.length - 1)) * chartW; }
+
+    // Grid lines
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = 1;
+    for (var g = 0; g <= 4; g++) {
+      var gy = padT + (g / 4) * chartH;
+      ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(padL + chartW, gy); ctx.stroke();
+    }
+
+    // Cost area (blue)
+    ctx.beginPath();
+    ctx.moveTo(xPos(0), padT + chartH);
+    for (var i = 0; i < costs.length; i++) {
+      var cy = padT + chartH - (costs[i] / maxCost) * chartH;
+      if (i === 0) ctx.lineTo(xPos(i), cy);
+      else ctx.lineTo(xPos(i), cy);
+    }
+    ctx.lineTo(xPos(costs.length - 1), padT + chartH);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(99,102,241,0.13)';
+    ctx.fill();
+
+    // Cost line
+    ctx.beginPath();
+    for (var i = 0; i < costs.length; i++) {
+      var cy = padT + chartH - (costs[i] / maxCost) * chartH;
+      if (i === 0) ctx.moveTo(xPos(i), cy); else ctx.lineTo(xPos(i), cy);
+    }
+    ctx.strokeStyle = '#6366f1'; ctx.lineWidth = 2.5; ctx.stroke();
+
+    // Conversions line (green)
+    ctx.beginPath();
+    for (var i = 0; i < convs.length; i++) {
+      var vy = padT + chartH - (convs[i] / maxConv) * chartH;
+      if (i === 0) ctx.moveTo(xPos(i), vy); else ctx.lineTo(xPos(i), vy);
+    }
+    ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2.5; ctx.stroke();
+
+    // Y-axis labels (cost left, conversions right)
+    ctx.fillStyle = '#6366f1'; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
+    for (var g = 0; g <= 4; g++) {
+      var val = ((4 - g) / 4) * maxCost;
+      ctx.fillText('$' + val.toFixed(0), padL - 6, padT + (g / 4) * chartH + 4);
+    }
+    ctx.fillStyle = '#10b981'; ctx.textAlign = 'left';
+    for (var g = 0; g <= 4; g++) {
+      var val = ((4 - g) / 4) * maxConv;
+      ctx.fillText(val.toFixed(1), padL + chartW + 6, padT + (g / 4) * chartH + 4);
+    }
+
+    // X-axis labels (show ~6 evenly spaced dates)
+    ctx.fillStyle = '#6b7280'; ctx.textAlign = 'center'; ctx.font = '10px sans-serif';
+    var step = Math.max(1, Math.floor(labels.length / 6));
+    for (var i = 0; i < labels.length; i += step) {
+      var parts = labels[i].split('-');
+      ctx.fillText(parts[1] + '/' + parts[2], xPos(i), padT + chartH + 18);
+    }
+
+    // Legend
+    ctx.font = '11px sans-serif';
+    var legY = padT + chartH + 36;
+    ctx.fillStyle = '#6366f1';
+    ctx.fillRect(padL, legY - 8, 12, 3);
+    ctx.fillText('Spend', padL + 46, legY - 3);
+    ctx.fillStyle = '#10b981';
+    ctx.fillRect(padL + 80, legY - 8, 12, 3);
+    ctx.fillText('Conversions', padL + 132, legY - 3);
+  })();
+  </script>
+  {% endif %}
+
   {# TRUST & PROTECTION SECTION #}
   <div class="rounded-xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-4 md:p-6">
     <div class="flex flex-col sm:flex-row items-start gap-3 md:gap-4">

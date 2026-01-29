@@ -71,7 +71,7 @@ def run_agents_for_all_accounts(layer: str = 'all'):
 
 
 def _ensure_agent_tables():
-    """Create agent tables if they don't exist."""
+    """Create agent tables if they don't exist, and add missing columns."""
     from app import db
     with db.engine.begin() as conn:
         conn.execute(text("""
@@ -106,6 +106,7 @@ def _ensure_agent_tables():
                 customer_id VARCHAR(32) NULL DEFAULT '',
                 campaign_id VARCHAR(64) NULL,
                 ad_group_id VARCHAR(64) NULL,
+                keyword_id VARCHAR(64) NULL,
                 action_data JSON NULL,
                 risk_level VARCHAR(32) NOT NULL DEFAULT 'medium',
                 requires_approval TINYINT(1) NOT NULL DEFAULT 1,
@@ -120,11 +121,21 @@ def _ensure_agent_tables():
                 actual_outcome JSON NULL,
                 prediction_accuracy FLOAT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 INDEX ix_ad_account (account_id),
                 INDEX ix_ad_agent (agent_id),
                 INDEX ix_ad_status (status)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         """))
+        # Add columns that may be missing if table was created in an earlier version
+        for col_def in (
+            "ADD COLUMN keyword_id VARCHAR(64) NULL AFTER ad_group_id",
+            "ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at",
+        ):
+            try:
+                conn.execute(text(f"ALTER TABLE agent_decisions {col_def}"))
+            except Exception:
+                pass  # Column already exists
 
 
 def run_agents_for_account(
@@ -192,36 +203,174 @@ def run_agents_for_account(
     except Exception as e:
         raise RuntimeError(f"Failed to initialize Google Ads client: {str(e)}")
 
-    # Fetch REAL performance data from Google Ads
+    # Fetch REAL performance data from Google Ads API (live)
     try:
-        from app.services.google_ads_insights import get_account_performance_data
+        from app.google.utils_ads import (
+            get_stored_access_token, google_ads_search, resolve_ads_context
+        )
 
-        perf_data = get_account_performance_data(account_id, days=90)
+        # Get a fresh access token
+        access_token = get_stored_access_token(account_id, ("ads", "lsa"))
+        if not access_token:
+            raise RuntimeError("No access token available")
 
-        # Extract campaigns and calculate ROAS
+        ctx = resolve_ads_context(account_id)
+        login_customer_id = ctx.get("login_customer_id")
+
+        def _ads_query(query: str):
+            return google_ads_search(
+                access_token=access_token,
+                customer_id=customer_id,
+                query=query,
+                login_customer_id=login_customer_id,
+                stream=True,
+            )
+
+        # 1. Account-level aggregate metrics (last 90 days)
+        account_rows = _ads_query("""
+            SELECT
+                metrics.impressions,
+                metrics.clicks,
+                metrics.cost_micros,
+                metrics.conversions,
+                metrics.conversions_value
+            FROM customer
+            WHERE segments.date DURING LAST_90_DAYS
+        """)
+
+        total_impressions = 0
+        total_clicks = 0
+        total_cost_micros = 0
+        total_conversions = 0.0
+        total_conversion_value = 0.0
+
+        for row in account_rows:
+            m = row.get("metrics", {})
+            total_impressions += int(m.get("impressions", 0))
+            total_clicks += int(m.get("clicks", 0))
+            total_cost_micros += int(m.get("costMicros", 0))
+            total_conversions += float(m.get("conversions", 0))
+            total_conversion_value += float(m.get("conversionsValue", 0))
+
+        total_spend = total_cost_micros / 1_000_000
+        overall_roas = total_conversion_value / total_spend if total_spend > 0 else 0
+        avg_cpa = total_spend / total_conversions if total_conversions > 0 else 0
+
+        # 2. Campaign-level data (last 30 days, top 10 by spend)
+        campaign_rows = _ads_query("""
+            SELECT
+                campaign.id, campaign.name, campaign.status,
+                campaign.advertising_channel_type,
+                campaign_budget.amount_micros,
+                metrics.cost_micros, metrics.conversions, metrics.clicks,
+                metrics.impressions, metrics.search_impression_share
+            FROM campaign
+            WHERE campaign.status != 'REMOVED'
+              AND segments.date DURING LAST_30_DAYS
+            ORDER BY metrics.cost_micros DESC
+            LIMIT 10
+        """)
+
         campaigns = []
-        for c in perf_data.get('campaigns', []):
-            spend = c.get('spend', 0)
-            conversions = c.get('conversions', 0)
-            conversion_value = conversions * 500
-            roas = conversion_value / spend if spend > 0 else 0
+        has_search = False
+        has_pmax = False
+        for row in campaign_rows:
+            c = row.get("campaign", {})
+            m = row.get("metrics", {})
+            budget = row.get("campaignBudget", {})
+
+            cost = int(m.get("costMicros", 0)) / 1_000_000
+            conversions = float(m.get("conversions", 0))
+            clicks = int(m.get("clicks", 0))
+            impressions = int(m.get("impressions", 0))
+            conv_value = conversions * 500  # estimate
+            roas = conv_value / cost if cost > 0 else 0
+            channel = c.get("advertisingChannelType", "")
+
+            if "SEARCH" in channel:
+                has_search = True
+            if "PERFORMANCE_MAX" in channel:
+                has_pmax = True
+
+            search_is = m.get("searchImpressionShare")
+            imp_share = float(search_is) * 100 if search_is else 50
 
             campaigns.append({
-                'id': str(c.get('id', '')),
-                'name': c.get('name', ''),
+                'id': str(c.get("id", "")),
+                'name': c.get("name", ""),
+                'type': channel.split(".")[-1] if "." in channel else channel,
                 'roas': roas,
-                'impression_share': 70,
-                'monthly_spend': spend / 3,
-                'spend_90d': spend,
-                'conversions': conversions,
-                'cpa': c.get('cpa', 0)
+                'impression_share': imp_share,
+                'monthly_spend': cost,
+                'spend_90d': cost * 3,  # estimate from 30d
+                'conversions': int(conversions),
+                'cpa': cost / conversions if conversions > 0 else 0,
             })
 
-        summary = perf_data.get('account_summary', {})
-        total_spend = summary.get('total_spend', 0)
-        total_conversions = summary.get('total_conversions', 0)
-        conversion_value = total_conversions * 500
-        overall_roas = conversion_value / total_spend if total_spend > 0 else 0
+        # 3. Keyword data (last 30 days, top 30 by spend)
+        keyword_rows = _ads_query("""
+            SELECT
+                ad_group_criterion.criterion_id,
+                ad_group_criterion.keyword.text,
+                ad_group_criterion.keyword.match_type,
+                ad_group_criterion.ad_group,
+                metrics.cost_micros, metrics.conversions,
+                metrics.clicks, metrics.impressions
+            FROM keyword_view
+            WHERE ad_group_criterion.status != 'REMOVED'
+              AND segments.date DURING LAST_30_DAYS
+            ORDER BY metrics.cost_micros DESC
+            LIMIT 30
+        """)
+
+        keywords_list = []
+        for row in keyword_rows:
+            kw = row.get("adGroupCriterion", {})
+            m = row.get("metrics", {})
+            kw_keyword = kw.get("keyword", {})
+            cost = int(m.get("costMicros", 0)) / 1_000_000
+            conversions = float(m.get("conversions", 0))
+            clicks = int(m.get("clicks", 0))
+            impressions = int(m.get("impressions", 0))
+
+            keywords_list.append({
+                'id': str(kw.get("criterionId", "")),
+                'text': kw_keyword.get("text", ""),
+                'match': kw_keyword.get("matchType", ""),
+                'spend': cost,
+                'conversions': int(conversions),
+                'cpa': cost / conversions if conversions > 0 else 0,
+                'ctr': clicks / impressions if impressions > 0 else 0,
+                'clicks': clicks,
+            })
+
+        # 4. Search terms (last 30 days, top 20 by spend)
+        search_terms_list = []
+        try:
+            st_rows = _ads_query("""
+                SELECT
+                    search_term_view.search_term,
+                    metrics.cost_micros, metrics.conversions,
+                    metrics.clicks, metrics.impressions
+                FROM search_term_view
+                WHERE segments.date DURING LAST_30_DAYS
+                ORDER BY metrics.cost_micros DESC
+                LIMIT 20
+            """)
+            for row in st_rows:
+                stv = row.get("searchTermView", {})
+                m = row.get("metrics", {})
+                cost = int(m.get("costMicros", 0)) / 1_000_000
+                clicks = int(m.get("clicks", 0))
+                impressions = int(m.get("impressions", 0))
+                search_terms_list.append({
+                    'text': stv.get("searchTerm", ""),
+                    'spend': cost,
+                    'conversions': int(float(m.get("conversions", 0))),
+                    'ctr': clicks / impressions if impressions > 0 else 0,
+                })
+        except Exception as e:
+            current_app.logger.warning(f"Search terms fetch failed: {e}")
 
         context = {
             'account_id': account_id,
@@ -229,27 +378,33 @@ def run_agents_for_account(
             'performance_90d': {
                 'roas': overall_roas,
                 'spend': total_spend,
-                'conversions': total_conversions,
-                'cost_per_conversion': summary.get('avg_cpa', 0)
+                'conversions': int(total_conversions),
+                'cost_per_conversion': avg_cpa,
             },
             'campaigns': campaigns,
-            'keywords': perf_data.get('keywords', []),
-            'search_terms': perf_data.get('search_terms', []),
+            'has_search_campaigns': has_search,
+            'has_pmax_campaigns': has_pmax,
+            'keywords': keywords_list,
+            'search_terms': search_terms_list,
             'total_budget': total_spend / 3,
             'business_goals': {
                 'target_roas': 3.0,
-                'target_cpl': 80
+                'target_cpl': 80,
             }
         }
 
     except Exception as e:
-        print(f"Failed to fetch Google Ads data: {str(e)}")
+        current_app.logger.error(f"Failed to fetch Google Ads data for account {account_id}: {e}")
+        import traceback
+        current_app.logger.error(traceback.format_exc())
         # Fallback to minimal context if data fetch fails
         context = {
             'account_id': account_id,
             'customer_id': customer_id,
             'performance_90d': {},
             'campaigns': [],
+            'has_search_campaigns': False,
+            'has_pmax_campaigns': False,
             'keywords': [],
             'search_terms': [],
             'total_budget': 0,

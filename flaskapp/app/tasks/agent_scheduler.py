@@ -71,7 +71,7 @@ def run_agents_for_all_accounts(layer: str = 'all'):
 
 
 def _ensure_agent_tables():
-    """Create agent tables if they don't exist."""
+    """Create agent tables if they don't exist, and add missing columns."""
     from app import db
     with db.engine.begin() as conn:
         conn.execute(text("""
@@ -106,6 +106,7 @@ def _ensure_agent_tables():
                 customer_id VARCHAR(32) NULL DEFAULT '',
                 campaign_id VARCHAR(64) NULL,
                 ad_group_id VARCHAR(64) NULL,
+                keyword_id VARCHAR(64) NULL,
                 action_data JSON NULL,
                 risk_level VARCHAR(32) NOT NULL DEFAULT 'medium',
                 requires_approval TINYINT(1) NOT NULL DEFAULT 1,
@@ -120,11 +121,21 @@ def _ensure_agent_tables():
                 actual_outcome JSON NULL,
                 prediction_accuracy FLOAT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 INDEX ix_ad_account (account_id),
                 INDEX ix_ad_agent (agent_id),
                 INDEX ix_ad_status (status)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         """))
+        # Add columns that may be missing if table was created in an earlier version
+        for col_def in (
+            "ADD COLUMN keyword_id VARCHAR(64) NULL AFTER ad_group_id",
+            "ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at",
+        ):
+            try:
+                conn.execute(text(f"ALTER TABLE agent_decisions {col_def}"))
+            except Exception:
+                pass  # Column already exists
 
 
 def run_agents_for_account(
@@ -383,13 +394,17 @@ def run_agents_for_account(
         }
 
     except Exception as e:
-        print(f"Failed to fetch Google Ads data: {str(e)}")
+        current_app.logger.error(f"Failed to fetch Google Ads data for account {account_id}: {e}")
+        import traceback
+        current_app.logger.error(traceback.format_exc())
         # Fallback to minimal context if data fetch fails
         context = {
             'account_id': account_id,
             'customer_id': customer_id,
             'performance_90d': {},
             'campaigns': [],
+            'has_search_campaigns': False,
+            'has_pmax_campaigns': False,
             'keywords': [],
             'search_terms': [],
             'total_budget': 0,

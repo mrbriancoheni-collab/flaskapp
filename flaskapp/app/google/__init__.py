@@ -2971,6 +2971,49 @@ def ads_performance():
         except Exception as e:
             current_app.logger.warning(f"[DECISION] Session fallback failed: {e}")
 
+    # Fetch daily performance data for the graph (last 30 days)
+    daily_performance = []
+    if connected and account_performance and account_performance.get('has_data'):
+        try:
+            from app.google.utils_ads import (
+                get_stored_access_token, google_ads_search, resolve_ads_context
+            )
+            tok = get_stored_access_token(aid, ("ads", "lsa"))
+            if tok:
+                ctx = resolve_ads_context(aid)
+                cid = ctx.get("customer_id")
+                login_cid = ctx.get("login_customer_id")
+                if cid:
+                    daily_rows = google_ads_search(
+                        access_token=tok,
+                        customer_id=cid,
+                        query="""
+                            SELECT
+                                segments.date,
+                                metrics.cost_micros,
+                                metrics.conversions,
+                                metrics.clicks,
+                                metrics.impressions
+                            FROM customer
+                            WHERE segments.date DURING LAST_30_DAYS
+                            ORDER BY segments.date ASC
+                        """,
+                        login_customer_id=login_cid,
+                        stream=True,
+                    )
+                    for row in daily_rows:
+                        seg = row.get("segments", {})
+                        m = row.get("metrics", {})
+                        daily_performance.append({
+                            "date": seg.get("date", ""),
+                            "cost": round(int(m.get("costMicros", 0)) / 1_000_000, 2),
+                            "conversions": round(float(m.get("conversions", 0)), 1),
+                            "clicks": int(m.get("clicks", 0)),
+                            "impressions": int(m.get("impressions", 0)),
+                        })
+        except Exception as e:
+            current_app.logger.warning(f"Could not fetch daily performance for graph: {e}")
+
     # Transform actions into timeline format
     recent_changes = []
     for action in recent_actions:
@@ -3020,6 +3063,7 @@ def ads_performance():
         recent_changes=recent_changes,
         historical_improvement=historical_improvement,
         account_performance=account_performance,
+        daily_performance=daily_performance,
         auth_error=auth_error,
         epn=request.endpoint,
     )

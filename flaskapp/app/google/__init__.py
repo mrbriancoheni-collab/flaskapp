@@ -748,7 +748,10 @@ def _fetch_gsc_report(site_url: str, start_date: str, end_date: str) -> dict | N
     }
 
 # --- OpenAI Insights --------------------------------------------------------
-from openai import OpenAI
+try:
+    from openai import OpenAI as _OpenAI
+except ImportError:
+    _OpenAI = None
 import json
 import math
 from flask import current_app
@@ -813,7 +816,7 @@ def get_gsc_insights(gsc: dict) -> str:
 
         if prompt_config:
             # Use database prompt (comprehensive SEO analysis)
-            client = OpenAI(api_key=api_key)
+            client = _OpenAI(api_key=api_key)
 
             # Prepare data for template formatting
             summary = gsc.get('summary', {}) or {}
@@ -856,7 +859,7 @@ def get_gsc_insights(gsc: dict) -> str:
             # Fallback to old inline prompt
             current_app.logger.warning("Database prompt not found, using fallback inline prompt")
             model = current_app.config.get("OPENAI_MODEL", "gpt-4o-mini")
-            client = OpenAI(api_key=api_key)
+            client = _OpenAI(api_key=api_key)
 
             prompt = _build_insights_prompt(gsc)
             # Responses API (official modern surface)
@@ -1830,7 +1833,7 @@ def ga_insights():
     )
 
     try:
-        client = OpenAI()
+        client = _OpenAI()
         resp = client.chat.completions.create(
             model=os.environ.get("GA_INSIGHTS_MODEL", "gpt-4o-mini"),
             temperature=0.3,

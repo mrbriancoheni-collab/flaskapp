@@ -487,6 +487,12 @@ def google_ads_search(
             current_app.logger.error(f"Google Ads API authentication failed (401)")
             r.raise_for_status()
 
+        # Log 400 errors with response body for debugging
+        if r.status_code == 400:
+            current_app.logger.error(f"Google Ads API 400 Bad Request body: {r.text[:2000]}")
+            # Don't retry 400s — they are query/request errors, not transient
+            r.raise_for_status()
+
         # Check for rate limiting (should retry)
         if r.status_code == 429:
             current_app.logger.warning("Google Ads API rate limited (429)")

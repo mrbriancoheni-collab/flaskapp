@@ -116,7 +116,7 @@ class DecisionLog:
                 'campaign_id': decision.campaign_id,
                 'ad_group_id': decision.ad_group_id,
                 'action_data': json.dumps(decision.action_data) if isinstance(decision.action_data, (dict, list)) else str(decision.action_data),
-                'risk_level': decision.risk_level.value,
+                'risk_level': decision.risk_level.value if hasattr(decision.risk_level, 'value') else str(decision.risk_level),
                 'requires_approval': decision.requires_approval,
                 'confidence': decision.confidence,
                 'expected_monthly_savings': decision.expected_monthly_savings,

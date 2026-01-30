@@ -45,6 +45,7 @@ class KeywordOptimizerAgent(BaseAgent):
         for keyword in keywords:
             keyword_id = keyword['id']
             keyword_text = keyword.get('text', '')
+            ad_group_id = keyword.get('ad_group_id', '')
             cpa = keyword.get('cpa_30d', 0)
             conversions = keyword.get('conversions_30d', 0)
             spend = keyword.get('spend_30d', 0)
@@ -56,6 +57,7 @@ class KeywordOptimizerAgent(BaseAgent):
                     'severity': 'medium',
                     'keyword_id': keyword_id,
                     'keyword_text': keyword_text,
+                    'ad_group_id': ad_group_id,
                     'spend_30d': spend,
                     'conversions_30d': conversions
                 })
@@ -71,6 +73,7 @@ class KeywordOptimizerAgent(BaseAgent):
                         'severity': 'medium',
                         'keyword_id': keyword_id,
                         'keyword_text': keyword_text,
+                        'ad_group_id': ad_group_id,
                         'current_cpa': cpa,
                         'target_cpa': target_cpa,
                         'recommended_bid_change_pct': bid_increase_pct
@@ -83,6 +86,7 @@ class KeywordOptimizerAgent(BaseAgent):
                         'severity': 'medium',
                         'keyword_id': keyword_id,
                         'keyword_text': keyword_text,
+                        'ad_group_id': ad_group_id,
                         'current_cpa': cpa,
                         'target_cpa': target_cpa,
                         'recommended_bid_change_pct': bid_decrease_pct
@@ -125,6 +129,7 @@ class KeywordOptimizerAgent(BaseAgent):
                     reasoning="No conversions after significant spend - not a fit",
                     account_id=0,
                     customer_id='',
+                    ad_group_id=opp.get('ad_group_id', ''),
                     action_data={
                         'keyword_id': opp['keyword_id']
                     },
@@ -145,6 +150,7 @@ class KeywordOptimizerAgent(BaseAgent):
                     reasoning="Optimize bid to reach target CPA",
                     account_id=0,
                     customer_id='',
+                    ad_group_id=opp.get('ad_group_id', ''),
                     action_data={
                         'keyword_id': opp['keyword_id'],
                         'bid_change_pct': opp['recommended_bid_change_pct']

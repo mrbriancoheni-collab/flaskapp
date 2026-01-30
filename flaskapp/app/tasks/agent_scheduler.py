@@ -370,11 +370,16 @@ def run_agents_for_account(
             clicks = int(m.get("clicks", 0))
             impressions = int(m.get("impressions", 0))
 
+            # ad_group is a resource name like "customers/123/adGroups/456"
+            ad_group_resource = kw.get("adGroup", "")
+            ad_group_id = ad_group_resource.split("/")[-1] if ad_group_resource else ""
+
             kw_cpa = cost / conversions if conversions > 0 else 0
             keywords_list.append({
                 'id': str(kw.get("criterionId", "")),
                 'text': kw_keyword.get("text", ""),
                 'match': kw_keyword.get("matchType", ""),
+                'ad_group_id': ad_group_id,
                 'spend': cost,
                 'conversions': int(conversions),
                 'cpa': kw_cpa,

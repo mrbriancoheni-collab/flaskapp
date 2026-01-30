@@ -387,6 +387,9 @@ class GoogleAdsAgentExecutor:
         Returns:
             Execution result
         """
+        if not ad_group_id or not keyword_id:
+            return {'success': False, 'error': f'Missing required IDs: ad_group_id={ad_group_id!r}, keyword_id={keyword_id!r}'}
+
         client = self.get_client()
 
         try:

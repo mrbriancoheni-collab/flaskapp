@@ -233,14 +233,21 @@ def analyze():
     """
     account_id = current_user.account_id
 
-    # Fetch Google Ads OAuth tokens from database
-    # Tokens are in google_oauth_tokens, customer_id is in accounts table
+    # Fetch a fresh access token (auto-refreshes if expired) and refresh_token
     from sqlalchemy import text
+    try:
+        from app.google.token_utils import ensure_access_token
+        access_token, _product = ensure_access_token(account_id, ("ads",))
+    except (RuntimeError, Exception) as e:
+        logger.warning(f"Could not get fresh access token: {e}")
+        flash("Please connect your Google Ads account first.", "error")
+        return redirect(url_for("ads_grader_bp.connect"))
+
+    # Still need refresh_token for GoogleAdsGraderClient (SDK handles its own refresh)
     with db.engine.connect() as conn:
-        # Get OAuth tokens
         token_row = conn.execute(
             text("""
-                SELECT access_token, refresh_token
+                SELECT refresh_token
                 FROM google_oauth_tokens
                 WHERE account_id=:aid AND product='ads'
                 ORDER BY updated_at DESC LIMIT 1
@@ -264,7 +271,6 @@ def analyze():
         return redirect(url_for("ads_grader_bp.connect"))
 
     refresh_token = token_row['refresh_token']
-    access_token = token_row['access_token']
     default_customer_id = account_row['google_ads_customer_id'] if account_row else None
 
     # Fetch all accessible customer IDs for dropdown

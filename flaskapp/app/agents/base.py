@@ -97,7 +97,7 @@ class AgentDecision:
             'campaign_id': self.campaign_id,
             'ad_group_id': self.ad_group_id,
             'action_data': self.action_data,
-            'risk_level': self.risk_level.value,
+            'risk_level': self.risk_level.value if hasattr(self.risk_level, 'value') else str(self.risk_level),
             'requires_approval': self.requires_approval,
             'confidence': self.confidence,
             'expected_monthly_savings': self.expected_monthly_savings,

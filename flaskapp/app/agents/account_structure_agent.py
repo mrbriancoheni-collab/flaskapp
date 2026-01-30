@@ -14,9 +14,6 @@ This agent evaluates:
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
 import logging
-import anthropic
-from flask import current_app
-
 from .base import BaseAgent, AgentDecision, AgentCapability
 from .event_bus import AgentEventBus
 

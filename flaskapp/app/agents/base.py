@@ -438,8 +438,13 @@ class BaseAgent(ABC):
         - Confidence exceeds threshold
         - Agent has autonomous execution capability
         """
+        risk = decision.risk_level
+        is_low_risk = (
+            risk == DecisionRiskLevel.LOW
+            or (isinstance(risk, str) and risk.lower() == 'low')
+        )
         return (
-            decision.risk_level == DecisionRiskLevel.LOW and
+            is_low_risk and
             decision.confidence >= self.auto_execute_threshold and
             AgentCapability.AUTONOMOUS_EXECUTION in self.capabilities
         )

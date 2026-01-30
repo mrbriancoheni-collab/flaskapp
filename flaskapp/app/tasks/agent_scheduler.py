@@ -127,6 +127,22 @@ def _ensure_agent_tables():
                 INDEX ix_ad_status (status)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS agent_configurations (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                account_id INT NULL,
+                agent_id VARCHAR(64) NOT NULL,
+                agent_type VARCHAR(64) NOT NULL,
+                enabled TINYINT(1) NOT NULL DEFAULT 1,
+                auto_execute_threshold FLOAT NULL DEFAULT 0.85,
+                custom_prompt TEXT NULL,
+                risk_overrides JSON NULL,
+                business_rules JSON NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_agent_config (account_id, agent_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """))
         # Add columns that may be missing if table was created in an earlier version
         for col_def in (
             "ADD COLUMN keyword_id VARCHAR(64) NULL AFTER ad_group_id",
@@ -296,7 +312,17 @@ def run_agents_for_account(
                 has_pmax = True
 
             search_is = m.get("searchImpressionShare")
-            imp_share = float(search_is) * 100 if search_is else 50
+            try:
+                imp_share = float(search_is) * 100 if search_is else 50
+            except (ValueError, TypeError):
+                imp_share = 50
+
+            cpl = cost / conversions if conversions > 0 else 0
+            ctr = clicks / impressions * 100 if impressions > 0 else 0
+            conv_rate = conversions / clicks * 100 if clicks > 0 else 0
+            daily_budget_micros = int(budget.get("amountMicros", 0))
+            daily_budget = daily_budget_micros / 1_000_000
+            monthly_budget = daily_budget * 30.4
 
             campaigns.append({
                 'id': str(c.get("id", "")),
@@ -305,9 +331,17 @@ def run_agents_for_account(
                 'roas': roas,
                 'impression_share': imp_share,
                 'monthly_spend': cost,
+                'monthly_budget': monthly_budget,
                 'spend_90d': cost * 3,  # estimate from 30d
                 'conversions': int(conversions),
-                'cpa': cost / conversions if conversions > 0 else 0,
+                'cpa': cpl,
+                # Keys expected by CampaignManagerAgent
+                'cpl_7d': cpl,
+                'conversion_rate_7d': conv_rate,
+                # Keys expected by BudgetGuardianAgent
+                'spend_mtd': cost,  # best estimate from 30d data
+                'daily_spend_avg_7d': cost / 30,
+                'daily_spend_yesterday': cost / 30,  # estimate
             })
 
         # 3. Keyword data (last 30 days, top 30 by spend)
@@ -336,15 +370,23 @@ def run_agents_for_account(
             clicks = int(m.get("clicks", 0))
             impressions = int(m.get("impressions", 0))
 
+            kw_cpa = cost / conversions if conversions > 0 else 0
             keywords_list.append({
                 'id': str(kw.get("criterionId", "")),
                 'text': kw_keyword.get("text", ""),
                 'match': kw_keyword.get("matchType", ""),
                 'spend': cost,
                 'conversions': int(conversions),
-                'cpa': cost / conversions if conversions > 0 else 0,
+                'cpa': kw_cpa,
                 'ctr': clicks / impressions if impressions > 0 else 0,
                 'clicks': clicks,
+                # Keys expected by KeywordOptimizerAgent
+                'cpa_30d': kw_cpa,
+                'conversions_30d': int(conversions),
+                'spend_30d': cost,
+                # Keys expected by QualityScoreAgent
+                'monthly_spend': cost,
+                'quality_score': 0,  # not available from this query
             })
 
         # 4. Search terms (last 30 days, top 20 by spend)
@@ -390,6 +432,8 @@ def run_agents_for_account(
             'keywords': keywords_list,
             'search_terms': search_terms_list,
             'total_budget': total_spend / 3,
+            'target_cpa': 80,         # top-level for KeywordOptimizerAgent
+            'target_cpl': 80,         # top-level for CampaignManagerAgent
             'business_goals': {
                 'target_roas': 3.0,
                 'target_cpl': 80,
@@ -491,4 +535,4 @@ def run_agents_for_account(
                 })
 
             print(f"  ✗ {agent.agent_type} failed: {str(e)}")
-            raise
+            # Continue running remaining agents instead of stopping

@@ -101,10 +101,9 @@ class DecisionLog:
                     :status,
                     :created_at
                 )
-                RETURNING id
             """)
 
-            result = self.session.execute(query, {
+            self.session.execute(query, {
                 'agent_id': decision.agent_id,
                 'agent_type': decision.agent_type,
                 'decision_type': decision.decision_type,
@@ -126,6 +125,8 @@ class DecisionLog:
                 'created_at': decision.created_at,
             })
 
+            # Get the auto-generated ID (MariaDB/MySQL)
+            result = self.session.execute(text("SELECT LAST_INSERT_ID()"))
             decision_id = result.scalar()
             self.session.commit()
 

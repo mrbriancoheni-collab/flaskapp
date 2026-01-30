@@ -223,35 +223,42 @@ def create_app():
         app.config.get("GOOGLE_ADS_REDIRECT_URI") or "default",
     )
 
-    # ---- Logging (stderr + rotating file) ----------------------------------
+    # ---- Logging (file handler + optional stderr) --------------------------
+    log_path = _os.getenv("APP_ERROR_LOG", "/home/fieljtgr/flaskapp/stderr.log")
     try:
-        stderr_handler = logging.StreamHandler()
-        try:
-            if hasattr(stderr_handler.stream, "buffer"):
-                stderr_handler.setStream(io.TextIOWrapper(stderr_handler.stream.buffer, encoding="utf-8", errors="replace"))
-        except Exception:
-            pass
-
-        stderr_handler.setLevel(logging.INFO)
-        stderr_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
-
-        log_path = _os.getenv("APP_ERROR_LOG", "/home/fieljtgr/flaskapp/stderr.log")
         _os.makedirs(_os.path.dirname(log_path), exist_ok=True)
         file_handler = RotatingFileHandler(log_path, maxBytes=1_000_000, backupCount=3, encoding="utf-8")
         file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
 
         app.logger.handlers.clear()
-        app.logger.addHandler(stderr_handler)
         app.logger.addHandler(file_handler)
+
+        # Only add stderr handler if stderr is writable (Passenger/LiteSpeed
+        # may close it, which would crash StreamHandler on first write).
+        try:
+            import sys as _sys
+            if _sys.stderr and not _sys.stderr.closed:
+                stderr_handler = logging.StreamHandler()
+                stderr_handler.setLevel(logging.INFO)
+                stderr_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
+                app.logger.addHandler(stderr_handler)
+        except Exception:
+            pass  # no stderr — file handler is enough
+
         app.logger.setLevel(logging.INFO)
         app.logger.propagate = False
         app.logger.info(f"=== APP STARTED === Logging to: {log_path}")
     except Exception as log_err:
-        app.logger.handlers.clear()
-        app.logger.addHandler(logging.StreamHandler())
-        app.logger.setLevel(logging.INFO)
-        app.logger.error(f"Failed to setup file logging: {log_err}")
+        # Last resort: at least keep a file handler so the app can start
+        try:
+            app.logger.handlers.clear()
+            fallback = RotatingFileHandler(log_path, maxBytes=1_000_000, backupCount=3)
+            app.logger.addHandler(fallback)
+            app.logger.setLevel(logging.INFO)
+            app.logger.error(f"Failed to setup file logging: {log_err}")
+        except Exception:
+            pass  # cannot log at all — but do NOT crash the app
 
     # ---- DB / Extensions init ----------------------------------------------
     db.init_app(app)

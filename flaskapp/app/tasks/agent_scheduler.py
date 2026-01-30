@@ -226,7 +226,11 @@ def run_agents_for_account(
             )
 
         # 1. Account-level aggregate metrics (last 90 days)
-        account_rows = _ads_query("""
+        from datetime import date, timedelta
+        _today = date.today()
+        _d90 = (_today - timedelta(days=90)).strftime('%Y-%m-%d')
+        _d_today = _today.strftime('%Y-%m-%d')
+        account_rows = _ads_query(f"""
             SELECT
                 metrics.impressions,
                 metrics.clicks,
@@ -234,7 +238,7 @@ def run_agents_for_account(
                 metrics.conversions,
                 metrics.conversions_value
             FROM customer
-            WHERE segments.date DURING LAST_90_DAYS
+            WHERE segments.date BETWEEN '{_d90}' AND '{_d_today}'
         """)
 
         total_impressions = 0

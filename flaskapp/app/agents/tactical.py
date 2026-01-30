@@ -91,15 +91,19 @@ class KeywordOptimizerAgent(BaseAgent):
         # 3. Search term analysis for new keywords
         search_terms = context.get('search_terms', [])
         for term in search_terms:
-            if term.get('conversions', 0) >= 2 and term.get('cost_per_conversion', 0) < target_cpa:
+            term_convs = term.get('conversions', 0)
+            term_spend = term.get('spend', 0)
+            term_cpa = term_spend / term_convs if term_convs > 0 else 0
+            term_text = term.get('text', '') or term.get('query', '')
+            if term_convs >= 2 and term_cpa < target_cpa and term_cpa > 0:
                 # High-performing search term not yet a keyword
-                if not self._is_already_keyword(term['query'], keywords):
+                if not self._is_already_keyword(term_text, keywords):
                     opportunities.append({
                         'type': 'add_keyword',
                         'severity': 'low',
-                        'search_query': term['query'],
-                        'conversions': term['conversions'],
-                        'cpa': term['cost_per_conversion']
+                        'search_query': term_text,
+                        'conversions': term_convs,
+                        'cpa': term_cpa
                     })
 
         return opportunities
@@ -269,8 +273,8 @@ class NegativeKeywordAgent(BaseAgent):
         search_terms = context.get('search_terms', [])
 
         for term in search_terms:
-            query = term.get('query', '').lower()
-            cost = term.get('cost', 0)
+            query = (term.get('text', '') or term.get('query', '')).lower()
+            cost = term.get('spend', 0) or term.get('cost', 0)
             conversions = term.get('conversions', 0)
 
             # 1. Obvious waste patterns
@@ -280,7 +284,7 @@ class NegativeKeywordAgent(BaseAgent):
                         'type': 'add_negative_keyword',
                         'severity': 'high',
                         'confidence': 0.99,
-                        'search_query': term['query'],
+                        'search_query': query,
                         'cost': cost,
                         'conversions': conversions,
                         'reason': f'Contains waste pattern: {pattern}'
@@ -295,7 +299,7 @@ class NegativeKeywordAgent(BaseAgent):
                         'type': 'add_negative_keyword',
                         'severity': 'medium',
                         'confidence': 0.85,
-                        'search_query': term['query'],
+                        'search_query': query,
                         'cost': cost,
                         'conversions': conversions,
                         'reason': 'Irrelevant to business after spending >$50'

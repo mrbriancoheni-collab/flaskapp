@@ -73,7 +73,7 @@ class StrategicDirectorAgent(BaseAgent):
             # Emit event for other agents
             AgentEventBus.emit(
                 event_type='structure_analysis_complete',
-                source_agent=self.agent_id,
+                source_agent_id=self.agent_id,
                 data={
                     'opportunities_found': len(structure_opportunities),
                     'analysis_timestamp': datetime.now().isoformat()

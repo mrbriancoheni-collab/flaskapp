@@ -52,3 +52,4 @@ automation_state.json
 
 /check_imports.py
 /tmp/
+*.lock

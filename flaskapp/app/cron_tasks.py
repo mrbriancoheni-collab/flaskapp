@@ -55,6 +55,12 @@ def run_daily(app, db):
     except Exception:
         app.logger.exception("[CRON] GMB monthly insights run failed")
 
+    # Run AI agents for Google Ads accounts
+    try:
+        _run_daily_ai_agents(app)
+    except Exception:
+        app.logger.exception("[CRON] AI agents run failed")
+
     # Run Google Ads advanced intelligence features
     try:
         _run_daily_google_ads_intelligence(app)
@@ -282,6 +288,28 @@ def _generate_gmb_insights_for_account(app, aid: int) -> bool:
     _save_insights(aid, html)
     app.logger.info("[CRON] insights saved for account_id=%s", aid)
     return True
+
+
+# =========================
+# AI Agents (Daily)
+# =========================
+
+def _run_daily_ai_agents(app) -> None:
+    """
+    Run AI agents for all Google Ads-connected accounts.
+    Agents analyse account data and make optimisation decisions automatically.
+    """
+    enabled = app.config.get("AI_AGENTS_ENABLED", True)
+    if not enabled:
+        app.logger.info("[CRON] AI agents disabled (AI_AGENTS_ENABLED=False)")
+        return
+
+    from app.tasks.agent_scheduler import run_all_accounts
+    with app.app_context():
+        success, errors = run_all_accounts(layer='all')
+        app.logger.info(
+            "[CRON] AI agents completed: %d succeeded, %d failed", success, errors
+        )
 
 
 # =========================

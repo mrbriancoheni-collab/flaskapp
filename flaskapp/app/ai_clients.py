@@ -1,8 +1,15 @@
 # app/ai_clients.py
 import os
 from typing import Optional, Dict
-from openai import OpenAI
-import anthropic
+try:
+    from openai import OpenAI
+except ImportError:
+    OpenAI = None
+
+try:
+    import anthropic
+except ImportError:
+    anthropic = None
 
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-haiku-20240307")
@@ -21,6 +28,8 @@ def _profile_prefix(profile: Optional[Dict]) -> str:
 
 def chatgpt_response(prompt: str, profile: Optional[Dict] = None) -> str:
     """Call OpenAI Chat Completions API (OpenAI Python >= 1.x)."""
+    if OpenAI is None:
+        return "OpenAI package not installed."
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         return "OpenAI API key not configured."
@@ -41,6 +50,8 @@ def chatgpt_response(prompt: str, profile: Optional[Dict] = None) -> str:
 
 def claude_response(prompt: str, profile: Optional[Dict] = None) -> str:
     """Call Anthropic Messages API (latest style; no deprecated Completion)."""
+    if anthropic is None:
+        return "Anthropic package not installed."
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
         return "Anthropic API key not configured."

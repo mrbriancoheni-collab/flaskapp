@@ -2,7 +2,11 @@ import os
 
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "change-this")
-    SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_DATABASE_URI")
+    # Only override SQLALCHEMY_DATABASE_URI if explicitly set in environment;
+    # otherwise let the default from create_app() remain.
+    _db_uri = os.environ.get("SQLALCHEMY_DATABASE_URI")
+    if _db_uri:
+        SQLALCHEMY_DATABASE_URI = _db_uri
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Stripe keys

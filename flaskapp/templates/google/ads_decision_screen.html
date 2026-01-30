@@ -122,6 +122,79 @@
     </div>
   </div>
 
+  {# PLAIN-ENGLISH PERFORMANCE SYNOPSIS #}
+  {% if account_performance and account_performance.has_data %}
+  <div class="rounded-xl border border-gray-200 bg-white p-4 md:p-6 shadow-sm">
+    <div class="flex items-start gap-3">
+      <div class="bg-indigo-100 text-indigo-600 w-10 h-10 rounded-lg flex items-center justify-center text-lg flex-shrink-0">
+        <i class="fa-solid fa-message"></i>
+      </div>
+      <div>
+        <h2 class="text-base md:text-lg font-bold text-gray-900 mb-2">Here's what's happening with your ads</h2>
+        <p class="text-sm md:text-base text-gray-700 leading-relaxed">
+          Over the last {{ account_performance.days }} days, you spent
+          <strong>${{ "{:,.0f}".format(account_performance.cost) }}</strong> on Google Ads.
+          That generated
+          <strong>{{ "{:,.0f}".format(account_performance.impressions) }}</strong> people seeing your ad,
+          <strong>{{ "{:,.0f}".format(account_performance.clicks) }}</strong> clicking through to your site,
+          and <strong>{{ "{:,.0f}".format(account_performance.conversions) }}</strong>
+          turning into actual leads or calls.
+
+          {% if account_performance.cost_per_conversion and account_performance.cost_per_conversion > 0 %}
+          Each lead cost you about <strong>${{ "{:,.0f}".format(account_performance.cost_per_conversion) }}</strong>.
+          {% endif %}
+
+          {% if account_performance.has_comparison is defined and account_performance.has_comparison %}
+            {% if account_performance.conversions_change is defined and account_performance.conversions_change > 5 %}
+            Compared to the prior 30 days, your leads are <strong>up {{ account_performance.conversions_change }}%</strong> &mdash; things are trending in the right direction.
+            {% elif account_performance.conversions_change is defined and account_performance.conversions_change < -5 %}
+            Compared to the prior 30 days, leads are <strong>down {{ account_performance.conversions_change|abs }}%</strong>. The AI agents are working on getting this back up.
+            {% else %}
+            Performance has been steady compared to the prior 30 days.
+            {% endif %}
+          {% endif %}
+        </p>
+
+        {% if _connected and (ai_actions_taken > 0 or wasted_spend_prevented > 0 or blocked_searches_count > 0) %}
+        <p class="text-sm md:text-base text-gray-700 leading-relaxed mt-3">
+          <strong>What your AI agents have done:</strong>
+          {% if ai_actions_taken > 0 %}
+          They've made <strong>{{ ai_actions_taken }} optimization{{ 's' if ai_actions_taken != 1 }}</strong> to your campaigns.
+          {% endif %}
+          {% if wasted_spend_prevented > 0 %}
+          They prevented an estimated <strong>${{ "{:,.0f}".format(wasted_spend_prevented) }}</strong> in wasted ad spend by pausing poor-performing keywords and blocking irrelevant searches.
+          {% endif %}
+          {% if blocked_searches_count > 0 %}
+          So far they've blocked <strong>{{ blocked_searches_count }} junk search term{{ 's' if blocked_searches_count != 1 }}</strong> from eating into your budget.
+          {% endif %}
+          The agents run daily to keep your account lean and your budget focused on real customers.
+        </p>
+        {% elif _connected %}
+        <p class="text-sm text-gray-500 mt-3">
+          <i class="fa-solid fa-robot mr-1"></i>
+          Your AI agents are monitoring this account daily. As they make optimizations, you'll see a summary of their work here.
+        </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% elif not _connected %}
+  <div class="rounded-xl border border-gray-200 bg-white p-4 md:p-6 shadow-sm">
+    <div class="flex items-start gap-3">
+      <div class="bg-gray-100 text-gray-400 w-10 h-10 rounded-lg flex items-center justify-center text-lg flex-shrink-0">
+        <i class="fa-solid fa-message"></i>
+      </div>
+      <div>
+        <h2 class="text-base md:text-lg font-bold text-gray-900 mb-2">Connect your Google Ads account to see your performance</h2>
+        <p class="text-sm text-gray-600">
+          Once connected, this page will show you a plain-English breakdown of how your ads are performing,
+          how much each lead costs, and what our AI agents are doing to protect your budget every day.
+        </p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   {# HIGH-LEVEL ACCOUNT SUMMARY - KEY METRICS AT A GLANCE #}
   {% if account_performance and account_performance.has_data %}
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">

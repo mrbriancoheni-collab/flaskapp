@@ -489,9 +489,10 @@ def google_ads_search(
 
         # Log 400 errors with response body for debugging
         if r.status_code == 400:
-            current_app.logger.error(f"Google Ads API 400 Bad Request body: {r.text[:2000]}")
-            # Don't retry 400s — they are query/request errors, not transient
-            r.raise_for_status()
+            body_text = r.text[:2000]
+            current_app.logger.error(f"Google Ads API 400 Bad Request body: {body_text}")
+            # Don't retry 400s — raise as ValueError to bypass retry wrapper
+            raise ValueError(f"Google Ads API 400: {body_text}")
 
         # Check for rate limiting (should retry)
         if r.status_code == 429:

@@ -569,7 +569,13 @@ def fetch_leads_last_30d(
 
     login_customer_id = ctx["login_customer_id"]  # may be None (direct mode)
 
-    tok = access_token or get_stored_access_token(aid, ("ads", "lsa"))
+    if not access_token:
+        from app.google.token_utils import ensure_access_token as _eat
+        try:
+            access_token, _ = _eat(aid, ("ads", "lsa"))
+        except RuntimeError:
+            pass
+    tok = access_token
     if not tok:
         raise RuntimeError("missing_access_token")
 
@@ -682,7 +688,13 @@ def fetch_account_performance_stats(
             return empty_result
 
         login_customer_id = ctx["login_customer_id"]
-        tok = access_token or get_stored_access_token(aid, ("ads", "lsa"))
+        if not access_token:
+            from app.google.token_utils import ensure_access_token as _eat
+            try:
+                access_token, _ = _eat(aid, ("ads", "lsa"))
+            except RuntimeError:
+                pass
+        tok = access_token
         if not tok:
             current_app.logger.warning(f"No access token found for account {aid}")
             return empty_result

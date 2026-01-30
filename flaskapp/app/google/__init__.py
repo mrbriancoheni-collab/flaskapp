@@ -2976,9 +2976,10 @@ def ads_performance():
     if connected and account_performance and account_performance.get('has_data'):
         try:
             from app.google.utils_ads import (
-                get_stored_access_token, google_ads_search, resolve_ads_context
+                google_ads_search, resolve_ads_context
             )
-            tok = get_stored_access_token(aid, ("ads", "lsa"))
+            from app.google.token_utils import ensure_access_token
+            tok, _prod = ensure_access_token(aid, ("ads", "lsa"))
             if tok:
                 ctx = resolve_ads_context(aid)
                 cid = ctx.get("customer_id")

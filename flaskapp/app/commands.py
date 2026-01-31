@@ -695,7 +695,7 @@ def run_auto_executor_command(account, dry_run, lookback):
 
     try:
         from app.services.google_ads_auto_executor import GoogleAdsAutoExecutor
-        from app.models import Account
+        from app.models import Account, GoogleAdsAuth
         from app.models_google import GoogleOAuthToken
 
         # Verify account exists and has Google Ads connected
@@ -709,8 +709,12 @@ def run_auto_executor_command(account, dry_run, lookback):
             click.echo(f"❌ Account {account} has no Google Ads connected", err=True)
             return 1
 
+        # Get customer_id from GoogleAdsAuth
+        ads_auth = GoogleAdsAuth.query.filter_by(account_id=account).first()
+        customer_id = ads_auth.customer_id if ads_auth else 'Not set'
+
         click.echo(f"✓ Account: {acct.name or acct.id}")
-        click.echo(f"✓ Google Ads Customer ID: {acct.google_ads_customer_id or 'Not set'}")
+        click.echo(f"✓ Google Ads Customer ID: {customer_id}")
         click.echo("")
 
         # Run the auto-executor
@@ -762,7 +766,7 @@ def run_all_ai_command(account):
     try:
         from app.tasks.agent_scheduler import run_agents_for_account
         from app.services.google_ads_auto_executor import GoogleAdsAutoExecutor
-        from app.models import Account
+        from app.models import Account, GoogleAdsAuth
         from app.models_google import GoogleOAuthToken
         from app import db
         from sqlalchemy import text
@@ -779,24 +783,19 @@ def run_all_ai_command(account):
             click.echo(f"❌ Account {account} has no Google Ads connected", err=True)
             return 1
 
+        # Get customer_id from GoogleAdsAuth
+        ads_auth = GoogleAdsAuth.query.filter_by(account_id=account).first()
+        customer_id = ads_auth.customer_id if ads_auth else None
+
         click.echo(f"✓ Account: {acct.name or acct.id}")
-        click.echo(f"✓ Google Ads: {acct.google_ads_customer_id or 'Not set'}\n")
+        click.echo(f"✓ Google Ads: {customer_id or 'Not set'}\n")
 
-        # Get credentials
-        query = text("""
-            SELECT a.google_ads_customer_id, got.credentials_json
-            FROM accounts a
-            JOIN google_oauth_tokens got ON a.id = got.account_id
-            WHERE a.id = :account_id AND got.product = 'ads'
-        """)
-        result = db.session.execute(query, {"account_id": account}).fetchone()
-
-        if not result or not result[1]:
+        # Get credentials from token
+        if not token.credentials_json:
             click.echo(f"❌ No valid credentials for account {account}", err=True)
             return 1
 
-        customer_id = result[0]
-        credentials = json.loads(result[1]) if isinstance(result[1], str) else result[1]
+        credentials = json.loads(token.credentials_json) if isinstance(token.credentials_json, str) else token.credentials_json
 
         # 1. Run Strategic Agents
         click.echo("1️⃣  Running STRATEGIC agents...")

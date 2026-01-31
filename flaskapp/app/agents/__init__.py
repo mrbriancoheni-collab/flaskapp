@@ -34,6 +34,13 @@ from .fbads_tactical import (
     FBBidOptimizerAgent,
     FBCreativeOptimizerAgent,
 )
+from .fbads_advanced import (
+    FBSpendOptimizerAgent,
+    FBDaypartingAgent,
+    FBGeoOptimizerAgent,
+    FBRetargetingAgent,
+    FBPixelHealthAgent,
+)
 
 __all__ = [
     # Base
@@ -72,4 +79,10 @@ __all__ = [
     'FBPlacementOptimizerAgent',
     'FBBidOptimizerAgent',
     'FBCreativeOptimizerAgent',
+    # Facebook Ads - Advanced Layer (Spend, Geo, Retargeting, Tracking)
+    'FBSpendOptimizerAgent',
+    'FBDaypartingAgent',
+    'FBGeoOptimizerAgent',
+    'FBRetargetingAgent',
+    'FBPixelHealthAgent',
 ]

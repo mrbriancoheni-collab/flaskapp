@@ -669,6 +669,181 @@ def clear_sample_data_command(account):
     click.echo("The performance page will now only show real data from Google Ads API.\n")
 
 
+@click.command('run-auto-executor')
+@click.option('--account', type=int, required=True, help='Account ID to run auto-executor for')
+@click.option('--dry-run', is_flag=True, help='Preview actions without executing')
+@click.option('--lookback', type=int, default=30, help='Days of search term data to analyze (default: 30)')
+@with_appcontext
+def run_auto_executor_command(account, dry_run, lookback):
+    """
+    Manually trigger the Google Ads Auto-Executor for a specific account.
+
+    This analyzes search term reports and automatically:
+    - Adds negative keywords for wasteful searches
+    - Creates AIAction records with full audit trail
+
+    Examples:
+        flask run-auto-executor --account 3              # Run for account 3
+        flask run-auto-executor --account 3 --dry-run    # Preview without executing
+        flask run-auto-executor --account 3 --lookback 7 # Only last 7 days
+    """
+    click.echo(f"\n{'='*60}")
+    click.echo(f"Running Auto-Executor for account {account}")
+    click.echo(f"Mode: {'DRY RUN (preview only)' if dry_run else 'EXECUTE'}")
+    click.echo(f"Lookback: {lookback} days")
+    click.echo(f"{'='*60}\n")
+
+    try:
+        from app.services.google_ads_auto_executor import GoogleAdsAutoExecutor
+        from app.models import Account
+        from app.models_google import GoogleOAuthToken
+
+        # Verify account exists and has Google Ads connected
+        acct = Account.query.get(account)
+        if not acct:
+            click.echo(f"❌ Account {account} not found", err=True)
+            return 1
+
+        token = GoogleOAuthToken.query.filter_by(account_id=account, product='ads').first()
+        if not token:
+            click.echo(f"❌ Account {account} has no Google Ads connected", err=True)
+            return 1
+
+        click.echo(f"✓ Account: {acct.name or acct.id}")
+        click.echo(f"✓ Google Ads Customer ID: {acct.google_ads_customer_id or 'Not set'}")
+        click.echo("")
+
+        # Run the auto-executor
+        executor = GoogleAdsAutoExecutor(account)
+        actions = executor.auto_add_negative_keywords(lookback_days=lookback, dry_run=dry_run)
+
+        if actions:
+            click.echo(f"\n{'='*60}")
+            click.echo(f"{'PREVIEW' if dry_run else 'CREATED'} {len(actions)} actions:")
+            click.echo(f"{'='*60}")
+            for action in actions[:10]:  # Show first 10
+                click.echo(f"  • {action.get('title', action.get('keyword', 'Unknown'))}")
+                if action.get('estimated_monthly_savings'):
+                    click.echo(f"    Savings: ${action['estimated_monthly_savings']:.2f}/mo")
+            if len(actions) > 10:
+                click.echo(f"  ... and {len(actions) - 10} more")
+        else:
+            click.echo("\n✓ No wasteful search terms found - account looks clean!")
+
+        click.echo(f"\n{'='*60}\n")
+
+    except Exception as e:
+        click.echo(f"\n❌ Error: {e}", err=True)
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
+@click.command('run-all-ai')
+@click.option('--account', type=int, required=True, help='Account ID to run all AI for')
+@with_appcontext
+def run_all_ai_command(account):
+    """
+    Run ALL AI agents and auto-executor for a specific account immediately.
+
+    This triggers:
+    1. Strategic agents (campaign structure, budget allocation)
+    2. Operational agents (budget guardian, quality score)
+    3. Tactical agents (keyword optimizer, negative keywords, ad copy)
+    4. Auto-Executor (automatic negative keyword additions)
+
+    Examples:
+        flask run-all-ai --account 3    # Run everything for account 3
+    """
+    click.echo(f"\n{'='*60}")
+    click.echo(f"Running ALL AI for account {account}")
+    click.echo(f"{'='*60}\n")
+
+    try:
+        from app.tasks.agent_scheduler import run_agents_for_account
+        from app.services.google_ads_auto_executor import GoogleAdsAutoExecutor
+        from app.models import Account
+        from app.models_google import GoogleOAuthToken
+        from app import db
+        from sqlalchemy import text
+        import json
+
+        # Verify account
+        acct = Account.query.get(account)
+        if not acct:
+            click.echo(f"❌ Account {account} not found", err=True)
+            return 1
+
+        token = GoogleOAuthToken.query.filter_by(account_id=account, product='ads').first()
+        if not token:
+            click.echo(f"❌ Account {account} has no Google Ads connected", err=True)
+            return 1
+
+        click.echo(f"✓ Account: {acct.name or acct.id}")
+        click.echo(f"✓ Google Ads: {acct.google_ads_customer_id or 'Not set'}\n")
+
+        # Get credentials
+        query = text("""
+            SELECT a.google_ads_customer_id, got.credentials_json
+            FROM accounts a
+            JOIN google_oauth_tokens got ON a.id = got.account_id
+            WHERE a.id = :account_id AND got.product = 'ads'
+        """)
+        result = db.session.execute(query, {"account_id": account}).fetchone()
+
+        if not result or not result[1]:
+            click.echo(f"❌ No valid credentials for account {account}", err=True)
+            return 1
+
+        customer_id = result[0]
+        credentials = json.loads(result[1]) if isinstance(result[1], str) else result[1]
+
+        # 1. Run Strategic Agents
+        click.echo("1️⃣  Running STRATEGIC agents...")
+        try:
+            run_agents_for_account(account, customer_id, credentials, layer='strategic')
+            click.echo("   ✓ Strategic agents complete")
+        except Exception as e:
+            click.echo(f"   ⚠ Strategic agents error: {e}")
+
+        # 2. Run Operational Agents
+        click.echo("2️⃣  Running OPERATIONAL agents...")
+        try:
+            run_agents_for_account(account, customer_id, credentials, layer='operational')
+            click.echo("   ✓ Operational agents complete")
+        except Exception as e:
+            click.echo(f"   ⚠ Operational agents error: {e}")
+
+        # 3. Run Tactical Agents
+        click.echo("3️⃣  Running TACTICAL agents...")
+        try:
+            run_agents_for_account(account, customer_id, credentials, layer='tactical')
+            click.echo("   ✓ Tactical agents complete")
+        except Exception as e:
+            click.echo(f"   ⚠ Tactical agents error: {e}")
+
+        # 4. Run Auto-Executor
+        click.echo("4️⃣  Running AUTO-EXECUTOR...")
+        try:
+            executor = GoogleAdsAutoExecutor(account)
+            actions = executor.auto_add_negative_keywords(lookback_days=30, dry_run=False)
+            click.echo(f"   ✓ Auto-executor complete: {len(actions)} actions created")
+        except Exception as e:
+            click.echo(f"   ⚠ Auto-executor error: {e}")
+
+        # Summary
+        click.echo(f"\n{'='*60}")
+        click.echo(f"✓ All AI processing complete for account {account}")
+        click.echo("Visit /account/google/ads/performance to see results")
+        click.echo(f"{'='*60}\n")
+
+    except Exception as e:
+        click.echo(f"\n❌ Error: {e}", err=True)
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
 def register_commands(app):
     """Register all CLI commands with the Flask app."""
     app.cli.add_command(run_agents_command)
@@ -677,5 +852,7 @@ def register_commands(app):
     app.cli.add_command(check_email_status_command)
     app.cli.add_command(test_email_provider_command)
     app.cli.add_command(clear_sample_data_command)
+    app.cli.add_command(run_auto_executor_command)
+    app.cli.add_command(run_all_ai_command)
     # Note: seed_ai_actions_command intentionally not registered by default
     # It's a development-only tool that should not be used on real accounts

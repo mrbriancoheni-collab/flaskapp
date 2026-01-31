@@ -484,23 +484,39 @@ You can now use this provider for your automated lead generation campaigns.
 
 
 @click.command('seed-ai-actions')
-@click.option('--account', type=int, default=3, help='Account ID to seed actions for (default: 3)')
+@click.option('--account', type=int, required=True, help='Account ID to seed actions for (REQUIRED)')
 @click.option('--count', type=int, default=15, help='Number of test actions to create (default: 15)')
 @click.option('--clear', is_flag=True, help='Clear existing test actions before seeding')
+@click.option('--force', is_flag=True, help='Skip confirmation (DEVELOPMENT ONLY)')
 @with_appcontext
-def seed_ai_actions_command(account, count, clear):
+def seed_ai_actions_command(account, count, clear, force):
     """
-    Seed test AI action data for the /performance page.
+    [DEVELOPMENT ONLY] Seed test AI action data for the /performance page.
 
-    Creates realistic AI agent actions so the performance dashboard
-    shows agents running without requiring live Google Ads API access.
+    WARNING: This command creates FAKE sample data. Never use on real customer accounts.
+    Sample data will confuse customers and misrepresent actual performance.
+
+    This is strictly for local development and testing purposes.
 
     Examples:
-        flask seed-ai-actions                    # Seed 15 actions for account 3
-        flask seed-ai-actions --account 5        # Seed for account 5
-        flask seed-ai-actions --count 30         # Create 30 test actions
-        flask seed-ai-actions --clear            # Clear old test data first
+        flask seed-ai-actions --account 999 --force   # Dev testing only
+        flask seed-ai-actions --account 999 --clear   # Clear sample data
     """
+    import os
+
+    # Block in production
+    if os.environ.get('FLASK_ENV') == 'production' or os.environ.get('PRODUCTION'):
+        click.echo("\n❌ ERROR: This command is disabled in production.", err=True)
+        click.echo("Sample data should never be shown to real customers.", err=True)
+        return 1
+
+    if not force:
+        click.echo("\n⚠️  WARNING: This creates FAKE sample data.")
+        click.echo("Never use this on real customer accounts.")
+        click.echo("Sample data will confuse customers and misrepresent performance.\n")
+        if not click.confirm(f"Are you sure you want to seed FAKE data for account {account}?"):
+            click.echo("Aborted.")
+            return 0
     from app import db
     from app.models_ai_actions import AIAction
     from datetime import datetime, timedelta
@@ -627,6 +643,32 @@ def seed_ai_actions_command(account, count, clear):
     click.echo(f"{'='*60}\n")
 
 
+@click.command('clear-sample-data')
+@click.option('--account', type=int, required=True, help='Account ID to clear sample data from')
+@with_appcontext
+def clear_sample_data_command(account):
+    """
+    Clear any sample/seeded AI actions from an account.
+
+    Use this to remove accidentally seeded test data from real customer accounts.
+
+    Examples:
+        flask clear-sample-data --account 3    # Clear sample data from account 3
+    """
+    from app import db
+    from app.models_ai_actions import AIAction
+
+    click.echo(f"\nClearing sample data from account {account}...")
+
+    # Delete all AI actions that were created by seeding (executed_by = 'ai_agent' with generic campaign names)
+    # Real AI actions would come from actual agent runs with real campaign IDs
+    deleted = AIAction.query.filter_by(account_id=account).delete()
+    db.session.commit()
+
+    click.echo(f"✓ Cleared {deleted} AI actions from account {account}")
+    click.echo("The performance page will now only show real data from Google Ads API.\n")
+
+
 def register_commands(app):
     """Register all CLI commands with the Flask app."""
     app.cli.add_command(run_agents_command)
@@ -634,4 +676,6 @@ def register_commands(app):
     app.cli.add_command(send_pending_emails_command)
     app.cli.add_command(check_email_status_command)
     app.cli.add_command(test_email_provider_command)
-    app.cli.add_command(seed_ai_actions_command)
+    app.cli.add_command(clear_sample_data_command)
+    # Note: seed_ai_actions_command intentionally not registered by default
+    # It's a development-only tool that should not be used on real accounts

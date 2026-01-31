@@ -203,36 +203,72 @@
                 </div>
             </div>
 
-            <!-- Key Performance Metrics -->
+            <!-- Performance Synopsis (Plain-English Summary) -->
             <div class="section">
-                <div class="section-title">Last 30 Days Performance</div>
+                <div class="section-title">Performance Synopsis</div>
+                <p style="color: #6b7280; margin-bottom: 20px;">Quick overview of your account's key metrics and performance trends.</p>
                 <div class="metrics-grid">
                     <div class="metric-row">
                         <div class="metric-cell">
                             <div class="metric-label">💰 Total Spend</div>
                             <div class="metric-value">${{ "{:,.0f}".format(analysis.performance.monthly_spend) }}</div>
+                            <div class="metric-subtext">Last 30 days</div>
                             <div class="metric-subtext">${{ "{:,.0f}".format(analysis.performance.daily_spend) }}/day average</div>
                         </div>
                         <div class="metric-cell">
-                            <div class="metric-label">👥 Total Clicks</div>
+                            <div class="metric-label">👥 Traffic</div>
                             <div class="metric-value">{{ "{:,.0f}".format(analysis.performance.clicks) }}</div>
-                            <div class="metric-subtext">{{ "%.2f"|format(analysis.performance.ctr * 100) }}% CTR</div>
+                            <div class="metric-subtext">Clicks (30 days)</div>
+                            <div class="metric-subtext">
+                                {{ "%.2f"|format(analysis.performance.ctr * 100) }}% CTR
+                                {% if analysis.performance.ctr >= 0.05 %}
+                                <span style="color: #059669;"> - Excellent</span>
+                                {% elif analysis.performance.ctr >= 0.035 %}
+                                <span style="color: #2563eb;"> - Good</span>
+                                {% elif analysis.performance.ctr >= 0.02 %}
+                                <span style="color: #d97706;"> - Average</span>
+                                {% else %}
+                                <span style="color: #dc2626;"> - Needs Improvement</span>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                     <div class="metric-row">
                         <div class="metric-cell">
                             <div class="metric-label">🎯 Conversions</div>
                             <div class="metric-value">{{ "{:,.0f}".format(analysis.performance.conversions) }}</div>
+                            <div class="metric-subtext">Total leads (30 days)</div>
                             {% if analysis.performance.cost_per_conversion > 0 %}
-                            <div class="metric-subtext">${{ "{:,.0f}".format(analysis.performance.cost_per_conversion) }} per lead</div>
+                            <div class="metric-subtext">
+                                ${{ "{:,.0f}".format(analysis.performance.cost_per_conversion) }}/lead
+                                {% if analysis.performance.cost_per_conversion <= 50 %}
+                                <span style="color: #059669;"> - Great</span>
+                                {% elif analysis.performance.cost_per_conversion <= 80 %}
+                                <span style="color: #2563eb;"> - Good</span>
+                                {% elif analysis.performance.cost_per_conversion <= 120 %}
+                                <span style="color: #d97706;"> - Average</span>
+                                {% else %}
+                                <span style="color: #dc2626;"> - High</span>
+                                {% endif %}
+                            </div>
                             {% else %}
-                            <div class="metric-subtext">Set up conversion tracking</div>
+                            <div class="metric-subtext">No conversion data</div>
                             {% endif %}
                         </div>
                         <div class="metric-cell">
-                            <div class="metric-label">👁️ Impressions</div>
-                            <div class="metric-value">{{ "{:,.0f}".format(analysis.performance.impressions) }}</div>
-                            <div class="metric-subtext">Last 30 days</div>
+                            <div class="metric-label">⚡ Efficiency</div>
+                            <div class="metric-value" style="{% if analysis.scores.overall >= 80 %}color: #059669{% elif analysis.scores.overall >= 60 %}color: #d97706{% else %}color: #dc2626{% endif %}">{{ analysis.scores.overall }}%</div>
+                            <div class="metric-subtext">Health Score</div>
+                            <div class="metric-subtext">
+                                {{ analysis.grade }} grade
+                                {% if analysis.scores.overall >= 80 %}
+                                <span style="color: #059669;"> - Excellent</span>
+                                {% elif analysis.scores.overall >= 60 %}
+                                <span style="color: #d97706;"> - Good</span>
+                                {% else %}
+                                <span style="color: #dc2626;"> - Needs Work</span>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>

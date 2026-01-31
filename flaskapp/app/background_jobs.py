@@ -165,24 +165,27 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
-    # Lead generation automation (daily at 10 AM UTC)
+    # Lead generation automation (daily at 8 AM Pacific Time)
+    # Scrapes leads, enriches with contact info, and sends outreach emails
     scheduler.add_job(
         func=run_lead_automation_daily,
         trigger='cron',
-        hour=10,
+        hour=8,
         minute=0,
+        timezone='America/Los_Angeles',  # Pacific Time
         id='run_lead_automation_daily',
         replace_existing=True,
         kwargs={'app': app}
     )
 
-    # Daily email blast to all unsent contacts (daily at 2 PM UTC)
-    # Runs 4 hours after main automation to catch any remaining contacts
+    # Daily email blast to all unsent contacts (daily at 12 PM Pacific Time)
+    # Runs 4 hours after main automation (8am PT) to catch any remaining contacts
     scheduler.add_job(
         func=send_to_all_unsent_today,
         trigger='cron',
-        hour=14,
+        hour=12,
         minute=0,
+        timezone='America/Los_Angeles',  # Pacific Time
         id='send_to_all_unsent_today',
         replace_existing=True,
         kwargs={'app': app}

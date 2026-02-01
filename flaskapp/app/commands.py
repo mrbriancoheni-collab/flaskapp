@@ -697,6 +697,8 @@ def run_auto_executor_command(account, dry_run, lookback):
         from app.services.google_ads_auto_executor import GoogleAdsAutoExecutor
         from app.models import Account, GoogleAdsAuth
         from app.models_google import GoogleOAuthToken
+        from app import db
+        from sqlalchemy import text
 
         # Verify account exists and has Google Ads connected
         acct = Account.query.get(account)
@@ -709,12 +711,22 @@ def run_auto_executor_command(account, dry_run, lookback):
             click.echo(f"❌ Account {account} has no Google Ads connected", err=True)
             return 1
 
-        # Get customer_id from GoogleAdsAuth
-        ads_auth = GoogleAdsAuth.query.filter_by(account_id=account).first()
-        customer_id = ads_auth.customer_id if ads_auth else 'Not set'
+        # Get customer_id - try accounts table first, then GoogleAdsAuth
+        customer_id = None
+        with db.engine.connect() as conn:
+            row = conn.execute(
+                text("SELECT google_ads_customer_id FROM accounts WHERE id = :aid"),
+                {"aid": account}
+            ).first()
+            if row and row[0]:
+                customer_id = row[0]
+
+        if not customer_id:
+            ads_auth = GoogleAdsAuth.query.filter_by(account_id=account).first()
+            customer_id = ads_auth.customer_id if ads_auth else None
 
         click.echo(f"✓ Account: {acct.name or acct.id}")
-        click.echo(f"✓ Google Ads Customer ID: {customer_id}")
+        click.echo(f"✓ Google Ads Customer ID: {customer_id or 'Not set'}")
         click.echo("")
 
         # Run the auto-executor
@@ -783,12 +795,25 @@ def run_all_ai_command(account):
             click.echo(f"❌ Account {account} has no Google Ads connected", err=True)
             return 1
 
-        # Get customer_id from GoogleAdsAuth
-        ads_auth = GoogleAdsAuth.query.filter_by(account_id=account).first()
-        customer_id = ads_auth.customer_id if ads_auth else None
+        # Get customer_id - try accounts table first, then GoogleAdsAuth
+        customer_id = None
+
+        # First try accounts table (primary source)
+        with db.engine.connect() as conn:
+            row = conn.execute(
+                text("SELECT google_ads_customer_id FROM accounts WHERE id = :aid"),
+                {"aid": account}
+            ).first()
+            if row and row[0]:
+                customer_id = row[0]
+
+        # Fallback to GoogleAdsAuth table
+        if not customer_id:
+            ads_auth = GoogleAdsAuth.query.filter_by(account_id=account).first()
+            customer_id = ads_auth.customer_id if ads_auth else None
 
         click.echo(f"✓ Account: {acct.name or acct.id}")
-        click.echo(f"✓ Google Ads: {customer_id or 'Not set'}\n")
+        click.echo(f"✓ Google Ads Customer ID: {customer_id or 'Not set'}\n")
 
         # Get credentials from token
         if not token.credentials_json:

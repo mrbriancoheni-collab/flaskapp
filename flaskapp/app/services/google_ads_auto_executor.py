@@ -90,22 +90,51 @@ class GoogleAdsAutoExecutor:
     def _get_google_ads_client(self):
         """Get Google Ads API client."""
         if not self.google_ads_client:
-            # Get Google Ads credentials from GoogleAdsAuth table
-            ads_auth = GoogleAdsAuth.query.filter_by(account_id=self.account_id).first()
+            customer_id = None
+            manager_id = None
+            refresh_token = None
 
-            if not ads_auth:
-                raise ValueError(f"Account {self.account_id} has no Google Ads connection")
+            # 1. Get customer_id from accounts table (primary source)
+            with db.engine.connect() as conn:
+                row = conn.execute(
+                    text("SELECT google_ads_customer_id, google_ads_manager_id FROM accounts WHERE id = :aid"),
+                    {"aid": self.account_id}
+                ).first()
+                if row:
+                    customer_id = row[0]
+                    manager_id = row[1]
 
-            refresh_token = ads_auth.refresh_token
-            if not refresh_token:
-                raise ValueError(f"Account {self.account_id} has no refresh token")
+            # 2. Get refresh_token from google_oauth_tokens (where Flask stores OAuth)
+            with db.engine.connect() as conn:
+                row = conn.execute(
+                    text("SELECT credentials_json FROM google_oauth_tokens WHERE account_id = :aid AND product = 'ads' LIMIT 1"),
+                    {"aid": self.account_id}
+                ).first()
+                if row and row[0]:
+                    creds = row[0]
+                    if isinstance(creds, str):
+                        creds = json.loads(creds)
+                    refresh_token = creds.get('refresh_token') if isinstance(creds, dict) else None
 
-            customer_id = ads_auth.customer_id
+            # 3. Fallback to GoogleAdsAuth table if needed
+            if not customer_id or not refresh_token:
+                ads_auth = GoogleAdsAuth.query.filter_by(account_id=self.account_id).first()
+                if ads_auth:
+                    if not customer_id:
+                        customer_id = ads_auth.customer_id
+                    if not manager_id:
+                        manager_id = ads_auth.manager_customer_id
+                    if not refresh_token:
+                        refresh_token = ads_auth.refresh_token
+
             if not customer_id:
                 raise ValueError(f"Account {self.account_id} has no Google Ads customer ID")
 
+            if not refresh_token:
+                raise ValueError(f"Account {self.account_id} has no refresh token")
+
             # Get manager ID if available
-            login_customer_id = ads_auth.manager_customer_id or customer_id
+            login_customer_id = manager_id or customer_id
 
             # Store for later use
             self._refresh_token = refresh_token

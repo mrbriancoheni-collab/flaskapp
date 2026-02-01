@@ -203,8 +203,7 @@ class GoogleAdsAutoExecutor:
                     metrics.clicks,
                     metrics.conversions,
                     metrics.cost_micros,
-                    metrics.ctr,
-                    metrics.conversion_rate
+                    metrics.ctr
                 FROM search_term_view
                 WHERE segments.date DURING LAST_{lookback_days}_DAYS
                     AND metrics.impressions > 10
@@ -275,7 +274,7 @@ class GoogleAdsAutoExecutor:
                             'conversions': conversions,
                             'cost': cost,
                             'ctr': row.metrics.ctr,
-                            'conversion_rate': row.metrics.conversion_rate,
+                            'conversion_rate': conversions / row.metrics.clicks if row.metrics.clicks > 0 else 0,
                             'lookback_days': lookback_days
                         },
                         status='pending'
@@ -347,7 +346,11 @@ class GoogleAdsAutoExecutor:
         confidence += pattern_score
 
         # Conversion performance (0.0 to 0.3 points)
-        conversion_rate = metrics.conversion_rate
+        # Calculate conversion rate manually (conversions / clicks)
+        clicks = metrics.clicks
+        conversions = metrics.conversions
+        conversion_rate = conversions / clicks if clicks > 0 else 0
+
         if conversion_rate == 0:
             confidence += 0.3  # High confidence if zero conversions
         elif conversion_rate < 0.01:

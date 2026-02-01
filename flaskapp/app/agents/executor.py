@@ -169,18 +169,42 @@ class GoogleAdsAgentExecutor:
         client = self.get_client()
 
         try:
-            campaign_service = client.get_service("CampaignService")
+            ga_service = client.get_service("GoogleAdsService")
             campaign_budget_service = client.get_service("CampaignBudgetService")
 
-            # Get current campaign to find its budget
-            campaign_resource_name = campaign_service.campaign_path(
-                self.client_customer_id, campaign_id
+            # First, query to get the campaign's budget resource name
+            query = f"""
+                SELECT campaign.campaign_budget
+                FROM campaign
+                WHERE campaign.id = {campaign_id}
+            """
+            response = ga_service.search(
+                customer_id=self.client_customer_id,
+                query=query
             )
 
-            # Create new budget or update existing
+            budget_resource_name = None
+            for row in response:
+                budget_resource_name = row.campaign.campaign_budget
+                break
+
+            if not budget_resource_name:
+                return {
+                    'success': False,
+                    'error': f'No budget found for campaign {campaign_id}'
+                }
+
+            # Create update operation with resource name and field mask
             operation = client.get_type("CampaignBudgetOperation")
             budget = operation.update
+            budget.resource_name = budget_resource_name
             budget.amount_micros = int(new_budget * 1_000_000)  # Convert to micros
+
+            # Set field mask to specify which fields we're updating
+            client.copy_from(
+                operation.update_mask,
+                client.get_type("FieldMask")(paths=["amount_micros"])
+            )
 
             response = campaign_budget_service.mutate_campaign_budgets(
                 customer_id=self.client_customer_id,

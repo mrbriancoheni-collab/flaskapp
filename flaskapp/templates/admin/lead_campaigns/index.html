@@ -10,6 +10,10 @@
             <p class="text-gray-600 mt-2">Scrape Google SERPs and send cold outreach emails</p>
         </div>
         <div class="flex gap-3">
+            <button onclick="activateAllCampaigns()" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold">
+                <i class="fa-solid fa-play mr-2"></i>
+                Activate All
+            </button>
             <button onclick="cleanupOldCampaigns()" class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 font-semibold">
                 <i class="fa-solid fa-trash mr-2"></i>
                 Delete Old Campaigns
@@ -243,6 +247,41 @@
 </div>
 
 <script>
+async function activateAllCampaigns() {
+    if (!confirm('Activate all draft campaigns? This will set their status to "ready" so they can be processed.')) return;
+
+    const btn = event.target.closest('button');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Activating...';
+
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        const response = await fetch('/admin/lead-campaigns/activate-all', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(csrfToken && { 'X-CSRFToken': csrfToken.content })
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(`Success! Activated ${data.activated_count} campaigns.`);
+            location.reload();
+        } else {
+            alert(`Error: ${data.error}`);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    } catch (error) {
+        alert(`Error: ${error.message}`);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
 async function startScraping(campaignId) {
     if (!confirm('Start scraping leads for this campaign?')) return;
 

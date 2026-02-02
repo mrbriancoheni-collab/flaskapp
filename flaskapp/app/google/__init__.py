@@ -2812,6 +2812,7 @@ def _calculate_historical_improvement(account_id, connected):
         # Calculate current month metrics
         current_month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
+        # Query ai_actions table
         current_month_savings = db.session.query(
             func.sum(AIAction.estimated_monthly_savings)
         ).filter(
@@ -2825,6 +2826,32 @@ def _calculate_historical_improvement(account_id, connected):
             AIAction.status == 'executed',
             AIAction.executed_at >= current_month_start
         ).count()
+
+        # Also query agent_decisions table
+        try:
+            agent_current_savings = db.session.execute(
+                text("""
+                    SELECT COALESCE(SUM(expected_monthly_savings), 0)
+                    FROM agent_decisions
+                    WHERE account_id = :aid AND status = 'executed'
+                    AND (executed_at >= :start OR created_at >= :start)
+                """),
+                {"aid": account_id, "start": current_month_start}
+            ).scalar() or 0
+            current_month_savings += float(agent_current_savings)
+
+            agent_current_actions = db.session.execute(
+                text("""
+                    SELECT COUNT(*)
+                    FROM agent_decisions
+                    WHERE account_id = :aid AND status = 'executed'
+                    AND (executed_at >= :start OR created_at >= :start)
+                """),
+                {"aid": account_id, "start": current_month_start}
+            ).scalar() or 0
+            current_month_actions += agent_current_actions
+        except Exception as e:
+            current_app.logger.warning(f"Could not query agent_decisions for current month: {e}")
 
         # Calculate previous month metrics (MoM comparison)
         prev_month_start = (current_month_start - timedelta(days=1)).replace(day=1)
@@ -2845,6 +2872,34 @@ def _calculate_historical_improvement(account_id, connected):
             AIAction.executed_at < current_month_start
         ).count()
 
+        # Also query agent_decisions for previous month
+        try:
+            agent_prev_savings = db.session.execute(
+                text("""
+                    SELECT COALESCE(SUM(expected_monthly_savings), 0)
+                    FROM agent_decisions
+                    WHERE account_id = :aid AND status = 'executed'
+                    AND (executed_at >= :start OR created_at >= :start)
+                    AND (executed_at < :end OR created_at < :end)
+                """),
+                {"aid": account_id, "start": prev_month_start, "end": current_month_start}
+            ).scalar() or 0
+            prev_month_savings += float(agent_prev_savings)
+
+            agent_prev_actions = db.session.execute(
+                text("""
+                    SELECT COUNT(*)
+                    FROM agent_decisions
+                    WHERE account_id = :aid AND status = 'executed'
+                    AND (executed_at >= :start OR created_at >= :start)
+                    AND (executed_at < :end OR created_at < :end)
+                """),
+                {"aid": account_id, "start": prev_month_start, "end": current_month_start}
+            ).scalar() or 0
+            prev_month_actions += agent_prev_actions
+        except Exception as e:
+            current_app.logger.warning(f"Could not query agent_decisions for prev month: {e}")
+
         # Calculate improvement percentages
         savings_improvement = 0
         if prev_month_savings > 0:
@@ -2854,13 +2909,22 @@ def _calculate_historical_improvement(account_id, connected):
         if prev_month_actions > 0:
             actions_improvement = ((current_month_actions - prev_month_actions) / prev_month_actions) * 100
 
-        # Estimate total cumulative savings
+        # Estimate total cumulative savings (from both tables)
         total_savings = db.session.query(
             func.sum(AIAction.estimated_monthly_savings)
         ).filter(
             AIAction.account_id == account_id,
             AIAction.status == 'executed'
         ).scalar() or 0
+
+        try:
+            agent_total_savings = db.session.execute(
+                text("SELECT COALESCE(SUM(expected_monthly_savings), 0) FROM agent_decisions WHERE account_id = :aid AND status = 'executed'"),
+                {"aid": account_id}
+            ).scalar() or 0
+            total_savings += float(agent_total_savings)
+        except Exception as e:
+            current_app.logger.warning(f"Could not query agent_decisions for total savings: {e}")
 
         # Determine comparison period label
         if days_active >= 365:

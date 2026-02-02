@@ -246,7 +246,7 @@
     {% endif %}
 </div>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
 async function activateAllCampaigns() {
     if (!confirm('Activate all draft campaigns? This will set their status to "ready" so they can be processed.')) return;
 

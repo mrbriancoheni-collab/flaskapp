@@ -2084,3 +2084,58 @@ def calculate_next_run_time(config):
         attempts += 1
 
     return None  # No valid run time found
+
+
+# ==================== Bulk Status Updates ====================
+
+@lead_campaigns_bp.route('/activate-all', methods=['POST'])
+@require_admin
+def activate_all_campaigns():
+    """Activate all draft campaigns (set status to 'ready')"""
+    try:
+        # Update all draft campaigns to ready
+        updated = LeadCampaign.query.filter_by(status='draft').update({'status': 'ready'})
+        db.session.commit()
+
+        logger.info(f"Activated {updated} campaigns (draft -> ready)")
+        flash(f'Activated {updated} campaigns!', 'success')
+
+        return jsonify({
+            'success': True,
+            'activated_count': updated,
+            'message': f'Activated {updated} campaigns'
+        })
+
+    except Exception as e:
+        logger.error(f"Error activating campaigns: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@lead_campaigns_bp.route('/<int:campaign_id>/set-status', methods=['POST'])
+@require_admin
+def set_campaign_status(campaign_id):
+    """Set a campaign's status"""
+    campaign = LeadCampaign.query.get_or_404(campaign_id)
+
+    new_status = request.form.get('status') or request.json.get('status')
+    valid_statuses = ['draft', 'scraping', 'ready', 'sending', 'paused', 'completed']
+
+    if new_status not in valid_statuses:
+        return jsonify({
+            'success': False,
+            'error': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'
+        }), 400
+
+    old_status = campaign.status
+    campaign.status = new_status
+    db.session.commit()
+
+    logger.info(f"Campaign {campaign_id} status changed: {old_status} -> {new_status}")
+
+    return jsonify({
+        'success': True,
+        'campaign_id': campaign_id,
+        'old_status': old_status,
+        'new_status': new_status
+    })

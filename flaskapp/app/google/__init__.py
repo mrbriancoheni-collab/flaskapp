@@ -2849,22 +2849,42 @@ def ads_performance():
     except Exception as e:
         current_app.logger.warning(f"Could not load LSA missed calls: {e}")
 
-    # Get real AI action data
+    # Get real AI action data from BOTH ai_actions and agent_decisions tables
     status = 'green'  # green, yellow, red
 
-    # Get total executed actions
+    # Get total executed actions from ai_actions table
     ai_actions_taken = AIAction.query.filter_by(
         account_id=aid,
         status='executed'
     ).count()
 
-    # Get total estimated savings
+    # Also count executed decisions from agent_decisions table
+    try:
+        agent_decisions_count = db.session.execute(
+            text("SELECT COUNT(*) FROM agent_decisions WHERE account_id = :aid AND status = 'executed'"),
+            {"aid": aid}
+        ).scalar() or 0
+        ai_actions_taken += agent_decisions_count
+    except Exception as e:
+        current_app.logger.warning(f"Could not query agent_decisions: {e}")
+
+    # Get total estimated savings from ai_actions
     wasted_spend_prevented = db.session.query(
         func.sum(AIAction.estimated_monthly_savings)
     ).filter_by(
         account_id=aid,
         status='executed'
     ).scalar() or 0
+
+    # Also add savings from agent_decisions table
+    try:
+        agent_savings = db.session.execute(
+            text("SELECT COALESCE(SUM(expected_monthly_savings), 0) FROM agent_decisions WHERE account_id = :aid AND status = 'executed'"),
+            {"aid": aid}
+        ).scalar() or 0
+        wasted_spend_prevented += float(agent_savings)
+    except Exception as e:
+        current_app.logger.warning(f"Could not query agent_decisions savings: {e}")
 
     # Count blocked searches (negative keywords added)
     blocked_searches_count = AIAction.query.filter_by(
@@ -2882,11 +2902,46 @@ def ads_performance():
     if lsa_missed_calls and lsa_missed_calls.get('high_priority', 0) > 0:
         status = 'red'
 
-    # Get recent AI actions for timeline (last 10)
+    # Get recent AI actions for timeline (last 10) from BOTH tables
     recent_actions = AIAction.query.filter_by(
         account_id=aid,
         status='executed'
     ).order_by(desc(AIAction.executed_at)).limit(10).all()
+
+    # Also get recent agent_decisions and convert to compatible format
+    try:
+        agent_decision_rows = db.session.execute(
+            text("""
+                SELECT id, decision_type as action_type, title, description,
+                       expected_monthly_savings as estimated_monthly_savings,
+                       campaign_id, executed_at, created_at
+                FROM agent_decisions
+                WHERE account_id = :aid AND status = 'executed'
+                ORDER BY COALESCE(executed_at, created_at) DESC
+                LIMIT 10
+            """),
+            {"aid": aid}
+        ).mappings().all()
+
+        # Convert to objects with matching attributes
+        class DecisionProxy:
+            def __init__(self, row):
+                self.id = row['id']
+                self.action_type = row['action_type']
+                self.title = row['title']
+                self.description = row['description']
+                self.estimated_monthly_savings = row['estimated_monthly_savings']
+                self.campaign_id = row['campaign_id']
+                self.executed_at = row['executed_at'] or row['created_at']
+
+        agent_decisions_list = [DecisionProxy(row) for row in agent_decision_rows]
+
+        # Combine and sort by executed_at
+        all_actions = list(recent_actions) + agent_decisions_list
+        all_actions.sort(key=lambda x: x.executed_at or datetime.min, reverse=True)
+        recent_actions = all_actions[:10]
+    except Exception as e:
+        current_app.logger.warning(f"Could not query agent_decisions for timeline: {e}")
 
     # Calculate historical improvement metrics
     historical_improvement = _calculate_historical_improvement(aid, connected)

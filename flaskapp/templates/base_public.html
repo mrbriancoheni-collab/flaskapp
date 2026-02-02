@@ -322,6 +322,29 @@
     }
 
     .marquee:hover { animation-play-state: paused; }
+
+    /* AI Agent workflow animations */
+    @keyframes bounce-x {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(6px); }
+    }
+
+    @keyframes bounce-y {
+      0%, 100% { transform: translateY(0) rotate(90deg); }
+      50% { transform: translateY(6px) rotate(90deg); }
+    }
+
+    .animate-bounce-x {
+      animation: bounce-x 1.5s ease-in-out infinite;
+    }
+
+    .animate-bounce-y {
+      animation: bounce-y 1.5s ease-in-out infinite;
+    }
+
+    .animation-delay-200 { animation-delay: 0.2s; }
+    .animation-delay-400 { animation-delay: 0.4s; }
+    .animation-delay-600 { animation-delay: 0.6s; }
   </style>
 
   <!-- Organization Schema for AI Search & Entity Recognition -->

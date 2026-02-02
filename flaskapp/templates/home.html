@@ -1059,6 +1059,133 @@
       </div>
     </div>
 
+    <!-- AI Agent Workflow Visualization -->
+    <div class="bg-white rounded-2xl shadow-xl p-8 max-w-5xl mx-auto mb-12">
+      <h3 class="text-2xl font-bold text-center mb-8">How Our AI Agents Work Together</h3>
+
+      <!-- Animated Workflow Diagram -->
+      <div class="relative">
+        <!-- Central Flow -->
+        <div class="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-4">
+
+          <!-- Step 1: Data Input -->
+          <div class="flex flex-col items-center text-center w-full lg:w-1/5">
+            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-gray-600 to-gray-800 flex items-center justify-center text-white mb-3 shadow-lg animate-pulse">
+              <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7c-2 0-3 1-3 3zm5-4v4m6-4v4"/>
+              </svg>
+            </div>
+            <div class="font-bold text-sm">Google Ads Data</div>
+            <div class="text-xs text-gray-500 mt-1">Campaigns, keywords,<br/>search terms, bids</div>
+          </div>
+
+          <!-- Arrow 1 -->
+          <div class="hidden lg:flex items-center text-indigo-400">
+            <svg class="w-8 h-8 animate-bounce-x" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M13.025 1l-2.847 2.828 6.176 6.176h-16.354v3.992h16.354l-6.176 6.176 2.847 2.828 10.975-11z"/>
+            </svg>
+          </div>
+          <div class="lg:hidden text-indigo-400">
+            <svg class="w-8 h-8 animate-bounce-y rotate-90" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M13.025 1l-2.847 2.828 6.176 6.176h-16.354v3.992h16.354l-6.176 6.176 2.847 2.828 10.975-11z"/>
+            </svg>
+          </div>
+
+          <!-- Step 2: Strategic Analysis -->
+          <div class="flex flex-col items-center text-center w-full lg:w-1/5">
+            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center text-white mb-3 shadow-lg relative">
+              <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+              </svg>
+              <span class="absolute -top-1 -right-1 bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-full">Daily</span>
+            </div>
+            <div class="font-bold text-sm text-indigo-700">Strategic Layer</div>
+            <div class="text-xs text-gray-500 mt-1">Budget allocation,<br/>scaling decisions</div>
+          </div>
+
+          <!-- Arrow 2 -->
+          <div class="hidden lg:flex items-center text-blue-400">
+            <svg class="w-8 h-8 animate-bounce-x animation-delay-200" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M13.025 1l-2.847 2.828 6.176 6.176h-16.354v3.992h16.354l-6.176 6.176 2.847 2.828 10.975-11z"/>
+            </svg>
+          </div>
+          <div class="lg:hidden text-blue-400">
+            <svg class="w-8 h-8 animate-bounce-y animation-delay-200 rotate-90" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M13.025 1l-2.847 2.828 6.176 6.176h-16.354v3.992h16.354l-6.176 6.176 2.847 2.828 10.975-11z"/>
+            </svg>
+          </div>
+
+          <!-- Step 3: Operational Monitoring -->
+          <div class="flex flex-col items-center text-center w-full lg:w-1/5">
+            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white mb-3 shadow-lg relative">
+              <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+              </svg>
+              <span class="absolute -top-1 -right-1 bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">6hr</span>
+            </div>
+            <div class="font-bold text-sm text-blue-700">Operational Layer</div>
+            <div class="text-xs text-gray-500 mt-1">Performance monitoring,<br/>anomaly detection</div>
+          </div>
+
+          <!-- Arrow 3 -->
+          <div class="hidden lg:flex items-center text-green-400">
+            <svg class="w-8 h-8 animate-bounce-x animation-delay-400" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M13.025 1l-2.847 2.828 6.176 6.176h-16.354v3.992h16.354l-6.176 6.176 2.847 2.828 10.975-11z"/>
+            </svg>
+          </div>
+          <div class="lg:hidden text-green-400">
+            <svg class="w-8 h-8 animate-bounce-y animation-delay-400 rotate-90" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M13.025 1l-2.847 2.828 6.176 6.176h-16.354v3.992h16.354l-6.176 6.176 2.847 2.828 10.975-11z"/>
+            </svg>
+          </div>
+
+          <!-- Step 4: Tactical Execution -->
+          <div class="flex flex-col items-center text-center w-full lg:w-1/5">
+            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center text-white mb-3 shadow-lg relative">
+              <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+              <span class="absolute -top-1 -right-1 bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">2hr</span>
+            </div>
+            <div class="font-bold text-sm text-green-700">Tactical Layer</div>
+            <div class="text-xs text-gray-500 mt-1">Keyword bids,<br/>negative keywords</div>
+          </div>
+
+          <!-- Arrow 4 -->
+          <div class="hidden lg:flex items-center text-emerald-400">
+            <svg class="w-8 h-8 animate-bounce-x animation-delay-600" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M13.025 1l-2.847 2.828 6.176 6.176h-16.354v3.992h16.354l-6.176 6.176 2.847 2.828 10.975-11z"/>
+            </svg>
+          </div>
+          <div class="lg:hidden text-emerald-400">
+            <svg class="w-8 h-8 animate-bounce-y animation-delay-600 rotate-90" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M13.025 1l-2.847 2.828 6.176 6.176h-16.354v3.992h16.354l-6.176 6.176 2.847 2.828 10.975-11z"/>
+            </svg>
+          </div>
+
+          <!-- Step 5: Results -->
+          <div class="flex flex-col items-center text-center w-full lg:w-1/5">
+            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white mb-3 shadow-lg">
+              <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <div class="font-bold text-sm text-emerald-700">Results</div>
+            <div class="text-xs text-gray-500 mt-1">Lower CPL,<br/>more leads</div>
+          </div>
+        </div>
+
+        <!-- Live Activity Indicator -->
+        <div class="mt-8 flex items-center justify-center gap-2 text-sm">
+          <span class="relative flex h-3 w-3">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+          </span>
+          <span class="text-gray-600">Agents are actively optimizing <strong>847</strong> campaigns right now</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Agent Stats -->
     <div class="bg-white rounded-2xl shadow-xl p-8 max-w-4xl mx-auto">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">

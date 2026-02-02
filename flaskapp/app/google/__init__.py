@@ -2218,6 +2218,118 @@ def ads_debug_config():
         "env":    {"has_dev": bool(dev_env), "dev_len": len(dev_env or ""), "login_cid": (mgr_env or None)}
     })
 
+
+@google_bp.get("/ads/debug/ai-savings")
+@login_required
+def ads_debug_ai_savings():
+    """Debug endpoint to check AI actions and agent decisions data."""
+    from app.models_ai_actions import AIAction
+    from sqlalchemy import func, text
+
+    aid = current_account_id()
+
+    # Query ai_actions table
+    ai_actions_stats = {}
+    try:
+        ai_actions_count = db.session.query(
+            AIAction.status,
+            func.count(AIAction.id),
+            func.sum(AIAction.estimated_monthly_savings)
+        ).filter_by(account_id=aid).group_by(AIAction.status).all()
+
+        for status, count, savings in ai_actions_count:
+            ai_actions_stats[status] = {
+                'count': count,
+                'savings': float(savings) if savings else 0
+            }
+    except Exception as e:
+        ai_actions_stats['error'] = str(e)
+
+    # Query agent_decisions table
+    agent_decisions_stats = {}
+    try:
+        result = db.session.execute(
+            text("""
+                SELECT status, COUNT(*) as cnt, COALESCE(SUM(expected_monthly_savings), 0) as savings
+                FROM agent_decisions
+                WHERE account_id = :aid
+                GROUP BY status
+            """),
+            {"aid": aid}
+        ).fetchall()
+
+        for row in result:
+            agent_decisions_stats[row[0]] = {
+                'count': row[1],
+                'savings': float(row[2]) if row[2] else 0
+            }
+    except Exception as e:
+        agent_decisions_stats['error'] = str(e)
+
+    # Get recent actions sample
+    recent_ai_actions = []
+    try:
+        actions = AIAction.query.filter_by(account_id=aid).order_by(AIAction.created_at.desc()).limit(5).all()
+        for a in actions:
+            recent_ai_actions.append({
+                'id': a.id,
+                'type': a.action_type,
+                'status': a.status,
+                'savings': a.estimated_monthly_savings,
+                'created': str(a.created_at)
+            })
+    except Exception as e:
+        recent_ai_actions = [{'error': str(e)}]
+
+    recent_agent_decisions = []
+    try:
+        result = db.session.execute(
+            text("""
+                SELECT id, decision_type, status, expected_monthly_savings, created_at
+                FROM agent_decisions
+                WHERE account_id = :aid
+                ORDER BY created_at DESC
+                LIMIT 5
+            """),
+            {"aid": aid}
+        ).fetchall()
+        for row in result:
+            recent_agent_decisions.append({
+                'id': row[0],
+                'type': row[1],
+                'status': row[2],
+                'savings': float(row[3]) if row[3] else 0,
+                'created': str(row[4])
+            })
+    except Exception as e:
+        recent_agent_decisions = [{'error': str(e)}]
+
+    # Calculate totals like performance page does
+    executed_savings = 0
+    executed_count = 0
+
+    if 'executed' in ai_actions_stats:
+        executed_savings += ai_actions_stats['executed']['savings']
+        executed_count += ai_actions_stats['executed']['count']
+
+    if 'executed' in agent_decisions_stats:
+        executed_savings += agent_decisions_stats['executed']['savings']
+        executed_count += agent_decisions_stats['executed']['count']
+
+    return jsonify({
+        "ok": True,
+        "account_id": aid,
+        "ai_actions": ai_actions_stats,
+        "agent_decisions": agent_decisions_stats,
+        "recent_ai_actions": recent_ai_actions,
+        "recent_agent_decisions": recent_agent_decisions,
+        "totals": {
+            "executed_count": executed_count,
+            "executed_savings": executed_savings
+        }
+    })
+
+
 # ------------------------- Google Ads UI -------------------------
 
 @google_bp.route("/ads", methods=["GET"], endpoint="ads_ui")

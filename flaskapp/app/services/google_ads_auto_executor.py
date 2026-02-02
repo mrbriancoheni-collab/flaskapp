@@ -5,7 +5,7 @@ Google Ads Auto-Execution Service
 Automatically applies safe optimizations to Google Ads campaigns with full logging and undo capability.
 
 Features:
-- Auto-adds negative keywords for non-purchase intent searches
+- Auto-adds negative keywords using LLM-based business relevance analysis
 - Auto-pauses low-performing keywords
 - Auto-adjusts bids based on performance
 - Full audit trail via AIAction model
@@ -13,8 +13,9 @@ Features:
 - Safety limits and confidence thresholds
 """
 
-import logging
 import json
+import logging
+import os
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional, Tuple
 from sqlalchemy import func, and_, text
@@ -86,6 +87,10 @@ class GoogleAdsAutoExecutor:
 
         self.google_ads_client = None
         self.google_auth = None
+
+        # Load business context for LLM-based relevance checks
+        self.business_description = self.account.get_business_description() or ''
+        self.business_services = self.account.get_business_services() or ''
 
     def _get_google_ads_client(self):
         """Get Google Ads API client."""
@@ -170,7 +175,9 @@ class GoogleAdsAutoExecutor:
 
     def auto_add_negative_keywords(self, lookback_days: int = 30, dry_run: bool = False) -> List[AIAction]:
         """
-        Automatically add negative keywords for non-purchase intent search terms.
+        Automatically add negative keywords using two-pass analysis:
+        1. Pattern matching for obvious non-purchase-intent terms
+        2. LLM-based business relevance check for all remaining terms
 
         Args:
             lookback_days: How many days back to analyze search terms
@@ -215,93 +222,169 @@ class GoogleAdsAutoExecutor:
             ga_service = client.get_service("GoogleAdsService")
             stream = ga_service.search_stream(customer_id=customer_id, query=query)
 
-            actions_created = []
-            processed_terms = set()  # Avoid duplicates
+            # Collect all search terms first
+            all_rows = []
+            processed_terms = set()
 
             for batch in stream:
                 for row in batch.results:
                     search_term = row.search_term_view.search_term.lower().strip()
+                    if search_term not in processed_terms:
+                        all_rows.append(row)
+                        processed_terms.add(search_term)
 
-                    # Skip if already processed
-                    if search_term in processed_terms:
-                        continue
+            if not all_rows:
+                logger.info(f"Account {self.account_id}: No search terms found in last {lookback_days} days")
+                return []
 
-                    # Check if this search term has non-purchase intent
-                    has_non_purchase_intent, patterns_matched = self._check_non_purchase_intent(search_term)
+            # PASS 1: Pattern matching for obvious non-purchase-intent
+            pattern_flagged = {}   # term -> (row, patterns_matched)
+            remaining_rows = []    # terms not caught by patterns
 
-                    if not has_non_purchase_intent:
-                        continue
+            for row in all_rows:
+                search_term = row.search_term_view.search_term.lower().strip()
+                has_non_purchase_intent, patterns_matched = self._check_non_purchase_intent(search_term)
+                if has_non_purchase_intent:
+                    pattern_flagged[search_term] = (row, patterns_matched)
+                else:
+                    remaining_rows.append(row)
 
-                    # Calculate confidence based on performance and pattern matching
-                    confidence = self._calculate_confidence(
-                        row.metrics,
-                        patterns_matched,
-                        search_term
-                    )
+            # PASS 2: LLM-based business relevance for remaining terms
+            llm_flagged = {}  # term -> (row, reason)
+            if remaining_rows and self.business_description:
+                terms_for_llm = [
+                    row.search_term_view.search_term.lower().strip()
+                    for row in remaining_rows
+                ]
+                llm_results = self._evaluate_terms_with_llm(terms_for_llm)
 
-                    # Only proceed if confidence is above threshold
-                    if confidence < self.CONFIDENCE_THRESHOLDS['negative_keyword_added']:
-                        logger.debug(f"Skipping '{search_term}' - confidence {confidence:.2f} too low")
-                        continue
+                for row in remaining_rows:
+                    search_term = row.search_term_view.search_term.lower().strip()
+                    result = llm_results.get(search_term, {})
+                    if result.get('irrelevant', False):
+                        llm_flagged[search_term] = (row, result.get('reason', 'Irrelevant to business'))
+            elif remaining_rows and not self.business_description:
+                logger.warning(
+                    f"Account {self.account_id}: No business_description set. "
+                    f"Skipping LLM relevance check for {len(remaining_rows)} search terms. "
+                    f"Set account.business_description to enable intelligent negative keyword detection."
+                )
 
-                    # Calculate estimated savings (money being wasted on this term)
-                    cost = row.metrics.cost_micros / 1_000_000
-                    conversions = row.metrics.conversions
-                    estimated_savings = cost if conversions == 0 else cost * 0.8  # If has some conversions, partial savings
+            # Create actions for all flagged terms
+            actions_created = []
 
-                    # Create AIAction
-                    action = AIAction(
-                        account_id=self.account_id,
-                        action_type='negative_keyword_added',
-                        title=f"Block Non-Purchase Intent: '{search_term}'",
-                        description=f"Detected non-purchase intent search term based on patterns: {', '.join(patterns_matched[:3])}. This term has spent ${cost:.2f} with {conversions} conversions.",
-                        campaign_id=str(row.campaign.id),
-                        campaign_name=row.campaign.name,
-                        ad_group_id=str(row.ad_group.id),
-                        ad_group_name=row.ad_group.name,
-                        before_value={'search_term': search_term, 'status': 'active'},
-                        after_value={'search_term': search_term, 'status': 'excluded'},
-                        estimated_monthly_savings=estimated_savings,
-                        confidence_score=confidence,
-                        reasoning=f"Search term '{search_term}' matches non-purchase intent patterns: {', '.join(patterns_matched)}. " +
-                                 f"Performance: ${cost:.2f} spent, {row.metrics.clicks} clicks, {conversions} conversions ({row.metrics.ctr:.2%} CTR). " +
-                                 f"Adding as negative keyword to prevent wasted spend.",
-                        data_used={
-                            'search_term': search_term,
-                            'patterns_matched': patterns_matched,
-                            'impressions': row.metrics.impressions,
-                            'clicks': row.metrics.clicks,
-                            'conversions': conversions,
-                            'cost': cost,
-                            'ctr': row.metrics.ctr,
-                            'conversion_rate': conversions / row.metrics.clicks if row.metrics.clicks > 0 else 0,
-                            'lookback_days': lookback_days
-                        },
-                        status='pending'
-                    )
+            # Process pattern-matched terms
+            for search_term, (row, patterns_matched) in pattern_flagged.items():
+                confidence = self._calculate_confidence(row.metrics, patterns_matched, search_term)
+                if confidence < self.CONFIDENCE_THRESHOLDS['negative_keyword_added']:
+                    continue
 
-                    db.session.add(action)
-                    actions_created.append(action)
-                    processed_terms.add(search_term)
+                cost = row.metrics.cost_micros / 1_000_000
+                conversions = row.metrics.conversions
+                estimated_savings = cost if conversions == 0 else cost * 0.8
 
-                    # Execute if not dry run
-                    if not dry_run:
-                        try:
-                            self._execute_negative_keyword_add(action, customer_id, search_term, row.campaign.id)
-                            action.mark_executed()
-                            logger.info(f"Added negative keyword: '{search_term}' to campaign {row.campaign.name}")
-                        except Exception as e:
-                            action.mark_failed(str(e))
-                            logger.error(f"Failed to add negative keyword '{search_term}': {e}")
+                action = AIAction(
+                    account_id=self.account_id,
+                    action_type='negative_keyword_added',
+                    title=f"Block Non-Purchase Intent: '{search_term}'",
+                    description=f"Detected non-purchase intent patterns: {', '.join(patterns_matched[:3])}. Spent ${cost:.2f} with {conversions} conversions.",
+                    campaign_id=str(row.campaign.id),
+                    campaign_name=row.campaign.name,
+                    ad_group_id=str(row.ad_group.id),
+                    ad_group_name=row.ad_group.name,
+                    before_value={'search_term': search_term, 'status': 'active'},
+                    after_value={'search_term': search_term, 'status': 'excluded'},
+                    estimated_monthly_savings=estimated_savings,
+                    confidence_score=confidence,
+                    reasoning=f"Search term '{search_term}' matches non-purchase intent patterns: {', '.join(patterns_matched)}. "
+                             f"Performance: ${cost:.2f} spent, {row.metrics.clicks} clicks, {conversions} conversions ({row.metrics.ctr:.2%} CTR).",
+                    data_used={
+                        'search_term': search_term,
+                        'detection_method': 'pattern_match',
+                        'patterns_matched': patterns_matched,
+                        'impressions': row.metrics.impressions,
+                        'clicks': row.metrics.clicks,
+                        'conversions': conversions,
+                        'cost': cost,
+                        'ctr': row.metrics.ctr,
+                        'conversion_rate': row.metrics.conversion_rate,
+                        'lookback_days': lookback_days
+                    },
+                    status='pending'
+                )
+                db.session.add(action)
+                actions_created.append(action)
 
-                    # Check if we've hit the daily limit
-                    if not self._check_daily_limit('negative_keyword_added'):
-                        break
+                if not dry_run:
+                    try:
+                        self._execute_negative_keyword_add(action, customer_id, search_term, row.campaign.id)
+                        action.mark_executed()
+                        logger.info(f"Added negative keyword (pattern): '{search_term}' to campaign {row.campaign.name}")
+                    except Exception as e:
+                        action.mark_failed(str(e))
+                        logger.error(f"Failed to add negative keyword '{search_term}': {e}")
+
+                if not self._check_daily_limit('negative_keyword_added'):
+                    break
+
+            # Process LLM-flagged terms
+            for search_term, (row, reason) in llm_flagged.items():
+                if not self._check_daily_limit('negative_keyword_added'):
+                    break
+
+                cost = row.metrics.cost_micros / 1_000_000
+                conversions = row.metrics.conversions
+                estimated_savings = cost if conversions == 0 else cost * 0.8
+                confidence = 0.90  # High confidence from LLM analysis
+
+                action = AIAction(
+                    account_id=self.account_id,
+                    action_type='negative_keyword_added',
+                    title=f"Block Irrelevant Term: '{search_term}'",
+                    description=f"AI determined this term is irrelevant to business. {reason}. Spent ${cost:.2f} with {conversions} conversions.",
+                    campaign_id=str(row.campaign.id),
+                    campaign_name=row.campaign.name,
+                    ad_group_id=str(row.ad_group.id),
+                    ad_group_name=row.ad_group.name,
+                    before_value={'search_term': search_term, 'status': 'active'},
+                    after_value={'search_term': search_term, 'status': 'excluded'},
+                    estimated_monthly_savings=estimated_savings,
+                    confidence_score=confidence,
+                    reasoning=f"AI analysis: '{search_term}' is irrelevant to business ({self.business_description}). "
+                             f"Reason: {reason}. "
+                             f"Performance: ${cost:.2f} spent, {row.metrics.clicks} clicks, {conversions} conversions ({row.metrics.ctr:.2%} CTR).",
+                    data_used={
+                        'search_term': search_term,
+                        'detection_method': 'llm_business_relevance',
+                        'llm_reason': reason,
+                        'business_description': self.business_description,
+                        'impressions': row.metrics.impressions,
+                        'clicks': row.metrics.clicks,
+                        'conversions': conversions,
+                        'cost': cost,
+                        'ctr': row.metrics.ctr,
+                        'conversion_rate': row.metrics.conversion_rate,
+                        'lookback_days': lookback_days
+                    },
+                    status='pending'
+                )
+                db.session.add(action)
+                actions_created.append(action)
+
+                if not dry_run:
+                    try:
+                        self._execute_negative_keyword_add(action, customer_id, search_term, row.campaign.id)
+                        action.mark_executed()
+                        logger.info(f"Added negative keyword (LLM): '{search_term}' to campaign {row.campaign.name}")
+                    except Exception as e:
+                        action.mark_failed(str(e))
+                        logger.error(f"Failed to add negative keyword '{search_term}': {e}")
 
             db.session.commit()
 
             logger.info(
-                f"Account {self.account_id}: Created {len(actions_created)} negative keyword actions " +
+                f"Account {self.account_id}: Created {len(actions_created)} negative keyword actions "
+                f"(pattern={len(pattern_flagged)}, llm={len(llm_flagged)}) "
                 f"({'DRY RUN' if dry_run else 'EXECUTED'})"
             )
 
@@ -312,9 +395,99 @@ class GoogleAdsAutoExecutor:
             db.session.rollback()
             return []
 
+    def _evaluate_terms_with_llm(self, search_terms: List[str]) -> Dict[str, Dict]:
+        """
+        Use LLM to evaluate whether search terms are relevant to the business.
+
+        Sends a batch of search terms to OpenAI and gets back a relevance verdict
+        for each one. This catches business-specific irrelevant terms that pattern
+        matching alone would miss.
+
+        Args:
+            search_terms: List of search term strings to evaluate
+
+        Returns:
+            Dict mapping search_term -> {'irrelevant': bool, 'reason': str}
+        """
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            logger.warning("No OPENAI_API_KEY set, skipping LLM-based term evaluation")
+            return {}
+
+        if not search_terms:
+            return {}
+
+        # Build the prompt with business context
+        business_context = f"Business: {self.business_description}"
+        if self.business_services:
+            business_context += f"\nServices offered: {self.business_services}"
+
+        terms_list = "\n".join(f"- {term}" for term in search_terms[:50])  # Batch up to 50
+
+        prompt = f"""You are a Google Ads negative keyword analyst. Analyze each search term below and determine whether it is RELEVANT or IRRELEVANT to this business.
+
+{business_context}
+
+A search term is RELEVANT if a person searching it could reasonably become a paying customer for the services listed above. A search term is IRRELEVANT if:
+- It relates to a different industry or service (e.g. "pool construction" for a pool cleaning company)
+- It's seeking information, products, or services the business does NOT offer
+- It's a generic/broad term with no purchase intent for the specific services
+- It's in a foreign language BUT still relates to the business services (mark as RELEVANT)
+
+Search terms to evaluate:
+{terms_list}
+
+Respond ONLY with valid JSON — an array of objects, one per term:
+[{{"term": "the search term", "irrelevant": true/false, "reason": "brief explanation"}}]
+
+Be conservative: when in doubt, mark as RELEVANT (false). Only mark terms IRRELEVANT when you are confident they do not match the business services."""
+
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=api_key)
+
+            resp = client.chat.completions.create(
+                model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=4000,
+            )
+
+            content = (resp.choices[0].message.content or "").strip()
+
+            # Parse JSON response (handle markdown code blocks)
+            if content.startswith("```"):
+                content = content.split("```")[1]
+                if content.startswith("json"):
+                    content = content[4:]
+                content = content.strip()
+
+            results_list = json.loads(content)
+
+            # Convert list to dict keyed by term
+            results = {}
+            for item in results_list:
+                term = item.get('term', '').lower().strip()
+                results[term] = {
+                    'irrelevant': item.get('irrelevant', False),
+                    'reason': item.get('reason', '')
+                }
+
+            logger.info(
+                f"LLM evaluated {len(search_terms)} terms: "
+                f"{sum(1 for v in results.values() if v.get('irrelevant'))} irrelevant, "
+                f"{sum(1 for v in results.values() if not v.get('irrelevant'))} relevant"
+            )
+
+            return results
+
+        except Exception as e:
+            logger.error(f"LLM term evaluation failed: {e}")
+            return {}
+
     def _check_non_purchase_intent(self, search_term: str) -> Tuple[bool, List[str]]:
         """
-        Check if search term indicates non-purchase intent.
+        Check if search term indicates non-purchase intent via pattern matching.
 
         Returns:
             (has_non_purchase_intent, patterns_matched)

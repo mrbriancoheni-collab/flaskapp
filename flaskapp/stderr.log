@@ -1,1 +1,6 @@
 
+
+=== PASSENGER STARTUP 2026-01-28 04:41:59.705950 ===
+APP_ROOT: /home/user/flaskapp/flaskapp
+Python: 3.11.14 (main, Oct 10 2025, 08:54:04) [GCC 13.3.0]
+2026-01-28 04:41:59,706 [INFO] root: Logging initialized to: /home/user/flaskapp/flaskapp/stderr.log

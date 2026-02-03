@@ -43,6 +43,7 @@ class AgentDecision:
     agent_id: str
     agent_type: str
     decision_type: str  # e.g., "add_negative_keyword", "adjust_bid", "pause_campaign"
+    id: Optional[int] = None  # Database ID (set after log_decision)
 
     # Decision details
     title: str

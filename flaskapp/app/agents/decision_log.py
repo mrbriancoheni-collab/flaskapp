@@ -137,6 +137,9 @@ class DecisionLog:
 
             logger.info(f"Logged decision: {decision.decision_type} by {decision.agent_id} (ID: {decision_id})")
 
+            # Store the ID on the decision object for later updates
+            decision.id = decision_id
+
             return decision_id
 
         except Exception as e:
@@ -153,27 +156,48 @@ class DecisionLog:
             result: Execution result
         """
         try:
-            query = text("""
-                UPDATE agent_decisions
-                SET
-                    status = :status,
-                    executed_at = :executed_at,
-                    execution_result = :execution_result
-                WHERE
-                    agent_id = :agent_id
-                    AND decision_type = :decision_type
-                    AND created_at = :created_at
-            """)
+            # Prefer ID-based update if available (more reliable)
+            if hasattr(decision, 'id') and decision.id:
+                query = text("""
+                    UPDATE agent_decisions
+                    SET
+                        status = :status,
+                        executed_at = :executed_at,
+                        execution_result = :execution_result
+                    WHERE id = :id
+                """)
+                params = {
+                    'id': decision.id,
+                    'status': decision.status,
+                    'executed_at': decision.executed_at,
+                    'execution_result': json.dumps(result) if isinstance(result, (dict, list)) else str(result),
+                }
+            else:
+                # Fallback to matching on agent_id + decision_type + account_id
+                query = text("""
+                    UPDATE agent_decisions
+                    SET
+                        status = :status,
+                        executed_at = :executed_at,
+                        execution_result = :execution_result
+                    WHERE
+                        agent_id = :agent_id
+                        AND decision_type = :decision_type
+                        AND account_id = :account_id
+                        AND status IN ('pending', 'approved')
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                """)
+                params = {
+                    'status': decision.status,
+                    'executed_at': decision.executed_at,
+                    'execution_result': json.dumps(result) if isinstance(result, (dict, list)) else str(result),
+                    'agent_id': decision.agent_id,
+                    'decision_type': decision.decision_type,
+                    'account_id': decision.account_id,
+                }
 
-            self.session.execute(query, {
-                'status': decision.status,
-                'executed_at': decision.executed_at,
-                'execution_result': json.dumps(result) if isinstance(result, (dict, list)) else str(result),
-                'agent_id': decision.agent_id,
-                'decision_type': decision.decision_type,
-                'created_at': decision.created_at,
-            })
-
+            self.session.execute(query, params)
             self.session.commit()
 
             logger.info(

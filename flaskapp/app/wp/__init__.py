@@ -484,29 +484,134 @@ def test():
     if not site:
         flash("No WordPress settings found. Please configure first.", "error")
         return see_other("wp_bp.settings")
+
+    results = {"api_index": None, "posts_endpoint": None, "auth": None}
+
     try:
         c = WPClient(site.base_url, site.username, site.app_password)
+
+        # Step 1: Check if REST API is accessible at all
+        try:
+            import requests
+            # Try both endpoints without auth first to see what's blocked
+            for url in [f"{site.base_url}/wp-json/", f"{site.base_url}/index.php?rest_route=/"]:
+                try:
+                    r = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+                    if r.status_code == 200:
+                        results["api_index"] = "ok"
+                        break
+                    elif r.status_code == 403:
+                        results["api_index"] = f"403 blocked at {url}"
+                except Exception:
+                    continue
+        except Exception as e:
+            results["api_index"] = f"error: {e}"
+
+        # Step 2: Check auth with existing method
         res = c.auth_check()
         if res.get("ok"):
-            author = res.get("author")
-            msg = "Connected. Draft post permission endpoint reachable"
-            if author is not None:
-                msg += f" (author #{author})"
-            msg += "."
-            flash(msg, "success")
+            results["auth"] = f"ok (author #{res.get('author', '?')})"
         else:
-            status = res.get("status")
-            body = res.get("body") or ""
-            if status == 403:
-                flash("Host reachable, but users/me is forbidden by edge (e.g., Cloudflare). Publishing via posts API usually still works.", "warning")
-            else:
-                flash(f"Could not verify publishing permissions: {res.get('error') or 'Unknown error'}", "error")
-            if body:
-                current_app.logger.warning("WP test body: %s", body)
+            results["auth"] = res.get("error", "failed")
+
+        # Step 3: Try to actually access posts endpoint (the real test)
+        try:
+            # Just try to list posts - this tests if posts API is accessible
+            test_resp = c._req("GET", "/wp/v2/posts", params={"per_page": 1})
+            results["posts_endpoint"] = "ok"
+        except Exception as post_err:
+            err_str = str(post_err)
+            results["posts_endpoint"] = err_str[:200]
+
+        # Summarize results
+        if results["posts_endpoint"] == "ok":
+            flash(f"Success! WordPress API is working. Auth: {results['auth']}", "success")
+        elif "403" in str(results.get("posts_endpoint", "")):
+            # Posts endpoint blocked - this is the real problem
+            flash(
+                "403 Forbidden on posts API. Your WordPress site is blocking REST API requests. "
+                "Check: 1) Security plugins (Wordfence, Sucuri) - whitelist your server IP, "
+                "2) Cloudflare - create a rule to allow /wp-json/* and index.php?rest_route=*, "
+                "3) .htaccess or server config blocking Authorization header.",
+                "error"
+            )
+        else:
+            flash(f"Connection issue: {results.get('posts_endpoint', 'Unknown error')}", "error")
+
+        current_app.logger.info("WP test results: %s", results)
+
     except Exception as e:
         current_app.logger.exception("WP test failed")
         flash(f"Could not connect: {e}", "error")
+
     return see_other("wp_bp.settings")
+
+
+@wp_bp.route("/diagnose", methods=["GET"], endpoint="diagnose")
+@login_required
+def diagnose():
+    """Detailed diagnostic endpoint returning JSON with all test results."""
+    site = _current_site()
+    if not site:
+        return jsonify({"error": "No WordPress site configured"}), 400
+
+    import requests as req_lib
+    diag = {
+        "site_url": site.base_url,
+        "tests": {}
+    }
+
+    # Test 1: Raw connectivity (no auth)
+    for label, url in [
+        ("wp_json_noauth", f"{site.base_url}/wp-json/"),
+        ("rest_route_noauth", f"{site.base_url}/index.php?rest_route=/"),
+    ]:
+        try:
+            r = req_lib.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+            diag["tests"][label] = {"status": r.status_code, "ok": r.status_code == 200}
+        except Exception as e:
+            diag["tests"][label] = {"error": str(e)}
+
+    # Test 2: With auth
+    try:
+        c = WPClient(site.base_url, site.username, site.app_password)
+
+        # Auth check
+        auth_res = c.auth_check()
+        diag["tests"]["auth_check"] = auth_res
+
+        # Posts list
+        try:
+            c._req("GET", "/wp/v2/posts", params={"per_page": 1})
+            diag["tests"]["posts_list"] = {"ok": True}
+        except Exception as e:
+            diag["tests"]["posts_list"] = {"ok": False, "error": str(e)[:500]}
+
+        # Categories (often less protected)
+        try:
+            c._req("GET", "/wp/v2/categories", params={"per_page": 1})
+            diag["tests"]["categories"] = {"ok": True}
+        except Exception as e:
+            diag["tests"]["categories"] = {"ok": False, "error": str(e)[:200]}
+
+    except Exception as e:
+        diag["tests"]["client_init"] = {"error": str(e)}
+
+    # Recommendation
+    posts_ok = diag["tests"].get("posts_list", {}).get("ok", False)
+    if posts_ok:
+        diag["recommendation"] = "All tests passed. Publishing should work."
+    elif "403" in str(diag["tests"].get("posts_list", {})):
+        diag["recommendation"] = (
+            "Posts API returns 403. This is usually caused by: "
+            "1) Security plugin blocking REST API (check Wordfence/Sucuri settings), "
+            "2) Cloudflare/WAF blocking requests (add firewall rule to allow), "
+            "3) Server stripping Authorization header (check .htaccess)."
+        )
+    else:
+        diag["recommendation"] = "Connection issues detected. Check credentials and site URL."
+
+    return jsonify(diag)
 
 # ---------- content ops ----------
 

@@ -279,6 +279,28 @@
         </form>
       </div>
 
+      <!-- Troubleshooting -->
+      <div class="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl border border-red-100 p-5">
+        <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-triangle-exclamation text-red-500"></i>
+          403 Forbidden Error?
+        </h3>
+        <div class="space-y-3 text-sm text-gray-600">
+          <p>If you're getting 403 errors, your WordPress REST API is being blocked. Check:</p>
+          <ol class="list-decimal ml-4 space-y-2">
+            <li><strong>Security Plugins</strong> - Wordfence, Sucuri, or iThemes may block REST API. Whitelist your server's IP address.</li>
+            <li><strong>Cloudflare/WAF</strong> - Create a firewall rule to allow requests to <code class="bg-white px-1 rounded">/wp-json/*</code></li>
+            <li><strong>.htaccess</strong> - Ensure Authorization header passes through:
+              <code class="block bg-white p-2 rounded mt-1 text-xs">RewriteCond %{HTTP:Authorization} ^(.*)<br>RewriteRule .* - [E=HTTP_AUTHORIZATION:%1]</code>
+            </li>
+          </ol>
+          <a href="{{ url_for('wp_bp.diagnose') }}" target="_blank" class="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 mt-2">
+            <i class="fa-solid fa-stethoscope"></i>
+            Run Full Diagnostics
+          </a>
+        </div>
+      </div>
+
       <!-- Help -->
       <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-5">
         <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -291,8 +313,8 @@
             <p class="text-gray-600">Go to WP Admin → Users → Your Profile → Scroll to "Application Passwords"</p>
           </div>
           <div>
-            <div class="font-medium text-gray-700">Connection Issues?</div>
-            <p class="text-gray-600">Make sure your site allows REST API access and isn't blocked by a security plugin.</p>
+            <div class="font-medium text-gray-700">Application Password Format</div>
+            <p class="text-gray-600">Copy the password exactly as shown (with spaces). Example: <code class="bg-white px-1 rounded">AbCd EfGh IjKl MnOp</code></p>
           </div>
         </div>
       </div>

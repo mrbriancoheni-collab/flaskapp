@@ -1,76 +1,256 @@
 {# templates/wp/new_post.html #}
 {% extends "base_app.html" %}
-{% block title %}Compose New – {{ app_name }}{% endblock %}
+{% block title %}Create Content · {{ app_name }}{% endblock %}
 {% block content %}
-<h1 class="text-2xl font-semibold mb-4">Compose New</h1>
-
-<div class="grid md:grid-cols-2 gap-6">
-  <!-- Manual compose -->
-  <div class="bg-white border rounded p-4">
-    <div class="font-semibold mb-3">Write it yourself</div>
-    <form method="post" action="{{ url_for('wp_bp.compose_submit') }}" class="space-y-3">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="mode" value="manual">
-      <input type="text" name="title" placeholder="Post title" class="w-full border rounded px-3 py-2" required>
-      <textarea name="content" rows="10" class="w-full border rounded px-3 py-2" placeholder="Write your post…"></textarea>
-      <button class="px-4 py-2 rounded text-white bg-[var(--brand)]">Queue Post</button>
-    </form>
+<div class="max-w-5xl mx-auto">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Create Content</h1>
+      <p class="text-gray-500 mt-1">Choose how you want to create your next post</p>
+    </div>
+    <a href="{{ url_for('wp_bp.publisher') }}" class="px-4 py-2 rounded-lg border hover:bg-gray-50 flex items-center gap-2 text-sm">
+      <i class="fa-solid fa-arrow-left"></i>
+      Back to Publisher
+    </a>
   </div>
 
-  <!-- AI compose -->
-  <div class="bg-white border rounded p-4">
-    <div class="font-semibold mb-3">Let AI draft it</div>
-    <form method="post" action="{{ url_for('wp_bp.compose') }}" class="space-y-3">
+  <!-- Mode Toggle -->
+  <div class="bg-white rounded-xl border p-1 inline-flex mb-6">
+    <button type="button" id="aiModeBtn" class="px-4 py-2 rounded-lg text-sm font-medium transition bg-indigo-600 text-white">
+      <i class="fa-solid fa-wand-magic-sparkles mr-2"></i>AI Draft
+    </button>
+    <button type="button" id="manualModeBtn" class="px-4 py-2 rounded-lg text-sm font-medium transition text-gray-600 hover:bg-gray-100">
+      <i class="fa-solid fa-pen-to-square mr-2"></i>Write Manually
+    </button>
+  </div>
+
+  <!-- AI Draft Form -->
+  <div id="aiForm" class="bg-white rounded-xl border shadow-sm">
+    <div class="p-6 border-b">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+        </div>
+        <div>
+          <h2 class="font-semibold text-gray-900">AI-Powered Content</h2>
+          <p class="text-sm text-gray-500">Provide keywords and topics, and AI will draft your content</p>
+        </div>
+      </div>
+    </div>
+
+    <form method="post" action="{{ url_for('wp_bp.compose_submit') }}" class="p-6 space-y-6">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="mode" value="ai">
 
-      <label class="block text-sm font-medium">Primary keyword</label>
-      <input type="text" name="primary_keyword" class="w-full border rounded px-3 py-2" placeholder="e.g., lawn care tips spring">
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Left Column - Core Inputs -->
+        <div class="space-y-5">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Primary Keyword</label>
+            <input type="text" name="primary_keyword"
+                   class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                   placeholder="e.g., lawn care tips spring">
+            <p class="text-xs text-gray-500 mt-1">Main keyword to optimize for SEO</p>
+          </div>
 
-      <label class="block text-sm font-medium">Extra keywords (comma-separated)</label>
-      <input type="text" name="extra_keywords" class="w-full border rounded px-3 py-2" placeholder="mowing schedule, aeration">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Extra Keywords</label>
+            <input type="text" name="extra_keywords"
+                   class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                   placeholder="mowing schedule, aeration, fertilizer">
+            <p class="text-xs text-gray-500 mt-1">Comma-separated additional keywords</p>
+          </div>
 
-      <label class="block text-sm font-medium">Topic</label>
-      <input type="text" name="topic" class="w-full border rounded px-3 py-2" placeholder="e.g., Seasonal lawn care for small yards">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Topic</label>
+            <input type="text" name="topic"
+                   class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                   placeholder="e.g., Seasonal lawn care for small yards">
+          </div>
 
-      <label class="block text-sm font-medium">More topics (comma-separated)</label>
-      <input type="text" name="topics_extra" class="w-full border rounded px-3 py-2" placeholder="fertilizer timing, weed control">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Additional Topics</label>
+            <input type="text" name="topics_extra"
+                   class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                   placeholder="fertilizer timing, weed control">
+            <p class="text-xs text-gray-500 mt-1">Comma-separated</p>
+          </div>
 
-      <label class="block text-sm font-medium">POVs (hold Ctrl/Cmd to multi-select)</label>
-      <select multiple name="pov_ids[]" class="w-full border rounded px-3 py-2 h-28">
-        {% for pov in povs or [] %}
-          <option value="{{ pov.id }}">{{ pov.name }}</option>
-        {% endfor %}
-      </select>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Source URL (Optional)</label>
+            <input type="url" name="source_url"
+                   class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                   placeholder="https://example.com/reference-article">
+            <p class="text-xs text-gray-500 mt-1">AI will analyze and incorporate insights from this page</p>
+          </div>
+        </div>
 
-      <label class="block text-sm font-medium">Tone</label>
-      <select name="tone" class="w-full border rounded px-3 py-2">
-        <option value="">Auto</option>
-        <option>Friendly</option>
-        <option>Professional</option>
-        <option>Playful</option>
-        <option>Technical</option>
-      </select>
+        <!-- Right Column - Options -->
+        <div class="space-y-5">
+          {% if povs %}
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Point of View</label>
+            <select multiple name="pov_ids[]"
+                    class="w-full border border-gray-300 rounded-lg px-4 py-2 h-28 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+              {% for pov in povs %}
+                <option value="{{ pov.id }}">{{ pov.name }}</option>
+              {% endfor %}
+            </select>
+            <p class="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
+          </div>
+          {% endif %}
 
-      <label class="block text-sm font-medium">Approximate word count</label>
-      <input type="number" name="word_count" class="w-full border rounded px-3 py-2" placeholder="800">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Tone</label>
+              <select name="tone" class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="">Auto (Match Brand)</option>
+                <option value="Friendly">Friendly</option>
+                <option value="Professional">Professional</option>
+                <option value="Playful">Playful</option>
+                <option value="Technical">Technical</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Word Count</label>
+              <input type="number" name="word_count"
+                     class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                     placeholder="800" value="800">
+            </div>
+          </div>
 
-      <label class="block text-sm font-medium">Optional source URL (analyze & summarize)</label>
-      <input type="url" name="source_url" class="w-full border rounded px-3 py-2" placeholder="https://example.com/article">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Custom Instructions</label>
+            <textarea name="prompt" rows="3"
+                      class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      placeholder="E.g., include a bulleted checklist and a call to action at the end"></textarea>
+          </div>
 
-      <label class="block text-sm font-medium">Extra instructions for AI</label>
-      <textarea name="prompt" rows="4" class="w-full border rounded px-3 py-2" placeholder="E.g., include a bulleted checklist and a call to action"></textarea>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Outline (Optional)</label>
+            <textarea name="outline" rows="4"
+                      class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      placeholder="H2: Introduction&#10;H2: Main Points&#10;  - Point 1&#10;  - Point 2&#10;H2: Conclusion"></textarea>
+            <p class="text-xs text-gray-500 mt-1">Provide structure hints for the AI</p>
+          </div>
 
-      <div class="flex items-center gap-2">
-        <input type="checkbox" id="include_images" name="include_images" value="1">
-        <label for="include_images" class="text-sm">Suggest stock images</label>
+          <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <input type="checkbox" id="include_images" name="include_images" value="1"
+                   class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+            <label for="include_images" class="text-sm text-gray-700">Suggest stock images for the post</label>
+          </div>
+        </div>
       </div>
 
-      <label class="block text-sm font-medium">Optional outline</label>
-      <textarea name="outline" rows="4" class="w-full border rounded px-3 py-2" placeholder="H1, H2s, bullets…"></textarea>
+      <div class="flex items-center justify-between pt-4 border-t">
+        <div class="text-sm text-gray-500">
+          <i class="fa-solid fa-info-circle mr-1"></i>
+          Content will be queued for review before publishing
+        </div>
+        <button type="submit" class="px-6 py-2.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition font-medium flex items-center gap-2">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          Generate Draft
+        </button>
+      </div>
+    </form>
+  </div>
 
-      <button class="px-4 py-2 rounded text-white bg-[var(--brand)]">Queue AI Draft</button>
+  <!-- Manual Write Form -->
+  <div id="manualForm" class="bg-white rounded-xl border shadow-sm hidden">
+    <div class="p-6 border-b">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+          <i class="fa-solid fa-pen-to-square"></i>
+        </div>
+        <div>
+          <h2 class="font-semibold text-gray-900">Write Your Own</h2>
+          <p class="text-sm text-gray-500">Create content manually with full control</p>
+        </div>
+      </div>
+    </div>
+
+    <form method="post" action="{{ url_for('wp_bp.compose_submit') }}" class="p-6 space-y-5">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="mode" value="manual">
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Post Title</label>
+        <input type="text" name="title" required
+               class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-lg"
+               placeholder="Enter your post title">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Content</label>
+        <textarea name="content" rows="15" required
+                  class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-mono text-sm"
+                  placeholder="Write your post content here...&#10;&#10;You can use HTML tags for formatting:&#10;<h2>Headings</h2>&#10;<p>Paragraphs</p>&#10;<ul><li>Lists</li></ul>"></textarea>
+        <p class="text-xs text-gray-500 mt-1">HTML formatting supported</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Excerpt (Optional)</label>
+          <textarea name="excerpt" rows="2"
+                    class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    placeholder="Brief summary for meta description and previews"></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Schedule (Optional)</label>
+          <input type="datetime-local" name="publish_dt"
+                 class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+          <p class="text-xs text-gray-500 mt-1">Leave empty to publish immediately</p>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between pt-4 border-t">
+        <div class="text-sm text-gray-500">
+          <i class="fa-solid fa-info-circle mr-1"></i>
+          Post will be queued and sent to WordPress
+        </div>
+        <button type="submit" class="px-6 py-2.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition font-medium flex items-center gap-2">
+          <i class="fa-solid fa-paper-plane"></i>
+          Queue Post
+        </button>
+      </div>
     </form>
   </div>
 </div>
+
+<script nonce="{{ g.csp_nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+  const aiModeBtn = document.getElementById('aiModeBtn');
+  const manualModeBtn = document.getElementById('manualModeBtn');
+  const aiForm = document.getElementById('aiForm');
+  const manualForm = document.getElementById('manualForm');
+
+  // Check URL for mode parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('mode') === 'manual') {
+    showManualForm();
+  }
+
+  function showAIForm() {
+    aiModeBtn.classList.add('bg-indigo-600', 'text-white');
+    aiModeBtn.classList.remove('text-gray-600', 'hover:bg-gray-100');
+    manualModeBtn.classList.remove('bg-emerald-600', 'text-white');
+    manualModeBtn.classList.add('text-gray-600', 'hover:bg-gray-100');
+    aiForm.classList.remove('hidden');
+    manualForm.classList.add('hidden');
+  }
+
+  function showManualForm() {
+    manualModeBtn.classList.add('bg-emerald-600', 'text-white');
+    manualModeBtn.classList.remove('text-gray-600', 'hover:bg-gray-100');
+    aiModeBtn.classList.remove('bg-indigo-600', 'text-white');
+    aiModeBtn.classList.add('text-gray-600', 'hover:bg-gray-100');
+    manualForm.classList.remove('hidden');
+    aiForm.classList.add('hidden');
+  }
+
+  aiModeBtn.addEventListener('click', showAIForm);
+  manualModeBtn.addEventListener('click', showManualForm);
+});
+</script>
 {% endblock %}

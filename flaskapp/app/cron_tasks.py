@@ -304,9 +304,9 @@ def _run_daily_ai_agents(app) -> None:
         app.logger.info("[CRON] AI agents disabled (AI_AGENTS_ENABLED=False)")
         return
 
-    from app.tasks.agent_scheduler import run_all_accounts
+    from app.tasks.agent_scheduler import run_agents_for_all_accounts
     with app.app_context():
-        success, errors = run_all_accounts(layer='all')
+        success, errors = run_agents_for_all_accounts(layer='all')
         app.logger.info(
             "[CRON] AI agents completed: %d succeeded, %d failed", success, errors
         )

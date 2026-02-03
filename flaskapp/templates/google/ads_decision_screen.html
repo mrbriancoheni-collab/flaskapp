@@ -62,6 +62,25 @@
   </div>
   {% endif %}
 
+  {# PENDING DECISIONS ALERT #}
+  {% if pending_decisions_count is defined and pending_decisions_count > 0 %}
+  <div class="rounded-xl border-2 border-indigo-300 bg-gradient-to-r from-indigo-50 to-purple-50 p-4 flex items-start gap-3">
+    <div class="bg-indigo-100 text-indigo-600 w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
+      <i class="fa-solid fa-robot"></i>
+    </div>
+    <div class="flex-1">
+      <p class="font-semibold text-indigo-900">{{ pending_decisions_count }} AI recommendation{{ 's' if pending_decisions_count != 1 else '' }} awaiting your approval</p>
+      <p class="text-sm text-indigo-700 mt-1">
+        Your AI agents have found opportunities to save an estimated <strong>${{ "{:,.0f}".format(pending_savings) }}</strong> in wasted ad spend.
+        Review and approve these recommendations to start saving.
+      </p>
+      <a href="{{ url_for('google_bp.agents_approval_queue') }}" class="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
+        <i class="fa-solid fa-check-circle"></i> Review Recommendations
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
   {# HEADER WITH BACK LINK #}
   <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
     <div>
@@ -157,6 +176,16 @@
 
         {% if _connected and (ai_actions_taken > 0 or wasted_spend_prevented > 0 or blocked_searches_count > 0) %}
         <p class="text-sm md:text-base text-gray-700 leading-relaxed mt-3">
+          {% if savings_are_pending is defined and savings_are_pending %}
+          <strong>What your AI agents found:</strong>
+          {% if ai_actions_taken > 0 %}
+          They've identified <strong>{{ ai_actions_taken }} optimization{{ 's' if ai_actions_taken != 1 }}</strong> for your campaigns.
+          {% endif %}
+          {% if wasted_spend_prevented > 0 %}
+          These recommendations could save an estimated <strong>${{ "{:,.0f}".format(wasted_spend_prevented) }}</strong> in wasted ad spend.
+          {% endif %}
+          <a href="{{ url_for('google_bp.agents_approval_queue') }}" class="text-indigo-600 hover:text-indigo-700 font-medium">Review and approve them</a> to start saving.
+          {% else %}
           <strong>What your AI agents have done:</strong>
           {% if ai_actions_taken > 0 %}
           They've made <strong>{{ ai_actions_taken }} optimization{{ 's' if ai_actions_taken != 1 }}</strong> to your campaigns.
@@ -168,6 +197,7 @@
           So far they've blocked <strong>{{ blocked_searches_count }} junk search term{{ 's' if blocked_searches_count != 1 }}</strong> from eating into your budget.
           {% endif %}
           The agents run daily to keep your account lean and your budget focused on real customers.
+          {% endif %}
         </p>
         {% elif _connected %}
         <p class="text-sm text-gray-500 mt-3">
@@ -617,8 +647,19 @@
           <i class="fa-solid fa-ban"></i>
         </div>
         <div>
-          <div class="text-sm text-gray-500 font-medium">Wasted Spend Prevented</div>
+          <div class="text-sm text-gray-500 font-medium">
+            {% if savings_are_pending is defined and savings_are_pending %}
+            Potential Savings
+            {% else %}
+            Wasted Spend Prevented
+            {% endif %}
+          </div>
           <div class="text-3xl font-bold text-gray-900">${{ wasted_spend_prevented if connected else 842 }}</div>
+          {% if savings_are_pending is defined and savings_are_pending %}
+          <div class="text-xs text-amber-600 font-medium mt-1">
+            <i class="fa-solid fa-clock mr-1"></i>Awaiting approval
+          </div>
+          {% endif %}
         </div>
       </div>
       <div class="text-sm text-gray-600 space-y-1">
@@ -677,8 +718,19 @@
           <i class="fa-solid fa-robot"></i>
         </div>
         <div>
-          <div class="text-sm text-gray-500 font-medium">AI Actions Taken</div>
+          <div class="text-sm text-gray-500 font-medium">
+            {% if savings_are_pending is defined and savings_are_pending %}
+            AI Recommendations
+            {% else %}
+            AI Actions Taken
+            {% endif %}
+          </div>
           <div class="text-3xl font-bold text-gray-900">{{ ai_actions_taken if connected else 47 }}</div>
+          {% if savings_are_pending is defined and savings_are_pending %}
+          <div class="text-xs text-amber-600 font-medium mt-1">
+            <i class="fa-solid fa-clock mr-1"></i>Pending your review
+          </div>
+          {% endif %}
         </div>
       </div>
       <div class="text-sm text-gray-600 space-y-1">

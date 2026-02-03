@@ -139,6 +139,86 @@
         {% endif %}
     </div>
 
+    <!-- Manual Automation Triggers -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8 border border-gray-200">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-xl font-bold text-gray-900">Run Automation Now</h2>
+                <p class="text-gray-600 text-sm mt-1">Manually trigger automation steps (cron runs daily at 8 AM Pacific)</p>
+            </div>
+            <a href="{{ url_for('lead_campaigns_bp.automation_center') }}"
+               class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                <i class="fa-solid fa-cog mr-1"></i>
+                Automation Center
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Scrape Button -->
+            <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-gray-900">Step 1: Scrape</div>
+                        <div class="text-xs text-gray-500">Find leads from Google</div>
+                    </div>
+                </div>
+                <button id="triggerScrapeBtn"
+                        class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-play"></i>
+                    Run Scraping
+                </button>
+            </div>
+
+            <!-- Enrich Button -->
+            <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-green-100 text-green-600 flex items-center justify-center">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-gray-900">Step 2: Enrich</div>
+                        <div class="text-xs text-gray-500">Find decision makers & emails</div>
+                    </div>
+                </div>
+                <button id="triggerEnrichBtn"
+                        class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-play"></i>
+                    Run Enrichment
+                </button>
+            </div>
+
+            <!-- Email Button -->
+            <div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-gray-900">Step 3: Outreach</div>
+                        <div class="text-xs text-gray-500">Send emails to contacts</div>
+                    </div>
+                </div>
+                <button id="triggerOutreachBtn"
+                        class="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-medium text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-play"></i>
+                    Send Emails
+                </button>
+            </div>
+        </div>
+
+        <!-- Run All Button -->
+        <div class="mt-4 pt-4 border-t border-gray-200">
+            <button id="runAllAutomationBtn"
+                    class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-indigo-700 hover:to-purple-700 font-semibold flex items-center justify-center gap-2">
+                <i class="fa-solid fa-bolt"></i>
+                Run Full Automation (Scrape → Enrich → Email)
+            </button>
+        </div>
+    </div>
+
     {% if campaign_stats %}
     <div class="grid gap-6">
         {% for stat in campaign_stats %}
@@ -438,6 +518,155 @@ Type "DELETE" in the next prompt to confirm.`;
     }
 }
 
+// Global automation triggers
+async function triggerGlobalScraping(btn) {
+    if (!confirm('Run scraping for all campaigns? This will scrape leads from Google up to the daily limit (50).')) return;
+
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Scraping...';
+
+    try {
+        const response = await fetch('/admin/lead-campaigns/trigger-scraping', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(`Success! Scraped ${data.scraped} campaigns.\nTotal campaigns: ${data.total_campaigns}`);
+            location.reload();
+        } else {
+            alert(`Error: ${data.error || 'Unknown error'}`);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    } catch (error) {
+        console.error('Scraping error:', error);
+        alert(`Error: ${error.message}`);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+async function triggerGlobalEnrichment(btn) {
+    if (!confirm('Run enrichment for all pending leads? This will find decision makers and emails up to the daily limit (100).')) return;
+
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Enriching...';
+
+    try {
+        const response = await fetch('/admin/lead-campaigns/trigger-enrichment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(`Success! Enriched ${data.enriched} leads.\nTotal enriched: ${data.total_enriched}`);
+            location.reload();
+        } else {
+            alert(`Error: ${data.error || 'Unknown error'}`);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    } catch (error) {
+        console.error('Enrichment error:', error);
+        alert(`Error: ${error.message}`);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+async function triggerGlobalOutreach(btn) {
+    if (!confirm('Send emails to all enriched leads? This will send up to 250 emails (daily limit).')) return;
+
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Sending...';
+
+    try {
+        const response = await fetch('/admin/lead-campaigns/trigger-outreach', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(`Success! Sent ${data.sent} emails.\nTotal emails sent: ${data.total_emails}`);
+            location.reload();
+        } else {
+            alert(`Error: ${data.error || 'Unknown error'}`);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    } catch (error) {
+        console.error('Outreach error:', error);
+        alert(`Error: ${error.message}`);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+async function runFullAutomation(btn) {
+    if (!confirm('Run FULL automation pipeline?\n\nThis will:\n1. Scrape leads from Google\n2. Enrich with decision maker info\n3. Send outreach emails\n\nThis may take several minutes.')) return;
+
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Running full automation...';
+
+    try {
+        // Step 1: Scrape
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Step 1/3: Scraping...';
+        let scrapeResponse = await fetch('/admin/lead-campaigns/trigger-scraping', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }
+        });
+        let scrapeData = await scrapeResponse.json();
+
+        // Step 2: Enrich
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Step 2/3: Enriching...';
+        let enrichResponse = await fetch('/admin/lead-campaigns/trigger-enrichment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }
+        });
+        let enrichData = await enrichResponse.json();
+
+        // Step 3: Send emails
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Step 3/3: Sending emails...';
+        let emailResponse = await fetch('/admin/lead-campaigns/trigger-outreach', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }
+        });
+        let emailData = await emailResponse.json();
+
+        alert(`Full Automation Complete!\n\n` +
+              `✓ Scraped: ${scrapeData.scraped || 0} campaigns\n` +
+              `✓ Enriched: ${enrichData.enriched || 0} leads\n` +
+              `✓ Emails sent: ${emailData.sent || 0}`);
+        location.reload();
+
+    } catch (error) {
+        console.error('Full automation error:', error);
+        alert(`Error during automation: ${error.message}`);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
 // Attach event listeners on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', function() {
     // Activate All button
@@ -453,6 +682,35 @@ document.addEventListener('DOMContentLoaded', function() {
     if (cleanupBtn) {
         cleanupBtn.addEventListener('click', function() {
             cleanupOldCampaigns(this);
+        });
+    }
+
+    // Global automation trigger buttons
+    const triggerScrapeBtn = document.getElementById('triggerScrapeBtn');
+    if (triggerScrapeBtn) {
+        triggerScrapeBtn.addEventListener('click', function() {
+            triggerGlobalScraping(this);
+        });
+    }
+
+    const triggerEnrichBtn = document.getElementById('triggerEnrichBtn');
+    if (triggerEnrichBtn) {
+        triggerEnrichBtn.addEventListener('click', function() {
+            triggerGlobalEnrichment(this);
+        });
+    }
+
+    const triggerOutreachBtn = document.getElementById('triggerOutreachBtn');
+    if (triggerOutreachBtn) {
+        triggerOutreachBtn.addEventListener('click', function() {
+            triggerGlobalOutreach(this);
+        });
+    }
+
+    const runAllAutomationBtn = document.getElementById('runAllAutomationBtn');
+    if (runAllAutomationBtn) {
+        runAllAutomationBtn.addEventListener('click', function() {
+            runFullAutomation(this);
         });
     }
 

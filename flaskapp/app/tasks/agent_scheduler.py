@@ -219,6 +219,12 @@ def run_agents_for_account(
     except Exception as e:
         raise RuntimeError(f"Failed to initialize Google Ads client: {str(e)}")
 
+    # Load business context from Account model
+    from app.models import Account as AccountModel
+    account_obj = AccountModel.query.get(account_id)
+    business_description = account_obj.get_business_description() or '' if account_obj else ''
+    business_services = account_obj.get_business_services() or '' if account_obj else ''
+
     # Fetch REAL performance data from Google Ads API (live)
     try:
         from app.google.utils_ads import (
@@ -425,6 +431,8 @@ def run_agents_for_account(
         context = {
             'account_id': account_id,
             'customer_id': customer_id,
+            'business_description': business_description,
+            'business_services': business_services,
             'performance_90d': {
                 'roas': overall_roas,
                 'spend': total_spend,
@@ -453,6 +461,8 @@ def run_agents_for_account(
         context = {
             'account_id': account_id,
             'customer_id': customer_id,
+            'business_description': business_description,
+            'business_services': business_services,
             'performance_90d': {},
             'campaigns': [],
             'has_search_campaigns': False,

@@ -246,7 +246,7 @@
     {% endif %}
 </div>
 
-<script>
+<script nonce="{{ g.csp_nonce }}">
 async function activateAllCampaigns() {
     if (!confirm('Activate all draft campaigns? This will set their status to "ready" so they can be processed.')) return;
 
@@ -256,12 +256,14 @@ async function activateAllCampaigns() {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Activating...';
 
     try {
-        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+
         const response = await fetch('/admin/lead-campaigns/activate-all', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                ...(csrfToken && { 'X-CSRFToken': csrfToken.content })
+                'X-CSRFToken': csrfToken
             }
         });
 
@@ -271,11 +273,12 @@ async function activateAllCampaigns() {
             alert(`Success! Activated ${data.activated_count} campaigns.`);
             location.reload();
         } else {
-            alert(`Error: ${data.error}`);
+            alert(`Error: ${data.error || 'Unknown error'}`);
             btn.disabled = false;
             btn.innerHTML = originalText;
         }
     } catch (error) {
+        console.error('Activate error:', error);
         alert(`Error: ${error.message}`);
         btn.disabled = false;
         btn.innerHTML = originalText;

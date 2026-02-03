@@ -15,7 +15,6 @@
         </div>
         <div class="flex items-center space-x-4">
             <button
-                onclick="runAgentsNow()"
                 id="runAgentsBtn"
                 class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg"
             >
@@ -291,5 +290,13 @@ function runAgentsNow() {
         btn.innerHTML = originalText;
     });
 }
+
+// Attach event listeners on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
+    const runAgentsBtn = document.getElementById('runAgentsBtn');
+    if (runAgentsBtn) {
+        runAgentsBtn.addEventListener('click', runAgentsNow);
+    }
+});
 </script>
 {% endblock %}

@@ -1,174 +1,302 @@
 {% extends "base_app.html" %}
-{% block title %}WordPress Settings – {{ app_name }}{% endblock %}
+{% block title %}WordPress Settings · {{ app_name }}{% endblock %}
 {% block content %}
-<div class="w-full max-w-3xl">
-
-  <h1 class="text-2xl font-semibold mb-2">WordPress Settings</h1>
-  <p class="text-sm text-gray-600 mb-6">
-    Connect your WordPress site with an App Password. Then optionally enable Autopilot to queue content.
-  </p>
-
-  <!-- Connection form -->
-  <form method="post" class="space-y-5 bg-white border rounded-2xl p-6">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="max-w-4xl mx-auto">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
     <div>
-      <label class="block text-sm font-medium mb-1">Base URL</label>
-      <input
-        name="base_url"
-        type="url"
-        placeholder="https://your-site.com"
-        class="w-full border rounded px-3 py-2"
-        value="{{ site.base_url if site else '' }}"
-        {% if site and site.id == 0 %}readonly{% endif %}
-      >
-      <p class="text-xs text-gray-500 mt-1">
-        Your public WordPress URL (no trailing slash). Example: <code>https://example.com</code>
-      </p>
+      <h1 class="text-2xl font-bold text-gray-900">WordPress Settings</h1>
+      <p class="text-gray-500 mt-1">Connect and configure your WordPress site</p>
     </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium mb-1">Username</label>
-        <input
-          name="username"
-          class="w-full border rounded px-3 py-2"
-          value="{{ site.username if site else '' }}"
-          {% if site and site.id == 0 %}readonly{% endif %}
-        >
-      </div>
-      <div>
-        <label class="block text-sm font-medium mb-1">Application Password</label>
-        <input
-          name="app_password"
-          type="password"
-          class="w-full border rounded px-3 py-2"
-          value="{{ '********' if site else '' }}"
-          {% if site and site.id == 0 %}readonly{% endif %}
-        >
-        <p class="text-xs text-gray-500 mt-1">
-          WordPress App Password (Users → Profile → Application Passwords). If already saved, leave as <code>********</code>.
-        </p>
-      </div>
-    </div>
-
-    {% if site and site.id == 0 %}
-      <div class="rounded-lg bg-amber-50 border border-amber-200 p-3 text-amber-800 text-sm">
-        These credentials are loaded from environment variables and are read-only here. To change them, update your server env.
-      </div>
-    {% endif %}
-
-    <div class="flex flex-wrap gap-3">
-      <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
-        Save
-      </button>
-      <button
-        formaction="{{ url_for('wp_bp.test') }}"
-        formmethod="post"
-        class="px-4 py-2 border rounded hover:bg-gray-50"
-      >
-        Test Connection
-      </button>
-    </div>
-  </form>
-
-  <!-- Autopilot settings -->
-  <form method="post" action="{{ url_for('wp_bp.settings') }}" class="mt-6 bg-white border rounded-2xl p-6 space-y-5">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-    <!-- We re-post full settings to the same endpoint; users can change autopilot in a second step -->
-    <input type="hidden" name="base_url" value="{{ site.base_url if site else '' }}">
-    <input type="hidden" name="username" value="{{ site.username if site else '' }}">
-    <input type="hidden" name="app_password" value="********">
-
-    <h2 class="text-lg font-semibold">Autopilot</h2>
-
-    <div class="flex items-center gap-3">
-      <input
-        id="autopilot_enabled"
-        name="autopilot_enabled"
-        type="checkbox"
-        class="h-4 w-4 border rounded"
-        {% if site and site.autopilot_enabled %}checked{% endif %}
-      >
-      <label for="autopilot_enabled" class="text-sm">Enable Autopilot (queue content automatically)</label>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div>
-        <label class="block text-sm font-medium mb-1">New Posts / day</label>
-        <input
-          name="autopilot_daily_new"
-          type="number" min="0" max="10"
-          class="w-full border rounded px-3 py-2"
-          value="{{ site.autopilot_daily_new if site else 1 }}"
-        >
-      </div>
-      <div>
-        <label class="block text-sm font-medium mb-1">Refresh Updates / day</label>
-        <input
-          name="autopilot_daily_refresh"
-          type="number" min="0" max="10"
-          class="w-full border rounded px-3 py-2"
-          value="{{ site.autopilot_daily_refresh if site else 1 }}"
-        >
-      </div>
-      <div class="flex items-end">
-        <label class="inline-flex items-center gap-2 text-sm">
-          <input
-            name="autopilot_require_approval"
-            type="checkbox"
-            class="h-4 w-4 border rounded"
-            {% if site and site.autopilot_require_approval %}checked{% endif %}
-          >
-          Require manual approval before publishing
-        </label>
-      </div>
-    </div>
-
-    <div>
-      <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
-        Save Autopilot Settings
-      </button>
-    </div>
-  </form>
-
-  <!-- Quick actions -->
-  <div class="mt-6 bg-white border rounded-2xl p-6">
-    <h2 class="text-lg font-semibold mb-3">Quick Actions</h2>
-
-    <!-- Test connection again (POST) -->
-    <form method="post" action="{{ url_for('wp_bp.test') }}" class="inline-block mr-2">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-      <button class="px-4 py-2 border rounded hover:bg-gray-50">Test Connection</button>
-    </form>
-
-    <!-- Queue a sample post (POST) -->
-    <form method="post" action="{{ url_for('wp_bp.new_post') }}" class="mt-4 space-y-3">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div>
-          <label class="block text-sm font-medium mb-1">Sample Title</label>
-          <input name="title" class="w-full border rounded px-3 py-2" value="How We Keep Your Home Safer (Test)">
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-1">Publish When</label>
-          <select name="publish_when" class="w-full border rounded px-3 py-2">
-            <option value="">Now</option>
-            <option value="future+1">In 1 day</option>
-            <option value="future+2">In 2 days</option>
-          </select>
-        </div>
-      </div>
-      <div>
-        <label class="block text-sm font-medium mb-1">Content (HTML)</label>
-        <textarea name="html" rows="5" class="w-full border rounded px-3 py-2">&lt;p&gt;This is a test post created from {{ app_name }}.&lt;/p&gt;</textarea>
-      </div>
-      <div>
-        <label class="block text-sm font-medium mb-1">Excerpt (optional)</label>
-        <input name="excerpt" class="w-full border rounded px-3 py-2" placeholder="Short summary for meta/preview">
-      </div>
-      <button class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Queue Sample Post</button>
-    </form>
+    <a href="{{ url_for('wp_bp.publisher') }}" class="px-4 py-2 rounded-lg border hover:bg-gray-50 flex items-center gap-2 text-sm">
+      <i class="fa-solid fa-arrow-left"></i>
+      Back to Publisher
+    </a>
   </div>
 
+  <div class="grid lg:grid-cols-3 gap-6">
+    <!-- Main Settings Column -->
+    <div class="lg:col-span-2 space-y-6">
+
+      <!-- Connection Card -->
+      <div class="bg-white rounded-xl border shadow-sm">
+        <div class="p-5 border-b flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
+              <i class="fa-brands fa-wordpress text-xl"></i>
+            </div>
+            <div>
+              <h2 class="font-semibold text-gray-900">WordPress Connection</h2>
+              <p class="text-sm text-gray-500">API credentials for your WordPress site</p>
+            </div>
+          </div>
+          {% if site and site.base_url %}
+            <span class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium flex items-center gap-1.5">
+              <span class="w-2 h-2 bg-emerald-500 rounded-full"></span>
+              Connected
+            </span>
+          {% else %}
+            <span class="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-medium">
+              Not Connected
+            </span>
+          {% endif %}
+        </div>
+
+        <form method="post" class="p-5 space-y-4">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Site URL</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <i class="fa-solid fa-globe"></i>
+              </span>
+              <input
+                name="base_url"
+                type="url"
+                placeholder="https://your-site.com"
+                class="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                value="{{ site.base_url if site else '' }}"
+                {% if site and site.id == 0 %}readonly class="bg-gray-50"{% endif %}
+              >
+            </div>
+            <p class="text-xs text-gray-500 mt-1">Your WordPress site URL without trailing slash</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Username</label>
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <i class="fa-solid fa-user"></i>
+                </span>
+                <input
+                  name="username"
+                  class="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  value="{{ site.username if site else '' }}"
+                  placeholder="admin"
+                  {% if site and site.id == 0 %}readonly class="bg-gray-50"{% endif %}
+                >
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Application Password</label>
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <i class="fa-solid fa-key"></i>
+                </span>
+                <input
+                  name="app_password"
+                  type="password"
+                  class="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  value="{{ '********' if site else '' }}"
+                  placeholder="xxxx xxxx xxxx xxxx"
+                  {% if site and site.id == 0 %}readonly class="bg-gray-50"{% endif %}
+                >
+              </div>
+              <p class="text-xs text-gray-500 mt-1">Find in WP Admin → Users → Profile → Application Passwords</p>
+            </div>
+          </div>
+
+          {% if site and site.id == 0 %}
+            <div class="rounded-lg bg-amber-50 border border-amber-200 p-3 text-amber-800 text-sm flex items-start gap-2">
+              <i class="fa-solid fa-info-circle mt-0.5"></i>
+              <span>Credentials loaded from environment variables (read-only). Update your server configuration to change them.</span>
+            </div>
+          {% endif %}
+
+          <div class="flex items-center gap-3 pt-2">
+            <button type="submit" class="px-5 py-2.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition font-medium flex items-center gap-2">
+              <i class="fa-solid fa-save"></i>
+              Save Connection
+            </button>
+            <button
+              formaction="{{ url_for('wp_bp.test') }}"
+              formmethod="post"
+              class="px-5 py-2.5 rounded-lg border hover:bg-gray-50 transition font-medium flex items-center gap-2"
+            >
+              <i class="fa-solid fa-plug"></i>
+              Test Connection
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Autopilot Card -->
+      <div class="bg-white rounded-xl border shadow-sm">
+        <div class="p-5 border-b flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center">
+              <i class="fa-solid fa-robot"></i>
+            </div>
+            <div>
+              <h2 class="font-semibold text-gray-900">Autopilot Settings</h2>
+              <p class="text-sm text-gray-500">Configure automated content publishing</p>
+            </div>
+          </div>
+          {% if site and site.autopilot_enabled %}
+            <span class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium flex items-center gap-1.5">
+              <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+              Active
+            </span>
+          {% else %}
+            <span class="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-medium">
+              Disabled
+            </span>
+          {% endif %}
+        </div>
+
+        <form method="post" action="{{ url_for('wp_bp.settings') }}" class="p-5 space-y-5">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <input type="hidden" name="base_url" value="{{ site.base_url if site else '' }}">
+          <input type="hidden" name="username" value="{{ site.username if site else '' }}">
+          <input type="hidden" name="app_password" value="********">
+
+          <!-- Enable Toggle -->
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div class="flex items-center gap-3">
+              <i class="fa-solid fa-power-off text-gray-400"></i>
+              <div>
+                <div class="font-medium text-gray-900">Enable Autopilot</div>
+                <div class="text-sm text-gray-500">Automatically queue and process content</div>
+              </div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" name="autopilot_enabled" class="sr-only peer"
+                     {% if site and site.autopilot_enabled %}checked{% endif %}>
+              <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+            </label>
+          </div>
+
+          <!-- Daily Limits -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">New Posts / Day</label>
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <i class="fa-solid fa-file-plus"></i>
+                </span>
+                <input
+                  name="autopilot_daily_new"
+                  type="number" min="0" max="10"
+                  class="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  value="{{ site.autopilot_daily_new if site else 1 }}"
+                >
+              </div>
+              <p class="text-xs text-gray-500 mt-1">Max 10 per day</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">Refresh Updates / Day</label>
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <i class="fa-solid fa-sync"></i>
+                </span>
+                <input
+                  name="autopilot_daily_refresh"
+                  type="number" min="0" max="10"
+                  class="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  value="{{ site.autopilot_daily_refresh if site else 1 }}"
+                >
+              </div>
+              <p class="text-xs text-gray-500 mt-1">Metadata updates</p>
+            </div>
+          </div>
+
+          <!-- Approval Toggle -->
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div class="flex items-center gap-3">
+              <i class="fa-solid fa-shield-check text-gray-400"></i>
+              <div>
+                <div class="font-medium text-gray-900">Require Approval</div>
+                <div class="text-sm text-gray-500">Review content before publishing</div>
+              </div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" name="autopilot_require_approval" class="sr-only peer"
+                     {% if site and site.autopilot_require_approval %}checked{% endif %}>
+              <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+            </label>
+          </div>
+
+          <div class="pt-2">
+            <button type="submit" class="px-5 py-2.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition font-medium flex items-center gap-2">
+              <i class="fa-solid fa-save"></i>
+              Save Autopilot Settings
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="space-y-6">
+      <!-- Quick Test -->
+      <div class="bg-white rounded-xl border p-5">
+        <h3 class="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-flask text-gray-400"></i>
+          Quick Test
+        </h3>
+        <form method="post" action="{{ url_for('wp_bp.test') }}" class="space-y-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <p class="text-sm text-gray-600">Verify your WordPress connection is working properly.</p>
+          <button class="w-full px-4 py-2.5 rounded-lg border hover:bg-gray-50 transition font-medium flex items-center justify-center gap-2">
+            <i class="fa-solid fa-plug"></i>
+            Test Connection
+          </button>
+        </form>
+      </div>
+
+      <!-- Quick Post -->
+      <div class="bg-white rounded-xl border p-5">
+        <h3 class="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-paper-plane text-gray-400"></i>
+          Test Post
+        </h3>
+        <form method="post" action="{{ url_for('wp_bp.new_post') }}" class="space-y-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <p class="text-sm text-gray-600 mb-3">Send a test post to verify publishing works.</p>
+
+          <div>
+            <input name="title" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" value="Test Post from {{ app_name }}" placeholder="Title">
+          </div>
+
+          <div>
+            <textarea name="html" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Content">&lt;p&gt;This is a test post created from {{ app_name }}.&lt;/p&gt;</textarea>
+          </div>
+
+          <div>
+            <select name="publish_when" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+              <option value="">Publish Now</option>
+              <option value="future+1">Schedule: In 1 day</option>
+              <option value="future+2">Schedule: In 2 days</option>
+            </select>
+          </div>
+
+          <button class="w-full px-4 py-2.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition font-medium flex items-center justify-center gap-2">
+            <i class="fa-solid fa-paper-plane"></i>
+            Queue Test Post
+          </button>
+        </form>
+      </div>
+
+      <!-- Help -->
+      <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-5">
+        <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-circle-question text-blue-500"></i>
+          Need Help?
+        </h3>
+        <div class="space-y-3 text-sm">
+          <div>
+            <div class="font-medium text-gray-700">Creating App Passwords</div>
+            <p class="text-gray-600">Go to WP Admin → Users → Your Profile → Scroll to "Application Passwords"</p>
+          </div>
+          <div>
+            <div class="font-medium text-gray-700">Connection Issues?</div>
+            <p class="text-gray-600">Make sure your site allows REST API access and isn't blocked by a security plugin.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

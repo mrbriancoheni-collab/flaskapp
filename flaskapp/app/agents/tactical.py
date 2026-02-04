@@ -254,7 +254,7 @@ class NegativeKeywordAgent(BaseAgent):
                 AgentCapability.KEYWORD_MANAGEMENT,
                 AgentCapability.AUTONOMOUS_EXECUTION,
             ],
-            auto_execute_threshold=0.95,  # Very confident - blocking waste is safe
+            auto_execute_threshold=0.80,  # Lowered to auto-execute LLM-evaluated irrelevant terms (confidence 0.92)
             **kwargs
         )
 

@@ -3064,7 +3064,7 @@ def ads_performance():
 
     # Get PENDING decisions (awaiting approval) - show as potential savings
     pending_decisions_count = 0
-    pending_savings = 0
+    pending_savings = 0.0
     try:
         pending_stats = db.session.execute(
             text("""
@@ -3075,20 +3075,26 @@ def ads_performance():
             {"aid": aid}
         ).fetchone()
         if pending_stats:
-            pending_decisions_count = pending_stats[0] or 0
-            pending_savings = float(pending_stats[1] or 0)
+            pending_decisions_count = int(pending_stats[0] or 0)
+            try:
+                pending_savings = float(pending_stats[1]) if pending_stats[1] is not None else 0.0
+            except (TypeError, ValueError):
+                pending_savings = 0.0
     except Exception as e:
         current_app.logger.warning(f"Could not query pending agent_decisions: {e}")
+        pending_decisions_count = 0
+        pending_savings = 0.0
 
     # If no executed actions but we have pending ones, show pending as the main metric
     # This ensures users see value even before approving decisions
-    if wasted_spend_prevented == 0 and pending_savings > 0:
-        wasted_spend_prevented = pending_savings
-        ai_actions_taken = pending_decisions_count
-        # Flag that these are pending, not executed
-        savings_are_pending = True
-    else:
-        savings_are_pending = False
+    savings_are_pending = False
+    try:
+        if wasted_spend_prevented == 0 and pending_savings > 0:
+            wasted_spend_prevented = pending_savings
+            ai_actions_taken = pending_decisions_count
+            savings_are_pending = True
+    except Exception as e:
+        current_app.logger.warning(f"Error setting pending savings display: {e}")
 
     # Count blocked searches (negative keywords added)
     blocked_searches_count = AIAction.query.filter_by(

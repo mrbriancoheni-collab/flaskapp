@@ -606,7 +606,20 @@ async function triggerGlobalOutreach(btn) {
         const data = await response.json();
 
         if (data.success) {
-            alert(`Success! Sent ${data.sent} emails.\nTotal emails sent: ${data.total_emails}`);
+            if (data.sent === 0 && data.reasons) {
+                // Show why no emails were sent
+                let msg = `No emails sent.\n\nReasons:\n`;
+                data.reasons.forEach(r => msg += `• ${r}\n`);
+                if (data.stats) {
+                    msg += `\nCurrent stats:\n`;
+                    msg += `• Ready campaigns: ${data.stats.ready_campaigns}\n`;
+                    msg += `• Enriched leads: ${data.stats.enriched_leads}\n`;
+                    msg += `• Pending contacts: ${data.stats.pending_contacts}`;
+                }
+                alert(msg);
+            } else {
+                alert(`Success! Sent ${data.sent} emails.\nTotal emails sent: ${data.total_emails}`);
+            }
             location.reload();
         } else {
             alert(`Error: ${data.error || 'Unknown error'}`);

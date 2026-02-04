@@ -14,7 +14,7 @@ from threading import Thread
 
 from app.extensions import db
 from app.auth.decorators import require_admin_cloaked as require_admin
-from app.models_leads import LeadCampaign, Lead, EmailSequence, LeadEmail, LeadContactEmail, EmailUnsubscribe
+from app.models_leads import LeadCampaign, Lead, EmailSequence, LeadEmail, LeadContactEmail, EmailUnsubscribe, LeadContact
 from app.services.serpapi_scraper import SerpAPIScraperService
 from app.services.lead_enrichment import LeadEnrichmentService
 from app.services.brevo_outreach import BrevoOutreachService
@@ -1213,6 +1213,37 @@ def trigger_outreach():
         logger.info("Manual trigger: Starting email outreach operation")
         service = LeadAutomationService()
         result = service.run_email_outreach()
+
+        # Provide helpful context when no emails sent
+        if result['sent'] == 0:
+            # Check why no emails were sent
+            ready_campaigns = LeadCampaign.query.filter_by(status='ready').count()
+            enriched_leads = Lead.query.filter_by(enrichment_status='completed').count()
+            pending_contacts = db.session.query(func.count(LeadContact.id)).filter(
+                LeadContact.email_status == 'pending',
+                LeadContact.email.isnot(None)
+            ).scalar() or 0
+
+            reasons = []
+            if ready_campaigns == 0:
+                reasons.append("No campaigns with status 'ready'")
+            if enriched_leads == 0:
+                reasons.append("No enriched leads (run enrichment first)")
+            if pending_contacts == 0:
+                reasons.append("No contacts with pending email status (all may have been emailed already)")
+
+            return jsonify({
+                'success': True,
+                'sent': 0,
+                'total_emails': result['total_emails'],
+                'message': 'No emails sent',
+                'reasons': reasons if reasons else ['All eligible contacts have already received emails'],
+                'stats': {
+                    'ready_campaigns': ready_campaigns,
+                    'enriched_leads': enriched_leads,
+                    'pending_contacts': pending_contacts
+                }
+            })
 
         return jsonify({
             'success': True,

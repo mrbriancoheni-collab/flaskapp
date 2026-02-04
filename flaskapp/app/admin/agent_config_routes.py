@@ -390,7 +390,7 @@ def get_agent_configuration(agent_id: str, account_id: int = None) -> dict:
     # No configuration found - return defaults
     return {
         "enabled": True,
-        "auto_execute_threshold": 0.95,
+        "auto_execute_threshold": 0.80,
         "custom_prompt": None,
         "risk_overrides": {},
         "business_rules": []

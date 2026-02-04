@@ -624,8 +624,9 @@ class QualityScoreAgent(BaseAgent):
             capabilities=[
                 AgentCapability.QUALITY_SCORE_OPTIMIZATION,
                 AgentCapability.PERFORMANCE_MONITORING,
+                AgentCapability.AUTONOMOUS_EXECUTION,
             ],
-            auto_execute_threshold=0.85,
+            auto_execute_threshold=0.80,
             **kwargs
         )
 

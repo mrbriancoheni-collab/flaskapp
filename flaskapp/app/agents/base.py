@@ -131,7 +131,7 @@ class BaseAgent(ABC):
         self,
         agent_id: str,
         capabilities: List[AgentCapability],
-        auto_execute_threshold: float = 0.95,
+        auto_execute_threshold: float = 0.80,
         event_bus: Optional[Any] = None,
         decision_log: Optional[Any] = None,
         account_id: Optional[int] = None,

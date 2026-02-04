@@ -498,6 +498,7 @@ class AdCopyAgent(BaseAgent):
             capabilities=[
                 AgentCapability.AD_CREATION,
                 AgentCapability.QUALITY_SCORE_OPTIMIZATION,
+                AgentCapability.AUTONOMOUS_EXECUTION,
             ],
             auto_execute_threshold=0.80,
             **kwargs

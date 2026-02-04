@@ -525,6 +525,82 @@ def reject_decision(decision_id):
     return jsonify({"success": True, "message": "Decision rejected"})
 
 
+@agents_bp.route("/api/decisions/auto-execute-low-risk", methods=["POST"])
+@login_required
+def auto_execute_low_risk():
+    """
+    Auto-approve and execute all pending LOW-risk decisions with high confidence.
+    This catches up decisions that should have auto-executed but didn't.
+    """
+    import json as _json
+    account_id = current_account_id()
+
+    # Find all pending low-risk decisions
+    find_query = text("""
+        SELECT id, decision_type, action_data, campaign_id, ad_group_id, keyword_id,
+               risk_level, confidence
+        FROM agent_decisions
+        WHERE account_id = :account_id
+          AND status = 'pending'
+          AND risk_level = 'low'
+          AND confidence >= 0.80
+    """)
+
+    with db.engine.connect() as conn:
+        rows = conn.execute(find_query, {"account_id": account_id}).mappings().all()
+
+    if not rows:
+        return jsonify({"success": True, "message": "No low-risk pending decisions to auto-execute", "executed": 0})
+
+    executed = 0
+    failed = 0
+    skipped = 0
+
+    for row in rows:
+        try:
+            # Mark as approved
+            with db.engine.begin() as conn:
+                conn.execute(text("""
+                    UPDATE agent_decisions
+                    SET status = 'approved', updated_at = NOW()
+                    WHERE id = :id AND account_id = :account_id
+                """), {"id": row['id'], "account_id": account_id})
+
+            # Execute
+            result = _execute_agent_decision(account_id, row)
+
+            if result.get('success'):
+                with db.engine.begin() as conn:
+                    conn.execute(text("""
+                        UPDATE agent_decisions
+                        SET status = 'executed', executed_at = NOW(),
+                            execution_result = :result, updated_at = NOW()
+                        WHERE id = :id
+                    """), {"id": row['id'], "result": _json.dumps(result)})
+                executed += 1
+            else:
+                with db.engine.begin() as conn:
+                    conn.execute(text("""
+                        UPDATE agent_decisions
+                        SET status = 'execution_failed',
+                            execution_result = :result, updated_at = NOW()
+                        WHERE id = :id
+                    """), {"id": row['id'], "result": _json.dumps(result)})
+                failed += 1
+
+        except Exception as e:
+            current_app.logger.error(f"Failed to auto-execute decision {row['id']}: {e}")
+            failed += 1
+
+    return jsonify({
+        "success": True,
+        "message": f"Auto-executed {executed} low-risk decisions ({failed} failed, {skipped} skipped)",
+        "total_found": len(rows),
+        "executed": executed,
+        "failed": failed
+    })
+
+
 @agents_bp.route("/api/decisions/<int:decision_id>")
 @login_required
 def get_decision(decision_id):

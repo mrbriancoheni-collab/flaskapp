@@ -473,32 +473,35 @@ def run_agents_for_account(
             'business_goals': {'target_roas': 3.0, 'target_cpl': 80}
         }
 
+    # Common kwargs for all agents
+    agent_kwargs = dict(event_bus=event_bus, decision_log=decision_log, account_id=account_id)
+
     # Select agents based on layer
     if layer == 'strategic':
         agents = [
-            StrategicDirectorAgent(event_bus=event_bus, decision_log=decision_log),
+            StrategicDirectorAgent(**agent_kwargs),
         ]
     elif layer == 'operational':
         agents = [
-            CampaignManagerAgent(event_bus=event_bus, decision_log=decision_log),
-            BudgetGuardianAgent(event_bus=event_bus, decision_log=decision_log),
-            QualityScoreAgent(event_bus=event_bus, decision_log=decision_log),
+            CampaignManagerAgent(**agent_kwargs),
+            BudgetGuardianAgent(**agent_kwargs),
+            QualityScoreAgent(**agent_kwargs),
         ]
     elif layer == 'tactical':
         agents = [
-            KeywordOptimizerAgent(event_bus=event_bus, decision_log=decision_log),
-            NegativeKeywordAgent(event_bus=event_bus, decision_log=decision_log),
-            AdCopyAgent(event_bus=event_bus, decision_log=decision_log),
+            KeywordOptimizerAgent(**agent_kwargs),
+            NegativeKeywordAgent(**agent_kwargs),
+            AdCopyAgent(**agent_kwargs),
         ]
     else:  # 'all'
         agents = [
-            StrategicDirectorAgent(event_bus=event_bus, decision_log=decision_log),
-            CampaignManagerAgent(event_bus=event_bus, decision_log=decision_log),
-            BudgetGuardianAgent(event_bus=event_bus, decision_log=decision_log),
-            QualityScoreAgent(event_bus=event_bus, decision_log=decision_log),
-            KeywordOptimizerAgent(event_bus=event_bus, decision_log=decision_log),
-            NegativeKeywordAgent(event_bus=event_bus, decision_log=decision_log),
-            AdCopyAgent(event_bus=event_bus, decision_log=decision_log),
+            StrategicDirectorAgent(**agent_kwargs),
+            CampaignManagerAgent(**agent_kwargs),
+            BudgetGuardianAgent(**agent_kwargs),
+            QualityScoreAgent(**agent_kwargs),
+            KeywordOptimizerAgent(**agent_kwargs),
+            NegativeKeywordAgent(**agent_kwargs),
+            AdCopyAgent(**agent_kwargs),
         ]
 
     # Run agents and log execution

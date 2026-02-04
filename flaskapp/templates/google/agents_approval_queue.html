@@ -15,6 +15,13 @@
         </div>
         <div class="flex items-center space-x-4">
             <button
+                id="autoExecuteLowRiskBtn"
+                class="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-all shadow-lg"
+            >
+                <i class="fa-solid fa-bolt mr-2"></i>
+                Auto-Execute Low Risk
+            </button>
+            <button
                 id="runAgentsBtn"
                 class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg"
             >
@@ -291,11 +298,55 @@ function runAgentsNow() {
     });
 }
 
+function autoExecuteLowRisk() {
+    const btn = document.getElementById('autoExecuteLowRiskBtn');
+    if (!confirm('Auto-execute all LOW risk decisions with confidence >= 80%?\n\nThis will approve and execute safe optimizations like:\n- Adding negative keywords\n- Small bid adjustments\n- Pausing wasteful keywords')) return;
+
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Executing...';
+
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+
+    fetch('/account/google/ads/agents/api/decisions/auto-execute-low-risk', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('Done!\n\n' +
+                'Executed: ' + data.executed + '\n' +
+                'Failed: ' + data.failed + '\n' +
+                'Total found: ' + data.total_found);
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+}
+
 // Attach event listeners on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', function() {
     const runAgentsBtn = document.getElementById('runAgentsBtn');
     if (runAgentsBtn) {
         runAgentsBtn.addEventListener('click', runAgentsNow);
+    }
+
+    const autoExecBtn = document.getElementById('autoExecuteLowRiskBtn');
+    if (autoExecBtn) {
+        autoExecBtn.addEventListener('click', autoExecuteLowRisk);
     }
 });
 </script>

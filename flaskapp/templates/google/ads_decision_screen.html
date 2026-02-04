@@ -74,7 +74,7 @@
         Your AI agents have found opportunities to save an estimated <strong>${{ "{:,.0f}".format(pending_savings) }}</strong> in wasted ad spend.
         Review and approve these recommendations to start saving.
       </p>
-      <a href="{{ url_for('google_bp.agents_approval_queue') }}" class="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
+      <a href="{{ url_for('agents_bp.approval_queue') }}" class="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
         <i class="fa-solid fa-check-circle"></i> Review Recommendations
       </a>
     </div>
@@ -184,7 +184,7 @@
           {% if wasted_spend_prevented > 0 %}
           These recommendations could save an estimated <strong>${{ "{:,.0f}".format(wasted_spend_prevented) }}</strong> in wasted ad spend.
           {% endif %}
-          <a href="{{ url_for('google_bp.agents_approval_queue') }}" class="text-indigo-600 hover:text-indigo-700 font-medium">Review and approve them</a> to start saving.
+          <a href="{{ url_for('agents_bp.approval_queue') }}" class="text-indigo-600 hover:text-indigo-700 font-medium">Review and approve them</a> to start saving.
           {% else %}
           <strong>What your AI agents have done:</strong>
           {% if ai_actions_taken > 0 %}

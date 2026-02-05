@@ -22,10 +22,24 @@
       <h1 class="text-3xl font-bold text-gray-900">AI Change Log</h1>
       <p class="text-gray-600 mt-1">Complete history of AI actions on your account</p>
     </div>
-    <a href="{{ url_for('google_bp.ads_performance') }}"
-       class="rounded-md border px-4 py-2 text-gray-700 hover:bg-gray-50">
-      <i class="fa-solid fa-arrow-left mr-2"></i>Back to Dashboard
-    </a>
+    <div class="flex items-center gap-3">
+      <button id="autoExecuteLowRiskBtn"
+              class="bg-green-600 text-white px-4 py-2 rounded-md font-semibold hover:bg-green-700 transition-all shadow text-sm">
+        <i class="fa-solid fa-bolt mr-1"></i>Auto-Execute Low Risk
+      </button>
+      <button id="runAgentsBtn"
+              class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-md font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow text-sm">
+        <i class="fa-solid fa-play mr-1"></i>Run Agents Now
+      </button>
+      <a href="{{ url_for('agents_bp.approval_queue') }}"
+         class="rounded-md border border-indigo-200 bg-indigo-50 px-4 py-2 text-indigo-700 hover:bg-indigo-100 text-sm font-medium">
+        <i class="fa-solid fa-list-check mr-1"></i>Approval Queue
+      </a>
+      <a href="{{ url_for('google_bp.ads_performance') }}"
+         class="rounded-md border px-4 py-2 text-gray-700 hover:bg-gray-50 text-sm">
+        <i class="fa-solid fa-arrow-left mr-1"></i>Dashboard
+      </a>
+    </div>
   </div>
 
   {# SUMMARY STATS #}
@@ -397,5 +411,67 @@ async function undoAction(actionId) {
     alert('Error undoing action: ' + error.message);
   }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+  const autoExecBtn = document.getElementById('autoExecuteLowRiskBtn');
+  if (autoExecBtn) {
+    autoExecBtn.addEventListener('click', async function() {
+      autoExecBtn.disabled = true;
+      autoExecBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Executing...';
+      try {
+        const resp = await fetch('/account/google/ads/agents/api/decisions/auto-execute-low-risk', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+          }
+        });
+        const data = await resp.json();
+        if (data.success) {
+          alert('Auto-executed ' + data.executed + ' low-risk decisions.\nFailed: ' + data.failed);
+          location.reload();
+        } else {
+          alert('Error: ' + (data.error || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        autoExecBtn.disabled = false;
+        autoExecBtn.innerHTML = '<i class="fa-solid fa-bolt mr-1"></i>Auto-Execute Low Risk';
+      }
+    });
+  }
+
+  const runAgentsBtn = document.getElementById('runAgentsBtn');
+  if (runAgentsBtn) {
+    runAgentsBtn.addEventListener('click', async function() {
+      runAgentsBtn.disabled = true;
+      runAgentsBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Running Agents...';
+      try {
+        const resp = await fetch('/account/google/ads/agents/api/run', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+          }
+        });
+        const data = await resp.json();
+        if (data.success) {
+          const msg = 'Agents finished!\nDecisions created: ' + (data.decisions_created || 0) +
+                      '\nAuto-executed: ' + (data.auto_executed || 0);
+          alert(msg);
+          location.reload();
+        } else {
+          alert('Error: ' + (data.error || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        runAgentsBtn.disabled = false;
+        runAgentsBtn.innerHTML = '<i class="fa-solid fa-play mr-1"></i>Run Agents Now';
+      }
+    });
+  }
+});
 </script>
 {% endblock %}

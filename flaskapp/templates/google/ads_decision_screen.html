@@ -664,16 +664,16 @@
       </div>
       <div class="text-sm text-gray-600 space-y-1">
         <div class="flex justify-between">
-          <span>{{industry_language.waste_example}} blocked:</span>
-          <span class="font-medium">${{ "N/A" if connected else 312 }}</span>
+          <span>irrelevant searches blocked:</span>
+          <span class="font-medium">{{ irrelevant_blocked_count if connected else 312 }}</span>
         </div>
         <div class="flex justify-between">
           <span>Job searches blocked:</span>
-          <span class="font-medium">${{ "N/A" if connected else 287 }}</span>
+          <span class="font-medium">{{ job_blocked_count if connected else 287 }}</span>
         </div>
         <div class="flex justify-between">
           <span>Low-quality clicks avoided:</span>
-          <span class="font-medium">${{ "N/A" if connected else 243 }}</span>
+          <span class="font-medium">{{ low_quality_count if connected else 243 }}</span>
         </div>
       </div>
     </div>

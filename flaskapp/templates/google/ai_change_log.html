@@ -428,8 +428,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         const data = await resp.json();
         if (data.success) {
-          alert('Auto-executed ' + data.executed + ' low-risk decisions.\nFailed: ' + data.failed);
-          location.reload();
+          let msg = 'Auto-executed ' + data.executed + ' low-risk decisions.\nFailed: ' + data.failed;
+          if (data.errors && data.errors.length > 0) {
+            msg += '\n\nFirst error: ' + data.errors[0].error;
+            console.log('Auto-execute errors:', data.errors);
+          }
+          alert(msg);
+          if (data.executed > 0) {
+            location.reload();
+          }
         } else {
           alert('Error: ' + (data.error || 'Unknown error'));
         }
@@ -457,8 +464,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         const data = await resp.json();
         if (data.success) {
-          const msg = 'Agents finished!\nDecisions created: ' + (data.decisions_created || 0) +
-                      '\nAuto-executed: ' + (data.auto_executed || 0);
+          const summary = data.summary || {};
+          const msg = 'Agents finished!\nDecisions created: ' + (summary.total_decisions || 0) +
+                      '\nAuto-executed: ' + (summary.auto_executed || 0) +
+                      '\nPending approval: ' + (summary.pending_approval || 0);
           alert(msg);
           location.reload();
         } else {

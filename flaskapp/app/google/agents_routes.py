@@ -2,7 +2,7 @@
 """
 Routes for AI Agent management - Approval Queue and Dashboard.
 """
-from flask import Blueprint, render_template, jsonify, request, flash, redirect, url_for
+from flask import Blueprint, render_template, jsonify, request, flash, redirect, url_for, current_app
 from sqlalchemy import text
 from datetime import datetime
 

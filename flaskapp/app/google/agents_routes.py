@@ -555,6 +555,7 @@ def auto_execute_low_risk():
     executed = 0
     failed = 0
     skipped = 0
+    errors = []
 
     for row in rows:
         try:
@@ -587,17 +588,28 @@ def auto_execute_low_risk():
                         WHERE id = :id
                     """), {"id": row['id'], "result": _json.dumps(result)})
                 failed += 1
+                errors.append({
+                    "decision_id": row['id'],
+                    "type": row.get('decision_type'),
+                    "error": result.get('error', 'Unknown error')
+                })
 
         except Exception as e:
             current_app.logger.error(f"Failed to auto-execute decision {row['id']}: {e}")
             failed += 1
+            errors.append({
+                "decision_id": row['id'],
+                "type": row.get('decision_type'),
+                "error": str(e)
+            })
 
     return jsonify({
         "success": True,
         "message": f"Auto-executed {executed} low-risk decisions ({failed} failed, {skipped} skipped)",
         "total_found": len(rows),
         "executed": executed,
-        "failed": failed
+        "failed": failed,
+        "errors": errors[:10]  # Limit to first 10 errors for readability
     })
 
 

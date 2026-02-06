@@ -3096,12 +3096,97 @@ def ads_performance():
     except Exception as e:
         current_app.logger.warning(f"Error setting pending savings display: {e}")
 
-    # Count blocked searches (negative keywords added)
+    # Count blocked searches (negative keywords added) - both executed and pending
     blocked_searches_count = AIAction.query.filter_by(
         account_id=aid,
         status='executed',
         action_type='negative_keyword_added'
     ).count()
+    # Also count pending negative keywords from agent_decisions
+    pending_negative_keywords = 0
+    try:
+        pending_negative_keywords = db.session.execute(
+            text("SELECT COUNT(*) FROM agent_decisions WHERE account_id = :aid AND status IN ('pending', 'approved') AND decision_type LIKE '%negative%'"),
+            {"aid": aid}
+        ).scalar() or 0
+    except Exception:
+        pass
+
+    # Calculate savings breakdown for display
+    # Total executed savings
+    irrelevant_blocked_savings = 0.0
+    job_blocked_savings = 0.0
+    low_quality_savings = 0.0
+
+    # Get pending decision counts for each category
+    try:
+        # Irrelevant searches (negative keywords not job-related)
+        irrelevant_count = db.session.execute(
+            text("""
+                SELECT COUNT(*) FROM agent_decisions
+                WHERE account_id = :aid AND status IN ('pending', 'approved', 'executed')
+                AND decision_type LIKE '%negative%'
+                AND (title NOT LIKE '%job%' AND title NOT LIKE '%career%' AND title NOT LIKE '%hiring%')
+            """),
+            {"aid": aid}
+        ).scalar() or 0
+
+        # Job searches blocked
+        job_count = db.session.execute(
+            text("""
+                SELECT COUNT(*) FROM agent_decisions
+                WHERE account_id = :aid AND status IN ('pending', 'approved', 'executed')
+                AND decision_type LIKE '%negative%'
+                AND (title LIKE '%job%' OR title LIKE '%career%' OR title LIKE '%hiring%')
+            """),
+            {"aid": aid}
+        ).scalar() or 0
+
+        # Low quality (paused keywords, etc)
+        low_quality_count = db.session.execute(
+            text("""
+                SELECT COUNT(*) FROM agent_decisions
+                WHERE account_id = :aid AND status IN ('pending', 'approved', 'executed')
+                AND (decision_type LIKE '%pause%' OR decision_type LIKE '%quality%')
+            """),
+            {"aid": aid}
+        ).scalar() or 0
+    except Exception:
+        irrelevant_count = 0
+        job_count = 0
+        low_quality_count = 0
+
+    # Count budget reallocations
+    budget_reallocations = AIAction.query.filter_by(
+        account_id=aid,
+        status='executed',
+        action_type='budget_reallocated'
+    ).count()
+    # Also count from agent_decisions
+    try:
+        agent_budget_count = db.session.execute(
+            text("SELECT COUNT(*) FROM agent_decisions WHERE account_id = :aid AND status = 'executed' AND decision_type LIKE '%budget%'"),
+            {"aid": aid}
+        ).scalar() or 0
+        budget_reallocations += agent_budget_count
+    except Exception:
+        pass
+
+    # Count bids optimized
+    bids_optimized = AIAction.query.filter_by(
+        account_id=aid,
+        status='executed',
+        action_type='bid_adjusted'
+    ).count()
+    # Also count from agent_decisions
+    try:
+        agent_bids_count = db.session.execute(
+            text("SELECT COUNT(*) FROM agent_decisions WHERE account_id = :aid AND status = 'executed' AND decision_type LIKE '%bid%'"),
+            {"aid": aid}
+        ).scalar() or 0
+        bids_optimized += agent_bids_count
+    except Exception:
+        pass
 
     # Calls generated from LSA (if available)
     calls_generated = 0
@@ -3328,6 +3413,12 @@ def ads_performance():
         calls_generated=calls_generated,
         ai_actions_taken=ai_actions_taken,
         blocked_searches_count=blocked_searches_count,
+        budget_reallocations=budget_reallocations,
+        bids_optimized=bids_optimized,
+        # Savings breakdown counts
+        irrelevant_blocked_count=irrelevant_count,
+        job_blocked_count=job_count,
+        low_quality_count=low_quality_count,
         lsa_missed_calls=lsa_missed_calls,
         recent_changes=recent_changes,
         historical_improvement=historical_improvement,

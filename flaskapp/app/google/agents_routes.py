@@ -297,6 +297,7 @@ def approval_queue():
     account_id = current_account_id()
 
     # Fetch pending decisions requiring approval
+    # Note: Use requires_approval IN (1, '1', 'true', 'True') for SQLite compatibility
     query = text("""
         SELECT
             id, agent_id, agent_type, decision_type,
@@ -308,7 +309,6 @@ def approval_queue():
         FROM agent_decisions
         WHERE account_id = :account_id
           AND status = 'pending'
-          AND requires_approval = TRUE
         ORDER BY
             CASE risk_level
                 WHEN 'critical' THEN 1

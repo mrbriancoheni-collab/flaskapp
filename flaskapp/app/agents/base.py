@@ -43,7 +43,6 @@ class AgentDecision:
     agent_id: str
     agent_type: str
     decision_type: str  # e.g., "add_negative_keyword", "adjust_bid", "pause_campaign"
-    id: Optional[int] = None  # Database ID (set after log_decision)
 
     # Decision details
     title: str
@@ -53,6 +52,9 @@ class AgentDecision:
     # Target
     account_id: int
     customer_id: str
+
+    # Optional fields (must come after required fields)
+    id: Optional[int] = None  # Database ID (set after log_decision)
     campaign_id: Optional[str] = None
     ad_group_id: Optional[str] = None
 

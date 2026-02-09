@@ -550,7 +550,7 @@ def auto_execute_low_risk():
         rows = conn.execute(find_query, {"account_id": account_id}).mappings().all()
 
     if not rows:
-        return jsonify({"success": True, "message": "No low-risk pending decisions to auto-execute", "executed": 0})
+        return jsonify({"success": True, "message": "No low-risk pending decisions to auto-execute", "executed": 0, "failed": 0, "total_found": 0})
 
     executed = 0
     failed = 0
@@ -648,7 +648,18 @@ def run_agents():
     3. Agents create decisions (appear in approval queue)
     4. Low-risk decisions auto-execute immediately
     """
-    from flask import current_app
+    try:
+        return _run_agents_internal()
+    except Exception as e:
+        current_app.logger.error(f"Run agents failed with error: {str(e)}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": f"Agent execution failed: {str(e)}"
+        }), 500
+
+
+def _run_agents_internal():
+    """Internal implementation of run_agents with full error details."""
     account_id = current_account_id()
 
     # Get Google Ads credentials

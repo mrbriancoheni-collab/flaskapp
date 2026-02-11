@@ -1323,6 +1323,45 @@ def trigger_outreach():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@lead_campaigns_bp.route('/trigger-force-send-all', methods=['POST'])
+@require_admin
+def trigger_force_send_all():
+    """
+    Force send emails to ALL contacts with email addresses who haven't received
+    the campaign emails yet, regardless of scrape timing or enrichment status.
+
+    This bypasses normal automation checks and sends to anyone who:
+    1. Has an email address (in lead_contacts or decision_maker_email)
+    2. Hasn't received this sequence step yet
+    3. Isn't unsubscribed
+    """
+    try:
+        from app.services.lead_automation_service import LeadAutomationService
+
+        # Get sequence step from request (default to 1)
+        data = request.get_json() or {}
+        sequence_step = data.get('sequence_step', 1)
+
+        logger.info(f"Manual trigger: Force sending sequence step {sequence_step} to all unsent contacts")
+        service = LeadAutomationService()
+        result = service.send_to_all_unsent_ever(sequence_step=sequence_step)
+
+        return jsonify({
+            'success': True,
+            'sent': result.get('sent', 0),
+            'sequence_step': result.get('sequence_step', sequence_step),
+            'total_contacts_checked': result.get('total_contacts_checked', 0),
+            'eligible_contacts': result.get('eligible_contacts', 0),
+            'skipped_unsubscribed': result.get('skipped_unsubscribed', 0),
+            'skipped_already_received': result.get('skipped_already_received_step', 0),
+            'message': f"Sent {result.get('sent', 0)} emails (sequence step {sequence_step})"
+        })
+
+    except Exception as e:
+        logger.exception(f"Error in force send all: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # ==================== Bulk Actions ====================
 
 def _save_bulk_stats(action_type: str, stats: dict):

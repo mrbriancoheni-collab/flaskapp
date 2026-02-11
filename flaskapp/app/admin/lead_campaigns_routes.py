@@ -1188,6 +1188,45 @@ def trigger_enrichment():
         service = LeadAutomationService()
         result = service.run_enrichment()
 
+        # Provide helpful context when no leads enriched
+        if result['enriched'] == 0:
+            # Check why no leads were enriched
+            total_leads = Lead.query.count()
+            pending_leads = Lead.query.filter_by(enrichment_status='pending').count()
+            pending_leads_with_website = Lead.query.filter_by(
+                enrichment_status='pending'
+            ).filter(Lead.website.isnot(None)).count()
+            already_enriched = Lead.query.filter_by(enrichment_status='completed').count()
+            failed_leads = Lead.query.filter_by(enrichment_status='failed').count()
+
+            reasons = []
+            if total_leads == 0:
+                reasons.append("No leads exist - run scraping first")
+            elif pending_leads == 0:
+                if already_enriched > 0:
+                    reasons.append(f"All {already_enriched} leads already enriched")
+                elif failed_leads > 0:
+                    reasons.append(f"{failed_leads} leads failed enrichment - check API keys")
+            elif pending_leads_with_website == 0:
+                reasons.append(f"{pending_leads} leads pending but none have website URLs (required for enrichment)")
+            else:
+                reasons.append("Unknown - check enrichment service logs")
+
+            return jsonify({
+                'success': True,
+                'enriched': 0,
+                'total_enriched': result['total_enriched'],
+                'message': 'No leads enriched',
+                'reasons': reasons,
+                'stats': {
+                    'total_leads': total_leads,
+                    'pending_leads': pending_leads,
+                    'pending_leads_with_website': pending_leads_with_website,
+                    'already_enriched': already_enriched,
+                    'failed_leads': failed_leads
+                }
+            })
+
         return jsonify({
             'success': True,
             'enriched': result['enriched'],
@@ -1216,7 +1255,7 @@ def trigger_outreach():
 
         # Provide helpful context when no emails sent
         if result['sent'] == 0:
-            # Check why no emails were sent
+            # Check why no emails were sent - gather comprehensive stats
             ready_campaigns = LeadCampaign.query.filter_by(status='ready').count()
             enriched_leads = Lead.query.filter_by(enrichment_status='completed').count()
             pending_contacts = db.session.query(func.count(LeadContact.id)).filter(
@@ -1224,12 +1263,35 @@ def trigger_outreach():
                 LeadContact.email.isnot(None)
             ).scalar() or 0
 
+            # Additional diagnostic info
+            total_leads = Lead.query.count()
+            pending_leads = Lead.query.filter_by(enrichment_status='pending').count()
+            pending_leads_with_website = Lead.query.filter_by(
+                enrichment_status='pending'
+            ).filter(Lead.website.isnot(None)).count()
+            failed_leads = Lead.query.filter_by(enrichment_status='failed').count()
+
+            # Check for legacy decision_maker_email (leads without contacts)
+            leads_with_pending_legacy_email = Lead.query.filter(
+                Lead.enrichment_status == 'completed',
+                Lead.email_status == 'pending',
+                Lead.decision_maker_email.isnot(None)
+            ).count()
+
             reasons = []
             if ready_campaigns == 0:
                 reasons.append("No campaigns with status 'ready'")
             if enriched_leads == 0:
-                reasons.append("No enriched leads (run enrichment first)")
-            if pending_contacts == 0:
+                if pending_leads > 0:
+                    if pending_leads_with_website == 0:
+                        reasons.append(f"No enriched leads - {pending_leads} leads pending but none have website URLs (required for enrichment)")
+                    else:
+                        reasons.append(f"No enriched leads - {pending_leads_with_website} leads ready for enrichment (run enrichment first)")
+                elif failed_leads > 0:
+                    reasons.append(f"No enriched leads - {failed_leads} leads failed enrichment (check API keys and retry)")
+                else:
+                    reasons.append("No enriched leads (run enrichment first)")
+            if pending_contacts == 0 and leads_with_pending_legacy_email == 0:
                 reasons.append("No contacts with pending email status (all may have been emailed already)")
 
             return jsonify({
@@ -1241,7 +1303,11 @@ def trigger_outreach():
                 'stats': {
                     'ready_campaigns': ready_campaigns,
                     'enriched_leads': enriched_leads,
-                    'pending_contacts': pending_contacts
+                    'pending_contacts': pending_contacts,
+                    'total_leads': total_leads,
+                    'pending_leads': pending_leads,
+                    'pending_leads_with_website': pending_leads_with_website,
+                    'failed_leads': failed_leads
                 }
             })
 

@@ -572,7 +572,24 @@ async function triggerGlobalEnrichment(btn) {
         const data = await response.json();
 
         if (data.success) {
-            alert(`Success! Enriched ${data.enriched} leads.\nTotal enriched: ${data.total_enriched}`);
+            if (data.enriched === 0 && data.reasons) {
+                // Show why no leads were enriched
+                let msg = `No leads enriched.\n\nReasons:\n`;
+                data.reasons.forEach(r => msg += `• ${r}\n`);
+                if (data.stats) {
+                    msg += `\nLead stats:\n`;
+                    msg += `• Total leads: ${data.stats.total_leads}\n`;
+                    msg += `• Pending enrichment: ${data.stats.pending_leads}\n`;
+                    msg += `• Have website (can be enriched): ${data.stats.pending_leads_with_website}\n`;
+                    msg += `• Already enriched: ${data.stats.already_enriched}\n`;
+                    if (data.stats.failed_leads > 0) {
+                        msg += `• Failed enrichment: ${data.stats.failed_leads}`;
+                    }
+                }
+                alert(msg);
+            } else {
+                alert(`Success! Enriched ${data.enriched} leads.\nTotal enriched: ${data.total_enriched}`);
+            }
             location.reload();
         } else {
             alert(`Error: ${data.error || 'Unknown error'}`);
@@ -614,7 +631,17 @@ async function triggerGlobalOutreach(btn) {
                     msg += `\nCurrent stats:\n`;
                     msg += `• Ready campaigns: ${data.stats.ready_campaigns}\n`;
                     msg += `• Enriched leads: ${data.stats.enriched_leads}\n`;
-                    msg += `• Pending contacts: ${data.stats.pending_contacts}`;
+                    msg += `• Pending contacts: ${data.stats.pending_contacts}\n`;
+                    // Show additional diagnostic info if available
+                    if (data.stats.total_leads !== undefined) {
+                        msg += `\nLead details:\n`;
+                        msg += `• Total leads: ${data.stats.total_leads}\n`;
+                        msg += `• Pending enrichment: ${data.stats.pending_leads}\n`;
+                        msg += `• Ready for enrichment (have website): ${data.stats.pending_leads_with_website}\n`;
+                        if (data.stats.failed_leads > 0) {
+                            msg += `• Failed enrichment: ${data.stats.failed_leads}`;
+                        }
+                    }
                 }
                 alert(msg);
             } else {

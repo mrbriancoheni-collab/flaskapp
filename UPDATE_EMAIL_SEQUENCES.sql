@@ -7,8 +7,11 @@
 --   Steps 5-6: GET MORE LEADS (ROI, growth, lead quality)
 -- ============================================================================
 
--- First, delete existing sequences to replace with new ones
-DELETE FROM email_sequences WHERE name = 'Auto Campaign';
+-- First, delete existing sequences for core campaigns (steps 1-6) to replace with new ones
+-- This handles cases where sequences might have different names
+DELETE es FROM email_sequences es
+INNER JOIN lead_campaigns lc ON es.campaign_id = lc.id
+WHERE lc.is_core = 1 AND es.step_number IN (1, 2, 3, 4, 5, 6);
 
 -- ============================================================================
 -- STEP 1: SPEND LESS - Initial Outreach (Day 0)
@@ -61,7 +64,15 @@ https://FieldSprout.io
     NOW(),
     NOW()
 FROM lead_campaigns lc
-WHERE lc.is_core = 1;
+WHERE lc.is_core = 1
+ON DUPLICATE KEY UPDATE
+    name = VALUES(name),
+    subject = VALUES(subject),
+    body_html = VALUES(body_html),
+    body_text = VALUES(body_text),
+    delay_days = VALUES(delay_days),
+    is_active = VALUES(is_active),
+    updated_at = NOW();
 
 
 -- ============================================================================
@@ -129,7 +140,15 @@ Founder, FieldSprout.io
     NOW(),
     NOW()
 FROM lead_campaigns lc
-WHERE lc.is_core = 1;
+WHERE lc.is_core = 1
+ON DUPLICATE KEY UPDATE
+    name = VALUES(name),
+    subject = VALUES(subject),
+    body_html = VALUES(body_html),
+    body_text = VALUES(body_text),
+    delay_days = VALUES(delay_days),
+    is_active = VALUES(is_active),
+    updated_at = NOW();
 
 
 -- ============================================================================
@@ -202,7 +221,15 @@ FieldSprout.io
     NOW(),
     NOW()
 FROM lead_campaigns lc
-WHERE lc.is_core = 1;
+WHERE lc.is_core = 1
+ON DUPLICATE KEY UPDATE
+    name = VALUES(name),
+    subject = VALUES(subject),
+    body_html = VALUES(body_html),
+    body_text = VALUES(body_text),
+    delay_days = VALUES(delay_days),
+    is_active = VALUES(is_active),
+    updated_at = NOW();
 
 
 -- ============================================================================
@@ -278,7 +305,15 @@ Brian
     NOW(),
     NOW()
 FROM lead_campaigns lc
-WHERE lc.is_core = 1;
+WHERE lc.is_core = 1
+ON DUPLICATE KEY UPDATE
+    name = VALUES(name),
+    subject = VALUES(subject),
+    body_html = VALUES(body_html),
+    body_text = VALUES(body_text),
+    delay_days = VALUES(delay_days),
+    is_active = VALUES(is_active),
+    updated_at = NOW();
 
 
 -- ============================================================================
@@ -350,7 +385,15 @@ FieldSprout.io
     NOW(),
     NOW()
 FROM lead_campaigns lc
-WHERE lc.is_core = 1;
+WHERE lc.is_core = 1
+ON DUPLICATE KEY UPDATE
+    name = VALUES(name),
+    subject = VALUES(subject),
+    body_html = VALUES(body_html),
+    body_text = VALUES(body_text),
+    delay_days = VALUES(delay_days),
+    is_active = VALUES(is_active),
+    updated_at = NOW();
 
 
 -- ============================================================================
@@ -427,7 +470,15 @@ P.S. — If you''ve already solved your ad optimization challenges, I''d genuine
     NOW(),
     NOW()
 FROM lead_campaigns lc
-WHERE lc.is_core = 1;
+WHERE lc.is_core = 1
+ON DUPLICATE KEY UPDATE
+    name = VALUES(name),
+    subject = VALUES(subject),
+    body_html = VALUES(body_html),
+    body_text = VALUES(body_text),
+    delay_days = VALUES(delay_days),
+    is_active = VALUES(is_active),
+    updated_at = NOW();
 
 
 -- ============================================================================

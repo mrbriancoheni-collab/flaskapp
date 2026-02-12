@@ -949,11 +949,11 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                     email_record = LeadContactEmail(
                         contact_id=contact.id,
                         lead_id=lead.id,
+                        campaign_id=campaign.id,
                         sequence_step=email_sequence.step_number,
                         to_email=contact.email,
                         subject=subject,
-                        body_text=body,
-                        body_html=body.replace('\n', '<br>'),
+                        body=body,
                         sent_at=datetime.utcnow(),
                         status='sent'
                     )

@@ -235,11 +235,19 @@ def _send_workflow_email(
         from jinja2 import Template
 
         # Prepare template variables
+        # CRMContact uses contact_name (full name) and business_name
+        contact_name = contact.contact_name or ""
+        name_parts = contact_name.split() if contact_name else []
+        first_name = name_parts[0] if name_parts else ""
+        last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
+
         template_vars = {
-            "first_name": contact.first_name or "",
-            "last_name": contact.last_name or "",
+            "first_name": first_name,
+            "last_name": last_name,
+            "contact_name": contact_name,
             "email": contact.email or "",
-            "company_name": contact.company_name or "",
+            "company_name": contact.business_name or "",
+            "business_name": contact.business_name or "",
             "phone": contact.phone or "",
         }
 

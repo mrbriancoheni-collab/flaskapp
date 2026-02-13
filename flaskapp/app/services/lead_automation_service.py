@@ -1041,12 +1041,13 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
         )
         logger.info(f"Found {len(unsubscribed_emails)} unsubscribed email addresses")
 
-        # Get all enriched contacts
+        # Get all enriched contacts with valid emails
         all_contacts = (
             LeadContact.query.join(Lead)
             .filter(
-                LeadContact.email_status == "verified",
-                Lead.scraped_at.isnot(None),
+                Lead.enrichment_status == 'completed',
+                LeadContact.email.isnot(None),
+                LeadContact.email != '',
             )
             .all()
         )
@@ -1062,9 +1063,10 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             contacts_by_campaign[campaign_id].append(contact)
 
         # Process each campaign
+        daily_limit = AUTOMATION_CONFIG["daily_email_limit"]
         for campaign_id, contacts in contacts_by_campaign.items():
-            if sent_count >= self.EMAIL_DAILY_LIMIT:
-                logger.info(f"Reached daily limit of {self.EMAIL_DAILY_LIMIT} emails")
+            if sent_count >= daily_limit:
+                logger.info(f"Reached daily limit of {daily_limit} emails")
                 break
 
             # Get all sequence steps for this campaign, ordered by step_number
@@ -1081,7 +1083,7 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
 
             # Process each contact in this campaign
             for contact in contacts:
-                if sent_count >= self.EMAIL_DAILY_LIMIT:
+                if sent_count >= daily_limit:
                     break
 
                 # Skip unsubscribed
@@ -1159,10 +1161,11 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
 
                     if success:
                         sent_count += 1
-                        self._update_daily_stats(1)
+                        self.state["emails_sent"] += 1
+                        self.state["daily_stats"]["emails"] += 1
 
-                        if sent_count >= self.EMAIL_DAILY_LIMIT:
-                            logger.info(f"Reached daily limit of {self.EMAIL_DAILY_LIMIT} emails")
+                        if sent_count >= daily_limit:
+                            logger.info(f"Reached daily limit of {daily_limit} emails")
                             break
 
                 except Exception as e:
@@ -1186,6 +1189,91 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             "skipped_not_ready": skipped_not_ready,
             "skipped_complete": skipped_complete,
         }
+
+    def _send_campaign_email(self, contact: LeadContact, campaign: LeadCampaign, sequence: EmailSequence) -> bool:
+        """
+        Send a campaign email to a contact.
+
+        Args:
+            contact: The LeadContact to send to
+            campaign: The LeadCampaign this belongs to
+            sequence: The EmailSequence step to send
+
+        Returns:
+            True if email was sent successfully, False otherwise
+        """
+        try:
+            lead = contact.lead
+
+            # Initialize outreach service if needed
+            if not self.outreach:
+                self.outreach = BrevoOutreachService()
+
+            # Prepare email content using contact-specific variables
+            subject = self._replace_contact_variables(sequence.subject, lead, contact, campaign)
+            body = self._replace_contact_variables(sequence.body_text, lead, contact, campaign)
+
+            # Send email
+            result = self.outreach.send_email(
+                to_email=contact.email,
+                subject=subject,
+                body_html=body.replace('\n', '<br>'),
+                body_text=body
+            )
+
+            # Check for rate limiting
+            if result.get('rate_limited'):
+                retry_after = result.get('retry_after', 300)
+                logger.warning(f"Email rate limit hit. Retry after {retry_after} seconds")
+                return False
+
+            if result.get('success'):
+                # Record email sent to contact using correct LeadContactEmail fields
+                email_record = LeadContactEmail(
+                    contact_id=contact.id,
+                    lead_id=lead.id,
+                    campaign_id=campaign.id,
+                    sequence_step=sequence.step_number,
+                    subject=subject,
+                    body=body,  # LeadContactEmail uses 'body' not 'body_text'/'body_html'
+                    to_email=contact.email,
+                    email_provider='brevo',
+                    sent_at=datetime.utcnow(),
+                    status='sent'
+                )
+
+                # Store Brevo message ID if available
+                if result.get('message_id'):
+                    email_record.brevo_message_id = result.get('message_id')
+
+                db.session.add(email_record)
+
+                # Update contact status
+                contact.email_status = 'sent'
+                contact.current_sequence_step = sequence.step_number
+                contact.last_email_sent_at = datetime.utcnow()
+
+                # Update lead status if primary contact
+                if contact.is_primary:
+                    lead.email_status = 'sent'
+                    lead.current_sequence_step = sequence.step_number
+                    lead.last_email_sent_at = datetime.utcnow()
+
+                # Update campaign stats
+                campaign.emails_sent = (campaign.emails_sent or 0) + 1
+
+                db.session.commit()
+
+                logger.info(f"Sent sequence step {sequence.step_number} to {contact.email} ({contact.name})")
+                return True
+            else:
+                logger.warning(f"Failed to send email to {contact.email}: {result.get('error')}")
+                return False
+
+        except Exception as e:
+            logger.error(f"Error sending campaign email to {contact.email}: {e}")
+            db.session.rollback()
+            return False
 
     def _replace_variables(self, text: str, lead: Lead, campaign: LeadCampaign) -> str:
         """Replace template variables in email text"""

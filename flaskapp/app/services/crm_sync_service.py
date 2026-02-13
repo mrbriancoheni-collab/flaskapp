@@ -194,3 +194,57 @@ class CRMSyncService:
 
         logger.info(f"Batch sync complete: {companies_synced} companies, {contacts_synced} contacts")
         return (companies_synced, contacts_synced)
+
+    def sync_lead_contacts_by_email(self) -> Tuple[int, int]:
+        """
+        Link LeadContacts to CompanyContacts by email matching only.
+
+        This is a more flexible sync that doesn't require the parent Lead to be
+        synced to the same CRMContact. Useful for linking existing data.
+
+        Returns:
+            Tuple of (linked_count, not_found_count)
+        """
+        # Get all LeadContacts without company_contact_id that have an email
+        unlinked_contacts = LeadContact.query.filter(
+            LeadContact.company_contact_id.is_(None),
+            LeadContact.email.isnot(None),
+            LeadContact.email != ''
+        ).all()
+
+        logger.info(f"Found {len(unlinked_contacts)} unlinked LeadContacts with emails")
+
+        # Build a lookup dict of CompanyContacts by email for efficiency
+        company_contacts = CompanyContact.query.filter(
+            CompanyContact.email.isnot(None),
+            CompanyContact.email != ''
+        ).all()
+
+        email_to_company_contact = {}
+        for cc in company_contacts:
+            email_lower = cc.email.lower().strip()
+            if email_lower not in email_to_company_contact:
+                email_to_company_contact[email_lower] = cc
+
+        logger.info(f"Built lookup with {len(email_to_company_contact)} unique CompanyContact emails")
+
+        linked_count = 0
+        not_found_count = 0
+
+        for lc in unlinked_contacts:
+            email_lower = lc.email.lower().strip()
+
+            if email_lower in email_to_company_contact:
+                company_contact = email_to_company_contact[email_lower]
+                lc.company_contact_id = company_contact.id
+                linked_count += 1
+                logger.debug(f"Linked LeadContact {lc.id} ({lc.email}) to CompanyContact {company_contact.id}")
+            else:
+                not_found_count += 1
+                logger.debug(f"No CompanyContact found for LeadContact {lc.id} ({lc.email})")
+
+        if linked_count > 0:
+            db.session.commit()
+            logger.info(f"Committed {linked_count} links to database")
+
+        return (linked_count, not_found_count)

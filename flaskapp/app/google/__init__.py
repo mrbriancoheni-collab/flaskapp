@@ -3190,8 +3190,12 @@ def ads_performance():
 
     # Calls generated from LSA (if available)
     calls_generated = 0
+    qualified_leads = 0
+    booked_jobs = 0
     if lsa_missed_calls:
         calls_generated = lsa_missed_calls.get('total_calls', 0)
+        qualified_leads = lsa_missed_calls.get('qualified_leads', 0)
+        booked_jobs = lsa_missed_calls.get('booked_jobs', 0)
 
     # If there are high-priority missed calls, change status to red
     if lsa_missed_calls and lsa_missed_calls.get('high_priority', 0) > 0:
@@ -3209,7 +3213,8 @@ def ads_performance():
             text("""
                 SELECT id, decision_type as action_type, title, description,
                        expected_monthly_savings as estimated_monthly_savings,
-                       campaign_id, executed_at, created_at
+                       campaign_id, executed_at, created_at,
+                       reasoning, confidence
                 FROM agent_decisions
                 WHERE account_id = :aid AND status = 'executed'
                 ORDER BY COALESCE(executed_at, created_at) DESC
@@ -3228,6 +3233,13 @@ def ads_performance():
                 self.estimated_monthly_savings = row['estimated_monthly_savings']
                 self.campaign_id = row['campaign_id']
                 self.executed_at = row['executed_at'] or row['created_at']
+                self.reasoning = row.get('reasoning')
+                self.confidence_score = float(row['confidence']) if row.get('confidence') is not None else None
+                self.can_undo = False
+
+            @property
+            def is_undoable(self):
+                return False
 
         agent_decisions_list = [DecisionProxy(row) for row in agent_decision_rows]
 
@@ -3411,6 +3423,8 @@ def ads_performance():
         status=status,
         wasted_spend_prevented=round(wasted_spend_prevented, 2),
         calls_generated=calls_generated,
+        qualified_leads=qualified_leads,
+        booked_jobs=booked_jobs,
         ai_actions_taken=ai_actions_taken,
         blocked_searches_count=blocked_searches_count,
         budget_reallocations=budget_reallocations,

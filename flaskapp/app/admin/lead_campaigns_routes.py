@@ -2275,3 +2275,214 @@ def set_campaign_status(campaign_id):
         'old_status': old_status,
         'new_status': new_status
     })
+
+
+# =============================================================================
+# EMAIL MONITORING DASHBOARD
+# =============================================================================
+
+@lead_campaigns_bp.route('/email-monitoring')
+@require_admin
+def email_monitoring_dashboard():
+    """
+    Email monitoring dashboard with aggregate metrics, open/click/bounce rates,
+    and daily volume chart.
+    """
+    from sqlalchemy import case, cast, Date
+    from datetime import date, timedelta
+
+    # Get date range from query params (default: last 30 days)
+    days = request.args.get('days', 30, type=int)
+    start_date = datetime.utcnow() - timedelta(days=days)
+
+    # =======================
+    # AGGREGATE METRICS
+    # =======================
+
+    # Total emails from LeadContactEmail
+    total_contact_emails = db.session.query(func.count(LeadContactEmail.id)).filter(
+        LeadContactEmail.created_at >= start_date
+    ).scalar() or 0
+
+    # Total emails from legacy LeadEmail
+    total_legacy_emails = db.session.query(func.count(LeadEmail.id)).filter(
+        LeadEmail.created_at >= start_date
+    ).scalar() or 0
+
+    total_sent = total_contact_emails + total_legacy_emails
+
+    # Status breakdown for LeadContactEmail
+    contact_email_stats = db.session.query(
+        LeadContactEmail.status,
+        func.count(LeadContactEmail.id)
+    ).filter(
+        LeadContactEmail.created_at >= start_date
+    ).group_by(LeadContactEmail.status).all()
+
+    contact_status_dict = dict(contact_email_stats)
+
+    # Status breakdown for legacy LeadEmail
+    legacy_email_stats = db.session.query(
+        LeadEmail.status,
+        func.count(LeadEmail.id)
+    ).filter(
+        LeadEmail.created_at >= start_date
+    ).group_by(LeadEmail.status).all()
+
+    legacy_status_dict = dict(legacy_email_stats)
+
+    # Calculate metrics
+    sent_count = contact_status_dict.get('sent', 0) + legacy_status_dict.get('sent', 0)
+    delivered_count = contact_status_dict.get('delivered', 0) + legacy_status_dict.get('delivered', 0) + sent_count
+    opened_count = contact_status_dict.get('opened', 0) + legacy_status_dict.get('opened', 0)
+    clicked_count = contact_status_dict.get('clicked', 0) + legacy_status_dict.get('clicked', 0)
+    bounced_count = contact_status_dict.get('bounced', 0) + legacy_status_dict.get('bounced', 0)
+    failed_count = contact_status_dict.get('failed', 0) + legacy_status_dict.get('failed', 0)
+
+    # Also count opened/clicked by checking the timestamp columns
+    opened_by_timestamp = db.session.query(func.count(LeadContactEmail.id)).filter(
+        LeadContactEmail.created_at >= start_date,
+        LeadContactEmail.opened_at.isnot(None)
+    ).scalar() or 0
+
+    clicked_by_timestamp = db.session.query(func.count(LeadContactEmail.id)).filter(
+        LeadContactEmail.created_at >= start_date,
+        LeadContactEmail.clicked_at.isnot(None)
+    ).scalar() or 0
+
+    # Use the higher value between status and timestamp counts
+    opened_count = max(opened_count, opened_by_timestamp)
+    clicked_count = max(clicked_count, clicked_by_timestamp)
+
+    # Calculate rates (avoid division by zero)
+    delivery_rate = (delivered_count / total_sent * 100) if total_sent > 0 else 0
+    open_rate = (opened_count / delivered_count * 100) if delivered_count > 0 else 0
+    click_rate = (clicked_count / opened_count * 100) if opened_count > 0 else 0
+    bounce_rate = (bounced_count / total_sent * 100) if total_sent > 0 else 0
+
+    # =======================
+    # DAILY VOLUME DATA (for chart)
+    # =======================
+    daily_volume = db.session.query(
+        func.date(LeadContactEmail.sent_at).label('date'),
+        func.count(LeadContactEmail.id).label('count')
+    ).filter(
+        LeadContactEmail.sent_at >= start_date,
+        LeadContactEmail.sent_at.isnot(None)
+    ).group_by(
+        func.date(LeadContactEmail.sent_at)
+    ).order_by(
+        func.date(LeadContactEmail.sent_at)
+    ).all()
+
+    # Also get legacy daily volume
+    legacy_daily_volume = db.session.query(
+        func.date(LeadEmail.sent_at).label('date'),
+        func.count(LeadEmail.id).label('count')
+    ).filter(
+        LeadEmail.sent_at >= start_date,
+        LeadEmail.sent_at.isnot(None)
+    ).group_by(
+        func.date(LeadEmail.sent_at)
+    ).order_by(
+        func.date(LeadEmail.sent_at)
+    ).all()
+
+    # Merge daily volumes
+    daily_volume_dict = {}
+    for row in daily_volume:
+        date_str = row.date.strftime('%Y-%m-%d') if row.date else None
+        if date_str:
+            daily_volume_dict[date_str] = daily_volume_dict.get(date_str, 0) + row.count
+    for row in legacy_daily_volume:
+        date_str = row.date.strftime('%Y-%m-%d') if row.date else None
+        if date_str:
+            daily_volume_dict[date_str] = daily_volume_dict.get(date_str, 0) + row.count
+
+    # Sort by date
+    sorted_dates = sorted(daily_volume_dict.keys())
+    chart_labels = sorted_dates
+    chart_data = [daily_volume_dict[d] for d in sorted_dates]
+
+    # =======================
+    # CAMPAIGN BREAKDOWN
+    # =======================
+    campaign_stats = db.session.query(
+        LeadCampaign.id,
+        LeadCampaign.name,
+        func.count(LeadContactEmail.id).label('total_emails'),
+        func.sum(case((LeadContactEmail.status == 'sent', 1), (LeadContactEmail.status == 'delivered', 1), else_=0)).label('delivered'),
+        func.sum(case((LeadContactEmail.status == 'opened', 1), else_=0)).label('opened'),
+        func.sum(case((LeadContactEmail.status == 'clicked', 1), else_=0)).label('clicked'),
+        func.sum(case((LeadContactEmail.status == 'bounced', 1), else_=0)).label('bounced'),
+        func.sum(case((LeadContactEmail.opened_at.isnot(None), 1), else_=0)).label('opened_by_ts'),
+        func.sum(case((LeadContactEmail.clicked_at.isnot(None), 1), else_=0)).label('clicked_by_ts')
+    ).join(
+        LeadContactEmail, LeadCampaign.id == LeadContactEmail.campaign_id
+    ).filter(
+        LeadContactEmail.created_at >= start_date
+    ).group_by(
+        LeadCampaign.id, LeadCampaign.name
+    ).order_by(
+        desc(func.count(LeadContactEmail.id))
+    ).limit(20).all()
+
+    # Process campaign stats
+    campaign_data = []
+    for row in campaign_stats:
+        opened = max(row.opened or 0, row.opened_by_ts or 0)
+        clicked = max(row.clicked or 0, row.clicked_by_ts or 0)
+        delivered = (row.delivered or 0)
+        total = row.total_emails or 0
+
+        campaign_data.append({
+            'id': row.id,
+            'name': row.name,
+            'total': total,
+            'delivered': delivered,
+            'opened': opened,
+            'clicked': clicked,
+            'bounced': row.bounced or 0,
+            'open_rate': (opened / delivered * 100) if delivered > 0 else 0,
+            'click_rate': (clicked / opened * 100) if opened > 0 else 0
+        })
+
+    # =======================
+    # RECENT EMAILS
+    # =======================
+    recent_emails = LeadContactEmail.query.filter(
+        LeadContactEmail.sent_at.isnot(None)
+    ).order_by(
+        desc(LeadContactEmail.sent_at)
+    ).limit(25).all()
+
+    # =======================
+    # UNSUBSCRIBE COUNT
+    # =======================
+    unsubscribe_count = db.session.query(func.count(EmailUnsubscribe.id)).scalar() or 0
+
+    return render_template(
+        'admin/lead_campaigns/email_monitoring.html',
+        # Aggregate metrics
+        total_sent=total_sent,
+        delivered_count=delivered_count,
+        opened_count=opened_count,
+        clicked_count=clicked_count,
+        bounced_count=bounced_count,
+        failed_count=failed_count,
+        unsubscribe_count=unsubscribe_count,
+        # Rates
+        delivery_rate=delivery_rate,
+        open_rate=open_rate,
+        click_rate=click_rate,
+        bounce_rate=bounce_rate,
+        # Chart data
+        chart_labels=chart_labels,
+        chart_data=chart_data,
+        # Campaign breakdown
+        campaign_stats=campaign_data,
+        # Recent emails
+        recent_emails=recent_emails,
+        # Filters
+        days=days
+    )

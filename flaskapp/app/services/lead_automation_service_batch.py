@@ -16,6 +16,7 @@ from app.extensions import db
 from app.models_leads import LeadCampaign, Lead, LeadContact, LeadEmail, LeadContactEmail
 from app.configs.lead_automation_config import AUTOMATION_CONFIG
 from app.services.brevo_outreach import BrevoOutreachService
+from app.services.email_dedup_service import can_send_email
 
 logger = logging.getLogger(__name__)
 
@@ -86,15 +87,10 @@ def process_email_sending_batch(automation_service) -> int:
 
             # If no contacts, fall back to legacy decision_maker_email
             if not pending_contacts and lead.email_status == 'pending' and lead.decision_maker_email:
-                # DUPLICATE PREVENTION: Check if we've already sent this sequence to this email
-                already_sent = LeadEmail.query.filter_by(
-                    lead_id=lead.id,
-                    sequence_id=email_sequence.id,
-                    to_email=lead.decision_maker_email
-                ).first()
-
-                if already_sent:
-                    logger.debug(f"Batch: Skipping {lead.decision_maker_email} - already sent sequence step {email_sequence.step_number}")
+                # DUPLICATE PREVENTION: Case-insensitive global dedup check
+                can_send, reason = can_send_email(lead.decision_maker_email, sequence_step=email_sequence.step_number)
+                if not can_send:
+                    logger.debug(f"Batch: Skipping {lead.decision_maker_email} - {reason}")
                     continue
 
                 subject = automation_service._replace_variables(email_sequence.subject, lead, campaign)
@@ -125,15 +121,10 @@ def process_email_sending_batch(automation_service) -> int:
                 if len(emails_to_send) >= remaining:
                     break
 
-                # DUPLICATE PREVENTION: Check if we've already sent this sequence to this contact
-                already_sent = LeadContactEmail.query.filter_by(
-                    contact_id=contact.id,
-                    sequence_step=email_sequence.step_number,
-                    to_email=contact.email
-                ).first()
-
-                if already_sent:
-                    logger.debug(f"Batch: Skipping {contact.email} ({contact.name}) - already sent sequence step {email_sequence.step_number}")
+                # DUPLICATE PREVENTION: Case-insensitive global dedup check
+                can_send, reason = can_send_email(contact.email, sequence_step=email_sequence.step_number, contact_id=contact.id)
+                if not can_send:
+                    logger.debug(f"Batch: Skipping {contact.email} ({contact.name}) - {reason}")
                     continue
 
                 subject = automation_service._replace_contact_variables(email_sequence.subject, lead, contact, campaign)

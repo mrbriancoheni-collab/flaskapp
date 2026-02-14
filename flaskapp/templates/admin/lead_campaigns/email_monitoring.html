@@ -1,0 +1,377 @@
+{% extends "base_admin.html" %}
+
+{% block title %}Email Monitoring Dashboard - Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">
+                <i class="fa-solid fa-chart-line text-indigo-600 mr-3"></i>
+                Email Monitoring Dashboard
+            </h1>
+            <p class="text-gray-600 mt-2">Track email performance, engagement rates, and campaign success</p>
+        </div>
+        <div class="flex gap-3">
+            <select id="daysFilter" class="border border-gray-300 rounded-lg px-4 py-2 bg-white" onchange="updateDateRange()">
+                <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
+                <option value="14" {% if days == 14 %}selected{% endif %}>Last 14 days</option>
+                <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+                <option value="60" {% if days == 60 %}selected{% endif %}>Last 60 days</option>
+                <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
+            </select>
+            <a href="{{ url_for('lead_campaigns_bp.index') }}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 font-semibold">
+                <i class="fa-solid fa-arrow-left mr-2"></i>
+                Back to Campaigns
+            </a>
+        </div>
+    </div>
+
+    <!-- Key Metrics Overview -->
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
+        <!-- Total Sent -->
+        <div class="bg-white border rounded-lg p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-gray-600 font-medium">Total Sent</span>
+                <i class="fa-solid fa-paper-plane text-blue-500 text-xl"></i>
+            </div>
+            <div class="text-3xl font-bold text-gray-900">{{ "{:,}".format(total_sent) }}</div>
+            <div class="text-xs text-gray-500 mt-1">Last {{ days }} days</div>
+        </div>
+
+        <!-- Delivered -->
+        <div class="bg-white border rounded-lg p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-gray-600 font-medium">Delivered</span>
+                <i class="fa-solid fa-check-circle text-green-500 text-xl"></i>
+            </div>
+            <div class="text-3xl font-bold text-green-600">{{ "{:,}".format(delivered_count) }}</div>
+            <div class="text-xs text-gray-500 mt-1">{{ "%.1f"|format(delivery_rate) }}% delivery rate</div>
+        </div>
+
+        <!-- Opened -->
+        <div class="bg-white border rounded-lg p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-gray-600 font-medium">Opened</span>
+                <i class="fa-solid fa-envelope-open text-purple-500 text-xl"></i>
+            </div>
+            <div class="text-3xl font-bold text-purple-600">{{ "{:,}".format(opened_count) }}</div>
+            <div class="text-xs text-gray-500 mt-1">{{ "%.1f"|format(open_rate) }}% open rate</div>
+        </div>
+
+        <!-- Clicked -->
+        <div class="bg-white border rounded-lg p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-gray-600 font-medium">Clicked</span>
+                <i class="fa-solid fa-mouse-pointer text-orange-500 text-xl"></i>
+            </div>
+            <div class="text-3xl font-bold text-orange-600">{{ "{:,}".format(clicked_count) }}</div>
+            <div class="text-xs text-gray-500 mt-1">{{ "%.1f"|format(click_rate) }}% click rate</div>
+        </div>
+
+        <!-- Bounced -->
+        <div class="bg-white border rounded-lg p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-gray-600 font-medium">Bounced</span>
+                <i class="fa-solid fa-exclamation-triangle text-red-500 text-xl"></i>
+            </div>
+            <div class="text-3xl font-bold text-red-600">{{ "{:,}".format(bounced_count) }}</div>
+            <div class="text-xs text-gray-500 mt-1">{{ "%.1f"|format(bounce_rate) }}% bounce rate</div>
+        </div>
+
+        <!-- Unsubscribed -->
+        <div class="bg-white border rounded-lg p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-gray-600 font-medium">Unsubscribed</span>
+                <i class="fa-solid fa-user-slash text-gray-500 text-xl"></i>
+            </div>
+            <div class="text-3xl font-bold text-gray-600">{{ "{:,}".format(unsubscribe_count) }}</div>
+            <div class="text-xs text-gray-500 mt-1">Total all time</div>
+        </div>
+    </div>
+
+    <!-- Engagement Rate Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <!-- Open Rate Gauge -->
+        <div class="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-6">
+            <div class="text-center">
+                <div class="text-lg text-purple-900 font-medium mb-2">Open Rate</div>
+                <div class="relative w-32 h-32 mx-auto mb-3">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#e9d5ff" stroke-width="10"></circle>
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#9333ea" stroke-width="10"
+                                stroke-dasharray="{{ 283 * (open_rate / 100) }} 283"
+                                stroke-linecap="round"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-3xl font-bold text-purple-900">{{ "%.1f"|format(open_rate) }}%</span>
+                    </div>
+                </div>
+                <div class="text-sm text-purple-700">{{ "{:,}".format(opened_count) }} / {{ "{:,}".format(delivered_count) }} opened</div>
+            </div>
+        </div>
+
+        <!-- Click Rate Gauge -->
+        <div class="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-lg p-6">
+            <div class="text-center">
+                <div class="text-lg text-orange-900 font-medium mb-2">Click Rate</div>
+                <div class="relative w-32 h-32 mx-auto mb-3">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#fed7aa" stroke-width="10"></circle>
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#ea580c" stroke-width="10"
+                                stroke-dasharray="{{ 283 * (click_rate / 100) }} 283"
+                                stroke-linecap="round"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-3xl font-bold text-orange-900">{{ "%.1f"|format(click_rate) }}%</span>
+                    </div>
+                </div>
+                <div class="text-sm text-orange-700">{{ "{:,}".format(clicked_count) }} / {{ "{:,}".format(opened_count) }} clicked</div>
+            </div>
+        </div>
+
+        <!-- Bounce Rate Gauge -->
+        <div class="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-lg p-6">
+            <div class="text-center">
+                <div class="text-lg text-red-900 font-medium mb-2">Bounce Rate</div>
+                <div class="relative w-32 h-32 mx-auto mb-3">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#fecaca" stroke-width="10"></circle>
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#dc2626" stroke-width="10"
+                                stroke-dasharray="{{ 283 * (bounce_rate / 100) }} 283"
+                                stroke-linecap="round"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-3xl font-bold text-red-900">{{ "%.1f"|format(bounce_rate) }}%</span>
+                    </div>
+                </div>
+                <div class="text-sm text-red-700">{{ "{:,}".format(bounced_count) }} / {{ "{:,}".format(total_sent) }} bounced</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Volume Chart -->
+    <div class="bg-white border rounded-lg p-6 shadow-sm mb-8">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">
+            <i class="fa-solid fa-chart-area text-indigo-600 mr-2"></i>
+            Daily Email Volume
+        </h2>
+        <div style="height: 300px;">
+            <canvas id="dailyVolumeChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Campaign Performance Table -->
+    {% if campaign_stats %}
+    <div class="bg-white border rounded-lg p-6 shadow-sm mb-8">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">
+            <i class="fa-solid fa-bullhorn text-indigo-600 mr-2"></i>
+            Campaign Performance
+        </h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-semibold">Campaign</th>
+                        <th class="px-4 py-3 text-right font-semibold">Sent</th>
+                        <th class="px-4 py-3 text-right font-semibold">Delivered</th>
+                        <th class="px-4 py-3 text-right font-semibold">Opened</th>
+                        <th class="px-4 py-3 text-right font-semibold">Clicked</th>
+                        <th class="px-4 py-3 text-right font-semibold">Bounced</th>
+                        <th class="px-4 py-3 text-right font-semibold">Open Rate</th>
+                        <th class="px-4 py-3 text-right font-semibold">Click Rate</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+                    {% for campaign in campaign_stats %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3">
+                            <a href="{{ url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign.id) }}"
+                               class="text-indigo-600 hover:underline font-medium">
+                                {{ campaign.name }}
+                            </a>
+                        </td>
+                        <td class="px-4 py-3 text-right">{{ "{:,}".format(campaign.total) }}</td>
+                        <td class="px-4 py-3 text-right text-green-600">{{ "{:,}".format(campaign.delivered) }}</td>
+                        <td class="px-4 py-3 text-right text-purple-600">{{ "{:,}".format(campaign.opened) }}</td>
+                        <td class="px-4 py-3 text-right text-orange-600">{{ "{:,}".format(campaign.clicked) }}</td>
+                        <td class="px-4 py-3 text-right text-red-600">{{ "{:,}".format(campaign.bounced) }}</td>
+                        <td class="px-4 py-3 text-right">
+                            <span class="px-2 py-1 rounded text-xs font-semibold
+                                {% if campaign.open_rate >= 20 %}bg-green-100 text-green-800
+                                {% elif campaign.open_rate >= 10 %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ "%.1f"|format(campaign.open_rate) }}%
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            <span class="px-2 py-1 rounded text-xs font-semibold
+                                {% if campaign.click_rate >= 5 %}bg-green-100 text-green-800
+                                {% elif campaign.click_rate >= 2 %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ "%.1f"|format(campaign.click_rate) }}%
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Emails -->
+    <div class="bg-white border rounded-lg p-6 shadow-sm">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">
+            <i class="fa-regular fa-clock text-indigo-600 mr-2"></i>
+            Recent Emails
+        </h2>
+        {% if recent_emails %}
+        <div class="space-y-3">
+            {% for email in recent_emails %}
+            <div class="border rounded-lg p-4 hover:bg-gray-50 flex items-center justify-between">
+                <div class="flex-1">
+                    <div class="font-medium text-gray-900">{{ email.subject }}</div>
+                    <div class="text-sm text-gray-600 mt-1">
+                        <span class="text-gray-500">To:</span>
+                        <span class="font-mono">{{ email.to_email }}</span>
+                        <span class="mx-2 text-gray-400">|</span>
+                        <span class="text-gray-500">{{ email.sent_at.strftime('%Y-%m-%d %H:%M') if email.sent_at else 'Not sent' }}</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <!-- Status badges -->
+                    <span class="px-2 py-1 rounded text-xs font-semibold
+                        {% if email.status == 'opened' or email.opened_at %}bg-purple-100 text-purple-800
+                        {% elif email.status == 'clicked' or email.clicked_at %}bg-orange-100 text-orange-800
+                        {% elif email.status == 'bounced' or email.bounced_at %}bg-red-100 text-red-800
+                        {% elif email.status == 'delivered' %}bg-green-100 text-green-800
+                        {% elif email.status == 'sent' %}bg-blue-100 text-blue-800
+                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {% if email.opened_at %}
+                            <i class="fa-solid fa-envelope-open mr-1"></i> Opened
+                        {% elif email.clicked_at %}
+                            <i class="fa-solid fa-mouse-pointer mr-1"></i> Clicked
+                        {% elif email.bounced_at %}
+                            <i class="fa-solid fa-exclamation-triangle mr-1"></i> Bounced
+                        {% else %}
+                            {{ email.status|capitalize }}
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-12 text-gray-500">
+            <i class="fa-regular fa-envelope text-4xl mb-3 block"></i>
+            <p class="text-lg">No emails sent yet</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Benchmarks Info -->
+    <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <h3 class="text-lg font-bold text-blue-900 mb-3">
+            <i class="fa-solid fa-lightbulb mr-2"></i>
+            Industry Benchmarks
+        </h3>
+        <div class="grid md:grid-cols-3 gap-4 text-sm text-blue-900">
+            <div>
+                <h4 class="font-semibold mb-2">Open Rate</h4>
+                <ul class="list-disc list-inside space-y-1 text-blue-800">
+                    <li>Excellent: &gt; 25%</li>
+                    <li>Good: 15-25%</li>
+                    <li>Average: 10-15%</li>
+                    <li>Below Average: &lt; 10%</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-semibold mb-2">Click Rate</h4>
+                <ul class="list-disc list-inside space-y-1 text-blue-800">
+                    <li>Excellent: &gt; 5%</li>
+                    <li>Good: 2-5%</li>
+                    <li>Average: 1-2%</li>
+                    <li>Below Average: &lt; 1%</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-semibold mb-2">Bounce Rate</h4>
+                <ul class="list-disc list-inside space-y-1 text-blue-800">
+                    <li>Excellent: &lt; 2%</li>
+                    <li>Good: 2-5%</li>
+                    <li>Concerning: 5-10%</li>
+                    <li>Critical: &gt; 10%</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Date range filter
+    function updateDateRange() {
+        const days = document.getElementById('daysFilter').value;
+        window.location.href = '{{ url_for("lead_campaigns_bp.email_monitoring_dashboard") }}?days=' + days;
+    }
+
+    // Daily Volume Chart
+    const ctx = document.getElementById('dailyVolumeChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_labels|tojson }},
+            datasets: [{
+                label: 'Emails Sent',
+                data: {{ chart_data|tojson }},
+                borderColor: 'rgb(99, 102, 241)',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgb(17, 24, 39)',
+                    padding: 12,
+                    cornerRadius: 8
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        maxTicksLimit: 10
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    });
+</script>
+{% endblock %}

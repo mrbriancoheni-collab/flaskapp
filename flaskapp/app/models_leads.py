@@ -290,6 +290,9 @@ class LeadEmail(db.Model):
 class LeadContactEmail(db.Model):
     """Track emails sent to specific contacts"""
     __tablename__ = "lead_contact_emails"
+    __table_args__ = (
+        db.UniqueConstraint('contact_id', 'sequence_step', name='uq_lead_contact_emails_contact_step'),
+    )
 
     id = db.Column(Integer, primary_key=True)
     contact_id = db.Column(Integer, ForeignKey("lead_contacts.id"), nullable=False, index=True)

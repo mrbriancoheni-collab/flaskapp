@@ -48,7 +48,9 @@ class BrevoOutreachService:
         track_opens: bool = True,
         track_clicks: bool = True,
         tags: Optional[List[str]] = None,
-        custom_vars: Optional[Dict] = None
+        custom_vars: Optional[Dict] = None,
+        sequence_step: int = 1,
+        skip_dedup_check: bool = False
     ) -> Dict:
         """
         Send email via Brevo API
@@ -58,7 +60,25 @@ class BrevoOutreachService:
         - message_id: str (Brevo message ID)
         - error: str (if failed)
         - retry_after: int (seconds to wait if rate limited)
+        - skipped: bool (if dedup check blocked the send)
+        - skip_reason: str (reason for skip if applicable)
         """
+        # Global dedup check (case-insensitive)
+        if not skip_dedup_check:
+            try:
+                from app.services.email_dedup_service import can_send_email
+                can_send, reason = can_send_email(to_email, sequence_step)
+                if not can_send:
+                    logger.info(f"Skipping email to {to_email}: {reason}")
+                    return {
+                        'success': False,
+                        'skipped': True,
+                        'skip_reason': reason,
+                        'error': f'Email blocked by dedup check: {reason}'
+                    }
+            except Exception as e:
+                logger.warning(f"Dedup check failed for {to_email}, proceeding anyway: {e}")
+
         # Check if API key is configured
         if not self.api_key:
             logger.error("Cannot send email: BREVO_API_KEY not configured")

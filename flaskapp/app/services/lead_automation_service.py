@@ -674,13 +674,19 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                         subject = self._replace_variables(email_sequence.subject, lead, campaign)
                         body = self._replace_variables(email_sequence.body_text, lead, campaign)
 
-                        # Send email
+                        # Send email (with dedup check)
                         result = self.outreach.send_email(
                             to_email=lead.decision_maker_email,
                             subject=subject,
                             body_html=body.replace('\n', '<br>'),
-                            body_text=body
+                            body_text=body,
+                            sequence_step=1
                         )
+
+                        # Skip if dedup check blocked the send
+                        if result.get('skipped'):
+                            logger.debug(f"Dedup blocked email to {lead.decision_maker_email}: {result.get('skip_reason')}")
+                            continue
 
                         # Check for rate limiting
                         if result.get('rate_limited'):
@@ -743,13 +749,19 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                         subject = self._replace_contact_variables(email_sequence.subject, lead, contact, campaign)
                         body = self._replace_contact_variables(email_sequence.body_text, lead, contact, campaign)
 
-                        # Send email
+                        # Send email (with dedup check)
                         result = self.outreach.send_email(
                             to_email=contact.email,
                             subject=subject,
                             body_html=body.replace('\n', '<br>'),
-                            body_text=body
+                            body_text=body,
+                            sequence_step=email_sequence.step_number
                         )
+
+                        # Skip if dedup check blocked the send
+                        if result.get('skipped'):
+                            logger.debug(f"Dedup blocked email to {contact.email}: {result.get('skip_reason')}")
+                            continue
 
                         # Check for rate limiting
                         if result.get('rate_limited'):
@@ -763,7 +775,7 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                                 contact_id=contact.id,
                                 lead_id=lead.id,
                                 campaign_id=campaign.id,
-                                sequence_step=1,
+                                sequence_step=email_sequence.step_number,
                                 subject=subject,
                                 body=body,
                                 to_email=contact.email,
@@ -935,13 +947,19 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                 subject = self._replace_contact_variables(email_sequence.subject, lead, lead_contact, campaign)
                 body = self._replace_contact_variables(email_sequence.body_text, lead, lead_contact, campaign)
 
-                # Send email to the CRM contact's email
+                # Send email to the CRM contact's email (with dedup check)
                 result = self.outreach.send_email(
                     to_email=crm_contact.email,
                     subject=subject,
                     body_html=body.replace('\n', '<br>'),
-                    body_text=body
+                    body_text=body,
+                    sequence_step=sequence_step
                 )
+
+                # Skip if dedup check blocked the send
+                if result.get('skipped'):
+                    logger.debug(f"Dedup blocked email to {crm_contact.email}: {result.get('skip_reason')}")
+                    continue
 
                 # Check for rate limiting
                 if result.get('rate_limited'):
@@ -1233,13 +1251,19 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             subject = self._replace_contact_variables(sequence.subject, lead, contact, campaign)
             body = self._replace_contact_variables(sequence.body_text, lead, contact, campaign)
 
-            # Send email
+            # Send email (with dedup check)
             result = self.outreach.send_email(
                 to_email=contact.email,
                 subject=subject,
                 body_html=body.replace('\n', '<br>'),
-                body_text=body
+                body_text=body,
+                sequence_step=sequence.step_number
             )
+
+            # Skip if dedup check blocked the send
+            if result.get('skipped'):
+                logger.debug(f"Dedup blocked email to {contact.email}: {result.get('skip_reason')}")
+                return False
 
             # Check for rate limiting
             if result.get('rate_limited'):

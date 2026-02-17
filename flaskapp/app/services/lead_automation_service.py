@@ -1031,6 +1031,9 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
         This automatically progresses contacts through multi-step sequences
         (e.g., step 1 → wait 3 days → step 2 → wait 5 days → step 3, etc.)
 
+        IMPORTANT: This queries LeadContact directly (not via CompanyContact/CRM)
+        to ensure all contacts with emails are processed, regardless of CRM sync status.
+
         Returns: Dict with sent count, steps processed, and details
         """
         from datetime import datetime, timedelta
@@ -1050,6 +1053,7 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
         skipped_unsubscribed = 0
         skipped_not_ready = 0
         skipped_complete = 0
+        skipped_no_sequence = 0
 
         # Initialize Brevo outreach service
         try:
@@ -1064,35 +1068,30 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
         )
         logger.info(f"Found {len(unsubscribed_emails)} unsubscribed email addresses")
 
-        # Get all CRM contacts with valid emails (synced from lead enrichment)
-        all_crm_contacts = (
-            CompanyContact.query
+        # Query LeadContact directly - this catches ALL contacts with emails
+        # regardless of whether they're synced to CRM (CompanyContact)
+        all_lead_contacts = (
+            LeadContact.query
             .filter(
-                CompanyContact.email.isnot(None),
-                CompanyContact.email != '',
+                LeadContact.email.isnot(None),
+                LeadContact.email != '',
             )
             .all()
         )
 
-        logger.info(f"Found {len(all_crm_contacts)} CRM contacts to check")
+        logger.info(f"Found {len(all_lead_contacts)} LeadContacts with emails to check")
 
-        # Group contacts by campaign to batch sequence lookups
-        # Need to find linked LeadContact to determine campaign
+        # Group contacts by campaign for efficient sequence lookups
         contacts_by_campaign = {}
-        crm_to_lead_contact = {}  # Map CRM contact ID to LeadContact for later use
-
-        for crm_contact in all_crm_contacts:
-            # Find the linked LeadContact
-            lead_contact = LeadContact.query.filter_by(company_contact_id=crm_contact.id).first()
-            if not lead_contact:
-                logger.debug(f"CRM contact {crm_contact.id} ({crm_contact.email}) has no linked LeadContact")
+        for lead_contact in all_lead_contacts:
+            if not lead_contact.lead:
                 continue
-
-            crm_to_lead_contact[crm_contact.id] = lead_contact
             campaign_id = lead_contact.lead.campaign_id
             if campaign_id not in contacts_by_campaign:
                 contacts_by_campaign[campaign_id] = []
-            contacts_by_campaign[campaign_id].append(crm_contact)
+            contacts_by_campaign[campaign_id].append(lead_contact)
+
+        logger.info(f"Grouped contacts into {len(contacts_by_campaign)} campaigns")
 
         # Process each campaign
         daily_limit = AUTOMATION_CONFIG["daily_email_limit"]
@@ -1108,35 +1107,43 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             ).order_by(EmailSequence.step_number).all()
 
             if not sequences:
-                logger.debug(f"Campaign {campaign_id} has no active sequences")
+                # Try to create a default sequence for this campaign
+                campaign = LeadCampaign.query.get(campaign_id)
+                if campaign:
+                    first_seq = self._ensure_campaign_has_sequence(campaign)
+                    if first_seq:
+                        sequences = [first_seq]
+
+            if not sequences:
+                skipped_no_sequence += len(contacts)
+                logger.debug(f"Campaign {campaign_id} has no active sequences, skipping {len(contacts)} contacts")
                 continue
 
-            logger.info(f"Campaign {campaign_id}: {len(sequences)} active sequence steps, {len(contacts)} CRM contacts")
+            logger.info(f"Campaign {campaign_id}: {len(sequences)} active sequence steps, {len(contacts)} contacts")
 
-            # Process each CRM contact in this campaign
-            for crm_contact in contacts:
+            # Process each LeadContact in this campaign
+            for lead_contact in contacts:
                 if sent_count >= daily_limit:
                     break
 
-                # Get the linked LeadContact
-                lead_contact = crm_to_lead_contact.get(crm_contact.id)
-                if not lead_contact:
+                email = lead_contact.email
+                if not email:
                     continue
 
                 # Skip unsubscribed
-                if crm_contact.email.lower() in unsubscribed_emails:
+                if email.lower() in unsubscribed_emails:
                     skipped_unsubscribed += 1
                     continue
 
-                # Find which steps this contact has already received
+                # Find which steps this contact has already received (by email address)
                 received_steps = db.session.query(LeadContactEmail.sequence_step).filter(
-                    LeadContactEmail.to_email == crm_contact.email
+                    LeadContactEmail.to_email == email
                 ).all()
                 received_step_numbers = set(step[0] for step in received_steps if step[0] is not None)
 
                 # Also check legacy emails (treat as step 1)
                 legacy_email = db.session.query(LeadEmail).filter(
-                    LeadEmail.to_email == crm_contact.email
+                    LeadEmail.to_email == email
                 ).first()
                 if legacy_email:
                     received_step_numbers.add(1)
@@ -1151,25 +1158,30 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                 if not next_step:
                     # Contact has received all steps
                     skipped_complete += 1
-                    logger.debug(f"{crm_contact.email} has completed all {len(sequences)} sequence steps")
+                    logger.debug(f"{email} has completed all {len(sequences)} sequence steps")
                     continue
 
                 # Check if enough time has passed since last email
                 last_email = db.session.query(LeadContactEmail).filter(
-                    LeadContactEmail.to_email == crm_contact.email
+                    LeadContactEmail.to_email == email
                 ).order_by(LeadContactEmail.sent_at.desc()).first()
+
+                # Get campaign's default delay if sequence delay is not set
+                campaign = lead_contact.lead.campaign
+                default_delay = campaign.sequence_delay_days or 3
 
                 if not last_email and next_step.step_number == 1:
                     # First email, send immediately
                     ready_to_send = True
-                elif last_email and next_step.delay_days > 0:
+                elif last_email and (next_step.delay_days or default_delay) > 0:
                     # Check if delay_days have passed
+                    delay_days = next_step.delay_days if next_step.delay_days is not None else default_delay
                     days_since_last = (datetime.utcnow() - last_email.sent_at).days
-                    ready_to_send = days_since_last >= next_step.delay_days
+                    ready_to_send = days_since_last >= delay_days
                     if not ready_to_send:
                         logger.debug(
-                            f"{crm_contact.email}: Next step {next_step.step_number} requires "
-                            f"{next_step.delay_days} days delay, only {days_since_last} days passed"
+                            f"{email}: Next step {next_step.step_number} requires "
+                            f"{delay_days} days delay, only {days_since_last} days passed"
                         )
                 elif not last_email and next_step.step_number > 1:
                     # Contact hasn't received step 1, but next_step is not step 1
@@ -1186,14 +1198,13 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                 # Send the next step!
                 try:
                     logger.info(
-                        f"Sending step {next_step.step_number} to {crm_contact.email} "
+                        f"Sending step {next_step.step_number} to {email} "
                         f"(campaign: {campaign_id}, delay: {next_step.delay_days} days)"
                     )
 
-                    # Pass the LeadContact (not CRM contact) to _send_campaign_email
                     success = self._send_campaign_email(
                         contact=lead_contact,
-                        campaign=lead_contact.lead.campaign,
+                        campaign=campaign,
                         sequence=next_step
                     )
 
@@ -1207,25 +1218,27 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                             break
 
                 except Exception as e:
-                    logger.error(f"Error sending step {next_step.step_number} to {crm_contact.email}: {e}")
+                    logger.error(f"Error sending step {next_step.step_number} to {email}: {e}")
 
         self._save_state()
 
         logger.info("=" * 80)
         logger.info(f"SMART SEQUENCE COMPLETE:")
         logger.info(f"  - Emails sent: {sent_count}")
-        logger.info(f"  - Total CRM contacts checked: {len(all_crm_contacts)}")
+        logger.info(f"  - Total LeadContacts checked: {len(all_lead_contacts)}")
         logger.info(f"  - Skipped (unsubscribed): {skipped_unsubscribed}")
         logger.info(f"  - Skipped (not ready/delay pending): {skipped_not_ready}")
         logger.info(f"  - Skipped (completed all steps): {skipped_complete}")
+        logger.info(f"  - Skipped (no sequence): {skipped_no_sequence}")
         logger.info("=" * 80)
 
         return {
             "sent": sent_count,
-            "total_contacts_checked": len(all_crm_contacts),
+            "total_contacts_checked": len(all_lead_contacts),
             "skipped_unsubscribed": skipped_unsubscribed,
             "skipped_not_ready": skipped_not_ready,
             "skipped_complete": skipped_complete,
+            "skipped_no_sequence": skipped_no_sequence,
         }
 
     def _send_campaign_email(self, contact: LeadContact, campaign: LeadCampaign, sequence: EmailSequence) -> bool:

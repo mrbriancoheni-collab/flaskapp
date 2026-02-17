@@ -126,6 +126,82 @@ def _fetch_impression_share(refresh_token: str, customer_id: str) -> dict:
         return {}  # Return empty - agents will handle None values
 
 
+def _create_ai_action_from_decision(account_id: int, decision_row, result: dict) -> None:
+    """
+    Create an AIAction record from an executed agent decision.
+
+    This bridges the agent_decisions table with the ai_actions table that
+    the AI Change Log page uses for displaying executed actions.
+    """
+    import json
+
+    try:
+        from app.models_ai_actions import AIAction
+
+        # Map decision_type to AIAction action_type
+        action_type_map = {
+            'add_negative_keyword': 'negative_keyword_added',
+            'pause_keyword': 'keyword_paused',
+            'adjust_keyword_bid': 'bid_adjusted',
+            'adjust_campaign_bids': 'bid_adjusted',
+            'adjust_daily_budget': 'budget_adjusted',
+            'pause_campaign': 'campaign_paused',
+            'scale_campaign_budget': 'budget_adjusted',
+            'reallocate_budget': 'budget_reallocated',
+            'add_keyword': 'keyword_added',
+            'pause_ad': 'ad_paused',
+        }
+
+        decision_type = decision_row.get('decision_type', '')
+        action_type = action_type_map.get(decision_type, decision_type)
+
+        # Parse action_data if it's a string
+        action_data = decision_row.get('action_data')
+        if action_data and isinstance(action_data, str):
+            try:
+                action_data = json.loads(action_data)
+            except json.JSONDecodeError:
+                action_data = {}
+        elif not action_data:
+            action_data = {}
+
+        # Get title from decision or generate one
+        title = decision_row.get('title', f"Auto-executed: {decision_type}")
+
+        # Create the AIAction record
+        ai_action = AIAction(
+            account_id=account_id,
+            action_type=action_type,
+            title=title,
+            description=decision_row.get('description', ''),
+            campaign_id=decision_row.get('campaign_id'),
+            ad_group_id=decision_row.get('ad_group_id'),
+            before_value=action_data,
+            after_value=result,
+            estimated_monthly_savings=decision_row.get('expected_monthly_savings'),
+            confidence_score=decision_row.get('confidence', 0.9),
+            reasoning=decision_row.get('reasoning', ''),
+            data_used={
+                'agent_id': decision_row.get('agent_id'),
+                'agent_type': decision_row.get('agent_type'),
+                'risk_level': decision_row.get('risk_level', 'low'),
+                'source': 'auto_execute_low_risk',
+            },
+            status='executed',
+            executed_by='ai_agent',
+        )
+
+        db.session.add(ai_action)
+        db.session.commit()
+
+        current_app.logger.info(f"Created AIAction record for decision {decision_row.get('id')}")
+
+    except Exception as e:
+        current_app.logger.error(f"Failed to create AIAction record: {e}")
+        # Don't fail the main execution if AIAction creation fails
+        db.session.rollback()
+
+
 def _execute_agent_decision(account_id: int, decision_row) -> dict:
     """
     Execute an agent decision via the Google Ads API.
@@ -432,7 +508,9 @@ def approve_decision(decision_id):
 
     # First, get the decision details
     get_query = text("""
-        SELECT id, decision_type, action_data, campaign_id, ad_group_id, keyword_id
+        SELECT id, decision_type, action_data, campaign_id, ad_group_id, keyword_id,
+               title, description, expected_monthly_savings, reasoning, agent_id,
+               agent_type, risk_level, confidence
         FROM agent_decisions
         WHERE id = :decision_id
           AND account_id = :account_id
@@ -471,6 +549,9 @@ def approve_decision(decision_id):
             WHERE id = :decision_id
         """)
         status_msg = "Decision approved and executed successfully"
+
+        # Create AIAction record for transparency on AI Change Log page
+        _create_ai_action_from_decision(account_id, decision_row, execution_result)
     else:
         final_query = text("""
             UPDATE agent_decisions
@@ -538,7 +619,8 @@ def auto_execute_low_risk():
     # Find all pending low-risk decisions
     find_query = text("""
         SELECT id, decision_type, action_data, campaign_id, ad_group_id, keyword_id,
-               risk_level, confidence
+               risk_level, confidence, title, description, expected_monthly_savings,
+               reasoning, agent_id, agent_type
         FROM agent_decisions
         WHERE account_id = :account_id
           AND status = 'pending'
@@ -578,6 +660,10 @@ def auto_execute_low_risk():
                             execution_result = :result, updated_at = NOW()
                         WHERE id = :id
                     """), {"id": row['id'], "result": _json.dumps(result)})
+
+                # Create AIAction record for transparency on AI Change Log page
+                _create_ai_action_from_decision(account_id, row, result)
+
                 executed += 1
             else:
                 with db.engine.begin() as conn:

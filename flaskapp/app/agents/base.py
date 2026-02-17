@@ -488,6 +488,24 @@ class BaseAgent(ABC):
             if self.should_auto_execute(decision):
                 decision.status = "approved"
                 result = self.execute(decision, google_ads_client)
+
+                # Update status based on execution result
+                if result.get('success'):
+                    decision.status = "executed"
+                    decision.executed_at = datetime.utcnow()
+                    decision.execution_result = result
+                else:
+                    decision.status = "execution_failed"
+                    decision.execution_result = result
+
+                # Update database with execution result
+                if self.decision_log:
+                    self.decision_log.log_execution(decision, result)
+
+                # Create AIAction record for transparency on AI Change Log page
+                if result.get('success'):
+                    self._create_ai_action_record(decision, result)
+
                 auto_executed.append({
                     'decision': decision.to_dict(),
                     'result': result
@@ -507,3 +525,59 @@ class BaseAgent(ABC):
             'auto_executed': auto_executed,
             'pending_approval': pending_approval,
         }
+
+    def _create_ai_action_record(self, decision: AgentDecision, result: Dict[str, Any]) -> None:
+        """
+        Create an AIAction record for transparency on the AI Change Log page.
+
+        This bridges the agent_decisions table with the ai_actions table that
+        the AI Change Log page uses for displaying executed actions.
+        """
+        try:
+            from app.models_ai_actions import AIAction
+            from app import db
+
+            # Map decision_type to AIAction action_type
+            action_type_map = {
+                'add_negative_keyword': 'negative_keyword_added',
+                'pause_keyword': 'keyword_paused',
+                'adjust_keyword_bid': 'bid_adjusted',
+                'adjust_campaign_bids': 'bid_adjusted',
+                'adjust_daily_budget': 'budget_adjusted',
+                'pause_campaign': 'campaign_paused',
+                'scale_campaign_budget': 'budget_adjusted',
+                'reallocate_budget': 'budget_reallocated',
+                'add_keyword': 'keyword_added',
+                'pause_ad': 'ad_paused',
+            }
+
+            action_type = action_type_map.get(decision.decision_type, decision.decision_type)
+
+            # Create the AIAction record
+            ai_action = AIAction(
+                account_id=decision.account_id,
+                action_type=action_type,
+                title=decision.title,
+                description=decision.description,
+                campaign_id=decision.campaign_id,
+                ad_group_id=decision.ad_group_id,
+                before_value=decision.action_data,
+                after_value=result,
+                estimated_monthly_savings=decision.expected_monthly_savings,
+                confidence_score=decision.confidence,
+                reasoning=decision.reasoning,
+                data_used={
+                    'agent_id': decision.agent_id,
+                    'agent_type': decision.agent_type,
+                    'risk_level': decision.risk_level.value if hasattr(decision.risk_level, 'value') else str(decision.risk_level),
+                },
+                status='executed',
+                executed_by='ai_agent',
+            )
+
+            db.session.add(ai_action)
+            db.session.commit()
+
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to create AIAction record: {e}")

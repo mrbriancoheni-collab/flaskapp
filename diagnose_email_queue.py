@@ -77,124 +77,213 @@ def get_queued_lead_contact_emails(db, campaign_id=None, limit=100):
 
 
 def get_contacts_ready_for_first_email(db, campaign_id=None, limit=100):
-    """Get LeadContacts that have email but haven't been sent any emails yet."""
-    from app.models_leads import LeadContact, Lead, LeadCampaign, LeadContactEmail
-    from sqlalchemy import and_, not_, exists
+    """
+    Get contacts that haven't been sent any emails yet.
 
-    # Contacts with email, in active campaign, no emails sent yet
-    query = db.session.query(
-        LeadContact,
-        Lead.company_name,
-        LeadCampaign.name.label('campaign_name'),
-        LeadCampaign.id.label('campaign_id'),
-        LeadCampaign.status.label('campaign_status')
-    ).join(
-        Lead, LeadContact.lead_id == Lead.id
-    ).join(
-        LeadCampaign, Lead.campaign_id == LeadCampaign.id
-    ).filter(
-        LeadContact.email.isnot(None),
-        LeadContact.email != '',
-        LeadContact.email_status == 'pending',
-        LeadContact.current_sequence_step == 0,
-        LeadCampaign.status.in_(['ready', 'sending'])
+    Mirrors the actual send_next_sequence_steps() logic which queries
+    CompanyContact (CRM table) without filtering by campaign status.
+    """
+    from app.models import CompanyContact
+    from app.models_leads import (
+        LeadContact, Lead, LeadCampaign, LeadContactEmail,
+        LeadEmail, EmailSequence, EmailUnsubscribe,
     )
 
-    # Exclude contacts that already have any emails in LeadContactEmail
-    subquery = db.session.query(LeadContactEmail.contact_id).filter(
-        LeadContactEmail.contact_id == LeadContact.id
-    ).exists()
-    query = query.filter(~subquery)
+    # Get all unsubscribed emails for exclusion
+    unsubscribed_emails = set(
+        row[0].lower()
+        for row in db.session.query(EmailUnsubscribe.email).all()
+    )
 
-    if campaign_id:
-        query = query.filter(LeadCampaign.id == campaign_id)
+    # Query CompanyContacts with emails — matches send_next_sequence_steps()
+    crm_contacts = (
+        db.session.query(CompanyContact)
+        .filter(
+            CompanyContact.email.isnot(None),
+            CompanyContact.email != '',
+        )
+        .all()
+    )
 
-    query = query.order_by(LeadContact.created_at.asc()).limit(limit)
+    results = []
+    for crm_contact in crm_contacts:
+        if len(results) >= limit:
+            break
 
-    return query.all()
+        # Skip unsubscribed
+        if crm_contact.email.lower() in unsubscribed_emails:
+            continue
+
+        # Find linked LeadContact (same as send_next_sequence_steps)
+        lead_contact = LeadContact.query.filter_by(company_contact_id=crm_contact.id).first()
+        if not lead_contact:
+            continue
+
+        lead = Lead.query.get(lead_contact.lead_id)
+        if not lead:
+            continue
+
+        campaign = LeadCampaign.query.get(lead.campaign_id)
+        if not campaign:
+            continue
+
+        if campaign_id and campaign.id != campaign_id:
+            continue
+
+        # Check if contact has received ANY emails (LeadContactEmail)
+        has_email = db.session.query(LeadContactEmail).filter(
+            LeadContactEmail.to_email == crm_contact.email
+        ).first()
+        if has_email:
+            continue
+
+        # Also check legacy emails (treat as step 1)
+        has_legacy = db.session.query(LeadEmail).filter(
+            LeadEmail.to_email == crm_contact.email
+        ).first()
+        if has_legacy:
+            continue
+
+        # Check that campaign has at least one active sequence step
+        has_sequence = db.session.query(EmailSequence).filter(
+            EmailSequence.campaign_id == campaign.id,
+            EmailSequence.is_active == True
+        ).first()
+        if not has_sequence:
+            continue
+
+        results.append((lead_contact, lead.company_name, campaign.name, campaign.id, campaign.status))
+
+    return results
 
 
 def get_contacts_ready_for_next_sequence(db, campaign_id=None, limit=100):
-    """Get contacts ready for their next sequence step (follow-up emails)."""
-    from app.models_leads import LeadContact, Lead, LeadCampaign, EmailSequence, LeadContactEmail
-    from sqlalchemy import func, and_
+    """
+    Get contacts ready for their next sequence step (follow-up emails).
+
+    Mirrors the actual send_next_sequence_steps() logic which queries
+    CompanyContact (CRM table) without filtering by campaign status.
+    """
+    from app.models import CompanyContact
+    from app.models_leads import (
+        LeadContact, Lead, LeadCampaign, EmailSequence,
+        LeadContactEmail, LeadEmail, EmailUnsubscribe,
+    )
 
     results = []
 
-    # Get active campaigns
-    campaigns_query = db.session.query(LeadCampaign).filter(
-        LeadCampaign.status.in_(['ready', 'sending'])
+    # Get all unsubscribed emails for exclusion
+    unsubscribed_emails = set(
+        row[0].lower()
+        for row in db.session.query(EmailUnsubscribe.email).all()
     )
-    if campaign_id:
-        campaigns_query = campaigns_query.filter(LeadCampaign.id == campaign_id)
 
-    campaigns = campaigns_query.all()
+    # Query CompanyContacts with emails — matches send_next_sequence_steps()
+    crm_contacts = (
+        db.session.query(CompanyContact)
+        .filter(
+            CompanyContact.email.isnot(None),
+            CompanyContact.email != '',
+        )
+        .all()
+    )
 
-    for campaign in campaigns:
-        # Get max sequence step for this campaign
-        max_step = db.session.query(func.max(EmailSequence.step_number)).filter(
-            EmailSequence.campaign_id == campaign.id
-        ).scalar() or 0
+    for crm_contact in crm_contacts:
+        if len(results) >= limit:
+            break
 
-        if max_step <= 1:
-            continue  # No follow-up sequences
+        # Skip unsubscribed
+        if crm_contact.email.lower() in unsubscribed_emails:
+            continue
 
-        # Get contacts who have sent emails but not completed sequence
-        contacts = db.session.query(
-            LeadContact,
-            Lead.company_name,
-            func.max(LeadContactEmail.sequence_step).label('last_step'),
-            func.max(LeadContactEmail.sent_at).label('last_sent_at')
-        ).join(
-            Lead, LeadContact.lead_id == Lead.id
-        ).join(
-            LeadContactEmail, LeadContact.id == LeadContactEmail.contact_id
-        ).filter(
-            Lead.campaign_id == campaign.id,
-            LeadContact.email.isnot(None),
-            LeadContact.email_status.in_(['pending', 'sent', 'opened']),
-            LeadContactEmail.status.in_(['sent', 'delivered', 'opened', 'clicked'])
-        ).group_by(
-            LeadContact.id, Lead.company_name
-        ).having(
-            func.max(LeadContactEmail.sequence_step) < max_step
-        ).limit(limit).all()
+        # Find linked LeadContact
+        lead_contact = LeadContact.query.filter_by(company_contact_id=crm_contact.id).first()
+        if not lead_contact:
+            continue
 
-        for contact, company_name, last_step, last_sent_at in contacts:
-            next_step = last_step + 1
+        lead = Lead.query.get(lead_contact.lead_id)
+        if not lead:
+            continue
 
-            # Get delay for next step
-            next_sequence = db.session.query(EmailSequence).filter(
-                EmailSequence.campaign_id == campaign.id,
-                EmailSequence.step_number == next_step
-            ).first()
+        lcampaign = LeadCampaign.query.get(lead.campaign_id)
+        if not lcampaign:
+            continue
 
-            if not next_sequence:
-                continue
+        if campaign_id and lcampaign.id != campaign_id:
+            continue
 
-            delay_days = next_sequence.delay_days or campaign.sequence_delay_days or 3
+        # Get active sequence steps for this campaign
+        sequences = (
+            EmailSequence.query
+            .filter_by(campaign_id=lcampaign.id, is_active=True)
+            .order_by(EmailSequence.step_number)
+            .all()
+        )
+        if not sequences:
+            continue
 
-            # Check if enough days have passed
-            if last_sent_at:
-                days_since_last = (datetime.utcnow() - last_sent_at).days
-                ready = days_since_last >= delay_days
-            else:
-                days_since_last = None
-                ready = False
+        max_step = max(s.step_number for s in sequences)
 
-            results.append({
-                'contact': contact,
-                'company_name': company_name,
-                'campaign_name': campaign.name,
-                'campaign_id': campaign.id,
-                'last_step': last_step,
-                'next_step': next_step,
-                'max_step': max_step,
-                'last_sent_at': last_sent_at,
-                'days_since_last': days_since_last,
-                'delay_days': delay_days,
-                'ready': ready
-            })
+        # Find which steps this contact has already received (by email address)
+        received_steps = db.session.query(LeadContactEmail.sequence_step).filter(
+            LeadContactEmail.to_email == crm_contact.email
+        ).all()
+        received_step_numbers = set(step[0] for step in received_steps if step[0] is not None)
+
+        # Also check legacy emails (treat as step 1)
+        legacy_email = db.session.query(LeadEmail).filter(
+            LeadEmail.to_email == crm_contact.email
+        ).first()
+        if legacy_email:
+            received_step_numbers.add(1)
+
+        # Must have received at least one step to be a follow-up candidate
+        if not received_step_numbers:
+            continue
+
+        # Find the next step this contact needs
+        next_seq = None
+        for seq in sequences:
+            if seq.step_number not in received_step_numbers:
+                next_seq = seq
+                break
+
+        if not next_seq:
+            # All steps completed
+            continue
+
+        last_step = max(received_step_numbers)
+
+        # Get last email sent_at for delay check
+        last_email = (
+            db.session.query(LeadContactEmail)
+            .filter(LeadContactEmail.to_email == crm_contact.email)
+            .order_by(LeadContactEmail.sent_at.desc())
+            .first()
+        )
+
+        delay_days = next_seq.delay_days or lcampaign.sequence_delay_days or 3
+
+        if last_email and last_email.sent_at:
+            days_since_last = (datetime.utcnow() - last_email.sent_at).days
+            ready = days_since_last >= delay_days
+        else:
+            days_since_last = None
+            ready = False
+
+        results.append({
+            'contact': lead_contact,
+            'company_name': lead.company_name,
+            'campaign_name': lcampaign.name,
+            'campaign_id': lcampaign.id,
+            'last_step': last_step,
+            'next_step': next_seq.step_number,
+            'max_step': max_step,
+            'last_sent_at': last_email.sent_at if last_email else None,
+            'days_since_last': days_since_last,
+            'delay_days': delay_days,
+            'ready': ready,
+        })
 
     return results
 
@@ -395,8 +484,8 @@ Examples:
                         help='Show verbose output including waiting contacts')
     parser.add_argument('--campaign-id', type=int,
                         help='Filter by specific campaign ID')
-    parser.add_argument('--limit', type=int, default=100,
-                        help='Limit results per category (default: 100)')
+    parser.add_argument('--limit', type=int, default=500,
+                        help='Limit results per category (default: 500)')
     parser.add_argument('--export', type=str, metavar='FILE',
                         help='Export results to CSV file')
     parser.add_argument('--show-unsubscribes', action='store_true',

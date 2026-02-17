@@ -80,10 +80,9 @@ def get_contacts_ready_for_first_email(db, campaign_id=None, limit=100):
     """
     Get contacts that haven't been sent any emails yet.
 
-    Mirrors the actual send_next_sequence_steps() logic which queries
-    CompanyContact (CRM table) without filtering by campaign status.
+    Queries LeadContact directly (not via CompanyContact/CRM) to ensure
+    all contacts with emails are found, regardless of CRM sync status.
     """
-    from app.models import CompanyContact
     from app.models_leads import (
         LeadContact, Lead, LeadCampaign, LeadContactEmail,
         LeadEmail, EmailSequence, EmailUnsubscribe,
@@ -95,28 +94,23 @@ def get_contacts_ready_for_first_email(db, campaign_id=None, limit=100):
         for row in db.session.query(EmailUnsubscribe.email).all()
     )
 
-    # Query CompanyContacts with emails — matches send_next_sequence_steps()
-    crm_contacts = (
-        db.session.query(CompanyContact)
+    # Query LeadContacts with emails directly
+    lead_contacts = (
+        db.session.query(LeadContact)
         .filter(
-            CompanyContact.email.isnot(None),
-            CompanyContact.email != '',
+            LeadContact.email.isnot(None),
+            LeadContact.email != '',
         )
         .all()
     )
 
     results = []
-    for crm_contact in crm_contacts:
+    for lead_contact in lead_contacts:
         if len(results) >= limit:
             break
 
         # Skip unsubscribed
-        if crm_contact.email.lower() in unsubscribed_emails:
-            continue
-
-        # Find linked LeadContact (same as send_next_sequence_steps)
-        lead_contact = LeadContact.query.filter_by(company_contact_id=crm_contact.id).first()
-        if not lead_contact:
+        if lead_contact.email.lower() in unsubscribed_emails:
             continue
 
         lead = Lead.query.get(lead_contact.lead_id)
@@ -132,14 +126,14 @@ def get_contacts_ready_for_first_email(db, campaign_id=None, limit=100):
 
         # Check if contact has received ANY emails (LeadContactEmail)
         has_email = db.session.query(LeadContactEmail).filter(
-            LeadContactEmail.to_email == crm_contact.email
+            LeadContactEmail.to_email == lead_contact.email
         ).first()
         if has_email:
             continue
 
         # Also check legacy emails (treat as step 1)
         has_legacy = db.session.query(LeadEmail).filter(
-            LeadEmail.to_email == crm_contact.email
+            LeadEmail.to_email == lead_contact.email
         ).first()
         if has_legacy:
             continue
@@ -161,10 +155,9 @@ def get_contacts_ready_for_next_sequence(db, campaign_id=None, limit=100):
     """
     Get contacts ready for their next sequence step (follow-up emails).
 
-    Mirrors the actual send_next_sequence_steps() logic which queries
-    CompanyContact (CRM table) without filtering by campaign status.
+    Queries LeadContact directly (not via CompanyContact/CRM) to ensure
+    all contacts with emails are found, regardless of CRM sync status.
     """
-    from app.models import CompanyContact
     from app.models_leads import (
         LeadContact, Lead, LeadCampaign, EmailSequence,
         LeadContactEmail, LeadEmail, EmailUnsubscribe,
@@ -178,27 +171,22 @@ def get_contacts_ready_for_next_sequence(db, campaign_id=None, limit=100):
         for row in db.session.query(EmailUnsubscribe.email).all()
     )
 
-    # Query CompanyContacts with emails — matches send_next_sequence_steps()
-    crm_contacts = (
-        db.session.query(CompanyContact)
+    # Query LeadContacts with emails directly
+    lead_contacts = (
+        db.session.query(LeadContact)
         .filter(
-            CompanyContact.email.isnot(None),
-            CompanyContact.email != '',
+            LeadContact.email.isnot(None),
+            LeadContact.email != '',
         )
         .all()
     )
 
-    for crm_contact in crm_contacts:
+    for lead_contact in lead_contacts:
         if len(results) >= limit:
             break
 
         # Skip unsubscribed
-        if crm_contact.email.lower() in unsubscribed_emails:
-            continue
-
-        # Find linked LeadContact
-        lead_contact = LeadContact.query.filter_by(company_contact_id=crm_contact.id).first()
-        if not lead_contact:
+        if lead_contact.email.lower() in unsubscribed_emails:
             continue
 
         lead = Lead.query.get(lead_contact.lead_id)
@@ -226,13 +214,13 @@ def get_contacts_ready_for_next_sequence(db, campaign_id=None, limit=100):
 
         # Find which steps this contact has already received (by email address)
         received_steps = db.session.query(LeadContactEmail.sequence_step).filter(
-            LeadContactEmail.to_email == crm_contact.email
+            LeadContactEmail.to_email == lead_contact.email
         ).all()
         received_step_numbers = set(step[0] for step in received_steps if step[0] is not None)
 
         # Also check legacy emails (treat as step 1)
         legacy_email = db.session.query(LeadEmail).filter(
-            LeadEmail.to_email == crm_contact.email
+            LeadEmail.to_email == lead_contact.email
         ).first()
         if legacy_email:
             received_step_numbers.add(1)
@@ -257,7 +245,7 @@ def get_contacts_ready_for_next_sequence(db, campaign_id=None, limit=100):
         # Get last email sent_at for delay check
         last_email = (
             db.session.query(LeadContactEmail)
-            .filter(LeadContactEmail.to_email == crm_contact.email)
+            .filter(LeadContactEmail.to_email == lead_contact.email)
             .order_by(LeadContactEmail.sent_at.desc())
             .first()
         )

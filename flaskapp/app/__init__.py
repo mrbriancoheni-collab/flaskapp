@@ -825,6 +825,13 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register conversations_bp")
 
+    try:
+        from app.admin.ml_routes import ml_admin_bp
+        app.register_blueprint(ml_admin_bp)  # url_prefix=/admin/ml
+        app.logger.info("ml_admin_bp registered at /admin/ml")
+    except Exception:
+        app.logger.exception("Failed to register ml_admin_bp")
+
     # --- Email Webhooks (AI auto-responses for inbound emails) -------------
     try:
         from app.email_webhooks import email_webhook_bp

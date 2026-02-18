@@ -7,8 +7,16 @@ Provides concrete implementations of agent actions using the Google Ads API.
 
 from typing import Dict, Any, Optional
 import logging
-from google.ads.googleads.client import GoogleAdsClient
-from google.ads.googleads.errors import GoogleAdsException
+
+# Lazy import of Google Ads library - may not be installed in all environments
+try:
+    from google.ads.googleads.client import GoogleAdsClient
+    from google.ads.googleads.errors import GoogleAdsException
+    GOOGLE_ADS_AVAILABLE = True
+except ImportError:
+    GoogleAdsClient = None
+    GoogleAdsException = Exception
+    GOOGLE_ADS_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +38,11 @@ class GoogleAdsAgentExecutor:
             developer_token: Google Ads API developer token
             client_customer_id: Customer ID (without hyphens)
         """
+        if not GOOGLE_ADS_AVAILABLE:
+            raise RuntimeError(
+                "google-ads library is not installed. "
+                "Install with: pip install google-ads"
+            )
         self.refresh_token = refresh_token
         self.developer_token = developer_token
         self.client_customer_id = client_customer_id

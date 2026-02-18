@@ -47,6 +47,27 @@ def run_agents_for_all_accounts(layer: str = 'all'):
     with db.engine.connect() as conn:
         accounts = [dict(row._mapping) for row in conn.execute(query)]
 
+    if not accounts:
+        # Diagnostic: explain why no accounts found
+        diag_query = text("""
+            SELECT
+                (SELECT COUNT(*) FROM accounts WHERE status IN ('active', 'trial')) as active_accounts,
+                (SELECT COUNT(*) FROM accounts WHERE google_ads_customer_id IS NOT NULL) as accounts_with_gads,
+                (SELECT COUNT(*) FROM google_oauth_tokens WHERE product = 'ads') as ads_tokens,
+                (SELECT COUNT(*) FROM google_oauth_tokens WHERE product = 'ads' AND credentials_json IS NOT NULL) as ads_tokens_with_creds
+        """)
+        with db.engine.connect() as conn:
+            diag = dict(conn.execute(diag_query).first()._mapping)
+
+        print(f"No accounts found for agent execution. Diagnostic:")
+        print(f"  Active/trial accounts: {diag['active_accounts']}")
+        print(f"  Accounts with google_ads_customer_id: {diag['accounts_with_gads']}")
+        print(f"  Google OAuth tokens (ads): {diag['ads_tokens']}")
+        print(f"  OAuth tokens with credentials: {diag['ads_tokens_with_creds']}")
+        print(f"\nRequirements: account must be active/trial, have google_ads_customer_id set,")
+        print(f"and have a Google OAuth token with product='ads' and credentials_json set.")
+        return 0, 0
+
     print(f"Running {layer} agents for {len(accounts)} accounts...")
 
     success_count = 0
@@ -203,17 +224,31 @@ def run_agents_for_account(
         EventBus,
         DecisionLog
     )
-    from app.agents.executor import GoogleAdsAgentExecutor
+
+    try:
+        from app.agents.executor import GoogleAdsAgentExecutor
+    except ImportError as e:
+        raise RuntimeError(
+            f"Cannot import GoogleAdsAgentExecutor: {e}. "
+            f"Install google-ads library with: pip install google-ads"
+        )
 
     # Initialize infrastructure
     event_bus = EventBus()
     decision_log = DecisionLog()
 
     # Initialize Google Ads client
+    dev_token = current_app.config.get('GOOGLE_ADS_DEVELOPER_TOKEN')
+    if not dev_token:
+        raise RuntimeError(
+            f"GOOGLE_ADS_DEVELOPER_TOKEN is not set. "
+            f"Configure it in your environment or Flask config."
+        )
+
     try:
         executor = GoogleAdsAgentExecutor(
             refresh_token=refresh_token,
-            developer_token=current_app.config.get('GOOGLE_ADS_DEVELOPER_TOKEN'),
+            developer_token=dev_token,
             client_customer_id=customer_id
         )
     except Exception as e:
@@ -476,6 +511,41 @@ def run_agents_for_account(
     # Common kwargs for all agents
     agent_kwargs = dict(event_bus=event_bus, decision_log=decision_log, account_id=account_id)
 
+    # --- ML-powered context enrichment ---
+    # Build ML predictions and LLM advice for each agent type
+    try:
+        from app.ml.context_builder import ContextBuilder
+        from app.ml.llm_advisor import LLMAdvisor
+        from app.ml.predictor import MLPredictor
+
+        ml_context_builder = ContextBuilder(account_id, context)
+        llm_advisor = LLMAdvisor()
+        ml_predictor = MLPredictor(account_id)
+
+        # Get summary of all available ML predictions
+        ml_summary = ml_predictor.get_all_predictions_summary(context)
+        context['ml_predictions'] = ml_summary
+
+        print(f"  ML models available: {len(ml_summary.get('models_available', []))}, "
+              f"unavailable: {len(ml_summary.get('models_unavailable', []))}")
+
+    except Exception as e:
+        current_app.logger.warning(f"ML system unavailable for account {account_id}: {e}")
+        ml_context_builder = None
+        llm_advisor = None
+        context['ml_predictions'] = {}
+
+    # Map agent types to their ML context builder methods
+    AGENT_TYPE_MAP = {
+        'StrategicDirectorAgent': 'strategic_director',
+        'CampaignManagerAgent': 'campaign_manager',
+        'BudgetGuardianAgent': 'budget_guardian',
+        'QualityScoreAgent': 'quality_score',
+        'KeywordOptimizerAgent': 'keyword_optimizer',
+        'NegativeKeywordAgent': 'negative_keyword',
+        'AdCopyAgent': 'ad_copy',
+    }
+
     # Select agents based on layer
     if layer == 'strategic':
         agents = [
@@ -506,6 +576,26 @@ def run_agents_for_account(
 
     # Run agents and log execution
     for agent in agents:
+        # Inject ML context and LLM advice into the agent's context
+        agent_class_name = type(agent).__name__
+        ml_agent_type = AGENT_TYPE_MAP.get(agent_class_name)
+
+        if ml_context_builder and ml_agent_type:
+            try:
+                ml_ctx = ml_context_builder.build_context_for_agent(ml_agent_type)
+                context['ml_context'] = ml_ctx
+
+                # Get LLM advice guided by ML predictions
+                if llm_advisor:
+                    llm_advice = llm_advisor.get_advice(ml_agent_type, ml_ctx, context)
+                    context['llm_advice'] = llm_advice
+                    if llm_advice.get('decisions'):
+                        print(f"    LLM provided {len(llm_advice['decisions'])} recommendations for {ml_agent_type}")
+
+            except Exception as e:
+                current_app.logger.warning(f"ML/LLM enrichment failed for {ml_agent_type}: {e}")
+                context['ml_context'] = ''
+                context['llm_advice'] = {}
         try:
             result = agent.run_cycle(context, executor)
 

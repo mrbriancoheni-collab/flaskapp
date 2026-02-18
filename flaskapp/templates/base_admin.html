@@ -166,6 +166,9 @@
       <a class="secondary-link {% if request.endpoint in ['agent_config_bp.configure_list','agent_config_bp.configure_global','agent_config_bp.configure_account'] %}active{% endif %}" href="{{ url_for('agent_config_bp.configure_list') }}">
         <i class="fa-solid fa-robot"></i><span>AI Agents</span>
       </a>
+      <a class="secondary-link {% if request.endpoint and 'ml_admin_bp' in request.endpoint %}active{% endif %}" href="{{ url_for('ml_admin_bp.dashboard') }}">
+        <i class="fa-solid fa-brain"></i><span>ML Models</span>
+      </a>
       <a class="secondary-link {% if request.endpoint=='admin_bp.logs' %}active{% endif %}" href="{{ url_for('admin_bp.logs') }}">
         <i class="fa-solid fa-clipboard-list"></i><span>Audit Logs</span>
       </a>

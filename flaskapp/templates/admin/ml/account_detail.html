@@ -1,0 +1,268 @@
+{% extends "base_admin.html" %}
+
+{% block title %}ML Models - {{ account.name }} - Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <div class="flex items-center gap-2 text-sm text-gray-500 mb-1">
+        <a href="{{ url_for('ml_admin_bp.dashboard') }}" class="hover:text-indigo-600">ML Dashboard</a>
+        <i class="fa-solid fa-chevron-right text-xs"></i>
+        <span>Account Detail</span>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-900">{{ account.name }}</h1>
+      <p class="text-gray-600 font-mono">Customer ID: {{ account.customer_id }}</p>
+    </div>
+    <div class="flex gap-2">
+      <form method="post" action="{{ url_for('ml_admin_bp.train_models') }}">
+        <input type="hidden" name="account_id" value="{{ account.id }}">
+        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2">
+          <i class="fa-solid fa-graduation-cap"></i>
+          Train All Models
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Data Availability -->
+  <div class="bg-white rounded-lg shadow">
+    <div class="px-4 py-3 border-b">
+      <h2 class="text-lg font-semibold text-gray-900">Training Data Availability</h2>
+    </div>
+    <div class="p-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="border rounded-lg p-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <i class="fa-solid fa-chart-bar text-blue-600"></i>
+            </div>
+            <div>
+              <div class="text-xl font-bold text-gray-900">
+                {{ data_stats.get('campaign_performance', {}).get('count', 0)|default(0) }}
+              </div>
+              <div class="text-sm text-gray-500">Campaign Performance Records</div>
+            </div>
+          </div>
+          {% if data_stats.get('campaign_performance', {}).get('start') %}
+          <div class="text-xs text-gray-400 mt-2">
+            {{ data_stats.campaign_performance.start.strftime('%Y-%m-%d') }} to
+            {{ data_stats.campaign_performance.end.strftime('%Y-%m-%d') }}
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="border rounded-lg p-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <i class="fa-solid fa-calendar-day text-green-600"></i>
+            </div>
+            <div>
+              <div class="text-xl font-bold text-gray-900">
+                {{ data_stats.get('daily_stats', {}).get('count', 0)|default(0) }}
+              </div>
+              <div class="text-sm text-gray-500">Daily Stats Records</div>
+            </div>
+          </div>
+          {% if data_stats.get('daily_stats', {}).get('start') %}
+          <div class="text-xs text-gray-400 mt-2">
+            {{ data_stats.daily_stats.start.strftime('%Y-%m-%d') }} to
+            {{ data_stats.daily_stats.end.strftime('%Y-%m-%d') }}
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="border rounded-lg p-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <i class="fa-solid fa-magnifying-glass text-purple-600"></i>
+            </div>
+            <div>
+              <div class="text-xl font-bold text-gray-900">
+                {{ data_stats.get('search_terms', {}).get('count', 0)|default(0) }}
+              </div>
+              <div class="text-sm text-gray-500">Search Terms</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Model Training -->
+  <div class="bg-white rounded-lg shadow">
+    <div class="px-4 py-3 border-b flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-gray-900">Train Individual Models</h2>
+    </div>
+    <div class="p-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        {% set model_types = [
+          ('budget_roi', 'Budget ROI', 'Strategic Director'),
+          ('anomaly_detector', 'Anomaly Detector', 'Campaign Manager'),
+          ('spend_forecast', 'Spend Forecast', 'Budget Guardian'),
+          ('quality_score', 'Quality Score', 'QS Agent'),
+          ('cpa_predictor', 'CPA Predictor', 'Keyword Optimizer'),
+          ('waste_classifier', 'Waste Classifier', 'Negative Keyword'),
+          ('ctr_predictor', 'CTR Predictor', 'Ad Copy'),
+        ] %}
+        {% for key, name, agent in model_types %}
+        <form method="post" action="{{ url_for('ml_admin_bp.train_models') }}" class="border rounded-lg p-3 hover:bg-gray-50">
+          <input type="hidden" name="account_id" value="{{ account.id }}">
+          <input type="hidden" name="model_type" value="{{ key }}">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-medium text-gray-900">{{ name }}</div>
+              <div class="text-xs text-gray-500">{{ agent }}</div>
+            </div>
+            <button type="submit" class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 text-sm">
+              Train
+            </button>
+          </div>
+        </form>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Trained Models -->
+  <div class="bg-white rounded-lg shadow">
+    <div class="px-4 py-3 border-b">
+      <h2 class="text-lg font-semibold text-gray-900">Trained Models</h2>
+    </div>
+    {% if models %}
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Model</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trained</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Samples</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Features</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Accuracy</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">R²</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">MAE</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">RMSE</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          {% for model in models %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 font-medium text-gray-900">{{ model.model_name }}</td>
+            <td class="px-4 py-3 text-sm text-gray-600">{{ model.model_type }}</td>
+            <td class="px-4 py-3 text-sm text-gray-600">
+              {% if model.training_date %}
+              {{ model.training_date.strftime('%Y-%m-%d %H:%M') }}
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-600">{{ model.training_samples or '-' }}</td>
+            <td class="px-4 py-3 text-sm text-gray-600">{{ model.feature_count or '-' }}</td>
+            <td class="px-4 py-3 text-sm">
+              {% if model.accuracy_score %}
+              <span class="{% if model.accuracy_score > 0.7 %}text-green-600{% elif model.accuracy_score > 0.5 %}text-yellow-600{% else %}text-red-600{% endif %} font-medium">
+                {{ "%.2f"|format(model.accuracy_score) }}
+              </span>
+              {% else %}
+              <span class="text-gray-400">-</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-sm">
+              {% if model.r2_score %}
+              <span class="{% if model.r2_score > 0.7 %}text-green-600{% elif model.r2_score > 0.5 %}text-yellow-600{% else %}text-red-600{% endif %} font-medium">
+                {{ "%.2f"|format(model.r2_score) }}
+              </span>
+              {% else %}
+              <span class="text-gray-400">-</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-600">
+              {% if model.mae %}{{ "%.4f"|format(model.mae) }}{% else %}-{% endif %}
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-600">
+              {% if model.rmse %}{{ "%.4f"|format(model.rmse) }}{% else %}-{% endif %}
+            </td>
+            <td class="px-4 py-3">
+              {% if model.is_active %}
+              <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Active</span>
+              {% else %}
+              <span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">Inactive</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="p-8 text-center text-gray-500">
+      <i class="fa-solid fa-brain text-4xl text-gray-300 mb-3"></i>
+      <p>No models trained yet for this account</p>
+      <p class="text-sm mt-1">Click "Train All Models" to get started</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Recent Predictions -->
+  <div class="bg-white rounded-lg shadow">
+    <div class="px-4 py-3 border-b">
+      <h2 class="text-lg font-semibold text-gray-900">Recent Predictions</h2>
+    </div>
+    {% if predictions %}
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Model</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Confidence</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Input</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Result</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          {% for pred in predictions %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 text-sm text-gray-600">
+              {% if pred.created_at %}
+              {{ pred.created_at.strftime('%Y-%m-%d %H:%M') }}
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-900">{{ pred.model_name }}</td>
+            <td class="px-4 py-3 text-sm text-gray-600">{{ pred.prediction_type or '-' }}</td>
+            <td class="px-4 py-3 text-sm">
+              {% if pred.confidence_score %}
+              <div class="flex items-center gap-2">
+                <div class="w-16 bg-gray-200 rounded-full h-2">
+                  <div class="h-2 rounded-full {% if pred.confidence_score > 0.8 %}bg-green-500{% elif pred.confidence_score > 0.5 %}bg-yellow-500{% else %}bg-red-500{% endif %}"
+                       style="width: {{ pred.confidence_score * 100 }}%"></div>
+                </div>
+                <span class="text-xs">{{ "%.0f"|format(pred.confidence_score * 100) }}%</span>
+              </div>
+              {% else %}
+              <span class="text-gray-400">-</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-600 max-w-xs truncate" title="{{ pred.input_data }}">
+              {{ pred.input_data or '-' }}
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-600 max-w-xs truncate" title="{{ pred.prediction_result }}">
+              {{ pred.prediction_result or '-' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="p-8 text-center text-gray-500">
+      <i class="fa-solid fa-chart-line text-4xl text-gray-300 mb-3"></i>
+      <p>No predictions made yet for this account</p>
+      <p class="text-sm mt-1">Predictions will appear when agents run</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

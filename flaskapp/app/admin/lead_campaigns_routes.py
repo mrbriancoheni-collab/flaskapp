@@ -824,6 +824,34 @@ def enrich_leads(campaign_id: int):
                 lead.enrichment_status = 'completed'
                 lead.enriched_at = datetime.now()
 
+                # Save all discovered contacts as LeadContact records
+                contacts = result.get('contacts', [])
+                # Remove any stale contacts from a previous enrichment attempt
+                LeadContact.query.filter_by(lead_id=lead.id).delete()
+                for i, contact_data in enumerate(contacts):
+                    if not contact_data.get('name'):
+                        continue
+                    contact = LeadContact(
+                        lead_id=lead.id,
+                        name=contact_data['name'],
+                        title=contact_data.get('title'),
+                        email=contact_data.get('email'),
+                        linkedin_url=contact_data.get('linkedin_url'),
+                        role_category=contact_data.get('role_category', 'other'),
+                        is_primary=(i == 0)
+                    )
+                    db.session.add(contact)
+
+                db.session.commit()
+
+                # Sync all contacts to company_contacts table via CRM sync
+                try:
+                    from app.services.crm_sync_service import CRMSyncService
+                    crm_sync = CRMSyncService()
+                    crm_sync.sync_lead_contacts_to_crm(lead)
+                except Exception as sync_err:
+                    logger.warning(f"CRM sync failed for lead {lead.id}: {sync_err}")
+
                 enriched_count += 1
 
             except Exception as e:
@@ -1034,18 +1062,34 @@ def new_sequence(campaign_id: int):
 @lead_campaigns_bp.route('/<int:campaign_id>/send-emails', methods=['POST'])
 @require_admin
 def send_emails(campaign_id: int):
-    """Send emails to leads (respects daily limit)"""
+    """Send emails to all contacts for enriched leads (respects daily limit).
+
+    For each lead we first look for LeadContact records (which may have
+    multiple real email addresses discovered from the website / team pages).
+    If no LeadContact emails exist we fall back to Lead.decision_maker_email.
+
+    Per-contact sends are tracked in LeadContactEmail; legacy single-address
+    sends are tracked in LeadEmail as before.
+    """
     campaign = LeadCampaign.query.get_or_404(campaign_id)
 
     try:
         brevo = BrevoOutreachService()
 
-        # Check daily limit
+        # ── Daily limit check (counts both tracking tables) ──────────────────
         today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        sent_today = LeadEmail.query.join(Lead).filter(
+
+        sent_today_legacy = LeadEmail.query.join(Lead).filter(
             Lead.campaign_id == campaign_id,
             LeadEmail.created_at >= today_start
         ).count()
+
+        sent_today_contacts = LeadContactEmail.query.filter(
+            LeadContactEmail.campaign_id == campaign_id,
+            LeadContactEmail.created_at >= today_start
+        ).count()
+
+        sent_today = sent_today_legacy + sent_today_contacts
 
         if sent_today >= campaign.daily_email_limit:
             return jsonify({
@@ -1055,14 +1099,13 @@ def send_emails(campaign_id: int):
 
         remaining = campaign.daily_email_limit - sent_today
 
-        # Get leads ready to send (enriched, have email, not sent yet)
+        # ── Get leads ready to send ───────────────────────────────────────────
+        # Include leads that have contacts OR a decision_maker_email
         leads = Lead.query.filter_by(
             campaign_id=campaign_id,
             enrichment_status='completed',
             email_status='pending'
-        ).filter(
-            Lead.decision_maker_email.isnot(None)
-        ).limit(min(remaining, 50)).all()  # Send max 50 at a time
+        ).limit(min(remaining, 50)).all()
 
         # Get first sequence step
         sequence = EmailSequence.query.filter_by(
@@ -1077,64 +1120,144 @@ def send_emails(campaign_id: int):
         sent_count = 0
 
         for lead in leads:
-            # Check unsubscribe list
-            if EmailUnsubscribe.query.filter_by(email=lead.decision_maker_email).first():
-                lead.email_status = 'unsubscribed'
-                db.session.commit()
-                continue
+            # Find sendable contacts: LeadContact records that have an email
+            # and haven't already received this sequence step
+            sendable_contacts = []
+            for contact in lead.contacts:
+                if not contact.email:
+                    continue
+                # Skip unsubscribed
+                if EmailUnsubscribe.query.filter_by(email=contact.email).first():
+                    contact.email_status = 'unsubscribed'
+                    continue
+                # Skip if this contact already received step 1
+                already_sent = LeadContactEmail.query.filter_by(
+                    contact_id=contact.id,
+                    sequence_step=1
+                ).first()
+                if already_sent:
+                    continue
+                sendable_contacts.append(contact)
 
-            # Personalize email
-            variables = {
-                'company_name': lead.company_name,
-                'decision_maker_name': lead.decision_maker_name or 'there',
-                'decision_maker_title': lead.decision_maker_title or '',
-                'service_type': campaign.industry_service,
-                'location': campaign.location,
-            }
+            if sendable_contacts:
+                # ── Send to each individual contact ───────────────────────────
+                lead_sent = False
+                for contact in sendable_contacts:
+                    if remaining <= 0:
+                        break
 
-            subject = brevo.personalize_template(sequence.subject, variables)
-            body_html = brevo.personalize_template(sequence.body_html, variables)
+                    variables = {
+                        'company_name': lead.company_name,
+                        'decision_maker_name': contact.name or lead.decision_maker_name or 'there',
+                        'decision_maker_title': contact.title or lead.decision_maker_title or '',
+                        'service_type': campaign.industry_service,
+                        'location': campaign.location,
+                    }
+                    subject = brevo.personalize_template(sequence.subject, variables)
+                    body_html = brevo.personalize_template(sequence.body_html, variables)
 
-            # Send email
-            result = brevo.send_email(
-                to_email=lead.decision_maker_email,
-                subject=subject,
-                body_html=body_html,
-                tags=[f'campaign-{campaign_id}', f'sequence-{sequence.id}'],
-                custom_vars={'lead_id': lead.id, 'sequence_id': sequence.id}
-            )
+                    result = brevo.send_email(
+                        to_email=contact.email,
+                        subject=subject,
+                        body_html=body_html,
+                        tags=[f'campaign-{campaign_id}', f'sequence-{sequence.id}'],
+                        custom_vars={
+                            'lead_id': lead.id,
+                            'contact_id': contact.id,
+                            'sequence_id': sequence.id
+                        }
+                    )
 
-            if result.get('success'):
-                # Record sent email
-                email_sent = LeadEmail(
-                    lead_id=lead.id,
-                    sequence_id=sequence.id,
+                    if result.get('success'):
+                        email_record = LeadContactEmail(
+                            contact_id=contact.id,
+                            lead_id=lead.id,
+                            campaign_id=campaign_id,
+                            sequence_step=1,
+                            subject=subject,
+                            body=body_html,
+                            to_email=contact.email,
+                            email_provider='brevo',
+                            brevo_message_id=result.get('message_id'),
+                            status='sent',
+                            sent_at=datetime.now()
+                        )
+                        db.session.add(email_record)
+
+                        contact.email_status = 'sent'
+                        contact.current_sequence_step = 1
+                        contact.last_email_sent_at = datetime.now()
+
+                        sent_count += 1
+                        remaining -= 1
+                        lead_sent = True
+                    else:
+                        logger.error(f"Failed to send to contact {contact.id} ({contact.email}): {result.get('error')}")
+
+                if lead_sent:
+                    lead.email_status = 'sent'
+                    lead.current_sequence_step = 1
+                    lead.last_email_sent_at = datetime.now()
+                    lead.auto_delete_at = datetime.now() + timedelta(days=30)
+
+            elif lead.decision_maker_email:
+                # ── Fallback: no LeadContact emails, use legacy single address ─
+                if EmailUnsubscribe.query.filter_by(email=lead.decision_maker_email).first():
+                    lead.email_status = 'unsubscribed'
+                    db.session.commit()
+                    continue
+
+                variables = {
+                    'company_name': lead.company_name,
+                    'decision_maker_name': lead.decision_maker_name or 'there',
+                    'decision_maker_title': lead.decision_maker_title or '',
+                    'service_type': campaign.industry_service,
+                    'location': campaign.location,
+                }
+                subject = brevo.personalize_template(sequence.subject, variables)
+                body_html = brevo.personalize_template(sequence.body_html, variables)
+
+                result = brevo.send_email(
                     to_email=lead.decision_maker_email,
                     subject=subject,
                     body_html=body_html,
-                    brevo_message_id=result.get('message_id'),
-                    email_provider='brevo',
-                    status='sent',
-                    sent_at=datetime.now()
+                    tags=[f'campaign-{campaign_id}', f'sequence-{sequence.id}'],
+                    custom_vars={'lead_id': lead.id, 'sequence_id': sequence.id}
                 )
-                db.session.add(email_sent)
 
-                # Update lead
-                lead.email_status = 'sent'
-                lead.current_sequence_step = 1
-                lead.last_email_sent_at = datetime.now()
+                if result.get('success'):
+                    email_sent = LeadEmail(
+                        lead_id=lead.id,
+                        sequence_id=sequence.id,
+                        to_email=lead.decision_maker_email,
+                        subject=subject,
+                        body_html=body_html,
+                        brevo_message_id=result.get('message_id'),
+                        email_provider='brevo',
+                        status='sent',
+                        sent_at=datetime.now()
+                    )
+                    db.session.add(email_sent)
 
-                # Set auto-delete for 30 days if no response
-                lead.auto_delete_at = datetime.now() + timedelta(days=30)
+                    lead.email_status = 'sent'
+                    lead.current_sequence_step = 1
+                    lead.last_email_sent_at = datetime.now()
+                    lead.auto_delete_at = datetime.now() + timedelta(days=30)
 
-                sent_count += 1
+                    sent_count += 1
+                    remaining -= 1
+                else:
+                    logger.error(f"Failed to send to {lead.decision_maker_email}: {result.get('error')}")
             else:
-                logger.error(f"Failed to send to {lead.decision_maker_email}: {result.get('error')}")
+                # No email address at all — skip
+                logger.warning(f"Lead {lead.id} ({lead.company_name}) has no email addresses, skipping")
 
             db.session.commit()
 
-        # Update campaign stats
-        campaign.emails_sent = LeadEmail.query.join(Lead).filter(Lead.campaign_id == campaign_id).count()
+        # ── Update campaign stats (both tables) ───────────────────────────────
+        legacy_count = LeadEmail.query.join(Lead).filter(Lead.campaign_id == campaign_id).count()
+        contact_count = LeadContactEmail.query.filter_by(campaign_id=campaign_id).count()
+        campaign.emails_sent = legacy_count + contact_count
         campaign.sending_started_at = campaign.sending_started_at or datetime.now()
         db.session.commit()
 
@@ -1144,6 +1267,189 @@ def send_emails(campaign_id: int):
     except Exception as e:
         logger.error(f"Email sending error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ==================== Global Daily Email Sender ====================
+
+@lead_campaigns_bp.route('/send-daily', methods=['POST'])
+@require_admin
+def send_daily():
+    """
+    Global daily email sender.
+
+    Architecture:
+    - Email addresses come from company_contacts (canonical source of truth)
+    - Email content comes from email_sequences (via the contact's campaign)
+    - lead_contacts is used only as the tracking link between the two
+    - Sends across ALL campaigns, not just one
+    - Respects per-sequence delay_days between steps
+    - Tracks every send in lead_contact_emails (unique per contact + step)
+    - Respects EmailUnsubscribe list
+    """
+    from app.models import CompanyContact
+
+    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Global daily limit across all campaigns
+    sent_today = (
+        LeadContactEmail.query.filter(LeadContactEmail.created_at >= today_start).count()
+        + LeadEmail.query.filter(LeadEmail.created_at >= today_start).count()
+    )
+    daily_limit = 250
+    if sent_today >= daily_limit:
+        return jsonify({'success': False, 'error': f'Daily limit of {daily_limit} reached'}), 400
+
+    remaining = daily_limit - sent_today
+    brevo = BrevoOutreachService()
+    sent_count = 0
+    skipped_count = 0
+
+    # ── Find all lead_contacts that are linked to a company_contact with an email ──
+    # This traverses: company_contacts → lead_contacts → leads → lead_campaigns → email_sequences
+    sendable_contacts = (
+        LeadContact.query
+        .join(CompanyContact, LeadContact.company_contact_id == CompanyContact.id)
+        .filter(
+            CompanyContact.email.isnot(None),
+            CompanyContact.email != '',
+            LeadContact.email_status.in_(['pending', 'sent'])  # include sent so multi-step works
+        )
+        .order_by(LeadContact.last_email_sent_at.asc().nullsfirst())
+        .limit(remaining + 50)  # fetch a few extra to account for skips
+        .all()
+    )
+
+    for lead_contact in sendable_contacts:
+        if remaining <= 0:
+            break
+
+        company_contact = lead_contact.company_contact  # relationship via company_contact_id
+        if not company_contact or not company_contact.email:
+            continue
+
+        email = company_contact.email.strip()
+
+        # Skip unsubscribed addresses
+        if EmailUnsubscribe.query.filter(
+            db.func.lower(EmailUnsubscribe.email) == email.lower()
+        ).first():
+            lead_contact.email_status = 'unsubscribed'
+            db.session.commit()
+            continue
+
+        lead = lead_contact.lead
+        if not lead or not lead.campaign:
+            skipped_count += 1
+            continue
+
+        campaign = lead.campaign
+
+        # Get ALL active sequences for this contact's campaign, ordered by step
+        sequences = (
+            EmailSequence.query
+            .filter_by(campaign_id=campaign.id, is_active=True)
+            .order_by(EmailSequence.step_number)
+            .all()
+        )
+        if not sequences:
+            skipped_count += 1
+            continue
+
+        # Find which steps have already been sent to this contact
+        sent_steps = {
+            lce.sequence_step
+            for lce in LeadContactEmail.query
+            .filter_by(contact_id=lead_contact.id)
+            .with_entities(LeadContactEmail.sequence_step)
+            .all()
+        }
+
+        # Find the next sequence step that hasn't been sent yet
+        next_seq = next(
+            (s for s in sequences if s.step_number not in sent_steps),
+            None
+        )
+
+        if next_seq is None:
+            # All steps completed for this contact
+            lead_contact.email_status = 'sent'
+            db.session.commit()
+            skipped_count += 1
+            continue
+
+        # Respect delay_days between steps
+        if sent_steps and lead_contact.last_email_sent_at:
+            days_since_last = (datetime.now() - lead_contact.last_email_sent_at).days
+            if days_since_last < next_seq.delay_days:
+                skipped_count += 1
+                continue
+
+        # Personalize using company_contact as the primary source
+        name = company_contact.full_name or lead_contact.name or lead.decision_maker_name or 'there'
+        title = company_contact.title or lead_contact.title or lead.decision_maker_title or ''
+
+        variables = {
+            'company_name': lead.company_name,
+            'decision_maker_name': name,
+            'decision_maker_title': title,
+            'service_type': campaign.industry_service,
+            'location': campaign.location,
+        }
+
+        subject = brevo.personalize_template(next_seq.subject, variables)
+        body_html = brevo.personalize_template(next_seq.body_html, variables)
+
+        result = brevo.send_email(
+            to_email=email,
+            subject=subject,
+            body_html=body_html,
+            tags=[f'campaign-{campaign.id}', f'sequence-step-{next_seq.step_number}', 'daily-send'],
+            custom_vars={
+                'lead_contact_id': lead_contact.id,
+                'company_contact_id': company_contact.id,
+                'sequence_id': next_seq.id
+            }
+        )
+
+        if result.get('success'):
+            db.session.add(LeadContactEmail(
+                contact_id=lead_contact.id,
+                lead_id=lead.id,
+                campaign_id=campaign.id,
+                sequence_step=next_seq.step_number,
+                subject=subject,
+                body=body_html,
+                to_email=email,
+                email_provider='brevo',
+                brevo_message_id=result.get('message_id'),
+                status='sent',
+                sent_at=datetime.now()
+            ))
+
+            lead_contact.current_sequence_step = next_seq.step_number
+            lead_contact.last_email_sent_at = datetime.now()
+            if lead_contact.email_status == 'pending':
+                lead_contact.email_status = 'sent'
+
+            # Also mark the parent lead as sending if it was still pending
+            if lead.email_status == 'pending':
+                lead.email_status = 'sent'
+                lead.last_email_sent_at = datetime.now()
+
+            db.session.commit()
+            sent_count += 1
+            remaining -= 1
+        elif result.get('skipped'):
+            skipped_count += 1
+        else:
+            logger.error(f"Failed to send to {email} (contact {company_contact.id}): {result.get('error')}")
+
+    return jsonify({
+        'success': True,
+        'sent_count': sent_count,
+        'skipped_count': skipped_count,
+        'remaining_today': remaining
+    })
 
 
 # ==================== Individual Operation Triggers ====================
@@ -1650,19 +1956,10 @@ def bulk_enrich_all():
 @lead_campaigns_bp.route('/bulk/send-emails-all', methods=['POST'])
 @require_admin
 def bulk_send_emails_all():
-    """Bulk send emails to all leads ready to be contacted"""
-    try:
-        # Initialize Brevo email service
-        outreach_service = BrevoOutreachService()
-
-        # Get leads ready to send (enriched, have email, not sent yet)
-        # Limit to 100 to avoid timeout
-        ready_leads = Lead.query.filter_by(
-            enrichment_status='completed',
-            email_status='pending'
-        ).filter(
-            Lead.decision_maker_email.isnot(None)
-        ).limit(100).all()
+    """Bulk send emails — delegates to the global daily sender."""
+    # Redirect internally to the canonical daily sender so all sends go through
+    # the same company_contacts → email_sequences flow.
+    return send_daily()
 
         if not ready_leads:
             return jsonify({

@@ -198,6 +198,8 @@ class LeadContact(db.Model):
     # Relationships
     lead = relationship("Lead", back_populates="contacts")
     emails_sent = relationship("LeadContactEmail", back_populates="contact", cascade="all, delete-orphan")
+    # company_contact is the canonical record — email addresses should be read from there
+    company_contact = relationship("CompanyContact", foreign_keys=[company_contact_id])
 
     def __repr__(self) -> str:
         return f"<LeadContact id={self.id} name={self.name!r} title={self.title!r} email={self.email!r}>"

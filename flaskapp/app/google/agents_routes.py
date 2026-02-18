@@ -351,6 +351,24 @@ def _execute_agent_decision(account_id: int, decision_row) -> dict:
 
             return executor.add_keyword(str(ad_group_id), keyword_text, match_type)
 
+        elif decision_type == 'adjust_bids':
+            # CampaignManagerAgent uses 'adjust_bids' which maps to adjust_campaign_bids
+            campaign_id = decision_row.get('campaign_id') or action_data.get('campaign_id')
+            bid_change_pct = action_data.get('bid_change_pct', 0)
+
+            if not campaign_id:
+                return {'success': False, 'error': 'Missing campaign_id'}
+
+            return executor.adjust_campaign_bids(str(campaign_id), bid_change_pct)
+
+        elif decision_type in ('investigate_cpl_spike', 'investigate_conversion_drop'):
+            # These are delegation/analysis decisions — no direct API action needed
+            return {
+                'success': True,
+                'result': f'Investigation task "{decision_type}" acknowledged and queued',
+                'manual': False
+            }
+
         else:
             # For unhandled decision types, return as manual action
             return {

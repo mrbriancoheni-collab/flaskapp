@@ -535,3 +535,347 @@ class DataPipeline:
             }).fetchall()
 
         return [dict(r._mapping) for r in rows]
+
+    # ------------------------------------------------------------------
+    # Enhanced Seasonality Analysis
+    # ------------------------------------------------------------------
+
+    def get_seasonality_features(self, days: int = 365) -> Dict:
+        """
+        Extract seasonality patterns from historical data.
+
+        Returns aggregated performance metrics by:
+        - Quarter (Q1-Q4)
+        - Month (1-12)
+        - Day of week (0-6)
+        - Week of year (1-52)
+        - Holiday vs non-holiday periods
+        """
+        cutoff = (date.today() - timedelta(days=days)).isoformat()
+
+        query = text("""
+            SELECT
+                -- Quarterly patterns
+                QUARTER(date) as quarter,
+                MONTH(date) as month,
+                DAYOFWEEK(date) as day_of_week,
+                WEEK(date) as week_of_year,
+                was_holiday,
+
+                -- Aggregated metrics
+                COUNT(*) as days_in_period,
+                SUM(impressions) as total_impressions,
+                SUM(clicks) as total_clicks,
+                SUM(conversions) as total_conversions,
+                SUM(cost_cents) / 100.0 as total_cost,
+                AVG(ctr) as avg_ctr,
+                AVG(conversion_rate) as avg_conv_rate,
+                AVG(CASE WHEN conversions > 0 THEN cost_cents / conversions / 100.0 END) as avg_cpa,
+                AVG(roas) as avg_roas
+            FROM campaign_performance_history
+            WHERE account_id = :account_id
+              AND date >= :cutoff
+            GROUP BY quarter, month, day_of_week, week_of_year, was_holiday
+            ORDER BY quarter, month, day_of_week
+        """)
+
+        with db.engine.connect() as conn:
+            rows = conn.execute(query, {
+                'account_id': self.account_id,
+                'cutoff': cutoff,
+            }).fetchall()
+
+        raw_data = [dict(r._mapping) for r in rows]
+
+        # Aggregate into seasonal profiles
+        quarterly = {}
+        monthly = {}
+        daily = {}
+        holiday_impact = {'holiday': [], 'non_holiday': []}
+
+        for row in raw_data:
+            q = row['quarter']
+            m = row['month']
+            d = row['day_of_week']
+
+            if q not in quarterly:
+                quarterly[q] = []
+            quarterly[q].append(row)
+
+            if m not in monthly:
+                monthly[m] = []
+            monthly[m].append(row)
+
+            if d not in daily:
+                daily[d] = []
+            daily[d].append(row)
+
+            key = 'holiday' if row['was_holiday'] else 'non_holiday'
+            holiday_impact[key].append(row)
+
+        return {
+            'raw_data': raw_data,
+            'quarterly_patterns': self._aggregate_seasonal(quarterly),
+            'monthly_patterns': self._aggregate_seasonal(monthly),
+            'daily_patterns': self._aggregate_seasonal(daily),
+            'holiday_impact': {
+                'holiday_avg_cpa': np.mean([r['avg_cpa'] for r in holiday_impact['holiday'] if r['avg_cpa']]) if holiday_impact['holiday'] else None,
+                'non_holiday_avg_cpa': np.mean([r['avg_cpa'] for r in holiday_impact['non_holiday'] if r['avg_cpa']]) if holiday_impact['non_holiday'] else None,
+            }
+        }
+
+    def _aggregate_seasonal(self, grouped_data: Dict) -> Dict:
+        """Helper to aggregate seasonal metrics."""
+        result = {}
+        for key, rows in grouped_data.items():
+            cpas = [r['avg_cpa'] for r in rows if r['avg_cpa']]
+            ctrs = [r['avg_ctr'] for r in rows if r['avg_ctr']]
+            conv_rates = [r['avg_conv_rate'] for r in rows if r['avg_conv_rate']]
+
+            result[key] = {
+                'avg_cpa': np.mean(cpas) if cpas else None,
+                'avg_ctr': np.mean(ctrs) if ctrs else None,
+                'avg_conv_rate': np.mean(conv_rates) if conv_rates else None,
+                'total_conversions': sum(r['total_conversions'] or 0 for r in rows),
+                'total_cost': sum(r['total_cost'] or 0 for r in rows),
+                'sample_days': sum(r['days_in_period'] or 0 for r in rows),
+            }
+        return result
+
+    # ------------------------------------------------------------------
+    # Hourly Performance (Time of Day)
+    # ------------------------------------------------------------------
+
+    def get_hourly_performance(self, days: int = 90) -> List[Dict]:
+        """
+        Get hourly performance patterns.
+
+        Analyzes performance by hour of day to identify optimal bidding windows.
+        """
+        cutoff = (date.today() - timedelta(days=days)).isoformat()
+
+        query = text("""
+            SELECT
+                hour,
+                DAYOFWEEK(date) as day_of_week,
+
+                -- Aggregated metrics by hour
+                COUNT(*) as data_points,
+                SUM(impressions) as total_impressions,
+                SUM(clicks) as total_clicks,
+                SUM(conversions) as total_conversions,
+                SUM(budget_spent) as total_spend,
+                AVG(CASE WHEN clicks > 0 THEN conversions * 1.0 / clicks END) as avg_conv_rate,
+                AVG(CASE WHEN impressions > 0 THEN clicks * 100.0 / impressions END) as avg_ctr,
+                AVG(pacing_score) as avg_pacing_score
+            FROM ads_budget_pacing_history
+            WHERE account_id = :account_id
+              AND date >= :cutoff
+            GROUP BY hour, day_of_week
+            ORDER BY day_of_week, hour
+        """)
+
+        with db.engine.connect() as conn:
+            rows = conn.execute(query, {
+                'account_id': self.account_id,
+                'cutoff': cutoff,
+            }).fetchall()
+
+        return [dict(r._mapping) for r in rows]
+
+    def get_hourly_summary(self, days: int = 90) -> Dict:
+        """
+        Get summary of best/worst performing hours.
+        """
+        hourly_data = self.get_hourly_performance(days)
+
+        if not hourly_data:
+            return {'best_hours': [], 'worst_hours': [], 'by_hour': {}}
+
+        # Aggregate by hour across all days
+        by_hour = {}
+        for row in hourly_data:
+            h = row['hour']
+            if h not in by_hour:
+                by_hour[h] = {'conversions': 0, 'spend': 0, 'clicks': 0}
+            by_hour[h]['conversions'] += row['total_conversions'] or 0
+            by_hour[h]['spend'] += row['total_spend'] or 0
+            by_hour[h]['clicks'] += row['total_clicks'] or 0
+
+        # Calculate CPA by hour
+        for h, data in by_hour.items():
+            data['cpa'] = (data['spend'] / data['conversions']) if data['conversions'] > 0 else None
+
+        # Sort hours by CPA (best = lowest CPA)
+        hours_with_cpa = [(h, d['cpa']) for h, d in by_hour.items() if d['cpa']]
+        hours_with_cpa.sort(key=lambda x: x[1])
+
+        return {
+            'best_hours': [h for h, _ in hours_with_cpa[:4]],  # Top 4 hours
+            'worst_hours': [h for h, _ in hours_with_cpa[-4:]],  # Bottom 4 hours
+            'by_hour': by_hour,
+        }
+
+    # ------------------------------------------------------------------
+    # Service Type Extraction
+    # ------------------------------------------------------------------
+
+    SERVICE_TYPE_KEYWORDS = {
+        'hvac': ['hvac', 'heating', 'cooling', 'air conditioning', 'ac repair', 'furnace', 'heat pump'],
+        'plumbing': ['plumber', 'plumbing', 'drain', 'pipe', 'water heater', 'sewer', 'faucet'],
+        'electrical': ['electrician', 'electrical', 'wiring', 'outlet', 'panel', 'lighting'],
+        'roofing': ['roof', 'roofing', 'shingle', 'gutter', 'leak repair'],
+        'landscaping': ['landscaping', 'lawn', 'tree', 'garden', 'mowing', 'irrigation'],
+        'pest_control': ['pest', 'exterminator', 'termite', 'rodent', 'bug', 'insect'],
+        'cleaning': ['cleaning', 'maid', 'janitorial', 'carpet cleaning', 'pressure wash'],
+        'moving': ['moving', 'movers', 'relocation', 'packing'],
+        'painting': ['painting', 'painter', 'interior painting', 'exterior painting'],
+        'concrete': ['concrete', 'driveway', 'patio', 'foundation'],
+        'garage_door': ['garage door', 'overhead door'],
+        'windows': ['window', 'glass', 'replacement windows'],
+        'flooring': ['flooring', 'hardwood', 'tile', 'carpet', 'laminate'],
+        'remodeling': ['remodel', 'renovation', 'kitchen', 'bathroom', 'basement'],
+    }
+
+    def extract_service_types(self) -> Dict:
+        """
+        Extract service type/vertical from campaign and keyword names.
+
+        Returns inferred service categories with confidence scores.
+        """
+        # Get campaign names
+        campaign_query = text("""
+            SELECT DISTINCT campaign_name
+            FROM campaign_performance_history
+            WHERE account_id = :account_id
+        """)
+
+        # Get keywords
+        keyword_query = text("""
+            SELECT DISTINCT k.text as keyword_text
+            FROM keywords k
+            JOIN ad_groups ag ON ag.id = k.ad_group_id
+            JOIN ads_campaigns ac ON ac.id = ag.campaign_id
+            WHERE ac.account_id = :account_id
+            LIMIT 500
+        """)
+
+        with db.engine.connect() as conn:
+            campaigns = conn.execute(campaign_query, {'account_id': self.account_id}).fetchall()
+            keywords = conn.execute(keyword_query, {'account_id': self.account_id}).fetchall()
+
+        # Combine all text for analysis
+        all_text = ' '.join([
+            *[r[0].lower() for r in campaigns if r[0]],
+            *[r[0].lower() for r in keywords if r[0]],
+        ])
+
+        # Score each service type
+        service_scores = {}
+        for service_type, keywords_list in self.SERVICE_TYPE_KEYWORDS.items():
+            matches = sum(1 for kw in keywords_list if kw in all_text)
+            if matches > 0:
+                service_scores[service_type] = matches
+
+        if not service_scores:
+            return {'primary_service': 'unknown', 'services': {}, 'confidence': 0}
+
+        # Sort by score
+        sorted_services = sorted(service_scores.items(), key=lambda x: -x[1])
+        total_matches = sum(service_scores.values())
+
+        return {
+            'primary_service': sorted_services[0][0],
+            'services': {s: score / total_matches for s, score in sorted_services},
+            'confidence': min(sorted_services[0][1] / 5.0, 1.0),  # Cap at 1.0
+        }
+
+    # ------------------------------------------------------------------
+    # Cost Pattern Analysis
+    # ------------------------------------------------------------------
+
+    def get_cost_patterns(self, days: int = 180) -> Dict:
+        """
+        Analyze cost patterns over time.
+
+        Returns:
+        - Cost trends (increasing/decreasing/stable)
+        - Cost volatility
+        - Cost by day of week
+        - Cost efficiency trends (CPA over time)
+        """
+        cutoff = (date.today() - timedelta(days=days)).isoformat()
+
+        query = text("""
+            SELECT
+                date,
+                DAYOFWEEK(date) as day_of_week,
+                WEEK(date) as week_num,
+                SUM(cost_cents) / 100.0 as daily_cost,
+                SUM(conversions) as daily_conversions,
+                SUM(clicks) as daily_clicks,
+                AVG(ctr) as avg_ctr,
+                AVG(CASE WHEN conversions > 0 THEN cost_cents / conversions / 100.0 END) as daily_cpa
+            FROM campaign_performance_history
+            WHERE account_id = :account_id
+              AND date >= :cutoff
+            GROUP BY date, day_of_week, week_num
+            ORDER BY date
+        """)
+
+        with db.engine.connect() as conn:
+            rows = conn.execute(query, {
+                'account_id': self.account_id,
+                'cutoff': cutoff,
+            }).fetchall()
+
+        data = [dict(r._mapping) for r in rows]
+
+        if not data:
+            return {'trend': 'unknown', 'volatility': None, 'by_day': {}}
+
+        # Calculate trend (linear regression slope)
+        costs = [r['daily_cost'] for r in data if r['daily_cost']]
+        if len(costs) >= 7:
+            # Simple trend: compare first half avg to second half avg
+            mid = len(costs) // 2
+            first_half_avg = np.mean(costs[:mid])
+            second_half_avg = np.mean(costs[mid:])
+
+            if second_half_avg > first_half_avg * 1.1:
+                trend = 'increasing'
+            elif second_half_avg < first_half_avg * 0.9:
+                trend = 'decreasing'
+            else:
+                trend = 'stable'
+        else:
+            trend = 'insufficient_data'
+
+        # Cost volatility (coefficient of variation)
+        volatility = (np.std(costs) / np.mean(costs)) if costs and np.mean(costs) > 0 else None
+
+        # Cost by day of week
+        by_day = {}
+        for row in data:
+            d = row['day_of_week']
+            if d not in by_day:
+                by_day[d] = {'costs': [], 'cpas': []}
+            if row['daily_cost']:
+                by_day[d]['costs'].append(row['daily_cost'])
+            if row['daily_cpa']:
+                by_day[d]['cpas'].append(row['daily_cpa'])
+
+        day_summary = {}
+        for d, values in by_day.items():
+            day_summary[d] = {
+                'avg_cost': np.mean(values['costs']) if values['costs'] else None,
+                'avg_cpa': np.mean(values['cpas']) if values['cpas'] else None,
+            }
+
+        return {
+            'trend': trend,
+            'volatility': volatility,
+            'avg_daily_cost': np.mean(costs) if costs else None,
+            'by_day_of_week': day_summary,
+            'data_points': len(data),
+        }

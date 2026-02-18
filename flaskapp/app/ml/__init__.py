@@ -69,6 +69,17 @@ def ensure_tables():
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         """))
 
+        # Create ml_settings table for system-wide ML settings
+        db.session.execute(text("""
+            CREATE TABLE IF NOT EXISTS ml_settings (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                setting_key VARCHAR(100) NOT NULL UNIQUE,
+                setting_value VARCHAR(500),
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                updated_by INT
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """))
+
         db.session.commit()
         logger.info("ML tables ensured")
     except Exception as e:
@@ -76,8 +87,56 @@ def ensure_tables():
         db.session.rollback()
 
 
+def is_ml_decisions_enabled() -> bool:
+    """
+    Check if ML-powered decisions are enabled.
+    When disabled, ML models still train and learn, but don't influence agent decisions.
+    """
+    from app import db
+    from sqlalchemy import text
+
+    try:
+        row = db.session.execute(text("""
+            SELECT setting_value FROM ml_settings
+            WHERE setting_key = 'ml_decisions_enabled'
+        """)).fetchone()
+
+        if row:
+            return row[0].lower() in ('true', '1', 'yes', 'on')
+        return False  # Default to disabled
+    except Exception as e:
+        logger.warning(f"Could not check ML decisions setting: {e}")
+        return False
+
+
+def set_ml_decisions_enabled(enabled: bool, user_id: int = None):
+    """
+    Enable or disable ML-powered decisions.
+    """
+    from app import db
+    from sqlalchemy import text
+
+    try:
+        db.session.execute(text("""
+            INSERT INTO ml_settings (setting_key, setting_value, updated_by)
+            VALUES ('ml_decisions_enabled', :value, :user_id)
+            ON DUPLICATE KEY UPDATE
+                setting_value = VALUES(setting_value),
+                updated_by = VALUES(updated_by),
+                updated_at = CURRENT_TIMESTAMP
+        """), {'value': 'true' if enabled else 'false', 'user_id': user_id})
+        db.session.commit()
+        logger.info(f"ML decisions {'enabled' if enabled else 'disabled'} by user {user_id}")
+        return True
+    except Exception as e:
+        logger.warning(f"Could not set ML decisions setting: {e}")
+        db.session.rollback()
+        return False
+
+
 from app.ml.predictor import MLPredictor
 from app.ml.context_builder import ContextBuilder
 from app.ml.llm_advisor import LLMAdvisor
 
-__all__ = ['MLPredictor', 'ContextBuilder', 'LLMAdvisor', 'ensure_tables']
+__all__ = ['MLPredictor', 'ContextBuilder', 'LLMAdvisor', 'ensure_tables',
+           'is_ml_decisions_enabled', 'set_ml_decisions_enabled']

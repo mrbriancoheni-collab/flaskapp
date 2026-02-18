@@ -4,6 +4,45 @@
 
 {% block content %}
 <div class="space-y-6">
+  <!-- ML Status Banner -->
+  {% if ml_decisions_enabled %}
+  <div class="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+        <i class="fa-solid fa-circle-check text-green-600 text-xl"></i>
+      </div>
+      <div>
+        <div class="font-semibold text-green-800">ML Decisions Active</div>
+        <div class="text-sm text-green-700">Machine learning models are guiding agent decisions</div>
+      </div>
+    </div>
+    <form method="post" action="{{ url_for('ml_admin_bp.toggle_decisions') }}">
+      <button type="submit" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 flex items-center gap-2">
+        <i class="fa-solid fa-pause"></i>
+        Disable ML Decisions
+      </button>
+    </form>
+  </div>
+  {% else %}
+  <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+        <i class="fa-solid fa-graduation-cap text-amber-600 text-xl"></i>
+      </div>
+      <div>
+        <div class="font-semibold text-amber-800">Learning Mode</div>
+        <div class="text-sm text-amber-700">Models are training and learning, but not affecting agent decisions yet</div>
+      </div>
+    </div>
+    <form method="post" action="{{ url_for('ml_admin_bp.toggle_decisions') }}">
+      <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2">
+        <i class="fa-solid fa-play"></i>
+        Enable ML Decisions
+      </button>
+    </form>
+  </div>
+  {% endif %}
+
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div>

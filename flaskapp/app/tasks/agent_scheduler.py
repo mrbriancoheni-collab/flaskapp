@@ -47,6 +47,27 @@ def run_agents_for_all_accounts(layer: str = 'all'):
     with db.engine.connect() as conn:
         accounts = [dict(row._mapping) for row in conn.execute(query)]
 
+    if not accounts:
+        # Diagnostic: explain why no accounts found
+        diag_query = text("""
+            SELECT
+                (SELECT COUNT(*) FROM accounts WHERE status IN ('active', 'trial')) as active_accounts,
+                (SELECT COUNT(*) FROM accounts WHERE google_ads_customer_id IS NOT NULL) as accounts_with_gads,
+                (SELECT COUNT(*) FROM google_oauth_tokens WHERE product = 'ads') as ads_tokens,
+                (SELECT COUNT(*) FROM google_oauth_tokens WHERE product = 'ads' AND credentials_json IS NOT NULL) as ads_tokens_with_creds
+        """)
+        with db.engine.connect() as conn:
+            diag = dict(conn.execute(diag_query).first()._mapping)
+
+        print(f"No accounts found for agent execution. Diagnostic:")
+        print(f"  Active/trial accounts: {diag['active_accounts']}")
+        print(f"  Accounts with google_ads_customer_id: {diag['accounts_with_gads']}")
+        print(f"  Google OAuth tokens (ads): {diag['ads_tokens']}")
+        print(f"  OAuth tokens with credentials: {diag['ads_tokens_with_creds']}")
+        print(f"\nRequirements: account must be active/trial, have google_ads_customer_id set,")
+        print(f"and have a Google OAuth token with product='ads' and credentials_json set.")
+        return 0, 0
+
     print(f"Running {layer} agents for {len(accounts)} accounts...")
 
     success_count = 0
@@ -203,17 +224,31 @@ def run_agents_for_account(
         EventBus,
         DecisionLog
     )
-    from app.agents.executor import GoogleAdsAgentExecutor
+
+    try:
+        from app.agents.executor import GoogleAdsAgentExecutor
+    except ImportError as e:
+        raise RuntimeError(
+            f"Cannot import GoogleAdsAgentExecutor: {e}. "
+            f"Install google-ads library with: pip install google-ads"
+        )
 
     # Initialize infrastructure
     event_bus = EventBus()
     decision_log = DecisionLog()
 
     # Initialize Google Ads client
+    dev_token = current_app.config.get('GOOGLE_ADS_DEVELOPER_TOKEN')
+    if not dev_token:
+        raise RuntimeError(
+            f"GOOGLE_ADS_DEVELOPER_TOKEN is not set. "
+            f"Configure it in your environment or Flask config."
+        )
+
     try:
         executor = GoogleAdsAgentExecutor(
             refresh_token=refresh_token,
-            developer_token=current_app.config.get('GOOGLE_ADS_DEVELOPER_TOKEN'),
+            developer_token=dev_token,
             client_customer_id=customer_id
         )
     except Exception as e:

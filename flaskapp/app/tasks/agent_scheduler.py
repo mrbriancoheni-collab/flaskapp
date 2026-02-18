@@ -511,6 +511,41 @@ def run_agents_for_account(
     # Common kwargs for all agents
     agent_kwargs = dict(event_bus=event_bus, decision_log=decision_log, account_id=account_id)
 
+    # --- ML-powered context enrichment ---
+    # Build ML predictions and LLM advice for each agent type
+    try:
+        from app.ml.context_builder import ContextBuilder
+        from app.ml.llm_advisor import LLMAdvisor
+        from app.ml.predictor import MLPredictor
+
+        ml_context_builder = ContextBuilder(account_id, context)
+        llm_advisor = LLMAdvisor()
+        ml_predictor = MLPredictor(account_id)
+
+        # Get summary of all available ML predictions
+        ml_summary = ml_predictor.get_all_predictions_summary(context)
+        context['ml_predictions'] = ml_summary
+
+        print(f"  ML models available: {len(ml_summary.get('models_available', []))}, "
+              f"unavailable: {len(ml_summary.get('models_unavailable', []))}")
+
+    except Exception as e:
+        current_app.logger.warning(f"ML system unavailable for account {account_id}: {e}")
+        ml_context_builder = None
+        llm_advisor = None
+        context['ml_predictions'] = {}
+
+    # Map agent types to their ML context builder methods
+    AGENT_TYPE_MAP = {
+        'StrategicDirectorAgent': 'strategic_director',
+        'CampaignManagerAgent': 'campaign_manager',
+        'BudgetGuardianAgent': 'budget_guardian',
+        'QualityScoreAgent': 'quality_score',
+        'KeywordOptimizerAgent': 'keyword_optimizer',
+        'NegativeKeywordAgent': 'negative_keyword',
+        'AdCopyAgent': 'ad_copy',
+    }
+
     # Select agents based on layer
     if layer == 'strategic':
         agents = [
@@ -541,6 +576,26 @@ def run_agents_for_account(
 
     # Run agents and log execution
     for agent in agents:
+        # Inject ML context and LLM advice into the agent's context
+        agent_class_name = type(agent).__name__
+        ml_agent_type = AGENT_TYPE_MAP.get(agent_class_name)
+
+        if ml_context_builder and ml_agent_type:
+            try:
+                ml_ctx = ml_context_builder.build_context_for_agent(ml_agent_type)
+                context['ml_context'] = ml_ctx
+
+                # Get LLM advice guided by ML predictions
+                if llm_advisor:
+                    llm_advice = llm_advisor.get_advice(ml_agent_type, ml_ctx, context)
+                    context['llm_advice'] = llm_advice
+                    if llm_advice.get('decisions'):
+                        print(f"    LLM provided {len(llm_advice['decisions'])} recommendations for {ml_agent_type}")
+
+            except Exception as e:
+                current_app.logger.warning(f"ML/LLM enrichment failed for {ml_agent_type}: {e}")
+                context['ml_context'] = ''
+                context['llm_advice'] = {}
         try:
             result = agent.run_cycle(context, executor)
 

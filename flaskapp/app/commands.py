@@ -868,6 +868,80 @@ def run_all_ai_command(account):
         return 1
 
 
+@click.command('train-ml')
+@click.option('--account', type=int, help='Train models for specific account ID only')
+@click.option('--model', type=str, help='Train specific model only (e.g., budget_roi, anomaly, spend_forecast)')
+@with_appcontext
+def train_ml_command(account, model):
+    """
+    Train ML models for Google Ads optimization.
+
+    This trains predictive models using historical Google Ads data to help
+    AI agents make better decisions. Models are retrained weekly automatically.
+
+    Examples:
+        flask train-ml                    # Train all models for all accounts
+        flask train-ml --account 123      # Train for specific account only
+        flask train-ml --model budget_roi # Train specific model type only
+    """
+    from app.ml.trainer import MLTrainer
+
+    click.echo(f"\n{'='*60}")
+    click.echo("Training ML Models for Google Ads Optimization")
+    click.echo(f"{'='*60}\n")
+
+    try:
+        if account:
+            click.echo(f"Training models for account {account}...")
+            trainer = MLTrainer(account)
+
+            if model:
+                # Train specific model
+                model_map = {
+                    'budget_roi': trainer.train_budget_roi_model,
+                    'anomaly': trainer.train_anomaly_model,
+                    'spend_forecast': trainer.train_spend_forecast_model,
+                    'quality_score': trainer.train_quality_score_model,
+                    'cpa_predictor': trainer.train_cpa_predictor_model,
+                    'waste_classifier': trainer.train_waste_classifier_model,
+                    'ctr_predictor': trainer.train_ctr_predictor_model,
+                }
+                if model not in model_map:
+                    click.echo(f"Unknown model: {model}", err=True)
+                    click.echo(f"Available models: {', '.join(model_map.keys())}")
+                    return 1
+                result = model_map[model]()
+                click.echo(f"  - {model}: {'trained' if result else 'skipped (insufficient data)'}")
+            else:
+                # Train all models
+                results = trainer.train_all_models()
+                for model_name, success in results.items():
+                    status = 'trained' if success else 'skipped (insufficient data)'
+                    click.echo(f"  - {model_name}: {status}")
+
+            click.echo(f"\nTraining complete for account {account}")
+        else:
+            # Train all accounts
+            click.echo("Training models for all Google Ads accounts...")
+            from app.ml.trainer import train_all_accounts
+            results = train_all_accounts()
+
+            click.echo(f"\nTraining Summary:")
+            click.echo(f"  Accounts processed: {results['accounts_processed']}")
+            click.echo(f"  Models trained: {results['models_trained']}")
+            click.echo(f"  Errors: {results['errors']}")
+
+        click.echo(f"\n{'='*60}")
+        click.echo("ML Training Complete")
+        click.echo(f"{'='*60}\n")
+
+    except Exception as e:
+        click.echo(f"\nError during ML training: {e}", err=True)
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
 def register_commands(app):
     """Register all CLI commands with the Flask app."""
     app.cli.add_command(run_agents_command)
@@ -878,5 +952,6 @@ def register_commands(app):
     app.cli.add_command(clear_sample_data_command)
     app.cli.add_command(run_auto_executor_command)
     app.cli.add_command(run_all_ai_command)
+    app.cli.add_command(train_ml_command)
     # Note: seed_ai_actions_command intentionally not registered by default
     # It's a development-only tool that should not be used on real accounts

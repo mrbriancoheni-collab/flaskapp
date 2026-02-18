@@ -79,6 +79,12 @@ def run_daily(app, db):
     except Exception:
         app.logger.exception("[CRON] Google Ads monthly performance emails failed")
 
+    # Weekly ML model retraining (runs on Sundays)
+    try:
+        _run_weekly_ml_training(app)
+    except Exception:
+        app.logger.exception("[CRON] ML model training failed")
+
     # TODO: email digests, cleanups, churn pings, etc.
 
 
@@ -722,3 +728,51 @@ def _send_next_sequence_steps(app):
 
     except Exception as e:
         app.logger.exception(f"[CRON] Error running smart sequence progression: {e}")
+
+
+# =========================
+# ML Model Training (Weekly)
+# =========================
+
+def _run_weekly_ml_training(app) -> None:
+    """
+    Retrain ML models for Google Ads optimization weekly.
+
+    This runs every Sunday to update models with the latest data.
+    Models trained:
+    - BudgetROI: Predicts ROAS per campaign
+    - AnomalyDetector: Detects performance anomalies
+    - SpendForecast: Forecasts daily spend
+    - QualityScore: Predicts quality score components
+    - CPAPredictor: Predicts CPA per keyword
+    - WasteClassifier: Classifies wasteful search terms
+    - CTRPredictor: Predicts CTR for ad copy
+    """
+    # Only run on Sundays
+    if datetime.utcnow().weekday() != 6:
+        app.logger.debug("[CRON] Skipping ML training (not Sunday)")
+        return
+
+    enabled = app.config.get("ML_TRAINING_ENABLED", True)
+    if not enabled:
+        app.logger.info("[CRON] ML training disabled (ML_TRAINING_ENABLED=False)")
+        return
+
+    app.logger.info("[CRON] Starting weekly ML model training")
+
+    try:
+        from app.ml.trainer import train_all_accounts
+
+        results = train_all_accounts()
+
+        app.logger.info(
+            "[CRON] ML training completed: %d accounts processed, %d models trained, %d errors",
+            results['accounts_processed'],
+            results['models_trained'],
+            results['errors']
+        )
+
+    except ImportError as e:
+        app.logger.warning("[CRON] ML training skipped (ml module not available): %s", e)
+    except Exception as e:
+        app.logger.exception(f"[CRON] Error during ML training: {e}")

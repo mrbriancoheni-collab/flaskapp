@@ -436,27 +436,38 @@ def run_agents_for_account(
             })
 
         # 4. Search terms (last 30 days, top 20 by spend)
+        # Include campaign_id so negative keywords can be added to correct campaigns
         search_terms_list = []
         try:
             st_rows = _ads_query("""
                 SELECT
                     search_term_view.search_term,
+                    campaign.id,
+                    campaign.name,
                     metrics.cost_micros, metrics.conversions,
                     metrics.clicks, metrics.impressions
                 FROM search_term_view
                 WHERE segments.date DURING LAST_30_DAYS
                 ORDER BY metrics.cost_micros DESC
-                LIMIT 20
+                LIMIT 50
             """)
             for row in st_rows:
                 stv = row.get("searchTermView", {})
+                camp = row.get("campaign", {})
                 m = row.get("metrics", {})
                 cost = int(m.get("costMicros", 0)) / 1_000_000
                 clicks = int(m.get("clicks", 0))
                 impressions = int(m.get("impressions", 0))
+                # Extract campaign ID from resource name (e.g., "customers/123/campaigns/456")
+                campaign_resource = camp.get("resourceName", "")
+                campaign_id = campaign_resource.split("/")[-1] if campaign_resource else ""
                 search_terms_list.append({
                     'text': stv.get("searchTerm", ""),
+                    'query': stv.get("searchTerm", ""),  # alias for agent compatibility
+                    'campaign_id': campaign_id,
+                    'campaign_name': camp.get("name", ""),
                     'spend': cost,
+                    'cost': cost,  # alias for agent compatibility
                     'conversions': int(float(m.get("conversions", 0))),
                     'ctr': clicks / impressions if impressions > 0 else 0,
                 })

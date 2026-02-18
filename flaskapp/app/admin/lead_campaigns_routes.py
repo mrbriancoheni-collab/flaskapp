@@ -824,6 +824,24 @@ def enrich_leads(campaign_id: int):
                 lead.enrichment_status = 'completed'
                 lead.enriched_at = datetime.now()
 
+                # Save all discovered contacts as LeadContact records
+                contacts = result.get('contacts', [])
+                # Remove any stale contacts from a previous enrichment attempt
+                LeadContact.query.filter_by(lead_id=lead.id).delete()
+                for i, contact_data in enumerate(contacts):
+                    if not contact_data.get('name'):
+                        continue
+                    contact = LeadContact(
+                        lead_id=lead.id,
+                        name=contact_data['name'],
+                        title=contact_data.get('title'),
+                        email=contact_data.get('email'),
+                        linkedin_url=contact_data.get('linkedin_url'),
+                        role_category=contact_data.get('role_category', 'other'),
+                        is_primary=(i == 0)
+                    )
+                    db.session.add(contact)
+
                 enriched_count += 1
 
             except Exception as e:

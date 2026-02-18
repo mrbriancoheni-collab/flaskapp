@@ -160,7 +160,7 @@ class LeadEnrichmentService:
                 'api_key': self.serpapi_key,
                 'engine': 'google',
                 'q': query,
-                'num': 10  # Get more results to find multiple contacts
+                'num': 20  # Get more results to find multiple contacts
             }
 
             response = requests.get('https://serpapi.com/search', params=params, timeout=20)
@@ -202,8 +202,8 @@ class LeadEnrichmentService:
 
                     seen_names.add(name)
 
-                    # Limit to top 5 contacts to avoid overwhelming
-                    if len(contacts) >= 5:
+                    # Limit to top 10 contacts per company
+                    if len(contacts) >= 10:
                         break
 
         except Exception as e:

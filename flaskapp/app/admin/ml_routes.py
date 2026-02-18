@@ -30,6 +30,7 @@ ml_admin_bp = Blueprint("ml_admin_bp", __name__, url_prefix="/admin/ml")
 @require_admin
 def dashboard():
     """ML System Dashboard - Overview of all models and training status."""
+    from flask import g
 
     # Ensure ML tables exist
     try:
@@ -37,6 +38,14 @@ def dashboard():
         ensure_tables()
     except Exception as e:
         logger.warning(f"Could not ensure ML tables: {e}")
+
+    # Check if ML decisions are enabled
+    ml_decisions_enabled = False
+    try:
+        from app.ml import is_ml_decisions_enabled
+        ml_decisions_enabled = is_ml_decisions_enabled()
+    except Exception as e:
+        logger.warning(f"Could not check ML decisions setting: {e}")
 
     # Get all trained models from ml_models table
     models_data = []
@@ -232,7 +241,33 @@ def dashboard():
         total_models=total_models,
         unique_accounts=unique_accounts,
         recent_training=recent_training,
+        ml_decisions_enabled=ml_decisions_enabled,
     )
+
+
+@ml_admin_bp.route("/toggle-decisions", methods=["POST"])
+@login_required
+@require_admin
+def toggle_decisions():
+    """Enable or disable ML-powered decisions."""
+    from flask import g
+    from app.ml import set_ml_decisions_enabled, is_ml_decisions_enabled
+
+    current_state = is_ml_decisions_enabled()
+    new_state = not current_state
+
+    user_id = g.user.id if hasattr(g, 'user') and g.user else None
+    success = set_ml_decisions_enabled(new_state, user_id)
+
+    if success:
+        if new_state:
+            flash("ML decisions ENABLED - Models will now guide agent decisions", "success")
+        else:
+            flash("ML decisions DISABLED - Models will continue learning but won't affect decisions", "info")
+    else:
+        flash("Failed to update ML decisions setting", "error")
+
+    return redirect(url_for('ml_admin_bp.dashboard'))
 
 
 @ml_admin_bp.route("/train", methods=["POST"])

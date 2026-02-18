@@ -513,27 +513,43 @@ def run_agents_for_account(
 
     # --- ML-powered context enrichment ---
     # Build ML predictions and LLM advice for each agent type
+    # NOTE: ML models always train and learn, but only influence decisions if enabled
+    ml_decisions_enabled = False
     try:
-        from app.ml.context_builder import ContextBuilder
-        from app.ml.llm_advisor import LLMAdvisor
-        from app.ml.predictor import MLPredictor
+        from app.ml import is_ml_decisions_enabled
+        ml_decisions_enabled = is_ml_decisions_enabled()
+    except Exception:
+        pass
 
-        ml_context_builder = ContextBuilder(account_id, context)
-        llm_advisor = LLMAdvisor()
-        ml_predictor = MLPredictor(account_id)
+    ml_context_builder = None
+    llm_advisor = None
+    context['ml_predictions'] = {}
+    context['ml_decisions_enabled'] = ml_decisions_enabled
 
-        # Get summary of all available ML predictions
-        ml_summary = ml_predictor.get_all_predictions_summary(context)
-        context['ml_predictions'] = ml_summary
+    if ml_decisions_enabled:
+        try:
+            from app.ml.context_builder import ContextBuilder
+            from app.ml.llm_advisor import LLMAdvisor
+            from app.ml.predictor import MLPredictor
 
-        print(f"  ML models available: {len(ml_summary.get('models_available', []))}, "
-              f"unavailable: {len(ml_summary.get('models_unavailable', []))}")
+            ml_context_builder = ContextBuilder(account_id, context)
+            llm_advisor = LLMAdvisor()
+            ml_predictor = MLPredictor(account_id)
 
-    except Exception as e:
-        current_app.logger.warning(f"ML system unavailable for account {account_id}: {e}")
-        ml_context_builder = None
-        llm_advisor = None
-        context['ml_predictions'] = {}
+            # Get summary of all available ML predictions
+            ml_summary = ml_predictor.get_all_predictions_summary(context)
+            context['ml_predictions'] = ml_summary
+
+            print(f"  ML decisions ENABLED - models available: {len(ml_summary.get('models_available', []))}, "
+                  f"unavailable: {len(ml_summary.get('models_unavailable', []))}")
+
+        except Exception as e:
+            current_app.logger.warning(f"ML system unavailable for account {account_id}: {e}")
+            ml_context_builder = None
+            llm_advisor = None
+            context['ml_predictions'] = {}
+    else:
+        print(f"  ML decisions DISABLED - models learning only (enable in Admin > ML Models)")
 
     # Map agent types to their ML context builder methods
     AGENT_TYPE_MAP = {

@@ -898,13 +898,13 @@ def train_ml_command(account, model):
             if model:
                 # Train specific model
                 model_map = {
-                    'budget_roi': trainer.train_budget_roi_model,
-                    'anomaly': trainer.train_anomaly_model,
-                    'spend_forecast': trainer.train_spend_forecast_model,
-                    'quality_score': trainer.train_quality_score_model,
-                    'cpa_predictor': trainer.train_cpa_predictor_model,
-                    'waste_classifier': trainer.train_waste_classifier_model,
-                    'ctr_predictor': trainer.train_ctr_predictor_model,
+                    'budget_roi': trainer._train_budget_roi,
+                    'anomaly': trainer._train_anomaly_detector,
+                    'spend_forecast': trainer._train_spend_forecaster,
+                    'quality_score': trainer._train_quality_score,
+                    'cpa_predictor': trainer._train_cpa_predictor,
+                    'waste_classifier': trainer._train_waste_classifier,
+                    'ctr_predictor': trainer._train_ctr_predictor,
                 }
                 if model not in model_map:
                     click.echo(f"Unknown model: {model}", err=True)
@@ -914,7 +914,7 @@ def train_ml_command(account, model):
                 click.echo(f"  - {model}: {'trained' if result else 'skipped (insufficient data)'}")
             else:
                 # Train all models
-                results = trainer.train_all_models()
+                results = trainer.train_all()
                 for model_name, success in results.items():
                     status = 'trained' if success else 'skipped (insufficient data)'
                     click.echo(f"  - {model_name}: {status}")

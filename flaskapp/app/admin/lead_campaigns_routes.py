@@ -1032,7 +1032,9 @@ def new_sequence(campaign_id: int):
 
     if request.method == 'GET':
         # Get next step number
-        max_step = db.session.query(func.max(EmailSequence.step_number)).filter_by(campaign_id=campaign_id).scalar() or 0
+        max_step = db.session.query(func.max(EmailSequence.step_number)).filter(
+            EmailSequence.campaign_id == campaign_id
+        ).scalar() or 0
         next_step = max_step + 1
 
         return render_template('admin/lead_campaigns/new_sequence.html', campaign=campaign, next_step=next_step)
@@ -1061,10 +1063,21 @@ def new_sequence(campaign_id: int):
 
     except Exception as e:
         db.session.rollback()
+        err_str = str(e)
+        # Handle duplicate step number gracefully — redirect to edit the existing step
+        if '1062' in err_str or 'Duplicate entry' in err_str or 'unique_campaign_step' in err_str:
+            step_num = int(request.form.get('step_number') or 1)
+            existing = EmailSequence.query.filter(
+                EmailSequence.campaign_id == campaign_id,
+                EmailSequence.step_number == step_num
+            ).first()
+            if existing:
+                flash(f'Step {step_num} already exists — editing it instead.', 'warning')
+                return redirect(url_for('lead_campaigns_bp.sequences_edit', sequence_id=existing.id))
         logger.exception(f"Error creating sequence for campaign {campaign_id}: {e}")
         flash(f'Error creating sequence: {e}', 'danger')
         next_step = (db.session.query(func.max(EmailSequence.step_number))
-                     .filter_by(campaign_id=campaign_id).scalar() or 0) + 1
+                     .filter(EmailSequence.campaign_id == campaign_id).scalar() or 0) + 1
         return render_template('admin/lead_campaigns/new_sequence.html',
                                campaign=campaign, next_step=next_step), 400
 

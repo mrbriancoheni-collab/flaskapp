@@ -42,6 +42,17 @@ class KeywordOptimizerAgent(BaseAgent):
 
         keywords = context.get('keywords', [])
 
+        # Thresholds scale with account size so the agent is equally sensitive
+        # on a $500/mo account and a $50,000/mo account.
+        total_spend_90d = context.get('performance_90d', {}).get('spend', 0) or 0
+        monthly_budget = context.get('total_budget', 0) or 0
+        # Pause: keyword spent ≥2% of 90-day total with zero conversions (floor $20)
+        pause_threshold = max(20.0, total_spend_90d * 0.02)
+        # Bid adjust: keyword CPA deviates when ≥2 conversions and ≥1% of monthly budget
+        bid_min_spend = max(10.0, monthly_budget * 0.01)
+
+        target_cpa = context.get('target_cpa', 100)
+
         for keyword in keywords:
             keyword_id = keyword.get('id') or keyword.get('keyword_id') or keyword.get('criterion_id', '')
             keyword_text = keyword.get('text', '')
@@ -50,8 +61,8 @@ class KeywordOptimizerAgent(BaseAgent):
             conversions = keyword.get('conversions_30d', 0)
             spend = keyword.get('spend_30d', 0)
 
-            # 1. Pause underperformers — $50 spend with no conversions is enough signal
-            if spend > 50 and conversions == 0:
+            # 1. Pause underperformers — scaled threshold, not a fixed dollar amount
+            if spend > pause_threshold and conversions == 0:
                 opportunities.append({
                     'type': 'pause_keyword',
                     'severity': 'medium',
@@ -62,9 +73,8 @@ class KeywordOptimizerAgent(BaseAgent):
                     'conversions_30d': conversions
                 })
 
-            # 2. Bid adjustments for converters — 2 conversions is sufficient signal
-            target_cpa = context.get('target_cpa', 100)
-            if conversions >= 2 and cpa != 0:  # Enough data
+            # 2. Bid adjustments for converters — 2 conversions + scaled min spend
+            if conversions >= 2 and cpa != 0 and spend >= bid_min_spend:
                 if cpa < target_cpa * 0.8:  # CPA 20% below target
                     # Increase bids
                     bid_increase_pct = min(30, ((target_cpa - cpa) / cpa) * 100)
@@ -295,6 +305,11 @@ class NegativeKeywordAgent(BaseAgent):
         opportunities = []
         pattern_matched_queries = set()
 
+        # Threshold: a search term that has burned ≥0.5% of 90-day budget
+        # with zero conversions is wasteful regardless of account size (floor $5).
+        total_spend_90d = context.get('performance_90d', {}).get('spend', 0) or 0
+        fallback_threshold = max(5.0, total_spend_90d * 0.005)
+
         search_terms = context.get('search_terms', [])
 
         for term in search_terms:
@@ -356,8 +371,8 @@ class NegativeKeywordAgent(BaseAgent):
                     continue
                 cost = term.get('cost', 0)
                 conversions = term.get('conversions', 0)
-                # Flag any term that spent $10+ with zero conversions and looks irrelevant
-                if cost > 10 and conversions == 0:
+                # Flag any term that burned ≥0.5% of account spend with 0 conversions
+                if cost > fallback_threshold and conversions == 0:
                     if self._is_irrelevant(query, context):
                         opportunities.append({
                             'type': 'add_negative_keyword',

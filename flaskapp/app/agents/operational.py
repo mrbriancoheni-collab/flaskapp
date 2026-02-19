@@ -636,13 +636,19 @@ class QualityScoreAgent(BaseAgent):
 
         keywords = context.get('keywords', [])
 
+        # Threshold: flag low-QS keywords spending ≥1% of monthly budget (floor $10).
+        # This ensures the agent fires on small accounts ($1k/mo → $10 floor)
+        # and large ones ($100k/mo → $1,000) proportionally.
+        monthly_budget = context.get('total_budget', 0) or 0
+        qs_spend_threshold = max(10.0, monthly_budget * 0.01)
+
         # Group keywords by Quality Score
         low_qs_keywords = [k for k in keywords if k.get('quality_score', 10) < 5]
         medium_qs_keywords = [k for k in keywords if 5 <= k.get('quality_score', 10) < 7]
 
-        # Focus on keywords with any meaningful spend and low QS
+        # Focus on low-QS keywords with scaled meaningful spend
         for keyword in low_qs_keywords:
-            if keyword.get('monthly_spend', 0) > 25:  # Even $25/mo wasted on low QS matters
+            if keyword.get('monthly_spend', 0) > qs_spend_threshold:
                 keyword_id = keyword.get('id') or keyword.get('keyword_id') or keyword.get('criterion_id', '')
                 opportunities.append({
                     'type': 'low_quality_score',

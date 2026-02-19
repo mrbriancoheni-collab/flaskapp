@@ -49,15 +49,15 @@
             <label class="block text-sm font-medium text-gray-700 mb-2">Subject Line</label>
             <input type="text" name="subject" value="{{ sequence.subject }}" required
                    class="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                   placeholder="Quick question about {{company_name}}">
-            <p class="text-xs text-gray-500 mt-1">Use {{company_name}}, {{decision_maker_name}}, etc.</p>
+                   placeholder="{% raw %}Quick question about {{company_name}}{% endraw %}">
+            <p class="text-xs text-gray-500 mt-1">Use {% raw %}{{company_name}}, {{decision_maker_name}}{% endraw %}, etc.</p>
         </div>
 
         <div class="mb-6">
             <label class="block text-sm font-medium text-gray-700 mb-2">Email Body</label>
             <textarea name="body_text" rows="12" required
                       class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm font-mono">{{ sequence.body_text }}</textarea>
-            <p class="text-xs text-gray-500 mt-1">Write in plain text. Line breaks will be preserved. Available variables: {{company_name}}, {{decision_maker_name}}, {{decision_maker_title}}, {{service_type}}, {{location}}</p>
+            <p class="text-xs text-gray-500 mt-1">Write in plain text. Line breaks will be preserved. Available variables: {% raw %}{{company_name}}, {{decision_maker_name}}, {{decision_maker_title}}, {{service_type}}, {{location}}{% endraw %}</p>
         </div>
 
         <div class="mb-6">

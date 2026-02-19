@@ -964,6 +964,8 @@ def sequences_delete(sequence_id: int):
     sequence_name = sequence.name
 
     campaign_id = sequence.campaign_id
+    # Remove sent email records referencing this sequence before deleting it
+    LeadEmail.query.filter_by(sequence_id=sequence_id).delete()
     db.session.delete(sequence)
     db.session.commit()
 
@@ -976,6 +978,10 @@ def sequences_delete(sequence_id: int):
 def sequences_clear_all(campaign_id: int):
     """Delete all email sequences for a campaign"""
     campaign = LeadCampaign.query.get_or_404(campaign_id)
+    # Remove sent email records for all sequences in this campaign before deleting them
+    seq_ids = [s.id for s in EmailSequence.query.filter_by(campaign_id=campaign_id).with_entities(EmailSequence.id)]
+    if seq_ids:
+        LeadEmail.query.filter(LeadEmail.sequence_id.in_(seq_ids)).delete(synchronize_session='fetch')
     deleted = EmailSequence.query.filter(EmailSequence.campaign_id == campaign_id).delete()
     db.session.commit()
     flash(f'Deleted {deleted} sequence(s) for "{campaign.name}". You can now add a fresh sequence.', 'success')

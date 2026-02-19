@@ -963,11 +963,23 @@ def sequences_delete(sequence_id: int):
     sequence = EmailSequence.query.get_or_404(sequence_id)
     sequence_name = sequence.name
 
+    campaign_id = sequence.campaign_id
     db.session.delete(sequence)
     db.session.commit()
 
     flash(f'Email sequence "{sequence_name}" deleted!', 'success')
-    return redirect(url_for('lead_campaigns_bp.sequences_list'))
+    return redirect(url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign_id))
+
+
+@lead_campaigns_bp.route('/<int:campaign_id>/sequences/clear-all', methods=['POST'])
+@require_admin
+def sequences_clear_all(campaign_id: int):
+    """Delete all email sequences for a campaign"""
+    campaign = LeadCampaign.query.get_or_404(campaign_id)
+    deleted = EmailSequence.query.filter(EmailSequence.campaign_id == campaign_id).delete()
+    db.session.commit()
+    flash(f'Deleted {deleted} sequence(s) for "{campaign.name}". You can now add a fresh sequence.', 'success')
+    return redirect(url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign_id))
 
 
 @lead_campaigns_bp.route('/sequences/copy-campaign/<int:source_campaign_id>', methods=['GET', 'POST'])

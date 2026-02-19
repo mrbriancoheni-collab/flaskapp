@@ -43,15 +43,15 @@ class KeywordOptimizerAgent(BaseAgent):
         keywords = context.get('keywords', [])
 
         for keyword in keywords:
-            keyword_id = keyword['id']
+            keyword_id = keyword.get('id') or keyword.get('keyword_id') or keyword.get('criterion_id', '')
             keyword_text = keyword.get('text', '')
             ad_group_id = keyword.get('ad_group_id', '')
             cpa = keyword.get('cpa_30d', 0)
             conversions = keyword.get('conversions_30d', 0)
             spend = keyword.get('spend_30d', 0)
 
-            # 1. Pause underperformers
-            if spend > 200 and conversions == 0:  # Spent >$200 with 0 conversions
+            # 1. Pause underperformers — $50 spend with no conversions is enough signal
+            if spend > 50 and conversions == 0:
                 opportunities.append({
                     'type': 'pause_keyword',
                     'severity': 'medium',
@@ -62,9 +62,9 @@ class KeywordOptimizerAgent(BaseAgent):
                     'conversions_30d': conversions
                 })
 
-            # 2. Bid adjustments for converters
+            # 2. Bid adjustments for converters — 2 conversions is sufficient signal
             target_cpa = context.get('target_cpa', 100)
-            if conversions >= 5 and cpa != 0:  # Enough data
+            if conversions >= 2 and cpa != 0:  # Enough data
                 if cpa < target_cpa * 0.8:  # CPA 20% below target
                     # Increase bids
                     bid_increase_pct = min(30, ((target_cpa - cpa) / cpa) * 100)
@@ -258,18 +258,36 @@ class NegativeKeywordAgent(BaseAgent):
             **kwargs
         )
 
-        # Common irrelevant terms for home services
+        # Universally wasteful patterns — informational / non-buyer intent
         self.waste_patterns = [
             'free',
             'diy',
             'how to',
+            'how do i',
             'jobs',
+            'job opening',
+            'careers',
             'salary',
             'course',
+            'courses',
             'training',
             'school',
             'cheap',
             'discount',
+            'coupon',
+            'promo code',
+            'wikipedia',
+            'youtube',
+            'reddit',
+            'forum',
+            'template',
+            'example',
+            'sample',
+            'vs ',        # comparison queries rarely convert
+            ' review',   # review searchers are still researching
+            'complaint',
+            'scam',
+            'lawsuit',
         ]
 
     def analyze(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -338,16 +356,17 @@ class NegativeKeywordAgent(BaseAgent):
                     continue
                 cost = term.get('cost', 0)
                 conversions = term.get('conversions', 0)
-                if cost > 50 and conversions == 0:
+                # Flag any term that spent $10+ with zero conversions and looks irrelevant
+                if cost > 10 and conversions == 0:
                     if self._is_irrelevant(query, context):
                         opportunities.append({
                             'type': 'add_negative_keyword',
                             'severity': 'medium',
                             'confidence': 0.85,
-                            'search_query': term['query'],
+                            'search_query': term.get('query', '') or term.get('text', query),
                             'cost': cost,
                             'conversions': conversions,
-                            'reason': 'Irrelevant to business after spending >$50'
+                            'reason': 'Irrelevant to business after spending >$10 with 0 conversions'
                         })
 
         return opportunities

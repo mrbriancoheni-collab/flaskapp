@@ -640,13 +640,14 @@ class QualityScoreAgent(BaseAgent):
         low_qs_keywords = [k for k in keywords if k.get('quality_score', 10) < 5]
         medium_qs_keywords = [k for k in keywords if 5 <= k.get('quality_score', 10) < 7]
 
-        # Focus on high-spend, low-QS keywords first
+        # Focus on keywords with any meaningful spend and low QS
         for keyword in low_qs_keywords:
-            if keyword.get('monthly_spend', 0) > 100:  # Spending >$100/mo
+            if keyword.get('monthly_spend', 0) > 25:  # Even $25/mo wasted on low QS matters
+                keyword_id = keyword.get('id') or keyword.get('keyword_id') or keyword.get('criterion_id', '')
                 opportunities.append({
                     'type': 'low_quality_score',
                     'severity': 'high',
-                    'keyword_id': keyword['id'],
+                    'keyword_id': keyword_id,
                     'keyword_text': keyword.get('text', ''),
                     'quality_score': keyword.get('quality_score', 0),
                     'monthly_spend': keyword.get('monthly_spend', 0),

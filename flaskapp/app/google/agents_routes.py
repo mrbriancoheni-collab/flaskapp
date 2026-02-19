@@ -23,24 +23,48 @@ def _get_account_ads_settings(account_id: int) -> dict:
             SELECT setting_key, setting_value
             FROM account_settings
             WHERE account_id = :account_id
-              AND setting_key IN ('ads_customer_value', 'ads_target_roas', 'ads_target_cpl')
+              AND setting_key IN (
+                'ads_customer_value', 'ads_target_roas', 'ads_target_cpl',
+                'business_description', 'business_services', 'business_name'
+              )
         """)
 
         with db.engine.connect() as conn:
             result = conn.execute(settings_query, {"account_id": account_id})
             settings = {row.setting_key: row.setting_value for row in result}
 
+        # Also try fetching business info from the accounts table directly
+        biz_desc = settings.get('business_description', '')
+        biz_services = settings.get('business_services', '')
+        if not biz_desc:
+            try:
+                acct_query = text("""
+                    SELECT business_description, services_offered, business_name
+                    FROM accounts WHERE id = :account_id LIMIT 1
+                """)
+                with db.engine.connect() as conn:
+                    row = conn.execute(acct_query, {"account_id": account_id}).first()
+                if row:
+                    biz_desc = row.business_description or ''
+                    biz_services = row.services_offered or biz_services
+            except Exception:
+                pass
+
         return {
             'customer_value': float(settings.get('ads_customer_value', 500)),
             'target_roas': float(settings.get('ads_target_roas', 3.0)),
-            'target_cpl': float(settings.get('ads_target_cpl', 80))
+            'target_cpl': float(settings.get('ads_target_cpl', 80)),
+            'business_description': biz_desc,
+            'business_services': biz_services,
         }
     except Exception:
         # Table might not exist or other error - return defaults
         return {
             'customer_value': 500,
             'target_roas': 3.0,
-            'target_cpl': 80
+            'target_cpl': 80,
+            'business_description': '',
+            'business_services': '',
         }
 
 
@@ -907,8 +931,13 @@ def _run_agents_internal():
             spend_val = kw.get('spend', 0) or kw.get('cost', 0)
             conv_val = kw.get('conversions', 0)
             kw_cpa = (spend_val / conv_val) if conv_val > 0 else 0
+            # Resolve the keyword ID from any of the common field names the API may return
+            kw_id = (kw.get('id') or kw.get('keyword_id') or
+                     kw.get('criterion_id') or kw.get('resource_name', ''))
             keywords.append({
                 **kw,
+                'id': kw_id,
+                'keyword_id': kw_id,
                 'cpa_30d': kw.get('cpa_30d', kw.get('cpa', kw_cpa)),
                 'conversions_30d': kw.get('conversions_30d', conv_val),
                 'spend_30d': kw.get('spend_30d', spend_val),
@@ -936,11 +965,14 @@ def _run_agents_internal():
         context = {
             'account_id': account_id,
             'customer_id': customer_id,
-            'customer_value': customer_value,  # Include for transparency
+            'customer_value': customer_value,
             # Top-level aliases so agents find them without nesting
             'target_cpl': target_cpl,
             'target_cpa': target_cpl,   # CPA == CPL for lead-gen
             'target_roas': target_roas,
+            # Business description enables NegativeKeywordAgent LLM relevance analysis
+            'business_description': account_settings.get('business_description', ''),
+            'business_services': account_settings.get('business_services', ''),
             'performance_90d': {
                 'roas': overall_roas,
                 'spend': total_spend,

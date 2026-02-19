@@ -1561,7 +1561,9 @@ def trigger_outreach():
         # Provide helpful context when no emails sent
         if result['sent'] == 0:
             # Check why no emails were sent - gather comprehensive stats
-            ready_campaigns = LeadCampaign.query.filter_by(status='ready').count()
+            ready_campaigns = LeadCampaign.query.filter(
+                LeadCampaign.status.in_(['ready', 'sending'])
+            ).count()
             enriched_leads = Lead.query.filter_by(enrichment_status='completed').count()
             pending_contacts = db.session.query(func.count(LeadContact.id)).filter(
                 LeadContact.email_status == 'pending',
@@ -1585,7 +1587,7 @@ def trigger_outreach():
 
             reasons = []
             if ready_campaigns == 0:
-                reasons.append("No campaigns with status 'ready'")
+                reasons.append("No campaigns with status 'ready' or 'sending'")
             if enriched_leads == 0:
                 if pending_leads > 0:
                     if pending_leads_with_website == 0:

@@ -1038,25 +1038,35 @@ def new_sequence(campaign_id: int):
         return render_template('admin/lead_campaigns/new_sequence.html', campaign=campaign, next_step=next_step)
 
     # Create sequence
-    body_text = request.form.get('body_text', '')
-    body_html = text_to_html(body_text)  # Convert plain text to HTML
+    try:
+        body_text = request.form.get('body_text', '')
+        body_html = text_to_html(body_text)
 
-    sequence = EmailSequence(
-        campaign_id=campaign_id,
-        step_number=int(request.form['step_number']),
-        name=request.form['name'],
-        subject=request.form['subject'],
-        body_html=body_html,
-        body_text=body_text,
-        delay_days=int(request.form.get('delay_days', 0)),
-        is_active=True
-    )
+        sequence = EmailSequence(
+            campaign_id=campaign_id,
+            step_number=int(request.form.get('step_number') or 1),
+            name=request.form.get('name', '').strip(),
+            subject=request.form.get('subject', '').strip(),
+            body_html=body_html or '',
+            body_text=body_text,
+            delay_days=int(request.form.get('delay_days') or 0),
+            is_active=True
+        )
 
-    db.session.add(sequence)
-    db.session.commit()
+        db.session.add(sequence)
+        db.session.commit()
 
-    flash(f'Email sequence "{sequence.name}" created!', 'success')
-    return redirect(url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign_id))
+        flash(f'Email sequence "{sequence.name}" created!', 'success')
+        return redirect(url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign_id))
+
+    except Exception as e:
+        db.session.rollback()
+        logger.exception(f"Error creating sequence for campaign {campaign_id}: {e}")
+        flash(f'Error creating sequence: {e}', 'danger')
+        next_step = (db.session.query(func.max(EmailSequence.step_number))
+                     .filter_by(campaign_id=campaign_id).scalar() or 0) + 1
+        return render_template('admin/lead_campaigns/new_sequence.html',
+                               campaign=campaign, next_step=next_step), 400
 
 
 @lead_campaigns_bp.route('/<int:campaign_id>/send-emails', methods=['POST'])

@@ -216,7 +216,7 @@ class BudgetROIModel(BaseMLModel):
         budget_dates = {}
         for bh in budget_hist:
             cid = bh.get('campaign_id')
-            bd = bh.get('change_date')
+            bd = bh.get('changed_at')
             if cid and bd:
                 budget_dates.setdefault(cid, []).append(bd)
 

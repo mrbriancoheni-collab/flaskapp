@@ -411,7 +411,7 @@ def get_adjustment_history(
         FROM budget_change_log bcl
         JOIN ads_campaigns ac ON ac.id = bcl.campaign_id
         WHERE bcl.account_id = :account_id
-          AND bcl.change_date >= :start_date
+          AND bcl.changed_at >= :start_date
     """]
 
     params = {
@@ -423,7 +423,7 @@ def get_adjustment_history(
         query_parts.append("AND bcl.campaign_id = :campaign_id")
         params["campaign_id"] = campaign_id
 
-    query_parts.append("ORDER BY bcl.change_date DESC LIMIT 100")
+    query_parts.append("ORDER BY bcl.changed_at DESC LIMIT 100")
     query = text(" ".join(query_parts))
 
     with db.engine.connect() as conn:

@@ -113,12 +113,12 @@
           </div>
           <div class="flex-1">
             <div class="flex items-center justify-between">
-              <div class="font-semibold text-gray-900">{{ action.action_description or action.action_type.replace('_', ' ').title() }}</div>
+              <div class="font-semibold text-gray-900">{{ action.title or action.action_type.replace('_', ' ').title() }}</div>
               <div class="text-sm text-gray-500">{{ action.created_at.strftime('%b %d, %I:%M %p') }}</div>
             </div>
-            {% if action.details %}
+            {% if action.description %}
             <div class="text-sm text-gray-600 mt-1">
-              {{ action.details }}
+              {{ action.description }}
             </div>
             {% endif %}
             <div class="mt-3 flex items-center justify-between">

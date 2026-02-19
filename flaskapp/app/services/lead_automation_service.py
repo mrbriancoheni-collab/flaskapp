@@ -613,8 +613,10 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             logger.error(f"Cannot initialize Brevo outreach service: {e}")
             return 0
 
-        # Get ALL ready campaigns (we'll create sequences if missing)
-        ready_campaigns = LeadCampaign.query.filter_by(status='ready').all()
+        # Get ALL active campaigns (ready or currently sending)
+        ready_campaigns = LeadCampaign.query.filter(
+            LeadCampaign.status.in_(['ready', 'sending'])
+        ).all()
 
         logger.info(f"Found {len(ready_campaigns)} ready campaigns")
 
@@ -977,6 +979,8 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                         to_email=crm_contact.email,
                         subject=subject,
                         body=body,
+                        email_provider='brevo',
+                        brevo_message_id=result.get('message_id'),
                         sent_at=datetime.utcnow(),
                         status='sent'
                     )

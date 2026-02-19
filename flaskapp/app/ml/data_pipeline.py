@@ -270,7 +270,7 @@ class DataPipeline:
         query = text("""
             SELECT
                 campaign_id,
-                change_date,
+                changed_at,
                 old_daily_budget_cents,
                 new_daily_budget_cents,
                 change_pct,
@@ -278,8 +278,8 @@ class DataPipeline:
                 adjustment_type
             FROM budget_change_log
             WHERE account_id = :account_id
-              AND change_date >= :cutoff
-            ORDER BY change_date
+              AND changed_at >= :cutoff
+            ORDER BY changed_at
         """)
 
         with db.engine.connect() as conn:

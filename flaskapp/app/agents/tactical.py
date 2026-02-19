@@ -325,6 +325,8 @@ class NegativeKeywordAgent(BaseAgent):
                         'severity': 'high',
                         'confidence': 0.99,
                         'search_query': query,
+                        'campaign_id': term.get('campaign_id', ''),
+                        'campaign_name': term.get('campaign_name', ''),
                         'cost': cost,
                         'conversions': conversions,
                         'reason': f'Contains waste pattern: {pattern}'
@@ -359,6 +361,8 @@ class NegativeKeywordAgent(BaseAgent):
                             'severity': 'high',
                             'confidence': 0.92,
                             'search_query': term['query'],
+                            'campaign_id': term.get('campaign_id', ''),
+                            'campaign_name': term.get('campaign_name', ''),
                             'cost': cost,
                             'conversions': conversions,
                             'reason': f"AI: {result.get('reason', 'Irrelevant to business')}"
@@ -379,9 +383,11 @@ class NegativeKeywordAgent(BaseAgent):
                             'severity': 'medium',
                             'confidence': 0.85,
                             'search_query': term.get('query', '') or term.get('text', query),
+                            'campaign_id': term.get('campaign_id', ''),
+                            'campaign_name': term.get('campaign_name', ''),
                             'cost': cost,
                             'conversions': conversions,
-                            'reason': 'Irrelevant to business after spending >$10 with 0 conversions'
+                            'reason': f'Irrelevant to business after spending ${cost:.2f} with 0 conversions'
                         })
 
         return opportunities
@@ -461,18 +467,25 @@ Be conservative: when in doubt, mark as RELEVANT."""
         decisions = []
 
         for opp in opportunities:
+            campaign_name = opp.get('campaign_name', '')
+            title = f"Block search term '{opp['search_query']}'"
+            if campaign_name:
+                title += f" in {campaign_name}"
+
             decision = AgentDecision(
                 agent_id=self.agent_id,
                 agent_type=self.agent_type,
                 decision_type='add_negative_keyword',
-                title=f"Block search term '{opp['search_query']}'",
+                title=title,
                 description=f"Cost ${opp['cost']:.2f}, {opp['conversions']} conversions",
                 reasoning=opp['reason'],
                 account_id=0,
                 customer_id='',
+                campaign_id=opp.get('campaign_id', ''),
                 action_data={
                     'keyword_text': opp['search_query'],
-                    'match_type': 'PHRASE'
+                    'match_type': 'PHRASE',
+                    'campaign_id': opp.get('campaign_id', ''),
                 },
                 risk_level=DecisionRiskLevel.LOW,
                 requires_approval=False,
@@ -487,9 +500,18 @@ Be conservative: when in doubt, mark as RELEVANT."""
         """Execute negative keyword additions."""
         from .executor import GoogleAdsAgentExecutor
 
+        # Get campaign_id from decision or action_data
+        campaign_id = decision.campaign_id or decision.action_data.get('campaign_id', '')
+
+        if not campaign_id:
+            return {
+                'success': False,
+                'error': 'Missing campaign_id - cannot add negative keyword without target campaign'
+            }
+
         if isinstance(google_ads_client, GoogleAdsAgentExecutor):
             return google_ads_client.add_negative_keyword(
-                campaign_id=decision.campaign_id or '',
+                campaign_id=campaign_id,
                 keyword_text=decision.action_data['keyword_text'],
                 match_type=decision.action_data['match_type']
             )

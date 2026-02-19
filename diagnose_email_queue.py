@@ -104,6 +104,20 @@ def get_contacts_ready_for_first_email(db, campaign_id=None, limit=100):
         .all()
     )
 
+    # Track why contacts are skipped for diagnostics
+    skip_reasons = {
+        'unsubscribed': 0,
+        'no_lead': 0,
+        'no_campaign': 0,
+        'wrong_campaign': 0,
+        'already_emailed': 0,
+        'legacy_emailed': 0,
+        'no_sequence': 0,
+    }
+
+    print(f"\n  [DEBUG] Total LeadContacts with emails: {len(lead_contacts)}")
+    print(f"  [DEBUG] Unsubscribed emails: {len(unsubscribed_emails)}")
+
     results = []
     for lead_contact in lead_contacts:
         if len(results) >= limit:
@@ -111,17 +125,21 @@ def get_contacts_ready_for_first_email(db, campaign_id=None, limit=100):
 
         # Skip unsubscribed
         if lead_contact.email.lower() in unsubscribed_emails:
+            skip_reasons['unsubscribed'] += 1
             continue
 
         lead = Lead.query.get(lead_contact.lead_id)
         if not lead:
+            skip_reasons['no_lead'] += 1
             continue
 
         campaign = LeadCampaign.query.get(lead.campaign_id)
         if not campaign:
+            skip_reasons['no_campaign'] += 1
             continue
 
         if campaign_id and campaign.id != campaign_id:
+            skip_reasons['wrong_campaign'] += 1
             continue
 
         # Check if contact has received ANY emails (LeadContactEmail)
@@ -129,6 +147,7 @@ def get_contacts_ready_for_first_email(db, campaign_id=None, limit=100):
             LeadContactEmail.to_email == lead_contact.email
         ).first()
         if has_email:
+            skip_reasons['already_emailed'] += 1
             continue
 
         # Also check legacy emails (treat as step 1)
@@ -136,6 +155,7 @@ def get_contacts_ready_for_first_email(db, campaign_id=None, limit=100):
             LeadEmail.to_email == lead_contact.email
         ).first()
         if has_legacy:
+            skip_reasons['legacy_emailed'] += 1
             continue
 
         # Check that campaign has at least one active sequence step
@@ -144,9 +164,16 @@ def get_contacts_ready_for_first_email(db, campaign_id=None, limit=100):
             EmailSequence.is_active == True
         ).first()
         if not has_sequence:
+            skip_reasons['no_sequence'] += 1
             continue
 
         results.append((lead_contact, lead.company_name, campaign.name, campaign.id, campaign.status))
+
+    print(f"  [DEBUG] Skip reasons:")
+    for reason, count in skip_reasons.items():
+        if count > 0:
+            print(f"    - {reason}: {count}")
+    print(f"  [DEBUG] Eligible contacts found: {len(results)}")
 
     return results
 

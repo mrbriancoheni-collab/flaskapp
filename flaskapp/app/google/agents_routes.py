@@ -864,6 +864,10 @@ def _run_agents_internal():
             campaign_id = str(c.get('id', ''))
             campaign_impression_share = impression_share_data.get(campaign_id, {}).get('search_impression_share')
 
+            cpa = c.get('cpa', 0) or c.get('cpl', 0)
+            clicks = c.get('clicks', 0)
+            conv_rate = (conversions / clicks * 100) if clicks > 0 else 0
+
             campaigns.append({
                 'id': campaign_id,
                 'name': c.get('name', ''),
@@ -872,7 +876,15 @@ def _run_agents_internal():
                 'monthly_spend': spend / 3,  # 90 days / 3 = monthly
                 'spend_90d': spend,
                 'conversions': conversions,
-                'cpa': c.get('cpa', 0)
+                'cpa': cpa,
+                # Aliases used by CampaignManagerAgent / tactical agents
+                'cpl_7d': cpa,
+                'cpa_7d': cpa,
+                'conversion_rate_7d': conv_rate,
+                'spend_mtd': spend / 3,
+                'monthly_budget': spend / 3,
+                'daily_spend_avg_7d': spend / 90 if spend > 0 else 0,
+                'status': c.get('status', 'ENABLED'),
             })
 
         summary = perf_data.get('account_summary', {})
@@ -886,10 +898,47 @@ def _run_agents_internal():
         # Get account-level impression share
         account_impression_share = impression_share_data.get('account', {}).get('search_impression_share')
 
+        # Normalize keyword fields so all agents find what they expect
+        raw_keywords = perf_data.get('keywords', [])
+        keywords = []
+        for kw in raw_keywords:
+            spend_val = kw.get('spend', 0) or kw.get('cost', 0)
+            conv_val = kw.get('conversions', 0)
+            kw_cpa = (spend_val / conv_val) if conv_val > 0 else 0
+            keywords.append({
+                **kw,
+                'cpa_30d': kw.get('cpa_30d', kw.get('cpa', kw_cpa)),
+                'conversions_30d': kw.get('conversions_30d', conv_val),
+                'spend_30d': kw.get('spend_30d', spend_val),
+                'text': kw.get('text', kw.get('keyword_text', '')),
+                'ad_group_id': kw.get('ad_group_id', ''),
+                'quality_score': kw.get('quality_score', 0),
+                'monthly_spend': spend_val,
+            })
+
+        # Normalize search_term fields so both 'text'/'query' and 'spend'/'cost' work
+        raw_search_terms = perf_data.get('search_terms', [])
+        search_terms = []
+        for st in raw_search_terms:
+            spend_val = st.get('spend', 0) or st.get('cost', 0)
+            text_val = st.get('text', st.get('query', ''))
+            search_terms.append({
+                **st,
+                'text': text_val,
+                'query': text_val,
+                'spend': spend_val,
+                'cost': spend_val,
+                'conversions': st.get('conversions', 0),
+            })
+
         context = {
             'account_id': account_id,
             'customer_id': customer_id,
             'customer_value': customer_value,  # Include for transparency
+            # Top-level aliases so agents find them without nesting
+            'target_cpl': target_cpl,
+            'target_cpa': target_cpl,   # CPA == CPL for lead-gen
+            'target_roas': target_roas,
             'performance_90d': {
                 'roas': overall_roas,
                 'spend': total_spend,
@@ -898,8 +947,8 @@ def _run_agents_internal():
                 'impression_share': account_impression_share
             },
             'campaigns': campaigns,
-            'keywords': perf_data.get('keywords', []),
-            'search_terms': perf_data.get('search_terms', []),
+            'keywords': keywords,
+            'search_terms': search_terms,
             'total_budget': total_spend / 3,  # Monthly budget estimate
             'business_goals': {
                 'target_roas': target_roas,

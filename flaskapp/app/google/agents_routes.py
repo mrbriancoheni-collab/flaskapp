@@ -426,7 +426,9 @@ def approval_queue():
     }
 
     for decision in pending_decisions:
-        risk_level = decision['risk_level']
+        risk_level = decision.get('risk_level') or 'medium'
+        if risk_level not in decisions_by_risk:
+            risk_level = 'medium'  # bucket unknown values safely
         decisions_by_risk[risk_level].append(decision)
 
     return render_template(

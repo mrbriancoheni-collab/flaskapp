@@ -3,6 +3,83 @@
 {% block title %}AI Agent Approval Queue - FieldSprout{% endblock %}
 
 {% block content %}
+
+{# ── Macro must be defined before any call sites ─────────────────────────── #}
+{% macro render_decision_card(decision, risk_class) %}
+<div class="bg-white rounded-lg shadow-lg p-6 mb-4 border-l-4 {% if risk_class == 'critical' %}border-red-500{% elif risk_class == 'high' %}border-orange-500{% elif risk_class == 'medium' %}border-yellow-500{% else %}border-blue-500{% endif %}">
+    <div class="flex items-start justify-between mb-4">
+        <div class="flex-1">
+            <div class="flex items-center space-x-2 mb-2">
+                <span class="px-2 py-1 text-xs font-semibold rounded {% if risk_class == 'critical' %}bg-red-100 text-red-800{% elif risk_class == 'high' %}bg-orange-100 text-orange-800{% elif risk_class == 'medium' %}bg-yellow-100 text-yellow-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                    {{ decision.agent_type }}
+                </span>
+                <span class="px-2 py-1 text-xs font-semibold rounded bg-gray-100 text-gray-800">
+                    {{ decision.decision_type|replace('_', ' ')|title }}
+                </span>
+                <span class="text-xs text-gray-500">
+                    Confidence: {{ "%.0f"|format(decision.confidence * 100) }}%
+                </span>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">{{ decision.title }}</h3>
+            <p class="text-gray-700 mb-3">{{ decision.description }}</p>
+
+            <!-- Reasoning -->
+            <div class="bg-gray-50 rounded p-3 mb-3">
+                <p class="text-sm text-gray-600"><span class="font-semibold">Reasoning:</span> {{ decision.reasoning }}</p>
+            </div>
+
+            <!-- Expected Impact -->
+            <div class="flex items-center space-x-6 text-sm">
+                {% if decision.expected_monthly_savings %}
+                <div class="flex items-center text-green-600">
+                    <i class="fa-solid fa-piggy-bank mr-1"></i>
+                    <span class="font-semibold">${{ "%.0f"|format(decision.expected_monthly_savings) }}/mo savings</span>
+                </div>
+                {% endif %}
+                {% if decision.expected_monthly_leads %}
+                <div class="flex items-center text-blue-600">
+                    <i class="fa-solid fa-user-plus mr-1"></i>
+                    <span class="font-semibold">+{{ decision.expected_monthly_leads }} leads/mo</span>
+                </div>
+                {% endif %}
+                {% if decision.expected_improvement_pct %}
+                <div class="flex items-center text-purple-600">
+                    <i class="fa-solid fa-arrow-up mr-1"></i>
+                    <span class="font-semibold">+{{ "%.0f"|format(decision.expected_improvement_pct) }}% improvement</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex flex-col space-y-2 ml-6">
+            <button
+                onclick="approveDecision({{ decision.id }})"
+                class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition flex items-center justify-center"
+            >
+                <i class="fa-solid fa-check mr-2"></i>
+                Approve
+            </button>
+            <button
+                onclick="rejectDecision({{ decision.id }})"
+                class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition flex items-center justify-center"
+            >
+                <i class="fa-solid fa-times mr-2"></i>
+                Reject
+            </button>
+        </div>
+    </div>
+
+    <!-- Metadata -->
+    <div class="flex items-center text-xs text-gray-500 space-x-4 pt-3 border-t">
+        <span><i class="fa-solid fa-clock mr-1"></i>Created {{ decision.created_at.strftime('%b %d, %Y %I:%M %p') if decision.created_at else 'Unknown' }}</span>
+        {% if decision.campaign_id %}
+        <span><i class="fa-solid fa-bullhorn mr-1"></i>Campaign ID: {{ decision.campaign_id }}</span>
+        {% endif %}
+    </div>
+</div>
+{% endmacro %}
+
 <div class="container mx-auto px-4 py-8">
     <!-- Header -->
     <div class="flex items-center justify-between mb-8">
@@ -170,82 +247,6 @@
     {% endif %}
 </div>
 
-<!-- Decision Card Macro -->
-{% macro render_decision_card(decision, risk_class) %}
-<div class="bg-white rounded-lg shadow-lg p-6 mb-4 border-l-4 {% if risk_class == 'critical' %}border-red-500{% elif risk_class == 'high' %}border-orange-500{% elif risk_class == 'medium' %}border-yellow-500{% else %}border-blue-500{% endif %}">
-    <div class="flex items-start justify-between mb-4">
-        <div class="flex-1">
-            <div class="flex items-center space-x-2 mb-2">
-                <span class="px-2 py-1 text-xs font-semibold rounded {% if risk_class == 'critical' %}bg-red-100 text-red-800{% elif risk_class == 'high' %}bg-orange-100 text-orange-800{% elif risk_class == 'medium' %}bg-yellow-100 text-yellow-800{% else %}bg-blue-100 text-blue-800{% endif %}">
-                    {{ decision.agent_type }}
-                </span>
-                <span class="px-2 py-1 text-xs font-semibold rounded bg-gray-100 text-gray-800">
-                    {{ decision.decision_type|replace('_', ' ')|title }}
-                </span>
-                <span class="text-xs text-gray-500">
-                    Confidence: {{ "%.0f"|format(decision.confidence * 100) }}%
-                </span>
-            </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">{{ decision.title }}</h3>
-            <p class="text-gray-700 mb-3">{{ decision.description }}</p>
-
-            <!-- Reasoning -->
-            <div class="bg-gray-50 rounded p-3 mb-3">
-                <p class="text-sm text-gray-600"><span class="font-semibold">Reasoning:</span> {{ decision.reasoning }}</p>
-            </div>
-
-            <!-- Expected Impact -->
-            <div class="flex items-center space-x-6 text-sm">
-                {% if decision.expected_monthly_savings %}
-                <div class="flex items-center text-green-600">
-                    <i class="fa-solid fa-piggy-bank mr-1"></i>
-                    <span class="font-semibold">${{ "%.0f"|format(decision.expected_monthly_savings) }}/mo savings</span>
-                </div>
-                {% endif %}
-                {% if decision.expected_monthly_leads %}
-                <div class="flex items-center text-blue-600">
-                    <i class="fa-solid fa-user-plus mr-1"></i>
-                    <span class="font-semibold">+{{ decision.expected_monthly_leads }} leads/mo</span>
-                </div>
-                {% endif %}
-                {% if decision.expected_improvement_pct %}
-                <div class="flex items-center text-purple-600">
-                    <i class="fa-solid fa-arrow-up mr-1"></i>
-                    <span class="font-semibold">+{{ "%.0f"|format(decision.expected_improvement_pct) }}% improvement</span>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Actions -->
-        <div class="flex flex-col space-y-2 ml-6">
-            <button
-                onclick="approveDecision({{ decision.id }})"
-                class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition flex items-center justify-center"
-            >
-                <i class="fa-solid fa-check mr-2"></i>
-                Approve
-            </button>
-            <button
-                onclick="rejectDecision({{ decision.id }})"
-                class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition flex items-center justify-center"
-            >
-                <i class="fa-solid fa-times mr-2"></i>
-                Reject
-            </button>
-        </div>
-    </div>
-
-    <!-- Metadata -->
-    <div class="flex items-center text-xs text-gray-500 space-x-4 pt-3 border-t">
-        <span><i class="fa-solid fa-clock mr-1"></i>Created {{ decision.created_at.strftime('%b %d, %Y %I:%M %p') if decision.created_at else 'Unknown' }}</span>
-        {% if decision.campaign_id %}
-        <span><i class="fa-solid fa-bullhorn mr-1"></i>Campaign ID: {{ decision.campaign_id }}</span>
-        {% endif %}
-    </div>
-</div>
-{% endmacro %}
-
 <script nonce="{{ g.csp_nonce }}">
 function approveDecision(decisionId) {
     if (!confirm('Are you sure you want to approve this decision? This action will execute the change in Google Ads.')) {
@@ -303,7 +304,6 @@ function runAgentsNow() {
     const btn = document.getElementById('runAgentsBtn');
     const originalText = btn.innerHTML;
 
-    // Disable button and show loading state
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Running Agents...';
 
@@ -347,14 +347,11 @@ function autoExecuteLowRisk() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Executing...';
 
-    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-    const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
-
     fetch('/account/google/ads/agents/api/decisions/auto-execute-low-risk', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
         }
     })
     .then(r => r.json())
@@ -378,7 +375,6 @@ function autoExecuteLowRisk() {
     });
 }
 
-// Attach event listeners on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', function() {
     const runAgentsBtn = document.getElementById('runAgentsBtn');
     if (runAgentsBtn) {

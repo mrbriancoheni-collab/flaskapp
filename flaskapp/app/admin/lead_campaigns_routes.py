@@ -1232,8 +1232,7 @@ def send_emails(campaign_id: int):
                         to_email=lead.decision_maker_email,
                         subject=subject,
                         body_html=body_html,
-                        brevo_message_id=result.get('message_id'),
-                        email_provider='brevo',
+                        mailgun_message_id=result.get('message_id'),
                         status='sent',
                         sent_at=datetime.now()
                     )

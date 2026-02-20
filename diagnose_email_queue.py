@@ -159,10 +159,17 @@ def get_contacts_ready_for_first_email(db, campaign_id=None, limit=100):
             continue
 
         # Check that campaign has at least one active sequence step
-        has_sequence = db.session.query(EmailSequence).filter(
-            EmailSequence.campaign_id == campaign.id,
-            EmailSequence.is_active == True
-        ).first()
+        # Also accept global sequences (campaign_id IS NULL)
+        has_sequence = (
+            db.session.query(EmailSequence).filter(
+                EmailSequence.campaign_id == campaign.id,
+                EmailSequence.is_active == True
+            ).first() or
+            db.session.query(EmailSequence).filter(
+                EmailSequence.campaign_id == None,
+                EmailSequence.is_active == True
+            ).first()
+        )
         if not has_sequence:
             skip_reasons['no_sequence'] += 1
             continue
@@ -228,12 +235,20 @@ def get_contacts_ready_for_next_sequence(db, campaign_id=None, limit=100):
             continue
 
         # Get active sequence steps for this campaign
+        # Fall back to global sequences (campaign_id IS NULL)
         sequences = (
             EmailSequence.query
             .filter_by(campaign_id=lcampaign.id, is_active=True)
             .order_by(EmailSequence.step_number)
             .all()
         )
+        if not sequences:
+            sequences = (
+                EmailSequence.query
+                .filter_by(campaign_id=None, is_active=True)
+                .order_by(EmailSequence.step_number)
+                .all()
+            )
         if not sequences:
             continue
 

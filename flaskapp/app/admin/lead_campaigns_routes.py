@@ -18,7 +18,7 @@ from app.models_leads import LeadCampaign, Lead, EmailSequence, LeadEmail, LeadC
 from app.services.serpapi_scraper import SerpAPIScraperService
 from app.services.lead_enrichment import LeadEnrichmentService
 from app.services.brevo_outreach import BrevoOutreachService
-from app.configs.lead_automation_config import HOME_SERVICE_CATEGORIES
+from app.configs.lead_automation_config import HOME_SERVICE_CATEGORIES, TOP_CITIES
 
 logger = logging.getLogger(__name__)
 
@@ -550,8 +550,13 @@ def index():
 @require_admin
 def new_campaign():
     """Create new lead campaign"""
+    service_options = sorted(HOME_SERVICE_CATEGORIES.values())
+    city_options = TOP_CITIES
+
     if request.method == 'GET':
-        return render_template('admin/lead_campaigns/new.html')
+        return render_template('admin/lead_campaigns/new.html',
+                               service_options=service_options,
+                               city_options=city_options)
 
     # Validate inputs
     industry_service = request.form.get('industry_service', '').strip()
@@ -578,7 +583,9 @@ def new_campaign():
     if errors:
         for error in errors:
             flash(error, 'error')
-        return render_template('admin/lead_campaigns/new.html')
+        return render_template('admin/lead_campaigns/new.html',
+                               service_options=service_options,
+                               city_options=city_options)
 
     # Create campaign
     campaign = LeadCampaign(
@@ -639,9 +646,13 @@ def view_campaign(campaign_id: int):
 def edit_campaign(campaign_id: int):
     """Edit an existing campaign"""
     campaign = LeadCampaign.query.get_or_404(campaign_id)
+    service_options = sorted(HOME_SERVICE_CATEGORIES.values())
+    city_options = TOP_CITIES
 
     if request.method == 'GET':
-        return render_template('admin/lead_campaigns/edit.html', campaign=campaign)
+        return render_template('admin/lead_campaigns/edit.html', campaign=campaign,
+                               service_options=service_options,
+                               city_options=city_options)
 
     # Validate inputs
     industry_service = request.form.get('industry_service', '').strip()
@@ -668,7 +679,9 @@ def edit_campaign(campaign_id: int):
     if errors:
         for error in errors:
             flash(error, 'error')
-        return render_template('admin/lead_campaigns/edit.html', campaign=campaign)
+        return render_template('admin/lead_campaigns/edit.html', campaign=campaign,
+                               service_options=service_options,
+                               city_options=city_options)
 
     # Update campaign
     campaign.name = request.form['name']

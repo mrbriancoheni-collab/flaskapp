@@ -111,13 +111,27 @@
 
                 <div class="form-group">
                     <label for="industry_service">Service/Industry</label>
-                    <input type="text" id="industry_service" name="industry_service" required>
+                    <input type="text" id="industry_service" name="industry_service" required
+                           list="service-options" autocomplete="off"
+                           placeholder="E.g., plumber, hvac repair, electrician">
+                    <datalist id="service-options">
+                        {% for service in service_options %}
+                        <option value="{{ service }}">
+                        {% endfor %}
+                    </datalist>
                     <div class="help-text">E.g., "plumber", "hvac repair", "electrician"</div>
                 </div>
 
                 <div class="form-group">
                     <label for="location">Location</label>
-                    <input type="text" id="location" name="location" required>
+                    <input type="text" id="location" name="location" required
+                           list="city-options" autocomplete="off"
+                           placeholder="E.g., Austin, TX">
+                    <datalist id="city-options">
+                        {% for city in city_options %}
+                        <option value="{{ city }}">
+                        {% endfor %}
+                    </datalist>
                     <div class="help-text">E.g., "Austin, TX", "New York, NY"</div>
                 </div>
 

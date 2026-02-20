@@ -1300,12 +1300,18 @@ def send_emails(campaign_id: int):
             email_status='pending'
         ).limit(min(remaining, 50)).all()
 
-        # Get first sequence step
+        # Get first sequence step — fall back to global sequence (campaign_id IS NULL)
         sequence = EmailSequence.query.filter_by(
             campaign_id=campaign_id,
             step_number=1,
             is_active=True
         ).first()
+        if not sequence:
+            sequence = EmailSequence.query.filter_by(
+                campaign_id=None,
+                step_number=1,
+                is_active=True
+            ).first()
 
         if not sequence:
             return jsonify({'success': False, 'error': 'No email sequence configured'}), 400
@@ -1537,12 +1543,20 @@ def send_daily():
         campaign = lead.campaign
 
         # Get ALL active sequences for this contact's campaign, ordered by step
+        # Fall back to global sequences (campaign_id IS NULL) if none are campaign-specific
         sequences = (
             EmailSequence.query
             .filter_by(campaign_id=campaign.id, is_active=True)
             .order_by(EmailSequence.step_number)
             .all()
         )
+        if not sequences:
+            sequences = (
+                EmailSequence.query
+                .filter_by(campaign_id=None, is_active=True)
+                .order_by(EmailSequence.step_number)
+                .all()
+            )
         if not sequences:
             skipped_count += 1
             continue

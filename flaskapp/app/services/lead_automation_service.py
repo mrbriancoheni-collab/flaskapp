@@ -560,6 +560,15 @@ class LeadAutomationService:
         if existing_sequence:
             return existing_sequence
 
+        # Fall back to global sequence (campaign_id IS NULL) before creating a new one
+        global_sequence = EmailSequence.query.filter_by(
+            campaign_id=None,
+            step_number=1
+        ).first()
+        if global_sequence:
+            logger.info(f"Using global sequence (id={global_sequence.id}) for campaign '{campaign.name}'")
+            return global_sequence
+
         # Create default sequence for automated campaigns
         logger.info(f"Creating default email sequence for campaign '{campaign.name}'")
 

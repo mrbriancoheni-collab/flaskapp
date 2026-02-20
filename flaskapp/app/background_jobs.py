@@ -202,12 +202,27 @@ def register_scheduled_jobs(scheduler, app):
     )
 
     # Google Ads AI Agents - Tactical (every 2 hours)
-    # Quick wins: bid adjustments, add negative keywords, pause low CTR ads
+    # Quick wins: bid adjustments, pause low CTR ads
+    # Note: NegativeKeywordAgent has its own daily job below (search term data
+    # has a 24h delay — running every 2h just re-analyses stale data)
     scheduler.add_job(
         func=run_tactical_agents,
         trigger='interval',
         hours=2,
         id='run_tactical_agents',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    # Google Ads AI Agents - Negative Keywords (daily at 7 AM UTC)
+    # Runs after strategic (6 AM) so search term data from the previous day
+    # is fresh and the account context is up to date
+    scheduler.add_job(
+        func=run_negative_keyword_agents,
+        trigger='cron',
+        hour=7,
+        minute=0,
+        id='run_negative_keyword_agents',
         replace_existing=True,
         kwargs={'app': app}
     )
@@ -713,12 +728,12 @@ def run_tactical_agents(app: Flask):
     Run tactical-layer AI agents for all active Google Ads accounts.
 
     Tactical agents make quick, high-frequency optimizations:
-    - Bid adjustments based on performance
-    - Add negative keywords from search term reports
+    - Keyword bid adjustments based on performance
     - Pause low-performing ads (CTR < 1%)
     - Add high-performing broad match queries as exact match
 
-    Runs every 2 hours to catch opportunities quickly.
+    Runs every 2 hours. NegativeKeywordAgent runs separately at 7 AM daily
+    because search term data has a ~24h reporting delay.
     """
     with app.app_context():
         try:
@@ -734,6 +749,31 @@ def run_tactical_agents(app: Flask):
 
         except Exception as e:
             current_app.logger.error(f"Error running tactical agents: {e}", exc_info=True)
+
+
+def run_negative_keyword_agents(app: Flask):
+    """
+    Run NegativeKeywordAgent daily for all active Google Ads accounts.
+
+    Runs once per day rather than every 2 hours because Google Ads search term
+    data has a ~24 hour reporting delay — more frequent runs just re-analyse
+    yesterday's data. A daily run ensures we always work on fresh data and
+    systematically block wasteful queries before they burn more budget.
+    """
+    with app.app_context():
+        try:
+            current_app.logger.info("[JOB] Starting daily negative keyword analysis for all accounts")
+
+            from app.tasks.agent_scheduler import run_agents_for_all_accounts
+
+            success_count, error_count = run_agents_for_all_accounts(layer='negative_keyword')
+
+            current_app.logger.info(
+                f"[JOB] Negative keyword analysis completed: {success_count} succeeded, {error_count} failed"
+            )
+
+        except Exception as e:
+            current_app.logger.error(f"Error running negative keyword agents: {e}", exc_info=True)
 
 
 def run_operational_agents(app: Flask):

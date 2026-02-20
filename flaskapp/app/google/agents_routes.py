@@ -347,9 +347,116 @@ def _fetch_live_gads_data(refresh_token: str, customer_id: str) -> dict:
                 'ctr': clicks / impressions if impressions > 0 else 0,
             })
 
+        # ── Ad Groups + Ads (last 90 days) — needed by AdCopyAgent + LandingPageAnalystAgent ──
+        ad_rows = _run_query("""
+            SELECT
+                ad_group_ad.ad.id,
+                ad_group_ad.ad_group,
+                ad_group_ad.status,
+                ad_group_ad.ad.final_urls,
+                ad_group_ad.ad.responsive_search_ad.headlines,
+                ad_group_ad.ad.expanded_text_ad.headline_part1,
+                ad_group_ad.ad.expanded_text_ad.headline_part2,
+                ad_group.id,
+                ad_group.name,
+                campaign.id,
+                metrics.clicks,
+                metrics.impressions,
+                metrics.ctr,
+                metrics.cost_micros
+            FROM ad_group_ad
+            WHERE ad_group_ad.status != 'REMOVED'
+              AND segments.date DURING LAST_90_DAYS
+            ORDER BY metrics.impressions DESC
+            LIMIT 200
+        """)
+
+        # Group ads by ad_group to build the ad_groups list
+        _ag_map: dict = {}
+        for row in ad_rows:
+            ag_id = str(row.ad_group.id)
+            impressions = int(row.metrics.impressions)
+            ctr = float(row.metrics.ctr) * 100  # fraction → percentage
+
+            # Extract landing URL — first final_url wins
+            try:
+                final_urls = list(row.ad_group_ad.ad.final_urls)
+                landing_url = final_urls[0] if final_urls else ''
+            except Exception:
+                landing_url = ''
+
+            # Extract headlines — RSA first, then ETA fallback
+            headlines = []
+            try:
+                rsa_headlines = row.ad_group_ad.ad.responsive_search_ad.headlines
+                headlines = [h.text for h in rsa_headlines if h.text]
+            except Exception:
+                pass
+            if not headlines:
+                try:
+                    eta = row.ad_group_ad.ad.expanded_text_ad
+                    for h in [eta.headline_part1, eta.headline_part2]:
+                        if h:
+                            headlines.append(h)
+                except Exception:
+                    pass
+
+            if ag_id not in _ag_map:
+                _ag_map[ag_id] = {
+                    'id': ag_id,
+                    'name': row.ad_group.name,
+                    'campaign_id': str(row.campaign.id),
+                    'ads': [],
+                    '_total_ctr': 0.0,
+                    '_ad_count': 0,
+                    '_landing_urls': set(),
+                    '_headlines': [],
+                }
+            if landing_url:
+                _ag_map[ag_id]['_landing_urls'].add(landing_url)
+            _ag_map[ag_id]['_headlines'].extend(h for h in headlines if h not in _ag_map[ag_id]['_headlines'])
+            _ag_map[ag_id]['ads'].append({
+                'id': str(row.ad_group_ad.ad.id),
+                'status': str(row.ad_group_ad.status).split('.')[-1],
+                'impressions': impressions,
+                'ctr': ctr,
+                'clicks': int(row.metrics.clicks),
+                'landing_url': landing_url,
+                'headlines': headlines,
+            })
+            _ag_map[ag_id]['_total_ctr'] += ctr
+            _ag_map[ag_id]['_ad_count'] += 1
+
+        # Build per-campaign landing_url and ad_headlines for LandingPageAnalystAgent
+        _campaign_landing: dict = {}  # campaign_id → {landing_url, ad_headlines}
+        ad_groups = []
+        for ag in _ag_map.values():
+            avg_ctr = ag['_total_ctr'] / ag['_ad_count'] if ag['_ad_count'] > 0 else 0
+            ag_landing = next(iter(ag['_landing_urls']), '')
+            ad_groups.append({
+                'id': ag['id'],
+                'name': ag['name'],
+                'campaign_id': ag['campaign_id'],
+                'avg_ctr': avg_ctr,
+                'landing_url': ag_landing,
+                'ad_headlines': ag['_headlines'],
+                'ads': ag['ads'],
+            })
+            cid = ag['campaign_id']
+            if cid not in _campaign_landing:
+                _campaign_landing[cid] = {'landing_url': ag_landing, 'ad_headlines': list(ag['_headlines'])}
+
+        # Patch landing_url + ad_headlines onto campaigns so LandingPageAnalystAgent works
+        for c in campaigns:
+            cid = c.get('id', '')
+            if cid in _campaign_landing:
+                c['landing_url'] = _campaign_landing[cid]['landing_url']
+                c['ad_headlines'] = _campaign_landing[cid]['ad_headlines']
+
         current_app.logger.info(
             f"[agents] Live Google Ads fetch: {len(campaigns)} campaigns, "
-            f"{len(keywords)} keywords, {len(search_terms)} search terms"
+            f"{len(keywords)} keywords, {len(search_terms)} search terms, "
+            f"{len(ad_groups)} ad groups"
         )
 
         return {
@@ -361,6 +468,7 @@ def _fetch_live_gads_data(refresh_token: str, customer_id: str) -> dict:
             'campaigns': campaigns,
             'keywords': keywords,
             'search_terms': search_terms,
+            'ad_groups': ad_groups,
             'has_search_campaigns': has_search,
             'has_pmax_campaigns': has_pmax,
         }
@@ -372,6 +480,7 @@ def _fetch_live_gads_data(refresh_token: str, customer_id: str) -> dict:
             'campaigns': [],
             'keywords': [],
             'search_terms': [],
+            'ad_groups': [],
             'has_search_campaigns': False,
             'has_pmax_campaigns': False,
         }
@@ -1137,6 +1246,10 @@ def _run_agents_internal():
                 'monthly_budget': spend / 3,
                 'daily_spend_avg_7d': spend / 90 if spend > 0 else 0,
                 'status': c.get('status', 'ENABLED'),
+                # Landing page + ad copy — pulled from ads via final_urls / headlines
+                # Used by LandingPageAnalystAgent
+                'landing_url': c.get('landing_url', ''),
+                'ad_headlines': c.get('ad_headlines', []),
             })
 
         summary = perf_data.get('account_summary', {})
@@ -1222,6 +1335,7 @@ def _run_agents_internal():
             'campaigns': campaigns,
             'keywords': keywords,
             'search_terms': search_terms,
+            'ad_groups': perf_data.get('ad_groups', []),
             'has_search_campaigns': has_search_campaigns,
             'has_pmax_campaigns': has_pmax_campaigns,
             'total_budget': total_spend / 3,  # Monthly budget estimate
@@ -1285,6 +1399,7 @@ def _run_agents_internal():
         'campaigns': len(context.get('campaigns', [])),
         'keywords': len(context.get('keywords', [])),
         'search_terms': len(context.get('search_terms', [])),
+        'ad_groups': len(context.get('ad_groups', [])),
         'total_spend_90d': context.get('performance_90d', {}).get('spend', 0),
         'has_search_campaigns': context.get('has_search_campaigns', False),
         'has_pmax_campaigns': context.get('has_pmax_campaigns', False),

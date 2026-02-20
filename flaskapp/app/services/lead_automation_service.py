@@ -624,18 +624,35 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             for row in db.session.query(EmailUnsubscribe.email).all()
         )
 
-        # Cache sequences per campaign so we only hit the DB once per campaign
-        sequence_cache: Dict[int, object] = {}
+        # Cache sequences per campaign so we only hit the DB once per campaign.
+        # Key is campaign.id or None (for contacts whose campaign no longer exists).
+        sequence_cache: Dict = {}
+
+        # Lazily resolved global fallback — any active step-1 sequence in the system.
+        _fallback_seq: list = [None]  # list so the closure can mutate it
+
+        def _global_fallback():
+            if _fallback_seq[0] is None:
+                _fallback_seq[0] = EmailSequence.query.filter_by(
+                    step_number=1, is_active=True
+                ).first()
+            return _fallback_seq[0]
 
         def _get_sequence(campaign):
-            if campaign.id not in sequence_cache:
-                seq = EmailSequence.query.filter_by(
-                    campaign_id=campaign.id, step_number=1, is_active=True
-                ).first()
-                if not seq:
-                    seq = self._ensure_campaign_has_sequence(campaign)
-                sequence_cache[campaign.id] = seq
-            return sequence_cache[campaign.id]
+            cid = campaign.id if campaign else None
+            if cid not in sequence_cache:
+                if campaign:
+                    seq = EmailSequence.query.filter_by(
+                        campaign_id=campaign.id, step_number=1, is_active=True
+                    ).first()
+                    if not seq:
+                        seq = self._ensure_campaign_has_sequence(campaign)
+                    if not seq:
+                        seq = _global_fallback()
+                else:
+                    seq = _global_fallback()
+                sequence_cache[cid] = seq
+            return sequence_cache[cid]
 
         # ── Primary path: LeadContact records with pending status ─────────────
         pending_contacts = (
@@ -662,13 +679,11 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             if not lead:
                 continue
 
-            campaign = LeadCampaign.query.get(lead.campaign_id)
-            if not campaign:
-                continue
+            campaign = LeadCampaign.query.get(lead.campaign_id) if lead.campaign_id else None
 
             email_sequence = _get_sequence(campaign)
             if not email_sequence:
-                logger.warning(f"No sequence for campaign '{campaign.name}' — skipping contact {contact.id}")
+                logger.warning(f"No sequence available anywhere — skipping contact {contact.id}")
                 continue
 
             # Dedup: skip if already sent this step to this address
@@ -703,7 +718,7 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                     record = LeadContactEmail(
                         contact_id=contact.id,
                         lead_id=lead.id,
-                        campaign_id=campaign.id,
+                        campaign_id=campaign.id if campaign else None,
                         sequence_step=email_sequence.step_number,
                         subject=subject,
                         body=body,
@@ -721,7 +736,8 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                     if contact.is_primary:
                         lead.email_status = 'sent'
                         lead.last_email_sent_at = datetime.utcnow()
-                    campaign.emails_sent = (campaign.emails_sent or 0) + 1
+                    if campaign:
+                        campaign.emails_sent = (campaign.emails_sent or 0) + 1
 
                     db.session.commit()
                     self.state["emails_sent"] += 1
@@ -756,9 +772,7 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             if email.lower() in unsubscribed_emails:
                 continue
 
-            campaign = LeadCampaign.query.get(lead.campaign_id)
-            if not campaign:
-                continue
+            campaign = LeadCampaign.query.get(lead.campaign_id) if lead.campaign_id else None
 
             email_sequence = _get_sequence(campaign)
             if not email_sequence:
@@ -806,7 +820,8 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
 
                     lead.email_status = 'sent'
                     lead.last_email_sent_at = datetime.utcnow()
-                    campaign.emails_sent = (campaign.emails_sent or 0) + 1
+                    if campaign:
+                        campaign.emails_sent = (campaign.emails_sent or 0) + 1
 
                     db.session.commit()
                     self.state["emails_sent"] += 1
@@ -1322,7 +1337,7 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             db.session.rollback()
             return False
 
-    def _replace_variables(self, text: str, lead: Lead, campaign: LeadCampaign) -> str:
+    def _replace_variables(self, text: str, lead: Lead, campaign) -> str:
         """Replace template variables in email text"""
         if not text:
             return ""
@@ -1331,8 +1346,8 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             '{{company_name}}': lead.company_name or '',
             '{{decision_maker_name}}': lead.decision_maker_name or '',
             '{{decision_maker_title}}': lead.decision_maker_title or '',
-            '{{service_type}}': campaign.industry_service or '',
-            '{{location}}': campaign.location or '',
+            '{{service_type}}': (campaign.industry_service if campaign else '') or '',
+            '{{location}}': (campaign.location if campaign else '') or '',
         }
 
         result = text
@@ -1341,7 +1356,7 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
 
         return result
 
-    def _replace_contact_variables(self, text: str, lead: Lead, contact: LeadContact, campaign: LeadCampaign) -> str:
+    def _replace_contact_variables(self, text: str, lead: Lead, contact: LeadContact, campaign) -> str:
         """Replace template variables in email text with contact-specific info"""
         if not text:
             return ""
@@ -1350,8 +1365,8 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             '{{company_name}}': lead.company_name or '',
             '{{decision_maker_name}}': contact.name or '',
             '{{decision_maker_title}}': contact.title or '',
-            '{{service_type}}': campaign.industry_service or '',
-            '{{location}}': campaign.location or '',
+            '{{service_type}}': (campaign.industry_service if campaign else '') or '',
+            '{{location}}': (campaign.location if campaign else '') or '',
         }
 
         result = text

@@ -963,11 +963,29 @@ def sequences_delete(sequence_id: int):
     sequence = EmailSequence.query.get_or_404(sequence_id)
     sequence_name = sequence.name
 
+    campaign_id = sequence.campaign_id
+    # Remove sent email records referencing this sequence before deleting it
+    LeadEmail.query.filter_by(sequence_id=sequence_id).delete()
     db.session.delete(sequence)
     db.session.commit()
 
     flash(f'Email sequence "{sequence_name}" deleted!', 'success')
-    return redirect(url_for('lead_campaigns_bp.sequences_list'))
+    return redirect(url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign_id))
+
+
+@lead_campaigns_bp.route('/<int:campaign_id>/sequences/clear-all', methods=['POST'])
+@require_admin
+def sequences_clear_all(campaign_id: int):
+    """Delete all email sequences for a campaign"""
+    campaign = LeadCampaign.query.get_or_404(campaign_id)
+    # Remove sent email records for all sequences in this campaign before deleting them
+    seq_ids = [s.id for s in EmailSequence.query.filter_by(campaign_id=campaign_id).with_entities(EmailSequence.id)]
+    if seq_ids:
+        LeadEmail.query.filter(LeadEmail.sequence_id.in_(seq_ids)).delete(synchronize_session='fetch')
+    deleted = EmailSequence.query.filter(EmailSequence.campaign_id == campaign_id).delete()
+    db.session.commit()
+    flash(f'Deleted {deleted} sequence(s) for "{campaign.name}". You can now add a fresh sequence.', 'success')
+    return redirect(url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign_id))
 
 
 @lead_campaigns_bp.route('/sequences/copy-campaign/<int:source_campaign_id>', methods=['GET', 'POST'])
@@ -1032,7 +1050,9 @@ def new_sequence(campaign_id: int):
 
     if request.method == 'GET':
         # Get next step number
-        max_step = db.session.query(func.max(EmailSequence.step_number)).filter_by(campaign_id=campaign_id).scalar() or 0
+        max_step = db.session.query(func.max(EmailSequence.step_number)).filter(
+            EmailSequence.campaign_id == campaign_id
+        ).scalar() or 0
         next_step = max_step + 1
 
         return render_template('admin/lead_campaigns/new_sequence.html', campaign=campaign, next_step=next_step)
@@ -1061,10 +1081,21 @@ def new_sequence(campaign_id: int):
 
     except Exception as e:
         db.session.rollback()
+        err_str = str(e)
+        # Handle duplicate step number gracefully — redirect to edit the existing step
+        if '1062' in err_str or 'Duplicate entry' in err_str or 'unique_campaign_step' in err_str:
+            step_num = int(request.form.get('step_number') or 1)
+            existing = EmailSequence.query.filter(
+                EmailSequence.campaign_id == campaign_id,
+                EmailSequence.step_number == step_num
+            ).first()
+            if existing:
+                flash(f'Step {step_num} already exists — editing it instead.', 'warning')
+                return redirect(url_for('lead_campaigns_bp.sequences_edit', sequence_id=existing.id))
         logger.exception(f"Error creating sequence for campaign {campaign_id}: {e}")
         flash(f'Error creating sequence: {e}', 'danger')
         next_step = (db.session.query(func.max(EmailSequence.step_number))
-                     .filter_by(campaign_id=campaign_id).scalar() or 0) + 1
+                     .filter(EmailSequence.campaign_id == campaign_id).scalar() or 0) + 1
         return render_template('admin/lead_campaigns/new_sequence.html',
                                campaign=campaign, next_step=next_step), 400
 

@@ -79,7 +79,16 @@
     <!-- Email Sequences -->
     {% if sequences %}
     <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h2 class="text-xl font-bold text-gray-900 mb-4">Email Sequences</h2>
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-gray-900">Email Sequences</h2>
+            <form method="POST" action="{{ url_for('lead_campaigns_bp.sequences_clear_all', campaign_id=campaign.id) }}"
+                  onsubmit="return confirm('Delete ALL {{ sequences|length }} sequence(s) for this campaign? This cannot be undone.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="text-sm bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 font-medium">
+                    <i class="fa-solid fa-trash mr-1"></i>Clear All Sequences
+                </button>
+            </form>
+        </div>
         <div class="space-y-3">
             {% for seq in sequences %}
             <div class="border border-gray-200 rounded p-4">
@@ -88,6 +97,19 @@
                         <h3 class="font-semibold text-gray-900">Step {{ seq.step_number }}: {{ seq.name }}</h3>
                         <p class="text-sm text-gray-600 mt-1">{{ seq.subject }}</p>
                         <p class="text-xs text-gray-500 mt-1">Delay: {{ seq.delay_days }} days | Sent: {{ seq.sent_count }} | Opened: {{ seq.opened_count }}</p>
+                    </div>
+                    <div class="flex gap-2 ml-4">
+                        <a href="{{ url_for('lead_campaigns_bp.sequences_edit', sequence_id=seq.id) }}"
+                           class="text-sm text-indigo-600 hover:text-indigo-800 font-medium px-3 py-1 border border-indigo-200 rounded hover:bg-indigo-50">
+                            Edit
+                        </a>
+                        <form method="POST" action="{{ url_for('lead_campaigns_bp.sequences_delete', sequence_id=seq.id) }}"
+                              onsubmit="return confirm('Delete Step {{ seq.step_number }}: {{ seq.name }}?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-sm text-red-600 hover:text-red-800 font-medium px-3 py-1 border border-red-200 rounded hover:bg-red-50">
+                                Delete
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>

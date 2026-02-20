@@ -210,7 +210,7 @@ class EmailSequence(db.Model):
     __tablename__ = "email_sequences"
 
     id = db.Column(Integer, primary_key=True)
-    campaign_id = db.Column(Integer, ForeignKey("lead_campaigns.id"), nullable=False, index=True)
+    campaign_id = db.Column(Integer, ForeignKey("lead_campaigns.id"), nullable=True, index=True)
 
     step_number = db.Column(Integer, nullable=False)  # 1 = first email, 2 = follow-up 1, etc.
     name = db.Column(String(200), nullable=False)  # e.g., "Initial Outreach"

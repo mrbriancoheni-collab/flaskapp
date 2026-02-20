@@ -988,6 +988,145 @@ def sequences_clear_all(campaign_id: int):
     return redirect(url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign_id))
 
 
+@lead_campaigns_bp.route('/<int:campaign_id>/reset-email-sending', methods=['POST'])
+@require_admin
+def reset_email_sending(campaign_id: int):
+    """Reset all email sending state for a campaign so contacts can be emailed again.
+
+    This:
+    - Deletes all LeadContactEmail tracking records for this campaign
+    - Resets LeadContact.email_status → 'pending' for all contacts in this campaign
+    - Resets Lead.email_status → 'pending' for all leads in this campaign
+    - Sets campaign status back to 'ready' if it was 'completed'
+    """
+    campaign = LeadCampaign.query.get_or_404(campaign_id)
+
+    leads = Lead.query.filter_by(campaign_id=campaign_id).all()
+    lead_ids = [l.id for l in leads]
+
+    # Delete LeadContactEmail tracking records
+    contact_emails_deleted = 0
+    if lead_ids:
+        contact_ids = [
+            c.id for c in LeadContact.query.filter(LeadContact.lead_id.in_(lead_ids)).with_entities(LeadContact.id)
+        ]
+        if contact_ids:
+            contact_emails_deleted = LeadContactEmail.query.filter(
+                LeadContactEmail.contact_id.in_(contact_ids)
+            ).delete(synchronize_session='fetch')
+
+        # Reset LeadContact email_status
+        LeadContact.query.filter(LeadContact.lead_id.in_(lead_ids)).update(
+            {'email_status': 'pending'}, synchronize_session='fetch'
+        )
+
+        # Reset Lead email_status
+        Lead.query.filter(Lead.id.in_(lead_ids)).update(
+            {'email_status': 'pending', 'current_sequence_step': 0, 'last_email_sent_at': None},
+            synchronize_session='fetch'
+        )
+
+    # Reset campaign status if completed
+    if campaign.status == 'completed':
+        campaign.status = 'ready'
+
+    db.session.commit()
+
+    contacts_reset = LeadContact.query.filter(LeadContact.lead_id.in_(lead_ids)).count() if lead_ids else 0
+    flash(
+        f'Reset email sending for "{campaign.name}": '
+        f'{contacts_reset} contacts → pending, {contact_emails_deleted} send records removed.',
+        'success'
+    )
+    return redirect(url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign_id))
+
+
+@lead_campaigns_bp.route('/<int:campaign_id>/import-crm-contacts', methods=['POST'])
+@require_admin
+def import_crm_contacts(campaign_id: int):
+    """Import CRM contacts (crm_contacts + company_contacts) as Lead + LeadContact
+    records for this campaign so they flow through the normal email sending pipeline.
+
+    For each crm_contact:
+    - Creates a Lead record (skips if one already exists for this crm_contact + campaign)
+    - For each company_contact with an email → creates a LeadContact
+    - If no company_contacts have emails but crm_contact.email is set →
+      sets lead.decision_maker_email so the legacy send path can reach them
+    """
+    from app.models import CRMContact, CompanyContact
+
+    campaign = LeadCampaign.query.get_or_404(campaign_id)
+
+    crm_contacts = CRMContact.query.filter(
+        db.or_(
+            CRMContact.email.isnot(None),
+            CRMContact.contacts.any(CompanyContact.email.isnot(None))
+        )
+    ).all()
+
+    leads_created = 0
+    contacts_created = 0
+    skipped = 0
+
+    for crm in crm_contacts:
+        # Skip if already imported for this campaign
+        existing_lead = Lead.query.filter_by(
+            campaign_id=campaign_id,
+            crm_contact_id=crm.id
+        ).first()
+
+        if existing_lead:
+            skipped += 1
+            lead = existing_lead
+        else:
+            lead = Lead(
+                campaign_id=campaign_id,
+                crm_contact_id=crm.id,
+                company_name=crm.business_name or 'Unknown',
+                website=f'https://{crm.domain}' if crm.domain and not crm.domain.startswith('http') else crm.domain,
+                phone=crm.phone,
+                address=', '.join(filter(None, [crm.address1, crm.city, crm.region, crm.postal_code])) or None,
+                source_type='organic',
+                decision_maker_name=crm.contact_name,
+                decision_maker_email=crm.email,
+                enrichment_status='completed',
+                email_status='pending',
+            )
+            db.session.add(lead)
+            db.session.flush()  # get lead.id before creating contacts
+            leads_created += 1
+
+        # Create LeadContact records from company_contacts with emails
+        individual_contacts = [c for c in crm.contacts if c.email]
+        for cc in individual_contacts:
+            already_exists = LeadContact.query.filter_by(
+                lead_id=lead.id,
+                email=cc.email
+            ).first()
+            if not already_exists:
+                lc = LeadContact(
+                    lead_id=lead.id,
+                    company_contact_id=cc.id,
+                    name=cc.full_name,
+                    title=cc.title,
+                    email=cc.email,
+                    linkedin_url=cc.linkedin_url,
+                    role_category=cc.role_category,
+                    email_status='pending',
+                )
+                db.session.add(lc)
+                contacts_created += 1
+
+    db.session.commit()
+
+    flash(
+        f'CRM import for "{campaign.name}": '
+        f'{leads_created} leads created, {contacts_created} contacts created, {skipped} already existed.',
+        'success'
+    )
+    return redirect(url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign_id))
+
+
 @lead_campaigns_bp.route('/sequences/copy-campaign/<int:source_campaign_id>', methods=['GET', 'POST'])
 @require_admin
 def sequences_copy_campaign(source_campaign_id: int):

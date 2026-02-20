@@ -599,13 +599,18 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
         return sequence
 
     def _process_email_sending(self) -> int:
-        """Send emails to enriched leads up to daily limit"""
+        """Send emails to all pending contacts/leads up to the daily limit.
+
+        Contact-first approach: iterates over every pending LeadContact (and
+        leads with a decision_maker_email fallback) across ALL campaigns,
+        regardless of campaign status.  Campaign objects are only used to
+        look up the email sequence to send.
+        """
         if not self._can_send_email_today():
             return 0
 
         sent_count = 0
 
-        # Initialize Brevo outreach service
         try:
             logger.info("Using Brevo email service")
             self.outreach = BrevoOutreachService()
@@ -613,208 +618,209 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             logger.error(f"Cannot initialize Brevo outreach service: {e}")
             return 0
 
-        # Get ALL active campaigns (ready or currently sending)
-        ready_campaigns = LeadCampaign.query.filter(
-            LeadCampaign.status.in_(['ready', 'sending'])
-        ).all()
+        from app.models_leads import EmailUnsubscribe
+        unsubscribed_emails = set(
+            row[0].lower()
+            for row in db.session.query(EmailUnsubscribe.email).all()
+        )
 
-        logger.info(f"Found {len(ready_campaigns)} ready campaigns")
+        # Cache sequences per campaign (keyed by campaign.id or None).
+        # Falls back to the primary sequence (id=1) if no campaign-specific one exists.
+        sequence_cache: Dict = {}
+        _primary_seq: list = [None]  # lazy singleton
 
-        for campaign in ready_campaigns:
+        def _primary_sequence():
+            if _primary_seq[0] is None:
+                _primary_seq[0] = EmailSequence.query.get(1)
+            return _primary_seq[0]
+
+        def _get_sequence(campaign):
+            cid = campaign.id if campaign else None
+            if cid not in sequence_cache:
+                seq = EmailSequence.query.filter_by(
+                    campaign_id=cid, step_number=1, is_active=True
+                ).first() if cid else None
+                sequence_cache[cid] = seq or _primary_sequence()
+            return sequence_cache[cid]
+
+        # ── Primary path: LeadContact records with pending status ─────────────
+        pending_contacts = (
+            LeadContact.query
+            .filter(
+                LeadContact.email_status == 'pending',
+                LeadContact.email.isnot(None),
+                LeadContact.email != '',
+            )
+            .all()
+        )
+        logger.info(f"Found {len(pending_contacts)} pending lead contacts")
+
+        for contact in pending_contacts:
             if not self._can_send_email_today():
                 break
 
-            # Get enriched leads with contacts
-            enriched_leads = Lead.query.filter_by(
-                campaign_id=campaign.id,
-                enrichment_status='completed'
-            ).limit(AUTOMATION_CONFIG["daily_email_limit"]).all()
+            email = contact.email.strip()
 
-            logger.info(f"Campaign '{campaign.name}': {len(enriched_leads)} enriched leads")
-
-            # Ensure campaign has an email sequence (create if missing)
-            email_sequence = self._ensure_campaign_has_sequence(campaign)
-            if not email_sequence:
-                logger.warning(f"Could not get/create email sequence for campaign '{campaign.name}'")
+            if email.lower() in unsubscribed_emails:
                 continue
 
-            for lead in enriched_leads:
-                if not self._can_send_email_today():
-                    break
+            lead = Lead.query.get(contact.lead_id)
+            if not lead:
+                continue
 
-                # Get pending contacts for this lead
-                pending_contacts = LeadContact.query.filter_by(
-                    lead_id=lead.id,
-                    email_status='pending'
-                ).filter(
-                    LeadContact.email.isnot(None)
-                ).all()
+            campaign = LeadCampaign.query.get(lead.campaign_id) if lead.campaign_id else None
 
-                total_contacts = LeadContact.query.filter_by(lead_id=lead.id).count()
-                if total_contacts > 0 and not pending_contacts:
-                    logger.debug(f"Lead '{lead.company_name}': {total_contacts} contacts but none pending")
-                elif total_contacts == 0:
-                    logger.debug(f"Lead '{lead.company_name}': No contacts found during enrichment")
+            email_sequence = _get_sequence(campaign)
+            if not email_sequence:
+                logger.warning(f"No sequence available anywhere — skipping contact {contact.id}")
+                continue
 
-                # If no contacts, fall back to legacy decision_maker_email
-                if not pending_contacts and lead.email_status == 'pending' and lead.decision_maker_email:
-                    # DUPLICATE PREVENTION: Check if we've already sent this sequence to this email
-                    already_sent = LeadEmail.query.filter_by(
-                        lead_id=lead.id,
-                        sequence_id=email_sequence.id,
-                        to_email=lead.decision_maker_email
-                    ).first()
+            # Dedup: skip if already sent this step to this address
+            already_sent = LeadContactEmail.query.filter_by(
+                contact_id=contact.id,
+                sequence_step=email_sequence.step_number,
+                to_email=email,
+            ).first()
+            if already_sent:
+                continue
 
-                    if already_sent:
-                        logger.debug(f"Skipping {lead.decision_maker_email} - already sent sequence step {email_sequence.step_number}")
-                        continue
+            try:
+                subject = self._replace_contact_variables(email_sequence.subject, lead, contact, campaign)
+                body = self._replace_contact_variables(email_sequence.body_text, lead, contact, campaign)
 
-                    # Send using legacy method (use the sequence we ensured exists)
-                    try:
+                result = self.outreach.send_email(
+                    to_email=email,
+                    subject=subject,
+                    body_html=body.replace('\n', '<br>'),
+                    body_text=body,
+                    sequence_step=email_sequence.step_number,
+                )
 
-                        # Prepare email content
-                        subject = self._replace_variables(email_sequence.subject, lead, campaign)
-                        body = self._replace_variables(email_sequence.body_text, lead, campaign)
-
-                        # Send email (with dedup check)
-                        result = self.outreach.send_email(
-                            to_email=lead.decision_maker_email,
-                            subject=subject,
-                            body_html=body.replace('\n', '<br>'),
-                            body_text=body,
-                            sequence_step=1
-                        )
-
-                        # Skip if dedup check blocked the send
-                        if result.get('skipped'):
-                            logger.debug(f"Dedup blocked email to {lead.decision_maker_email}: {result.get('skip_reason')}")
-                            continue
-
-                        # Check for rate limiting
-                        if result.get('rate_limited'):
-                            retry_after = result.get('retry_after', 300)
-                            logger.warning(f"Email rate limit hit. Stopping email sending. Retry after {retry_after} seconds ({retry_after/3600:.1f} hours)")
-                            return sent_count
-
-                        if result.get('success'):
-                            # Record email sent
-                            email_record = LeadEmail(
-                                lead_id=lead.id,
-                                sequence_id=email_sequence.id,
-                                to_email=lead.decision_maker_email,
-                                subject=subject,
-                                body_text=body,
-                                body_html=body.replace('\n', '<br>'),
-                                sent_at=datetime.utcnow(),
-                                status='sent'
-                            )
-                            db.session.add(email_record)
-
-                            # Update lead status
-                            lead.email_status = 'sent'
-                            lead.last_email_sent_at = datetime.utcnow()
-
-                            # Update campaign stats
-                            campaign.emails_sent = (campaign.emails_sent or 0) + 1
-
-                            db.session.commit()
-
-                            self.state["emails_sent"] += 1
-                            self.state["daily_stats"]["emails"] += 1
-                            sent_count += 1
-
-                            logger.info(f"Sent email to {lead.decision_maker_email} (legacy)")
-
-                    except Exception as e:
-                        logger.error(f"Error sending email to lead {lead.id}: {e}")
-                        db.session.rollback()
+                if result.get('skipped'):
                     continue
 
-                # Send to each contact
-                for contact in pending_contacts:
-                    if not self._can_send_email_today():
-                        break
+                if result.get('rate_limited'):
+                    logger.warning(f"Rate limit hit after {sent_count} emails")
+                    return sent_count
 
-                    # DUPLICATE PREVENTION: Check if we've already sent this sequence to this contact
-                    already_sent = LeadContactEmail.query.filter_by(
+                if result.get('success'):
+                    record = LeadContactEmail(
                         contact_id=contact.id,
+                        lead_id=lead.id,
+                        campaign_id=campaign.id if campaign else None,
                         sequence_step=email_sequence.step_number,
-                        to_email=contact.email
-                    ).first()
+                        subject=subject,
+                        body=body,
+                        to_email=email,
+                        email_provider='brevo',
+                        sent_at=datetime.utcnow(),
+                        status='sent',
+                    )
+                    if result.get('message_id'):
+                        record.brevo_message_id = result['message_id']
+                    db.session.add(record)
 
-                    if already_sent:
-                        logger.debug(f"Skipping {contact.email} ({contact.name}) - already sent sequence step {email_sequence.step_number}")
-                        continue
+                    contact.email_status = 'sent'
+                    contact.last_email_sent_at = datetime.utcnow()
+                    if contact.is_primary:
+                        lead.email_status = 'sent'
+                        lead.last_email_sent_at = datetime.utcnow()
+                    if campaign:
+                        campaign.emails_sent = (campaign.emails_sent or 0) + 1
 
-                    try:
-                        # Prepare email content with contact variables (use the sequence we ensured exists)
-                        subject = self._replace_contact_variables(email_sequence.subject, lead, contact, campaign)
-                        body = self._replace_contact_variables(email_sequence.body_text, lead, contact, campaign)
+                    db.session.commit()
+                    self.state["emails_sent"] += 1
+                    self.state["daily_stats"]["emails"] += 1
+                    sent_count += 1
+                    logger.info(f"Sent to {email} ({contact.name})")
 
-                        # Send email (with dedup check)
-                        result = self.outreach.send_email(
-                            to_email=contact.email,
-                            subject=subject,
-                            body_html=body.replace('\n', '<br>'),
-                            body_text=body,
-                            sequence_step=email_sequence.step_number
-                        )
+            except Exception as e:
+                logger.error(f"Error sending to contact {contact.id}: {e}")
+                db.session.rollback()
 
-                        # Skip if dedup check blocked the send
-                        if result.get('skipped'):
-                            logger.debug(f"Dedup blocked email to {contact.email}: {result.get('skip_reason')}")
-                            continue
+        # ── Legacy path: leads with decision_maker_email, no lead_contacts ────
+        pending_leads = (
+            Lead.query
+            .filter(
+                Lead.email_status == 'pending',
+                Lead.enrichment_status == 'completed',
+                Lead.decision_maker_email.isnot(None),
+            )
+            .outerjoin(LeadContact, LeadContact.lead_id == Lead.id)
+            .filter(LeadContact.id.is_(None))  # only leads with no contacts at all
+            .all()
+        )
+        logger.info(f"Found {len(pending_leads)} pending leads (legacy path)")
 
-                        # Check for rate limiting
-                        if result.get('rate_limited'):
-                            retry_after = result.get('retry_after', 300)
-                            logger.warning(f"Email rate limit hit. Stopping email sending. Retry after {retry_after} seconds ({retry_after/3600:.1f} hours)")
-                            return sent_count
+        for lead in pending_leads:
+            if not self._can_send_email_today():
+                break
 
-                        if result.get('success'):
-                            # Record email sent to contact
-                            email_record = LeadContactEmail(
-                                contact_id=contact.id,
-                                lead_id=lead.id,
-                                campaign_id=campaign.id,
-                                sequence_step=email_sequence.step_number,
-                                subject=subject,
-                                body=body,
-                                to_email=contact.email,
-                                email_provider='brevo',
-                                sent_at=datetime.utcnow(),
-                                status='sent'
-                            )
+            email = lead.decision_maker_email.strip()
 
-                            # Store Brevo message ID
-                            if result.get('message_id'):
-                                email_record.brevo_message_id = result.get('message_id')
+            if email.lower() in unsubscribed_emails:
+                continue
 
-                            db.session.add(email_record)
+            campaign = LeadCampaign.query.get(lead.campaign_id) if lead.campaign_id else None
 
-                            # Update contact status
-                            contact.email_status = 'sent'
-                            contact.last_email_sent_at = datetime.utcnow()
+            email_sequence = _get_sequence(campaign)
+            if not email_sequence:
+                continue
 
-                            # Update lead status if this was the first/primary contact
-                            if contact.is_primary:
-                                lead.email_status = 'sent'
-                                lead.last_email_sent_at = datetime.utcnow()
+            already_sent = LeadEmail.query.filter_by(
+                lead_id=lead.id,
+                sequence_id=email_sequence.id,
+                to_email=email,
+            ).first()
+            if already_sent:
+                continue
 
-                            # Update campaign stats
-                            campaign.emails_sent = (campaign.emails_sent or 0) + 1
+            try:
+                subject = self._replace_variables(email_sequence.subject, lead, campaign)
+                body = self._replace_variables(email_sequence.body_text, lead, campaign)
 
-                            db.session.commit()
+                result = self.outreach.send_email(
+                    to_email=email,
+                    subject=subject,
+                    body_html=body.replace('\n', '<br>'),
+                    body_text=body,
+                    sequence_step=1,
+                )
 
-                            self.state["emails_sent"] += 1
-                            self.state["daily_stats"]["emails"] += 1
-                            sent_count += 1
+                if result.get('skipped'):
+                    continue
 
-                            logger.info(f"Sent email to {contact.email} ({contact.name} - {contact.title})")
+                if result.get('rate_limited'):
+                    logger.warning(f"Rate limit hit after {sent_count} emails")
+                    return sent_count
 
-                    except Exception as e:
-                        logger.error(f"Error sending email to contact {contact.id}: {e}")
-                        db.session.rollback()
+                if result.get('success'):
+                    record = LeadEmail(
+                        lead_id=lead.id,
+                        sequence_id=email_sequence.id,
+                        to_email=email,
+                        subject=subject,
+                        body_text=body,
+                        body_html=body.replace('\n', '<br>'),
+                        sent_at=datetime.utcnow(),
+                        status='sent',
+                    )
+                    db.session.add(record)
+
+                    lead.email_status = 'sent'
+                    lead.last_email_sent_at = datetime.utcnow()
+                    if campaign:
+                        campaign.emails_sent = (campaign.emails_sent or 0) + 1
+
+                    db.session.commit()
+                    self.state["emails_sent"] += 1
+                    self.state["daily_stats"]["emails"] += 1
+                    sent_count += 1
+                    logger.info(f"Sent to {email} (legacy)")
+
+            except Exception as e:
+                logger.error(f"Error sending to lead {lead.id}: {e}")
+                db.session.rollback()
 
         return sent_count
 
@@ -1320,7 +1326,7 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             db.session.rollback()
             return False
 
-    def _replace_variables(self, text: str, lead: Lead, campaign: LeadCampaign) -> str:
+    def _replace_variables(self, text: str, lead: Lead, campaign) -> str:
         """Replace template variables in email text"""
         if not text:
             return ""
@@ -1329,8 +1335,8 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             '{{company_name}}': lead.company_name or '',
             '{{decision_maker_name}}': lead.decision_maker_name or '',
             '{{decision_maker_title}}': lead.decision_maker_title or '',
-            '{{service_type}}': campaign.industry_service or '',
-            '{{location}}': campaign.location or '',
+            '{{service_type}}': (campaign.industry_service if campaign else '') or '',
+            '{{location}}': (campaign.location if campaign else '') or '',
         }
 
         result = text
@@ -1339,7 +1345,7 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
 
         return result
 
-    def _replace_contact_variables(self, text: str, lead: Lead, contact: LeadContact, campaign: LeadCampaign) -> str:
+    def _replace_contact_variables(self, text: str, lead: Lead, contact: LeadContact, campaign) -> str:
         """Replace template variables in email text with contact-specific info"""
         if not text:
             return ""
@@ -1348,8 +1354,8 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             '{{company_name}}': lead.company_name or '',
             '{{decision_maker_name}}': contact.name or '',
             '{{decision_maker_title}}': contact.title or '',
-            '{{service_type}}': campaign.industry_service or '',
-            '{{location}}': campaign.location or '',
+            '{{service_type}}': (campaign.industry_service if campaign else '') or '',
+            '{{location}}': (campaign.location if campaign else '') or '',
         }
 
         result = text

@@ -474,14 +474,19 @@ def run_agents_for_account(
         except Exception as e:
             current_app.logger.warning(f"Search terms fetch failed: {e}")
 
-        # 5. Ad groups + ads — needed by AdCopyAgent
+        # 5. Ad groups + ads — needed by AdCopyAgent + LandingPageAnalystAgent
         ad_groups_list = []
+        _campaign_landing = {}  # campaign_id → {landing_url, ad_headlines}
         try:
             ad_rows = _ads_query("""
                 SELECT
                     ad_group_ad.ad.id,
                     ad_group_ad.ad_group,
                     ad_group_ad.status,
+                    ad_group_ad.ad.final_urls,
+                    ad_group_ad.ad.responsive_search_ad.headlines,
+                    ad_group_ad.ad.expanded_text_ad.headline_part1,
+                    ad_group_ad.ad.expanded_text_ad.headline_part2,
                     ad_group.id,
                     ad_group.name,
                     campaign.id,
@@ -497,15 +502,29 @@ def run_agents_for_account(
             """)
             _ag_map = {}
             for row in ad_rows:
-                ag_resource = row.get("adGroupAd", {}).get("adGroup", "")
+                aga = row.get("adGroupAd", {})
+                ag_resource = aga.get("adGroup", "")
                 ag_id = ag_resource.split("/")[-1] if ag_resource else ""
                 if not ag_id:
                     continue
+                ad = aga.get("ad", {})
                 ag_info = row.get("adGroup", {})
                 m = row.get("metrics", {})
                 impressions = int(m.get("impressions", 0))
                 ctr = float(m.get("ctr", 0)) * 100
-                ad_id = str(row.get("adGroupAd", {}).get("ad", {}).get("id", ""))
+                ad_id = str(ad.get("id", ""))
+
+                # Landing URL
+                final_urls = ad.get("finalUrls", [])
+                landing_url = final_urls[0] if final_urls else ''
+
+                # Headlines — RSA first, ETA fallback
+                rsa = ad.get("responsiveSearchAd", {})
+                headlines = [h.get("text", "") for h in rsa.get("headlines", []) if h.get("text")]
+                if not headlines:
+                    eta = ad.get("expandedTextAd", {})
+                    headlines = [h for h in [eta.get("headlinePart1", ""), eta.get("headlinePart2", "")] if h]
+
                 if ag_id not in _ag_map:
                     _ag_map[ag_id] = {
                         'id': ag_id,
@@ -514,26 +533,49 @@ def run_agents_for_account(
                         'ads': [],
                         '_total_ctr': 0.0,
                         '_ad_count': 0,
+                        '_landing_urls': set(),
+                        '_headlines': [],
                     }
+                if landing_url:
+                    _ag_map[ag_id]['_landing_urls'].add(landing_url)
+                _ag_map[ag_id]['_headlines'].extend(
+                    h for h in headlines if h not in _ag_map[ag_id]['_headlines']
+                )
                 _ag_map[ag_id]['ads'].append({
                     'id': ad_id,
-                    'status': str(row.get("adGroupAd", {}).get("status", "")).split(".")[-1],
+                    'status': str(aga.get("status", "")).split(".")[-1],
                     'impressions': impressions,
                     'ctr': ctr,
                     'clicks': int(m.get("clicks", 0)),
+                    'landing_url': landing_url,
+                    'headlines': headlines,
                 })
                 _ag_map[ag_id]['_total_ctr'] += ctr
                 _ag_map[ag_id]['_ad_count'] += 1
 
             for ag in _ag_map.values():
                 avg_ctr = ag['_total_ctr'] / ag['_ad_count'] if ag['_ad_count'] > 0 else 0
+                ag_landing = next(iter(ag['_landing_urls']), '')
                 ad_groups_list.append({
                     'id': ag['id'],
                     'name': ag['name'],
                     'campaign_id': ag['campaign_id'],
                     'avg_ctr': avg_ctr,
+                    'landing_url': ag_landing,
+                    'ad_headlines': ag['_headlines'],
                     'ads': ag['ads'],
                 })
+                cid = ag['campaign_id']
+                if cid not in _campaign_landing:
+                    _campaign_landing[cid] = {'landing_url': ag_landing, 'ad_headlines': list(ag['_headlines'])}
+
+            # Patch landing_url + ad_headlines onto campaigns list
+            for c in campaigns:
+                cid = c.get('id', '')
+                if cid in _campaign_landing:
+                    c['landing_url'] = _campaign_landing[cid]['landing_url']
+                    c['ad_headlines'] = _campaign_landing[cid]['ad_headlines']
+
         except Exception as e:
             current_app.logger.warning(f"Ad groups fetch failed: {e}")
 
@@ -650,10 +692,15 @@ def run_agents_for_account(
             QualityScoreAgent(**agent_kwargs),
         ]
     elif layer == 'tactical':
+        # NegativeKeywordAgent runs on its own daily schedule (search term data
+        # has a 24h reporting delay — running every 2h re-analyses stale data)
         agents = [
             KeywordOptimizerAgent(**agent_kwargs),
-            NegativeKeywordAgent(**agent_kwargs),
             AdCopyAgent(**agent_kwargs),
+        ]
+    elif layer == 'negative_keyword':
+        agents = [
+            NegativeKeywordAgent(**agent_kwargs),
         ]
     else:  # 'all'
         agents = [

@@ -158,6 +158,11 @@
                 <h2>Leads</h2>
                 <div style="display:flex;gap:10px;align-items:center;">
                     <a href="{{ url_for('lead_campaigns_bp.edit_campaign', campaign_id=campaign.id) }}" class="btn btn-secondary">Edit Campaign</a>
+                    <form method="POST" action="{{ url_for('lead_campaigns_bp.import_crm_contacts', campaign_id=campaign.id) }}"
+                          onsubmit="return confirm('Import all CRM contacts with emails as leads for this campaign?')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-primary">Import from CRM</button>
+                    </form>
                     <form method="POST" action="{{ url_for('lead_campaigns_bp.reset_email_sending', campaign_id=campaign.id) }}"
                           onsubmit="return confirm('Reset all email sending for this campaign? Contacts will be marked pending and send records removed.')">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

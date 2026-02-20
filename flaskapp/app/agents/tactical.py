@@ -620,7 +620,7 @@ class AdCopyAgent(BaseAgent):
                         'ad_group_id': opp['ad_group_id'],
                         'variations_needed': opp['target_ad_count'] - opp['current_ad_count']
                     },
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
                     confidence=0.75,
                     expected_improvement_pct=10  # 10% CTR improvement from testing
@@ -842,10 +842,10 @@ class LandingPageAnalystAgent(BaseAgent):
             # Map severity to risk level
             risk_map = {
                 'low': DecisionRiskLevel.LOW,
-                'medium': DecisionRiskLevel.MEDIUM,
+                'medium': DecisionRiskLevel.HIGH,
                 'high': DecisionRiskLevel.HIGH
             }
-            risk_level = risk_map.get(severity, DecisionRiskLevel.MEDIUM)
+            risk_level = risk_map.get(severity, DecisionRiskLevel.HIGH)
 
             if opp_type == 'improve_message_match':
                 decision = AgentDecision(

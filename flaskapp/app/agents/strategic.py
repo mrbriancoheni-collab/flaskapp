@@ -299,7 +299,7 @@ class StrategicDirectorAgent(BaseAgent):
                         'new_budget': opp['current_spend'] * 1.5,
                         'increase_amount': opp['recommended_increase']
                     },
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
                     confidence=0.80,
                     expected_monthly_leads=int(opp['recommended_increase'] / 50),  # Assume $50 CPL
@@ -366,8 +366,8 @@ class StrategicDirectorAgent(BaseAgent):
                             }
                         ]
                     },
-                    risk_level=DecisionRiskLevel.MEDIUM,
-                    requires_approval=False,  # AI auto-generates campaign structure, keywords, and ads
+                    risk_level=DecisionRiskLevel.HIGH,
+                    requires_approval=True,
                     confidence=0.88,
                     expected_improvement_pct=15.0,  # 15% more leads expected
                 )
@@ -399,7 +399,7 @@ class StrategicDirectorAgent(BaseAgent):
                             'audience_signals': 'Upload customer list or website visitors for better targeting'
                         }
                     },
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,  # Campaign creation requires asset preparation
                     confidence=0.85,
                     expected_improvement_pct=20.0,  # 20% more reach expected

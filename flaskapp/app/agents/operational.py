@@ -494,7 +494,7 @@ class BudgetGuardianAgent(BaseAgent):
                             'alert_type': 'budget_exceeded',
                             'campaign_ids': opp['campaign_ids']
                         },
-                        risk_level=DecisionRiskLevel.MEDIUM,
+                        risk_level=DecisionRiskLevel.HIGH,
                         requires_approval=True,  # Require approval since auto-pause is off
                         confidence=0.99
                     )

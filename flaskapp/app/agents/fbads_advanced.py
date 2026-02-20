@@ -304,7 +304,7 @@ class FBSpendOptimizerAgent(BaseAgent):
                         'direction': opp['direction'],
                         'daily_adjustment': opp['daily_adjustment']
                     },
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
                     confidence=0.85,
                     expected_monthly_savings=abs(opp['daily_adjustment']) * 10 if opp['direction'] == 'reduce' else 0
@@ -444,7 +444,7 @@ class FBDaypartingAgent(BaseAgent):
                         'best_hours': opp['best_hours'],
                         'worst_hours': opp['worst_hours']
                     },
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
                     confidence=0.80,
                     expected_improvement_pct=15.0
@@ -620,7 +620,7 @@ class FBGeoOptimizerAgent(BaseAgent):
                     action_data={
                         'strong_regions': opp['strong_regions']
                     },
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
                     confidence=0.80,
                     expected_improvement_pct=20.0
@@ -956,7 +956,7 @@ class FBPixelHealthAgent(BaseAgent):
                             '5. Set up standard events (PageView, Lead/Purchase)'
                         ]
                     },
-                    risk_level=DecisionRiskLevel.CRITICAL,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
                     confidence=0.99
                 )
@@ -986,7 +986,7 @@ class FBPixelHealthAgent(BaseAgent):
                             'Improves ad delivery optimization'
                         ]
                     },
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
                     confidence=0.95,
                     expected_improvement_pct=20.0
@@ -1012,7 +1012,7 @@ class FBPixelHealthAgent(BaseAgent):
                             'Check if landing pages are working'
                         ]
                     },
-                    risk_level=DecisionRiskLevel.CRITICAL,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=False,
                     confidence=0.95
                 )

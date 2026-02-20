@@ -459,7 +459,7 @@ class FBPlacementOptimizerAgent(BaseAgent):
                         'winning_placements': opp['winning_placements'],
                         'losing_placements': opp['losing_placements']
                     },
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
                     confidence=0.85,
                     expected_improvement_pct=25.0
@@ -654,7 +654,7 @@ class FBBidOptimizerAgent(BaseAgent):
                     action_data={
                         'suggested_cap': opp['target_cpa']
                     },
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
                     confidence=0.85,
                     expected_monthly_savings=(opp['actual_cpa'] - opp['target_cpa']) * 30
@@ -676,7 +676,7 @@ class FBBidOptimizerAgent(BaseAgent):
                         'current_goal': opp['current_goal'],
                         'new_goal': 'CONVERSIONS'
                     },
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
                     confidence=0.92,
                     expected_improvement_pct=30.0

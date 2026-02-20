@@ -6,11 +6,11 @@
 
 {# ── Macro must be defined before any call sites ─────────────────────────── #}
 {% macro render_decision_card(decision, risk_class) %}
-<div class="bg-white rounded-lg shadow-lg p-6 mb-4 border-l-4 {% if risk_class == 'critical' %}border-red-500{% elif risk_class == 'high' %}border-orange-500{% elif risk_class == 'medium' %}border-yellow-500{% else %}border-blue-500{% endif %}">
+<div class="bg-white rounded-lg shadow-lg p-6 mb-4 border-l-4 {% if risk_class == 'high' %}border-orange-500{% else %}border-green-500{% endif %}">
     <div class="flex items-start justify-between mb-4">
         <div class="flex-1">
             <div class="flex items-center space-x-2 mb-2">
-                <span class="px-2 py-1 text-xs font-semibold rounded {% if risk_class == 'critical' %}bg-red-100 text-red-800{% elif risk_class == 'high' %}bg-orange-100 text-orange-800{% elif risk_class == 'medium' %}bg-yellow-100 text-yellow-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                <span class="px-2 py-1 text-xs font-semibold rounded {% if risk_class == 'high' %}bg-orange-100 text-orange-800{% else %}bg-green-100 text-green-800{% endif %}">
                     {{ decision.agent_type }}
                 </span>
                 <span class="px-2 py-1 text-xs font-semibold rounded bg-gray-100 text-gray-800">
@@ -19,6 +19,15 @@
                 <span class="text-xs text-gray-500">
                     Confidence: {{ "%.0f"|format(decision.confidence * 100) }}%
                 </span>
+                {% if risk_class == 'high' %}
+                <span class="px-2 py-1 text-xs font-semibold rounded bg-orange-50 text-orange-700 border border-orange-200">
+                    <i class="fa-solid fa-user-check mr-1"></i>Requires Approval
+                </span>
+                {% else %}
+                <span class="px-2 py-1 text-xs font-semibold rounded bg-green-50 text-green-700 border border-green-200">
+                    <i class="fa-solid fa-bolt mr-1"></i>Auto-Execute
+                </span>
+                {% endif %}
             </div>
             <h3 class="text-xl font-bold text-gray-900 mb-2">{{ decision.title }}</h3>
             <p class="text-gray-700 mb-3">{{ decision.description }}</p>
@@ -113,7 +122,7 @@
     </div>
 
     <!-- Stats Summary -->
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between">
                 <div>
@@ -127,30 +136,11 @@
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-gray-600 text-sm">Critical</p>
-                    <p class="text-3xl font-bold text-red-600">{{ decisions_by_risk.critical|length }}</p>
-                </div>
-                <i class="fa-solid fa-triangle-exclamation text-red-400 text-3xl"></i>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-gray-600 text-sm">High Risk</p>
+                    <p class="text-gray-600 text-sm">Needs Approval</p>
                     <p class="text-3xl font-bold text-orange-600">{{ decisions_by_risk.high|length }}</p>
+                    <p class="text-xs text-orange-600 mt-1">Manual review required</p>
                 </div>
-                <i class="fa-solid fa-exclamation text-orange-400 text-3xl"></i>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-gray-600 text-sm">Medium Risk</p>
-                    <p class="text-3xl font-bold text-yellow-600">{{ decisions_by_risk.medium|length }}</p>
-                </div>
-                <i class="fa-solid fa-info-circle text-yellow-400 text-3xl"></i>
+                <i class="fa-solid fa-user-check text-orange-400 text-3xl"></i>
             </div>
         </div>
 
@@ -168,41 +158,16 @@
         </div>
     </div>
 
-    <!-- Critical Decisions -->
-    {% if decisions_by_risk.critical %}
-    <div class="mb-8">
-        <h2 class="text-2xl font-bold text-red-600 mb-4">
-            <i class="fa-solid fa-triangle-exclamation mr-2"></i>
-            Critical Decisions ({{ decisions_by_risk.critical|length }})
-        </h2>
-        {% for decision in decisions_by_risk.critical %}
-            {{ render_decision_card(decision, 'critical') }}
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <!-- High Risk Decisions -->
+    <!-- High Risk Decisions (Needs Manual Approval) -->
     {% if decisions_by_risk.high %}
     <div class="mb-8">
-        <h2 class="text-2xl font-bold text-orange-600 mb-4">
-            <i class="fa-solid fa-exclamation mr-2"></i>
-            High Risk Decisions ({{ decisions_by_risk.high|length }})
+        <h2 class="text-2xl font-bold text-orange-600 mb-2">
+            <i class="fa-solid fa-user-check mr-2"></i>
+            Needs Your Approval ({{ decisions_by_risk.high|length }})
         </h2>
+        <p class="text-sm text-gray-500 mb-4">These decisions involve significant changes — budget adjustments, campaign creation, or structural changes — and require your review before executing.</p>
         {% for decision in decisions_by_risk.high %}
             {{ render_decision_card(decision, 'high') }}
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <!-- Medium Risk Decisions -->
-    {% if decisions_by_risk.medium %}
-    <div class="mb-8">
-        <h2 class="text-2xl font-bold text-yellow-600 mb-4">
-            <i class="fa-solid fa-info-circle mr-2"></i>
-            Medium Risk Decisions ({{ decisions_by_risk.medium|length }})
-        </h2>
-        {% for decision in decisions_by_risk.medium %}
-            {{ render_decision_card(decision, 'medium') }}
         {% endfor %}
     </div>
     {% endif %}
@@ -210,10 +175,10 @@
     <!-- Low Risk Decisions (auto-executable) -->
     {% if decisions_by_risk.low %}
     <div class="mb-8">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center justify-between mb-2">
             <h2 class="text-2xl font-bold text-green-600">
                 <i class="fa-solid fa-bolt mr-2"></i>
-                Low Risk Decisions ({{ decisions_by_risk.low|length }}) — Ready to Auto-Execute
+                Low Risk — Ready to Auto-Execute ({{ decisions_by_risk.low|length }})
             </h2>
             <button
                 onclick="autoExecuteLowRisk()"
@@ -226,7 +191,7 @@
         <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
             <p class="text-sm text-green-800">
                 <i class="fa-solid fa-info-circle mr-1"></i>
-                These low-risk optimizations are safe to execute automatically. Click <strong>Auto-Execute All</strong> or use the button at the top of the page to apply them immediately.
+                These safe optimizations (negative keywords, small bid adjustments, budget pacing) will execute immediately. Click <strong>Auto-Execute All</strong> or use the button at the top of the page.
             </p>
         </div>
         {% for decision in decisions_by_risk.low %}

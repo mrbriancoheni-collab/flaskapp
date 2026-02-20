@@ -57,6 +57,30 @@ class DecisionLog:
             Decision ID in database
         """
         try:
+            # Deduplication: skip if a pending decision with the same signature already exists
+            dedup_check = text("""
+                SELECT id FROM agent_decisions
+                WHERE account_id = :account_id
+                  AND decision_type = :decision_type
+                  AND (campaign_id = :campaign_id OR (campaign_id IS NULL AND :campaign_id IS NULL))
+                  AND status = 'pending'
+                LIMIT 1
+            """)
+            existing = self.session.execute(dedup_check, {
+                'account_id': decision.account_id,
+                'decision_type': decision.decision_type,
+                'campaign_id': decision.campaign_id,
+            }).fetchone()
+
+            if existing:
+                existing_id = existing[0]
+                logger.info(
+                    f"Skipping duplicate decision: {decision.decision_type} by {decision.agent_id} "
+                    f"(existing ID: {existing_id})"
+                )
+                decision.id = existing_id
+                return existing_id
+
             # Insert into database
             query = text("""
                 INSERT INTO agent_decisions (

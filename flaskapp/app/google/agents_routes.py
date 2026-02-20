@@ -441,18 +441,17 @@ def approval_queue():
         result = conn.execute(query, {"account_id": account_id})
         pending_decisions = [dict(row._mapping) for row in result]
 
-    # Group by risk level for better UI
+    # Group by risk level - only LOW (auto-executed) and HIGH (manual approval required)
     decisions_by_risk = {
-        'critical': [],
         'high': [],
-        'medium': [],
         'low': []
     }
 
     for decision in pending_decisions:
-        risk_level = decision.get('risk_level') or 'medium'
-        if risk_level not in decisions_by_risk:
-            risk_level = 'medium'  # bucket unknown values safely
+        risk_level = decision.get('risk_level') or 'high'
+        # Map legacy medium/critical to high
+        if risk_level in ('medium', 'critical') or risk_level not in decisions_by_risk:
+            risk_level = 'high'
         decisions_by_risk[risk_level].append(decision)
 
     return render_template(

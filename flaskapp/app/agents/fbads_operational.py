@@ -211,7 +211,7 @@ class FBCampaignManagerAgent(BaseAgent):
                         ],
                         'conversions_needed': 50 - opp['conversions_7d']
                     },
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
                     confidence=0.85,
                     expected_improvement_pct=20.0
@@ -458,7 +458,7 @@ class FBBudgetGuardianAgent(BaseAgent):
                             'Verify bid strategy settings'
                         ]
                     },
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=False,
                     confidence=0.90
                 )
@@ -506,7 +506,7 @@ class FBBudgetGuardianAgent(BaseAgent):
                             'Switch to lowest cost bidding'
                         ]
                     },
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
                     confidence=0.85
                 )
@@ -710,7 +710,7 @@ class FBCreativeAnalystAgent(BaseAgent):
                         'status': opp['status'],
                         'reasons': opp['reason']
                     },
-                    risk_level=DecisionRiskLevel.CRITICAL,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
                     confidence=0.99
                 )

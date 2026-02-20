@@ -140,7 +140,7 @@ class AssetPerformanceAgent(BaseAgent):
                     reasoning="Performance Max needs 5+ headlines minimum. More headlines give Google's AI more combinations to test and find what works best.",
                     account_id=self.account_id or 0,
                     customer_id='',
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=False,  # Can be AI-generated automatically
                     confidence=0.95,
                     action_data={
@@ -160,7 +160,7 @@ class AssetPerformanceAgent(BaseAgent):
                     reasoning="Performance Max needs 4+ descriptions minimum. Diverse descriptions improve ad relevance across different contexts.",
                     account_id=self.account_id or 0,
                     customer_id='',
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=False,  # Can be AI-generated automatically
                     confidence=0.95,
                     action_data={
@@ -180,7 +180,7 @@ class AssetPerformanceAgent(BaseAgent):
                     reasoning="Performance Max recommends 15+ images (both landscape and square). More images = more visual variety = better performance across Display, YouTube, Discovery.",
                     account_id=self.account_id or 0,
                     customer_id='',
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
                     confidence=0.90,
                     action_data={
@@ -295,7 +295,7 @@ class AudienceSignalAgent(BaseAgent):
                     reasoning="Audience signals help Performance Max understand who your ideal customers are. While the campaign can run without them, signals improve targeting accuracy and reduce learning time.",
                     account_id=self.account_id or 0,
                     customer_id='',
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
                     confidence=0.85,
                     expected_improvement_pct=10.0,  # 10% efficiency improvement
@@ -439,7 +439,7 @@ class PMaxCampaignStructureAgent(BaseAgent):
                     reasoning="Multiple asset groups allow you to target different product/service categories with specific messaging. This improves relevance and performance.",
                     account_id=self.account_id or 0,
                     customer_id='',
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=False,  # AI auto-generates asset groups with themes and assets
                     confidence=0.85,
                     expected_improvement_pct=15.0,

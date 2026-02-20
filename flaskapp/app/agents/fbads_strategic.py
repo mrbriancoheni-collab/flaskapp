@@ -269,7 +269,7 @@ class FBStrategicDirectorAgent(BaseAgent):
                         'new_budget': opp['current_budget'] * 1.5,
                         'increase_amount': opp['recommended_increase']
                     },
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
                     confidence=0.80,
                     expected_monthly_leads=int(opp['recommended_increase'] / max(1, opp.get('current_cpa', 50))),
@@ -295,7 +295,7 @@ class FBStrategicDirectorAgent(BaseAgent):
                             'Pause for 7 days to reset frequency'
                         ]
                     },
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
                     confidence=0.85,
                 )
@@ -345,7 +345,7 @@ class FBStrategicDirectorAgent(BaseAgent):
                         'new_objective': opp['recommended_objective'],
                         'requires_new_campaign': True,  # Can't change objective on existing campaign
                     },
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
                     confidence=0.88,
                     expected_improvement_pct=30.0,
@@ -508,7 +508,7 @@ class FBAccountStructureAgent(BaseAgent):
                     action_data={
                         'campaign_id': opp['campaign_id']
                     },
-                    risk_level=DecisionRiskLevel.MEDIUM,
+                    risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
                     confidence=0.85,
                     expected_improvement_pct=15.0,

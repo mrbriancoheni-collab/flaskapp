@@ -25,10 +25,8 @@ class AgentCapability(Enum):
 
 class DecisionRiskLevel(Enum):
     """Risk level of a decision."""
-    LOW = "low"  # Auto-execute (e.g., add negative keyword for "free")
-    MEDIUM = "medium"  # Suggest but don't execute (e.g., bid adjustment)
-    HIGH = "high"  # Always require approval (e.g., budget change)
-    CRITICAL = "critical"  # Require approval + confirmation (e.g., pause campaign)
+    LOW = "low"    # Auto-execute immediately (e.g., add negative keyword, small bid adjustment)
+    HIGH = "high"  # Always require manual approval (e.g., budget changes, campaign creation)
 
 
 @dataclass
@@ -62,7 +60,7 @@ class AgentDecision:
     action_data: Dict[str, Any] = field(default_factory=dict)  # Specific params for execution
 
     # Risk & Approval
-    risk_level: DecisionRiskLevel = DecisionRiskLevel.MEDIUM
+    risk_level: DecisionRiskLevel = DecisionRiskLevel.HIGH
     requires_approval: bool = True
     confidence: float = 0.5  # 0.0-1.0, how confident the agent is
 
@@ -230,7 +228,13 @@ class BaseAgent(ABC):
         # Apply risk level override
         if decision.decision_type in self.risk_overrides:
             override_risk = self.risk_overrides[decision.decision_type]
-            decision.risk_level = DecisionRiskLevel(override_risk)
+            # Map legacy medium/critical values to high for backward compatibility
+            if override_risk in ('medium', 'critical'):
+                override_risk = 'high'
+            try:
+                decision.risk_level = DecisionRiskLevel(override_risk)
+            except ValueError:
+                decision.risk_level = DecisionRiskLevel.HIGH
 
             # Update requires_approval based on risk level
             if decision.risk_level == DecisionRiskLevel.LOW:
@@ -445,6 +449,7 @@ class BaseAgent(ABC):
         is_low_risk = (
             risk == DecisionRiskLevel.LOW
             or (isinstance(risk, str) and risk.lower() == 'low')
+            or (hasattr(risk, 'value') and risk.value == 'low')
         )
         return (
             is_low_risk and

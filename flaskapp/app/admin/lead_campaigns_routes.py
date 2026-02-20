@@ -2296,161 +2296,50 @@ def run_all_campaigns():
 
 
 def run_automation_job(job_id, automation_run_id):
-    """Background job to run all campaigns"""
+    """Background job to run all campaigns using LeadAutomationService"""
     from app import create_app
     from app.models_leads import AutomationRun
+    from app.services.lead_automation_service import LeadAutomationService
 
     # Create new app context for thread
     app = create_app()
 
     with app.app_context():
+        automation_run = None
         try:
             job = automation_jobs[job_id]
             automation_run = AutomationRun.query.get(automation_run_id)
 
-            # Get core campaigns
-            campaigns = LeadCampaign.query.filter_by(is_core=True).order_by(LeadCampaign.id).limit(20).all()
-            if not campaigns or len(campaigns) < 20:
-                campaigns = LeadCampaign.query.order_by(desc(LeadCampaign.updated_at)).limit(20).all()
+            job['current_operation'] = 'Running automation (scrape → enrich → email)...'
+            job['recent_logs'].append('Starting LeadAutomationService...')
 
-            job['campaigns_total'] = len(campaigns)
+            service = LeadAutomationService()
+            result = service.run_daily_automation()
 
-            # Initialize services (already imported at top)
-            scraper = SerpAPIScraperService()
-            enricher = LeadEnrichmentService()
-            outreach = BrevoOutreachService()
+            scraped   = result.get('scraped', 0)
+            enriched  = result.get('enriched', 0)
+            sent      = result.get('sent', 0)
 
-            # Process each campaign
-            for idx, campaign in enumerate(campaigns, 1):
-                try:
-                    job['current_operation'] = f"Processing campaign {idx}/20: {campaign.name}"
-                    job['recent_logs'].append(f"[{idx}/20] {campaign.name}")
-
-                    # STEP 1: Scrape (if needed)
-                    if campaign.status == 'draft':
-                        job['current_operation'] = f"[{idx}/20] Scraping: {campaign.name}"
-                        job['recent_logs'].append(f"  → Scraping leads...")
-
-                        # Scrape campaign
-                        query = f"{campaign.industry_service} {campaign.location}"
-                        results = scraper.scrape_campaign(
-                            query=query,
-                            location=campaign.location,
-                            scrape_ads=campaign.scrape_ads,
-                            scrape_maps=campaign.scrape_maps,
-                            scrape_lsa=campaign.scrape_lsa,
-                            scrape_organic=campaign.scrape_organic,
-                            max_organic=campaign.max_organic_results
-                        )
-
-                        # Save leads from scraping results
-                        source_type_mapping = {
-                            'ads': 'ad',
-                            'maps': 'map',
-                            'lsa': 'lsa',
-                            'organic': 'organic'
-                        }
-
-                        leads_created = 0
-                        for source_type, items in results.items():
-                            db_source_type = source_type_mapping.get(source_type, source_type)
-
-                            for item in items:
-                                # Check if lead already exists
-                                existing = Lead.query.filter_by(
-                                    campaign_id=campaign.id,
-                                    company_name=item['company_name']
-                                ).first()
-
-                                if existing:
-                                    continue
-
-                                lead = Lead(
-                                    campaign_id=campaign.id,
-                                    company_name=item['company_name'],
-                                    website=item.get('website'),
-                                    phone=item.get('phone'),
-                                    address=item.get('address'),
-                                    source_type=db_source_type,
-                                    source_url=item.get('source_url'),
-                                    serp_position=item.get('position'),
-                                    enrichment_status='pending',
-                                    email_status='pending'
-                                )
-                                db.session.add(lead)
-                                leads_created += 1
-
-                        db.session.commit()
-
-                        job['leads_scraped'] += leads_created
-                        job['recent_logs'].append(f"  ✓ Scraped {leads_created} leads")
-
-                        campaign.status = 'ready'
-                        campaign.scraping_completed_at = datetime.now()
-                        campaign.leads_scraped = (campaign.leads_scraped or 0) + leads_created
-                        db.session.commit()
-
-                    # STEP 2: Enrich (if needed)
-                    pending_leads = Lead.query.filter_by(
-                        campaign_id=campaign.id,
-                        enrichment_status='pending'
-                    ).limit(50).all()  # Limit to avoid timeout
-
-                    if pending_leads:
-                        job['current_operation'] = f"[{idx}/20] Enriching: {campaign.name} ({len(pending_leads)} leads)"
-                        job['recent_logs'].append(f"  → Enriching {len(pending_leads)} leads...")
-
-                        for lead in pending_leads:
-                            result = enricher.enrich_lead(lead.id)
-                            if result.get('success'):
-                                job['leads_enriched'] += 1
-
-                        job['recent_logs'].append(f"  ✓ Enriched {len(pending_leads)} leads")
-
-                    # STEP 3: Send Emails (if needed)
-                    ready_leads = Lead.query.filter_by(
-                        campaign_id=campaign.id,
-                        enrichment_status='completed',
-                        email_status='pending'
-                    ).filter(
-                        Lead.decision_maker_email.isnot(None)
-                    ).limit(campaign.daily_email_limit or 50).all()
-
-                    if ready_leads:
-                        job['current_operation'] = f"[{idx}/20] Sending emails: {campaign.name} ({len(ready_leads)} leads)"
-                        job['recent_logs'].append(f"  → Sending {len(ready_leads)} emails...")
-
-                        for lead in ready_leads:
-                            result = outreach.send_initial_email(lead.id, campaign.id)
-                            if result.get('success'):
-                                job['emails_sent'] += 1
-
-                        job['recent_logs'].append(f"  ✓ Sent {len(ready_leads)} emails")
-
-                    # Update campaign automation timestamp
-                    campaign.last_automation_run = datetime.now()
-                    db.session.commit()
-
-                    job['campaigns_processed'] += 1
-
-                except Exception as e:
-                    logger.error(f"Error processing campaign {campaign.id}: {e}")
-                    job['error_count'] += 1
-                    job['errors'].append(f"Campaign {campaign.name}: {str(e)}")
-                    job['recent_logs'].append(f"  ✗ Error: {str(e)}")
+            job['leads_scraped']       = scraped
+            job['leads_enriched']      = enriched
+            job['emails_sent']         = sent
+            job['campaigns_processed'] = result.get('total_campaigns', 0)
+            job['recent_logs'].append(f'  ✓ Scraped {scraped} campaigns')
+            job['recent_logs'].append(f'  ✓ Enriched {enriched} leads')
+            job['recent_logs'].append(f'  ✓ Sent {sent} emails')
 
             # Mark job as completed
             job['status'] = 'completed'
             job['current_operation'] = 'Completed!'
             job['completed_at'] = datetime.now()
 
-            # Update automation run
+            # Update automation run record
             automation_run.status = 'completed'
             automation_run.completed_at = datetime.now()
             automation_run.campaigns_processed = job['campaigns_processed']
-            automation_run.leads_scraped = job['leads_scraped']
-            automation_run.leads_enriched = job['leads_enriched']
-            automation_run.emails_sent = job['emails_sent']
+            automation_run.leads_scraped = scraped
+            automation_run.leads_enriched = enriched
+            automation_run.emails_sent = sent
             automation_run.error_count = job['error_count']
             automation_run.duration_minutes = int((datetime.now() - automation_run.started_at).total_seconds() / 60)
             db.session.commit()

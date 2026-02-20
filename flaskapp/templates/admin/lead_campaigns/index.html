@@ -10,15 +10,11 @@
             <p class="text-gray-600 mt-2">Scrape Google SERPs and send cold outreach emails</p>
         </div>
         <div class="flex gap-3">
-            <button id="activateAllBtn" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold">
-                <i class="fa-solid fa-play mr-2"></i>
-                Activate All
-            </button>
-            <button id="cleanupBtn" class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 font-semibold">
-                <i class="fa-solid fa-trash mr-2"></i>
-                Delete Old Campaigns
-            </button>
-            <a href="{{ url_for('lead_campaigns_bp.new_campaign') }}" class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 font-semibold">
+            <a href="{{ url_for('lead_campaigns_bp.sequences_list') }}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 font-medium text-sm border border-gray-300">
+                <i class="fa-solid fa-envelope-open-text mr-2"></i>
+                Email Sequences
+            </a>
+            <a href="{{ url_for('lead_campaigns_bp.new_campaign') }}" class="bg-indigo-600 text-white px-5 py-2 rounded-lg hover:bg-indigo-700 font-semibold text-sm">
                 <i class="fa-solid fa-plus mr-2"></i>
                 New Campaign
             </a>
@@ -218,29 +214,16 @@
             </button>
         </div>
 
-        <!-- Force Send All Button -->
+        <!-- Daily limit status -->
+        {% set emails_today = automation_progress.daily_stats.emails|default(0) %}
+        {% if emails_today >= 250 %}
         <div class="mt-4 pt-4 border-t border-gray-200">
-            <div class="bg-orange-50 rounded-lg p-4 border border-orange-200">
-                <div class="flex items-center gap-3 mb-3">
-                    <div class="w-10 h-10 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center">
-                        <i class="fa-solid fa-rocket"></i>
-                    </div>
-                    <div>
-                        <div class="font-semibold text-gray-900">Force Send to All Contacts</div>
-                        <div class="text-xs text-gray-500">Send to ALL contacts with emails who haven't received this campaign's emails yet</div>
-                    </div>
-                </div>
-                <button id="forceSendAllBtn"
-                        class="w-full bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 font-semibold flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-paper-plane"></i>
-                    Force Send to All Unsent Contacts
-                </button>
-                <p class="text-xs text-orange-600 mt-2">
-                    <i class="fa-solid fa-info-circle mr-1"></i>
-                    Bypasses scrape timing checks. Only skips unsubscribed and already-emailed contacts.
-                </p>
+            <div class="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 flex items-center gap-3 text-sm">
+                <i class="fa-solid fa-circle-info text-amber-500 text-base"></i>
+                <span class="text-amber-800"><strong>Daily email limit reached</strong> — {{ emails_today }}/250 emails sent today. Automation resets at midnight UTC.</span>
             </div>
         </div>
+        {% endif %}
     </div>
 
     {% if campaign_stats %}
@@ -717,10 +700,19 @@ async function runFullAutomation(btn) {
         });
         let emailData = await emailResponse.json();
 
-        alert(`Full Automation Complete!\n\n` +
-              `✓ Scraped: ${scrapeData.scraped || 0} campaigns\n` +
-              `✓ Enriched: ${enrichData.enriched || 0} leads\n` +
-              `✓ Emails sent: ${emailData.sent || 0}`);
+        let msg = `Full Automation Complete!\n\n`;
+        msg += `✓ Scraped: ${scrapeData.scraped || 0} campaigns\n`;
+        msg += `✓ Enriched: ${enrichData.enriched || 0} leads\n`;
+        msg += `✓ Emails sent: ${emailData.sent || 0}\n`;
+
+        // Explain zeros
+        const zeroReasons = [];
+        if (!scrapeData.scraped && scrapeData.reasons) scrapeData.reasons.forEach(r => zeroReasons.push(`• Scraping: ${r}`));
+        if (!enrichData.enriched && enrichData.reasons) enrichData.reasons.forEach(r => zeroReasons.push(`• Enrichment: ${r}`));
+        if (!emailData.sent && emailData.reasons) emailData.reasons.forEach(r => zeroReasons.push(`• Email: ${r}`));
+        if (zeroReasons.length) msg += `\nWhy zeros?\n` + zeroReasons.join('\n');
+
+        alert(msg);
         location.reload();
 
     } catch (error) {
@@ -778,22 +770,6 @@ async function forceSendAll(btn) {
 
 // Attach event listeners on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Activate All button
-    const activateAllBtn = document.getElementById('activateAllBtn');
-    if (activateAllBtn) {
-        activateAllBtn.addEventListener('click', function() {
-            activateAllCampaigns(this);
-        });
-    }
-
-    // Cleanup button
-    const cleanupBtn = document.getElementById('cleanupBtn');
-    if (cleanupBtn) {
-        cleanupBtn.addEventListener('click', function() {
-            cleanupOldCampaigns(this);
-        });
-    }
-
     // Global automation trigger buttons
     const triggerScrapeBtn = document.getElementById('triggerScrapeBtn');
     if (triggerScrapeBtn) {
@@ -820,13 +796,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (runAllAutomationBtn) {
         runAllAutomationBtn.addEventListener('click', function() {
             runFullAutomation(this);
-        });
-    }
-
-    const forceSendAllBtn = document.getElementById('forceSendAllBtn');
-    if (forceSendAllBtn) {
-        forceSendAllBtn.addEventListener('click', function() {
-            forceSendAll(this);
         });
     }
 

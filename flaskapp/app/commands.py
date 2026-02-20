@@ -13,7 +13,7 @@ from flask.cli import with_appcontext
 
 
 @click.command('run-agents')
-@click.option('--layer', default='all', type=click.Choice(['all', 'strategic', 'operational', 'tactical']),
+@click.option('--layer', default='all', type=click.Choice(['all', 'strategic', 'operational', 'tactical', 'negative_keyword']),
               help='Which agent layer to run (default: all)')
 @click.option('--account', type=int, help='Run for specific account ID only')
 @with_appcontext
@@ -22,11 +22,12 @@ def run_agents_command(layer, account):
     Run AI agents for Google Ads optimization.
 
     Examples:
-        flask run-agents --layer tactical  # Run hourly tactical agents
-        flask run-agents --layer operational  # Run 4-hourly operational agents
-        flask run-agents --layer strategic  # Run daily strategic agent
-        flask run-agents --all  # Run all agents
-        flask run-agents --account 123  # Run for specific account only
+        flask run-agents --layer tactical         # Run bid + ad copy agents (every 2h)
+        flask run-agents --layer negative_keyword # Run negative keyword agent (daily)
+        flask run-agents --layer operational      # Run budget/quality agents (every 6h)
+        flask run-agents --layer strategic        # Run strategic agent (daily)
+        flask run-agents --all                    # Run all agents
+        flask run-agents --account 123            # Run for specific account only
     """
     from app.tasks.agent_scheduler import run_agents_for_all_accounts, run_agents_for_account
     from app import db

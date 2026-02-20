@@ -474,6 +474,69 @@ def run_agents_for_account(
         except Exception as e:
             current_app.logger.warning(f"Search terms fetch failed: {e}")
 
+        # 5. Ad groups + ads — needed by AdCopyAgent
+        ad_groups_list = []
+        try:
+            ad_rows = _ads_query("""
+                SELECT
+                    ad_group_ad.ad.id,
+                    ad_group_ad.ad_group,
+                    ad_group_ad.status,
+                    ad_group.id,
+                    ad_group.name,
+                    campaign.id,
+                    metrics.clicks,
+                    metrics.impressions,
+                    metrics.ctr,
+                    metrics.cost_micros
+                FROM ad_group_ad
+                WHERE ad_group_ad.status != 'REMOVED'
+                  AND segments.date DURING LAST_30_DAYS
+                ORDER BY metrics.impressions DESC
+                LIMIT 200
+            """)
+            _ag_map = {}
+            for row in ad_rows:
+                ag_resource = row.get("adGroupAd", {}).get("adGroup", "")
+                ag_id = ag_resource.split("/")[-1] if ag_resource else ""
+                if not ag_id:
+                    continue
+                ag_info = row.get("adGroup", {})
+                m = row.get("metrics", {})
+                impressions = int(m.get("impressions", 0))
+                ctr = float(m.get("ctr", 0)) * 100
+                ad_id = str(row.get("adGroupAd", {}).get("ad", {}).get("id", ""))
+                if ag_id not in _ag_map:
+                    _ag_map[ag_id] = {
+                        'id': ag_id,
+                        'name': ag_info.get("name", ""),
+                        'campaign_id': str(row.get("campaign", {}).get("id", "")),
+                        'ads': [],
+                        '_total_ctr': 0.0,
+                        '_ad_count': 0,
+                    }
+                _ag_map[ag_id]['ads'].append({
+                    'id': ad_id,
+                    'status': str(row.get("adGroupAd", {}).get("status", "")).split(".")[-1],
+                    'impressions': impressions,
+                    'ctr': ctr,
+                    'clicks': int(m.get("clicks", 0)),
+                })
+                _ag_map[ag_id]['_total_ctr'] += ctr
+                _ag_map[ag_id]['_ad_count'] += 1
+
+            for ag in _ag_map.values():
+                avg_ctr = ag['_total_ctr'] / ag['_ad_count'] if ag['_ad_count'] > 0 else 0
+                ad_groups_list.append({
+                    'id': ag['id'],
+                    'name': ag['name'],
+                    'campaign_id': ag['campaign_id'],
+                    'avg_ctr': avg_ctr,
+                    'ads': ag['ads'],
+                })
+        except Exception as e:
+            current_app.logger.warning(f"Ad groups fetch failed: {e}")
+
         context = {
             'account_id': account_id,
             'customer_id': customer_id,
@@ -490,6 +553,7 @@ def run_agents_for_account(
             'has_pmax_campaigns': has_pmax,
             'keywords': keywords_list,
             'search_terms': search_terms_list,
+            'ad_groups': ad_groups_list,
             'total_budget': total_spend / 3,
             'target_cpa': 80,         # top-level for KeywordOptimizerAgent
             'target_cpl': 80,         # top-level for CampaignManagerAgent
@@ -515,6 +579,7 @@ def run_agents_for_account(
             'has_pmax_campaigns': False,
             'keywords': [],
             'search_terms': [],
+            'ad_groups': [],
             'total_budget': 0,
             'business_goals': {'target_roas': 3.0, 'target_cpl': 80}
         }

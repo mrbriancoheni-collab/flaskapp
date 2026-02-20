@@ -347,9 +347,66 @@ def _fetch_live_gads_data(refresh_token: str, customer_id: str) -> dict:
                 'ctr': clicks / impressions if impressions > 0 else 0,
             })
 
+        # ── Ad Groups + Ads (last 90 days) — needed by AdCopyAgent ──────
+        ad_rows = _run_query("""
+            SELECT
+                ad_group_ad.ad.id,
+                ad_group_ad.ad_group,
+                ad_group_ad.status,
+                ad_group.id,
+                ad_group.name,
+                campaign.id,
+                metrics.clicks,
+                metrics.impressions,
+                metrics.ctr,
+                metrics.cost_micros
+            FROM ad_group_ad
+            WHERE ad_group_ad.status != 'REMOVED'
+              AND segments.date DURING LAST_90_DAYS
+            ORDER BY metrics.impressions DESC
+            LIMIT 200
+        """)
+
+        # Group ads by ad_group to build the ad_groups list
+        _ag_map: dict = {}
+        for row in ad_rows:
+            ag_id = str(row.ad_group.id)
+            impressions = int(row.metrics.impressions)
+            ctr = float(row.metrics.ctr) * 100  # fraction → percentage
+            if ag_id not in _ag_map:
+                _ag_map[ag_id] = {
+                    'id': ag_id,
+                    'name': row.ad_group.name,
+                    'campaign_id': str(row.campaign.id),
+                    'ads': [],
+                    '_total_ctr': 0.0,
+                    '_ad_count': 0,
+                }
+            _ag_map[ag_id]['ads'].append({
+                'id': str(row.ad_group_ad.ad.id),
+                'status': str(row.ad_group_ad.status).split('.')[-1],
+                'impressions': impressions,
+                'ctr': ctr,
+                'clicks': int(row.metrics.clicks),
+            })
+            _ag_map[ag_id]['_total_ctr'] += ctr
+            _ag_map[ag_id]['_ad_count'] += 1
+
+        ad_groups = []
+        for ag in _ag_map.values():
+            avg_ctr = ag['_total_ctr'] / ag['_ad_count'] if ag['_ad_count'] > 0 else 0
+            ad_groups.append({
+                'id': ag['id'],
+                'name': ag['name'],
+                'campaign_id': ag['campaign_id'],
+                'avg_ctr': avg_ctr,
+                'ads': ag['ads'],
+            })
+
         current_app.logger.info(
             f"[agents] Live Google Ads fetch: {len(campaigns)} campaigns, "
-            f"{len(keywords)} keywords, {len(search_terms)} search terms"
+            f"{len(keywords)} keywords, {len(search_terms)} search terms, "
+            f"{len(ad_groups)} ad groups"
         )
 
         return {
@@ -361,6 +418,7 @@ def _fetch_live_gads_data(refresh_token: str, customer_id: str) -> dict:
             'campaigns': campaigns,
             'keywords': keywords,
             'search_terms': search_terms,
+            'ad_groups': ad_groups,
             'has_search_campaigns': has_search,
             'has_pmax_campaigns': has_pmax,
         }
@@ -372,6 +430,7 @@ def _fetch_live_gads_data(refresh_token: str, customer_id: str) -> dict:
             'campaigns': [],
             'keywords': [],
             'search_terms': [],
+            'ad_groups': [],
             'has_search_campaigns': False,
             'has_pmax_campaigns': False,
         }
@@ -1222,6 +1281,7 @@ def _run_agents_internal():
             'campaigns': campaigns,
             'keywords': keywords,
             'search_terms': search_terms,
+            'ad_groups': perf_data.get('ad_groups', []),
             'has_search_campaigns': has_search_campaigns,
             'has_pmax_campaigns': has_pmax_campaigns,
             'total_budget': total_spend / 3,  # Monthly budget estimate
@@ -1285,6 +1345,7 @@ def _run_agents_internal():
         'campaigns': len(context.get('campaigns', [])),
         'keywords': len(context.get('keywords', [])),
         'search_terms': len(context.get('search_terms', [])),
+        'ad_groups': len(context.get('ad_groups', [])),
         'total_spend_90d': context.get('performance_90d', {}).get('spend', 0),
         'has_search_campaigns': context.get('has_search_campaigns', False),
         'has_pmax_campaigns': context.get('has_pmax_campaigns', False),

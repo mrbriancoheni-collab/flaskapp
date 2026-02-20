@@ -624,34 +624,16 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             for row in db.session.query(EmailUnsubscribe.email).all()
         )
 
-        # Cache sequences per campaign so we only hit the DB once per campaign.
-        # Key is campaign.id or None (for contacts whose campaign no longer exists).
+        # Cache sequences per campaign (keyed by campaign.id or None).
+        # Only sequences that exist in email_sequences are used — no auto-creation.
         sequence_cache: Dict = {}
-
-        # Lazily resolved global fallback — any active step-1 sequence in the system.
-        _fallback_seq: list = [None]  # list so the closure can mutate it
-
-        def _global_fallback():
-            if _fallback_seq[0] is None:
-                _fallback_seq[0] = EmailSequence.query.filter_by(
-                    step_number=1, is_active=True
-                ).first()
-            return _fallback_seq[0]
 
         def _get_sequence(campaign):
             cid = campaign.id if campaign else None
             if cid not in sequence_cache:
-                if campaign:
-                    seq = EmailSequence.query.filter_by(
-                        campaign_id=campaign.id, step_number=1, is_active=True
-                    ).first()
-                    if not seq:
-                        seq = self._ensure_campaign_has_sequence(campaign)
-                    if not seq:
-                        seq = _global_fallback()
-                else:
-                    seq = _global_fallback()
-                sequence_cache[cid] = seq
+                sequence_cache[cid] = EmailSequence.query.filter_by(
+                    campaign_id=cid, step_number=1, is_active=True
+                ).first() if cid else None
             return sequence_cache[cid]
 
         # ── Primary path: LeadContact records with pending status ─────────────

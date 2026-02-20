@@ -902,7 +902,14 @@
             {% if not loop.last %}<div class="w-0.5 h-full bg-gray-200"></div>{% endif %}
           </div>
           <div class="flex-1 {% if not loop.last %}pb-4{% endif %}">
-            <div class="text-sm text-gray-500">{{ change.time }}</div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-500">{{ change.time }}</span>
+              {% if change.status == 'pending' %}
+              <span class="text-xs font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Pending</span>
+              {% elif change.status == 'approved' %}
+              <span class="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Approved</span>
+              {% endif %}
+            </div>
             <div class="font-semibold text-gray-900 mt-1">
               <i class="fa-solid {{change.icon}} text-{{change.color}}-600 mr-1"></i>
               {{ change.title or change.description }}

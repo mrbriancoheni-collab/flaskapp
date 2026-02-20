@@ -2812,19 +2812,19 @@ def _calculate_historical_improvement(account_id, connected):
         # Calculate current month metrics
         current_month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-        # Query ai_actions table
+        # Query ai_actions table (count all non-rejected/failed actions)
         current_month_savings = db.session.query(
             func.sum(AIAction.estimated_monthly_savings)
         ).filter(
             AIAction.account_id == account_id,
-            AIAction.status == 'executed',
-            AIAction.executed_at >= current_month_start
+            AIAction.status.in_(['pending', 'approved', 'executed']),
+            AIAction.created_at >= current_month_start
         ).scalar() or 0
 
         current_month_actions = AIAction.query.filter(
             AIAction.account_id == account_id,
-            AIAction.status == 'executed',
-            AIAction.executed_at >= current_month_start
+            AIAction.status.in_(['pending', 'approved', 'executed']),
+            AIAction.created_at >= current_month_start
         ).count()
 
         # Also query agent_decisions table
@@ -2833,8 +2833,8 @@ def _calculate_historical_improvement(account_id, connected):
                 text("""
                     SELECT COALESCE(SUM(expected_monthly_savings), 0)
                     FROM agent_decisions
-                    WHERE account_id = :aid AND status = 'executed'
-                    AND (executed_at >= :start OR created_at >= :start)
+                    WHERE account_id = :aid AND status IN ('pending', 'approved', 'executed')
+                    AND created_at >= :start
                 """),
                 {"aid": account_id, "start": current_month_start}
             ).scalar() or 0
@@ -2844,8 +2844,8 @@ def _calculate_historical_improvement(account_id, connected):
                 text("""
                     SELECT COUNT(*)
                     FROM agent_decisions
-                    WHERE account_id = :aid AND status = 'executed'
-                    AND (executed_at >= :start OR created_at >= :start)
+                    WHERE account_id = :aid AND status IN ('pending', 'approved', 'executed')
+                    AND created_at >= :start
                 """),
                 {"aid": account_id, "start": current_month_start}
             ).scalar() or 0
@@ -2860,16 +2860,16 @@ def _calculate_historical_improvement(account_id, connected):
             func.sum(AIAction.estimated_monthly_savings)
         ).filter(
             AIAction.account_id == account_id,
-            AIAction.status == 'executed',
-            AIAction.executed_at >= prev_month_start,
-            AIAction.executed_at < current_month_start
+            AIAction.status.in_(['pending', 'approved', 'executed']),
+            AIAction.created_at >= prev_month_start,
+            AIAction.created_at < current_month_start
         ).scalar() or 0
 
         prev_month_actions = AIAction.query.filter(
             AIAction.account_id == account_id,
-            AIAction.status == 'executed',
-            AIAction.executed_at >= prev_month_start,
-            AIAction.executed_at < current_month_start
+            AIAction.status.in_(['pending', 'approved', 'executed']),
+            AIAction.created_at >= prev_month_start,
+            AIAction.created_at < current_month_start
         ).count()
 
         # Also query agent_decisions for previous month
@@ -2878,9 +2878,8 @@ def _calculate_historical_improvement(account_id, connected):
                 text("""
                     SELECT COALESCE(SUM(expected_monthly_savings), 0)
                     FROM agent_decisions
-                    WHERE account_id = :aid AND status = 'executed'
-                    AND (executed_at >= :start OR created_at >= :start)
-                    AND (executed_at < :end OR created_at < :end)
+                    WHERE account_id = :aid AND status IN ('pending', 'approved', 'executed')
+                    AND created_at >= :start AND created_at < :end
                 """),
                 {"aid": account_id, "start": prev_month_start, "end": current_month_start}
             ).scalar() or 0
@@ -2890,9 +2889,8 @@ def _calculate_historical_improvement(account_id, connected):
                 text("""
                     SELECT COUNT(*)
                     FROM agent_decisions
-                    WHERE account_id = :aid AND status = 'executed'
-                    AND (executed_at >= :start OR created_at >= :start)
-                    AND (executed_at < :end OR created_at < :end)
+                    WHERE account_id = :aid AND status IN ('pending', 'approved', 'executed')
+                    AND created_at >= :start AND created_at < :end
                 """),
                 {"aid": account_id, "start": prev_month_start, "end": current_month_start}
             ).scalar() or 0
@@ -2909,17 +2907,17 @@ def _calculate_historical_improvement(account_id, connected):
         if prev_month_actions > 0:
             actions_improvement = ((current_month_actions - prev_month_actions) / prev_month_actions) * 100
 
-        # Estimate total cumulative savings (from both tables)
+        # Estimate total cumulative savings (from both tables, all non-rejected decisions)
         total_savings = db.session.query(
             func.sum(AIAction.estimated_monthly_savings)
         ).filter(
             AIAction.account_id == account_id,
-            AIAction.status == 'executed'
+            AIAction.status.in_(['pending', 'approved', 'executed'])
         ).scalar() or 0
 
         try:
             agent_total_savings = db.session.execute(
-                text("SELECT COALESCE(SUM(expected_monthly_savings), 0) FROM agent_decisions WHERE account_id = :aid AND status = 'executed'"),
+                text("SELECT COALESCE(SUM(expected_monthly_savings), 0) FROM agent_decisions WHERE account_id = :aid AND status IN ('pending', 'approved', 'executed')"),
                 {"aid": account_id}
             ).scalar() or 0
             total_savings += float(agent_total_savings)
@@ -3202,10 +3200,10 @@ def ads_performance():
         status = 'red'
 
     # Get recent AI actions for timeline (last 10) from BOTH tables
-    recent_actions = AIAction.query.filter_by(
-        account_id=aid,
-        status='executed'
-    ).order_by(desc(AIAction.executed_at)).limit(10).all()
+    recent_actions = AIAction.query.filter(
+        AIAction.account_id == aid,
+        AIAction.status.in_(['pending', 'approved', 'executed'])
+    ).order_by(desc(AIAction.created_at)).limit(10).all()
 
     # Also get recent agent_decisions and convert to compatible format
     try:
@@ -3214,9 +3212,9 @@ def ads_performance():
                 SELECT id, decision_type as action_type, title, description,
                        expected_monthly_savings as estimated_monthly_savings,
                        campaign_id, executed_at, created_at,
-                       reasoning, confidence
+                       reasoning, confidence, status
                 FROM agent_decisions
-                WHERE account_id = :aid AND status = 'executed'
+                WHERE account_id = :aid AND status IN ('pending', 'approved', 'executed')
                 ORDER BY COALESCE(executed_at, created_at) DESC
                 LIMIT 10
             """),
@@ -3236,6 +3234,7 @@ def ads_performance():
                 self.reasoning = row.get('reasoning')
                 self.confidence_score = float(row['confidence']) if row.get('confidence') is not None else None
                 self.can_undo = False
+                self.status = row.get('status', 'pending')
 
             @property
             def is_undoable(self):
@@ -3397,11 +3396,18 @@ def ads_performance():
             icon = 'fa-robot'
             color = 'blue'
 
-        # Format time
-        if action.executed_at:
-            time_str = action.executed_at.strftime('%-I:%M %p')
+        # Format time — include date for older items
+        action_dt = action.executed_at
+        if action_dt:
+            now = datetime.utcnow()
+            if action_dt.date() == now.date():
+                time_str = action_dt.strftime('%-I:%M %p')
+            else:
+                time_str = action_dt.strftime('%b %-d, %-I:%M %p')
         else:
             time_str = 'Unknown'
+
+        action_status = getattr(action, 'status', 'pending')
 
         recent_changes.append({
             'type': action.action_type,
@@ -3415,6 +3421,7 @@ def ads_performance():
             'confidence': action.confidence_score,
             'can_undo': action.is_undoable,
             'action_id': action.id,
+            'status': action_status,
         })
 
     return render_template(

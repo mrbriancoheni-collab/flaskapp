@@ -1038,6 +1038,16 @@ def _run_agents_internal():
                 'error': str(e)
             })
 
+    # Build data context summary so callers can diagnose why agents produced 0 decisions
+    data_summary = {
+        'campaigns': len(context.get('campaigns', [])),
+        'keywords': len(context.get('keywords', [])),
+        'search_terms': len(context.get('search_terms', [])),
+        'total_spend_90d': context.get('performance_90d', {}).get('spend', 0),
+        'has_search_campaigns': context.get('has_search_campaigns', False),
+        'has_pmax_campaigns': context.get('has_pmax_campaigns', False),
+    }
+
     return jsonify({
         "success": True,
         "message": f"Ran {len(agents)} agents successfully",
@@ -1046,5 +1056,6 @@ def _run_agents_internal():
             "auto_executed": total_auto_executed,
             "pending_approval": total_pending_approval
         },
+        "data_context": data_summary,
         "results": results
     })

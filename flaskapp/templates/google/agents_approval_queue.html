@@ -204,10 +204,16 @@
     <div class="bg-white rounded-lg shadow-lg p-12 text-center">
         <i class="fa-solid fa-check-circle text-green-500 text-6xl mb-4"></i>
         <h2 class="text-2xl font-bold text-gray-900 mb-2">All Caught Up!</h2>
-        <p class="text-gray-600">No pending decisions requiring your approval. Your AI agents are working autonomously.</p>
-        <a href="{{ url_for('agents_bp.dashboard') }}" class="inline-block mt-6 bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700">
-            View Agent Dashboard
-        </a>
+        <p class="text-gray-600">No pending decisions. Run agents to check for new optimization opportunities.</p>
+        <div class="mt-6 flex justify-center gap-4">
+            <button id="runAgentsEmptyBtn" onclick="runAgentsNow()"
+                class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 font-semibold">
+                <i class="fa-solid fa-play mr-2"></i>Run Agents Now
+            </button>
+            <a href="{{ url_for('agents_bp.dashboard') }}" class="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 font-semibold">
+                View Dashboard
+            </a>
+        </div>
     </div>
     {% endif %}
 </div>
@@ -283,13 +289,24 @@ function runAgentsNow() {
     .then(data => {
         if (data.success) {
             const summary = data.summary;
-            alert(
-                `Agents ran successfully!\n\n` +
-                `Total Decisions: ${summary.total_decisions}\n` +
-                `Auto-Executed: ${summary.auto_executed}\n` +
-                `Pending Approval: ${summary.pending_approval}\n\n` +
-                `Reloading page to show new decisions...`
-            );
+            const ctx = data.data_context || {};
+            let msg = `Agents ran successfully!\n\n` +
+                `✓ Total Decisions: ${summary.total_decisions}\n` +
+                `✓ Auto-Executed: ${summary.auto_executed}\n` +
+                `✓ Pending Approval: ${summary.pending_approval}`;
+
+            if (summary.total_decisions === 0) {
+                msg += `\n\n— Why 0 decisions? —\n`;
+                msg += `Campaigns found: ${ctx.campaigns || 0}\n`;
+                msg += `Keywords found: ${ctx.keywords || 0}\n`;
+                msg += `Search terms found: ${ctx.search_terms || 0}\n`;
+                msg += `90-day spend: $${(ctx.total_spend_90d || 0).toFixed(0)}\n`;
+                if (!ctx.campaigns) {
+                    msg += `\nNo active campaigns detected. Agents need running campaigns to optimize.`;
+                }
+            }
+
+            alert(msg + '\n\nReloading...');
             location.reload();
         } else {
             alert('Error running agents: ' + (data.error || 'Unknown error'));

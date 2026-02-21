@@ -65,10 +65,8 @@
 
       // Only track if user spent more than 1 second
       if (timeOnPage > 1) {
-        navigator.sendBeacon(
-          '/pv/pageview/' + pageViewId + '/time',
-          JSON.stringify({ time_on_page: timeOnPage })
-        );
+        var blob = new Blob([JSON.stringify({ time_on_page: timeOnPage })], { type: 'application/json' });
+        navigator.sendBeacon('/pv/pageview/' + pageViewId + '/time', blob);
       }
     }
   }

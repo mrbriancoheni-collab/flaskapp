@@ -11,6 +11,7 @@ Checks (in order):
   3. Generic/role-based local-part block (info@, admin@, noreply@, etc.)
   4. Minimum local-part and domain sanity
 """
+import difflib
 import re
 import logging
 
@@ -28,7 +29,28 @@ _FREE_DOMAINS = {
     'aol.com', 'msn.com',
     'protonmail.com', 'pm.me',
     'zohomail.com',
+    'mail.com',
 }
+
+# Similarity threshold for typo detection (0–1). 0.85 catches ~1-character
+# typos (missing, extra, or swapped single char) against known free domains
+# without false-positives on real business domains.
+_TYPO_CUTOFF = 0.85
+
+
+def _is_typo_of_free_domain(domain: str) -> bool:
+    """
+    Return True if *domain* looks like a misspelling of a known free/consumer
+    email domain (e.g. 'yaho.com' → 'yahoo.com', 'gmial.com' → 'gmail.com').
+
+    Uses difflib.get_close_matches which implements SequenceMatcher — no
+    external dependencies required.
+    """
+    matches = difflib.get_close_matches(domain, _FREE_DOMAINS, n=1, cutoff=_TYPO_CUTOFF)
+    if matches:
+        logger.debug(f"Domain '{domain}' looks like typo of free domain '{matches[0]}'")
+        return True
+    return False
 
 # Generic role-based local parts — these go to shared inboxes, are rarely
 # monitored by a decision-maker, and are common spam traps.
@@ -71,11 +93,12 @@ def validate_email_for_outreach(email: str) -> tuple:
         reason is '' when valid, a short error code when invalid.
 
     Error codes:
-        'empty'           — blank or None
-        'bad_format'      — fails basic RFC structure check
-        'free_domain'     — consumer domain (gmail, yahoo, etc.)
-        'generic_local'   — role-based address (info@, admin@, etc.)
-        'local_too_short' — local part too short to be a real person
+        'empty'            — blank or None
+        'bad_format'       — fails basic RFC structure check
+        'free_domain'      — consumer domain (gmail, yahoo, etc.)
+        'typo_free_domain' — looks like a typo of a free domain (yaho.com, gmial.com)
+        'generic_local'    — role-based address (info@, admin@, etc.)
+        'local_too_short'  — local part too short to be a real person
     """
     if not email or not email.strip():
         return False, 'empty'
@@ -89,9 +112,13 @@ def validate_email_for_outreach(email: str) -> tuple:
 
     local, domain = email.rsplit('@', 1)
 
-    # 2. Free/consumer email domain
+    # 2. Free/consumer email domain (exact match)
     if domain in _FREE_DOMAINS:
         return False, 'free_domain'
+
+    # 2b. Looks like a typo of a free domain (yaho.com, gmial.com, yahho.com)
+    if _is_typo_of_free_domain(domain):
+        return False, 'typo_free_domain'
 
     # 3. Generic role-based local part (exact match or with dots/hyphens stripped)
     normalised_local = re.sub(r'[.\-_]', '', local)

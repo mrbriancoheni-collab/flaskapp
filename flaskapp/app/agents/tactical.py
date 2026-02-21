@@ -337,6 +337,7 @@ class NegativeKeywordAgent(BaseAgent):
         # 2. LLM-based business relevance check for remaining terms
         business_desc = context.get('business_description', '')
         business_services = context.get('business_services', '')
+        negative_keyword_examples = context.get('negative_keyword_examples', '')
 
         if business_desc:
             remaining_terms = [
@@ -346,7 +347,8 @@ class NegativeKeywordAgent(BaseAgent):
 
             if remaining_terms:
                 llm_results = self._evaluate_terms_with_llm(
-                    remaining_terms, business_desc, business_services
+                    remaining_terms, business_desc, business_services,
+                    negative_keyword_examples
                 )
 
                 for term in remaining_terms:
@@ -396,7 +398,8 @@ class NegativeKeywordAgent(BaseAgent):
         self,
         search_terms: List[Dict[str, Any]],
         business_desc: str,
-        business_services: str
+        business_services: str,
+        negative_keyword_examples: str = ''
     ) -> Dict[str, Dict]:
         """Use LLM to evaluate search term relevance to the business."""
         import os
@@ -414,11 +417,19 @@ class NegativeKeywordAgent(BaseAgent):
         if business_services:
             business_context += f"\nServices offered: {business_services}"
 
+        # Build the guidance section if the account has provided intent rules / examples
+        guidance_section = ""
+        if negative_keyword_examples:
+            guidance_section = f"""
+ACCOUNT-SPECIFIC INTENT GUIDANCE (use this as your primary signal):
+{negative_keyword_examples}
+"""
+
         prompt = f"""You are a Google Ads negative keyword analyst. Analyze each search term and determine if it is RELEVANT or IRRELEVANT to this business.
 
 {business_context}
-
-A term is RELEVANT if a person searching it could reasonably become a paying customer for the specific services listed. A term is IRRELEVANT if it relates to a different service, industry, or has no purchase intent for these services.
+{guidance_section}
+A term is RELEVANT if a person searching it could reasonably become a paying customer for the specific services listed. A term is IRRELEVANT if it targets a different service category, indicates the searcher wants to DIY rather than hire a professional, or reflects intent to purchase/install a product rather than engage a service provider.
 
 Foreign language terms that relate to the business services should be marked RELEVANT.
 
@@ -428,7 +439,7 @@ Search terms:
 Respond ONLY with valid JSON — an array of objects:
 [{{"term": "the search term", "irrelevant": true/false, "reason": "brief explanation"}}]
 
-Be conservative: when in doubt, mark as RELEVANT."""
+{'Apply the account-specific intent guidance strictly — if a term clearly matches an irrelevant pattern described above, mark it IRRELEVANT. Otherwise, when in doubt, mark as RELEVANT.' if negative_keyword_examples else 'When in doubt, mark as RELEVANT.'}
 
         try:
             from openai import OpenAI

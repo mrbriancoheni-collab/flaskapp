@@ -28,6 +28,11 @@ class BrevoOutreachService:
         self.api_key = os.getenv('BREVO_API_KEY') or os.getenv('SENDINBLUE_API_KEY')
         self.from_email = os.getenv('BREVO_FROM_EMAIL', 'noreply@fieldsprout.io')
         self.from_name = os.getenv('BREVO_FROM_NAME', 'FieldSprout')
+        self.base_url_app = os.getenv('BASE_URL', '').rstrip('/')
+        self.company_address = os.getenv(
+            'BREVO_COMPANY_ADDRESS',
+            'FieldSprout Inc., 1234 Main St, Suite 100, Austin, TX 78701'
+        )
 
         if not self.api_key:
             logger.warning("BREVO_API_KEY environment variable not set - email sending will not work")
@@ -38,6 +43,15 @@ class BrevoOutreachService:
             'api-key': self.api_key or '',
             'content-type': 'application/json'
         }
+
+    def get_unsubscribe_url(self, email: str, campaign_id: Optional[int] = None) -> str:
+        """Generate a full unsubscribe URL for the given recipient."""
+        from urllib.parse import urlencode
+        params = {'email': email}
+        if campaign_id:
+            params['campaign'] = campaign_id
+        base = self.base_url_app or ''
+        return f"{base}/unsubscribe?{urlencode(params)}"
 
     def send_email(
         self,
@@ -50,7 +64,8 @@ class BrevoOutreachService:
         tags: Optional[List[str]] = None,
         custom_vars: Optional[Dict] = None,
         sequence_step: int = 1,
-        skip_dedup_check: bool = False
+        skip_dedup_check: bool = False,
+        unsubscribe_url: Optional[str] = None
     ) -> Dict:
         """
         Send email via Brevo API
@@ -88,28 +103,39 @@ class BrevoOutreachService:
             }
 
         try:
+            # Always generate an unsubscribe URL — required by Gmail/Yahoo/Brevo
+            if not unsubscribe_url:
+                unsubscribe_url = self.get_unsubscribe_url(to_email)
+
+            # Inject unsubscribe footer into HTML body before sending
+            body_html = self.add_unsubscribe_footer(body_html, unsubscribe_url)
+
+            # List-Unsubscribe headers required by Gmail/Yahoo (Feb 2024) and enforced
+            # by Brevo for bulk outreach. Without these, Brevo blocks the email.
+            email_headers = {
+                "List-Unsubscribe": (
+                    f"<mailto:{self.from_email}?subject=unsubscribe>, "
+                    f"<{unsubscribe_url}>"
+                ),
+                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            }
+            if not track_opens:
+                email_headers["X-Mailin-Tag"] = "no-tracking"
+
             payload = {
                 "sender": {
                     "name": self.from_name,
                     "email": self.from_email
                 },
-                "to": [
-                    {
-                        "email": to_email
-                    }
-                ],
+                "to": [{"email": to_email}],
                 "subject": subject,
                 "htmlContent": body_html,
+                "headers": email_headers,
             }
 
             # Add text version if provided
             if body_text:
                 payload["textContent"] = body_text
-
-            # Add tracking
-            if not track_opens:
-                payload["headers"] = payload.get("headers", {})
-                payload["headers"]["X-Mailin-Tag"] = "no-tracking"
 
             # Add tags
             if tags:
@@ -443,14 +469,14 @@ class BrevoOutreachService:
         return result
 
     def add_unsubscribe_footer(self, html_body: str, unsubscribe_url: str) -> str:
-        """Add CAN-SPAM compliant unsubscribe footer"""
+        """Add CAN-SPAM compliant unsubscribe footer with physical address."""
         footer = f'''
-        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ccc; font-size: 12px; color: #666;">
+        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ccc; font-size: 12px; color: #666; font-family: Arial, sans-serif;">
             <p>You received this email because we found your business online and thought our services might be helpful.</p>
             <p><a href="{unsubscribe_url}" style="color: #666;">Unsubscribe from future emails</a></p>
             <p style="margin-top: 10px; font-size: 11px;">
-                FieldSprout Inc.<br>
-                This is a commercial email. CAN-SPAM Act compliant.
+                {self.company_address}<br>
+                This is a commercial email sent in compliance with the CAN-SPAM Act.
             </p>
         </div>
         '''

@@ -64,6 +64,8 @@ class Config:
     BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
     BREVO_FROM_EMAIL = os.environ.get("BREVO_FROM_EMAIL", "noreply@fieldsprout.io")
     BREVO_FROM_NAME = os.environ.get("BREVO_FROM_NAME", "FieldSprout")
+    # Physical mailing address shown in CAN-SPAM footer — required by law and Brevo
+    BREVO_COMPANY_ADDRESS = os.environ.get("BREVO_COMPANY_ADDRESS", "FieldSprout Inc., 1234 Main St, Suite 100, Austin, TX 78701")
 
     # Lead automation enabled by default
     LEAD_AUTOMATION_ENABLED = os.environ.get("LEAD_AUTOMATION_ENABLED", "True").lower() == "true"

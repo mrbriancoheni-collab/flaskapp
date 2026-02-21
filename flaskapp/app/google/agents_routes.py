@@ -25,7 +25,8 @@ def _get_account_ads_settings(account_id: int) -> dict:
             WHERE account_id = :account_id
               AND setting_key IN (
                 'ads_customer_value', 'ads_target_roas', 'ads_target_cpl',
-                'business_description', 'business_services', 'business_name'
+                'business_description', 'business_services', 'business_name',
+                'negative_keyword_examples'
               )
         """)
 
@@ -36,17 +37,20 @@ def _get_account_ads_settings(account_id: int) -> dict:
         # Also try fetching business info from the accounts table directly
         biz_desc = settings.get('business_description', '')
         biz_services = settings.get('business_services', '')
-        if not biz_desc:
+        nk_examples = settings.get('negative_keyword_examples', '')
+        if not biz_desc or not nk_examples:
             try:
                 acct_query = text("""
-                    SELECT business_description, services_offered, business_name
+                    SELECT business_description, services_offered, business_name,
+                           negative_keyword_examples
                     FROM accounts WHERE id = :account_id LIMIT 1
                 """)
                 with db.engine.connect() as conn:
                     row = conn.execute(acct_query, {"account_id": account_id}).first()
                 if row:
-                    biz_desc = row.business_description or ''
-                    biz_services = row.services_offered or biz_services
+                    biz_desc = biz_desc or row.business_description or ''
+                    biz_services = biz_services or row.services_offered or ''
+                    nk_examples = nk_examples or (row.negative_keyword_examples or '')
             except Exception:
                 pass
 
@@ -56,6 +60,7 @@ def _get_account_ads_settings(account_id: int) -> dict:
             'target_cpl': float(settings.get('ads_target_cpl', 80)),
             'business_description': biz_desc,
             'business_services': biz_services,
+            'negative_keyword_examples': nk_examples,
         }
     except Exception:
         # Table might not exist or other error - return defaults
@@ -65,6 +70,7 @@ def _get_account_ads_settings(account_id: int) -> dict:
             'target_cpl': 80,
             'business_description': '',
             'business_services': '',
+            'negative_keyword_examples': '',
         }
 
 
@@ -1325,6 +1331,7 @@ def _run_agents_internal():
             # Business description enables NegativeKeywordAgent LLM relevance analysis
             'business_description': account_settings.get('business_description', ''),
             'business_services': account_settings.get('business_services', ''),
+            'negative_keyword_examples': account_settings.get('negative_keyword_examples', ''),
             'performance_90d': {
                 'roas': overall_roas,
                 'spend': total_spend,

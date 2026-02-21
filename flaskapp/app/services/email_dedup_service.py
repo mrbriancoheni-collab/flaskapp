@@ -203,6 +203,13 @@ class EmailDedupService:
 
         email = email.strip()
 
+        # Validate format and quality before any DB checks
+        from app.services.email_validation import validate_email_for_outreach
+        valid, reason = validate_email_for_outreach(email)
+        if not valid:
+            logger.info(f"Skipping email {email}: failed validation ({reason})")
+            return False, reason
+
         # Check unsubscribe list
         if check_unsubscribed and self.is_unsubscribed(email):
             logger.debug(f"Email {email} is unsubscribed")

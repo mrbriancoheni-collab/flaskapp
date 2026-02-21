@@ -94,6 +94,19 @@ class BrevoOutreachService:
             except Exception as e:
                 logger.warning(f"Dedup check failed for {to_email}, proceeding anyway: {e}")
 
+        # Last-ditch email validation — catches bad addresses even when
+        # skip_dedup_check=True or the dedup service call raised an exception.
+        from app.services.email_validation import validate_email_for_outreach
+        valid, val_reason = validate_email_for_outreach(to_email)
+        if not valid:
+            logger.warning(f"Blocked send to {to_email}: failed email validation ({val_reason})")
+            return {
+                'success': False,
+                'skipped': True,
+                'skip_reason': val_reason,
+                'error': f'Invalid email address: {val_reason}'
+            }
+
         # Check if API key is configured
         if not self.api_key:
             logger.error("Cannot send email: BREVO_API_KEY not configured")

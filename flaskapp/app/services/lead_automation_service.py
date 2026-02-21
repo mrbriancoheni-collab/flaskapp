@@ -703,6 +703,7 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                     body_html=body.replace('\n', '<br>'),
                     body_text=body,
                     sequence_step=email_sequence.step_number,
+                    unsubscribe_url=self.outreach.get_unsubscribe_url(email, campaign.id),
                 )
 
                 if result.get('skipped'):
@@ -794,6 +795,7 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                     body_html=body.replace('\n', '<br>'),
                     body_text=body,
                     sequence_step=1,
+                    unsubscribe_url=self.outreach.get_unsubscribe_url(email, campaign.id),
                 )
 
                 if result.get('skipped'):
@@ -960,7 +962,8 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                     subject=subject,
                     body_html=body.replace('\n', '<br>'),
                     body_text=body,
-                    sequence_step=sequence_step
+                    sequence_step=sequence_step,
+                    unsubscribe_url=self.outreach.get_unsubscribe_url(email, campaign.id),
                 )
 
                 if result.get('skipped'):
@@ -1273,7 +1276,8 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                 subject=subject,
                 body_html=body.replace('\n', '<br>'),
                 body_text=body,
-                sequence_step=sequence.step_number
+                sequence_step=sequence.step_number,
+                unsubscribe_url=self.outreach.get_unsubscribe_url(contact.email, campaign.id),
             )
 
             # Skip if dedup check blocked the send

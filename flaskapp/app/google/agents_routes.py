@@ -1107,6 +1107,109 @@ def get_decision(decision_id):
         return jsonify(dict(row._mapping))
 
 
+@agents_bp.route("/api/negative-keyword-test", methods=["POST"])
+@login_required
+def test_negative_keyword_classification():
+    """
+    Test the NegativeKeywordAgent LLM classification without touching Google Ads.
+
+    Verifies three things:
+      1. DB - negative_keyword_examples is loaded from the accounts table
+      2. Context - _get_account_ads_settings returns it correctly
+      3. LLM - the prompt produces correct RELEVANT/IRRELEVANT decisions
+
+    POST body (optional):
+      { "terms": ["pool maintenance", "plunge pool", "10x10 swimming pool"] }
+    If omitted, a default set of known-good and known-bad terms is used.
+    """
+    account_id = current_account_id()
+    data = request.get_json(silent=True) or {}
+
+    # Default test set covers every category in the intent rules
+    default_terms = [
+        # Should be RELEVANT
+        "pool maintenance",
+        "pool cleaning service",
+        "pool service near me",
+        "how much does pool cleaning cost",
+        "weekly pool maintenance",
+        "green pool cleaning",
+        "pool equipment repair",
+        # Should be IRRELEVANT - plunge pools (all intents)
+        "plunge pool",
+        "plunge pool maintenance",
+        "plunge pool service",
+        "plunge pool prices",
+        "how much does a plunge pool cost",
+        # Should be IRRELEVANT - install/buy intent
+        "small backyard pool",
+        "fiberglass pool sizes and prices",
+        "container pools for sale",
+        "mini inground pool cost",
+        "10x10 swimming pool",
+        # Should be IRRELEVANT - DIY
+        "pool maintenance chemicals",
+        "pool maintenance for beginners",
+        "skimmer",
+    ]
+
+    terms = data.get("terms", default_terms)
+
+    # Layer 1 + 2: load settings and verify guidance is present
+    settings = _get_account_ads_settings(account_id)
+    business_desc = settings.get("business_description", "")
+    business_services = settings.get("business_services", "")
+    nk_examples = settings.get("negative_keyword_examples", "")
+
+    if not business_desc and not nk_examples:
+        return jsonify({
+            "success": False,
+            "error": "No business_description or negative_keyword_examples found for this account. "
+                     "Run the migration SQL first."
+        }), 400
+
+    # Layer 3: run LLM classification
+    from app.agents.tactical import NegativeKeywordAgent
+    agent = NegativeKeywordAgent()
+
+    search_term_dicts = [{"query": t} for t in terms]
+    llm_results = agent._evaluate_terms_with_llm(
+        search_term_dicts, business_desc, business_services, nk_examples
+    )
+
+    # Format results with pass/fail indicators
+    results = []
+    for term in terms:
+        result = llm_results.get(term.lower(), {})
+        results.append({
+            "term": term,
+            "irrelevant": result.get("irrelevant"),
+            "reason": result.get("reason", ""),
+            "llm_responded": term.lower() in llm_results,
+        })
+
+    irrelevant_count = sum(1 for r in results if r["irrelevant"] is True)
+    relevant_count = sum(1 for r in results if r["irrelevant"] is False)
+    no_response = sum(1 for r in results if not r["llm_responded"])
+
+    return jsonify({
+        "success": True,
+        "settings_check": {
+            "business_description_loaded": bool(business_desc),
+            "business_services_loaded": bool(business_services),
+            "negative_keyword_examples_loaded": bool(nk_examples),
+            "examples_preview": nk_examples[:200] + "..." if len(nk_examples) > 200 else nk_examples,
+        },
+        "summary": {
+            "total_terms": len(terms),
+            "marked_irrelevant": irrelevant_count,
+            "marked_relevant": relevant_count,
+            "no_llm_response": no_response,
+        },
+        "results": results,
+    })
+
+
 @agents_bp.route("/api/run", methods=["POST"])
 @login_required
 def run_agents():

@@ -417,21 +417,19 @@ class NegativeKeywordAgent(BaseAgent):
         if business_services:
             business_context += f"\nServices offered: {business_services}"
 
-        # Build the examples section if the account has provided them
-        examples_section = ""
+        # Build the guidance section if the account has provided intent rules / examples
+        guidance_section = ""
         if negative_keyword_examples:
-            examples_section = f"""
-The account owner has identified these as examples of IRRELEVANT search terms that should be blocked. Use them to understand the categories of intent that do NOT fit this business:
+            guidance_section = f"""
+ACCOUNT-SPECIFIC INTENT GUIDANCE (use this as your primary signal):
 {negative_keyword_examples}
-
-Use these examples to infer the full pattern of irrelevance — not just these exact terms, but other searches that share the same intent (wrong product type, wrong service, wrong audience, wrong scale, etc.).
 """
 
         prompt = f"""You are a Google Ads negative keyword analyst. Analyze each search term and determine if it is RELEVANT or IRRELEVANT to this business.
 
 {business_context}
-{examples_section}
-A term is RELEVANT if a person searching it could reasonably become a paying customer for the specific services listed. A term is IRRELEVANT if it relates to a different service, wrong product category, wrong audience, or has no purchase intent for these services.
+{guidance_section}
+A term is RELEVANT if a person searching it could reasonably become a paying customer for the specific services listed. A term is IRRELEVANT if it targets a different service category, indicates the searcher wants to DIY rather than hire a professional, or reflects intent to purchase/install a product rather than engage a service provider.
 
 Foreign language terms that relate to the business services should be marked RELEVANT.
 
@@ -441,7 +439,7 @@ Search terms:
 Respond ONLY with valid JSON — an array of objects:
 [{{"term": "the search term", "irrelevant": true/false, "reason": "brief explanation"}}]
 
-When examples of irrelevant terms are provided, use them as your primary signal — do not be conservative if the term clearly matches the same category of irrelevance shown in the examples. Otherwise, when in doubt, mark as RELEVANT."""
+{'Apply the account-specific intent guidance strictly — if a term clearly matches an irrelevant pattern described above, mark it IRRELEVANT. Otherwise, when in doubt, mark as RELEVANT.' if negative_keyword_examples else 'When in doubt, mark as RELEVANT.'}
 
         try:
             from openai import OpenAI

@@ -456,6 +456,18 @@ def _create_real_report(customer_id: str, refresh_token: str) -> GoogleAdsGrader
         analyzer = GoogleAdsAnalyzer(metrics)
         analysis_results = analyzer.analyze()
 
+        # Enhance with AI (gpt-4o via google_ads_main prompt)
+        logger.info("Calling AI enhancer for report")
+        from app.ads_grader.ai_enhancer import enhance_report_with_ai, merge_ai_recommendations
+        ai_analysis = enhance_report_with_ai(metrics, analysis_results)
+        if ai_analysis:
+            analysis_results["recommendations"] = merge_ai_recommendations(
+                ai_analysis, analysis_results["recommendations"]
+            )
+            logger.info("AI enhancement applied to real report")
+        else:
+            logger.info("Using rule-based recommendations (AI unavailable)")
+
         # Get account info
         account_info = metrics.get("account_info", {})
         account_name = account_info.get("account_name", f"Account {customer_id}")
@@ -463,6 +475,18 @@ def _create_real_report(customer_id: str, refresh_token: str) -> GoogleAdsGrader
         # Merge chart data into detailed_metrics for display
         detailed_metrics = metrics.copy()
         detailed_metrics.update(analysis_results.get("chart_data", {}))
+        if ai_analysis:
+            detailed_metrics["ai_analysis"] = {
+                "summary": ai_analysis.get("summary"),
+                "campaign_audit": ai_analysis.get("campaign_audit"),
+                "ad_copy_analysis": ai_analysis.get("ad_copy_analysis"),
+                "keyword_analysis": ai_analysis.get("keyword_analysis"),
+                "negative_keywords": ai_analysis.get("negative_keywords"),
+                "targeting_bidding": ai_analysis.get("targeting_bidding"),
+                "budget_allocation": ai_analysis.get("budget_allocation"),
+                "landing_pages": ai_analysis.get("landing_pages"),
+                "automation_tracking": ai_analysis.get("automation_tracking"),
+            }
 
         # Create report from analysis results
         report = GoogleAdsGraderReport(
@@ -729,6 +753,112 @@ def _create_demo_report(customer_id: str) -> GoogleAdsGraderReport:
         date_range_start=datetime.utcnow() - timedelta(days=90),
         date_range_end=datetime.utcnow(),
     )
+
+    # ── AI enhancement ────────────────────────────────────────────────────────
+    # Build a synthetic metrics/analysis context from the hardcoded demo values
+    # and run the same gpt-4o google_ads_main prompt used for real reports.
+    _demo_metrics = {
+        "performance": {
+            "cost": 42000.0,       # 90-day spend
+            "conversions": 160.0,
+            "ctr": 3.2,
+            "avg_cpa": 262.50,
+            "avg_cpc": 13.13,      # $42k / 3,200 clicks
+            "clicks": 3200,
+            "impressions": 100000,
+        },
+        "campaigns": {
+            "campaign_count": 6,
+            "campaigns": [
+                {"name": "Search - Emergency Services",
+                 "ad_groups": ["AC Repair", "Furnace Repair", "Heat Pump Service"]},
+                {"name": "Search - HVAC Installation",
+                 "ad_groups": ["AC Installation", "Furnace Install"]},
+                {"name": "Search - Plumbing Emergency",
+                 "ad_groups": ["Leak Repair", "Drain Clog", "Burst Pipe"]},
+                {"name": "Search - Plumbing Services",
+                 "ad_groups": ["Water Heater", "Pipe Repair", "Sewer"]},
+                {"name": "Search - Electrical",
+                 "ad_groups": ["Panel Upgrade", "Outlet Install", "Wiring"]},
+                {"name": "Display - Remarketing",
+                 "ad_groups": ["Site Visitors 30d"]},
+            ],
+        },
+        "keywords": {
+            "total_keywords": 485,
+            "keywords": [
+                {"text": "hvac repair",              "match_type": "BROAD",  "clicks": 120, "cost": 1578, "ctr": 2.8},
+                {"text": "air conditioner repair",   "match_type": "PHRASE", "clicks": 95,  "cost": 1247, "ctr": 3.5},
+                {"text": "ac repair near me",        "match_type": "EXACT",  "clicks": 87,  "cost": 1143, "ctr": 5.1},
+                {"text": "furnace repair",           "match_type": "BROAD",  "clicks": 72,  "cost": 946,  "ctr": 2.4},
+                {"text": "plumber near me",          "match_type": "PHRASE", "clicks": 68,  "cost": 893,  "ctr": 3.8},
+                {"text": "emergency plumber",        "match_type": "PHRASE", "clicks": 54,  "cost": 709,  "ctr": 4.2},
+                {"text": "hvac",                     "match_type": "BROAD",  "clicks": 45,  "cost": 591,  "ctr": 1.2},
+                {"text": "air conditioning",         "match_type": "BROAD",  "clicks": 38,  "cost": 499,  "ctr": 0.9},
+                {"text": "electrician near me",      "match_type": "PHRASE", "clicks": 36,  "cost": 473,  "ctr": 3.3},
+                {"text": "water heater replacement", "match_type": "PHRASE", "clicks": 29,  "cost": 381,  "ctr": 4.7},
+            ],
+        },
+        "quality_scores": {"average": 5.5, "keyword_count": 485},
+        "negative_keywords": 110,
+    }
+    _demo_analysis = {
+        "overall_score": round(overall_score, 1),
+        "overall_grade": _calculate_grade(overall_score),
+        "section_scores": {
+            "wasted_spend": wasted_spend_score,
+            "quality_score": quality_score_score,
+            "ctr_optimization": ctr_score,
+            "text_ad_optimization": text_ad_score,
+            "account_activity": account_activity_score,
+            "long_tail_keywords": long_tail_score,
+            "impression_share": impression_share_score,
+            "landing_pages": landing_page_score,
+            "mobile_advertising": mobile_score,
+            "expanded_text_ads": expanded_text_ads_score,
+        },
+        "key_metrics": {
+            "quality_score_avg": 5.5,
+            "ctr_avg": 3.2,
+            "wasted_spend_90d": 7980.0,
+            "projected_waste_12m": 31920.0,
+            "waste_percentage": waste_percentage,
+        },
+        "account_diagnostics": {
+            "active_campaigns": 6,
+            "active_ad_groups": 24,
+            "active_text_ads": 52,
+            "active_keywords": 485,
+            "clicks_90d": 3200,
+            "conversions_90d": 160,
+            "avg_cpa_90d": 262.50,
+            "avg_monthly_spend": 14000.0,
+        },
+    }
+
+    from app.ads_grader.ai_enhancer import enhance_report_with_ai, merge_ai_recommendations
+    ai_analysis = enhance_report_with_ai(_demo_metrics, _demo_analysis)
+    if ai_analysis:
+        report.recommendations = merge_ai_recommendations(
+            ai_analysis, report.recommendations
+        )
+        dm = dict(report.detailed_metrics or {})
+        dm["ai_analysis"] = {
+            "summary": ai_analysis.get("summary"),
+            "campaign_audit": ai_analysis.get("campaign_audit"),
+            "ad_copy_analysis": ai_analysis.get("ad_copy_analysis"),
+            "keyword_analysis": ai_analysis.get("keyword_analysis"),
+            "negative_keywords": ai_analysis.get("negative_keywords"),
+            "targeting_bidding": ai_analysis.get("targeting_bidding"),
+            "budget_allocation": ai_analysis.get("budget_allocation"),
+            "landing_pages": ai_analysis.get("landing_pages"),
+            "automation_tracking": ai_analysis.get("automation_tracking"),
+        }
+        report.detailed_metrics = dm
+        logger.info("AI enhancement applied to demo report")
+    else:
+        logger.info("Demo report using rule-based recommendations (AI unavailable)")
+    # ── end AI enhancement ────────────────────────────────────────────────────
 
     db.session.add(report)
     db.session.commit()

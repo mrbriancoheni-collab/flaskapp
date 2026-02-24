@@ -129,12 +129,15 @@ class LeadAutomationService:
 
     def _remaining_emails_today(self) -> int:
         """
-        Return how many emails remain in today's budget.
+        Return how many lead-outreach emails remain in today's budget.
 
-        Uses Brevo's aggregated report as the source of truth so that any
-        sends that succeeded on Brevo's side (but were not recorded locally,
-        or failed after being recorded) are accounted for.  Falls back to the
-        local DB count if the Brevo API is unavailable.
+        The local DB count (LeadEmail + LeadContactEmail rows with sent_at today)
+        is the authoritative source for the lead-specific daily limit.  Brevo's
+        aggregated report covers ALL emails sent through the account (transactional,
+        marketing, etc.) so it cannot be used directly as the lead-outreach limit.
+
+        The Brevo count is fetched once per run for diagnostic logging only — it
+        helps surface dropped sends (local > brevo) but does not gate the limit.
         """
         today = datetime.utcnow()
         daily_limit = AUTOMATION_CONFIG["daily_email_limit"]
@@ -146,7 +149,7 @@ class LeadAutomationService:
 
         today_start = today.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        # --- Local DB count (always available) ---
+        # --- Local DB count — authoritative for lead-outreach limit ---
         today_legacy_emails = db.session.query(func.count(LeadEmail.id)).filter(
             LeadEmail.sent_at >= today_start
         ).scalar() or 0
@@ -157,7 +160,7 @@ class LeadAutomationService:
 
         local_count = today_legacy_emails + today_contact_emails
 
-        # --- Brevo-side count (fetched once per service instance, then cached) ---
+        # --- Brevo total (informational only — includes non-lead emails) ---
         if self._brevo_today_count is None:
             try:
                 brevo_svc = self.outreach or BrevoOutreachService()
@@ -166,27 +169,22 @@ class LeadAutomationService:
                 logger.warning(f"Could not fetch Brevo today count: {e}")
                 self._brevo_today_count = -1
 
-        # Reconcile: use whichever is higher so we never exceed the limit
         if self._brevo_today_count >= 0:
-            reconciled = max(local_count, self._brevo_today_count)
-            if reconciled != local_count:
+            if local_count > self._brevo_today_count:
+                # We recorded more sends than Brevo accepted — possible data loss
                 logger.warning(
-                    f"Email count discrepancy — local DB: {local_count}, "
-                    f"Brevo: {self._brevo_today_count}; using {reconciled}"
+                    f"Possible dropped sends — local DB: {local_count}, "
+                    f"Brevo total: {self._brevo_today_count} (all email types). "
+                    f"Some lead emails may not have reached Brevo."
                 )
             else:
                 logger.info(
-                    f"Email counts in sync — local DB: {local_count}, "
-                    f"Brevo: {self._brevo_today_count}"
+                    f"Lead outreach sent today (local DB): {local_count} | "
+                    f"Brevo account total (all types): {self._brevo_today_count}"
                 )
-        else:
-            reconciled = local_count
-            logger.warning(
-                f"Brevo API unavailable; using local DB count ({local_count}) for daily limit check"
-            )
 
-        remaining = daily_limit - reconciled
-        logger.info(f"Daily email budget: {reconciled}/{daily_limit} used, {remaining} remaining")
+        remaining = daily_limit - local_count
+        logger.info(f"Daily email budget: {local_count}/{daily_limit} used, {remaining} remaining")
         return max(remaining, 0)
 
     def _is_duplicate_domain(self, domain: str) -> bool:
@@ -1477,12 +1475,7 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             brevo_emails_today = -1
 
         daily_limit = AUTOMATION_CONFIG["daily_email_limit"]
-        reconciled_emails_today = (
-            max(local_emails_today, brevo_emails_today)
-            if brevo_emails_today >= 0
-            else local_emails_today
-        )
-        remaining_today = max(daily_limit - reconciled_emails_today, 0)
+        remaining_today = max(daily_limit - local_emails_today, 0)
 
         return {
             "total_campaigns_planned": total_campaigns_planned,
@@ -1498,9 +1491,8 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                 "date": datetime.now().date().isoformat(),
                 "scrapes": today_scrapes,
                 "enrichments": today_enrichments,
-                "emails_local_db": local_emails_today,
-                "emails_brevo": brevo_emails_today,   # -1 means API unavailable
-                "emails_reconciled": reconciled_emails_today,
+                "emails_lead_outreach": local_emails_today,          # authoritative for daily limit
+                "emails_brevo_total": brevo_emails_today,            # all email types; -1 = unavailable
                 "emails_remaining": remaining_today,
                 "daily_limit": daily_limit,
             },

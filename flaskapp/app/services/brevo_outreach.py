@@ -357,6 +357,51 @@ class BrevoOutreachService:
             logger.error(f"Error fetching Brevo events: {e}")
             return []
 
+    def get_today_sent_count(self) -> int:
+        """
+        Query Brevo's aggregated report for today to get the actual number of
+        emails Brevo accepted and processed.
+
+        Uses /smtp/statistics/aggregatedReport with today's date as both start
+        and end date.  The ``requests`` field is the authoritative count of
+        messages Brevo received from us (regardless of delivery outcome).
+
+        Returns:
+            int: number of emails Brevo processed today, or -1 on API failure
+                 (caller should fall back to the local DB count).
+        """
+        if not self.api_key:
+            return -1
+
+        today_str = datetime.utcnow().strftime('%Y-%m-%d')
+        try:
+            response = requests.get(
+                f'{self.base_url}/smtp/statistics/aggregatedReport',
+                headers=self.headers,
+                params={'startDate': today_str, 'endDate': today_str},
+                timeout=10
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                brevo_requests = data.get('requests', 0)
+                logger.info(
+                    f"Brevo today stats — requests={brevo_requests}, "
+                    f"delivered={data.get('delivered', 0)}, "
+                    f"bounced={data.get('hardBounces', 0) + data.get('softBounces', 0)}, "
+                    f"blocked={data.get('blocked', 0)}"
+                )
+                return brevo_requests
+            else:
+                logger.warning(
+                    f"Brevo aggregatedReport returned {response.status_code}: {response.text[:200]}"
+                )
+                return -1
+
+        except Exception as e:
+            logger.error(f"Error fetching Brevo today sent count: {e}")
+            return -1
+
     def send_batch_emails(
         self,
         recipients: List[Dict],

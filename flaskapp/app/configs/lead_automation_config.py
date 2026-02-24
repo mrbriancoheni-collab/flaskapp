@@ -57,7 +57,7 @@ HOME_SERVICE_CATEGORIES = {
 AUTOMATION_CONFIG = {
     "daily_scrape_limit": 50,  # Max campaigns to scrape per day (SerpAPI limit)
     "daily_enrich_limit": 100,  # Max leads to enrich per day
-    "daily_email_limit": 250,  # Max emails to send per day (Mailgun limit)
+    "daily_email_limit": 500,  # Max emails to send per day (Brevo limit)
     "skip_email_days": [6],  # 0=Monday, 6=Sunday
     "scrape_sources": {
         "scrape_ads": True,

@@ -357,6 +357,72 @@ class BrevoOutreachService:
             logger.error(f"Error fetching Brevo events: {e}")
             return []
 
+    def get_all_events_by_type(
+        self,
+        event_type: str,
+        days: int = 30,
+        max_pages: int = 50
+    ) -> List[str]:
+        """
+        Return all unique email addresses that triggered *event_type* in the
+        last *days* days, paginating through /smtp/statistics/events.
+
+        Args:
+            event_type: Brevo event name, e.g. 'bounces', 'hardBounces',
+                        'softBounces', 'blocked', 'spam'
+            days: Look-back window (default: 30)
+            max_pages: Safety ceiling; 50 pages × 100 events = 5 000 events
+
+        Returns:
+            Deduplicated list of lowercase email addresses.
+        """
+        if not self.api_key:
+            logger.warning("BREVO_API_KEY not set; cannot fetch events")
+            return []
+
+        emails: set = set()
+        page_size = 100
+
+        for page in range(max_pages):
+            offset = page * page_size
+            try:
+                response = requests.get(
+                    f'{self.base_url}/smtp/statistics/events',
+                    headers=self.headers,
+                    params={
+                        'event': event_type,
+                        'days': days,
+                        'limit': page_size,
+                        'offset': offset,
+                    },
+                    timeout=30,
+                )
+            except Exception as e:
+                logger.error(f"Error fetching Brevo {event_type} events at offset {offset}: {e}")
+                break
+
+            if response.status_code != 200:
+                logger.warning(
+                    f"Brevo events API returned {response.status_code} "
+                    f"for event={event_type} offset={offset}: {response.text[:200]}"
+                )
+                break
+
+            events = response.json().get('events', [])
+            for evt in events:
+                email = evt.get('email', '')
+                if email:
+                    emails.add(email.lower())
+
+            if len(events) < page_size:
+                break  # reached the last page
+
+        logger.info(
+            f"Fetched {len(emails)} unique '{event_type}' addresses from Brevo "
+            f"(last {days} days, {page + 1} page(s))"
+        )
+        return list(emails)
+
     def get_today_sent_count(self) -> int:
         """
         Query Brevo's aggregated report for today to get the actual number of

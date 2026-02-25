@@ -112,10 +112,13 @@ class EmailDedupService:
         try:
             from app.models_leads import LeadContactEmail, LeadEmail
 
-            # Check LeadContactEmail table (primary) - case-insensitive
+            # Check LeadContactEmail table (primary) - case-insensitive.
+            # Exclude bounced/failed records: a delivery failure does not mean
+            # the recipient received the email, so it should not block a retry.
             query = db.session.query(LeadContactEmail).filter(
                 func.lower(LeadContactEmail.to_email) == email_lower,
-                LeadContactEmail.sequence_step == sequence_step
+                LeadContactEmail.sequence_step == sequence_step,
+                LeadContactEmail.status.notin_(['bounced', 'failed']),
             )
 
             if contact_id:

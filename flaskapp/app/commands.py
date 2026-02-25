@@ -951,13 +951,14 @@ def train_ml_command(account, model):
 @with_appcontext
 def cleanup_email_contacts_command(days, dry_run):
     """
-    Mark bounced and invalid lead contacts so they are skipped on future sends.
+    Mark bounced/invalid contacts and reset soft-bounced ones for retry.
 
-    Pass 1 — Brevo events: fetch all bounced/blocked addresses from Brevo for
-    the last N days and mark matching LeadContact + Lead records as 'bounced'.
-
-    Pass 2 — Local validation: run validate_email_for_outreach() on every
-    remaining 'pending' LeadContact email and mark invalid ones as 'bounced'.
+    Pass 1a — Hard bounces + blocked: permanently mark as 'bounced'.
+    Pass 1b — Soft bounces only: reset to 'pending' so the automation
+              retries on the next run (the dedup service skips bounced
+              LeadContactEmail records, so a fresh attempt is allowed).
+    Pass 2  — Local validation: run validate_email_for_outreach() on
+              every remaining 'pending' contact and mark invalid ones.
 
     Examples:
         flask cleanup-email-contacts             # Full cleanup, 30-day lookback
@@ -977,31 +978,46 @@ def cleanup_email_contacts_command(days, dry_run):
 
     # ------------------------------------------------------------------
     # Pass 1: Brevo bounce + block events
+    #
+    # Hard bounces + blocked  → permanent failure → mark 'bounced'
+    # Soft bounces (not also hard-bounced/blocked) → temporary failure
+    #   → reset to 'pending' so the automation retries on the next run.
+    #   The dedup service now excludes 'bounced'/'failed' LeadContactEmail
+    #   records, so the retry can create a fresh send record.
     # ------------------------------------------------------------------
     click.echo(f"Pass 1: Fetching Brevo bounce/block events (last {days} days)...")
     brevo = BrevoOutreachService()
 
-    bounce_emails = set(brevo.get_all_events_by_type('bounces', days=days))
-    block_emails  = set(brevo.get_all_events_by_type('blocked', days=days))
-    bad_emails    = bounce_emails | block_emails
+    hard_emails   = set(brevo.get_all_events_by_type('hardBounces', days=days))
+    soft_emails   = set(brevo.get_all_events_by_type('softBounces', days=days))
+    block_emails  = set(brevo.get_all_events_by_type('blocked',     days=days))
 
-    click.echo(f"  Bounced addresses : {len(bounce_emails)}")
-    click.echo(f"  Blocked addresses : {len(block_emails)}")
-    click.echo(f"  Unique bad emails : {len(bad_emails)}")
+    # Permanent failures: hard bounces OR blocked
+    permanent_emails = hard_emails | block_emails
+    # Retryable: only soft-bounced AND not also permanently failed
+    retryable_emails = soft_emails - permanent_emails
 
-    brevo_contact_hits = 0
-    brevo_lead_hits = 0
+    click.echo(f"  Hard bounces : {len(hard_emails)}")
+    click.echo(f"  Soft bounces : {len(soft_emails)}")
+    click.echo(f"  Blocked      : {len(block_emails)}")
+    click.echo(f"  → Permanently bad (mark bounced) : {len(permanent_emails)}")
+    click.echo(f"  → Retryable   (reset to pending) : {len(retryable_emails)}")
 
-    if bad_emails:
-        # Case-insensitive match using lower() on both sides
+    brevo_contact_hits  = 0
+    brevo_lead_hits     = 0
+    soft_contact_resets = 0
+    soft_lead_resets    = 0
+
+    # --- Permanent failures → bounced ---
+    if permanent_emails:
         contacts_to_mark = LeadContact.query.filter(
-            sqlfunc.lower(LeadContact.email).in_(bad_emails),
+            sqlfunc.lower(LeadContact.email).in_(permanent_emails),
             LeadContact.email_status != 'bounced',
         ).all()
         brevo_contact_hits = len(contacts_to_mark)
 
         leads_to_mark = Lead.query.filter(
-            sqlfunc.lower(Lead.decision_maker_email).in_(bad_emails),
+            sqlfunc.lower(Lead.decision_maker_email).in_(permanent_emails),
             Lead.email_status != 'bounced',
         ).all()
         brevo_lead_hits = len(leads_to_mark)
@@ -1013,9 +1029,32 @@ def cleanup_email_contacts_command(days, dry_run):
                 lead.email_status = 'bounced'
             db.session.commit()
 
+    # --- Soft-bounce-only → reset to pending (allow retry) ---
+    if retryable_emails:
+        contacts_to_reset = LeadContact.query.filter(
+            sqlfunc.lower(LeadContact.email).in_(retryable_emails),
+            LeadContact.email_status.in_(['sent', 'sending']),
+        ).all()
+        soft_contact_resets = len(contacts_to_reset)
+
+        leads_to_reset = Lead.query.filter(
+            sqlfunc.lower(Lead.decision_maker_email).in_(retryable_emails),
+            Lead.email_status.in_(['sent', 'sending']),
+        ).all()
+        soft_lead_resets = len(leads_to_reset)
+
+        if not dry_run:
+            for c in contacts_to_reset:
+                c.email_status = 'pending'
+            for lead in leads_to_reset:
+                lead.email_status = 'pending'
+            db.session.commit()
+
     suffix = " (dry run — not written)" if dry_run else ""
-    click.echo(f"  LeadContact rows marked bounced : {brevo_contact_hits}{suffix}")
-    click.echo(f"  Lead rows marked bounced        : {brevo_lead_hits}{suffix}")
+    click.echo(f"  LeadContact marked bounced  : {brevo_contact_hits}{suffix}")
+    click.echo(f"  Lead marked bounced         : {brevo_lead_hits}{suffix}")
+    click.echo(f"  LeadContact reset to pending: {soft_contact_resets}{suffix}")
+    click.echo(f"  Lead reset to pending       : {soft_lead_resets}{suffix}")
 
     # ------------------------------------------------------------------
     # Pass 2: Local validation of all remaining pending contacts
@@ -1049,13 +1088,14 @@ def cleanup_email_contacts_command(days, dry_run):
     # ------------------------------------------------------------------
     # Summary
     # ------------------------------------------------------------------
-    total = brevo_contact_hits + brevo_lead_hits + len(invalid_contacts)
+    total = brevo_contact_hits + brevo_lead_hits + soft_contact_resets + soft_lead_resets + len(invalid_contacts)
     click.echo(f"\n{'='*70}")
     click.echo(f"CLEANUP {'PREVIEW' if dry_run else 'COMPLETE'}")
     click.echo(f"{'='*70}")
-    click.echo(f"  Pass 1 (Brevo events) : {brevo_contact_hits} contacts + {brevo_lead_hits} leads")
-    click.echo(f"  Pass 2 (validation)   : {len(invalid_contacts)} contacts")
-    click.echo(f"  Total records updated : {total}{' (none written — dry run)' if dry_run else ''}")
+    click.echo(f"  Pass 1a — hard bounced/blocked : {brevo_contact_hits} contacts, {brevo_lead_hits} leads marked bounced")
+    click.echo(f"  Pass 1b — soft bounce retry    : {soft_contact_resets} contacts, {soft_lead_resets} leads reset to pending")
+    click.echo(f"  Pass 2  — local validation     : {len(invalid_contacts)} contacts marked bounced")
+    click.echo(f"  Total records updated          : {total}{' (none written — dry run)' if dry_run else ''}")
     click.echo(f"{'='*70}\n")
 
 

@@ -788,9 +788,15 @@ class WasteClassifierModel(BaseMLModel):
             term = row.get('search_term', '')
             cost = _safe_float(row.get('cost_micros', 0)) / 1_000_000
             conv = _safe_float(row.get('conversions', 0))
+            clicks = max(_safe_float(row.get('clicks', 0)), 1)
 
-            # Label: waste = spent money but no conversions
-            is_waste = 1 if (cost > 1 and conv == 0) else 0
+            # Label: confirmed negatives are the strongest waste signal (feedback loop).
+            # Fallback: statistically wasteful = meaningful spend (>$0.50) with
+            # zero conversions and enough clicks to be reliable (>=3).
+            # Using $0.50 + click gate avoids mislabelling brand-new or low-traffic terms.
+            already_negated = bool(row.get('added_as_negative', False))
+            is_statistically_wasteful = (cost > 0.50 and conv == 0 and clicks >= 3)
+            is_waste = 1 if (already_negated or is_statistically_wasteful) else 0
 
             features = self._extract_text_features(term, row)
             X.append([_safe_float(features.get(n)) for n in self.FEATURE_NAMES])

@@ -32,34 +32,64 @@ class GoogleAdsAutoExecutor:
     """Service for automatically executing safe Google Ads optimizations"""
 
     # Non-purchase intent indicators (keywords/phrases that suggest no buying intent)
-    NON_PURCHASE_INTENT_PATTERNS = [
-        # Job/employment seeking
-        'job', 'jobs', 'career', 'careers', 'hiring', 'employment', 'resume', 'salary',
-        'work from home', 'remote work', 'part time', 'full time', 'apply',
-
-        # DIY/How-to (people looking to do it themselves)
-        'how to', 'diy', 'tutorial', 'guide', 'tips', 'instructions', 'step by step',
-        'yourself', 'myself', 'homemade', 'manual', 'fix it', 'repair guide',
-
-        # Educational/informational
-        'what is', 'definition', 'meaning', 'wiki', 'wikipedia', 'learn', 'course',
-        'training', 'certification', 'school', 'class', 'education',
-
-        # Free/cheap alternatives
-        'free', 'cheap', 'discount', 'coupon', 'deal', 'sale', 'clearance',
-
-        # Research/comparison (not ready to buy)
-        'review', 'reviews', 'comparison', 'compare', 'vs', 'versus', 'best',
-        'top 10', 'alternatives', 'options', 'which', 'should i',
-
-        # Images/videos (informational browsing)
-        'image', 'images', 'photo', 'photos', 'picture', 'pictures', 'video', 'videos',
-        'clip', 'clips', 'youtube', 'watch',
-
-        # Wrong products/services
-        'software', 'app', 'game', 'toy', 'used', 'for sale', 'buy', 'purchase',
-        'online', 'shopping', 'store'
-    ]
+    # Named intent groups — each can be enabled/disabled per account and extended
+    # with account-specific custom patterns.
+    INTENT_GROUPS = {
+        'diy': {
+            'name': 'DIY / Do It Yourself',
+            'description': 'People looking to do it themselves rather than hire a professional',
+            'patterns': [
+                'how to', 'diy', 'tutorial', 'guide', 'tips', 'instructions',
+                'step by step', 'yourself', 'myself', 'homemade', 'manual',
+            ],
+            'enabled_by_default': True,
+        },
+        'free': {
+            'name': 'Free / Cheap Alternatives',
+            'description': 'People seeking free or heavily discounted options',
+            'patterns': [
+                'free', 'cheap', 'discount', 'coupon', 'deal', 'sale', 'clearance',
+            ],
+            'enabled_by_default': True,
+        },
+        'informational': {
+            'name': 'Informational / Research',
+            'description': 'Early-stage researchers not yet ready to buy or hire',
+            'patterns': [
+                'what is', 'definition', 'meaning', 'wiki', 'wikipedia', 'learn',
+                'course', 'training', 'certification', 'school', 'class', 'education',
+                'review', 'reviews', 'comparison', 'compare', 'vs', 'versus',
+                'alternatives', 'which', 'should i', 'top 10',
+            ],
+            'enabled_by_default': True,
+        },
+        'job_seeking': {
+            'name': 'Job Seeking / Employment',
+            'description': 'People looking for jobs, not services',
+            'patterns': [
+                'job', 'jobs', 'career', 'careers', 'hiring', 'employment', 'resume',
+                'salary', 'work from home', 'remote work', 'part time', 'full time', 'apply',
+            ],
+            'enabled_by_default': True,
+        },
+        'media': {
+            'name': 'Images / Videos',
+            'description': 'Browsing images or videos — informational, not buying',
+            'patterns': [
+                'image', 'images', 'photo', 'photos', 'picture', 'pictures',
+                'video', 'videos', 'clip', 'clips', 'youtube', 'watch',
+            ],
+            'enabled_by_default': True,
+        },
+        'wrong_product': {
+            'name': 'Wrong Product / Unrelated Category',
+            'description': 'Searching for products or categories you do not offer',
+            'patterns': [
+                'software', 'app', 'game', 'toy', 'used',
+            ],
+            'enabled_by_default': False,
+        },
+    }
 
     # Confidence thresholds for different action types
     CONFIDENCE_THRESHOLDS = {
@@ -91,6 +121,212 @@ class GoogleAdsAutoExecutor:
         # Load business context for LLM-based relevance checks
         self.business_description = self.account.get_business_description() or ''
         self.business_services = self.account.get_business_services() or ''
+        self.negative_keyword_examples = self.account.get_negative_keyword_examples() or ''
+
+        # Build the active pattern list from enabled intent groups + account customisations
+        self._active_patterns, self._active_groups_meta = self._load_active_patterns()
+
+    def _load_active_patterns(self) -> Tuple[List[str], dict]:
+        """
+        Build the active pattern list by merging global INTENT_GROUPS with
+        account-level customisations stored in account_settings (key:
+        'intent_group_settings', JSON value).
+
+        Returns:
+            (flat_patterns, groups_meta)
+            flat_patterns — deduplicated list of all active patterns
+            groups_meta   — dict mapping group_key -> {name, enabled, patterns, custom}
+        """
+        import json
+
+        # Load account-level overrides from account_settings table
+        account_overrides: dict = {}
+        try:
+            with db.engine.connect() as conn:
+                row = conn.execute(
+                    text("""
+                        SELECT setting_value FROM account_settings
+                        WHERE account_id = :aid AND setting_key = 'intent_group_settings'
+                        LIMIT 1
+                    """),
+                    {"aid": self.account_id}
+                ).first()
+            if row and row[0]:
+                account_overrides = json.loads(row[0])
+        except Exception:
+            pass  # Table may not exist yet — use defaults
+
+        groups_meta: dict = {}
+        flat_patterns: List[str] = []
+
+        for group_key, group_def in self.INTENT_GROUPS.items():
+            override = account_overrides.get(group_key, {})
+            enabled = override.get('enabled', group_def['enabled_by_default'])
+            extra_patterns = override.get('extra_patterns', [])
+            active_patterns = group_def['patterns'] + [p for p in extra_patterns if p]
+
+            groups_meta[group_key] = {
+                'name': group_def['name'],
+                'description': group_def['description'],
+                'enabled': enabled,
+                'patterns': group_def['patterns'],
+                'extra_patterns': extra_patterns,
+            }
+
+            if enabled:
+                flat_patterns.extend(active_patterns)
+
+        # Account-level custom groups (arbitrary groups not in INTENT_GROUPS)
+        custom_groups = account_overrides.get('custom_groups', [])
+        for cg in custom_groups:
+            if cg.get('enabled', True) and cg.get('patterns'):
+                flat_patterns.extend(cg['patterns'])
+                groups_meta[f"custom_{cg.get('name', 'group')}"] = {
+                    'name': cg.get('name', 'Custom Group'),
+                    'description': cg.get('description', ''),
+                    'enabled': True,
+                    'patterns': cg['patterns'],
+                    'extra_patterns': [],
+                }
+
+        # Deduplicate while preserving order
+        seen: set = set()
+        deduped: List[str] = []
+        for p in flat_patterns:
+            if p not in seen:
+                seen.add(p)
+                deduped.append(p)
+
+        return deduped, groups_meta
+
+    # ── Fix 1: Persist search terms so ML trainer has data ───────────────────
+
+    def _persist_search_terms(self, all_rows: list) -> None:
+        """
+        Upsert search terms from a Google Ads API result set into the
+        search_terms DB table so the WasteClassifier has data to train on.
+        Uses INSERT … ON DUPLICATE KEY UPDATE keyed on (search_term).
+        Silently skips if the table schema is incompatible.
+        """
+        if not all_rows:
+            return
+        try:
+            today = datetime.utcnow().date().isoformat()
+            with db.engine.begin() as conn:
+                for row in all_rows:
+                    term = row.search_term_view.search_term.lower().strip()
+                    conn.execute(text("""
+                        INSERT INTO search_terms
+                            (search_term, clicks, impressions, cost_micros, conversions,
+                             added_as_keyword, added_as_negative)
+                        VALUES
+                            (:term, :clicks, :impressions, :cost_micros, :conv, FALSE, FALSE)
+                        ON DUPLICATE KEY UPDATE
+                            clicks        = clicks + VALUES(clicks),
+                            impressions   = impressions + VALUES(impressions),
+                            cost_micros   = cost_micros + VALUES(cost_micros),
+                            conversions   = conversions + VALUES(conversions)
+                    """), {
+                        "term":        term,
+                        "clicks":      row.metrics.clicks,
+                        "impressions": row.metrics.impressions,
+                        "cost_micros": row.metrics.cost_micros,
+                        "conv":        row.metrics.conversions,
+                    })
+            logger.info(f"Account {self.account_id}: persisted {len(all_rows)} search terms to DB")
+        except Exception as e:
+            logger.debug(f"Search term persistence skipped (schema mismatch?): {e}")
+
+    # ── Fix 2: ML WasteClassifier as a third-pass signal ─────────────────────
+
+    def _ml_classify_terms(self, rows: list) -> dict:
+        """
+        Run the trained WasteClassifierModel against a list of search term rows.
+        Returns: {search_term: (row, waste_probability)} for terms above threshold.
+        Falls back gracefully if no model is trained yet.
+        """
+        ml_flagged: dict = {}
+        try:
+            from app.ml.predictor import MLPredictor
+            predictor = MLPredictor(self.account_id)
+            for row in rows:
+                term = row.search_term_view.search_term.lower().strip()
+                cost = row.metrics.cost_micros / 1_000_000
+                result = predictor.classify_search_term(
+                    search_term=term,
+                    cost=cost,
+                    clicks=row.metrics.clicks,
+                    impressions=row.metrics.impressions,
+                    conversions=row.metrics.conversions,
+                    ctr=row.metrics.ctr,
+                )
+                prob = result.get('waste_probability', 0.0)
+                if prob >= 0.55:  # Confident enough to flag
+                    ml_flagged[term] = (row, prob)
+        except Exception as e:
+            logger.debug(f"WasteClassifier pass skipped (model not trained?): {e}")
+        return ml_flagged
+
+    # ── Fix 3: Cross-system dedup ─────────────────────────────────────────────
+
+    def _is_already_negated(self, search_term: str, campaign_id_str: str) -> bool:
+        """
+        Return True if this term was already added as a negative keyword
+        for this account+campaign in the last 60 days, by either the
+        auto-executor (ai_actions) or the agent framework (negative_keywords).
+        Prevents both systems from duplicating work.
+        """
+        try:
+            cutoff = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            cutoff = cutoff.replace(day=cutoff.day - 60) if cutoff.day > 60 else cutoff  # safe 60-day lookback
+
+            # Check ai_actions table
+            existing = AIAction.query.filter(
+                AIAction.account_id == self.account_id,
+                AIAction.action_type == 'negative_keyword_added',
+                AIAction.status.in_(['executed', 'pending']),
+                AIAction.campaign_id == campaign_id_str,
+                AIAction.created_at >= datetime.utcnow().replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                ).replace(year=datetime.utcnow().year,
+                          month=datetime.utcnow().month,
+                          day=max(1, datetime.utcnow().day - 60))
+            ).filter(
+                AIAction.title.contains(f"'{search_term}'")
+            ).first()
+            if existing:
+                return True
+
+            # Check negative_keywords table (agent framework)
+            row = db.session.execute(text("""
+                SELECT id FROM negative_keywords
+                WHERE account_id = :aid AND keyword_text = :term AND campaign_id = :cid
+                LIMIT 1
+            """), {"aid": self.account_id, "term": search_term, "cid": campaign_id_str}).first()
+            if row:
+                return True
+
+        except Exception as e:
+            logger.debug(f"Dedup check failed, allowing term: {e}")
+
+        return False
+
+    # ── Fix 4: Feedback loop — mark term as negated in DB ────────────────────
+
+    def _mark_search_term_negated(self, search_term: str) -> None:
+        """
+        Mark search_term.added_as_negative = TRUE after execution.
+        This feeds back into the WasteClassifier training labels so the
+        model learns from confirmed bad terms over time.
+        """
+        try:
+            with db.engine.begin() as conn:
+                conn.execute(text("""
+                    UPDATE search_terms SET added_as_negative = TRUE
+                    WHERE search_term = :term
+                """), {"term": search_term})
+        except Exception as e:
+            logger.debug(f"Feedback loop update skipped: {e}")
 
     def _get_google_ads_client(self):
         """Get Google Ads API client."""
@@ -237,6 +473,9 @@ class GoogleAdsAutoExecutor:
                 logger.info(f"Account {self.account_id}: No search terms found in last {lookback_days} days")
                 return []
 
+            # Fix 1: Persist raw search terms to DB for ML training
+            self._persist_search_terms(all_rows)
+
             # PASS 1: Pattern matching for obvious non-purchase-intent
             pattern_flagged = {}   # term -> (row, patterns_matched)
             remaining_rows = []    # terms not caught by patterns
@@ -249,9 +488,21 @@ class GoogleAdsAutoExecutor:
                 else:
                     remaining_rows.append(row)
 
-            # PASS 2: LLM-based business relevance for remaining terms
+            # PASS 2: ML WasteClassifier for terms not caught by patterns
+            ml_flagged = {}   # term -> (row, waste_probability)
+            if remaining_rows:
+                ml_flagged = self._ml_classify_terms(remaining_rows)
+                remaining_rows = [
+                    r for r in remaining_rows
+                    if r.search_term_view.search_term.lower().strip() not in ml_flagged
+                ]
+                if ml_flagged:
+                    logger.info(f"Account {self.account_id}: ML WasteClassifier flagged {len(ml_flagged)} terms")
+
+            # PASS 3: LLM-based business relevance for remaining terms
+            has_llm_context = bool(self.business_description or self.negative_keyword_examples)
             llm_flagged = {}  # term -> (row, reason)
-            if remaining_rows and self.business_description:
+            if remaining_rows and has_llm_context:
                 terms_for_llm = [
                     row.search_term_view.search_term.lower().strip()
                     for row in remaining_rows
@@ -263,18 +514,25 @@ class GoogleAdsAutoExecutor:
                     result = llm_results.get(search_term, {})
                     if result.get('irrelevant', False):
                         llm_flagged[search_term] = (row, result.get('reason', 'Irrelevant to business'))
-            elif remaining_rows and not self.business_description:
+            elif remaining_rows and not has_llm_context:
                 logger.warning(
-                    f"Account {self.account_id}: No business_description set. "
+                    f"Account {self.account_id}: No business_description or negative_keyword_examples set. "
                     f"Skipping LLM relevance check for {len(remaining_rows)} search terms. "
-                    f"Set account.business_description to enable intelligent negative keyword detection."
+                    f"Set account.business_description or account.negative_keyword_examples to enable intelligent negative keyword detection."
                 )
 
             # Create actions for all flagged terms
             actions_created = []
 
-            # Process pattern-matched terms
+            # Process pattern-matched terms (Pass 1)
             for search_term, (row, patterns_matched) in pattern_flagged.items():
+                if not self._check_daily_limit('negative_keyword_added'):
+                    break
+                # Fix 3: cross-system dedup
+                if self._is_already_negated(search_term, str(row.campaign.id)):
+                    logger.debug(f"Skipping already-negated term: '{search_term}'")
+                    continue
+
                 confidence = self._calculate_confidence(row.metrics, patterns_matched, search_term)
                 if confidence < self.CONFIDENCE_THRESHOLDS['negative_keyword_added']:
                     continue
@@ -307,7 +565,7 @@ class GoogleAdsAutoExecutor:
                         'conversions': conversions,
                         'cost': cost,
                         'ctr': row.metrics.ctr,
-                        'conversion_rate': row.metrics.conversion_rate,
+                        'conversion_rate': conversions / row.metrics.clicks if row.metrics.clicks > 0 else 0,
                         'lookback_days': lookback_days
                     },
                     status='pending'
@@ -319,18 +577,74 @@ class GoogleAdsAutoExecutor:
                     try:
                         self._execute_negative_keyword_add(action, customer_id, search_term, row.campaign.id)
                         action.mark_executed()
+                        self._mark_search_term_negated(search_term)  # Fix 4: feedback loop
                         logger.info(f"Added negative keyword (pattern): '{search_term}' to campaign {row.campaign.name}")
                     except Exception as e:
                         action.mark_failed(str(e))
                         logger.error(f"Failed to add negative keyword '{search_term}': {e}")
 
+            # Process ML WasteClassifier terms (Pass 2)
+            for search_term, (row, waste_prob) in ml_flagged.items():
                 if not self._check_daily_limit('negative_keyword_added'):
                     break
+                # Fix 3: cross-system dedup
+                if self._is_already_negated(search_term, str(row.campaign.id)):
+                    continue
 
-            # Process LLM-flagged terms
+                cost = row.metrics.cost_micros / 1_000_000
+                conversions = row.metrics.conversions
+                estimated_savings = cost if conversions == 0 else cost * 0.8
+                confidence = min(0.88, 0.70 + waste_prob * 0.25)  # Scale 0.55-1.0 prob → 0.84-0.95
+
+                action = AIAction(
+                    account_id=self.account_id,
+                    action_type='negative_keyword_added',
+                    title=f"Block ML-Predicted Waste: '{search_term}'",
+                    description=f"ML model predicted {waste_prob:.0%} waste probability. Spent ${cost:.2f} with {conversions} conversions.",
+                    campaign_id=str(row.campaign.id),
+                    campaign_name=row.campaign.name,
+                    ad_group_id=str(row.ad_group.id),
+                    ad_group_name=row.ad_group.name,
+                    before_value={'search_term': search_term, 'status': 'active'},
+                    after_value={'search_term': search_term, 'status': 'excluded'},
+                    estimated_monthly_savings=estimated_savings,
+                    confidence_score=confidence,
+                    reasoning=f"WasteClassifier model predicted {waste_prob:.0%} probability of waste for '{search_term}'. "
+                             f"Performance: ${cost:.2f} spent, {row.metrics.clicks} clicks, {conversions} conversions.",
+                    data_used={
+                        'search_term': search_term,
+                        'detection_method': 'ml_waste_classifier',
+                        'waste_probability': waste_prob,
+                        'impressions': row.metrics.impressions,
+                        'clicks': row.metrics.clicks,
+                        'conversions': conversions,
+                        'cost': cost,
+                        'ctr': row.metrics.ctr,
+                        'conversion_rate': conversions / row.metrics.clicks if row.metrics.clicks > 0 else 0,
+                        'lookback_days': lookback_days
+                    },
+                    status='pending'
+                )
+                db.session.add(action)
+                actions_created.append(action)
+
+                if not dry_run:
+                    try:
+                        self._execute_negative_keyword_add(action, customer_id, search_term, row.campaign.id)
+                        action.mark_executed()
+                        self._mark_search_term_negated(search_term)  # Fix 4: feedback loop
+                        logger.info(f"Added negative keyword (ML): '{search_term}' to campaign {row.campaign.name}")
+                    except Exception as e:
+                        action.mark_failed(str(e))
+                        logger.error(f"Failed to add negative keyword (ML) '{search_term}': {e}")
+
+            # Process LLM-flagged terms (Pass 3)
             for search_term, (row, reason) in llm_flagged.items():
                 if not self._check_daily_limit('negative_keyword_added'):
                     break
+                # Fix 3: cross-system dedup
+                if self._is_already_negated(search_term, str(row.campaign.id)):
+                    continue
 
                 cost = row.metrics.cost_micros / 1_000_000
                 conversions = row.metrics.conversions
@@ -363,7 +677,7 @@ class GoogleAdsAutoExecutor:
                         'conversions': conversions,
                         'cost': cost,
                         'ctr': row.metrics.ctr,
-                        'conversion_rate': row.metrics.conversion_rate,
+                        'conversion_rate': conversions / row.metrics.clicks if row.metrics.clicks > 0 else 0,
                         'lookback_days': lookback_days
                     },
                     status='pending'
@@ -375,6 +689,7 @@ class GoogleAdsAutoExecutor:
                     try:
                         self._execute_negative_keyword_add(action, customer_id, search_term, row.campaign.id)
                         action.mark_executed()
+                        self._mark_search_term_negated(search_term)  # Fix 4: feedback loop
                         logger.info(f"Added negative keyword (LLM): '{search_term}' to campaign {row.campaign.name}")
                     except Exception as e:
                         action.mark_failed(str(e))
@@ -384,7 +699,7 @@ class GoogleAdsAutoExecutor:
 
             logger.info(
                 f"Account {self.account_id}: Created {len(actions_created)} negative keyword actions "
-                f"(pattern={len(pattern_flagged)}, llm={len(llm_flagged)}) "
+                f"(pattern={len(pattern_flagged)}, ml={len(ml_flagged)}, llm={len(llm_flagged)}) "
                 f"({'DRY RUN' if dry_run else 'EXECUTED'})"
             )
 
@@ -418,9 +733,11 @@ class GoogleAdsAutoExecutor:
             return {}
 
         # Build the prompt with business context
-        business_context = f"Business: {self.business_description}"
+        business_context = f"Business: {self.business_description}" if self.business_description else ""
         if self.business_services:
             business_context += f"\nServices offered: {self.business_services}"
+        if self.negative_keyword_examples:
+            business_context += f"\n\nBusiness-specific keyword guidance:\n{self.negative_keyword_examples}"
 
         terms_list = "\n".join(f"- {term}" for term in search_terms[:50])  # Batch up to 50
 
@@ -494,7 +811,7 @@ Be conservative: when in doubt, mark as RELEVANT (false). Only mark terms IRRELE
         """
         patterns_matched = []
 
-        for pattern in self.NON_PURCHASE_INTENT_PATTERNS:
+        for pattern in self._active_patterns:
             if pattern in search_term.lower():
                 patterns_matched.append(pattern)
 

@@ -32,34 +32,64 @@ class GoogleAdsAutoExecutor:
     """Service for automatically executing safe Google Ads optimizations"""
 
     # Non-purchase intent indicators (keywords/phrases that suggest no buying intent)
-    NON_PURCHASE_INTENT_PATTERNS = [
-        # Job/employment seeking
-        'job', 'jobs', 'career', 'careers', 'hiring', 'employment', 'resume', 'salary',
-        'work from home', 'remote work', 'part time', 'full time', 'apply',
-
-        # DIY/How-to (people looking to do it themselves)
-        'how to', 'diy', 'tutorial', 'guide', 'tips', 'instructions', 'step by step',
-        'yourself', 'myself', 'homemade', 'manual', 'fix it', 'repair guide',
-
-        # Educational/informational
-        'what is', 'definition', 'meaning', 'wiki', 'wikipedia', 'learn', 'course',
-        'training', 'certification', 'school', 'class', 'education',
-
-        # Free/cheap alternatives
-        'free', 'cheap', 'discount', 'coupon', 'deal', 'sale', 'clearance',
-
-        # Research/comparison (not ready to buy)
-        'review', 'reviews', 'comparison', 'compare', 'vs', 'versus', 'best',
-        'top 10', 'alternatives', 'options', 'which', 'should i',
-
-        # Images/videos (informational browsing)
-        'image', 'images', 'photo', 'photos', 'picture', 'pictures', 'video', 'videos',
-        'clip', 'clips', 'youtube', 'watch',
-
-        # Wrong products/services
-        'software', 'app', 'game', 'toy', 'used', 'for sale', 'buy', 'purchase',
-        'online', 'shopping', 'store'
-    ]
+    # Named intent groups — each can be enabled/disabled per account and extended
+    # with account-specific custom patterns.
+    INTENT_GROUPS = {
+        'diy': {
+            'name': 'DIY / Do It Yourself',
+            'description': 'People looking to do it themselves rather than hire a professional',
+            'patterns': [
+                'how to', 'diy', 'tutorial', 'guide', 'tips', 'instructions',
+                'step by step', 'yourself', 'myself', 'homemade', 'manual',
+            ],
+            'enabled_by_default': True,
+        },
+        'free': {
+            'name': 'Free / Cheap Alternatives',
+            'description': 'People seeking free or heavily discounted options',
+            'patterns': [
+                'free', 'cheap', 'discount', 'coupon', 'deal', 'sale', 'clearance',
+            ],
+            'enabled_by_default': True,
+        },
+        'informational': {
+            'name': 'Informational / Research',
+            'description': 'Early-stage researchers not yet ready to buy or hire',
+            'patterns': [
+                'what is', 'definition', 'meaning', 'wiki', 'wikipedia', 'learn',
+                'course', 'training', 'certification', 'school', 'class', 'education',
+                'review', 'reviews', 'comparison', 'compare', 'vs', 'versus',
+                'alternatives', 'which', 'should i', 'top 10',
+            ],
+            'enabled_by_default': True,
+        },
+        'job_seeking': {
+            'name': 'Job Seeking / Employment',
+            'description': 'People looking for jobs, not services',
+            'patterns': [
+                'job', 'jobs', 'career', 'careers', 'hiring', 'employment', 'resume',
+                'salary', 'work from home', 'remote work', 'part time', 'full time', 'apply',
+            ],
+            'enabled_by_default': True,
+        },
+        'media': {
+            'name': 'Images / Videos',
+            'description': 'Browsing images or videos — informational, not buying',
+            'patterns': [
+                'image', 'images', 'photo', 'photos', 'picture', 'pictures',
+                'video', 'videos', 'clip', 'clips', 'youtube', 'watch',
+            ],
+            'enabled_by_default': True,
+        },
+        'wrong_product': {
+            'name': 'Wrong Product / Unrelated Category',
+            'description': 'Searching for products or categories you do not offer',
+            'patterns': [
+                'software', 'app', 'game', 'toy', 'used',
+            ],
+            'enabled_by_default': False,
+        },
+    }
 
     # Confidence thresholds for different action types
     CONFIDENCE_THRESHOLDS = {
@@ -92,6 +122,82 @@ class GoogleAdsAutoExecutor:
         self.business_description = self.account.get_business_description() or ''
         self.business_services = self.account.get_business_services() or ''
         self.negative_keyword_examples = self.account.get_negative_keyword_examples() or ''
+
+        # Build the active pattern list from enabled intent groups + account customisations
+        self._active_patterns, self._active_groups_meta = self._load_active_patterns()
+
+    def _load_active_patterns(self) -> Tuple[List[str], dict]:
+        """
+        Build the active pattern list by merging global INTENT_GROUPS with
+        account-level customisations stored in account_settings (key:
+        'intent_group_settings', JSON value).
+
+        Returns:
+            (flat_patterns, groups_meta)
+            flat_patterns — deduplicated list of all active patterns
+            groups_meta   — dict mapping group_key -> {name, enabled, patterns, custom}
+        """
+        import json
+
+        # Load account-level overrides from account_settings table
+        account_overrides: dict = {}
+        try:
+            with db.engine.connect() as conn:
+                row = conn.execute(
+                    text("""
+                        SELECT setting_value FROM account_settings
+                        WHERE account_id = :aid AND setting_key = 'intent_group_settings'
+                        LIMIT 1
+                    """),
+                    {"aid": self.account_id}
+                ).first()
+            if row and row[0]:
+                account_overrides = json.loads(row[0])
+        except Exception:
+            pass  # Table may not exist yet — use defaults
+
+        groups_meta: dict = {}
+        flat_patterns: List[str] = []
+
+        for group_key, group_def in self.INTENT_GROUPS.items():
+            override = account_overrides.get(group_key, {})
+            enabled = override.get('enabled', group_def['enabled_by_default'])
+            extra_patterns = override.get('extra_patterns', [])
+            active_patterns = group_def['patterns'] + [p for p in extra_patterns if p]
+
+            groups_meta[group_key] = {
+                'name': group_def['name'],
+                'description': group_def['description'],
+                'enabled': enabled,
+                'patterns': group_def['patterns'],
+                'extra_patterns': extra_patterns,
+            }
+
+            if enabled:
+                flat_patterns.extend(active_patterns)
+
+        # Account-level custom groups (arbitrary groups not in INTENT_GROUPS)
+        custom_groups = account_overrides.get('custom_groups', [])
+        for cg in custom_groups:
+            if cg.get('enabled', True) and cg.get('patterns'):
+                flat_patterns.extend(cg['patterns'])
+                groups_meta[f"custom_{cg.get('name', 'group')}"] = {
+                    'name': cg.get('name', 'Custom Group'),
+                    'description': cg.get('description', ''),
+                    'enabled': True,
+                    'patterns': cg['patterns'],
+                    'extra_patterns': [],
+                }
+
+        # Deduplicate while preserving order
+        seen: set = set()
+        deduped: List[str] = []
+        for p in flat_patterns:
+            if p not in seen:
+                seen.add(p)
+                deduped.append(p)
+
+        return deduped, groups_meta
 
     def _get_google_ads_client(self):
         """Get Google Ads API client."""
@@ -498,7 +604,7 @@ Be conservative: when in doubt, mark as RELEVANT (false). Only mark terms IRRELE
         """
         patterns_matched = []
 
-        for pattern in self.NON_PURCHASE_INTENT_PATTERNS:
+        for pattern in self._active_patterns:
             if pattern in search_term.lower():
                 patterns_matched.append(pattern)
 

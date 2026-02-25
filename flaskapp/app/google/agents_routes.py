@@ -1526,3 +1526,138 @@ def _run_agents_internal():
         "data_context": data_summary,
         "results": results
     })
+
+
+# ── Intent Groups & AI Settings ─────────────────────────────────────────────
+
+@agents_bp.route("/api/intent-groups", methods=["GET"])
+@login_required
+def get_intent_groups():
+    """Return the merged intent group config for this account."""
+    import json
+    from app.services.google_ads_auto_executor import GoogleAdsAutoExecutor
+
+    account_id = current_account_id()
+    if not account_id:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    # Load overrides from account_settings
+    overrides: dict = {}
+    try:
+        with db.engine.connect() as conn:
+            row = conn.execute(
+                text("""
+                    SELECT setting_value FROM account_settings
+                    WHERE account_id = :aid AND setting_key = 'intent_group_settings'
+                    LIMIT 1
+                """),
+                {"aid": account_id}
+            ).first()
+        if row and row[0]:
+            overrides = json.loads(row[0])
+    except Exception:
+        pass
+
+    groups = []
+    for group_key, group_def in GoogleAdsAutoExecutor.INTENT_GROUPS.items():
+        override = overrides.get(group_key, {})
+        groups.append({
+            "key": group_key,
+            "name": group_def["name"],
+            "description": group_def["description"],
+            "enabled": override.get("enabled", group_def["enabled_by_default"]),
+            "enabled_by_default": group_def["enabled_by_default"],
+            "patterns": group_def["patterns"],
+            "extra_patterns": override.get("extra_patterns", []),
+        })
+
+    custom_groups = overrides.get("custom_groups", [])
+
+    return jsonify({
+        "groups": groups,
+        "custom_groups": custom_groups,
+    })
+
+
+@agents_bp.route("/api/intent-groups", methods=["POST"])
+@login_required
+def save_intent_groups():
+    """Save account-level intent group settings."""
+    import json
+    from sqlalchemy.dialects.mysql import insert as mysql_insert
+
+    account_id = current_account_id()
+    if not account_id:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    data = request.get_json(silent=True) or {}
+
+    # Build the settings object
+    settings: dict = {}
+    for group in data.get("groups", []):
+        key = group.get("key")
+        if not key:
+            continue
+        settings[key] = {
+            "enabled": bool(group.get("enabled", True)),
+            "extra_patterns": [p.strip() for p in group.get("extra_patterns", []) if p.strip()],
+        }
+
+    settings["custom_groups"] = [
+        {
+            "name": cg.get("name", "Custom"),
+            "description": cg.get("description", ""),
+            "patterns": [p.strip() for p in cg.get("patterns", []) if p.strip()],
+            "enabled": bool(cg.get("enabled", True)),
+        }
+        for cg in data.get("custom_groups", [])
+    ]
+
+    settings_json = json.dumps(settings)
+
+    try:
+        with db.engine.begin() as conn:
+            conn.execute(text("""
+                INSERT INTO account_settings (account_id, setting_key, setting_value)
+                VALUES (:aid, 'intent_group_settings', :val)
+                ON DUPLICATE KEY UPDATE setting_value = :val
+            """), {"aid": account_id, "val": settings_json})
+    except Exception as e:
+        current_app.logger.error(f"Failed to save intent group settings: {e}")
+        return jsonify({"error": "Failed to save settings"}), 500
+
+    return jsonify({"success": True, "message": "Intent group settings saved."})
+
+
+@agents_bp.route("/api/ai-settings", methods=["POST"])
+@login_required
+def save_ai_settings():
+    """Save business description, services, and negative keyword examples."""
+    from sqlalchemy import text as sqla_text
+
+    account_id = current_account_id()
+    if not account_id:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    data = request.get_json(silent=True) or {}
+    business_description = (data.get("business_description") or "").strip()
+    business_services = (data.get("business_services") or "").strip()
+    negative_keyword_examples = (data.get("negative_keyword_examples") or "").strip()
+
+    try:
+        with db.engine.begin() as conn:
+            conn.execute(sqla_text("""
+                UPDATE accounts
+                SET business_description = :bd,
+                    negative_keyword_examples = :nk
+                WHERE id = :aid
+            """), {
+                "bd": business_description or None,
+                "nk": negative_keyword_examples or None,
+                "aid": account_id,
+            })
+    except Exception as e:
+        current_app.logger.error(f"Failed to save AI settings for account {account_id}: {e}")
+        return jsonify({"error": "Failed to save settings"}), 500
+
+    return jsonify({"success": True, "message": "AI settings saved."})

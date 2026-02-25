@@ -247,6 +247,67 @@ def _sample(label: str) -> Dict[str, Any]:
 
 # --------------------------- cards builder ---------------------------
 
+def _check_ai_requirements(aid: int, ads_connected: bool) -> list:
+    """
+    Return a list of warning dicts describing missing ML/AI agent requirements.
+    Only runs when Google Ads is connected — no point warning otherwise.
+    """
+    import os
+    if not ads_connected:
+        return []
+
+    from app.models import Account
+    account = Account.query.get(aid)
+    if not account:
+        return []
+
+    warnings = []
+    has_biz = bool(account.get_business_description())
+    has_examples = bool(account.get_negative_keyword_examples())
+    has_openai = bool(os.getenv('OPENAI_API_KEY'))
+
+    if not has_biz and not has_examples:
+        warnings.append({
+            'key': 'no_business_context',
+            'title': 'AI agents have no business context',
+            'detail': (
+                'The AI agents need a business description or negative keyword examples '
+                'to intelligently filter irrelevant search terms. Without this, the LLM '
+                'relevance check is skipped entirely.'
+            ),
+            'fix_url': url_for('agents_bp.dashboard'),
+            'fix_label': 'Configure AI Settings →',
+            'severity': 'warning',
+        })
+    elif not has_examples:
+        warnings.append({
+            'key': 'no_nk_examples',
+            'title': 'Negative keyword examples not set',
+            'detail': (
+                'Adding examples of what is and isn\'t relevant to your business '
+                'helps the AI make better negative keyword decisions.'
+            ),
+            'fix_url': url_for('agents_bp.dashboard'),
+            'fix_label': 'Add Examples →',
+            'severity': 'info',
+        })
+
+    if not has_openai:
+        warnings.append({
+            'key': 'no_openai_key',
+            'title': 'OpenAI API key not configured',
+            'detail': (
+                'The AI agents use OpenAI to evaluate search terms. '
+                'Intelligent LLM filtering is disabled without this key.'
+            ),
+            'fix_url': None,
+            'fix_label': None,
+            'severity': 'error',
+        })
+
+    return warnings
+
+
 def _connection_cards(aid: int) -> Dict[str, Dict[str, Any]]:
     """
     Build a dict keyed exactly how the dashboard template expects:
@@ -403,6 +464,9 @@ def dashboard():
                 cache_time = datetime.fromisoformat(cached["__cached_at"])
                 if datetime.utcnow() - cache_time < timedelta(minutes=5):
                     current_app.logger.debug(f"Using cached dashboard for account {aid}")
+                    # ai_warnings always computed fresh — reflects current config state
+                    ads_connected = cached.get("cards", {}).get("ads", {}).get("connected", False)
+                    ai_warnings = _check_ai_requirements(aid, ads_connected)
                     return render_template(
                         "account/dashboard.html",
                         cards=cached["cards"],
@@ -411,6 +475,7 @@ def dashboard():
                         connected_count=cached["connected_count"],
                         total_count=cached["total_count"],
                         connected_percent=cached["connected_percent"],
+                        ai_warnings=ai_warnings,
                     )
             except (ValueError, TypeError, KeyError):
                 pass
@@ -437,6 +502,9 @@ def dashboard():
         "__cached_at": datetime.utcnow().isoformat(),
     }
 
+    ads_connected = cards.get("ads", {}).get("connected", False)
+    ai_warnings = _check_ai_requirements(aid, ads_connected)
+
     return render_template(
         "account/dashboard.html",
         cards=cards,
@@ -445,6 +513,7 @@ def dashboard():
         connected_count=connected_count,
         total_count=total_count,
         connected_percent=pct,
+        ai_warnings=ai_warnings,
     )
 
 @account_bp.route("/connect/<provider>", methods=["GET"], endpoint="connect")

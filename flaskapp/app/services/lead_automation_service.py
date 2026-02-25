@@ -730,11 +730,13 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                 logger.warning(f"No sequence available anywhere — skipping contact {contact.id}")
                 continue
 
-            # Dedup: skip if already sent this step to this address
-            already_sent = LeadContactEmail.query.filter_by(
-                contact_id=contact.id,
-                sequence_step=email_sequence.step_number,
-                to_email=email,
+            # Dedup: skip if already sent this step to this address.
+            # Exclude bounced/failed so soft-bounce resets can be retried.
+            already_sent = LeadContactEmail.query.filter(
+                LeadContactEmail.contact_id == contact.id,
+                LeadContactEmail.sequence_step == email_sequence.step_number,
+                LeadContactEmail.to_email == email,
+                LeadContactEmail.status.notin_(['bounced', 'failed']),
             ).first()
             if already_sent:
                 continue
@@ -823,10 +825,11 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             if not email_sequence:
                 continue
 
-            already_sent = LeadEmail.query.filter_by(
-                lead_id=lead.id,
-                sequence_id=email_sequence.id,
-                to_email=email,
+            already_sent = LeadEmail.query.filter(
+                LeadEmail.lead_id == lead.id,
+                LeadEmail.sequence_id == email_sequence.id,
+                LeadEmail.to_email == email,
+                LeadEmail.status.notin_(['bounced', 'failed']),
             ).first()
             if already_sent:
                 continue

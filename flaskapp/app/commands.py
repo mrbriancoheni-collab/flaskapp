@@ -190,7 +190,7 @@ def send_pending_emails_command():
         click.echo(f"  Leads Enriched: {progress['leads_enriched']}")
         click.echo(f"  Emails Sent: {progress['emails_sent']}")
         click.echo(f"\nToday's Stats ({progress['daily_stats']['date']}):")
-        click.echo(f"  Emails: {progress['daily_stats']['emails']}/250")
+        click.echo(f"  Emails: {progress['daily_stats']['emails_lead_outreach']}/{progress['daily_stats']['daily_limit']}")
         click.echo(f"\n{'='*80}\n")
 
         # Only send emails (skip scraping and enrichment)

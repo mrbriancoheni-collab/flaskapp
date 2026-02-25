@@ -91,6 +91,7 @@ class GoogleAdsAutoExecutor:
         # Load business context for LLM-based relevance checks
         self.business_description = self.account.get_business_description() or ''
         self.business_services = self.account.get_business_services() or ''
+        self.negative_keyword_examples = self.account.get_negative_keyword_examples() or ''
 
     def _get_google_ads_client(self):
         """Get Google Ads API client."""
@@ -251,7 +252,8 @@ class GoogleAdsAutoExecutor:
 
             # PASS 2: LLM-based business relevance for remaining terms
             llm_flagged = {}  # term -> (row, reason)
-            if remaining_rows and self.business_description:
+            has_llm_context = bool(self.business_description or self.negative_keyword_examples)
+            if remaining_rows and has_llm_context:
                 terms_for_llm = [
                     row.search_term_view.search_term.lower().strip()
                     for row in remaining_rows
@@ -263,11 +265,11 @@ class GoogleAdsAutoExecutor:
                     result = llm_results.get(search_term, {})
                     if result.get('irrelevant', False):
                         llm_flagged[search_term] = (row, result.get('reason', 'Irrelevant to business'))
-            elif remaining_rows and not self.business_description:
+            elif remaining_rows and not has_llm_context:
                 logger.warning(
-                    f"Account {self.account_id}: No business_description set. "
+                    f"Account {self.account_id}: No business_description or negative_keyword_examples set. "
                     f"Skipping LLM relevance check for {len(remaining_rows)} search terms. "
-                    f"Set account.business_description to enable intelligent negative keyword detection."
+                    f"Set account.business_description or account.negative_keyword_examples to enable intelligent negative keyword detection."
                 )
 
             # Create actions for all flagged terms
@@ -307,7 +309,7 @@ class GoogleAdsAutoExecutor:
                         'conversions': conversions,
                         'cost': cost,
                         'ctr': row.metrics.ctr,
-                        'conversion_rate': row.metrics.conversion_rate,
+                        'conversion_rate': conversions / row.metrics.clicks if row.metrics.clicks > 0 else 0,
                         'lookback_days': lookback_days
                     },
                     status='pending'
@@ -363,7 +365,7 @@ class GoogleAdsAutoExecutor:
                         'conversions': conversions,
                         'cost': cost,
                         'ctr': row.metrics.ctr,
-                        'conversion_rate': row.metrics.conversion_rate,
+                        'conversion_rate': conversions / row.metrics.clicks if row.metrics.clicks > 0 else 0,
                         'lookback_days': lookback_days
                     },
                     status='pending'
@@ -418,9 +420,11 @@ class GoogleAdsAutoExecutor:
             return {}
 
         # Build the prompt with business context
-        business_context = f"Business: {self.business_description}"
+        business_context = f"Business: {self.business_description}" if self.business_description else ""
         if self.business_services:
             business_context += f"\nServices offered: {self.business_services}"
+        if self.negative_keyword_examples:
+            business_context += f"\n\nBusiness-specific keyword guidance:\n{self.negative_keyword_examples}"
 
         terms_list = "\n".join(f"- {term}" for term in search_terms[:50])  # Batch up to 50
 

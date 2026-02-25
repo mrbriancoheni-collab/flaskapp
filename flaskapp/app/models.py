@@ -102,6 +102,20 @@ class Account(db.Model):
         except Exception:
             return None
 
+    def get_negative_keyword_examples(self):
+        """Get negative_keyword_examples from DB. Returns None if column doesn't exist yet."""
+        from sqlalchemy import text
+        try:
+            with db.engine.connect() as conn:
+                result = conn.execute(
+                    text("SELECT negative_keyword_examples FROM accounts WHERE id = :id"),
+                    {"id": self.id}
+                )
+                row = result.fetchone()
+                return row[0] if row else None
+        except Exception:
+            return None
+
     @property
     def google_ads_connected(self):
         """

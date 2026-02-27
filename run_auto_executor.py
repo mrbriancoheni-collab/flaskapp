@@ -37,13 +37,14 @@ def main():
         if args.account:
             account_ids = [args.account]
         else:
-            rows = db.engine.execute(text("""
-                SELECT DISTINCT a.id
-                FROM accounts a
-                JOIN google_oauth_tokens got
-                  ON a.id = got.account_id AND got.product = 'ads'
-                WHERE got.credentials_json IS NOT NULL
-            """)).fetchall()
+            with db.engine.connect() as conn:
+                rows = conn.execute(text("""
+                    SELECT DISTINCT a.id
+                    FROM accounts a
+                    JOIN google_oauth_tokens got
+                      ON a.id = got.account_id AND got.product = 'ads'
+                    WHERE got.credentials_json IS NOT NULL
+                """)).fetchall()
             account_ids = [r[0] for r in rows]
 
         if not account_ids:

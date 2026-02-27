@@ -717,10 +717,12 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
             email = contact.email.strip()
 
             if email.lower() in unsubscribed_emails:
+                logger.debug(f"Skipping contact {contact.id} ({email}): unsubscribed")
                 continue
 
             lead = Lead.query.get(contact.lead_id)
             if not lead:
+                logger.warning(f"Skipping contact {contact.id}: lead {contact.lead_id} not found")
                 continue
 
             campaign = LeadCampaign.query.get(lead.campaign_id) if lead.campaign_id else None
@@ -739,6 +741,21 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                 LeadContactEmail.status.notin_(['bounced', 'failed']),
             ).first()
             if already_sent:
+                # Heal stale status: email was sent but contact never got marked.
+                # Without this, the contact re-appears in the pending query every run.
+                if contact.email_status == 'pending':
+                    contact.email_status = 'sent'
+                    contact.last_email_sent_at = already_sent.sent_at
+                    db.session.commit()
+                    logger.info(
+                        f"Healed stale status for contact {contact.id} ({email}): "
+                        f"LeadContactEmail {already_sent.id} already existed (step {email_sequence.step_number})"
+                    )
+                else:
+                    logger.debug(
+                        f"Skipping contact {contact.id} ({email}): "
+                        f"step {email_sequence.step_number} already sent"
+                    )
                 continue
 
             try:
@@ -751,10 +768,11 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                     body_html=body.replace('\n', '<br>'),
                     body_text=body,
                     sequence_step=email_sequence.step_number,
-                    unsubscribe_url=self.outreach.get_unsubscribe_url(email, campaign.id),
+                    unsubscribe_url=self.outreach.get_unsubscribe_url(email, campaign.id if campaign else None),
                 )
 
                 if result.get('skipped'):
+                    logger.debug(f"Skipping contact {contact.id} ({email}): outreach service returned skipped")
                     continue
 
                 if result.get('rate_limited'):

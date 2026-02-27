@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'flaskapp'))
 
 def main():
     parser = argparse.ArgumentParser(description='Run Google Ads AI agents')
-    parser.add_argument('--layer', choices=['tactical', 'operational', 'strategic', 'all'],
+    parser.add_argument('--layer', choices=['tactical', 'operational', 'strategic', 'negative_keyword', 'all'],
                         default='all', help='Which agent layer to run')
     args = parser.parse_args()
 

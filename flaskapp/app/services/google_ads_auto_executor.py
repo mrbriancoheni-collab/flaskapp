@@ -313,6 +313,23 @@ class GoogleAdsAutoExecutor:
 
     # ── Fix 4: Feedback loop — mark term as negated in DB ────────────────────
 
+    def _smart_match_type(self, search_term: str) -> str:
+        """
+        Choose the safest match type for a negative keyword.
+
+        Short terms (1-2 words) get EXACT match — broad enough to catch the term,
+        narrow enough not to accidentally block related valuable searches.
+        Long-tail terms (3+ words) get PHRASE match — more targeted blocking.
+
+        Examples:
+          "pool" → EXACT  (avoid blocking "swimming pool service" if we only want to block generic "pool")
+          "pool party" → EXACT
+          "above ground pool" → PHRASE  (block any query containing this phrase)
+          "above ground pool installation" → PHRASE
+        """
+        words = search_term.strip().split()
+        return 'EXACT' if len(words) <= 2 else 'PHRASE'
+
     def _mark_search_term_negated(self, search_term: str) -> None:
         """
         Mark search_term.added_as_negative = TRUE after execution.
@@ -523,6 +540,7 @@ class GoogleAdsAutoExecutor:
 
             # Create actions for all flagged terms
             actions_created = []
+            review_queued = 0   # Terms with conversions — held for human review
 
             # Process pattern-matched terms (Pass 1)
             for search_term, (row, patterns_matched) in pattern_flagged.items():
@@ -574,14 +592,34 @@ class GoogleAdsAutoExecutor:
                 actions_created.append(action)
 
                 if not dry_run:
-                    try:
-                        self._execute_negative_keyword_add(action, customer_id, search_term, row.campaign.id)
-                        action.mark_executed()
-                        self._mark_search_term_negated(search_term)  # Fix 4: feedback loop
-                        logger.info(f"Added negative keyword (pattern): '{search_term}' to campaign {row.campaign.name}")
-                    except Exception as e:
-                        action.mark_failed(str(e))
-                        logger.error(f"Failed to add negative keyword '{search_term}': {e}")
+                    if conversions >= 1.0:
+                        # Conversion Guard: term had conversions → queue for human review
+                        review_queued += 1
+                        logger.info(
+                            f"Queued for review (pattern): '{search_term}' "
+                            f"had {conversions:.0f} conversion(s) — not auto-executing"
+                        )
+                    else:
+                        try:
+                            match_type = self._smart_match_type(search_term)
+                            resource_name = self._execute_negative_keyword_add(
+                                action, customer_id, search_term, row.campaign.id, match_type
+                            )
+                            action.mark_executed()
+                            if resource_name and action.after_value:
+                                action.after_value = {
+                                    **action.after_value,
+                                    'resource_name': resource_name,
+                                    'match_type': match_type,
+                                }
+                            self._mark_search_term_negated(search_term)
+                            logger.info(
+                                f"Added negative keyword (pattern/{match_type}): "
+                                f"'{search_term}' to campaign {row.campaign.name}"
+                            )
+                        except Exception as e:
+                            action.mark_failed(str(e))
+                            logger.error(f"Failed to add negative keyword '{search_term}': {e}")
 
             # Process ML WasteClassifier terms (Pass 2)
             for search_term, (row, waste_prob) in ml_flagged.items():
@@ -629,14 +667,34 @@ class GoogleAdsAutoExecutor:
                 actions_created.append(action)
 
                 if not dry_run:
-                    try:
-                        self._execute_negative_keyword_add(action, customer_id, search_term, row.campaign.id)
-                        action.mark_executed()
-                        self._mark_search_term_negated(search_term)  # Fix 4: feedback loop
-                        logger.info(f"Added negative keyword (ML): '{search_term}' to campaign {row.campaign.name}")
-                    except Exception as e:
-                        action.mark_failed(str(e))
-                        logger.error(f"Failed to add negative keyword (ML) '{search_term}': {e}")
+                    if conversions >= 1.0:
+                        # Conversion Guard: term had conversions → queue for human review
+                        review_queued += 1
+                        logger.info(
+                            f"Queued for review (ML): '{search_term}' "
+                            f"had {conversions:.0f} conversion(s) — not auto-executing"
+                        )
+                    else:
+                        try:
+                            match_type = self._smart_match_type(search_term)
+                            resource_name = self._execute_negative_keyword_add(
+                                action, customer_id, search_term, row.campaign.id, match_type
+                            )
+                            action.mark_executed()
+                            if resource_name and action.after_value:
+                                action.after_value = {
+                                    **action.after_value,
+                                    'resource_name': resource_name,
+                                    'match_type': match_type,
+                                }
+                            self._mark_search_term_negated(search_term)
+                            logger.info(
+                                f"Added negative keyword (ML/{match_type}): "
+                                f"'{search_term}' to campaign {row.campaign.name}"
+                            )
+                        except Exception as e:
+                            action.mark_failed(str(e))
+                            logger.error(f"Failed to add negative keyword (ML) '{search_term}': {e}")
 
             # Process LLM-flagged terms (Pass 3)
             for search_term, (row, reason) in llm_flagged.items():
@@ -686,22 +744,49 @@ class GoogleAdsAutoExecutor:
                 actions_created.append(action)
 
                 if not dry_run:
-                    try:
-                        self._execute_negative_keyword_add(action, customer_id, search_term, row.campaign.id)
-                        action.mark_executed()
-                        self._mark_search_term_negated(search_term)  # Fix 4: feedback loop
-                        logger.info(f"Added negative keyword (LLM): '{search_term}' to campaign {row.campaign.name}")
-                    except Exception as e:
-                        action.mark_failed(str(e))
-                        logger.error(f"Failed to add negative keyword '{search_term}': {e}")
+                    if conversions >= 1.0:
+                        # Conversion Guard: term had conversions → queue for human review
+                        review_queued += 1
+                        logger.info(
+                            f"Queued for review (LLM): '{search_term}' "
+                            f"had {conversions:.0f} conversion(s) — not auto-executing"
+                        )
+                    else:
+                        try:
+                            match_type = self._smart_match_type(search_term)
+                            resource_name = self._execute_negative_keyword_add(
+                                action, customer_id, search_term, row.campaign.id, match_type
+                            )
+                            action.mark_executed()
+                            if resource_name and action.after_value:
+                                action.after_value = {
+                                    **action.after_value,
+                                    'resource_name': resource_name,
+                                    'match_type': match_type,
+                                }
+                            self._mark_search_term_negated(search_term)
+                            logger.info(
+                                f"Added negative keyword (LLM/{match_type}): "
+                                f"'{search_term}' to campaign {row.campaign.name}"
+                            )
+                        except Exception as e:
+                            action.mark_failed(str(e))
+                            logger.error(f"Failed to add negative keyword '{search_term}': {e}")
 
             db.session.commit()
 
+            executed_count = sum(1 for a in actions_created if a.status == 'executed')
             logger.info(
-                f"Account {self.account_id}: Created {len(actions_created)} negative keyword actions "
+                f"Account {self.account_id}: {len(actions_created)} actions "
+                f"[executed={executed_count}, review_queue={review_queued}] "
                 f"(pattern={len(pattern_flagged)}, ml={len(ml_flagged)}, llm={len(llm_flagged)}) "
-                f"({'DRY RUN' if dry_run else 'EXECUTED'})"
+                f"{'DRY RUN' if dry_run else ''}"
             )
+            if review_queued:
+                logger.info(
+                    f"Account {self.account_id}: {review_queued} term(s) held in pending review queue "
+                    f"because they had ≥1 conversion — visit AI change log to approve or dismiss."
+                )
 
             return actions_created
 
@@ -867,9 +952,18 @@ Be conservative: when in doubt, mark as RELEVANT (false). Only mark terms IRRELE
         action: AIAction,
         customer_id: str,
         search_term: str,
-        campaign_id: int
-    ) -> None:
-        """Execute the negative keyword addition via Google Ads API."""
+        campaign_id: int,
+        match_type: str = 'PHRASE',
+    ) -> str:
+        """
+        Execute the negative keyword addition via Google Ads API.
+
+        Args:
+            match_type: 'EXACT' for 1-2 word terms, 'PHRASE' for 3+ words.
+
+        Returns:
+            resource_name of the created criterion (used for undo).
+        """
         client = self._get_google_ads_client()
 
         # Create negative keyword at campaign level
@@ -880,7 +974,13 @@ Be conservative: when in doubt, mark as RELEVANT (false). Only mark terms IRRELE
         campaign_criterion.campaign = client.get_service("CampaignService").campaign_path(customer_id, campaign_id)
         campaign_criterion.negative = True
         campaign_criterion.keyword.text = search_term
-        campaign_criterion.keyword.match_type = client.enums.KeywordMatchTypeEnum.PHRASE
+
+        match_type_enum = (
+            client.enums.KeywordMatchTypeEnum.EXACT
+            if match_type == 'EXACT'
+            else client.enums.KeywordMatchTypeEnum.PHRASE
+        )
+        campaign_criterion.keyword.match_type = match_type_enum
 
         # Execute the mutation
         response = campaign_criterion_service.mutate_campaign_criteria(
@@ -888,7 +988,9 @@ Be conservative: when in doubt, mark as RELEVANT (false). Only mark terms IRRELE
             operations=[campaign_criterion_operation]
         )
 
-        logger.info(f"Added negative keyword: {response.results[0].resource_name}")
+        resource_name = response.results[0].resource_name
+        logger.info(f"Added negative keyword [{match_type}]: {resource_name}")
+        return resource_name
 
     def undo_action(self, action_id: int, user_id: Optional[int] = None, reason: Optional[str] = None) -> bool:
         """
@@ -940,10 +1042,64 @@ Be conservative: when in doubt, mark as RELEVANT (false). Only mark terms IRRELE
             return False
 
     def _undo_negative_keyword_add(self, action: AIAction) -> None:
-        """Undo negative keyword addition by removing it."""
-        # TODO: Implement removing negative keyword via Google Ads API
-        # This requires finding the negative keyword criterion and removing it
-        pass
+        """
+        Undo a negative keyword by removing the campaign criterion via Google Ads API.
+
+        Requires the resource_name to have been stored in action.after_value at execution
+        time (populated since the smart-match-type upgrade). Falls back to a GAQL lookup
+        if the resource_name is missing (for negatives added before the upgrade).
+        """
+        client = self._get_google_ads_client()
+        customer_id = self._customer_id
+
+        # Prefer the stored resource_name (fast path)
+        resource_name = None
+        if action.after_value and isinstance(action.after_value, dict):
+            resource_name = action.after_value.get('resource_name')
+
+        # Fallback: query the API to find the criterion
+        if not resource_name:
+            if not action.campaign_id:
+                raise ValueError(
+                    f"Action {action.id} has no campaign_id and no resource_name — cannot undo."
+                )
+            search_term = action.after_value.get('search_term') if action.after_value else None
+            if not search_term:
+                raise ValueError(
+                    f"Action {action.id} has no search_term in after_value — cannot undo."
+                )
+            ga_service = client.get_service("GoogleAdsService")
+            query = f"""
+                SELECT campaign_criterion.resource_name
+                FROM campaign_criterion
+                WHERE campaign_criterion.campaign = '{
+                    client.get_service("CampaignService").campaign_path(customer_id, action.campaign_id)
+                }'
+                  AND campaign_criterion.negative = TRUE
+                  AND campaign_criterion.keyword.text = '{search_term.replace("'", "\\'")}'
+                LIMIT 1
+            """
+            stream = ga_service.search_stream(customer_id=customer_id, query=query)
+            for batch in stream:
+                for row in batch.results:
+                    resource_name = row.campaign_criterion.resource_name
+                    break
+                if resource_name:
+                    break
+
+        if not resource_name:
+            raise ValueError(
+                f"Could not find negative keyword criterion for action {action.id} to remove."
+            )
+
+        campaign_criterion_service = client.get_service("CampaignCriterionService")
+        op = client.get_type("CampaignCriterionOperation")
+        op.remove = resource_name
+        campaign_criterion_service.mutate_campaign_criteria(
+            customer_id=customer_id,
+            operations=[op]
+        )
+        logger.info(f"Removed negative keyword criterion: {resource_name}")
 
     def _undo_keyword_pause(self, action: AIAction) -> None:
         """Undo keyword pause by re-enabling it."""

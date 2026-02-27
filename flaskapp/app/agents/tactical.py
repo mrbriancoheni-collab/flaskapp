@@ -440,6 +440,7 @@ Respond ONLY with valid JSON — an array of objects:
 [{{"term": "the search term", "irrelevant": true/false, "reason": "brief explanation"}}]
 
 {'Apply the account-specific intent guidance strictly — if a term clearly matches an irrelevant pattern described above, mark it IRRELEVANT. Otherwise, when in doubt, mark as RELEVANT.' if negative_keyword_examples else 'When in doubt, mark as RELEVANT.'}
+"""
 
         try:
             from openai import OpenAI

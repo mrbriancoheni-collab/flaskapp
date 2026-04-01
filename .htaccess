@@ -20,29 +20,21 @@ SetEnv LSAPI_MAX_REQUESTS 1000
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Pass /blog/ requests directly to WordPress (filesystem)
+    # 1. /blog/* → WordPress/PHP — stop here, serve from filesystem
     RewriteCond %{REQUEST_URI} ^/blog(/|$)
     RewriteRule ^ - [L]
 
-    # Serve real static files directly (CSS, JS, images, fonts)
+    # 2. Block PHP execution outside /blog/ (security: stray PHP uploads)
+    RewriteCond %{REQUEST_URI} !^/blog/
+    RewriteRule \.php$ - [F,L]
+
+    # 3. Serve real static files directly (CSS, JS, images, fonts)
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
 
-    # Serve real directories directly
-    RewriteCond %{REQUEST_FILENAME} -d
-    RewriteRule ^ - [L]
-
-    # Route everything else through Passenger (Python) — never to index.php
-    RewriteRule ^ - [L]
-</IfModule>
-
-# ---- Block PHP execution outside /blog/ --------------------------------
-<FilesMatch "\.php$">
-    Require all denied
-</FilesMatch>
-<IfModule mod_rewrite.c>
-    RewriteCond %{REQUEST_URI} ^/blog/
-    RewriteRule ^ - [L]
+    # 4. Everything else (including /) → Passenger (Python/Flask)
+    #    No -d rule here: the root / must NOT be short-circuited to the
+    #    filesystem — Passenger must handle it so Flask can serve home.html.
 </IfModule>
 
 # ---- Disable directory listing -----------------------------------------

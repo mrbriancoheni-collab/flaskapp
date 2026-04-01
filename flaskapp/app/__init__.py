@@ -528,6 +528,14 @@ def create_app():
         app.logger.info("main_bp registered")
     except Exception:
         app.logger.exception("Failed to import main_bp")
+        # Fallback: register / directly so the homepage always works
+        @app.route("/", endpoint="home")
+        def _home_fallback():
+            try:
+                return render_template("home.html")
+            except Exception as _e:
+                app.logger.exception("home.html render failed: %s", _e)
+                return "FieldSprout — coming soon", 200
 
     try:
         from app.account import account_bp, stripe_webhook

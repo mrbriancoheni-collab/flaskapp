@@ -1,7 +1,6 @@
 # LiteSpeed / Passenger configuration for FieldSprout (Flask / Python)
 # -----------------------------------------------------------------------
-# IMPORTANT: Do NOT add WordPress rewrite rules here.
-# All requests must be handled by Passenger (Python), not PHP/index.php.
+# WordPress lives in /blog/ — everything else is handled by Passenger (Python).
 # -----------------------------------------------------------------------
 
 # ---- Passenger (Python WSGI) -------------------------------------------
@@ -17,28 +16,34 @@ SetEnv LSAPI_MAX_PROCESS_TIME 300
 SetEnv LSAPI_MAX_IDLE 120
 SetEnv LSAPI_MAX_REQUESTS 1000
 
-# ---- Route ALL requests through Passenger (Python), NOT index.php ------
-# This overrides any WordPress .htaccess rules that may have been uploaded.
+# ---- Routing -----------------------------------------------------------
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Allow direct access to real static files (CSS, JS, images, fonts)
+    # Pass /blog/ requests directly to WordPress (filesystem)
+    RewriteCond %{REQUEST_URI} ^/blog(/|$)
+    RewriteRule ^ - [L]
+
+    # Serve real static files directly (CSS, JS, images, fonts)
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
 
-    # Allow direct access to real directories
+    # Serve real directories directly
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
-    # Route everything else through Passenger (never to index.php)
+    # Route everything else through Passenger (Python) — never to index.php
     RewriteRule ^ - [L]
 </IfModule>
 
-# ---- Security: block direct PHP execution ------------------------------
-# Prevents any accidentally uploaded WordPress PHP files from running.
+# ---- Block PHP execution outside /blog/ --------------------------------
 <FilesMatch "\.php$">
     Require all denied
 </FilesMatch>
+<IfModule mod_rewrite.c>
+    RewriteCond %{REQUEST_URI} ^/blog/
+    RewriteRule ^ - [L]
+</IfModule>
 
 # ---- Disable directory listing -----------------------------------------
 Options -Indexes

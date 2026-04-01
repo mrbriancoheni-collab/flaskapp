@@ -1,16 +1,44 @@
-# LiteSpeed Configuration for Flask App (Python)
-# Increase LSAPI worker processes to handle concurrent requests
+# LiteSpeed / Passenger configuration for FieldSprout (Flask / Python)
+# -----------------------------------------------------------------------
+# IMPORTANT: Do NOT add WordPress rewrite rules here.
+# All requests must be handled by Passenger (Python), not PHP/index.php.
+# -----------------------------------------------------------------------
 
-# LSAPI Configuration for Python Apps (use environment variables)
+# ---- Passenger (Python WSGI) -------------------------------------------
+PassengerEnabled On
+PassengerAppRoot /home/fieljtgr/flaskapp/flaskapp
+PassengerBaseURI /
+PassengerPython /home/fieljtgr/virtualenv/flaskapp/3.9/bin/python3
+PassengerStartupFile passenger_wsgi.py
+
+# ---- LSAPI worker tuning -----------------------------------------------
 SetEnv LSAPI_CHILDREN 20
 SetEnv LSAPI_MAX_PROCESS_TIME 300
 SetEnv LSAPI_MAX_IDLE 120
 SetEnv LSAPI_MAX_REQUESTS 1000
 
-# Alternative: Module-based config (may not work for Python)
-<IfModule Litespeed>
-    php_value lsapi_children 20
-    php_value lsapi_max_process_time 300
-    php_value lsapi_max_idle 120
-    php_value lsapi_max_requests 1000
+# ---- Route ALL requests through Passenger (Python), NOT index.php ------
+# This overrides any WordPress .htaccess rules that may have been uploaded.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Allow direct access to real static files (CSS, JS, images, fonts)
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # Allow direct access to real directories
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Route everything else through Passenger (never to index.php)
+    RewriteRule ^ - [L]
 </IfModule>
+
+# ---- Security: block direct PHP execution ------------------------------
+# Prevents any accidentally uploaded WordPress PHP files from running.
+<FilesMatch "\.php$">
+    Require all denied
+</FilesMatch>
+
+# ---- Disable directory listing -----------------------------------------
+Options -Indexes

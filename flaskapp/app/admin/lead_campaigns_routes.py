@@ -550,7 +550,7 @@ def index():
 @require_admin
 def new_campaign():
     """Create new lead campaign"""
-    service_options = sorted(HOME_SERVICE_CATEGORIES.values())
+    service_options = sorted(set(list(HOME_SERVICE_CATEGORIES.keys()) + list(HOME_SERVICE_CATEGORIES.values())))
     city_options = TOP_CITIES
 
     if request.method == 'GET':
@@ -646,7 +646,7 @@ def view_campaign(campaign_id: int):
 def edit_campaign(campaign_id: int):
     """Edit an existing campaign"""
     campaign = LeadCampaign.query.get_or_404(campaign_id)
-    service_options = sorted(HOME_SERVICE_CATEGORIES.values())
+    service_options = sorted(set(list(HOME_SERVICE_CATEGORIES.keys()) + list(HOME_SERVICE_CATEGORIES.values())))
     city_options = TOP_CITIES
 
     if request.method == 'GET':

@@ -16,6 +16,10 @@ import os
 # Add the app directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'flaskapp'))
 
+# Load .env before importing app (searches parent dir too)
+from scripts.load_env import load_environment
+load_environment(os.path.dirname(os.path.abspath(__file__)))
+
 from app import create_app
 from app.services.lead_automation_service import LeadAutomationService
 

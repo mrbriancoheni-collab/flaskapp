@@ -6,7 +6,7 @@ import time
 from typing import Optional, Sequence, List
 
 import requests
-from requests.exceptions import RequestException, Timeout, ConnectionError as RequestsConnectionError
+from requests.exceptions import RequestException, Timeout, ConnectionError as RequestsConnectionError, HTTPError
 from flask import current_app
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
@@ -475,7 +475,6 @@ def google_ads_search(
         raise ValueError(f"Invalid customer_id: {customer_id}")
 
     headers = ads_headers(access_token, login_customer_id)
-    results: List[dict] = []
 
     def _make_stream_request():
         """Make a streaming search request."""
@@ -523,27 +522,48 @@ def google_ads_search(
         r.raise_for_status()
         return r.json() or {}
 
-    if stream:
-        # Streaming request with retry
-        payload = _retry_with_backoff(_make_stream_request, max_retries)
-        for batch in payload:
-            for row in batch.get("results", []):
-                results.append(row)
-        return results
+    # Determine which API versions to attempt.
+    # In "auto" mode: use cached working version when available, otherwise iterate all supported.
+    if _ENV_VERSION != "auto":
+        versions_to_try = [_ENV_VERSION]
+    elif _working_version:
+        versions_to_try = [_working_version]
+    else:
+        versions_to_try = list(SUPPORTED_ADS_VERSIONS)
 
-    # Non-streaming (handles pagination internally) with retry per page
-    page_token = None
-    while True:
-        payload = _retry_with_backoff(
-            lambda pt=page_token: _make_paginated_request(pt),
-            max_retries
-        )
-        results.extend(payload.get("results", []))
-        page_token = payload.get("nextPageToken")
-        if not page_token:
-            break
+    for ver in versions_to_try:
+        _set_working_version(ver)
+        iter_results: List[dict] = []
+        try:
+            if stream:
+                payload = _retry_with_backoff(_make_stream_request, max_retries)
+                for batch in payload:
+                    for row in batch.get("results", []):
+                        iter_results.append(row)
+            else:
+                page_token = None
+                while True:
+                    payload = _retry_with_backoff(
+                        lambda pt=page_token: _make_paginated_request(pt),
+                        max_retries
+                    )
+                    iter_results.extend(payload.get("results", []))
+                    page_token = payload.get("nextPageToken")
+                    if not page_token:
+                        break
+            return iter_results
+        except HTTPError as e:
+            if _ENV_VERSION == "auto" and e.response is not None and e.response.status_code == 404:
+                current_app.logger.warning(
+                    "Google Ads API %s returned 404 (version not found); trying next version", ver
+                )
+                continue
+            raise
 
-    return results
+    raise RuntimeError(
+        "Google Ads API search failed: endpoint not found on any supported version ("
+        + ", ".join(versions_to_try) + ")"
+    )
 
 
 # ────────────────────────────────────────────────────────────────────────────

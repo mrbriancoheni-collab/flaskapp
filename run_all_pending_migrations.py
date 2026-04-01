@@ -7,16 +7,17 @@ Fixes:
 2. keywords.max_cpc_cents - Missing column
 """
 
-import mysql.connector
+import pymysql
 from pathlib import Path
 
 def connect_db():
     """Connect to database"""
-    return mysql.connector.connect(
+    return pymysql.connect(
         host='localhost',
         user='fieljtgr_team',
         password='Jcl3QewSX8mQUj35w8QE',
-        database='fieljtgr_xyz'
+        database='fieljtgr_xyz',
+        autocommit=False,
     )
 
 def check_column_exists(cursor, table, column):
@@ -101,7 +102,7 @@ def main():
                     conn.commit()
                     print(f"\n✅ Index created: {migration['column']}")
                     success_count += 1
-                except mysql.connector.Error as e:
+                except pymysql.Error as e:
                     if 'Duplicate key name' in str(e):
                         print(f"\n✅ Index already exists: {migration['column']}")
                         skip_count += 1

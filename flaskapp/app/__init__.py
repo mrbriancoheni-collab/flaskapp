@@ -276,7 +276,9 @@ def create_app():
         x_for=1,      # Trust X-Forwarded-For
         x_proto=1,    # Trust X-Forwarded-Proto (critical for HTTPS detection)
         x_host=1,     # Trust X-Forwarded-Host
-        x_prefix=1    # Trust X-Forwarded-Prefix
+        x_prefix=0,   # Do NOT trust X-Forwarded-Prefix: if LiteSpeed/Passenger
+                      # sends X-Forwarded-Prefix=/ it strips the leading slash
+                      # from PATH_INFO, leaving "" which matches no Flask route.
     )
 
     # ---- Flask-Login init ---------------------------------------------------
@@ -1386,7 +1388,14 @@ def create_app():
     @app.errorhandler(404)
     def _404(err):
         """Handle 404 Not Found errors with clean HTML page"""
-        app.logger.warning(f"[404 ERROR] URL: {request.url}, Method: {request.method}, Referrer: {request.referrer}")
+        app.logger.warning(
+            "[404 ERROR] URL: %s, Method: %s, PATH_INFO: %r, SCRIPT_NAME: %r, "
+            "registered_routes: %s",
+            request.url, request.method,
+            request.environ.get("PATH_INFO"),
+            request.environ.get("SCRIPT_NAME"),
+            [r.rule for r in app.url_map.iter_rules() if r.rule in ("/", "/ping", "/about")],
+        )
         return render_template_string("""
 <!DOCTYPE html>
 <html lang="en">

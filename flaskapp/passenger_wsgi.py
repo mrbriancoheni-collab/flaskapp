@@ -78,14 +78,19 @@ from app import application  # create_app() already called in app/__init__.py
 
 class _PassengerRootFix:
     """
-    Passenger with ``PassengerBaseURI /`` puts '/' in SCRIPT_NAME and
-    strips it from PATH_INFO, leaving PATH_INFO=''.  Flask's URL router
-    never matches an empty PATH_INFO, so every request returns 404/308.
+    Passenger/LiteSpeed with ``PassengerBaseURI /`` sets SCRIPT_NAME='/'
+    and strips the leading slash from PATH_INFO for every request:
+      /        → SCRIPT_NAME='/', PATH_INFO=''
+      /blog/   → SCRIPT_NAME='/', PATH_INFO='blog/'
+      /about   → SCRIPT_NAME='/', PATH_INFO='about'
 
-    This middleware normalises the environ *before* ProxyFix or Flask
-    sees it:
-      - SCRIPT_NAME='/'  → ''   (Passenger sets this for root-mounted apps)
-      - PATH_INFO=''     → '/'  (missing leading slash)
+    Flask's URL router requires PATH_INFO to start with '/'.  Without this
+    fix every route returns 404.
+
+    Normalises the environ before ProxyFix or Flask sees it:
+      - SCRIPT_NAME='/' → ''
+      - PATH_INFO that does not start with '/' → prepend '/'
+        (covers both the empty '' case for root and 'blog/' for sub-paths)
     """
     __slots__ = ("_app",)
 
@@ -95,8 +100,9 @@ class _PassengerRootFix:
     def __call__(self, environ, start_response):
         if environ.get("SCRIPT_NAME") == "/":
             environ["SCRIPT_NAME"] = ""
-        if not environ.get("PATH_INFO"):
-            environ["PATH_INFO"] = "/"
+        path = environ.get("PATH_INFO", "")
+        if not path.startswith("/"):
+            environ["PATH_INFO"] = "/" + path
         return self._app(environ, start_response)
 
 

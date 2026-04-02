@@ -53,3 +53,6 @@ automation_state.json
 /check_imports.py
 /tmp/
 *.lock
+
+# WordPress blog — managed independently, not tracked in git
+/blog/

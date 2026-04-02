@@ -74,3 +74,30 @@ os.environ.setdefault("STRIPE_YEARLY_LINK", "https://buy.stripe.com/4gM8wI1fy6wZ
 
 # Use the factory defined in app/__init__.py
 from app import application  # create_app() already called in app/__init__.py
+
+
+class _PassengerRootFix:
+    """
+    Passenger with ``PassengerBaseURI /`` puts '/' in SCRIPT_NAME and
+    strips it from PATH_INFO, leaving PATH_INFO=''.  Flask's URL router
+    never matches an empty PATH_INFO, so every request returns 404/308.
+
+    This middleware normalises the environ *before* ProxyFix or Flask
+    sees it:
+      - SCRIPT_NAME='/'  → ''   (Passenger sets this for root-mounted apps)
+      - PATH_INFO=''     → '/'  (missing leading slash)
+    """
+    __slots__ = ("_app",)
+
+    def __init__(self, wsgi_app):
+        self._app = wsgi_app
+
+    def __call__(self, environ, start_response):
+        if environ.get("SCRIPT_NAME") == "/":
+            environ["SCRIPT_NAME"] = ""
+        if not environ.get("PATH_INFO"):
+            environ["PATH_INFO"] = "/"
+        return self._app(environ, start_response)
+
+
+application = _PassengerRootFix(application)

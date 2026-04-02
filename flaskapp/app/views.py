@@ -42,6 +42,12 @@ def expose_global_helpers():
 # ----------------------
 # PUBLIC PAGES (no login)
 # ----------------------
+@main_bp.route("/index.php", endpoint="index_php_redirect")
+def index_php_redirect():
+    """Redirect bots/crawlers looking for a PHP entry point."""
+    return redirect("/", 301)
+
+
 @main_bp.route("/", methods=["GET"], endpoint="home")
 def home():
     return render_template("home.html")

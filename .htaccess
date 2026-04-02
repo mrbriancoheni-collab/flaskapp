@@ -1,6 +1,6 @@
 # LiteSpeed / Passenger configuration for FieldSprout (Flask / Python)
 # -----------------------------------------------------------------------
-# WordPress lives in /blog/ — everything else is handled by Passenger (Python).
+# All requests are handled by Passenger (Python/Flask).
 # -----------------------------------------------------------------------
 
 # ---- Passenger (Python WSGI) -------------------------------------------
@@ -20,22 +20,14 @@ SetEnv LSAPI_MAX_REQUESTS 1000
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # 1. /blog/* → WordPress/PHP — stop here, do NOT pass to Passenger/Python.
-    #    [END] is the Apache 2.4 / LiteSpeed equivalent of [L] but also
-    #    prevents any subsequent internal sub-requests from re-entering the
-    #    rewrite engine, which is necessary to truly bypass Passenger.
-    RewriteCond %{REQUEST_URI} ^/blog(/|$)
-    RewriteRule ^ - [END]
-
-    # 2. Block PHP execution outside /blog/ (security: stray PHP uploads)
-    RewriteCond %{REQUEST_URI} !^/blog/
+    # 1. Block PHP execution (security: stray PHP uploads)
     RewriteRule \.php$ - [F,L]
 
-    # 3. Serve real static files directly (CSS, JS, images, fonts)
+    # 2. Serve real static files directly (CSS, JS, images, fonts)
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
 
-    # 4. Everything else (including /) → Passenger (Python/Flask)
+    # 3. Everything else (including / and /blog/*) → Passenger (Python/Flask)
     #    No -d rule here: the root / must NOT be short-circuited to the
     #    filesystem — Passenger must handle it so Flask can serve home.html.
     RewriteRule ^ - [L]

@@ -38,6 +38,7 @@ SetEnv LSAPI_MAX_REQUESTS 1000
     # 4. Everything else (including /) → Passenger (Python/Flask)
     #    No -d rule here: the root / must NOT be short-circuited to the
     #    filesystem — Passenger must handle it so Flask can serve home.html.
+    RewriteRule ^ - [L]
 </IfModule>
 
 # ---- Disable directory listing -----------------------------------------

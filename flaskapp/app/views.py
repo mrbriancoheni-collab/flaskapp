@@ -57,16 +57,16 @@ def home():
 @main_bp.route("/blog/<path:subpath>", endpoint="blog")
 def blog(subpath):
     """
-    Safety-net handler: reached only when LiteSpeed/Passenger fails to route
-    /blog/* to WordPress before Flask sees it.  If WP_BASE is configured,
-    redirect there; otherwise redirect to home so visitors aren't stranded.
+    WordPress was removed.  If WP_BASE is configured, proxy-redirect there;
+    otherwise return 404 so search engines drop stale blog URLs cleanly.
     """
     wp_base = current_app.config.get("WP_BASE", "").rstrip("/")
     if wp_base:
         target = f"{wp_base}/blog/{subpath}"
         qs = ("?" + request.query_string.decode()) if request.query_string else ""
         return redirect(target + qs, 301)
-    return redirect("/", 302)
+    from flask import abort
+    abort(404)
 
 
 @main_bp.route("/about", methods=["GET"], endpoint="about")

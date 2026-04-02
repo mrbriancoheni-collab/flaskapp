@@ -20,9 +20,12 @@ SetEnv LSAPI_MAX_REQUESTS 1000
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # 1. /blog/* → WordPress/PHP — stop here, serve from filesystem
+    # 1. /blog/* → WordPress/PHP — stop here, do NOT pass to Passenger/Python.
+    #    [END] is the Apache 2.4 / LiteSpeed equivalent of [L] but also
+    #    prevents any subsequent internal sub-requests from re-entering the
+    #    rewrite engine, which is necessary to truly bypass Passenger.
     RewriteCond %{REQUEST_URI} ^/blog(/|$)
-    RewriteRule ^ - [L]
+    RewriteRule ^ - [END]
 
     # 2. Block PHP execution outside /blog/ (security: stray PHP uploads)
     RewriteCond %{REQUEST_URI} !^/blog/

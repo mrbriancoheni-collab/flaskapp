@@ -3,6 +3,7 @@ from datetime import datetime
 
 from flask import (
     Blueprint,
+    jsonify,
     render_template,
     redirect,
     request,
@@ -113,6 +114,17 @@ def claude():
 @main_bp.route("/ping", methods=["GET"], endpoint="ping")
 def ping():
     return "pong", 200
+
+
+@main_bp.route("/_deploy_check", methods=["GET"], endpoint="_deploy_check")
+@main_bp.route("/deploy_check", methods=["GET"], endpoint="deploy_check")
+def deploy_check():
+    """Diagnostic health-check endpoint — returns JSON 200."""
+    return jsonify({
+        "status": "ok",
+        "server": "flask",
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+    })
 
 
 @main_bp.route("/__routes__", methods=["GET"], endpoint="__routes__")

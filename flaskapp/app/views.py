@@ -51,7 +51,29 @@ def index_php_redirect():
 
 @main_bp.route("/", methods=["GET"], endpoint="home")
 def home():
-    return render_template("home.html")
+    try:
+        return render_template("home.html")
+    except Exception:
+        return (
+            "<!doctype html><html><head><title>FieldSprout</title></head>"
+            "<body><h1>FieldSprout</h1><p>Server is running.</p>"
+            "<p><a href='/_deploy_check'>/_deploy_check</a></p></body></html>"
+        ), 200
+
+
+@main_bp.route("/test", methods=["GET"], endpoint="test")
+def test_page():
+    """Minimal route — returns raw HTML with zero dependencies to confirm Flask routing works."""
+    from datetime import datetime as _dt
+    return (
+        "<!doctype html><html><head><title>Flask Test</title></head><body>"
+        "<h1>Flask routing works</h1>"
+        f"<p>Time: {_dt.utcnow().isoformat()}Z</p>"
+        "<p><a href='/_deploy_check'>/_deploy_check</a> | "
+        "<a href='/deploy_check'>/deploy_check</a> | "
+        "<a href='/'>home</a></p>"
+        "</body></html>"
+    ), 200
 
 
 @main_bp.route("/blog/", defaults={"subpath": ""}, endpoint="blog_index")

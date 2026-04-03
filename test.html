@@ -1,0 +1,15 @@
+<!doctype html>
+<html>
+<head><title>Static Test</title></head>
+<body>
+  <h1>Static file test</h1>
+  <p>If you can see this, the web server is serving files correctly.</p>
+  <p>This file is served directly (bypasses Gunicorn/Flask entirely).</p>
+  <ul>
+    <li><a href="/_deploy_check">/_deploy_check</a> — WSGI-level intercept</li>
+    <li><a href="/deploy_check">/deploy_check</a> — Flask route</li>
+    <li><a href="/test">/test</a> — Flask inline HTML route</li>
+    <li><a href="/">/ (home)</a></li>
+  </ul>
+</body>
+</html>

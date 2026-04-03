@@ -1,14 +1,12 @@
-# LiteSpeed Configuration for FieldSprout (Flask / Python via Gunicorn)
+# LiteSpeed / cPanel Python App (LSAPI / Passenger) configuration
 # -----------------------------------------------------------------------
-# Gunicorn runs the Flask app as a standalone WSGI server on 127.0.0.1:8000.
-# LiteSpeed proxies all non-static requests to it via the [P] rewrite flag.
-#
-# LSAPI env vars are kept for compatibility in case LSAPI mode is active.
-# In LSAPI mode, LiteSpeed invokes passenger_wsgi.py directly and the
-# proxy RewriteRule below is simply bypassed by the static-file rule.
+# This app runs via cPanel's Python App Manager (LiteSpeed LSAPI).
+# LiteSpeed invokes passenger_wsgi.py directly — NO Gunicorn proxy needed.
+# The proxy-to-8000 rule has been removed because nothing listens on 8000
+# and it caused all dynamic requests to return 404.
 # -----------------------------------------------------------------------
 
-# ---- LSAPI worker tuning (kept for LSAPI compatibility) ----------------
+# ---- LSAPI worker tuning -----------------------------------------------
 SetEnv LSAPI_CHILDREN 20
 SetEnv LSAPI_MAX_PROCESS_TIME 300
 SetEnv LSAPI_MAX_IDLE 120
@@ -25,10 +23,8 @@ SetEnv LSAPI_MAX_REQUESTS 1000
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
 
-    # Proxy everything else to Gunicorn on port 8000.
-    # LiteSpeed supports the [P] proxy flag natively (no mod_proxy needed).
-    # This ensures the root URL "/" and all dynamic routes reach Flask.
-    RewriteRule ^(.*)$ http://127.0.0.1:8000%{REQUEST_URI} [P,QSA,L]
+    # All other requests go to the LSAPI/Passenger Python app (passenger_wsgi.py).
+    # No proxy rule — LiteSpeed handles this via its Python App handler.
 </IfModule>
 
 # ---- Disable directory listing -----------------------------------------

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unsubscribe</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 480px;
+            width: 90%;
+            text-align: center;
+        }
+        h1 { font-size: 1.5rem; margin-bottom: 12px; color: #2c3e50; }
+        p { color: #555; margin-bottom: 24px; line-height: 1.6; }
+        .email-display {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 10px 16px;
+            font-size: 0.95rem;
+            color: #495057;
+            margin-bottom: 24px;
+            word-break: break-all;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 32px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-secondary { background: #6c757d; color: white; margin-left: 10px; }
+        .btn-secondary:hover { background: #5a6268; }
+        input[type="email"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Unsubscribe</h1>
+        <p>You're about to unsubscribe from our outreach emails. You won't receive any further messages from us.</p>
+
+        <form method="POST">
+            {% if email %}
+                <div class="email-display">{{ email }}</div>
+                <input type="hidden" name="email" value="{{ email }}">
+            {% else %}
+                <input type="email" name="email" placeholder="Your email address" required>
+            {% endif %}
+            {% if campaign_id %}
+                <input type="hidden" name="campaign" value="{{ campaign_id }}">
+            {% endif %}
+            <div>
+                <button type="submit" class="btn btn-danger">Unsubscribe Me</button>
+                <a href="/" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

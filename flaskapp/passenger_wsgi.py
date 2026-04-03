@@ -109,30 +109,55 @@ application = _fix_path_info(application)
 
 def _diagnostic_wrapper(wsgi_app):
     """
-    TEMPORARY: intercept GET / and return a known-good 200 to confirm
-    this file is being loaded by the web server.  Remove once 404 is resolved.
+    TEMPORARY: intercept key paths at the raw WSGI layer to confirm
+    this file is loaded and to expose env info for debugging 404s.
+    Remove once routing is confirmed working.
     """
     import json as _json
     from datetime import datetime as _dt
 
-    DEPLOY_STAMP = "2026-04-03T15:05:00-WSGI-OK"
+    DEPLOY_STAMP = "2026-04-03T23:00:00-WSGI-V2"
+
+    INTERCEPT_PATHS = {"/_deploy_check", "/deploy_check", "/wsgi-check"}
 
     def middleware(environ, start_response):
         path = environ.get("PATH_INFO", "")
-        method = environ.get("REQUEST_METHOD", "")
-        if path == "/_deploy_check":
+        if path in INTERCEPT_PATHS:
             body = _json.dumps({
                 "status": "ok",
                 "stamp": DEPLOY_STAMP,
                 "path_info": path,
                 "script_name": environ.get("SCRIPT_NAME", ""),
+                "server_name": environ.get("SERVER_NAME", ""),
                 "server_software": environ.get("SERVER_SOFTWARE", ""),
+                "http_host": environ.get("HTTP_HOST", ""),
+                "wsgi_url_scheme": environ.get("wsgi.url_scheme", ""),
             }).encode()
             start_response("200 OK", [
                 ("Content-Type", "application/json"),
                 ("Content-Length", str(len(body))),
             ])
             return [body]
+
+        if path == "/":
+            body = (
+                b"<!doctype html><html><head><title>WSGI OK</title></head><body>"
+                b"<h1>WSGI layer is alive</h1>"
+                b"<p>stamp: " + DEPLOY_STAMP.encode() + b"</p>"
+                b"<p>If you see this, Gunicorn+passenger_wsgi.py is working.</p>"
+                b"<p>Flask is being bypassed temporarily for diagnosis.</p>"
+                b"<ul>"
+                b"<li><a href='/_deploy_check'>/_deploy_check (WSGI JSON)</a></li>"
+                b"<li><a href='/wsgi-check'>/wsgi-check (WSGI JSON)</a></li>"
+                b"</ul>"
+                b"</body></html>"
+            )
+            start_response("200 OK", [
+                ("Content-Type", "text/html; charset=utf-8"),
+                ("Content-Length", str(len(body))),
+            ])
+            return [body]
+
         return wsgi_app(environ, start_response)
     return middleware
 

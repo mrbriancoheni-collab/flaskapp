@@ -106,3 +106,36 @@ def _fix_path_info(wsgi_app):
 
 application = _fix_path_info(application)
 
+
+def _diagnostic_wrapper(wsgi_app):
+    """
+    TEMPORARY: intercept GET / and return a known-good 200 to confirm
+    this file is being loaded by the web server.  Remove once 404 is resolved.
+    """
+    import json as _json
+    from datetime import datetime as _dt
+
+    DEPLOY_STAMP = "2026-04-03T15:05:00-WSGI-OK"
+
+    def middleware(environ, start_response):
+        path = environ.get("PATH_INFO", "")
+        method = environ.get("REQUEST_METHOD", "")
+        if path == "/_deploy_check":
+            body = _json.dumps({
+                "status": "ok",
+                "stamp": DEPLOY_STAMP,
+                "path_info": path,
+                "script_name": environ.get("SCRIPT_NAME", ""),
+                "server_software": environ.get("SERVER_SOFTWARE", ""),
+            }).encode()
+            start_response("200 OK", [
+                ("Content-Type", "application/json"),
+                ("Content-Length", str(len(body))),
+            ])
+            return [body]
+        return wsgi_app(environ, start_response)
+    return middleware
+
+
+application = _diagnostic_wrapper(application)
+

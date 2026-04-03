@@ -116,18 +116,27 @@ def _diagnostic_wrapper(wsgi_app):
     import json as _json
     from datetime import datetime as _dt
 
-    DEPLOY_STAMP = "2026-04-03T23:00:00-WSGI-V2"
+    DEPLOY_STAMP = "2026-04-03T23:30:00-WSGI-V3"
 
     INTERCEPT_PATHS = {"/_deploy_check", "/deploy_check", "/wsgi-check"}
 
     def middleware(environ, start_response):
-        path = environ.get("PATH_INFO", "")
+        raw_path   = environ.get("PATH_INFO", "")
+        script     = environ.get("SCRIPT_NAME", "")
+
+        # Normalise: LiteSpeed proxy sends SCRIPT_NAME='/' PATH_INFO='' for root
+        if raw_path == "" or (raw_path == "" and script == "/"):
+            path = "/"
+        else:
+            path = raw_path
+
         if path in INTERCEPT_PATHS:
             body = _json.dumps({
                 "status": "ok",
                 "stamp": DEPLOY_STAMP,
-                "path_info": path,
-                "script_name": environ.get("SCRIPT_NAME", ""),
+                "path_info": raw_path,
+                "path_normalised": path,
+                "script_name": script,
                 "server_name": environ.get("SERVER_NAME", ""),
                 "server_software": environ.get("SERVER_SOFTWARE", ""),
                 "http_host": environ.get("HTTP_HOST", ""),
@@ -142,13 +151,14 @@ def _diagnostic_wrapper(wsgi_app):
         if path == "/":
             body = (
                 b"<!doctype html><html><head><title>WSGI OK</title></head><body>"
-                b"<h1>WSGI layer is alive</h1>"
+                b"<h1>WSGI layer is alive (V3)</h1>"
                 b"<p>stamp: " + DEPLOY_STAMP.encode() + b"</p>"
-                b"<p>If you see this, Gunicorn+passenger_wsgi.py is working.</p>"
-                b"<p>Flask is being bypassed temporarily for diagnosis.</p>"
+                b"<p>raw PATH_INFO=" + repr(raw_path).encode() + b" SCRIPT_NAME=" + repr(script).encode() + b"</p>"
+                b"<p>Gunicorn+passenger_wsgi.py is working.</p>"
                 b"<ul>"
-                b"<li><a href='/_deploy_check'>/_deploy_check (WSGI JSON)</a></li>"
-                b"<li><a href='/wsgi-check'>/wsgi-check (WSGI JSON)</a></li>"
+                b"<li><a href='/_deploy_check'>/_deploy_check</a></li>"
+                b"<li><a href='/wsgi-check'>/wsgi-check</a></li>"
+                b"<li><a href='/__routes__'>/__routes__ (Flask URL map)</a></li>"
                 b"</ul>"
                 b"</body></html>"
             )

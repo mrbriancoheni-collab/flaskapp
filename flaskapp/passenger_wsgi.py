@@ -75,3 +75,34 @@ os.environ.setdefault("STRIPE_YEARLY_LINK", "https://buy.stripe.com/4gM8wI1fy6wZ
 # Use the factory defined in app/__init__.py
 from app import application  # create_app() already called in app/__init__.py
 
+
+def _fix_path_info(wsgi_app):
+    """
+    Normalize SCRIPT_NAME / PATH_INFO before they reach Flask.
+
+    LiteSpeed (and some Passenger configs) mount the app at '/' by setting
+    SCRIPT_NAME='/' and PATH_INFO='' for requests to the root.  Flask routes
+    against PATH_INFO, so an empty string matches nothing and every root
+    request returns 404.
+
+    Fix: if PATH_INFO is empty (or '//' after naive concatenation), force it
+    to '/' so Flask's URL map resolves correctly.
+    """
+    def middleware(environ, start_response):
+        script = environ.get("SCRIPT_NAME", "")
+        path   = environ.get("PATH_INFO", "")
+
+        # If the proxy set SCRIPT_NAME='/' and left PATH_INFO empty,
+        # move the slash into PATH_INFO and clear SCRIPT_NAME.
+        if script == "/" and path == "":
+            environ["SCRIPT_NAME"] = ""
+            environ["PATH_INFO"]   = "/"
+        elif path == "":
+            environ["PATH_INFO"] = "/"
+
+        return wsgi_app(environ, start_response)
+    return middleware
+
+
+application = _fix_path_info(application)
+

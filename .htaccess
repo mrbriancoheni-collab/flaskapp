@@ -1,16 +1,10 @@
-# LiteSpeed / Passenger configuration for FieldSprout (Flask / Python)
+# LiteSpeed Configuration for FieldSprout (Flask / Python via Gunicorn)
 # -----------------------------------------------------------------------
-# All requests are handled by Passenger (Python/Flask).
+# Gunicorn runs the Flask app as a standalone WSGI server on port 8000.
+# LiteSpeed proxies all requests to it.  No Passenger/LSAPI directives.
 # -----------------------------------------------------------------------
 
-# ---- Passenger (Python WSGI) -------------------------------------------
-PassengerEnabled On
-PassengerAppRoot /home/fieljtgr/flaskapp/flaskapp
-PassengerBaseURI /
-PassengerPython /home/fieljtgr/virtualenv/flaskapp/3.9/bin/python3
-PassengerStartupFile passenger_wsgi.py
-
-# ---- LSAPI worker tuning -----------------------------------------------
+# ---- LSAPI worker tuning (kept for compatibility) ----------------------
 SetEnv LSAPI_CHILDREN 20
 SetEnv LSAPI_MAX_PROCESS_TIME 300
 SetEnv LSAPI_MAX_IDLE 120
@@ -20,16 +14,11 @@ SetEnv LSAPI_MAX_REQUESTS 1000
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # 1. Block PHP execution (security: stray PHP uploads)
+    # Block PHP execution (security)
     RewriteRule \.php$ - [F,L]
 
-    # 2. Serve real static files directly (CSS, JS, images, fonts)
+    # Serve real static files directly (CSS, JS, images, fonts)
     RewriteCond %{REQUEST_FILENAME} -f
-    RewriteRule ^ - [L]
-
-    # 3. Everything else (including / and /blog/*) → Passenger (Python/Flask)
-    #    No -d rule here: the root / must NOT be short-circuited to the
-    #    filesystem — Passenger must handle it so Flask can serve home.html.
     RewriteRule ^ - [L]
 </IfModule>
 

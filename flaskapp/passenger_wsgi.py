@@ -75,35 +75,3 @@ os.environ.setdefault("STRIPE_YEARLY_LINK", "https://buy.stripe.com/4gM8wI1fy6wZ
 # Use the factory defined in app/__init__.py
 from app import application  # create_app() already called in app/__init__.py
 
-
-class _PassengerRootFix:
-    """
-    Passenger/LiteSpeed with ``PassengerBaseURI /`` sets SCRIPT_NAME='/'
-    and strips the leading slash from PATH_INFO for every request:
-      /        → SCRIPT_NAME='/', PATH_INFO=''
-      /blog/   → SCRIPT_NAME='/', PATH_INFO='blog/'
-      /about   → SCRIPT_NAME='/', PATH_INFO='about'
-
-    Flask's URL router requires PATH_INFO to start with '/'.  Without this
-    fix every route returns 404.
-
-    Normalises the environ before ProxyFix or Flask sees it:
-      - SCRIPT_NAME='/' → ''
-      - PATH_INFO that does not start with '/' → prepend '/'
-        (covers both the empty '' case for root and 'blog/' for sub-paths)
-    """
-    __slots__ = ("_app",)
-
-    def __init__(self, wsgi_app):
-        self._app = wsgi_app
-
-    def __call__(self, environ, start_response):
-        if environ.get("SCRIPT_NAME") == "/":
-            environ["SCRIPT_NAME"] = ""
-        path = environ.get("PATH_INFO", "")
-        if not path.startswith("/"):
-            environ["PATH_INFO"] = "/" + path
-        return self._app(environ, start_response)
-
-
-application = _PassengerRootFix(application)

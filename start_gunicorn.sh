@@ -4,7 +4,7 @@
 
 # Configuration
 APP_DIR="/home/fieljtgr/flaskapp"
-VENV_DIR="/home/fieljtgr/virtualenv/flaskapp/3.8"  # Adjust if virtualenv is elsewhere
+VENV_DIR="/home/fieljtgr/virtualenv/flaskapp/3.9"
 BIND_ADDRESS="127.0.0.1:8000"
 WORKERS=4
 TIMEOUT=120

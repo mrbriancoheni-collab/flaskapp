@@ -2491,6 +2491,80 @@ def calculate_next_run_time(config):
 
 # ==================== Bulk Status Updates ====================
 
+@lead_campaigns_bp.route('/update-config', methods=['GET', 'POST'])
+@require_admin
+def update_config():
+    """
+    GET  – return current CampaignAutomationConfig as JSON.
+    POST – update CampaignAutomationConfig fields from JSON body.
+
+    Accepted POST fields (all optional):
+        enabled            bool
+        run_time           str  "HH:MM"
+        run_days           list [0-6]   (0=Mon)
+        daily_email_limit  int
+        skip_weekends      bool
+    """
+    from app.models_leads import CampaignAutomationConfig
+
+    config = CampaignAutomationConfig.query.first()
+
+    if request.method == 'GET':
+        if not config:
+            return jsonify({
+                'enabled': False,
+                'run_time': '09:00',
+                'run_days': [0, 1, 2, 3, 4],
+                'daily_email_limit': 250,
+                'skip_weekends': True,
+            })
+        return jsonify({
+            'enabled': config.enabled,
+            'run_time': config.run_time,
+            'run_days': config.run_days,
+            'daily_email_limit': config.daily_email_limit,
+            'skip_weekends': config.skip_weekends,
+            'next_run_at': config.next_run_at.isoformat() if config.next_run_at else None,
+            'last_run_at': config.last_run_at.isoformat() if config.last_run_at else None,
+        })
+
+    # POST — update config
+    try:
+        data = request.get_json() or {}
+
+        if not config:
+            config = CampaignAutomationConfig()
+            db.session.add(config)
+
+        if 'enabled' in data:
+            config.enabled = bool(data['enabled'])
+        if 'run_time' in data:
+            config.run_time = data['run_time']
+        if 'run_days' in data:
+            config.run_days = data['run_days']
+        if 'daily_email_limit' in data:
+            config.daily_email_limit = int(data['daily_email_limit'])
+        if 'skip_weekends' in data:
+            config.skip_weekends = bool(data['skip_weekends'])
+
+        config.updated_at = datetime.now()
+        config.next_run_at = calculate_next_run_time(config)
+
+        db.session.commit()
+        logger.info(f"Automation config updated: {data}")
+
+        return jsonify({
+            'success': True,
+            'message': 'Config updated',
+            'next_run_at': config.next_run_at.isoformat() if config.next_run_at else None,
+        })
+
+    except Exception as e:
+        logger.error(f"Error updating config: {e}")
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @lead_campaigns_bp.route('/activate-all', methods=['POST'])
 @require_admin
 def activate_all_campaigns():

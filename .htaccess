@@ -1,31 +1,30 @@
-# LiteSpeed / cPanel Python App (LSAPI / Passenger) configuration
 # -----------------------------------------------------------------------
-# This app runs via cPanel's Python App Manager (LiteSpeed LSAPI).
-# LiteSpeed invokes passenger_wsgi.py directly — NO Gunicorn proxy needed.
-# The proxy-to-8000 rule has been removed because nothing listens on 8000
-# and it caused all dynamic requests to return 404.
+# FieldSprout — LiteSpeed / cPanel Gunicorn proxy config
+# -----------------------------------------------------------------------
+# The app runs as a Gunicorn daemon on 127.0.0.1:8000.
+# LiteSpeed proxies all dynamic requests there via cPanel's proxy rules.
 # -----------------------------------------------------------------------
 
-# ---- LSAPI worker tuning -----------------------------------------------
-SetEnv LSAPI_CHILDREN 20
-SetEnv LSAPI_MAX_PROCESS_TIME 300
-SetEnv LSAPI_MAX_IDLE 120
-SetEnv LSAPI_MAX_REQUESTS 1000
+# ---- CRITICAL: prevent LiteSpeed from rewriting / to /index.php ------
+# Without this, LiteSpeed's default DirectoryIndex converts every bare /
+# request to /index.php before proxying, so Flask never sees PATH_INFO="/"
+# and the homepage 404s.
+DirectoryIndex disabled
+
+# ---- Disable directory listing -----------------------------------------
+Options -Indexes
 
 # ---- Routing -----------------------------------------------------------
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Block PHP execution (security)
+    # Block PHP execution (security hardening)
     RewriteRule \.php$ - [F,L]
 
     # Serve real static files directly (CSS, JS, images, fonts, robots.txt)
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
 
-    # All other requests go to the LSAPI/Passenger Python app (passenger_wsgi.py).
-    # No proxy rule — LiteSpeed handles this via its Python App handler.
+    # Proxy all dynamic requests to Gunicorn on port 8000
+    RewriteRule ^(.*)$ http://127.0.0.1:8000$1 [P,L]
 </IfModule>
-
-# ---- Disable directory listing -----------------------------------------
-Options -Indexes

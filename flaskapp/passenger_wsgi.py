@@ -103,6 +103,12 @@ def _fix_path_info(wsgi_app):
         if not environ.get("PATH_INFO"):
             environ["PATH_INFO"] = "/"
 
+        # LiteSpeed DirectoryIndex may rewrite bare / to /index.php before
+        # proxying.  Belt-and-suspenders: undo that here so Flask sees "/".
+        # (The real fix is DirectoryIndex disabled in .htaccess.)
+        if environ.get("PATH_INFO") in ("/index.php", "/index.html"):
+            environ["PATH_INFO"] = "/"
+
         return wsgi_app(environ, start_response)
     return middleware
 

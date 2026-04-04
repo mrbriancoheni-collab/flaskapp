@@ -281,6 +281,19 @@ def create_app():
                       # from PATH_INFO, leaving "" which matches no Flask route.
     )
 
+    # ---- Belt-and-suspenders: normalize PATH_INFO/SCRIPT_NAME after ProxyFix
+    # passenger_wsgi.py also does this before calling Flask, but ProxyFix runs
+    # inside Flask.__call__, so we add a second guard here to handle any edge
+    # case where SCRIPT_NAME='/' or PATH_INFO='' slips through after ProxyFix.
+    _post_proxy_wsgi = app.wsgi_app
+    def _inner_fix_path(environ, start_response):
+        if environ.get("SCRIPT_NAME") == "/":
+            environ["SCRIPT_NAME"] = ""
+        if not environ.get("PATH_INFO"):
+            environ["PATH_INFO"] = "/"
+        return _post_proxy_wsgi(environ, start_response)
+    app.wsgi_app = _inner_fix_path
+
     # ---- Flask-Login init ---------------------------------------------------
     login_manager = LoginManager()
     login_manager.init_app(app)

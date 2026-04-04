@@ -85,19 +85,22 @@ def _fix_path_info(wsgi_app):
     against PATH_INFO, so an empty string matches nothing and every root
     request returns 404.
 
-    Fix: if PATH_INFO is empty (or '//' after naive concatenation), force it
-    to '/' so Flask's URL map resolves correctly.
+    Also handles the case where SCRIPT_NAME='/' AND PATH_INFO='/' — in that
+    case Werkzeug may treat the effective path as '' (consumes the slash twice),
+    which also 404s.  Fix: always clear SCRIPT_NAME='/' since being mounted at
+    '/' is identical to '' in WSGI convention.
     """
     def middleware(environ, start_response):
         script = environ.get("SCRIPT_NAME", "")
         path   = environ.get("PATH_INFO", "")
 
-        # If the proxy set SCRIPT_NAME='/' and left PATH_INFO empty,
-        # move the slash into PATH_INFO and clear SCRIPT_NAME.
-        if script == "/" and path == "":
+        # Clear SCRIPT_NAME='/' — mounting at root is the same as no prefix.
+        # This prevents Werkzeug from consuming the leading slash of PATH_INFO.
+        if script == "/":
             environ["SCRIPT_NAME"] = ""
-            environ["PATH_INFO"]   = "/"
-        elif path == "":
+
+        # Ensure PATH_INFO is never empty — Flask routes against it.
+        if not environ.get("PATH_INFO"):
             environ["PATH_INFO"] = "/"
 
         return wsgi_app(environ, start_response)
@@ -116,7 +119,7 @@ def _diagnostic_wrapper(wsgi_app):
     import json as _json
     from datetime import datetime as _dt
 
-    DEPLOY_STAMP = "2026-04-03T23:30:00-WSGI-V3"
+    DEPLOY_STAMP = "2026-04-04T00:00:00-WSGI-V4"
 
     INTERCEPT_PATHS = {"/_deploy_check", "/deploy_check", "/wsgi-check"}
 
@@ -124,11 +127,22 @@ def _diagnostic_wrapper(wsgi_app):
         raw_path   = environ.get("PATH_INFO", "")
         script     = environ.get("SCRIPT_NAME", "")
 
-        # Normalise: LiteSpeed proxy sends SCRIPT_NAME='/' PATH_INFO='' for root
-        if raw_path == "" or (raw_path == "" and script == "/"):
-            path = "/"
-        else:
-            path = raw_path
+        # Normalise: LiteSpeed proxy may send SCRIPT_NAME='/' PATH_INFO='' for root
+        path = raw_path if raw_path else "/"
+
+        # Always log root requests to stderr.log for diagnosis
+        if path == "/" or not raw_path:
+            try:
+                import logging as _logging
+                _logging.getLogger(__name__).info(
+                    "ROOT_REQUEST raw_path=%r script=%r host=%r method=%r sw=%r",
+                    raw_path, script,
+                    environ.get("HTTP_HOST", ""),
+                    environ.get("REQUEST_METHOD", ""),
+                    environ.get("SERVER_SOFTWARE", ""),
+                )
+            except Exception:
+                pass
 
         if path in INTERCEPT_PATHS:
             body = _json.dumps({
@@ -151,7 +165,7 @@ def _diagnostic_wrapper(wsgi_app):
         if path == "/":
             body = (
                 b"<!doctype html><html><head><title>WSGI OK</title></head><body>"
-                b"<h1>WSGI layer is alive (V3)</h1>"
+                b"<h1>WSGI layer is alive (V4)</h1>"
                 b"<p>stamp: " + DEPLOY_STAMP.encode() + b"</p>"
                 b"<p>raw PATH_INFO=" + repr(raw_path).encode() + b" SCRIPT_NAME=" + repr(script).encode() + b"</p>"
                 b"<p>Gunicorn+passenger_wsgi.py is working.</p>"

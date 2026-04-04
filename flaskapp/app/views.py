@@ -9,7 +9,6 @@ from flask import (
     request,
     session,
     current_app,
-    url_for,
 )
 from app.ai_clients import chatgpt_response, claude_response
 from app.forms import ChatForm
@@ -149,16 +148,3 @@ def deploy_check():
     })
 
 
-@main_bp.route("/__routes__", methods=["GET"], endpoint="__routes__")
-def __routes__():
-    """Quickly inspect registered routes and whether url_for() resolves."""
-    lines = []
-    for rule in sorted(current_app.url_map.iter_rules(), key=lambda r: r.rule):
-        methods = ",".join(sorted(m for m in rule.methods if m not in ("HEAD", "OPTIONS")))
-        try:
-            url_for(rule.endpoint, **{arg: f"<{arg}>" for arg in rule.arguments})
-            ok = True
-        except Exception:
-            ok = False
-        lines.append(f"{rule.rule} → {rule.endpoint} [{methods}] {'OK' if ok else '(broken)'}")
-    return "<pre>" + "\n".join(lines) + "</pre>"

@@ -118,37 +118,21 @@ application = _fix_path_info(application)
 
 def _diagnostic_wrapper(wsgi_app):
     """
-    TEMPORARY: intercept key paths at the raw WSGI layer to confirm
-    this file is loaded and to expose env info for debugging 404s.
-    Remove once routing is confirmed working.
+    Intercept diagnostic paths at the raw WSGI layer to confirm
+    this file is loaded, independent of Flask routing.
     """
     import json as _json
-    from datetime import datetime as _dt
 
     DEPLOY_STAMP = "2026-04-04T00:00:00-WSGI-V4"
 
     INTERCEPT_PATHS = {"/_deploy_check", "/deploy_check", "/wsgi-check"}
 
     def middleware(environ, start_response):
-        raw_path   = environ.get("PATH_INFO", "")
-        script     = environ.get("SCRIPT_NAME", "")
+        raw_path = environ.get("PATH_INFO", "")
+        script   = environ.get("SCRIPT_NAME", "")
 
         # Normalise: LiteSpeed proxy may send SCRIPT_NAME='/' PATH_INFO='' for root
         path = raw_path if raw_path else "/"
-
-        # Always log root requests to stderr.log for diagnosis
-        if path == "/" or not raw_path:
-            try:
-                import logging as _logging
-                _logging.getLogger(__name__).info(
-                    "ROOT_REQUEST raw_path=%r script=%r host=%r method=%r sw=%r",
-                    raw_path, script,
-                    environ.get("HTTP_HOST", ""),
-                    environ.get("REQUEST_METHOD", ""),
-                    environ.get("SERVER_SOFTWARE", ""),
-                )
-            except Exception:
-                pass
 
         if path in INTERCEPT_PATHS:
             body = _json.dumps({
@@ -164,26 +148,6 @@ def _diagnostic_wrapper(wsgi_app):
             }).encode()
             start_response("200 OK", [
                 ("Content-Type", "application/json"),
-                ("Content-Length", str(len(body))),
-            ])
-            return [body]
-
-        if path == "/":
-            body = (
-                b"<!doctype html><html><head><title>WSGI OK</title></head><body>"
-                b"<h1>WSGI layer is alive (V4)</h1>"
-                b"<p>stamp: " + DEPLOY_STAMP.encode() + b"</p>"
-                b"<p>raw PATH_INFO=" + repr(raw_path).encode() + b" SCRIPT_NAME=" + repr(script).encode() + b"</p>"
-                b"<p>Gunicorn+passenger_wsgi.py is working.</p>"
-                b"<ul>"
-                b"<li><a href='/_deploy_check'>/_deploy_check</a></li>"
-                b"<li><a href='/wsgi-check'>/wsgi-check</a></li>"
-                b"<li><a href='/__routes__'>/__routes__ (Flask URL map)</a></li>"
-                b"</ul>"
-                b"</body></html>"
-            )
-            start_response("200 OK", [
-                ("Content-Type", "text/html; charset=utf-8"),
                 ("Content-Length", str(len(body))),
             ])
             return [body]

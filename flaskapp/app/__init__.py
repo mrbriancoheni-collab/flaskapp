@@ -224,7 +224,8 @@ def create_app():
     )
 
     # ---- Logging (file handler + optional stderr) --------------------------
-    log_path = _os.getenv("APP_ERROR_LOG", "/home/fieljtgr/flaskapp/stderr.log")
+    _app_dir = Path(__file__).resolve().parent.parent  # flaskapp/
+    log_path = _os.getenv("APP_ERROR_LOG", str(_app_dir / "stderr.log"))
     try:
         _os.makedirs(_os.path.dirname(log_path), exist_ok=True)
         file_handler = RotatingFileHandler(log_path, maxBytes=1_000_000, backupCount=3, encoding="utf-8")
@@ -962,69 +963,6 @@ def create_app():
         app.logger.info("CSRF exemptions applied for GMB POST endpoints")
     except Exception as e:
         app.logger.warning(f"Could not exempt GMB endpoints from CSRF: {e}")
-
-    # ---- Debug route for session diagnostics (REMOVE IN PRODUCTION) --------
-    @app.route('/debug-session')
-    def debug_session():
-        """
-        Diagnostic endpoint to debug session and HTTPS detection issues.
-        Visit https://fieldsprout.io/debug-session to see session state.
-
-        IMPORTANT: Remove this route before deploying to production!
-        """
-        from flask import request, session, jsonify
-
-        return jsonify({
-            'session_data': dict(session),
-            'cookies': dict(request.cookies),
-            'request_scheme': request.scheme,
-            'request_is_secure': request.is_secure,
-            'request_url': request.url,
-            'request_base_url': request.base_url,
-            'request_host': request.host,
-            'request_headers': dict(request.headers),
-            'flask_config': {
-                'SESSION_COOKIE_SECURE': app.config.get('SESSION_COOKIE_SECURE'),
-                'SESSION_COOKIE_HTTPONLY': app.config.get('SESSION_COOKIE_HTTPONLY'),
-                'SESSION_COOKIE_SAMESITE': app.config.get('SESSION_COOKIE_SAMESITE'),
-                'PERMANENT_SESSION_LIFETIME': str(app.config.get('PERMANENT_SESSION_LIFETIME')),
-                'PREFERRED_URL_SCHEME': app.config.get('PREFERRED_URL_SCHEME'),
-            },
-            'env_vars': {
-                'HTTPS': _os.getenv('HTTPS'),
-                'SECRET_KEY_SET': bool(_os.getenv('SECRET_KEY')),
-            },
-            'auth_status': {
-                'has_session_cookie': 'session' in request.cookies,
-                'session_keys': list(session.keys()) if session else [],
-            }
-        })
-
-    # ---- Additional debug route for login check ----------------------------
-    @app.route('/debug-login-check')
-    def debug_login_check():
-        """Check if login_required decorator would pass"""
-        from flask import session, jsonify
-        from app.auth.utils import is_logged_in, current_user_id, current_account_id
-
-        try:
-            logged_in = is_logged_in()
-            user_id = current_user_id()
-            account_id = current_account_id()
-        except Exception as e:
-            return jsonify({
-                'error': str(e),
-                'traceback': __import__('traceback').format_exc()
-            })
-
-        return jsonify({
-            'is_logged_in': logged_in,
-            'current_user_id': user_id,
-            'current_account_id': account_id,
-            'session_keys': list(session.keys()),
-            'would_pass_login_required': logged_in and user_id is not None,
-            'would_pass_dashboard_check': logged_in and account_id is not None
-        })
 
     # ---- Request hooks (auth + impersonation) ------------------------------
     try:

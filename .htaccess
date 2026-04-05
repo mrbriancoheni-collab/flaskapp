@@ -1,9 +1,8 @@
 # -----------------------------------------------------------------------
-# FieldSprout — CloudLinux Python Selector / LiteSpeed LSAPI config
+# FieldSprout — LiteSpeed / Gunicorn proxy config
 # -----------------------------------------------------------------------
-# The app runs via CloudLinux Python Selector (LSAPI/Passenger WSGI).
-# LiteSpeed invokes passenger_wsgi.py directly — no Gunicorn proxy needed.
-# CageFS prevents LiteSpeed from reaching localhost ports anyway.
+# The app runs as Gunicorn on 127.0.0.1:8000.
+# LiteSpeed proxies all dynamic requests there via mod_rewrite.
 # -----------------------------------------------------------------------
 
 # ---- CRITICAL: prevent LiteSpeed from rewriting / to /index.php ------
@@ -23,6 +22,6 @@ Options -Indexes
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
 
-    # All other requests pass through to CloudLinux LSAPI (passenger_wsgi.py)
-    # Do NOT proxy to localhost:8000 — CageFS blocks cross-process connections
+    # Proxy all dynamic requests to Gunicorn on port 8000
+    RewriteRule ^(.*)$ http://127.0.0.1:8000$1 [P,L]
 </IfModule>

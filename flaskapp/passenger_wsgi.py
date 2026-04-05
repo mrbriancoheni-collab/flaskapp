@@ -123,7 +123,7 @@ def _diagnostic_wrapper(wsgi_app):
     """
     import json as _json
 
-    DEPLOY_STAMP = "2026-04-04T00:00:00-WSGI-V4"
+    DEPLOY_STAMP = "2026-04-05T00:00:00-WSGI-V5"
 
     INTERCEPT_PATHS = {"/_deploy_check", "/deploy_check", "/wsgi-check"}
 

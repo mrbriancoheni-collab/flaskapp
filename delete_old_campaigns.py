@@ -7,7 +7,7 @@ import sys
 import os
 
 # Add flaskapp to path
-sys.path.insert(0, '/home/fieljtgr/flaskapp/flaskapp')
+sys.path.insert(0, '/home/fieldsprout/flaskapp/flaskapp')
 
 from app import create_app
 from app.extensions import db

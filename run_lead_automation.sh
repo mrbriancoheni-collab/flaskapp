@@ -15,7 +15,7 @@ if [ -z "$SQLALCHEMY_DATABASE_URI" ]; then
     read -s DB_PASSWORD
     echo ""
 
-    export SQLALCHEMY_DATABASE_URI="mysql+pymysql://root:${DB_PASSWORD}@localhost:3306/fieljtgr_xyz?charset=utf8mb4"
+    export SQLALCHEMY_DATABASE_URI="mysql+pymysql://root:${DB_PASSWORD}@localhost:3306/fieldsprout_xyz?charset=utf8mb4"
 else
     echo "✓ Database connection already configured"
 fi

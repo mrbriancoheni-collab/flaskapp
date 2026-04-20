@@ -13,7 +13,7 @@ if pgrep -f "gunicorn.*passenger_wsgi" > /dev/null; then
     ps aux | grep "[g]unicorn.*passenger_wsgi" | head -2
 else
     echo "   ✗ Gunicorn is NOT running!"
-    echo "   Run: cd /home/fieljtgr/flaskapp && ./start_gunicorn.sh"
+    echo "   Run: cd /home/fieldsprout/flaskapp && ./start_gunicorn.sh"
 fi
 
 echo ""

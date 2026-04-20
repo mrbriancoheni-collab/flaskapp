@@ -62,7 +62,7 @@ The AI agent should run automatically via cron job:
 crontab -l | grep "run-agents"
 
 # Manually trigger it
-cd /home/fieljtgr
+cd /home/fieldsprout
 venv/bin/flask run-agents
 ```
 
@@ -272,7 +272,7 @@ If this returns results but the page shows nothing, the actions might have `stat
 
 2. **Run the AI agent manually**
    ```bash
-   cd /home/fieljtgr
+   cd /home/fieldsprout
    venv/bin/flask run-agents --account-id=1
    ```
 

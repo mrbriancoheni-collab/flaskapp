@@ -9,7 +9,7 @@ Getting "Site Alert" emails every 5 minutes even though site is working fine.
 
 ### Option 1: Run the Diagnostic Script (30 seconds)
 ```bash
-cd /home/fieljtgr/flaskapp
+cd /home/fieldsprout/flaskapp
 ./find_alert_source.sh
 ```
 
@@ -183,7 +183,7 @@ If you've tried everything and it's still sending:
 
 1. **Run the diagnostic:**
    ```bash
-   cd /home/fieljtgr/flaskapp
+   cd /home/fieldsprout/flaskapp
    ./find_alert_source.sh > alert_debug.txt
    cat alert_debug.txt
    ```

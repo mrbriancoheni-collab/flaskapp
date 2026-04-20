@@ -253,7 +253,7 @@ WHERE is_active = TRUE;
 ### 1. Initialize/Update Prompts
 
 ```bash
-cd /home/fieljtgr
+cd /home/fieldsprout
 FLASK_APP=app virtualenv/bin/python -c "
 from app.services.ai_prompts_init import initialize_ai_prompts
 # Force update all prompts with new versions

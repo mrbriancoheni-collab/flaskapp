@@ -19,11 +19,11 @@ echo "FORCE COMPLETE LEAD AUTOMATION"
 echo "========================================================================"
 echo ""
 
-# Load environment variables from /home/fieljtgr/.env if it exists
-if [ -f "/home/fieljtgr/.env" ]; then
-    echo "Loading environment variables from /home/fieljtgr/.env"
+# Load environment variables from /home/fieldsprout/.env if it exists
+if [ -f "/home/fieldsprout/.env" ]; then
+    echo "Loading environment variables from /home/fieldsprout/.env"
     set -a  # automatically export all variables
-    source /home/fieljtgr/.env
+    source /home/fieldsprout/.env
     set +a
     echo "✓ Environment variables loaded"
     echo ""
@@ -35,7 +35,7 @@ elif [ -f ".env" ]; then
     echo "✓ Environment variables loaded"
     echo ""
 else
-    echo "WARNING: No .env file found at /home/fieljtgr/.env or ./.env"
+    echo "WARNING: No .env file found at /home/fieldsprout/.env or ./.env"
     echo "Environment variables must be already set in the environment"
     echo ""
 fi
@@ -50,7 +50,7 @@ fi
 # Check environment variables
 if [ -z "$SQLALCHEMY_DATABASE_URI" ]; then
     echo "ERROR: SQLALCHEMY_DATABASE_URI not set"
-    echo "Please set database connection string in /home/fieljtgr/.env"
+    echo "Please set database connection string in /home/fieldsprout/.env"
     exit 1
 fi
 

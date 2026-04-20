@@ -110,7 +110,7 @@
     </p>
     <div class="bg-white rounded p-4 border border-green-300 font-mono text-xs text-gray-800 overflow-x-auto">
       # Add to crontab (runs daily at 2 AM)<br>
-      0 2 * * * cd /home/fieljtgr/flaskapp && python3 -c "from app import create_app; from app.tasks.domain_crawler_task import run_daily_crawler; app = create_app(); app.app_context().push(); run_daily_crawler(max_domains=50)"
+      0 2 * * * cd /home/fieldsprout/flaskapp && python3 -c "from app import create_app; from app.tasks.domain_crawler_task import run_daily_crawler; app = create_app(); app.app_context().push(); run_daily_crawler(max_domains=50)"
     </div>
     <p class="text-xs text-green-700 mt-3">
       <i class="fa-solid fa-lightbulb mr-1"></i>

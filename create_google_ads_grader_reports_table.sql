@@ -1,5 +1,5 @@
 -- Migration: Create google_ads_grader_reports table
--- Database: fieljtgr_xyz
+-- Database: fieldsprout_xyz
 -- Date: 2025-11-03
 
 CREATE TABLE IF NOT EXISTS `google_ads_grader_reports` (

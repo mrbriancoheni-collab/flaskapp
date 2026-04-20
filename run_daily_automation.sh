@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Lead Automation Runner - Auto-detects environment
-# Works in both production (/home/fieljtgr/flaskapp) and dev (/home/user/flaskapp)
+# Works in both production (/home/fieldsprout/flaskapp) and dev (/home/user/flaskapp)
 #
 
 # Detect base directory automatically

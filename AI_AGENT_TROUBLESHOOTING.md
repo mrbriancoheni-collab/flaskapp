@@ -40,7 +40,7 @@ Even if Flask ran, it needs environment variables:
 On your production server:
 
 ```bash
-cd /home/fieljtgr  # Or wherever your flaskapp is
+cd /home/fieldsprout  # Or wherever your flaskapp is
 bash fix_agent_cron.sh
 ```
 
@@ -56,13 +56,13 @@ The script will show you the correct cron jobs. They should look like:
 
 ```bash
 # Tactical agents (hourly) - Fast optimizations
-0 * * * * cd /home/fieljtgr && FLASK_APP=app /home/fieljtgr/virtualenv/bin/python -m flask run-agents --layer tactical >> /home/fieljtgr/logs/agents-tactical.log 2>&1
+0 * * * * cd /home/fieldsprout && FLASK_APP=app /home/fieldsprout/virtualenv/bin/python -m flask run-agents --layer tactical >> /home/fieldsprout/logs/agents-tactical.log 2>&1
 
 # Operational agents (every 4 hours) - Budget/bid adjustments
-0 */4 * * * cd /home/fieljtgr && FLASK_APP=app /home/fieljtgr/virtualenv/bin/python -m flask run-agents --layer operational >> /home/fieljtgr/logs/agents-operational.log 2>&1
+0 */4 * * * cd /home/fieldsprout && FLASK_APP=app /home/fieldsprout/virtualenv/bin/python -m flask run-agents --layer operational >> /home/fieldsprout/logs/agents-operational.log 2>&1
 
 # Strategic agents (daily at 6 AM) - Campaign structure changes
-0 6 * * * cd /home/fieljtgr && FLASK_APP=app /home/fieljtgr/virtualenv/bin/python -m flask run-agents --layer strategic >> /home/fieljtgr/logs/agents-strategic.log 2>&1
+0 6 * * * cd /home/fieldsprout && FLASK_APP=app /home/fieldsprout/virtualenv/bin/python -m flask run-agents --layer strategic >> /home/fieldsprout/logs/agents-strategic.log 2>&1
 ```
 
 **Key differences from broken version:**
@@ -76,7 +76,7 @@ The script will show you the correct cron jobs. They should look like:
 Before waiting for cron to run, test it yourself:
 
 ```bash
-cd /home/fieljtgr
+cd /home/fieldsprout
 FLASK_APP=app virtualenv/bin/python -m flask run-agents --layer tactical
 ```
 
@@ -106,7 +106,7 @@ After running (either manually or waiting for cron):
 
 1. **Check logs:**
    ```bash
-   tail -f /home/fieljtgr/logs/agents-tactical.log
+   tail -f /home/fieldsprout/logs/agents-tactical.log
    ```
 
 2. **Check database:**
@@ -204,7 +204,7 @@ FLASK_ENV=production
 
 **Solution:** Check logs for what the agent analyzed:
 ```bash
-grep -i "analyzed\|found\|created" /home/fieljtgr/logs/agents-tactical.log
+grep -i "analyzed\|found\|created" /home/fieldsprout/logs/agents-tactical.log
 ```
 
 ---
@@ -216,14 +216,14 @@ Run through this to identify the problem:
 ```bash
 # 1. Can Python/Flask be found?
 which python3
-/home/fieljtgr/virtualenv/bin/python --version
+/home/fieldsprout/virtualenv/bin/python --version
 
 # 2. Can Flask app load?
-cd /home/fieljtgr
-FLASK_APP=app /home/fieljtgr/virtualenv/bin/python -m flask --help
+cd /home/fieldsprout
+FLASK_APP=app /home/fieldsprout/virtualenv/bin/python -m flask --help
 
 # 3. Is database accessible?
-FLASK_APP=app /home/fieljtgr/virtualenv/bin/python -m flask shell
+FLASK_APP=app /home/fieldsprout/virtualenv/bin/python -m flask shell
 >>> from app import db
 >>> db.session.execute('SELECT 1').scalar()
 # Should return: 1
@@ -232,14 +232,14 @@ FLASK_APP=app /home/fieljtgr/virtualenv/bin/python -m flask shell
 SELECT * FROM google_oauth_tokens WHERE product = 'ads' LIMIT 1;
 
 # 5. Can agents run?
-FLASK_APP=app /home/fieljtgr/virtualenv/bin/python -m flask run-agents --layer tactical
+FLASK_APP=app /home/fieldsprout/virtualenv/bin/python -m flask run-agents --layer tactical
 
 # 6. Are AI actions being created?
 SELECT COUNT(*) FROM ai_actions WHERE status = 'executed';
 
 # 7. Are cron jobs running?
 grep CRON /var/log/syslog | grep "flask"
-# Or check: tail -f /home/fieljtgr/logs/agents-*.log
+# Or check: tail -f /home/fieldsprout/logs/agents-*.log
 ```
 
 ---
@@ -250,7 +250,7 @@ Don't want to wait an hour? Run agents immediately:
 
 ```bash
 # Run all agents now
-cd /home/fieljtgr
+cd /home/fieldsprout
 FLASK_APP=app virtualenv/bin/python -m flask run-agents --all
 
 # Or run specific layer
@@ -314,7 +314,7 @@ Once cron jobs are fixed and running:
 If you've fixed the cron jobs but still not seeing data:
 
 1. Share the output of: `bash fix_agent_cron.sh`
-2. Share last 50 lines of: `tail -50 /home/fieljtgr/logs/agents-tactical.log`
+2. Share last 50 lines of: `tail -50 /home/fieldsprout/logs/agents-tactical.log`
 3. Share SQL result: `SELECT COUNT(*) FROM ai_actions;`
 4. Share specific keywords you think are wasteful
 

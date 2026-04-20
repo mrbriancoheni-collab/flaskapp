@@ -3,8 +3,8 @@
 # This script starts Gunicorn to serve the Flask app on port 8000
 
 # Configuration
-APP_DIR="/home/fieljtgr/flaskapp"
-VENV_DIR="/home/fieljtgr/virtualenv/flaskapp/3.9"
+APP_DIR="/home/fieldsprout/flaskapp"
+VENV_DIR="/home/fieldsprout/virtualenv/flaskapp/3.9"
 BIND_ADDRESS="127.0.0.1:8000"
 WORKERS=4
 TIMEOUT=120
@@ -28,8 +28,8 @@ else
     echo "Warning: Virtualenv not found at $VENV_DIR"
     echo "Looking for virtualenv..."
     # Try to find virtualenv
-    if [ -d "/home/fieljtgr/virtualenv" ]; then
-        FOUND_VENV=$(find /home/fieljtgr/virtualenv -name "activate" -type f 2>/dev/null | head -1)
+    if [ -d "/home/fieldsprout/virtualenv" ]; then
+        FOUND_VENV=$(find /home/fieldsprout/virtualenv -name "activate" -type f 2>/dev/null | head -1)
         if [ -n "$FOUND_VENV" ]; then
             VENV_DIR=$(dirname "$(dirname "$FOUND_VENV")")
             source "$FOUND_VENV"

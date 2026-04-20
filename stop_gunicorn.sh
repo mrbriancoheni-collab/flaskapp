@@ -1,7 +1,7 @@
 #!/bin/bash
 # Stop Gunicorn script
 
-APP_DIR="/home/fieljtgr/flaskapp"
+APP_DIR="/home/fieldsprout/flaskapp"
 PID_FILE="$APP_DIR/gunicorn.pid"
 
 if [ ! -f "$PID_FILE" ]; then

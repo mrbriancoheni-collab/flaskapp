@@ -1,14 +1,14 @@
 #!/bin/bash
 #
 # Production Virtualenv Setup Script
-# Run this on your production server at /home/fieljtgr/flaskapp
+# Run this on your production server at /home/fieldsprout/flaskapp
 #
 set -e
 
 echo "Setting up production virtualenv..."
 
 # Base directory (adjust if needed)
-PROD_BASE="/home/fieljtgr"
+PROD_BASE="/home/fieldsprout"
 APP_DIR="$PROD_BASE/flaskapp"
 VENV_DIR="$PROD_BASE/virtualenv/flaskapp/3.9"
 

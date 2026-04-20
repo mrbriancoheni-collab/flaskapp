@@ -31,9 +31,9 @@ def load_environment(project_root=None):
 
     # Check multiple possible .env file locations
     env_paths = [
-        os.path.join(project_root, '.env'),           # /home/fieljtgr/flaskapp/.env
-        os.path.join(os.path.dirname(project_root), '.env'),  # /home/fieljtgr/.env
-        os.path.expanduser('~/.env'),                  # /home/fieljtgr/.env (home directory)
+        os.path.join(project_root, '.env'),           # /home/fieldsprout/flaskapp/.env
+        os.path.join(os.path.dirname(project_root), '.env'),  # /home/fieldsprout/.env
+        os.path.expanduser('~/.env'),                  # /home/fieldsprout/.env (home directory)
     ]
 
     # Try to load .env file using python-dotenv

@@ -51,7 +51,7 @@ Before disabling, make sure your site isn't actually down!
 
 **Run this on production:**
 ```bash
-cd /home/fieljtgr/flaskapp
+cd /home/fieldsprout/flaskapp
 ./check_site_status.sh
 ```
 
@@ -89,15 +89,15 @@ If `check_site_status.sh` shows your site is down:
 
 **Restart Gunicorn:**
 ```bash
-cd /home/fieljtgr/flaskapp
+cd /home/fieldsprout/flaskapp
 ./stop_gunicorn.sh
 ./start_gunicorn.sh
 ```
 
 **Check Logs:**
 ```bash
-tail -100 /home/fieljtgr/flaskapp/logs/gunicorn_error.log
-tail -100 /home/fieljtgr/flaskapp/logs/gunicorn_access.log
+tail -100 /home/fieldsprout/flaskapp/logs/gunicorn_error.log
+tail -100 /home/fieldsprout/flaskapp/logs/gunicorn_access.log
 ```
 
 ---

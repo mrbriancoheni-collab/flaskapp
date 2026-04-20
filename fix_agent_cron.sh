@@ -13,8 +13,8 @@ echo "=================================="
 echo ""
 
 # Detect the correct base directory
-if [ -d "/home/fieljtgr" ]; then
-    BASE_DIR="/home/fieljtgr"
+if [ -d "/home/fieldsprout" ]; then
+    BASE_DIR="/home/fieldsprout"
 elif [ -d "/home/user/flaskapp" ]; then
     BASE_DIR="/home/user/flaskapp"
 else

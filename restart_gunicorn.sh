@@ -1,7 +1,7 @@
 #!/bin/bash
 # Restart Gunicorn script
 
-APP_DIR="/home/fieljtgr/flaskapp"
+APP_DIR="/home/fieldsprout/flaskapp"
 
 echo "Restarting Gunicorn..."
 "$APP_DIR/stop_gunicorn.sh"

@@ -9,10 +9,10 @@ echo ""
 # 1. Check automation state
 echo "1. AUTOMATION STATE:"
 echo "-------------------"
-if [ -f /home/fieljtgr/flaskapp/automation_state.json ]; then
-    cat /home/fieljtgr/flaskapp/automation_state.json
+if [ -f /home/fieldsprout/flaskapp/automation_state.json ]; then
+    cat /home/fieldsprout/flaskapp/automation_state.json
 else
-    echo "⚠️  State file not found at /home/fieljtgr/flaskapp/automation_state.json"
+    echo "⚠️  State file not found at /home/fieldsprout/flaskapp/automation_state.json"
 fi
 echo ""
 echo ""
@@ -20,10 +20,10 @@ echo ""
 # 2. Check recent automation logs
 echo "2. RECENT AUTOMATION LOGS (Last 30 lines):"
 echo "-------------------------------------------"
-if [ -f /home/fieljtgr/flaskapp/logs/automation.log ]; then
-    tail -30 /home/fieljtgr/flaskapp/logs/automation.log
+if [ -f /home/fieldsprout/flaskapp/logs/automation.log ]; then
+    tail -30 /home/fieldsprout/flaskapp/logs/automation.log
 else
-    echo "⚠️  Log file not found at /home/fieljtgr/flaskapp/logs/automation.log"
+    echo "⚠️  Log file not found at /home/fieldsprout/flaskapp/logs/automation.log"
 fi
 echo ""
 echo ""
@@ -31,11 +31,11 @@ echo ""
 # 3. Check for errors in logs
 echo "3. ERRORS IN LOGS:"
 echo "------------------"
-if [ -f /home/fieljtgr/flaskapp/logs/automation.log ]; then
-    ERROR_COUNT=$(grep -i "error" /home/fieljtgr/flaskapp/logs/automation.log | tail -10 | wc -l)
+if [ -f /home/fieldsprout/flaskapp/logs/automation.log ]; then
+    ERROR_COUNT=$(grep -i "error" /home/fieldsprout/flaskapp/logs/automation.log | tail -10 | wc -l)
     if [ $ERROR_COUNT -gt 0 ]; then
         echo "⚠️  Found $ERROR_COUNT recent errors:"
-        grep -i "error" /home/fieljtgr/flaskapp/logs/automation.log | tail -10
+        grep -i "error" /home/fieldsprout/flaskapp/logs/automation.log | tail -10
     else
         echo "✅ No errors found in recent logs"
     fi

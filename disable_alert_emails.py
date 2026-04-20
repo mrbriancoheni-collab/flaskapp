@@ -14,7 +14,7 @@ import sys
 import os
 
 # Add the flaskapp directory to the path
-sys.path.insert(0, '/home/fieljtgr/flaskapp')
+sys.path.insert(0, '/home/fieldsprout/flaskapp')
 
 from app import create_app, db
 from app.models_alerts import Alert, AlertSettings

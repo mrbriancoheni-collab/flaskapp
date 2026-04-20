@@ -7,9 +7,9 @@
 set -e
 
 # Production paths
-ENV_FILE="/home/fieljtgr/.env"
-APP_DIR="/home/fieljtgr/flaskapp"
-VENV_DIR="/home/fieljtgr/virtualenv/flaskapp/3.9"
+ENV_FILE="/home/fieldsprout/.env"
+APP_DIR="/home/fieldsprout/flaskapp"
+VENV_DIR="/home/fieldsprout/virtualenv/flaskapp/3.9"
 
 echo "========================================================================"
 echo "PRODUCTION LEAD AUTOMATION RUNNER"

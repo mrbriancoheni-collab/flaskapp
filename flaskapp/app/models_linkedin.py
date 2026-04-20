@@ -10,6 +10,7 @@ from typing import Optional
 from sqlalchemy import (
     String,
     Integer,
+    BigInteger,
     DateTime,
     Date,
     Text,
@@ -31,7 +32,7 @@ class LinkedInScheduledPost(db.Model):
     id = db.Column(Integer, primary_key=True)
 
     # Link to account
-    account_id = db.Column(Integer, ForeignKey("accounts.id"), index=True, nullable=False)
+    account_id = db.Column(BigInteger, ForeignKey("accounts.id"), index=True, nullable=False)
 
     # Post content
     post_text = db.Column(Text, nullable=False)
@@ -119,7 +120,7 @@ class LinkedInCategory(db.Model):
     __tablename__ = "linkedin_categories"
 
     id = db.Column(Integer, primary_key=True)
-    account_id = db.Column(Integer, ForeignKey("accounts.id"), index=True, nullable=False)
+    account_id = db.Column(BigInteger, ForeignKey("accounts.id"), index=True, nullable=False)
 
     # Category details
     name = db.Column(String(100), nullable=False)
@@ -228,7 +229,7 @@ class LinkedInCampaign(db.Model):
     __tablename__ = "linkedin_campaigns"
 
     id = db.Column(Integer, primary_key=True)
-    account_id = db.Column(Integer, ForeignKey("accounts.id"), index=True, nullable=False)
+    account_id = db.Column(BigInteger, ForeignKey("accounts.id"), index=True, nullable=False)
 
     # Campaign details
     name = db.Column(String(200), nullable=False)

@@ -62,7 +62,7 @@ def _retry_with_backoff(func, max_retries: int = MAX_RETRIES, *args, **kwargs):
 # Google Ads API version management
 # Supported versions in order of preference (newest first)
 # Google typically supports ~3 versions at a time, deprecating oldest every ~12 months
-SUPPORTED_ADS_VERSIONS = ["v19", "v18", "v17"]
+SUPPORTED_ADS_VERSIONS = ["v21", "v20", "v19"]
 
 # Version can be overridden via env; if "auto", will try versions until one works
 _ENV_VERSION = os.getenv("GOOGLE_ADS_API_VERSION", "auto").strip() or "auto"
@@ -74,7 +74,7 @@ _working_version: Optional[str] = None
 def _get_ads_api_version() -> str:
     """
     Get the Google Ads API version to use.
-    If env is set to a specific version (e.g., "v18"), use that.
+    If env is set to a specific version (e.g., "v21"), use that.
     If env is "auto" or not set, use the cached working version or default to newest.
     """
     global _working_version
@@ -477,50 +477,69 @@ def google_ads_search(
     headers = ads_headers(access_token, login_customer_id)
 
     def _make_stream_request():
-        """Make a streaming search request."""
-        url = f"{_get_ads_api_base()}/customers/{cid}/googleAds:searchStream"
-        r = requests.post(url, headers=headers, json={"query": query}, timeout=timeout)
+        """Make a streaming search request, trying fallback versions on 404."""
+        for version in SUPPORTED_ADS_VERSIONS:
+            url = f"https://googleads.googleapis.com/{version}/customers/{cid}/googleAds:searchStream"
+            r = requests.post(url, headers=headers, json={"query": query}, timeout=timeout)
 
-        # Check for auth errors (don't retry these)
-        if r.status_code == 401:
-            current_app.logger.error(f"Google Ads API authentication failed (401)")
+            # Check for auth errors (don't retry these)
+            if r.status_code == 401:
+                current_app.logger.error("Google Ads API authentication failed (401)")
+                r.raise_for_status()
+
+            # Log 400 errors with response body for debugging
+            if r.status_code == 400:
+                body_text = r.text[:2000]
+                current_app.logger.error(f"Google Ads API 400 Bad Request body: {body_text}")
+                raise ValueError(f"Google Ads API 400: {body_text}")
+
+            # Check for rate limiting (should retry)
+            if r.status_code == 429:
+                current_app.logger.warning("Google Ads API rate limited (429)")
+                raise RequestException(f"Rate limited: {r.status_code}")
+
+            # If version is deprecated/not found, try next version
+            if r.status_code == 404:
+                current_app.logger.warning(f"Google Ads API {version} returned 404, trying next version")
+                continue
+
             r.raise_for_status()
+            _set_working_version(version)
+            return r.json() or []
 
-        # Log 400 errors with response body for debugging
-        if r.status_code == 400:
-            body_text = r.text[:2000]
-            current_app.logger.error(f"Google Ads API 400 Bad Request body: {body_text}")
-            # Don't retry 400s — raise as ValueError to bypass retry wrapper
-            raise ValueError(f"Google Ads API 400: {body_text}")
-
-        # Check for rate limiting (should retry)
-        if r.status_code == 429:
-            current_app.logger.warning("Google Ads API rate limited (429)")
-            raise RequestException(f"Rate limited: {r.status_code}")
-
-        r.raise_for_status()
-        return r.json() or []
+        raise RequestException(f"All Google Ads API versions failed: {SUPPORTED_ADS_VERSIONS}")
 
     def _make_paginated_request(page_token=None):
-        """Make a paginated search request."""
-        url = f"{_get_ads_api_base()}/customers/{cid}/googleAds:search"
-        body = {"query": query}
-        if page_token:
-            body["pageToken"] = page_token
-        r = requests.post(url, headers=headers, json=body, timeout=timeout)
+        """Make a paginated search request, trying fallback versions on 404."""
+        for version in SUPPORTED_ADS_VERSIONS:
+            url = f"https://googleads.googleapis.com/{version}/customers/{cid}/googleAds:search"
+            body = {"query": query}
+            if page_token:
+                body["pageToken"] = page_token
+            r = requests.post(url, headers=headers, json=body, timeout=timeout)
 
-        # Check for auth errors (don't retry these)
-        if r.status_code == 401:
-            current_app.logger.error(f"Google Ads API authentication failed (401)")
+            if r.status_code == 401:
+                current_app.logger.error("Google Ads API authentication failed (401)")
+                r.raise_for_status()
+
+            if r.status_code == 400:
+                body_text = r.text[:2000]
+                current_app.logger.error(f"Google Ads API 400 Bad Request body: {body_text}")
+                raise ValueError(f"Google Ads API 400: {body_text}")
+
+            if r.status_code == 429:
+                current_app.logger.warning("Google Ads API rate limited (429)")
+                raise RequestException(f"Rate limited: {r.status_code}")
+
+            if r.status_code == 404:
+                current_app.logger.warning(f"Google Ads API {version} returned 404, trying next version")
+                continue
+
             r.raise_for_status()
+            _set_working_version(version)
+            return r.json() or {}
 
-        # Check for rate limiting (should retry)
-        if r.status_code == 429:
-            current_app.logger.warning("Google Ads API rate limited (429)")
-            raise RequestException(f"Rate limited: {r.status_code}")
-
-        r.raise_for_status()
-        return r.json() or {}
+        raise RequestException(f"All Google Ads API versions failed: {SUPPORTED_ADS_VERSIONS}")
 
     # Determine which API versions to attempt.
     # In "auto" mode: use cached working version when available, otherwise iterate all supported.

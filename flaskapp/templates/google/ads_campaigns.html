@@ -147,9 +147,7 @@
           {% set campaign_keywords = _data.keywords | selectattr('ad_group_id', 'in', ad_group_ids) | list %}
           <tr class="campaign-row hover:bg-gray-50" data-status="{{ campaign.status }}" data-type="{{ campaign.type }}">
             <td class="px-4 py-3">
-              <a href="{{ url_for('google_bp.ads_campaign_detail', campaign_id=campaign.id) }}" class="font-medium text-indigo-600 hover:text-indigo-900">
-                {{ campaign.name }}
-              </a>
+              <span class="font-medium text-gray-900">{{ campaign.name }}</span>
               <div class="text-xs text-gray-500">{{ campaign.bidding }}{% if campaign.target %} (${{ campaign.target }}){% endif %}</div>
             </td>
             <td class="px-4 py-3">

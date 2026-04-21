@@ -28,6 +28,20 @@ from app.google.utils_ads import client_from_refresh
 logger = logging.getLogger(__name__)
 
 
+def _is_sandbox_mode(account_id: int) -> bool:
+    """Return True if AI Sandbox mode is active for this account."""
+    try:
+        with db.engine.connect() as conn:
+            row = conn.execute(
+                text("SELECT setting_value FROM account_settings "
+                     "WHERE account_id = :aid AND setting_key = 'ai_sandbox_mode' LIMIT 1"),
+                {"aid": account_id},
+            ).first()
+            return bool(row and row[0] == "1")
+    except Exception:
+        return False
+
+
 class GoogleAdsAutoExecutor:
     """Service for automatically executing safe Google Ads optimizations"""
 
@@ -586,7 +600,7 @@ class GoogleAdsAutoExecutor:
                         'conversion_rate': conversions / row.metrics.clicks if row.metrics.clicks > 0 else 0,
                         'lookback_days': lookback_days
                     },
-                    status='pending'
+                    status='pending_review' if _is_sandbox_mode(self.account_id) else 'pending'
                 )
                 db.session.add(action)
                 actions_created.append(action)
@@ -661,7 +675,7 @@ class GoogleAdsAutoExecutor:
                         'conversion_rate': conversions / row.metrics.clicks if row.metrics.clicks > 0 else 0,
                         'lookback_days': lookback_days
                     },
-                    status='pending'
+                    status='pending_review' if _is_sandbox_mode(self.account_id) else 'pending'
                 )
                 db.session.add(action)
                 actions_created.append(action)
@@ -738,7 +752,7 @@ class GoogleAdsAutoExecutor:
                         'conversion_rate': conversions / row.metrics.clicks if row.metrics.clicks > 0 else 0,
                         'lookback_days': lookback_days
                     },
-                    status='pending'
+                    status='pending_review' if _is_sandbox_mode(self.account_id) else 'pending'
                 )
                 db.session.add(action)
                 actions_created.append(action)

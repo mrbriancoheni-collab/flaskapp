@@ -18,12 +18,28 @@
       Discover wasted spend, creative opportunities, and actionable recommendations.
     </p>
 
+    {% if not fb_oauth_approved %}
+    <div class="mb-4 px-5 py-3 bg-yellow-400/20 border border-yellow-300/40 rounded-xl text-yellow-100 text-sm">
+      <i class="fa-solid fa-clock mr-2"></i>
+      <strong>Coming soon</strong> — Facebook Ads live analysis is pending Facebook app approval.
+      You can still explore a <strong>demo report</strong> below.
+    </div>
+    {% endif %}
+
     <div class="flex flex-col sm:flex-row gap-4 justify-center mb-6">
+      {% if fb_oauth_approved %}
       <a href="{{ url_for('fb_ads_grader_bp.analyze') }}"
          class="inline-flex items-center justify-center px-8 py-4 bg-white text-blue-700 font-bold text-lg rounded-xl hover:bg-blue-50 transition shadow-lg hover:shadow-xl">
         <i class="fa-brands fa-facebook mr-3 text-2xl"></i>
         Analyze My Facebook Ads Account
       </a>
+      {% else %}
+      <a href="{{ url_for('fb_ads_grader_bp.analyze') }}"
+         class="inline-flex items-center justify-center px-8 py-4 bg-white text-blue-700 font-bold text-lg rounded-xl hover:bg-blue-50 transition shadow-lg hover:shadow-xl">
+        <i class="fa-solid fa-play mr-3"></i>
+        See a Demo Report
+      </a>
+      {% endif %}
 
       {% if not current_user.is_authenticated %}
       <a href="{{ url_for('auth_bp.register') }}"

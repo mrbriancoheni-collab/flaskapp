@@ -159,3 +159,44 @@ def remove(slug):
         db.session.commit()
         flash("Campaign removed from your repository.", "info")
     return redirect(url_for("campaigns_catalog_bp.index"))
+
+
+@campaigns_catalog_bp.route("/<slug>/push-to-google", methods=["POST"])
+@login_required
+def push_to_google(slug):
+    """Create a real Google Ads campaign from a saved template via the wizard."""
+    from app.models import CampaignSelection
+    sel = CampaignSelection.query.filter_by(
+        account_id=current_user.account_id, slug=slug
+    ).first()
+    if not sel:
+        flash("Save this campaign template first.", "error")
+        return redirect(url_for("campaigns_catalog_bp.index"))
+
+    campaign = CATALOG_BY_SLUG.get(slug)
+    if not campaign:
+        flash("Campaign template not found.", "error")
+        return redirect(url_for("campaigns_catalog_bp.index"))
+
+    # Check Google Ads is connected
+    try:
+        from app.google import _is_connected
+        from app.auth.utils import current_account_id
+        aid = current_account_id()
+        if not _is_connected(aid, "ads"):
+            flash("Connect your Google Ads account first.", "error")
+            return redirect(url_for("google_bp.connect_ads",
+                                    next=url_for("campaigns_catalog_bp.index")))
+    except Exception:
+        pass
+
+    # Pre-fill the campaign wizard with template data and redirect
+    from flask import session as flask_session
+    flask_session["campaign_prefill"] = {
+        "name": campaign["title"],
+        "description": campaign["desc"],
+        "slug": slug,
+        "ai_ideas": sel.ai_ideas or [],
+    }
+    flash(f"Campaign wizard pre-filled with '{campaign['title']}' — complete the setup below.", "info")
+    return redirect(url_for("google_bp.ads_campaign_wizard"))

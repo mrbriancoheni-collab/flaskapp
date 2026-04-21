@@ -85,22 +85,31 @@
     </h2>
     <div class="space-y-3">
       {% for s in saved %}
-      <div class="flex items-center justify-between p-4 border rounded-lg">
-        <div>
+      <div class="flex items-start justify-between p-4 border rounded-lg gap-4">
+        <div class="flex-1 min-w-0">
           <span class="font-semibold">{{ s.title }}</span>
           <span class="ml-2 text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">{{ s.status }}</span>
           <p class="text-xs text-gray-500 mt-1">Added {{ s.created_at.strftime('%b %d, %Y') }}</p>
           {% if s.ai_ideas %}
-          <p class="text-xs text-purple-600 mt-1"><i class="fa-solid fa-sparkles mr-1"></i>AI copy generated</p>
+          <p class="text-xs text-purple-600 mt-1"><i class="fa-solid fa-sparkles mr-1"></i>AI copy variants ready</p>
           {% endif %}
         </div>
-        <form method="post" action="{{ url_for('campaigns_catalog_bp.remove', slug=s.slug) }}"
-              onsubmit="return confirm('Remove this campaign?')">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="text-red-500 hover:text-red-700 text-sm">
-            <i class="fa-solid fa-trash"></i>
-          </button>
-        </form>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <form method="post" action="{{ url_for('campaigns_catalog_bp.push_to_google', slug=s.slug) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700">
+              <i class="fa-brands fa-google"></i> Push to Google Ads
+            </button>
+          </form>
+          <form method="post" action="{{ url_for('campaigns_catalog_bp.remove', slug=s.slug) }}"
+                onsubmit="return confirm('Remove this campaign?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="p-1.5 text-red-400 hover:text-red-600 rounded">
+              <i class="fa-solid fa-trash text-sm"></i>
+            </button>
+          </form>
+        </div>
       </div>
       {% endfor %}
     </div>

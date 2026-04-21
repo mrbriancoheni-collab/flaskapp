@@ -2,7 +2,7 @@
 {% block title %}{{ campaign.name }}{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto">
+<div class="max-w-5xl mx-auto">
 
   <!-- Breadcrumb -->
   <nav class="text-sm text-gray-500 mb-4">
@@ -12,7 +12,7 @@
   </nav>
 
   <!-- Header -->
-  <div class="flex items-start justify-between mb-6 gap-4">
+  <div class="flex items-start justify-between mb-6 gap-4 flex-wrap">
     <div>
       <h1 class="text-2xl font-bold text-gray-900">{{ campaign.name }}</h1>
       <div class="flex items-center gap-3 mt-1 text-sm text-gray-500">
@@ -42,7 +42,7 @@
     </div>
   </div>
 
-  <!-- Live Performance (if available) -->
+  <!-- Live Performance -->
   {% if perf %}
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
     <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
@@ -64,45 +64,147 @@
   </div>
   {% endif %}
 
-  <!-- Ad Groups -->
+  <!-- Ad Groups Section -->
   <div class="bg-white rounded-xl border shadow-sm overflow-hidden mb-6">
     <div class="flex items-center justify-between px-5 py-4 border-b">
       <h2 class="font-semibold text-gray-900">Ad Groups ({{ ad_groups|length }})</h2>
+      <button onclick="document.getElementById('newAdGroupModal').classList.remove('hidden')"
+              class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-xs font-medium">
+        <i class="fa-solid fa-plus"></i> New Ad Group
+      </button>
     </div>
+
     {% if ad_groups %}
-    <table class="min-w-full text-sm">
-      <thead class="bg-gray-50 border-b">
-        <tr>
-          <th class="px-4 py-3 text-left font-semibold text-gray-700">Name</th>
-          <th class="px-4 py-3 text-left font-semibold text-gray-700">Status</th>
-          <th class="px-4 py-3 text-right font-semibold text-gray-700">Max CPC</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for ag in ad_groups %}
-        <tr class="odd:bg-white even:bg-gray-50 hover:bg-indigo-50">
-          <td class="px-4 py-3 font-medium text-gray-900">{{ ag.name }}</td>
-          <td class="px-4 py-3">
+    <div class="divide-y">
+      {% for ag in ad_groups %}
+      <div class="p-4">
+        <!-- Ad Group Header -->
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-3">
+            <button onclick="toggleSection('ag-{{ ag.id }}')"
+                    class="text-gray-400 hover:text-gray-600 transition">
+              <i class="fa-solid fa-chevron-right text-xs" id="ag-{{ ag.id }}-icon"></i>
+            </button>
+            <span class="font-medium text-gray-900">{{ ag.name }}</span>
             <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold
               {% if ag.status == 'enabled' %}bg-green-100 text-green-700
               {% elif ag.status == 'paused' %}bg-yellow-100 text-yellow-700
               {% else %}bg-red-100 text-red-700{% endif %}">
               {{ ag.status|title }}
             </span>
-          </td>
-          <td class="px-4 py-3 text-right text-gray-700">
-            {% if ag.max_cpc_cents %}${{ "%.2f"|format(ag.max_cpc_cents / 100) }}{% else %}—{% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+            {% if ag.max_cpc_cents %}
+            <span class="text-xs text-gray-500">Max CPC: ${{ "%.2f"|format(ag.max_cpc_cents / 100) }}</span>
+            {% endif %}
+            <span class="text-xs text-gray-400">{{ ag.ads|length }} ad{{ 's' if ag.ads|length != 1 else '' }}, {{ ag.keywords|length }} keyword{{ 's' if ag.keywords|length != 1 else '' }}</span>
+          </div>
+          <div class="flex gap-1">
+            <button onclick="openEditAdGroupModal({{ ag.id }}, '{{ ag.name|replace("'", "\\'") }}', '{{ ag.status }}', {{ ag.max_cpc_cents or 0 }})"
+                    class="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded">
+              <i class="fa-solid fa-pen text-xs"></i>
+            </button>
+            <form method="post" action="{{ url_for('google_bp.ads_adgroup_delete', gid=ag.id) }}"
+                  onsubmit="return confirm('Delete ad group \'{{ ag.name }}\' and all its ads/keywords?')" class="inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded">
+                <i class="fa-solid fa-trash text-xs"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Expandable Content -->
+        <div id="ag-{{ ag.id }}" class="hidden pl-7">
+
+          <!-- Ads sub-section -->
+          <div class="mb-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ads</span>
+              <button onclick="openNewAdModal({{ ag.id }})"
+                      class="inline-flex items-center gap-1 px-2 py-1 border border-dashed border-indigo-300 text-indigo-600 rounded text-xs hover:bg-indigo-50">
+                <i class="fa-solid fa-plus text-xs"></i> Add Ad
+              </button>
+            </div>
+            {% if ag.ads %}
+            <div class="space-y-2">
+              {% for ad in ag.ads %}
+              <div class="bg-gray-50 rounded-lg p-3 text-sm flex items-start justify-between gap-3">
+                <div>
+                  <div class="font-medium text-blue-700">{{ ad.headline1 }}{% if ad.headline2 %} | {{ ad.headline2 }}{% endif %}{% if ad.headline3 %} | {{ ad.headline3 }}{% endif %}</div>
+                  {% if ad.description1 %}<div class="text-gray-600 text-xs mt-0.5">{{ ad.description1 }}</div>{% endif %}
+                  <div class="text-green-700 text-xs mt-0.5 font-mono">{{ ad.final_url[:60] }}{% if ad.final_url|length > 60 %}…{% endif %}</div>
+                  <span class="inline-block mt-1 px-1.5 py-0.5 rounded text-xs
+                    {% if ad.status == 'enabled' %}bg-green-100 text-green-700
+                    {% elif ad.status == 'paused' %}bg-yellow-100 text-yellow-700
+                    {% else %}bg-red-100 text-red-700{% endif %}">{{ ad.status|title }}</span>
+                </div>
+                <div class="flex gap-1 flex-shrink-0">
+                  <button onclick="openEditAdModal({{ ad.id }}, {{ ag.id }})"
+                          class="p-1 text-gray-400 hover:text-indigo-600 rounded text-xs">
+                    <i class="fa-solid fa-pen"></i>
+                  </button>
+                  <form method="post" action="{{ url_for('google_bp.ads_ad_delete', aid_=ad.id) }}"
+                        onsubmit="return confirm('Delete this ad?')" class="inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="p-1 text-gray-400 hover:text-red-600 rounded text-xs">
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-xs text-gray-400 italic py-2">No ads yet.</p>
+            {% endif %}
+          </div>
+
+          <!-- Keywords sub-section -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Keywords</span>
+              <button onclick="openNewKeywordModal({{ ag.id }})"
+                      class="inline-flex items-center gap-1 px-2 py-1 border border-dashed border-indigo-300 text-indigo-600 rounded text-xs hover:bg-indigo-50">
+                <i class="fa-solid fa-plus text-xs"></i> Add Keyword
+              </button>
+            </div>
+            {% if ag.keywords %}
+            <div class="flex flex-wrap gap-2">
+              {% for kw in ag.keywords %}
+              <div class="group inline-flex items-center gap-1.5 bg-white border rounded-full px-3 py-1 text-xs">
+                <span class="text-gray-500">[{{ kw.match_type[0]|upper }}]</span>
+                <span class="font-medium text-gray-800">{{ kw.text }}</span>
+                {% if kw.max_cpc_cents %}<span class="text-gray-400">${{ "%.2f"|format(kw.max_cpc_cents/100) }}</span>{% endif %}
+                <span class="{% if kw.status == 'enabled' %}text-green-600{% elif kw.status == 'paused' %}text-yellow-600{% else %}text-red-500{% endif %}">●</span>
+                <form method="post" action="{{ url_for('google_bp.ads_keyword_delete', kid=kw.id) }}"
+                      onsubmit="return confirm('Delete keyword?')" class="inline opacity-0 group-hover:opacity-100 transition">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="text-red-400 hover:text-red-600">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                  </button>
+                </form>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-xs text-gray-400 italic py-2">No keywords yet.</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
     {% else %}
-    <div class="py-10 text-center text-gray-500">No ad groups found.</div>
+    <div class="py-10 text-center text-gray-500">
+      <p class="mb-3">No ad groups yet.</p>
+      <button onclick="document.getElementById('newAdGroupModal').classList.remove('hidden')"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
+        <i class="fa-solid fa-plus"></i> Create First Ad Group
+      </button>
+    </div>
     {% endif %}
   </div>
 
-  <!-- Campaign Info -->
+  <!-- Campaign Details Card -->
   <div class="bg-white rounded-xl border shadow-sm p-5">
     <h2 class="font-semibold mb-3">Campaign Details</h2>
     <dl class="grid md:grid-cols-2 gap-3 text-sm">
@@ -122,15 +224,13 @@
   </div>
 </div>
 
-<!-- Edit Modal -->
+<!-- Edit Campaign Modal -->
 <div id="editCampaignModal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
-  <div class="absolute inset-0 bg-black/40"
-       onclick="document.getElementById('editCampaignModal').classList.add('hidden')"></div>
+  <div class="absolute inset-0 bg-black/40" onclick="document.getElementById('editCampaignModal').classList.add('hidden')"></div>
   <div class="relative bg-white w-full max-w-md mx-4 rounded-2xl shadow-xl border overflow-hidden">
     <div class="px-5 py-4 border-b flex items-center justify-between">
       <div class="font-semibold text-lg">Edit Campaign</div>
-      <button class="p-2 hover:bg-gray-100 rounded-lg"
-              onclick="document.getElementById('editCampaignModal').classList.add('hidden')">
+      <button class="p-2 hover:bg-gray-100 rounded-lg" onclick="document.getElementById('editCampaignModal').classList.add('hidden')">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
@@ -155,14 +255,201 @@
                value="{{ "%.2f"|format(campaign.daily_budget_cents / 100) }}"
                class="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
       </div>
-      <div class="flex items-center justify-end gap-2 pt-2">
+      <div class="flex justify-end gap-2 pt-2">
         <button type="button" class="px-4 py-2 rounded-lg border hover:bg-gray-50"
                 onclick="document.getElementById('editCampaignModal').classList.add('hidden')">Cancel</button>
-        <button type="submit" class="px-5 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 font-medium">
-          Save Changes
-        </button>
+        <button type="submit" class="px-5 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 font-medium">Save</button>
       </div>
     </form>
   </div>
 </div>
+
+<!-- New Ad Group Modal -->
+<div id="newAdGroupModal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" onclick="document.getElementById('newAdGroupModal').classList.add('hidden')"></div>
+  <div class="relative bg-white w-full max-w-md mx-4 rounded-2xl shadow-xl border overflow-hidden">
+    <div class="px-5 py-4 border-b flex items-center justify-between">
+      <div class="font-semibold text-lg">New Ad Group</div>
+      <button class="p-2 hover:bg-gray-100 rounded-lg" onclick="document.getElementById('newAdGroupModal').classList.add('hidden')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <form method="post" action="{{ url_for('google_bp.ads_adgroup_new', cid=campaign.id) }}" class="p-5 space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div>
+        <label class="block text-sm font-medium mb-1">Ad Group Name</label>
+        <input type="text" name="name" placeholder="e.g. AC Tune-Up — Brand" required
+               class="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" class="px-4 py-2 rounded-lg border hover:bg-gray-50"
+                onclick="document.getElementById('newAdGroupModal').classList.add('hidden')">Cancel</button>
+        <button type="submit" class="px-5 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 font-medium">Create</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Ad Group Modal -->
+<div id="editAdGroupModal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" onclick="document.getElementById('editAdGroupModal').classList.add('hidden')"></div>
+  <div class="relative bg-white w-full max-w-md mx-4 rounded-2xl shadow-xl border overflow-hidden">
+    <div class="px-5 py-4 border-b flex items-center justify-between">
+      <div class="font-semibold text-lg">Edit Ad Group</div>
+      <button class="p-2 hover:bg-gray-100 rounded-lg" onclick="document.getElementById('editAdGroupModal').classList.add('hidden')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <form id="editAdGroupForm" method="post" action="" class="p-5 space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div>
+        <label class="block text-sm font-medium mb-1">Name</label>
+        <input type="text" id="editAdGroupName" name="name"
+               class="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Status</label>
+        <select id="editAdGroupStatus" name="status" class="w-full rounded-lg border px-3 py-2">
+          <option value="enabled">Enabled</option>
+          <option value="paused">Paused</option>
+          <option value="removed">Removed</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Max CPC ($)</label>
+        <input type="number" id="editAdGroupCpc" name="max_cpc_cents" step="0.01" min="0" placeholder="Optional"
+               class="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" class="px-4 py-2 rounded-lg border hover:bg-gray-50"
+                onclick="document.getElementById('editAdGroupModal').classList.add('hidden')">Cancel</button>
+        <button type="submit" class="px-5 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 font-medium">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- New Ad Modal -->
+<div id="newAdModal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" onclick="document.getElementById('newAdModal').classList.add('hidden')"></div>
+  <div class="relative bg-white w-full max-w-lg mx-4 rounded-2xl shadow-xl border overflow-hidden">
+    <div class="px-5 py-4 border-b flex items-center justify-between">
+      <div class="font-semibold text-lg">New Ad</div>
+      <button class="p-2 hover:bg-gray-100 rounded-lg" onclick="document.getElementById('newAdModal').classList.add('hidden')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <form id="newAdForm" method="post" action="" class="p-5 space-y-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="grid grid-cols-3 gap-2">
+        <div class="col-span-3">
+          <label class="block text-xs font-medium mb-1 text-gray-600">Headline 1 <span class="text-red-500">*</span> <span class="text-gray-400">(max 30)</span></label>
+          <input type="text" name="headline1" maxlength="30" required
+                 class="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="col-span-3 sm:col-span-1">
+          <label class="block text-xs font-medium mb-1 text-gray-600">Headline 2 <span class="text-gray-400">(max 30)</span></label>
+          <input type="text" name="headline2" maxlength="30"
+                 class="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="col-span-3 sm:col-span-2">
+          <label class="block text-xs font-medium mb-1 text-gray-600">Headline 3 <span class="text-gray-400">(max 30)</span></label>
+          <input type="text" name="headline3" maxlength="30"
+                 class="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600">Description 1 <span class="text-gray-400">(max 90)</span></label>
+        <input type="text" name="description1" maxlength="90"
+               class="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600">Description 2 <span class="text-gray-400">(max 90)</span></label>
+        <input type="text" name="description2" maxlength="90"
+               class="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600">Final URL <span class="text-red-500">*</span></label>
+        <input type="url" name="final_url" placeholder="https://example.com/page" required
+               class="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" class="px-4 py-2 rounded-lg border hover:bg-gray-50"
+                onclick="document.getElementById('newAdModal').classList.add('hidden')">Cancel</button>
+        <button type="submit" class="px-5 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 font-medium">Create Ad</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- New Keyword Modal -->
+<div id="newKeywordModal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" onclick="document.getElementById('newKeywordModal').classList.add('hidden')"></div>
+  <div class="relative bg-white w-full max-w-md mx-4 rounded-2xl shadow-xl border overflow-hidden">
+    <div class="px-5 py-4 border-b flex items-center justify-between">
+      <div class="font-semibold text-lg">Add Keywords</div>
+      <button class="p-2 hover:bg-gray-100 rounded-lg" onclick="document.getElementById('newKeywordModal').classList.add('hidden')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <form id="newKeywordForm" method="post" action="" class="p-5 space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div>
+        <label class="block text-sm font-medium mb-1">Keyword Text</label>
+        <input type="text" name="text" placeholder="e.g. ac repair near me" required
+               class="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Match Type</label>
+        <select name="match_type" class="w-full rounded-lg border px-3 py-2">
+          <option value="broad">Broad</option>
+          <option value="phrase">Phrase</option>
+          <option value="exact">Exact</option>
+        </select>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" class="px-4 py-2 rounded-lg border hover:bg-gray-50"
+                onclick="document.getElementById('newKeywordModal').classList.add('hidden')">Cancel</button>
+        <button type="submit" class="px-5 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 font-medium">Add</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block body_extra %}
+<script nonce="{{ g.csp_nonce }}">
+function toggleSection(id) {
+  const el = document.getElementById(id);
+  const icon = document.getElementById(id + '-icon');
+  if (el.classList.contains('hidden')) {
+    el.classList.remove('hidden');
+    icon.classList.replace('fa-chevron-right', 'fa-chevron-down');
+  } else {
+    el.classList.add('hidden');
+    icon.classList.replace('fa-chevron-down', 'fa-chevron-right');
+  }
+}
+
+function openEditAdGroupModal(gid, name, status, maxCpcCents) {
+  document.getElementById('editAdGroupForm').action = '/account/google/ads/adgroup/' + gid + '/edit';
+  document.getElementById('editAdGroupName').value = name;
+  document.getElementById('editAdGroupStatus').value = status;
+  document.getElementById('editAdGroupCpc').value = maxCpcCents > 0 ? (maxCpcCents / 100).toFixed(2) : '';
+  document.getElementById('editAdGroupModal').classList.remove('hidden');
+}
+
+function openNewAdModal(gid) {
+  document.getElementById('newAdForm').action = '/account/google/ads/ad/new/' + gid;
+  document.getElementById('newAdForm').reset();
+  document.getElementById('newAdModal').classList.remove('hidden');
+}
+
+function openNewKeywordModal(gid) {
+  document.getElementById('newKeywordForm').action = '/account/google/ads/keyword/new/' + gid;
+  document.getElementById('newKeywordForm').reset();
+  document.getElementById('newKeywordModal').classList.remove('hidden');
+}
+</script>
 {% endblock %}

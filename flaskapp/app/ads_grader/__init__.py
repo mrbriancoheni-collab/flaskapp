@@ -376,6 +376,37 @@ def report(report_id):
     )
 
 
+@ads_grader_bp.route("/report/<int:report_id>/share", methods=["POST"])
+@login_required
+def report_share(report_id):
+    """Generate (or revoke) a shareable token for a report."""
+    import secrets
+    rpt = GoogleAdsGraderReport.query.get_or_404(report_id)
+    if rpt.account_id != current_user.account_id:
+        return jsonify({"error": "forbidden"}), 403
+
+    action = request.get_json(silent=True) or {}
+    if action.get("revoke"):
+        rpt.shareable_token = None
+        db.session.commit()
+        return jsonify({"ok": True, "revoked": True})
+
+    if not rpt.shareable_token:
+        rpt.shareable_token = secrets.token_urlsafe(32)
+        db.session.commit()
+
+    share_url = url_for("ads_grader_bp.report_shared",
+                        token=rpt.shareable_token, _external=True)
+    return jsonify({"ok": True, "url": share_url, "token": rpt.shareable_token})
+
+
+@ads_grader_bp.route("/shared/<token>")
+def report_shared(token):
+    """Public report view accessed via shareable token."""
+    rpt = GoogleAdsGraderReport.query.filter_by(shareable_token=token).first_or_404()
+    return render_template("ads_grader/report.html", report=rpt, is_shared=True)
+
+
 # ============================================================================
 # PDF Export
 # ============================================================================

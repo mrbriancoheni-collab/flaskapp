@@ -1,0 +1,160 @@
+{% extends "base_app.html" %}
+{% block title %}Value Dashboard — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Total Value Delivered</h1>
+    <p class="text-gray-500 text-sm mt-1">All optimizations and savings FieldSprout has generated for your account</p>
+  </div>
+
+  <!-- Hero Stats -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-5 text-white shadow-lg">
+      <div class="text-3xl font-extrabold">${{ "{:,.0f}".format(ai_stats.savings) }}</div>
+      <div class="text-green-100 text-xs mt-1">Monthly Savings Delivered</div>
+    </div>
+    <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-5 text-white shadow-lg">
+      <div class="text-3xl font-extrabold">${{ "{:,.0f}".format(projected_annual) }}</div>
+      <div class="text-indigo-100 text-xs mt-1">Projected Annual Impact</div>
+    </div>
+    <div class="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl p-5 text-white shadow-lg">
+      <div class="text-3xl font-extrabold">{{ ai_stats.count }}</div>
+      <div class="text-blue-100 text-xs mt-1">AI Actions Applied</div>
+    </div>
+    <div class="bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl p-5 text-white shadow-lg">
+      <div class="text-3xl font-extrabold">
+        {% if grader_improvement > 0 %}+{% endif %}{{ "%.0f"|format(grader_improvement) }}
+      </div>
+      <div class="text-orange-100 text-xs mt-1">Grade Score Improvement</div>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-6 mb-8">
+
+    <!-- Wasted Spend Card -->
+    <div class="bg-white rounded-xl border shadow-sm p-6">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
+          <i class="fa-solid fa-scissors text-red-600"></i>
+        </div>
+        <div>
+          <h2 class="font-semibold text-gray-900">Wasted Spend Recovery</h2>
+          <p class="text-xs text-gray-500">Budget recaptured from low-quality clicks</p>
+        </div>
+      </div>
+      {% if wasted_original > 0 %}
+      <div class="mb-3">
+        <div class="flex justify-between text-sm mb-1">
+          <span class="text-gray-600">Recovered</span>
+          <span class="font-semibold text-green-600">${{ "{:,.0f}".format(wasted_recovered) }}</span>
+        </div>
+        <div class="w-full bg-gray-100 rounded-full h-2.5">
+          {% set pct = [(wasted_recovered / wasted_original * 100)|int, 100]|min %}
+          <div class="bg-green-500 h-2.5 rounded-full" style="width: {{ pct }}%"></div>
+        </div>
+        <div class="text-xs text-gray-400 mt-1">
+          of ${{ "{:,.0f}".format(wasted_original) }} identified in last 90 days
+        </div>
+      </div>
+      {% else %}
+      <p class="text-gray-400 text-sm">Run the Ads Grader to identify wasted spend.</p>
+      <a href="{{ url_for('ads_grader_bp.index') }}"
+         class="mt-3 inline-block text-sm text-indigo-600 hover:underline">Run Free Grader →</a>
+      {% endif %}
+    </div>
+
+    <!-- AI Actions Card -->
+    <div class="bg-white rounded-xl border shadow-sm p-6">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+          <i class="fa-solid fa-robot text-purple-600"></i>
+        </div>
+        <div>
+          <h2 class="font-semibold text-gray-900">AI Optimizations</h2>
+          <p class="text-xs text-gray-500">
+            Auto-applied improvements
+            {% if sandbox_mode %}<span class="text-yellow-600">— Sandbox ON</span>{% endif %}
+          </p>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3 text-center">
+        <div class="bg-green-50 rounded-lg p-3">
+          <div class="text-2xl font-bold text-green-700">{{ ai_stats.count }}</div>
+          <div class="text-xs text-gray-500">Applied</div>
+        </div>
+        <div class="bg-yellow-50 rounded-lg p-3">
+          <div class="text-2xl font-bold text-yellow-600">{{ ai_stats.pending_review }}</div>
+          <div class="text-xs text-gray-500">Awaiting Review</div>
+        </div>
+      </div>
+      {% if ai_stats.pending_review > 0 %}
+      <a href="{{ url_for('google_bp.ai_actions_page') }}"
+         class="mt-3 inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline">
+        Review pending actions <i class="fa-solid fa-arrow-right text-xs"></i>
+      </a>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- Grade Score History -->
+  {% if grader_history %}
+  <div class="bg-white rounded-xl border shadow-sm p-6 mb-6">
+    <h2 class="font-semibold text-gray-900 mb-4">
+      <i class="fa-solid fa-chart-line text-indigo-600 mr-2"></i>Grade Score History
+    </h2>
+    <div class="flex items-end gap-3 h-32">
+      {% for pt in grader_history %}
+      {% set bar_h = [(pt.score / 100 * 100)|int, 8]|max %}
+      <div class="flex-1 flex flex-col items-center gap-1">
+        <span class="text-xs font-bold
+          {% if pt.score >= 80 %}text-green-600
+          {% elif pt.score >= 60 %}text-yellow-600
+          {% else %}text-red-500{% endif %}">
+          {{ "%.0f"|format(pt.score) }}
+        </span>
+        <div class="w-full rounded-t-md
+          {% if pt.score >= 80 %}bg-green-400
+          {% elif pt.score >= 60 %}bg-yellow-400
+          {% else %}bg-red-400{% endif %}"
+             style="height: {{ bar_h }}px;"></div>
+        <span class="text-xs text-gray-400 truncate w-full text-center">{{ pt.date }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% if grader_improvement > 0 %}
+    <p class="text-sm text-green-700 mt-3 font-medium">
+      <i class="fa-solid fa-arrow-trend-up mr-1"></i>
+      Score improved by {{ "%.0f"|format(grader_improvement) }} points since your first report.
+    </p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Quick Actions -->
+  <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-5">
+    <h2 class="font-semibold text-indigo-900 mb-3">Keep the momentum going</h2>
+    <div class="flex flex-wrap gap-3">
+      <a href="{{ url_for('ads_grader_bp.quick_wins_dashboard') }}"
+         class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
+        <i class="fa-solid fa-bolt"></i> View Quick Wins
+      </a>
+      <a href="{{ url_for('google_bp.ai_actions_page') }}"
+         class="inline-flex items-center gap-2 px-4 py-2 border border-indigo-300 text-indigo-700 rounded-lg text-sm hover:bg-indigo-100">
+        <i class="fa-solid fa-robot"></i> Manage AI Actions
+      </a>
+      <a href="{{ url_for('ads_grader_bp.index') }}"
+         class="inline-flex items-center gap-2 px-4 py-2 border border-indigo-300 text-indigo-700 rounded-lg text-sm hover:bg-indigo-100">
+        <i class="fa-solid fa-star"></i> Run New Grader Report
+      </a>
+      <a href="{{ url_for('budget_forecast_bp.index') }}"
+         class="inline-flex items-center gap-2 px-4 py-2 border border-indigo-300 text-indigo-700 rounded-lg text-sm hover:bg-indigo-100">
+        <i class="fa-solid fa-chart-pie"></i> Budget Forecast
+      </a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

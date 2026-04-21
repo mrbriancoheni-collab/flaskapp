@@ -69,10 +69,6 @@ def free_tools():
     return render_template("free_tools.html")
 
 
-@public_bp.route("/roadmap", endpoint="roadmap")
-def roadmap():
-    return render_template("roadmap.html")
-
 
 @public_bp.route("/vs-agency", endpoint="vs_agency")
 def vs_agency():

@@ -102,6 +102,74 @@ def pricing():
     return render_template("pricing.html")
 
 
+@main_bp.route("/robots.txt", methods=["GET"], endpoint="robots_txt")
+def robots_txt():
+    from flask import Response
+    body = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /account/\n"
+        "Disallow: /admin/\n"
+        "Disallow: /api/\n"
+        "Disallow: /_deploy_check\n"
+        "Disallow: /test\n\n"
+        "Sitemap: https://fieldsprout.io/sitemap.xml\n"
+    )
+    return Response(body, mimetype="text/plain")
+
+
+@main_bp.route("/sitemap.xml", methods=["GET"], endpoint="sitemap_xml")
+def sitemap_xml():
+    from flask import Response
+    from datetime import date
+    today = date.today().isoformat()
+    pages = [
+        ("https://fieldsprout.io/", "1.0", "weekly"),
+        ("https://fieldsprout.io/pricing", "0.9", "monthly"),
+        ("https://fieldsprout.io/about", "0.7", "monthly"),
+        ("https://fieldsprout.io/contact", "0.7", "monthly"),
+        ("https://fieldsprout.io/free-tools", "0.9", "weekly"),
+        ("https://fieldsprout.io/vs-agency", "0.8", "monthly"),
+        ("https://fieldsprout.io/industries/hvac", "0.9", "monthly"),
+        ("https://fieldsprout.io/industries/plumbing", "0.9", "monthly"),
+        ("https://fieldsprout.io/industries/electricians", "0.9", "monthly"),
+        ("https://fieldsprout.io/industries/roofing", "0.9", "monthly"),
+        ("https://fieldsprout.io/products/ads", "0.8", "monthly"),
+        ("https://fieldsprout.io/products/glsa", "0.8", "monthly"),
+        ("https://fieldsprout.io/products/gbp", "0.8", "monthly"),
+        ("https://fieldsprout.io/products/facebook-ads", "0.8", "monthly"),
+        ("https://fieldsprout.io/products/reviews", "0.8", "monthly"),
+        ("https://fieldsprout.io/products/listings", "0.8", "monthly"),
+        ("https://fieldsprout.io/products/forms-chat", "0.7", "monthly"),
+        ("https://fieldsprout.io/solutions/lead-generation", "0.8", "monthly"),
+        ("https://fieldsprout.io/solutions/multi-location", "0.8", "monthly"),
+        ("https://fieldsprout.io/solutions/lower-ad-cost", "0.8", "monthly"),
+        ("https://fieldsprout.io/solutions/get-more-reviews", "0.7", "monthly"),
+        ("https://fieldsprout.io/solutions/spend-when-open", "0.7", "monthly"),
+        ("https://fieldsprout.io/solutions/see-what-works", "0.7", "monthly"),
+        ("https://fieldsprout.io/ads-grader", "0.9", "weekly"),
+        ("https://fieldsprout.io/privacy-policy", "0.3", "yearly"),
+        ("https://fieldsprout.io/terms-of-service", "0.3", "yearly"),
+        ("https://fieldsprout.io/security", "0.4", "yearly"),
+    ]
+    urls = "\n".join(
+        f"  <url>\n"
+        f"    <loc>{loc}</loc>\n"
+        f"    <lastmod>{today}</lastmod>\n"
+        f"    <changefreq>{freq}</changefreq>\n"
+        f"    <priority>{pri}</priority>\n"
+        f"  </url>"
+        for loc, pri, freq in pages
+    )
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"{urls}\n"
+        "</urlset>"
+    )
+    return Response(xml, mimetype="application/xml")
+
+
 # -------------------------
 # APP PAGES (require login)
 # -------------------------

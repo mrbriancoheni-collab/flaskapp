@@ -62,3 +62,33 @@ def see_what_works():
 @public_bp.route("/podcast", endpoint="podcast")
 def podcast():
     return render_template("public/podcast.html")
+
+
+@public_bp.route("/free-tools", endpoint="free_tools")
+def free_tools():
+    return render_template("free_tools.html")
+
+
+@public_bp.route("/vs-agency", endpoint="vs_agency")
+def vs_agency():
+    return render_template("vs_agency.html")
+
+
+@public_bp.route("/industries/hvac", endpoint="industry_hvac")
+def industry_hvac():
+    return render_template("industries/hvac.html")
+
+
+@public_bp.route("/industries/plumbing", endpoint="industry_plumbing")
+def industry_plumbing():
+    return render_template("industries/plumbing.html")
+
+
+@public_bp.route("/industries/electricians", endpoint="industry_electricians")
+def industry_electricians():
+    return render_template("industries/electricians.html")
+
+
+@public_bp.route("/industries/roofing", endpoint="industry_roofing")
+def industry_roofing():
+    return render_template("industries/roofing.html")

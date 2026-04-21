@@ -1,0 +1,205 @@
+{% extends "base_public.html" %}
+{% block title %}Google Ads for HVAC Companies — Lower CPL, More Service Calls | FieldSprout{% endblock %}
+{% block meta_description %}FieldSprout's AI agents optimize Google Ads for HVAC companies 24/7 — reducing wasted spend, lowering cost per lead, and booking more service calls. See a live grade of your account in 60 seconds.{% endblock %}
+{% block og_title %}Google Ads for HVAC Companies — AI That Fills Your Service Calendar{% endblock %}
+{% block og_description %}Stop overpaying per lead. FieldSprout's AI optimizes your HVAC Google Ads around the clock — cutting waste, improving Quality Scores, and booking more tune-ups, repairs &amp; installs.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Google Ads for HVAC Companies",
+  "description": "AI-powered Google Ads optimization for HVAC businesses — reduce cost per lead, book more service calls.",
+  "url": "https://fieldsprout.io/industries/hvac",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://fieldsprout.io"},
+      {"@type": "ListItem", "position": 2, "name": "Industries", "item": "https://fieldsprout.io/industries"},
+      {"@type": "ListItem", "position": 3, "name": "HVAC", "item": "https://fieldsprout.io/industries/hvac"}
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-orange-50 via-white to-red-50 pt-20 pb-16">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-3/5 mb-10 md:mb-0">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-orange-100 text-orange-800 rounded-full text-sm font-semibold mb-6">
+          <i class="fa-solid fa-temperature-half"></i> Built for HVAC Companies
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+          Stop Overpaying for<br>HVAC Leads on Google
+        </h1>
+        <p class="text-xl text-gray-600 mb-8">
+          FieldSprout's AI agents optimize your Google Ads campaigns around the clock —
+          cutting wasted spend on unqualified clicks, boosting Quality Scores, and
+          filling your service calendar with tune-ups, repairs, and installs.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4">
+          {% if has_endpoint('ads_grader_bp.index') %}
+          <a href="{{ url_for('ads_grader_bp.index') }}"
+             class="btn btn-primary btn-lg">Grade My HVAC Ads — Free</a>
+          {% endif %}
+          <a href="/pricing" class="btn btn-secondary btn-lg">See Plans &amp; Pricing</a>
+        </div>
+        <p class="text-sm text-gray-500 mt-4">No credit card · 60-second setup · Cancel anytime</p>
+      </div>
+      <div class="md:w-2/5">
+        <div class="bg-white rounded-2xl shadow-card border p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Typical HVAC Account — Before vs. After FieldSprout</div>
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Cost per Lead</span>
+                <span class="text-green-600 font-bold">$147 → $89</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:61%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Wasted Spend / Month</span>
+                <span class="text-green-600 font-bold">$1,240 → $190</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:15%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Quality Score Avg</span>
+                <span class="text-green-600 font-bold">4.1 → 7.8</span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-2 mb-0.5">
+                <div class="bg-gray-400 h-2 rounded-full" style="width:41%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:78%"></div>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-4 text-center">Anonymized averages across HVAC accounts on FieldSprout</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Problems We Solve -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">The HVAC Google Ads problems we fix</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Most HVAC accounts are burning 30–45% of their budget on searches that will never convert to a booked job.</p>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, desc in [
+        ('fa-money-bill-wave', 'red', 'Wasted spend on non-buyers', 'Clicks from "DIY AC repair" and "HVAC school near me" drain your budget without generating a single call.'),
+        ('fa-calendar-xmark', 'orange', 'Ads running off-hours', 'Paying for clicks at 2am when your phones are off and no one is booking. We auto-apply business-hours scheduling.'),
+        ('fa-star-half-stroke', 'yellow', 'Low Quality Scores = higher CPCs', 'Poor ad relevance forces you to pay 40–60% more per click than competitors. We fix QS systematically.'),
+        ('fa-magnifying-glass', 'blue', 'Keyword gaps in peak season', 'Missing seasonal terms like "AC tune-up near me" means rivals capture your best leads every summer.'),
+        ('fa-chart-bar', 'purple', 'No visibility into what actually converts', 'Impressions and clicks look fine, but which campaigns actually book jobs? We surface real conversion data.'),
+        ('fa-person-digging', 'gray', 'Manual optimization that never gets done', 'Agencies make changes monthly at best. Our AI agents optimize continuously — every single day.'),
+      ] %}
+      <div class="p-6 rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Seasonal Intelligence -->
+<section class="py-16 bg-orange-50">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-1/2 mb-8 md:mb-0">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">HVAC seasonal intelligence built in</h2>
+        <p class="text-gray-600 mb-6">
+          We know that summer and fall are your peak seasons for AC tune-ups and furnace installs.
+          FieldSprout automatically ramps budget during high-demand periods and pulls back in slow months —
+          so your ad spend mirrors your actual opportunity.
+        </p>
+        <ul class="space-y-3 text-gray-700">
+          <li class="flex items-start gap-3"><i class="fa-solid fa-sun text-orange-400 mt-0.5"></i>Summer AC emergency and tune-up campaigns auto-boosted</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-snowflake text-blue-400 mt-0.5"></i>Fall furnace check campaigns ramped before the cold snap</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-calendar-check text-green-500 mt-0.5"></i>Budget forecast shows your projected leads by month</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-location-dot text-red-400 mt-0.5"></i>Geo-targeting tightened to your service radius</li>
+        </ul>
+      </div>
+      <div class="md:w-1/2">
+        <!-- Seasonal demand bar chart mockup -->
+        <div class="bg-white rounded-2xl border shadow-soft p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">HVAC Search Volume Index by Month</div>
+          <div class="flex items-end gap-1 h-28">
+            {% for month, h, hot in [
+              ('J',30,''), ('F',28,''), ('M',45,''), ('A',65,''),
+              ('M',80,''), ('J',100,'bg-orange-500'), ('J',100,'bg-orange-500'), ('A',90,'bg-orange-400'),
+              ('S',75,''), ('O',85,'bg-amber-400'), ('N',60,''), ('D',35,''),
+            ] %}
+            <div class="flex-1 flex flex-col items-center gap-1">
+              <div class="w-full rounded-t {{ hot if hot else 'bg-gray-200' }} transition" style="height:{{ h }}%;"></div>
+              <span class="text-xs text-gray-400">{{ month }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          <p class="text-xs text-gray-400 mt-2 text-center">FieldSprout auto-adjusts budget allocations based on this pattern</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Social Proof -->
+<section class="py-16 bg-white">
+  <div class="container-md">
+    <div class="grid md:grid-cols-3 gap-6">
+      {% for quote, name, co, result in [
+        ('"We went from $140 to $82 per lead in 6 weeks. The AI caught negative keywords our agency never touched."', 'Marcus T.', 'Atlanta HVAC Co.', '41% lower CPL'),
+        ('"Finally a tool that understands HVAC seasonality. It boosted our summer AC campaign automatically."', 'Diane K.', 'Midwest Heating & Cooling', '38% more calls in June'),
+        ('"The grader showed us we were wasting $1,800/month. We fixed it in a week and saw results immediately."', 'Jason R.', 'Southwest Air Solutions', '$1,800/mo recovered'),
+      ] %}
+      <div class="bg-gray-50 rounded-2xl p-6 border">
+        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
+        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
+        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
+        <div class="text-xs text-gray-500">{{ co }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-orange-500 to-red-600 text-white">
+  <div class="container-md text-center">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Get your free HVAC Ads Grade now</h2>
+    <p class="text-orange-100 text-lg mb-8 max-w-xl mx-auto">
+      See exactly where your HVAC Google Ads budget is being wasted — and get a prioritized action list to fix it. Takes 60 seconds.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('ads_grader_bp.index') %}
+      <a href="{{ url_for('ads_grader_bp.index') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Plans</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

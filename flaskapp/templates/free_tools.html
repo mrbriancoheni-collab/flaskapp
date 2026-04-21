@@ -1,0 +1,231 @@
+{% extends "base_public.html" %}
+{% block title %}Free Tools for Home Service Businesses — FieldSprout{% endblock %}
+{% block meta_description %}Free Google Ads grader, ROI calculator, and marketing tools built specifically for HVAC, plumbing, electrical, and roofing companies.{% endblock %}
+{% block og_title %}Free Marketing Tools for Home Service Companies — FieldSprout{% endblock %}
+{% block og_description %}Grade your Google Ads in 60 seconds, calculate your ROI, and get a free Facebook Ads analysis. No credit card. No login required.{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="bg-gradient-to-br from-emerald-50 via-white to-teal-50 pt-20 pb-16">
+  <div class="container-lg text-center">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-100 text-emerald-800 rounded-full text-sm font-semibold mb-6">
+      <i class="fa-solid fa-screwdriver-wrench"></i> 100% Free — No Credit Card Required
+    </div>
+    <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+      Free Marketing Tools for<br class="hidden md:block"> Home Service Businesses
+    </h1>
+    <p class="text-xl text-gray-600 max-w-2xl mx-auto mb-4">
+      Instantly see where your ad spend is being wasted, what your real ROI potential is,
+      and what quick wins can lower your cost per lead today.
+    </p>
+    <p class="text-sm text-gray-500">Used by 2,000+ HVAC, plumbing, electrical &amp; roofing companies</p>
+  </div>
+</section>
+
+<!-- Tools Grid -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <div class="grid md:grid-cols-3 gap-8">
+
+      <!-- Google Ads Grader -->
+      <div class="group rounded-2xl border-2 border-gray-100 hover:border-indigo-200 p-8 shadow-sm hover:shadow-lg transition-all flex flex-col">
+        <div class="w-14 h-14 rounded-2xl bg-indigo-100 flex items-center justify-center mb-5">
+          <i class="fa-solid fa-magnifying-glass-chart text-2xl text-indigo-600"></i>
+        </div>
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-2">
+            <h2 class="text-xl font-bold text-gray-900">Google Ads Grader</h2>
+            <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Free</span>
+          </div>
+          <p class="text-gray-600 mb-4">
+            Get a full A–F grade on your Google Ads account in under 60 seconds. See your Quality Score,
+            wasted spend, CTR, keyword coverage, and 8 more metrics — with a PDF you can share.
+          </p>
+          <ul class="space-y-2 text-sm text-gray-600 mb-6">
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Overall account grade (A–F)</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Wasted spend over last 90 days</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>10 scored performance dimensions</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Downloadable PDF report</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>No login required for demo</li>
+          </ul>
+        </div>
+        <div class="space-y-3">
+          {% if has_endpoint('ads_grader_bp.index') %}
+          <a href="{{ url_for('ads_grader_bp.index') }}"
+             class="block w-full text-center px-5 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition">
+            Grade My Google Ads →
+          </a>
+          <a href="{{ url_for('ads_grader_bp.demo') }}"
+             class="block w-full text-center px-5 py-2.5 border border-gray-300 text-gray-600 rounded-xl hover:bg-gray-50 text-sm transition">
+            See a live demo first
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ROI Calculator -->
+      <div class="group rounded-2xl border-2 border-gray-100 hover:border-orange-200 p-8 shadow-sm hover:shadow-lg transition-all flex flex-col">
+        <div class="w-14 h-14 rounded-2xl bg-orange-100 flex items-center justify-center mb-5">
+          <i class="fa-solid fa-calculator text-2xl text-orange-600"></i>
+        </div>
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-2">
+            <h2 class="text-xl font-bold text-gray-900">Ad Spend ROI Calculator</h2>
+            <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Free</span>
+          </div>
+          <p class="text-gray-600 mb-4">
+            Enter your monthly ad budget, average job value, and close rate. Get an instant projection
+            of leads, revenue, and what 20–40% waste reduction would add to your bottom line.
+          </p>
+          <ul class="space-y-2 text-sm text-gray-600 mb-6">
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Projected leads &amp; revenue</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Cost per lead benchmarks by trade</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Waste reduction impact model</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>12-month optimization scenarios</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>No account connection needed</li>
+          </ul>
+        </div>
+        <a href="{{ url_for('ads_grader_bp.calculator') if has_endpoint('ads_grader_bp.calculator') else '/ads-grader/calculator' }}"
+           class="block w-full text-center px-5 py-3 bg-orange-500 text-white font-semibold rounded-xl hover:bg-orange-600 transition">
+          Calculate My ROI →
+        </a>
+      </div>
+
+      <!-- Facebook Ads Inspector -->
+      <div class="group rounded-2xl border-2 border-gray-100 hover:border-blue-200 p-8 shadow-sm hover:shadow-lg transition-all flex flex-col">
+        <div class="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center mb-5">
+          <i class="fa-brands fa-facebook text-2xl text-blue-600"></i>
+        </div>
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-2">
+            <h2 class="text-xl font-bold text-gray-900">Facebook Ads Inspector</h2>
+            <span class="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full">Coming Soon</span>
+          </div>
+          <p class="text-gray-600 mb-4">
+            Analyze your Facebook &amp; Instagram ad account for wasted reach, creative fatigue,
+            audience overlap, and lead form drop-off. Built for home service businesses.
+          </p>
+          <ul class="space-y-2 text-sm text-gray-600 mb-6">
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Creative fatigue detection</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Audience overlap analysis</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Lead form completion rate</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Cost-per-lead by ad set</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>PDF report with fixes</li>
+          </ul>
+        </div>
+        <a href="/ads-grader/facebook"
+           class="block w-full text-center px-5 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition">
+          See Demo Report →
+        </a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Budget Forecast -->
+<section class="py-16 bg-gray-50">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-1/2 mb-8 md:mb-0">
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold mb-4">
+          FOR LOGGED-IN USERS
+        </div>
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Budget Forecasting Tool</h2>
+        <p class="text-gray-600 mb-6">
+          Connected your Google Ads account? Get a data-driven projection of what your leads and
+          revenue look like at +10%, +25%, and +50% budget — with seasonal adjustments for your trade.
+        </p>
+        <ul class="space-y-3 text-gray-600 mb-8">
+          <li class="flex items-start gap-3">
+            <div class="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <i class="fa-solid fa-check text-purple-600 text-xs"></i>
+            </div>
+            Real forecast based on your actual CPC, CVR, and Quality Score
+          </li>
+          <li class="flex items-start gap-3">
+            <div class="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <i class="fa-solid fa-check text-purple-600 text-xs"></i>
+            </div>
+            Seasonal demand index for HVAC, plumbing, and electrical
+          </li>
+          <li class="flex items-start gap-3">
+            <div class="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <i class="fa-solid fa-check text-purple-600 text-xs"></i>
+            </div>
+            AI-powered recommendation: scale, optimize, or cut waste first
+          </li>
+        </ul>
+        {% if has_endpoint('auth_bp.register') %}
+        <a href="{{ url_for('auth_bp.register') }}" class="btn btn-primary">Connect My Account — Free</a>
+        {% else %}
+        <a href="/signup" class="btn btn-primary">Connect My Account — Free</a>
+        {% endif %}
+      </div>
+      <div class="md:w-1/2 bg-white rounded-2xl border shadow-soft p-6">
+        <div class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Budget Scenario Preview</div>
+        <div class="space-y-3">
+          {% for label, budget, leads, color in [
+            ('Current Budget', '$3,200/mo', '28 leads', 'gray'),
+            ('+25% Budget', '$4,000/mo', '34 leads', 'blue'),
+            ('+50% Budget', '$4,800/mo', '39 leads', 'purple'),
+            ('+100% Budget', '$6,400/mo', '50 leads', 'indigo'),
+          ] %}
+          <div class="flex items-center justify-between p-3 rounded-xl bg-{{ color }}-50 border border-{{ color }}-100">
+            <span class="text-sm font-medium text-gray-700">{{ label }}</span>
+            <div class="flex items-center gap-4 text-sm">
+              <span class="text-gray-600">{{ budget }}</span>
+              <span class="font-bold text-{{ color }}-700">→ {{ leads }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        <p class="text-xs text-gray-400 mt-4 text-center">Example based on typical HVAC account ($85 CPL, 3.2% CVR)</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Why Trust Us -->
+<section class="py-16 bg-white">
+  <div class="container-md text-center">
+    <h2 class="text-2xl font-bold text-gray-900 mb-10">Why home service pros trust our free tools</h2>
+    <div class="grid md:grid-cols-3 gap-8 text-left">
+      <div>
+        <div class="text-3xl font-extrabold text-indigo-600 mb-1">$2.1M+</div>
+        <div class="font-semibold text-gray-900 mb-1">Wasted spend identified</div>
+        <p class="text-sm text-gray-500">Across all grader reports run in the last 12 months</p>
+      </div>
+      <div>
+        <div class="text-3xl font-extrabold text-indigo-600 mb-1">2,000+</div>
+        <div class="font-semibold text-gray-900 mb-1">Reports generated</div>
+        <p class="text-sm text-gray-500">For HVAC, plumbing, electrical, roofing, and pest control companies</p>
+      </div>
+      <div>
+        <div class="text-3xl font-extrabold text-indigo-600 mb-1">4.9★</div>
+        <div class="font-semibold text-gray-900 mb-1">Average rating</div>
+        <p class="text-sm text-gray-500">"Most actionable free audit I've ever gotten" — Home service owners</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-indigo-600 to-purple-700 text-white">
+  <div class="container-md text-center">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Ready for the full platform?</h2>
+    <p class="text-indigo-200 text-lg mb-8 max-w-xl mx-auto">
+      Connect your Google Ads account and let AI agents optimize your campaigns 24/7.
+      Most home service businesses cut their cost per lead by 20–40% in the first 30 days.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('auth_bp.register') %}
+      <a href="{{ url_for('auth_bp.register') }}" class="btn btn-secondary btn-lg">Start Free — No Credit Card</a>
+      {% else %}
+      <a href="/signup" class="btn btn-secondary btn-lg">Start Free — No Credit Card</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Pricing</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

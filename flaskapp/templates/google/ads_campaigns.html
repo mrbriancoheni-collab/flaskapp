@@ -165,9 +165,9 @@
                 <button type="button" class="text-gray-400 hover:text-gray-600" onclick="editCampaign('{{ campaign.id }}')">
                   <i class="fa-solid fa-pen"></i>
                 </button>
-                <a href="{{ url_for('google_bp.ads_campaign_detail', campaign_id=campaign.id) }}" class="text-indigo-600 hover:text-indigo-900">
+                <span class="text-gray-400">
                   <i class="fa-solid fa-arrow-right"></i>
-                </a>
+                </span>
               </div>
             </td>
           </tr>
@@ -228,10 +228,9 @@
                         onclick="editCampaign('{{ campaign.id }}')">
                   <i class="fa-solid fa-pen text-gray-600"></i>
                 </button>
-                <a href="{{ url_for('google_bp.ads_campaign_detail', campaign_id=campaign.id) }}"
-                   class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
+                <span class="inline-flex items-center gap-2 rounded-md bg-gray-300 px-4 py-2 text-white cursor-default">
                   View Details <i class="fa-solid fa-arrow-right"></i>
-                </a>
+                </span>
               </div>
             </div>
           </div>

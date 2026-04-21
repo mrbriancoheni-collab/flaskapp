@@ -365,7 +365,7 @@
         <i class="fa-solid fa-times text-xl"></i>
       </button>
     </div>
-    <form id="editCampaignForm" method="post" action="{{ url_for('google_bp.ads_campaign_update') }}">
+    <form id="editCampaignForm" method="post" action="#">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="id" id="edit_campaign_id">
 
@@ -490,6 +490,7 @@ function editCampaign(campaignId) {
   document.getElementById('edit_campaign_bidding').value = campaign.bidding;
   document.getElementById('edit_campaign_target').value = campaign.target || '';
 
+  document.getElementById('editCampaignForm').action = '/account/google/ads/campaign/' + campaignId + '/edit';
   document.getElementById('editCampaignModal').classList.remove('hidden');
   document.getElementById('editCampaignModal').classList.add('flex');
 }
@@ -507,7 +508,7 @@ function deleteCampaign() {
 
   const form = document.createElement('form');
   form.method = 'POST';
-  form.action = '{{ url_for("google_bp.ads_campaign_delete") }}';
+  form.action = '/account/google/ads/campaign/' + campaignId + '/delete';
 
   const csrfInput = document.createElement('input');
   csrfInput.type = 'hidden';

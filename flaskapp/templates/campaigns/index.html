@@ -3,110 +3,177 @@
 
 {% block content %}
 <div class="max-w-5xl mx-auto">
-  <h1 class="text-2xl font-semibold mb-4">Seasonal Campaigns</h1>
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold">Seasonal Campaign Templates</h1>
+      <p class="text-gray-500 text-sm mt-1">Select templates to build your campaign repository</p>
+    </div>
+    {% if ai_enabled %}
+    <span class="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-full">
+      <i class="fa-solid fa-sparkles"></i> AI Enabled
+    </span>
+    {% endif %}
+  </div>
 
-  {# Flash messages handled in base template already #}
-
-  {# Non-AI catalog and add-to-repo #}
-  <form method="post" class="rounded-xl border bg-white p-4 shadow-sm">
+  <!-- Campaign Catalog -->
+  <form method="post" action="{{ url_for('campaigns_catalog_bp.index') }}" class="bg-white rounded-xl border shadow-sm p-5 mb-8">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="grid gap-3">
+    <h2 class="text-lg font-semibold mb-4">Available Templates</h2>
+    <div class="grid md:grid-cols-2 gap-3">
       {% for c in catalog %}
-        <label class="flex items-start gap-3 border rounded-lg p-3 hover:bg-gray-50 cursor-pointer">
-          <input type="radio" name="slug" value="{{ c.slug }}" class="mt-1">
-          <div>
-            <div class="font-medium">{{ c.title }}</div>
-            <div class="text-sm text-gray-600">{{ c.desc }}</div>
-            <div class="mt-1 text-xs text-gray-400">Slug: {{ c.slug }}</div>
+      <label class="flex items-start gap-3 border rounded-lg p-4 hover:bg-indigo-50 cursor-pointer
+                    {% if c.slug in saved_slugs %}bg-green-50 border-green-200{% endif %}">
+        <input type="radio" name="slug" value="{{ c.slug }}" class="mt-1">
+        <div class="flex-1">
+          <div class="flex items-center gap-2">
+            <span class="font-semibold text-gray-900">{{ c.title }}</span>
+            <span class="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">{{ c.season }}</span>
+            {% if c.slug in saved_slugs %}
+            <span class="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">Saved</span>
+            {% endif %}
           </div>
-        </label>
+          <p class="text-sm text-gray-500 mt-1">{{ c.desc }}</p>
+        </div>
+      </label>
       {% endfor %}
     </div>
 
-    <div class="mt-4 flex items-center gap-2">
-      <button type="submit" class="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700">
-        Add to repository
+    <div class="mt-5 flex flex-wrap items-center gap-3">
+      <button type="submit"
+              class="px-5 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700">
+        <i class="fa-solid fa-plus mr-2"></i>Add to Repository
       </button>
 
-      {# Client-side: AI button disabled if not paid, but server still enforces via route decorator #}
-      <button
-        type="button"
-        class="px-4 py-2 rounded border hover:bg-gray-50 {% if not ai_enabled %}opacity-50 cursor-not-allowed{% endif %}"
-        {% if not ai_enabled %}disabled{% endif %}
-        onclick="openAISuggestModal()">
-        AI: Suggest copy/variants
+      <button type="button"
+              class="px-5 py-2 rounded-lg border font-medium hover:bg-gray-50
+                     {% if not ai_enabled %}opacity-50 cursor-not-allowed{% endif %}"
+              {% if not ai_enabled %}disabled title="Requires paid plan"{% endif %}
+              onclick="openAISuggestModal()">
+        <i class="fa-solid fa-wand-magic-sparkles mr-2 text-purple-600"></i>Generate AI Copy
       </button>
 
       {% if not ai_enabled %}
-        <span class="text-sm text-gray-600">
-          AI requires a paid plan.
-          <a class="text-indigo-600 underline" href="{{ url_for(ep('pricing')) }}">Upgrade</a>
-        </span>
+      <a href="{{ url_for(ep('pricing')) }}" class="text-sm text-indigo-600 hover:underline">
+        Upgrade for AI copy generation
+      </a>
       {% endif %}
     </div>
   </form>
 
-  {# AI results (when returning from /ai/suggest) #}
+  <!-- AI Ideas Result -->
   {% if ai_ideas %}
-    <div class="mt-6 rounded-xl border bg-white p-4 shadow-sm">
-      <div class="flex items-center justify-between">
-        <h2 class="text-lg font-semibold">AI Suggestions{% if chosen_slug %} for “{{ chosen_slug }}”{% endif %}</h2>
-        <form method="post" action="{{ url_for('campaigns_bp.index') }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="slug" value="{{ chosen_slug }}">
-          <button class="px-3 py-1 rounded border hover:bg-gray-50">Add this campaign</button>
-        </form>
+  <div class="bg-white rounded-xl border shadow-sm p-5 mb-8">
+    <h2 class="text-lg font-semibold mb-4">
+      <i class="fa-solid fa-sparkles text-purple-600 mr-2"></i>
+      AI Copy Variants{% if chosen_slug %} — {{ CATALOG_BY_SLUG[chosen_slug].title if chosen_slug in CATALOG_BY_SLUG else chosen_slug }}{% endif %}
+    </h2>
+    <div class="space-y-3">
+      {% for idea in ai_ideas %}
+      <div class="p-4 bg-purple-50 border border-purple-200 rounded-lg text-sm text-gray-800">
+        {{ idea }}
       </div>
-      <ul class="mt-3 list-disc pl-6 space-y-1 text-gray-800">
-        {% for idea in ai_ideas %}
-          <li>{{ idea }}</li>
-        {% endfor %}
-      </ul>
+      {% endfor %}
     </div>
+  </div>
+  {% endif %}
+
+  <!-- Saved Campaigns -->
+  {% if saved %}
+  <div class="bg-white rounded-xl border shadow-sm p-5">
+    <h2 class="text-lg font-semibold mb-4">
+      <i class="fa-solid fa-folder-open text-indigo-600 mr-2"></i>Your Campaign Repository
+    </h2>
+    <div class="space-y-3">
+      {% for s in saved %}
+      <div class="flex items-start justify-between p-4 border rounded-lg gap-4">
+        <div class="flex-1 min-w-0">
+          <span class="font-semibold">{{ s.title }}</span>
+          <span class="ml-2 text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">{{ s.status }}</span>
+          <p class="text-xs text-gray-500 mt-1">Added {{ s.created_at.strftime('%b %d, %Y') }}</p>
+          {% if s.ai_ideas %}
+          <p class="text-xs text-purple-600 mt-1"><i class="fa-solid fa-sparkles mr-1"></i>AI copy variants ready</p>
+          {% endif %}
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <form method="post" action="{{ url_for('campaigns_catalog_bp.push_to_google', slug=s.slug) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700">
+              <i class="fa-brands fa-google"></i> Push to Google Ads
+            </button>
+          </form>
+          <form method="post" action="{{ url_for('campaigns_catalog_bp.remove', slug=s.slug) }}"
+                onsubmit="return confirm('Remove this campaign?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="p-1.5 text-red-400 hover:text-red-600 rounded">
+              <i class="fa-solid fa-trash text-sm"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
   {% endif %}
 </div>
 
-{# Simple modal that posts to the AI route #}
+<!-- AI Suggest Modal -->
 <div id="aiSuggestModal" class="hidden fixed inset-0 z-50 items-center justify-center">
   <div class="absolute inset-0 bg-black/40" onclick="closeAISuggestModal()"></div>
   <div class="relative bg-white w-full max-w-lg mx-4 rounded-2xl shadow-xl border overflow-hidden">
     <div class="px-5 py-4 border-b flex items-center justify-between">
-      <div class="text-lg font-semibold">AI: Suggest copy/variants</div>
+      <div class="text-lg font-semibold">Generate AI Ad Copy</div>
       <button class="p-2 rounded-lg hover:bg-gray-100" onclick="closeAISuggestModal()">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
-    <form method="post" action="{{ url_for('campaigns_bp.ai_suggest') }}" class="p-5 space-y-4">
+    <form method="post" action="{{ url_for('campaigns_catalog_bp.ai_suggest') }}" class="p-5 space-y-4">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div>
-        <label class="block text-sm font-medium mb-1">Campaign slug</label>
-        <input name="slug" required class="w-full rounded border px-3 py-2" placeholder="e.g., fall-furnace-tuneup">
+        <label class="block text-sm font-medium mb-1">Campaign</label>
+        <select name="slug" required class="w-full rounded-lg border px-3 py-2">
+          {% for c in catalog %}
+          <option value="{{ c.slug }}">{{ c.title }}</option>
+          {% endfor %}
+        </select>
       </div>
       <div>
         <label class="block text-sm font-medium mb-1">Notes (optional)</label>
-        <textarea name="notes" class="w-full rounded border px-3 py-2" rows="3" placeholder="Target neighborhood, price point, timeframe…"></textarea>
+        <textarea name="notes" class="w-full rounded-lg border px-3 py-2" rows="3"
+                  placeholder="Target neighborhood, price point, promo details…"></textarea>
       </div>
       <div class="flex items-center justify-end gap-2">
-        <button type="button" class="px-3 py-2 rounded border hover:bg-gray-50" onclick="closeAISuggestModal()">Cancel</button>
-        <button class="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700">Generate</button>
+        <button type="button" class="px-4 py-2 rounded-lg border hover:bg-gray-50"
+                onclick="closeAISuggestModal()">Cancel</button>
+        <button class="px-5 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">
+          <i class="fa-solid fa-sparkles mr-2"></i>Generate
+        </button>
       </div>
     </form>
   </div>
 </div>
 
+{% block body_extra %}
 <script nonce="{{ g.csp_nonce }}">
-  function openAISuggestModal(){
+  function openAISuggestModal() {
     {% if ai_enabled %}
-      document.getElementById('aiSuggestModal').classList.remove('hidden');
-      document.getElementById('aiSuggestModal').classList.add('flex');
+      const m = document.getElementById('aiSuggestModal');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+      // Pre-select the currently checked radio
+      const checked = document.querySelector('input[name="slug"]:checked');
+      if (checked) {
+        document.querySelector('#aiSuggestModal select[name="slug"]').value = checked.value;
+      }
     {% else %}
-      // Soft nudge for non-paid (server still blocks)
       window.location.href = "{{ url_for(ep('pricing')) }}";
     {% endif %}
   }
-  function closeAISuggestModal(){
+  function closeAISuggestModal() {
     const m = document.getElementById('aiSuggestModal');
-    m.classList.add('hidden'); m.classList.remove('flex');
+    m.classList.add('hidden');
+    m.classList.remove('flex');
   }
 </script>
+{% endblock %}
 {% endblock %}

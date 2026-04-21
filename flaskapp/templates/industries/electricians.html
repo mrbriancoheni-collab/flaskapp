@@ -1,0 +1,207 @@
+{% extends "base_public.html" %}
+{% block title %}Google Ads for Electricians — More Service Calls, Lower Cost per Lead | FieldSprout{% endblock %}
+{% block meta_description %}FieldSprout's AI agents optimize Google Ads for electrical contractors 24/7 — reducing wasted spend, capturing panel upgrades and emergency calls, and growing your booked jobs.{% endblock %}
+{% block og_title %}Google Ads for Electricians — AI That Books More Electrical Jobs{% endblock %}
+{% block og_description %}Stop losing high-value electrical leads to competitors. FieldSprout AI optimizes your Google Ads around the clock — panel upgrades, EV chargers, emergency calls, all at lower CPL.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Google Ads for Electricians",
+  "description": "AI-powered Google Ads optimization for electrical contractors — reduce cost per lead, capture high-value jobs, grow revenue.",
+  "url": "https://fieldsprout.io/industries/electricians",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://fieldsprout.io"},
+      {"@type": "ListItem", "position": 2, "name": "Industries", "item": "https://fieldsprout.io/industries"},
+      {"@type": "ListItem", "position": 3, "name": "Electricians", "item": "https://fieldsprout.io/industries/electricians"}
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-yellow-50 via-white to-amber-50 pt-20 pb-16">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-3/5 mb-10 md:mb-0">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold mb-6">
+          <i class="fa-solid fa-bolt"></i> Built for Electrical Contractors
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+          Book More High-Value<br>Electrical Jobs on Google
+        </h1>
+        <p class="text-xl text-gray-600 mb-8">
+          FieldSprout's AI agents optimize your Google Ads campaigns around the clock —
+          targeting panel upgrades, EV charger installs, and emergency calls while
+          cutting spend on low-margin searches your team can't profitably service.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4">
+          {% if has_endpoint('ads_grader_bp.index') %}
+          <a href="{{ url_for('ads_grader_bp.index') }}"
+             class="btn btn-primary btn-lg">Grade My Electrician Ads — Free</a>
+          {% endif %}
+          <a href="/pricing" class="btn btn-secondary btn-lg">See Plans &amp; Pricing</a>
+        </div>
+        <p class="text-sm text-gray-500 mt-4">No credit card · 60-second setup · Cancel anytime</p>
+      </div>
+      <div class="md:w-2/5">
+        <div class="bg-white rounded-2xl shadow-card border p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Typical Electrical Account — Before vs. After FieldSprout</div>
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Cost per Lead</span>
+                <span class="text-green-600 font-bold">$132 → $79</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:60%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Wasted Spend / Month</span>
+                <span class="text-green-600 font-bold">$1,100 → $160</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:15%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">High-Value Job Rate</span>
+                <span class="text-green-600 font-bold">Panel upgrades +28%</span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-2 mb-0.5">
+                <div class="bg-gray-400 h-2 rounded-full" style="width:45%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:73%"></div>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-4 text-center">Anonymized averages across electrical accounts on FieldSprout</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Problems We Solve -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">The electrician Google Ads problems we fix</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Most electrical contractor accounts overspend on low-ticket searches and miss the high-value panel upgrades and EV installs that drive real revenue.</p>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, desc in [
+        ('fa-money-bill-wave', 'red', 'Wasting budget on DIY and supply searches', 'Clicks from "how to wire an outlet" and "electrical supplies near me" cost you real money. We auto-exclude them immediately.'),
+        ('fa-star-half-stroke', 'yellow', 'Low Quality Scores inflating your CPCs', 'Generic ads with poor landing page match force you to overpay per click. We rebuild ad groups around tightly matched intent.'),
+        ('fa-bolt', 'orange', 'Missing high-value job keywords', 'Not bidding on "panel upgrade cost", "EV charger installation", or "whole home generator" means giving those jobs to competitors.'),
+        ('fa-location-dot', 'blue', 'Geo-targeting spilling outside your license area', 'Paying for leads you legally can\'t serve in unlicensed counties. We tighten targeting to only where your license is valid.'),
+        ('fa-chart-bar', 'purple', 'Can\'t tell which campaigns drive panel upgrades vs. outlet fixes', 'A $50 outlet call and a $4,000 panel upgrade look the same in your dashboard. We help you track job value, not just conversions.'),
+        ('fa-person-digging', 'gray', 'No continuous optimization happening', 'Your campaigns run the same as they did 6 months ago. Our AI agents find and apply improvements every single day.'),
+      ] %}
+      <div class="p-6 rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- High-Value Job Targeting -->
+<section class="py-16 bg-yellow-50">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-1/2 mb-8 md:mb-0">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Target high-margin electrical jobs specifically</h2>
+        <p class="text-gray-600 mb-6">
+          Not all electrical leads are created equal. A call about a tripped breaker takes 30 minutes;
+          a panel upgrade or EV charger install books the whole day. FieldSprout segments your campaigns
+          by job type so your best budget goes toward your most profitable work.
+        </p>
+        <ul class="space-y-3 text-gray-700">
+          <li class="flex items-start gap-3"><i class="fa-solid fa-plug-circle-bolt text-yellow-500 mt-0.5"></i>Panel upgrades, rewiring, and generator installs get premium bids</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-car text-green-500 mt-0.5"></i>EV charger installation campaigns auto-boosted as EV adoption grows</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-house-chimney text-blue-400 mt-0.5"></i>Home addition and new construction keywords separated from service calls</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-phone text-gray-500 mt-0.5"></i>Commercial vs. residential intent separated into distinct ad groups</li>
+        </ul>
+      </div>
+      <div class="md:w-1/2">
+        <div class="bg-white rounded-2xl border shadow-soft p-6 space-y-3">
+          <div class="text-sm font-semibold text-gray-500 mb-2">Campaign Structure — Electrical Contractor</div>
+          {% for campaign, avg_job, priority, color in [
+            ('Panel Upgrades & Rewiring', '$2,800 avg job', 'Top priority', 'yellow'),
+            ('EV Charger Installation', '$1,400 avg job', 'High priority', 'green'),
+            ('Generator Install & Service', '$3,200 avg job', 'Top priority', 'orange'),
+            ('Emergency Electrical', '$380 avg job', 'High priority', 'red'),
+            ('Outlet & Fixture Repair', '$190 avg job', 'Moderate', 'blue'),
+            ('Lighting & Ceiling Fans', '$220 avg job', 'Moderate', 'gray'),
+          ] %}
+          <div class="flex items-center justify-between p-3 rounded-xl bg-{{ color }}-50 border border-{{ color }}-100">
+            <div>
+              <div class="text-sm font-medium text-gray-800">{{ campaign }}</div>
+              <div class="text-xs text-gray-500">{{ avg_job }}</div>
+            </div>
+            <span class="text-xs font-semibold text-{{ color }}-700 px-2 py-0.5 bg-{{ color }}-100 rounded-full">{{ priority }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Social Proof -->
+<section class="py-16 bg-white">
+  <div class="container-md">
+    <div class="grid md:grid-cols-3 gap-6">
+      {% for quote, name, co, result in [
+        ('"Our panel upgrade leads doubled in 8 weeks. FieldSprout restructured our campaigns by job type and the results were immediate."', 'Brian H.', 'Apex Electric', '2x panel upgrade leads'),
+        ('"We were bidding the same on a $150 outlet call and a $3,000 rewire. FieldSprout fixed that and our revenue per lead went through the roof."', 'Maria S.', 'Sunshine Electrical Services', '+41% revenue per lead'),
+        ('"The negative keyword cleanup alone saved us $1,100/month. We had no idea how much DIY searchers were costing us."', 'Tom V.', 'Volt Pro Electrical', '$1,100/mo recovered'),
+      ] %}
+      <div class="bg-gray-50 rounded-2xl p-6 border">
+        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
+        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
+        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
+        <div class="text-xs text-gray-500">{{ co }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-yellow-500 to-amber-600 text-white">
+  <div class="container-md text-center">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Get your free Electrician Ads Grade now</h2>
+    <p class="text-yellow-100 text-lg mb-8 max-w-xl mx-auto">
+      See exactly where your electrical Google Ads budget is being wasted — and get a prioritized action list to capture more high-value jobs. Takes 60 seconds.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('ads_grader_bp.index') %}
+      <a href="{{ url_for('ads_grader_bp.index') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Plans</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

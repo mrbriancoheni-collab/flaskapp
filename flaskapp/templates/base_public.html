@@ -5,6 +5,24 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>{% block title %}FieldSprout — Get Found. Grow Leads. Book Jobs.{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}FieldSprout helps local service pros get found, grow leads, and book more jobs with AI-powered campaigns and review automation.{% endblock %}">
+  <meta name="robots" content="{% block meta_robots %}index, follow{% endblock %}">
+  <link rel="canonical" href="{% block canonical %}https://fieldsprout.io{{ request.path }}{% endblock %}">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+  <meta property="og:site_name" content="FieldSprout">
+  <meta property="og:title" content="{% block og_title %}FieldSprout — AI Marketing for Home Service Businesses{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}FieldSprout uses autonomous AI agents to optimize Google Ads, reduce wasted spend, and grow leads for HVAC, plumbing, electrical, and roofing companies.{% endblock %}">
+  <meta property="og:image" content="{% block og_image %}https://fieldsprout.io/static/img/og-default.png{% endblock %}">
+  <meta property="og:url" content="https://fieldsprout.io{{ request.path }}">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@fieldsprout">
+  <meta name="twitter:title" content="{% block twitter_title %}FieldSprout — AI Marketing for Home Service Businesses{% endblock %}">
+  <meta name="twitter:description" content="{% block twitter_description %}Autonomous AI agents that optimize Google Ads 24/7 for home service companies. Cut wasted spend, lower CPL, book more jobs.{% endblock %}">
+  <meta name="twitter:image" content="{% block twitter_image %}https://fieldsprout.io/static/img/og-default.png{% endblock %}">
+
   <link rel="icon" href="{{ url_for('static', filename='brand/favicon.ico') }}">
   <meta name="facebook-domain-verification" content="pu3qyk43a95ad4bgi13g8wd0xn81ot" />
   <meta name="google-site-verification" content="google-site-verification=E3EM4jKlHkXc2U1-JsfrabLSb6jyGb48tGLCKy1ACVk" />
@@ -487,13 +505,35 @@
           </div>
         </div>
 
-        <!-- Free Grader Link -->
-        {% if has_endpoint('ads_grader_bp.index') %}
-        <a href="{{ url_for('ads_grader_bp.index') }}" class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-emerald-700 hover:text-emerald-800 rounded-lg hover:bg-emerald-50 transition">
-          <i class="fa-solid fa-clipboard-check"></i>
-          Ads Grader
+        <!-- Industries Dropdown -->
+        <div class="nav-item relative">
+          <button class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-700 rounded-lg hover:bg-gray-50 transition">
+            Industries
+            <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+          <div class="nav-dropdown absolute top-full left-0 mt-2 w-52 bg-white rounded-xl shadow-card border border-gray-100 py-2 z-50">
+            <a href="/industries/hvac" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-primary-700 hover:bg-gray-50 transition">
+              <i class="fa-solid fa-temperature-half w-4 text-orange-500"></i>HVAC Companies
+            </a>
+            <a href="/industries/plumbing" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-primary-700 hover:bg-gray-50 transition">
+              <i class="fa-solid fa-droplet w-4 text-blue-500"></i>Plumbing Companies
+            </a>
+            <a href="/industries/electricians" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-primary-700 hover:bg-gray-50 transition">
+              <i class="fa-solid fa-bolt w-4 text-yellow-500"></i>Electricians
+            </a>
+            <a href="/industries/roofing" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-primary-700 hover:bg-gray-50 transition">
+              <i class="fa-solid fa-house w-4 text-red-500"></i>Roofing Companies
+            </a>
+          </div>
+        </div>
+
+        <!-- Free Tools Link -->
+        <a href="/free-tools" class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-emerald-700 hover:text-emerald-800 rounded-lg hover:bg-emerald-50 transition">
+          <i class="fa-solid fa-screwdriver-wrench"></i>
+          Free Tools
         </a>
-        {% endif %}
 
         <!-- Pricing Link -->
         {% if has_endpoint('pricing') %}
@@ -590,13 +630,27 @@
         </div>
       </details>
 
-      <!-- Free Grader -->
-      {% if has_endpoint('ads_grader_bp.index') %}
-      <a href="{{ url_for('ads_grader_bp.index') }}" class="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 text-emerald-700 font-semibold">
-        <i class="fa-solid fa-clipboard-check"></i>
-        Ads Grader
+      <!-- Industries -->
+      <details class="group">
+        <summary class="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 cursor-pointer font-medium">
+          Industries
+          <svg class="w-5 h-5 text-gray-400 transition group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </summary>
+        <div class="pl-4 pt-2 space-y-1">
+          <a href="/industries/hvac" class="block p-3 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50">HVAC Companies</a>
+          <a href="/industries/plumbing" class="block p-3 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50">Plumbing Companies</a>
+          <a href="/industries/electricians" class="block p-3 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50">Electricians</a>
+          <a href="/industries/roofing" class="block p-3 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50">Roofing Companies</a>
+        </div>
+      </details>
+
+      <!-- Free Tools -->
+      <a href="/free-tools" class="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 text-emerald-700 font-semibold">
+        <i class="fa-solid fa-screwdriver-wrench"></i>
+        Free Tools
       </a>
-      {% endif %}
 
       <!-- Pricing -->
       {% if has_endpoint('pricing') %}
@@ -677,7 +731,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-8">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-8">
           <div>
             <h4 class="font-semibold text-white mb-4">Product</h4>
             <ul class="space-y-3 text-white/60">
@@ -696,21 +750,32 @@
           </div>
 
           <div>
+            <h4 class="font-semibold text-white mb-4">Industries</h4>
+            <ul class="space-y-3 text-white/60">
+              <li><a href="/industries/hvac" class="hover:text-white transition">HVAC</a></li>
+              <li><a href="/industries/plumbing" class="hover:text-white transition">Plumbing</a></li>
+              <li><a href="/industries/electricians" class="hover:text-white transition">Electricians</a></li>
+              <li><a href="/industries/roofing" class="hover:text-white transition">Roofing</a></li>
+              <li><a href="/free-tools" class="hover:text-white transition">Free Tools</a></li>
+              <li><a href="/vs-agency" class="hover:text-white transition">FieldSprout vs Agency</a></li>
+            </ul>
+          </div>
+
+          <div>
             <h4 class="font-semibold text-white mb-4">Company</h4>
             <ul class="space-y-3 text-white/60">
-              <li><a href="https://fieldsprout.io/about" class="hover:text-white transition">About</a></li>
-              <li><a href="https://fieldsprout.io/blog" class="hover:text-white transition">Blog</a></li>
-              <li><a href="https://fieldsprout.io/contact" class="hover:text-white transition">Contact</a></li>
-              <li><a href="https://fieldsprout.io/careers" class="hover:text-white transition">Careers</a></li>
+              <li><a href="/about" class="hover:text-white transition">About</a></li>
+              <li><a href="/blog" class="hover:text-white transition">Blog</a></li>
+              <li><a href="/contact" class="hover:text-white transition">Contact</a></li>
             </ul>
           </div>
 
           <div>
             <h4 class="font-semibold text-white mb-4">Legal</h4>
             <ul class="space-y-3 text-white/60">
-              <li><a href="https://fieldsprout.io/terms-of-service" class="hover:text-white transition">Terms</a></li>
-              <li><a href="https://fieldsprout.io/privacy-policy" class="hover:text-white transition">Privacy</a></li>
-              <li><a href="https://fieldsprout.io/security" class="hover:text-white transition">Security</a></li>
+              <li><a href="/terms-of-service" class="hover:text-white transition">Terms</a></li>
+              <li><a href="/privacy-policy" class="hover:text-white transition">Privacy</a></li>
+              <li><a href="/security" class="hover:text-white transition">Security</a></li>
             </ul>
           </div>
         </div>

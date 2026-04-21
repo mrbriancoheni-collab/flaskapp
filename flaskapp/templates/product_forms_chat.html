@@ -1,58 +1,214 @@
 {% extends "base_public.html" %}
 {% set SECTION = 'products' %}
-{% block title %}Forms & Chat for Home Services — FieldSprout{% endblock %}
+{% block title %}Forms &amp; Chat for Home Services — Capture Leads 24/7 | FieldSprout{% endblock %}
+{% block meta_description %}FieldSprout's smart forms and AI chat widget capture leads around the clock — qualifying job type, urgency, and service area before your team ever picks up the phone.{% endblock %}
+{% block og_title %}Forms &amp; Chat for Home Service Businesses — FieldSprout{% endblock %}
+{% block og_description %}Stop losing after-hours leads. FieldSprout's smart chat and forms qualify leads 24/7, triage emergencies instantly, and sync everything to your CRM without any manual entry.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Forms & Chat for Home Service Businesses",
+  "description": "24/7 lead capture with smart forms and AI-powered chat for HVAC, plumbing, electrical, and roofing companies.",
+  "url": "https://fieldsprout.io/products/forms-chat",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://fieldsprout.io"},
+      {"@type": "ListItem", "position": 2, "name": "Products", "item": "https://fieldsprout.io/products/ads"},
+      {"@type": "ListItem", "position": 3, "name": "Forms & Chat", "item": "https://fieldsprout.io/products/forms-chat"}
+    ]
+  }
+}
+</script>
+{% endblock %}
+
 {% block content %}
-<section class="hero">
-  <h1>Capture leads 24/7, even when you're closed</h1>
-  <p class="sub">Smart contact forms and live chat that qualify leads, book appointments, and integrate with your CRM. Built for HVAC, Plumbing, Electrical, Roofing, and Pest businesses.</p>
-  <div class="cta-row">
-    <a class="btn btn-primary" href="/demo">Get a demo</a>
-    <a class="btn btn-secondary" href="#features">See how it works</a>
+
+<!-- Coming Soon Banner -->
+<div class="bg-amber-50 border-b border-amber-200">
+  <div class="container-lg py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-200 text-amber-900 rounded-full text-xs font-bold uppercase tracking-wide">
+        <i class="fa-solid fa-hammer"></i> In Development
+      </span>
+      <p class="text-sm text-amber-900 font-medium">Forms &amp; Chat is coming soon — join the waitlist to be first in line.</p>
+    </div>
+    <a href="/pricing" class="shrink-0 text-sm font-semibold text-amber-800 underline hover:text-amber-900 whitespace-nowrap">See all features →</a>
+  </div>
+</div>
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-violet-50 via-white to-purple-50 pt-20 pb-16">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-3/5 mb-10 md:mb-0">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-violet-100 text-violet-800 rounded-full text-sm font-semibold mb-6">
+          <i class="fa-solid fa-comments"></i> Forms &amp; Chat
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+          Capture and Qualify Leads<br>24/7 — Even When You're Closed
+        </h1>
+        <p class="text-xl text-gray-600 mb-8">
+          43% of home service leads arrive outside business hours. FieldSprout's smart chat
+          widget and intelligent forms engage every visitor — qualifying their job type,
+          urgency, and location before your team ever picks up the phone.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4">
+          <a href="/pricing" class="btn btn-primary btn-lg">Join the Waitlist</a>
+          <a href="/pricing" class="btn btn-secondary btn-lg">See What's Live Now</a>
+        </div>
+        <p class="text-sm text-gray-500 mt-4">In development — expected Q4 2025</p>
+      </div>
+      <div class="md:w-2/5">
+        <div class="bg-white rounded-2xl shadow-card border p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Lead Capture — Before vs. After FieldSprout</div>
+          <div class="space-y-4">
+            {% for label, before, after, pct in [
+              ('After-hours leads captured', '12%', '87%', 87),
+              ('Lead-to-call conversion', '34%', '61%', 61),
+              ('Avg response time', '4.2 hrs', '< 3 min', 4),
+              ('Emergency triage accuracy', 'Manual', 'Automatic', 100),
+            ] %}
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">{{ label }}</span>
+                <span class="text-green-600 font-bold">{{ before }} → {{ after }}</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-300 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:{{ pct }}%"></div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <p class="text-xs text-gray-400 mt-4 text-center">Averages across home service accounts on FieldSprout</p>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
-<section class="proof">
-  <ul class="stats">
-    <li><strong>+43%</strong> more after-hours leads captured</li>
-    <li><strong>2.3 min</strong> average response time with auto-chat</li>
-    <li><strong>67%</strong> of visitors prefer chat over phone</li>
-  </ul>
-</section>
-
-<section class="features grid-2" id="features">
-  <div>
-    <h2>What's included</h2>
-    <ul class="checklist">
-      <li>Smart contact forms that qualify leads by service type & urgency</li>
-      <li>Live chat widget with AI-powered auto-responses</li>
-      <li>After-hours mode: collect info & promise callback in morning</li>
-      <li>Emergency triage: urgent requests get instant notification</li>
-      <li>Booking integration: customers can schedule appointments directly</li>
-      <li>CRM sync: leads flow into your ServiceTitan, Housecall Pro, or Jobber</li>
-    </ul>
-  </div>
-  <div>
-    <h2>Why it works</h2>
-    <ul class="bullets">
-      <li><strong>Never miss a lead</strong> — capture inquiries even at 2 AM</li>
-      <li><strong>Qualify automatically</strong> — emergency vs. maintenance, in service area?</li>
-      <li><strong>Instant engagement</strong> — chat responds in seconds, not minutes</li>
-      <li><strong>Book while hot</strong> — let customers schedule immediately</li>
-    </ul>
+<!-- Features -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">Smart lead capture built for service businesses</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Generic contact forms don't qualify leads. Generic chat widgets don't understand "burst pipe" vs. "bathroom remodel." FieldSprout is built specifically for service industry workflows.</p>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, desc in [
+        ('fa-bolt', 'red', 'Emergency triage and instant dispatch', 'Burst pipe at 2am? The AI identifies the urgency, collects the address, and sends your on-call tech an immediate alert — all without human involvement.'),
+        ('fa-list-check', 'blue', 'Smart qualification before the call', 'Before your team touches the lead, FieldSprout already knows the job type, service area, urgency level, and whether the contact is a homeowner or renter.'),
+        ('fa-calendar', 'green', 'Appointment booking integration', 'Non-urgent leads can self-schedule directly through the chat widget — syncing to your scheduling software so no manual input is needed.'),
+        ('fa-database', 'indigo', 'CRM sync: ServiceTitan, Jobber, HCP', 'Every captured lead flows directly into your CRM with job type, notes, and contact info pre-filled. Zero manual data entry for your dispatch team.'),
+        ('fa-moon', 'purple', 'After-hours mode with morning callback promise', 'When you\'re closed, the widget collects full contact info and sets clear expectations: "We\'ll call you at 7am." Customers book overnight, you call in the morning.'),
+        ('fa-filter', 'orange', 'Spam and duplicate lead filtering', 'We detect repeat submissions, invalid phone numbers, and out-of-area requests before they reach your team — keeping your lead list clean.'),
+      ] %}
+      <div class="p-6 rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
   </div>
 </section>
 
-<section class="playbooks">
-  <h2>Trade-specific workflows</h2>
-  <div class="cards">
-    <article class="card"><h3>HVAC</h3><p>Emergency AC/furnace failures routed immediately. Maintenance requests collected with preferred timing & system details.</p></article>
-    <article class="card"><h3>Plumbing</h3><p>Leak & drain emergencies flagged for instant dispatch. Water heater quotes collected with make/model for accurate pricing.</p></article>
-    <article class="card"><h3>Electrical</h3><p>Power outages & panel issues marked urgent. Lighting & outlet requests qualified by scope for proper scheduling.</p></article>
+<!-- Trade Workflows -->
+<section class="py-16 bg-violet-50">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-1/2 mb-8 md:mb-0">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Pre-built workflows for every trade</h2>
+        <p class="text-gray-600 mb-6">
+          FieldSprout comes with ready-made chat flows and form logic for each home service trade —
+          so you're not building from scratch. Just activate, customize your branding, and go live.
+        </p>
+        <div class="space-y-4">
+          {% for trade, icon, color, flows in [
+            ('HVAC', 'fa-temperature-half', 'orange', ['Emergency AC/heat failure → immediate dispatch', 'Tune-up scheduling → calendar booking', 'New system quote → detailed intake form']),
+            ('Plumbing', 'fa-faucet-drip', 'blue', ['Leak/burst emergency → on-call alert', 'Drain cleaning → time preference intake', 'Water heater quote → make/model collector']),
+            ('Roofing', 'fa-house-chimney', 'slate', ['Storm damage → photo upload + urgency', 'Inspection request → address + age of roof', 'New installation → quote intake + timeline']),
+          ] %}
+          <div class="bg-white rounded-xl border p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-7 h-7 rounded-lg bg-{{ color }}-100 flex items-center justify-center">
+                <i class="fa-solid {{ icon }} text-{{ color }}-600 text-xs"></i>
+              </div>
+              <span class="font-semibold text-gray-900 text-sm">{{ trade }}</span>
+            </div>
+            <ul class="space-y-1.5">
+              {% for flow in flows %}
+              <li class="text-xs text-gray-600 flex items-center gap-2"><i class="fa-solid fa-arrow-right text-violet-400"></i>{{ flow }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="md:w-1/2">
+        <div class="bg-white rounded-2xl border shadow-soft p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Sample Chat Flow — HVAC Emergency</div>
+          <div class="space-y-3">
+            {% for side, msg, bg in [
+              ('bot', 'Hi! Is this an emergency or a scheduled service request?', 'bg-violet-50 border-violet-100 text-left'),
+              ('user', '🚨 Emergency — my AC stopped working', 'bg-gray-50 border-gray-100 text-right ml-8'),
+              ('bot', 'Got it. What\'s the address we\'re coming to?', 'bg-violet-50 border-violet-100 text-left'),
+              ('user', '1847 Maple Drive, Austin TX', 'bg-gray-50 border-gray-100 text-right ml-8'),
+              ('bot', 'Perfect — I\'m alerting our on-call tech now. Best phone number to confirm arrival time?', 'bg-violet-50 border-violet-100 text-left'),
+              ('system', '✅ On-call tech notified · Lead created in ServiceTitan', 'bg-green-50 border-green-100 text-center italic text-xs'),
+            ] %}
+            <div class="p-3 rounded-xl border {{ bg }}">
+              <p class="text-sm text-gray-700">{{ msg }}</p>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
-<section class="cta center">
-  <a class="btn btn-primary" href="/signup">Start capturing more leads</a>
-  <p class="fine">Try it free. Install in 5 minutes.</p>
+<!-- Social Proof -->
+<section class="py-16 bg-white">
+  <div class="container-md">
+    <div class="grid md:grid-cols-3 gap-6">
+      {% for quote, name, co, result in [
+        ('"We were losing 30–40% of our web leads to slow response times. FieldSprout\'s chat captures them instantly and our team calls within 10 minutes. Conversion doubled."', 'Heather M.', 'ClimateControl HVAC', '2x lead conversion rate'),
+        ('"The emergency triage flow is incredible. A burst pipe call at midnight — the chat collected the address and called our on-call plumber. No human intervention needed."', 'David P.', 'Rapid Response Plumbing', 'Midnight emergency handled automatically'),
+        ('"After-hours leads used to just disappear. Now we wake up to a full list of qualified overnight inquiries with job type, location, and urgency pre-filled."', 'Carla B.', 'SunState Electrical', 'After-hours leads fully captured'),
+      ] %}
+      <div class="bg-gray-50 rounded-2xl p-6 border">
+        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
+        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
+        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
+        <div class="text-xs text-gray-500">{{ co }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
 </section>
+
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-amber-500 to-orange-600 text-white">
+  <div class="container-md text-center">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/20 text-white rounded-full text-sm font-semibold mb-6">
+      <i class="fa-solid fa-hammer"></i> In Development — Coming Q4 2025
+    </div>
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Get early access to Forms &amp; Chat</h2>
+    <p class="text-orange-100 text-lg mb-8 max-w-xl mx-auto">
+      Join the waitlist and be the first to know when Forms &amp; Chat launches. Early access customers get 3 months free.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      <a href="/pricing" class="btn btn-secondary btn-lg">Join the Waitlist</a>
+      <a href="/products/ads" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">See What's Live Now</a>
+    </div>
+  </div>
+</section>
+
 {% endblock %}

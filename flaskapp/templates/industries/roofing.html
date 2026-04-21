@@ -1,0 +1,208 @@
+{% extends "base_public.html" %}
+{% block title %}Google Ads for Roofing Companies — More Estimates, Lower CPL | FieldSprout{% endblock %}
+{% block meta_description %}FieldSprout's AI agents optimize Google Ads for roofing contractors 24/7 — capturing storm damage leads, roof replacement searches, and cutting spend on non-buyers.{% endblock %}
+{% block og_title %}Google Ads for Roofers — AI That Fills Your Estimate Calendar{% endblock %}
+{% block og_description %}Stop overpaying for roofing leads. FieldSprout AI optimizes your Google Ads around the clock — storm response campaigns, replacement vs. repair targeting, lower CPL.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Google Ads for Roofing Companies",
+  "description": "AI-powered Google Ads optimization for roofing contractors — reduce cost per lead, capture storm damage and replacement leads.",
+  "url": "https://fieldsprout.io/industries/roofing",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://fieldsprout.io"},
+      {"@type": "ListItem", "position": 2, "name": "Industries", "item": "https://fieldsprout.io/industries"},
+      {"@type": "ListItem", "position": 3, "name": "Roofing", "item": "https://fieldsprout.io/industries/roofing"}
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-slate-50 via-white to-gray-100 pt-20 pb-16">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-3/5 mb-10 md:mb-0">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-slate-100 text-slate-800 rounded-full text-sm font-semibold mb-6">
+          <i class="fa-solid fa-house-chimney"></i> Built for Roofing Companies
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+          Win More Roofing Estimates<br>Without Overpaying on Google
+        </h1>
+        <p class="text-xl text-gray-600 mb-8">
+          FieldSprout's AI agents optimize your roofing Google Ads campaigns 24/7 —
+          capturing storm damage leads at peak demand, targeting replacement buyers,
+          and cutting spend on searches that will never convert to a signed contract.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4">
+          {% if has_endpoint('ads_grader_bp.index') %}
+          <a href="{{ url_for('ads_grader_bp.index') }}"
+             class="btn btn-primary btn-lg">Grade My Roofing Ads — Free</a>
+          {% endif %}
+          <a href="/pricing" class="btn btn-secondary btn-lg">See Plans &amp; Pricing</a>
+        </div>
+        <p class="text-sm text-gray-500 mt-4">No credit card · 60-second setup · Cancel anytime</p>
+      </div>
+      <div class="md:w-2/5">
+        <div class="bg-white rounded-2xl shadow-card border p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Typical Roofing Account — Before vs. After FieldSprout</div>
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Cost per Estimate</span>
+                <span class="text-green-600 font-bold">$210 → $128</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:61%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Wasted Spend / Month</span>
+                <span class="text-green-600 font-bold">$1,850 → $240</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:13%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Storm Response Speed</span>
+                <span class="text-green-600 font-bold">Manual → Automatic</span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-2 mb-0.5">
+                <div class="bg-gray-400 h-2 rounded-full" style="width:20%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:95%"></div>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-4 text-center">Anonymized averages across roofing accounts on FieldSprout</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Problems We Solve -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">The roofing Google Ads problems we fix</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Roofing has the highest CPCs of any home service trade — which makes waste especially painful. Most accounts burn 35–50% of budget on non-converting searches.</p>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, desc in [
+        ('fa-cloud-bolt', 'red', 'Missing storm surges when they matter most', 'A hailstorm hits your market and your ads aren\'t boosted. Competitors scoop leads while you scramble to raise bids manually.'),
+        ('fa-money-bill-wave', 'orange', 'Highest CPCs in home services wasting fast', 'Roofing clicks can cost $25–$80. One wrong keyword match type bleeds your budget in hours. We lock match types tightly.'),
+        ('fa-star-half-stroke', 'yellow', 'Low Quality Scores on broad roofing terms', '"Roof repair" triggers everything from DIY forums to competitor ads. We build tightly themed ad groups that earn 7+ QS.'),
+        ('fa-house-crack', 'blue', 'Replacement vs. repair buyers mixed together', 'A $400 repair lead and a $18,000 replacement lead need different messaging and bids. We separate them into distinct campaigns.'),
+        ('fa-chart-bar', 'purple', 'Can\'t measure true ROI per campaign', 'Too many roofers track form fills — not estimate shows. We help you connect ad spend to actual signed contracts.'),
+        ('fa-person-digging', 'gray', 'Insurance claim keywords left untapped', '"Insurance roof replacement" and "hail damage claim" are high-intent gold. We ensure you\'re capturing them at the right bid.'),
+      ] %}
+      <div class="p-6 rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Storm Response Section -->
+<section class="py-16 bg-slate-50">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-1/2 mb-8 md:mb-0">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Storm-ready campaigns that activate automatically</h2>
+        <p class="text-gray-600 mb-6">
+          When hail or high winds hit your market, the window to capture leads is 72–96 hours.
+          FieldSprout monitors storm alerts and weather patterns so your campaigns can be
+          pre-configured to surge when demand spikes — before competitors have even logged in.
+        </p>
+        <ul class="space-y-3 text-gray-700">
+          <li class="flex items-start gap-3"><i class="fa-solid fa-cloud-showers-heavy text-blue-500 mt-0.5"></i>Pre-built storm response campaign templates ready to activate</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-magnifying-glass text-orange-400 mt-0.5"></i>"Hail damage", "storm roof repair", "insurance claim" keywords pre-loaded</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-arrow-up text-green-500 mt-0.5"></i>Budget surge recommendations triggered by demand signals</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-calendar-check text-purple-400 mt-0.5"></i>Post-storm budget ramp-down as demand returns to baseline</li>
+        </ul>
+      </div>
+      <div class="md:w-1/2">
+        <div class="bg-white rounded-2xl border shadow-soft p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Roofing Demand — Seasonal + Storm Events</div>
+          <div class="flex items-end gap-1 h-28">
+            {% for month, h, cls in [
+              ('J',35,''), ('F',30,''), ('M',50,''), ('A',65,''),
+              ('M',75,'bg-slate-400'), ('J',80,'bg-slate-400'), ('J',100,'bg-red-500'), ('A',95,'bg-red-400'),
+              ('S',85,'bg-slate-400'), ('O',70,''), ('N',45,''), ('D',32,''),
+            ] %}
+            <div class="flex-1 flex flex-col items-center gap-1">
+              <div class="w-full rounded-t {{ cls if cls else 'bg-gray-200' }}" style="height:{{ h }}%;"></div>
+              <span class="text-xs text-gray-400">{{ month }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          <div class="flex items-center gap-4 mt-3 text-xs text-gray-500">
+            <div class="flex items-center gap-1"><div class="w-3 h-3 rounded bg-red-500"></div> Storm surge</div>
+            <div class="flex items-center gap-1"><div class="w-3 h-3 rounded bg-slate-400"></div> Seasonal peak</div>
+            <div class="flex items-center gap-1"><div class="w-3 h-3 rounded bg-gray-200"></div> Baseline</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Social Proof -->
+<section class="py-16 bg-white">
+  <div class="container-md">
+    <div class="grid md:grid-cols-3 gap-6">
+      {% for quote, name, co, result in [
+        ('"After the April hailstorm, our storm campaign was already loaded. We booked 28 estimates in 4 days while competitors were still updating bids."', 'Rick J.', 'Summit Roofing', '28 estimates in 4 days'),
+        ('"FieldSprout separated our replacement and repair campaigns. Our cost per replacement estimate dropped from $260 to $140 in 6 weeks."', 'Angela D.', 'ProRoof Solutions', '46% lower estimate CPL'),
+        ('"We were bidding on \'roof tiles\' and \'roofing nails\' — actual supply searches. That wasted spend is gone now and our budget goes further."', 'Pete M.', 'Coastal Roofing Group', '$1,400/mo recovered'),
+      ] %}
+      <div class="bg-gray-50 rounded-2xl p-6 border">
+        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
+        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
+        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
+        <div class="text-xs text-gray-500">{{ co }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-slate-700 to-gray-900 text-white">
+  <div class="container-md text-center">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Get your free Roofing Ads Grade now</h2>
+    <p class="text-slate-300 text-lg mb-8 max-w-xl mx-auto">
+      See exactly where your roofing Google Ads budget is being wasted — and get a prioritized action list to book more estimates at lower cost. Takes 60 seconds.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('ads_grader_bp.index') %}
+      <a href="{{ url_for('ads_grader_bp.index') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Plans</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

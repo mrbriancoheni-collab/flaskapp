@@ -1,0 +1,207 @@
+{% extends "base_public.html" %}
+{% block title %}Google Ads for Garage Door Companies — Emergency Repairs &amp; Installs | FieldSprout{% endblock %}
+{% block meta_description %}FieldSprout's AI agents optimize Google Ads for garage door companies 24/7 — capturing broken spring, off-track, and new installation searches at the lowest possible cost per lead.{% endblock %}
+{% block og_title %}Google Ads for Garage Door Companies — AI That Books More Repairs &amp; Installs{% endblock %}
+{% block og_description %}Stop losing garage door leads to competitors. FieldSprout AI optimizes your Google Ads 24/7 — emergency repairs, spring replacement, new door sales, all at lower CPL.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Google Ads for Garage Door Companies",
+  "description": "AI-powered Google Ads optimization for garage door repair and installation companies — reduce cost per lead, capture emergency and installation searches.",
+  "url": "https://fieldsprout.io/industries/garage-door",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://fieldsprout.io"},
+      {"@type": "ListItem", "position": 2, "name": "Industries", "item": "https://fieldsprout.io/industries"},
+      {"@type": "ListItem", "position": 3, "name": "Garage Door", "item": "https://fieldsprout.io/industries/garage-door"}
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-gray-50 via-white to-zinc-50 pt-20 pb-16">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-3/5 mb-10 md:mb-0">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-gray-200 text-gray-800 rounded-full text-sm font-semibold mb-6">
+          <i class="fa-solid fa-warehouse"></i> Built for Garage Door Companies
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+          Be First When Homeowners<br>Search for Garage Door Help
+        </h1>
+        <p class="text-xl text-gray-600 mb-8">
+          FieldSprout's AI agents optimize your Google Ads 24/7 — capturing urgent broken spring
+          and off-track calls, targeting new door buyers, and making sure you win the moment
+          a homeowner can't get their car out of the garage.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4">
+          {% if has_endpoint('ads_grader_bp.index') %}
+          <a href="{{ url_for('ads_grader_bp.index') }}"
+             class="btn btn-primary btn-lg">Grade My Garage Door Ads — Free</a>
+          {% endif %}
+          <a href="/pricing" class="btn btn-secondary btn-lg">See Plans &amp; Pricing</a>
+        </div>
+        <p class="text-sm text-gray-500 mt-4">No credit card · 60-second setup · Cancel anytime</p>
+      </div>
+      <div class="md:w-2/5">
+        <div class="bg-white rounded-2xl shadow-card border p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Typical Garage Door Account — Before vs. After FieldSprout</div>
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Cost per Lead</span>
+                <span class="text-green-600 font-bold">$76 → $44</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:58%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Wasted Spend / Month</span>
+                <span class="text-green-600 font-bold">$520 → $60</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:12%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">New Door Install Leads</span>
+                <span class="text-green-600 font-bold">+37% more leads</span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-2 mb-0.5">
+                <div class="bg-gray-400 h-2 rounded-full" style="width:42%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:79%"></div>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-4 text-center">Anonymized averages across garage door accounts on FieldSprout</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Problems We Solve -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">The garage door Google Ads problems we fix</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Garage door has two very different customer types: the emergency repair caller and the new door buyer. Most accounts treat them identically — and pay for it.</p>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, desc in [
+        ('fa-bolt', 'red', 'Emergency and new-door searches mixed together', 'Someone with a broken spring needs to call now. Someone shopping for a new door is comparing prices. They need different ads, bids, and pages.'),
+        ('fa-clock', 'orange', 'Missing after-hours emergency demand', 'Garage doors break at 7pm when people get home from work. If your ads pause at 5pm, you\'re handing those calls to competitors. We keep them running.'),
+        ('fa-star-half-stroke', 'yellow', 'Broad match keywords burning budget fast', 'Garage door CPCs are low but volume is high — broad match "garage door" triggers everything from parts suppliers to DIY videos. We lock it down.'),
+        ('fa-map-pin', 'blue', 'Geo-targeting not tied to your drive time', 'Taking a job 45 minutes away kills your margin. We tighten targeting to your profitable service radius and bid up your highest-density neighborhoods.'),
+        ('fa-chart-bar', 'purple', 'No split between repair and installation revenue', 'A $180 spring repair and a $3,200 door installation both look like "conversions" in your dashboard. We help you track and optimize by job type.'),
+        ('fa-person-digging', 'gray', 'Competitor terms and brand-defense gaps', 'Competitors bidding on your name? You may not even know. We monitor brand term performance and defend your own searches.'),
+      ] %}
+      <div class="p-6 rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Repair vs Install Split -->
+<section class="py-16 bg-zinc-50">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-1/2 mb-8 md:mb-0">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Separate emergency repairs from new door sales</h2>
+        <p class="text-gray-600 mb-6">
+          Emergency repair callers search with urgency: "garage door won't open," "broken spring same day."
+          New door buyers search with intent to compare: "garage door prices," "best garage door brands."
+          FieldSprout creates distinct campaigns for each — with the right message, bid, and landing page.
+        </p>
+        <ul class="space-y-3 text-gray-700">
+          <li class="flex items-start gap-3"><i class="fa-solid fa-wrench text-red-500 mt-0.5"></i>Emergency repair campaigns run 24/7 with mobile call extensions enabled</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-door-open text-blue-400 mt-0.5"></i>New door installation campaigns target "shopping mode" keywords with price callouts</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-gear text-gray-500 mt-0.5"></i>Parts and opener replacement keywords segmented by job type</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-shield text-green-500 mt-0.5"></i>Brand defense campaign prevents competitor ad clicks on your company name</li>
+        </ul>
+      </div>
+      <div class="md:w-1/2">
+        <div class="bg-white rounded-2xl border shadow-soft p-6 space-y-3">
+          <div class="text-sm font-semibold text-gray-500 mb-2">Intent-Based Campaign Structure</div>
+          {% for intent, example, value, color in [
+            ('Emergency Repair', '"garage door won\'t open"', '$180–$400', 'red'),
+            ('Spring Replacement', '"broken garage door spring"', '$220–$350', 'orange'),
+            ('New Door Installation', '"garage door installation cost"', '$1,800–$4,000', 'blue'),
+            ('Opener Replacement', '"garage door opener install"', '$280–$550', 'purple'),
+            ('Commercial / Multi-Unit', '"commercial garage door repair"', '$600–$2,500', 'green'),
+            ('Brand Defense', '"[Your company name]"', 'Protect traffic', 'gray'),
+          ] %}
+          <div class="flex items-center justify-between p-3 rounded-xl bg-{{ color }}-50 border border-{{ color }}-100">
+            <div>
+              <div class="text-sm font-medium text-gray-800">{{ intent }}</div>
+              <div class="text-xs text-gray-500 font-mono">{{ example }}</div>
+            </div>
+            <span class="text-xs font-semibold text-{{ color }}-700">{{ value }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Social Proof -->
+<section class="py-16 bg-white">
+  <div class="container-md">
+    <div class="grid md:grid-cols-3 gap-6">
+      {% for quote, name, co, result in [
+        ('"We weren\'t running ads after 5pm. FieldSprout identified that 38% of our emergency calls came between 6–9pm and fixed our schedule immediately."', 'Jared K.', 'Precision Garage Doors', '+38% after-hours capture'),
+        ('"Separating our repair and new door campaigns was the single biggest improvement. Our installation CPL dropped from $95 to $49."', 'Susan M.', 'All-Pro Door Co.', '48% lower install CPL'),
+        ('"The negative keyword list alone was worth it. We had no idea we were paying for \'DIY garage door repair\' and \'garage door parts wholesale\' clicks."', 'Tony R.', 'FastTrack Garage Doors', '$480/mo recovered'),
+      ] %}
+      <div class="bg-gray-50 rounded-2xl p-6 border">
+        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
+        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
+        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
+        <div class="text-xs text-gray-500">{{ co }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-gray-700 to-zinc-800 text-white">
+  <div class="container-md text-center">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Get your free Garage Door Ads Grade now</h2>
+    <p class="text-gray-300 text-lg mb-8 max-w-xl mx-auto">
+      See exactly where your garage door Google Ads budget is being wasted — and get a prioritized action list to capture more emergency calls and installation leads. Takes 60 seconds.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('ads_grader_bp.index') %}
+      <a href="{{ url_for('ads_grader_bp.index') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Plans</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

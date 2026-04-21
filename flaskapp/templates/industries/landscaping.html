@@ -1,0 +1,210 @@
+{% extends "base_public.html" %}
+{% block title %}Google Ads for Landscaping Companies — More Estimates, Lower CPL | FieldSprout{% endblock %}
+{% block meta_description %}FieldSprout's AI agents optimize Google Ads for landscaping and lawn care companies 24/7 — capturing design-build, maintenance, and seasonal service searches at lower cost.{% endblock %}
+{% block og_title %}Google Ads for Landscaping Companies — AI That Fills Your Job Calendar{% endblock %}
+{% block og_description %}Stop overpaying for landscaping leads. FieldSprout AI optimizes your Google Ads 24/7 — lawn care, landscape design, hardscaping, snow removal — all at a lower cost per lead.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Google Ads for Landscaping Companies",
+  "description": "AI-powered Google Ads optimization for landscaping and lawn care businesses — reduce cost per lead, book more design-build and maintenance contracts.",
+  "url": "https://fieldsprout.io/industries/landscaping",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://fieldsprout.io"},
+      {"@type": "ListItem", "position": 2, "name": "Industries", "item": "https://fieldsprout.io/industries"},
+      {"@type": "ListItem", "position": 3, "name": "Landscaping", "item": "https://fieldsprout.io/industries/landscaping"}
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-emerald-50 via-white to-green-50 pt-20 pb-16">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-3/5 mb-10 md:mb-0">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-100 text-emerald-800 rounded-full text-sm font-semibold mb-6">
+          <i class="fa-solid fa-leaf"></i> Built for Landscaping &amp; Lawn Care Companies
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+          Fill Your Landscaping Calendar<br>with Better Google Ads
+        </h1>
+        <p class="text-xl text-gray-600 mb-8">
+          FieldSprout's AI agents optimize your Google Ads campaigns around the clock —
+          targeting high-value design-build projects, locking in recurring lawn care contracts,
+          and cutting spend on searchers who aren't ready to hire.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4">
+          {% if has_endpoint('ads_grader_bp.index') %}
+          <a href="{{ url_for('ads_grader_bp.index') }}"
+             class="btn btn-primary btn-lg">Grade My Landscaping Ads — Free</a>
+          {% endif %}
+          <a href="/pricing" class="btn btn-secondary btn-lg">See Plans &amp; Pricing</a>
+        </div>
+        <p class="text-sm text-gray-500 mt-4">No credit card · 60-second setup · Cancel anytime</p>
+      </div>
+      <div class="md:w-2/5">
+        <div class="bg-white rounded-2xl shadow-card border p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Typical Landscaping Account — Before vs. After FieldSprout</div>
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Cost per Estimate</span>
+                <span class="text-green-600 font-bold">$88 → $52</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:59%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Wasted Spend / Month</span>
+                <span class="text-green-600 font-bold">$680 → $85</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:12%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Design-Build Estimates</span>
+                <span class="text-green-600 font-bold">+33% more jobs</span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-2 mb-0.5">
+                <div class="bg-gray-400 h-2 rounded-full" style="width:42%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:75%"></div>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-4 text-center">Anonymized averages across landscaping accounts on FieldSprout</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Problems We Solve -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">The landscaping Google Ads problems we fix</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Most landscaping companies run one catch-all campaign. That means a $200 lawn mowing call and a $25,000 patio build get the same bid — and you're leaving money on the table.</p>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, desc in [
+        ('fa-money-bill-wave', 'red', 'Design-build and mowing lumped together', 'A patio installation and a weekly mow require completely different keywords, bids, and landing pages. We separate them automatically.'),
+        ('fa-sun', 'orange', 'Flat budgets miss the spring rush', 'March through May is when homeowners research landscaping. Flat monthly budgets miss the surge. We ramp spend when opportunity peaks.'),
+        ('fa-star-half-stroke', 'yellow', 'Generic ads with no local relevance', '"Landscaping company" and "best lawn care" are expensive and vague. We build hyper-local ad copy that earns higher QS and lower CPCs.'),
+        ('fa-snowflake', 'blue', 'Winter budget wasted or off entirely', 'Snow removal and holiday lighting are high-margin winter services most landscapers forget to advertise. We keep your ads earning year-round.'),
+        ('fa-rotate', 'green', 'Not promoting recurring maintenance contracts', 'One-time jobs pay the bills; recurring maintenance contracts build the business. We run separate campaigns to grow your recurring revenue base.'),
+        ('fa-person-digging', 'gray', 'Seasonal campaigns not active at the right time', 'Spring cleanup campaigns launching in May instead of March. We pre-load your seasonal campaigns and activate them on schedule.'),
+      ] %}
+      <div class="p-6 rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Seasonal Intelligence -->
+<section class="py-16 bg-emerald-50">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-1/2 mb-8 md:mb-0">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Year-round landscaping campaign intelligence</h2>
+        <p class="text-gray-600 mb-6">
+          Landscaping demand has four distinct seasons — and each one calls for a different
+          campaign focus. FieldSprout tracks your service calendar and automatically adjusts
+          budget allocation and ad messaging to match what homeowners are searching for right now.
+        </p>
+        <ul class="space-y-3 text-gray-700">
+          <li class="flex items-start gap-3"><i class="fa-solid fa-seedling text-green-500 mt-0.5"></i><strong>Spring:</strong> Cleanup, mulching, planting, lawn aeration — highest demand</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-sun text-yellow-400 mt-0.5"></i><strong>Summer:</strong> Irrigation, outdoor living installs, hardscaping design-build</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-tree text-orange-400 mt-0.5"></i><strong>Fall:</strong> Leaf removal, overseeding, fall cleanups, pre-winter prep</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-snowplow text-blue-400 mt-0.5"></i><strong>Winter:</strong> Snow removal contracts, holiday lighting, early spring booking</li>
+        </ul>
+      </div>
+      <div class="md:w-1/2">
+        <div class="bg-white rounded-2xl border shadow-soft p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Landscaping Search Demand by Month</div>
+          <div class="flex items-end gap-1 h-28">
+            {% for month, h, cls in [
+              ('J',25,'bg-blue-300'), ('F',28,'bg-blue-300'), ('M',72,'bg-emerald-500'),
+              ('A',100,'bg-emerald-600'), ('M',95,'bg-emerald-500'), ('J',80,'bg-yellow-400'),
+              ('J',75,'bg-yellow-400'), ('A',70,'bg-yellow-400'), ('S',65,'bg-orange-400'),
+              ('O',78,'bg-orange-500'), ('N',40,''), ('D',22,'bg-blue-200'),
+            ] %}
+            <div class="flex-1 flex flex-col items-center gap-1">
+              <div class="w-full rounded-t {{ cls if cls else 'bg-gray-200' }}" style="height:{{ h }}%;"></div>
+              <span class="text-xs text-gray-400">{{ month }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          <div class="flex flex-wrap items-center gap-3 mt-3 text-xs text-gray-500">
+            <div class="flex items-center gap-1"><div class="w-3 h-3 rounded bg-emerald-500"></div> Spring peak</div>
+            <div class="flex items-center gap-1"><div class="w-3 h-3 rounded bg-yellow-400"></div> Summer</div>
+            <div class="flex items-center gap-1"><div class="w-3 h-3 rounded bg-orange-400"></div> Fall</div>
+            <div class="flex items-center gap-1"><div class="w-3 h-3 rounded bg-blue-300"></div> Winter / snow</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Social Proof -->
+<section class="py-16 bg-white">
+  <div class="container-md">
+    <div class="grid md:grid-cols-3 gap-6">
+      {% for quote, name, co, result in [
+        ('"Our spring cleanup campaign used to launch in April. FieldSprout had it running and optimized by mid-February. We booked 3 extra weeks of jobs."', 'Derek S.', 'Green Horizons Landscaping', '3 extra weeks of spring jobs'),
+        ('"We were running the same campaign for weekly mowing and $30k patio builds. Separating them dropped our design-build CPL from $105 to $58."', 'Natalie C.', 'Premier Outdoor Living', '45% lower design-build CPL'),
+        ('"Snow removal contracts are now our top campaign from November through January. FieldSprout helped us build a whole new revenue stream in winter."', 'Mark F.', 'Four Seasons Landscapes', 'New winter revenue stream'),
+      ] %}
+      <div class="bg-gray-50 rounded-2xl p-6 border">
+        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
+        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
+        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
+        <div class="text-xs text-gray-500">{{ co }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-emerald-600 to-green-700 text-white">
+  <div class="container-md text-center">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Get your free Landscaping Ads Grade now</h2>
+    <p class="text-emerald-100 text-lg mb-8 max-w-xl mx-auto">
+      See exactly where your landscaping Google Ads budget is being wasted — and get a prioritized action plan to book more jobs this season. Takes 60 seconds.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('ads_grader_bp.index') %}
+      <a href="{{ url_for('ads_grader_bp.index') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Plans</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

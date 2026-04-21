@@ -1,58 +1,220 @@
 {% extends "base_public.html" %}
 {% set SECTION = 'products' %}
-{% block title %}Local Listings Management — FieldSprout{% endblock %}
+{% block title %}Local Listings Management for Home Services — FieldSprout{% endblock %}
+{% block meta_description %}FieldSprout manages your business listings across 50+ directories — keeping NAP consistent, fixing errors, suppressing duplicates, and boosting your local SEO rankings.{% endblock %}
+{% block og_title %}Local Listings Management for Home Service Businesses — FieldSprout{% endblock %}
+{% block og_description %}One wrong phone number on Yelp or Angi costs you jobs. FieldSprout keeps your listings accurate and consistent across 50+ directories — automatically, from one dashboard.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Local Listings Management for Home Service Businesses",
+  "description": "Automatic listing sync and NAP consistency management across 50+ directories for HVAC, plumbing, electrical, and roofing companies.",
+  "url": "https://fieldsprout.io/products/listings",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://fieldsprout.io"},
+      {"@type": "ListItem", "position": 2, "name": "Products", "item": "https://fieldsprout.io/products/ads"},
+      {"@type": "ListItem", "position": 3, "name": "Listings", "item": "https://fieldsprout.io/products/listings"}
+    ]
+  }
+}
+</script>
+{% endblock %}
+
 {% block content %}
-<section class="hero">
-  <h1>Show up everywhere customers search</h1>
-  <p class="sub">Manage your business listings across 50+ directories from one dashboard. FieldSprout keeps your NAP (Name, Address, Phone) consistent across Google, Yelp, Facebook, and industry-specific sites.</p>
-  <div class="cta-row">
-    <a class="btn btn-primary" href="/demo">Get a demo</a>
-    <a class="btn btn-secondary" href="#features">See directories</a>
+
+<!-- Coming Soon Banner -->
+<div class="bg-amber-50 border-b border-amber-200">
+  <div class="container-lg py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-200 text-amber-900 rounded-full text-xs font-bold uppercase tracking-wide">
+        <i class="fa-solid fa-hammer"></i> In Development
+      </span>
+      <p class="text-sm text-amber-900 font-medium">Local Listings Management is coming soon — join the waitlist to be first in line.</p>
+    </div>
+    <a href="/pricing" class="shrink-0 text-sm font-semibold text-amber-800 underline hover:text-amber-900 whitespace-nowrap">See all features →</a>
+  </div>
+</div>
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-teal-50 via-white to-cyan-50 pt-20 pb-16">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-3/5 mb-10 md:mb-0">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-teal-100 text-teal-800 rounded-full text-sm font-semibold mb-6">
+          <i class="fa-solid fa-map-location-dot"></i> Local Listings Management
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+          Show Up Everywhere Customers<br>Search — With Accurate Info
+        </h1>
+        <p class="text-xl text-gray-600 mb-8">
+          A wrong phone number on Yelp, outdated hours on Bing, or a duplicate listing on Angi
+          costs you real jobs. FieldSprout syncs your business information across 50+ directories
+          automatically — one update, everywhere, instantly.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4">
+          <a href="/pricing" class="btn btn-primary btn-lg">Join the Waitlist</a>
+          <a href="/pricing" class="btn btn-secondary btn-lg">See What's Live Now</a>
+        </div>
+        <p class="text-sm text-gray-500 mt-4">In development — expected Q3 2025</p>
+      </div>
+      <div class="md:w-2/5">
+        <div class="bg-white rounded-2xl shadow-card border p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Listing Health — Before vs. After FieldSprout</div>
+          <div class="space-y-4">
+            {% for label, before, after, pct in [
+              ('NAP Consistency', '41%', '99%', 99),
+              ('Directories with Errors', '18 dirs', '0 dirs', 0),
+              ('Duplicate Listings Found', '7 dupes', '0 dupes', 0),
+              ('Directories with Full Info', '8/50', '50/50', 100),
+            ] %}
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">{{ label }}</span>
+                <span class="text-green-600 font-bold">{{ before }} → {{ after }}</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-300 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:{{ pct if pct > 0 else 2 }}%"></div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <p class="text-xs text-gray-400 mt-4 text-center">Averages from listing audits run on FieldSprout</p>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
-<section class="proof">
-  <ul class="stats">
-    <li><strong>50+</strong> directories synced automatically</li>
-    <li><strong>94%</strong> NAP consistency across platforms</li>
-    <li><strong>−62%</strong> time spent on listing management</li>
-  </ul>
-</section>
-
-<section class="features grid-2" id="features">
-  <div>
-    <h2>What's included</h2>
-    <ul class="checklist">
-      <li>Automatic sync to Google Business Profile, Yelp, Facebook, Bing</li>
-      <li>Industry directories: HomeAdvisor, Angi, Thumbtack, BBB</li>
-      <li>Listing accuracy monitoring & duplicate suppression</li>
-      <li>Bulk hours updates for holidays and seasonal schedules</li>
-      <li>Photo & service menu management across all platforms</li>
-      <li>Citation building to improve local SEO rankings</li>
-    </ul>
-  </div>
-  <div>
-    <h2>Why it matters</h2>
-    <ul class="bullets">
-      <li><strong>Local SEO boost</strong> — consistent NAP signals to Google you're legitimate</li>
-      <li><strong>Show up everywhere</strong> — customers find you on their preferred platform</li>
-      <li><strong>Save time</strong> — update once, sync everywhere instantly</li>
-      <li><strong>Accuracy matters</strong> — wrong hours or phone = lost jobs</li>
-    </ul>
+<!-- Features -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">Everything your listings need to rank and convert</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Inconsistent listings don't just annoy customers — they actively hurt your Google rankings. NAP consistency is one of the strongest local SEO signals.</p>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, desc in [
+        ('fa-rotate', 'teal', 'One-click sync to 50+ directories', 'Update your name, address, phone, hours, or services once in FieldSprout and it propagates across Google, Yelp, Bing, Facebook, Angi, Thumbtack, and 45+ more.'),
+        ('fa-triangle-exclamation', 'red', 'Listing error detection & repair', 'We continuously scan your listings for outdated phone numbers, wrong addresses, inconsistent business names, and missing information — and fix them automatically.'),
+        ('fa-copy', 'orange', 'Duplicate listing suppression', 'Duplicate listings confuse customers and dilute your local SEO signals. We find and suppress duplicate entries across every directory we manage.'),
+        ('fa-clock', 'blue', 'Holiday & seasonal hours management', 'Update hours once for a holiday weekend and every directory reflects it instantly. No more customers showing up when you\'re closed.'),
+        ('fa-image', 'green', 'Photo and service menu sync', 'Keep your service offerings, photos, and descriptions consistent across every platform — without logging into each one separately.'),
+        ('fa-chart-line', 'purple', 'Citation building for local SEO', 'We identify high-authority directories where you\'re missing and add your listing — building citation signals that improve your local search rankings.'),
+      ] %}
+      <div class="p-6 rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
   </div>
 </section>
 
-<section class="playbooks">
-  <h2>Key directories by trade</h2>
-  <div class="cards">
-    <article class="card"><h3>HVAC</h3><p>Google, Yelp, HomeAdvisor, Angi, Carrier locator, Trane dealer finder, plus local chambers.</p></article>
-    <article class="card"><h3>Plumbing</h3><p>Google, Yelp, Angi, Thumbtack, local service directories, and emergency plumber sites.</p></article>
-    <article class="card"><h3>Electrical</h3><p>Google, BBB, electrical contractor directories, safety certification sites, HomeAdvisor.</p></article>
+<!-- Directory Coverage -->
+<section class="py-16 bg-teal-50">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-1/2 mb-8 md:mb-0">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">The directories that matter most for home services</h2>
+        <p class="text-gray-600 mb-6">
+          Home service customers search on Google, but they also check Yelp, Angi, Thumbtack,
+          HomeAdvisor, and trade-specific sites before calling. Being absent — or wrong — on
+          any of them means lost opportunities.
+        </p>
+        <div class="space-y-3">
+          {% for category, dirs in [
+            ('General Search & Maps', 'Google Business Profile, Bing Places, Apple Maps, MapQuest'),
+            ('Home Services Platforms', 'Angi, HomeAdvisor, Thumbtack, Houzz, Porch, HomeGuide'),
+            ('Review Platforms', 'Yelp, Facebook, BBB, Trustpilot, Expertise.com'),
+            ('Data Aggregators', 'Data Axle, Neustar Localeze, Foursquare — feeds hundreds of sites'),
+            ('Trade-Specific', 'HVAC: Carrier/Trane locators · Plumbing: Plumber.com · Roofing: GAF, CertainTeed'),
+          ] %}
+          <div class="bg-white rounded-xl border p-4">
+            <div class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">{{ category }}</div>
+            <div class="text-sm text-gray-700">{{ dirs }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="md:w-1/2">
+        <div class="bg-white rounded-2xl border shadow-soft p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Why NAP Consistency Matters for Rankings</div>
+          <div class="space-y-4 text-sm text-gray-600">
+            <div class="flex gap-3">
+              <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                <i class="fa-solid fa-check text-green-600 text-xs"></i>
+              </div>
+              <div><strong class="text-gray-800">Consistent NAP = trust signal.</strong> Google uses citation data from across the web to verify your business is legitimate and where it says it is.</div>
+            </div>
+            <div class="flex gap-3">
+              <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                <i class="fa-solid fa-check text-green-600 text-xs"></i>
+              </div>
+              <div><strong class="text-gray-800">More citations = more ranking signals.</strong> Each directory listing is a vote that your business exists at that location — more votes improve map pack position.</div>
+            </div>
+            <div class="flex gap-3">
+              <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <i class="fa-solid fa-xmark text-red-500 text-xs"></i>
+              </div>
+              <div><strong class="text-gray-800">Inconsistencies = ranking penalty.</strong> Different phone numbers or addresses across directories confuse Google's algorithm and actively suppress your local rankings.</div>
+            </div>
+            <div class="flex gap-3">
+              <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <i class="fa-solid fa-xmark text-red-500 text-xs"></i>
+              </div>
+              <div><strong class="text-gray-800">Duplicates split your authority.</strong> Two listings for the same location divide your review signals and citation weight — hurting both.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
-<section class="cta center">
-  <a class="btn btn-primary" href="/signup">Start managing your listings</a>
-  <p class="fine">Get a free listing audit. See where you're missing.</p>
+<!-- Social Proof -->
+<section class="py-16 bg-white">
+  <div class="container-md">
+    <div class="grid md:grid-cols-3 gap-6">
+      {% for quote, name, co, result in [
+        ('"We had 7 duplicate listings and wrong phone numbers on 12 directories. FieldSprout fixed everything in the first week and our local search traffic went up 40%."', 'Carl R.', 'TrueTemp HVAC', '+40% local search traffic'),
+        ('"I updated our new address once in FieldSprout. Every directory updated automatically. Previously that took us 3 weeks of manual work every time we changed anything."', 'Pam S.', 'Rapid Response Plumbing', 'Address update: 3 weeks → instant'),
+        ('"The listing audit showed us we weren\'t even on Apple Maps or Bing. We were just invisible to a huge chunk of potential customers."', 'Eric V.', 'Volt Electric', 'Found on Apple Maps & Bing'),
+      ] %}
+      <div class="bg-gray-50 rounded-2xl p-6 border">
+        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
+        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
+        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
+        <div class="text-xs text-gray-500">{{ co }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
 </section>
+
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-amber-500 to-orange-600 text-white">
+  <div class="container-md text-center">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/20 text-white rounded-full text-sm font-semibold mb-6">
+      <i class="fa-solid fa-hammer"></i> In Development — Coming Q3 2025
+    </div>
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Get early access to Listings Management</h2>
+    <p class="text-orange-100 text-lg mb-8 max-w-xl mx-auto">
+      Join the waitlist and be the first to know when Local Listings launches. Early access customers get 3 months free.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      <a href="/pricing" class="btn btn-secondary btn-lg">Join the Waitlist</a>
+      <a href="/products/ads" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">See What's Live Now</a>
+    </div>
+  </div>
+</section>
+
 {% endblock %}

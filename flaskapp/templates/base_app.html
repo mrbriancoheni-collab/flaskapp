@@ -265,6 +265,12 @@
           <i class="fa-solid fa-lightbulb"></i><span>Opportunities</span>
         </a>
       {% endif %}
+      {% if has_endpoint('google_bp.get_ai_actions') %}
+        <a href="{{ url_for('google_bp.get_ai_actions') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+          <i class="fa-solid fa-robot"></i><span>AI Actions</span>
+          <span id="ai-actions-badge" class="ml-auto hidden text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full font-bold"></span>
+        </a>
+      {% endif %}
 
       {# Local Services Ads submenu #}
       {% if has_endpoint('glsa_bp.dashboard') %}
@@ -378,6 +384,9 @@
         <a class="block px-3 py-3 nav-link min-h-12 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 hover:from-green-100 hover:to-emerald-100" href="{{ url_for('ads_grader_bp.index') }}">
           <i class="fa-brands fa-google text-green-600"></i><span class="font-semibold text-green-700">Google Ads Inspector</span>
           <span class="ml-auto text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-bold">FREE</span>
+        </a>
+        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('ads_grader_bp.quick_wins_dashboard') }}">
+          <i class="fa-solid fa-bolt text-yellow-500"></i><span>Quick Wins</span>
         </a>
       {% endif %}
 
@@ -1601,5 +1610,29 @@
       return originalFetch.call(window, url, options);
     };
   </script>
+
+  {% block body_extra %}{% endblock %}
+
+  {% if is_logged_in() and has_endpoint('google_bp.get_ai_actions_summary') %}
+  <script nonce="{{ g.csp_nonce }}">
+  // Fetch pending AI actions count and show badge
+  (function() {
+    try {
+      fetch('{{ url_for("google_bp.get_ai_actions_summary") }}', {credentials: 'same-origin'})
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (!data) return;
+          const pending = (data.pending || 0) + (data.pending_review || 0);
+          const badge = document.getElementById('ai-actions-badge');
+          if (badge && pending > 0) {
+            badge.textContent = pending;
+            badge.classList.remove('hidden');
+          }
+        })
+        .catch(() => {});
+    } catch(e) {}
+  })();
+  </script>
+  {% endif %}
 </body>
 </html>

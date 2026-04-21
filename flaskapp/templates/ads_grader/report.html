@@ -12,13 +12,49 @@
       <h1 class="text-3xl font-bold">Google Ads Performance Report</h1>
       <p class="text-gray-600 mt-1">{{ report.google_ads_account_name }} • {{ report.created_at.strftime('%B %d, %Y') }}</p>
     </div>
-    <div>
+    <div class="flex items-center gap-2 flex-shrink-0">
+      {% if not is_shared %}
       <a href="{{ url_for('ads_grader_bp.report_pdf', report_id=report.id) }}"
-         class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+         class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm">
         <i class="fa-solid fa-download mr-2"></i>Download PDF
       </a>
+      {% if current_user.is_authenticated and report.account_id and report.account_id == current_user.account_id %}
+      <button onclick="document.getElementById('sharePanel').classList.toggle('hidden')"
+              class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 text-sm">
+        <i class="fa-solid fa-share-nodes mr-2"></i>Share
+      </button>
+      {% endif %}
+      {% else %}
+      <span class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">Shared Report</span>
+      {% endif %}
     </div>
   </div>
+
+  <!-- Share Panel -->
+  {% if current_user.is_authenticated and report.account_id and report.account_id == current_user.account_id %}
+  <div id="sharePanel" class="hidden mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+    <p class="text-sm font-medium text-blue-900 mb-3">Share this report with clients or colleagues</p>
+    {% if report.shareable_token %}
+    <div class="flex items-center gap-2 mb-2">
+      <input id="shareUrlInput" type="text" readonly
+             value="{{ url_for('ads_grader_bp.report_shared', token=report.shareable_token, _external=True) }}"
+             class="flex-1 rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm text-gray-700">
+      <button onclick="copyShareUrl()" class="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+        <i class="fa-solid fa-copy"></i>
+      </button>
+      <button onclick="revokeShare()" class="px-3 py-2 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50">
+        Revoke
+      </button>
+    </div>
+    <p class="text-xs text-blue-600">Anyone with this link can view the full report.</p>
+    {% else %}
+    <button onclick="createShare()"
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+      <i class="fa-solid fa-link mr-2"></i>Generate Share Link
+    </button>
+    {% endif %}
+  </div>
+  {% endif %}
 
   <!-- Overall Score Card -->
   <div class="bg-white rounded-xl shadow-lg p-8 mb-6">
@@ -986,4 +1022,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Include Pricing Modal for Free Users -->
 {% include 'components/pricing_modal.html' %}
+
+{% if current_user.is_authenticated and report.account_id and report.account_id == current_user.account_id %}
+<script nonce="{{ g.csp_nonce }}">
+function copyShareUrl() {
+  const u = document.getElementById('shareUrlInput');
+  u.select();
+  document.execCommand('copy');
+  const btn = u.nextElementSibling;
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+  setTimeout(() => { btn.innerHTML = orig; }, 1500);
+}
+function createShare() {
+  fetch('{{ url_for("ads_grader_bp.report_share", report_id=report.id) }}', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
+    body: '{}'
+  }).then(r => r.json()).then(d => { if (d.ok) window.location.reload(); });
+}
+function revokeShare() {
+  if (!confirm('Revoke share link? Anyone with the link will lose access.')) return;
+  fetch('{{ url_for("ads_grader_bp.report_share", report_id=report.id) }}', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
+    body: '{"revoke":true}'
+  }).then(r => r.json()).then(d => { if (d.ok) window.location.reload(); });
+}
+</script>
+{% endif %}
 {% endblock %}

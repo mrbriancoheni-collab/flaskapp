@@ -327,6 +327,27 @@ def analyze():
 # ============================================================================
 # Report Viewing
 # ============================================================================
+# ============================================================================
+# Public Demo Route
+# ============================================================================
+@ads_grader_bp.route("/demo")
+def demo():
+    """
+    Generate and view a demo report without logging in.
+    Public lead-gen product — no authentication required.
+    """
+    # Reuse an existing demo report from this session if available
+    existing_id = session.get("demo_report_id")
+    if existing_id:
+        existing = GoogleAdsGraderReport.query.get(existing_id)
+        if existing and existing.account_id is None:
+            return redirect(url_for("ads_grader_bp.report", report_id=existing.id))
+
+    report = _create_demo_report("demo-preview")
+    session["demo_report_id"] = report.id
+    return redirect(url_for("ads_grader_bp.report", report_id=report.id))
+
+
 @ads_grader_bp.route("/report/<int:report_id>")
 def report(report_id):
     """
@@ -335,23 +356,55 @@ def report(report_id):
     """
     report = GoogleAdsGraderReport.query.get_or_404(report_id)
 
-    # Check access: report owner or admin only
-    if current_user.is_authenticated:
-        if report.account_id and report.account_id != current_user.account_id:
-            if not current_user.is_admin:
-                flash("You don't have permission to view this report.", "error")
-                return redirect(url_for("ads_grader_bp.index"))
+    # Demo reports (no account_id) are publicly accessible — shareable link
+    if report.account_id is None:
+        pass  # allow access
+    elif current_user.is_authenticated:
+        if report.account_id != current_user.account_id and not current_user.is_admin:
+            flash("You don't have permission to view this report.", "error")
+            return redirect(url_for("ads_grader_bp.index"))
     else:
-        # Allow anonymous access if session matches
+        # Authenticated report viewed anonymously — check session
         session_report_id = session.get("last_grader_report_id")
         if session_report_id != report_id:
-            flash("Report not found or access denied.", "error")
-            return redirect(url_for("ads_grader_bp.index"))
+            flash("Please log in to view this report.", "info")
+            return redirect(url_for("auth_bp.login", next=request.url))
 
     return render_template(
         "ads_grader/report.html",
         report=report,
     )
+
+
+@ads_grader_bp.route("/report/<int:report_id>/share", methods=["POST"])
+@login_required
+def report_share(report_id):
+    """Generate (or revoke) a shareable token for a report."""
+    import secrets
+    rpt = GoogleAdsGraderReport.query.get_or_404(report_id)
+    if rpt.account_id != current_user.account_id:
+        return jsonify({"error": "forbidden"}), 403
+
+    action = request.get_json(silent=True) or {}
+    if action.get("revoke"):
+        rpt.shareable_token = None
+        db.session.commit()
+        return jsonify({"ok": True, "revoked": True})
+
+    if not rpt.shareable_token:
+        rpt.shareable_token = secrets.token_urlsafe(32)
+        db.session.commit()
+
+    share_url = url_for("ads_grader_bp.report_shared",
+                        token=rpt.shareable_token, _external=True)
+    return jsonify({"ok": True, "url": share_url, "token": rpt.shareable_token})
+
+
+@ads_grader_bp.route("/shared/<token>")
+def report_shared(token):
+    """Public report view accessed via shareable token."""
+    rpt = GoogleAdsGraderReport.query.filter_by(shareable_token=token).first_or_404()
+    return render_template("ads_grader/report.html", report=rpt, is_shared=True)
 
 
 # ============================================================================
@@ -1220,37 +1273,58 @@ def check_alerts_now():
 @login_required
 def quick_wins_dashboard():
     """
-    Quick Wins dashboard showing top 3 immediate action items.
-    Analyzes account data to recommend highest-ROI optimizations.
+    Quick Wins dashboard — top 3 highest-ROI actions from the user's latest grader report.
+    Falls back to live API analysis if a report exists.
     """
-    from app.services.quick_wins_service import QuickWinsService
-
-    # Get user's primary Google Ads account
-    account = Account.query.filter_by(
-        user_id=current_user.id,
-        is_active=True
-    ).first()
-
+    account_id = current_user.account_id
     quick_wins = []
     error = None
+    latest_report = None
 
-    if account and account.google_refresh_token:
-        try:
-            service = QuickWinsService()
-            quick_wins_objects = service.get_top_quick_wins(account, limit=3)
-            quick_wins = [win.to_dict() for win in quick_wins_objects]
+    # Try to surface quick wins directly from the most recent grader report
+    try:
+        latest_report = (
+            GoogleAdsGraderReport.query
+            .filter_by(account_id=account_id)
+            .filter(GoogleAdsGraderReport.account_id.isnot(None))
+            .order_by(GoogleAdsGraderReport.created_at.desc())
+            .first()
+        )
+        if latest_report and latest_report.recommendations:
+            recs = latest_report.recommendations
+            if isinstance(recs, list):
+                # Sort by severity (1 = most urgent) and take top 3
+                sorted_recs = sorted(
+                    [r for r in recs if isinstance(r, dict)],
+                    key=lambda r: (r.get("severity", 99), -(r.get("roi", {}) or {}).get("monthly_savings", 0))
+                )
+                for rec in sorted_recs[:3]:
+                    roi = rec.get("roi") or {}
+                    effort = rec.get("effort") or {}
+                    quick_wins.append({
+                        "win_type": rec.get("category", "general"),
+                        "title": rec.get("title", ""),
+                        "description": rec.get("description", ""),
+                        "impact_monthly_value": roi.get("monthly_savings") or roi.get("total_value") or 0,
+                        "impact_leads": roi.get("monthly_leads") or 0,
+                        "difficulty": effort.get("difficulty", "Medium"),
+                        "time_estimate": effort.get("time_estimate", ""),
+                        "action_url": url_for("ads_grader_bp.report", report_id=latest_report.id),
+                        "action_text": "View Full Report",
+                        "data": {},
+                        "priority_score": rec.get("severity", 4),
+                    })
+    except Exception as e:
+        logger.warning(f"Could not load quick wins from report: {e}")
 
-        except Exception as e:
-            logger.error(f"Failed to get quick wins for user {current_user.id}: {e}")
-            error = "Failed to load quick wins. Please try again later."
-    else:
-        error = "Google Ads connection required. Please connect your account."
+    if not quick_wins:
+        error = "No recommendations found. Run a Google Ads analysis to get your personalized Quick Wins."
 
     return render_template(
         "ads_grader/quick_wins_dashboard.html",
         quick_wins=quick_wins,
-        account=account,
-        error=error
+        latest_report=latest_report,
+        error=error,
     )
 
 

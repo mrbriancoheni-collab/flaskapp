@@ -66,10 +66,18 @@
             <input
               type="text"
               name="campaign_name"
+              id="campaign_name"
               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               placeholder="e.g., Search - Plumbing Services - Denver"
+              value="{{ prefill.name if prefill else '' }}"
               required
             >
+            {% if prefill %}
+            <p class="text-xs text-indigo-600 mt-1">
+              <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>
+              Pre-filled from your campaign template "{{ prefill.name }}"
+            </p>
+            {% endif %}
             <p class="text-xs text-gray-500 mt-1">
               <i class="fa-solid fa-lightbulb text-yellow-500 mr-1"></i>
               Tip: Include campaign type, service, and location for easy identification

@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 fb_ads_grader_bp = Blueprint(
     "fb_ads_grader_bp",
     __name__,
-    url_prefix="/account/fbads",
+    url_prefix="/ads-grader/facebook",
     template_folder="templates",
 )
 
@@ -43,22 +43,25 @@ fb_ads_grader_bp = Blueprint(
 # ============================================================================
 # Landing Page
 # ============================================================================
+_FB_OAUTH_APPROVED = False  # flip to True once Facebook approves the app for ads_read
+
+
 @fb_ads_grader_bp.route("/")
 def index():
-    """
-    Landing page for Facebook Ads Performance Grader.
-    Available to all users (logged in or not).
-    """
-    # If user is logged in, show their recent reports
+    """Landing page for Facebook Ads Performance Grader."""
     recent_reports = []
     if current_user.is_authenticated:
-        recent_reports = FacebookAdsGraderReport.get_for_account(
-            current_user.account_id, limit=3
-        )
+        try:
+            recent_reports = FacebookAdsGraderReport.get_for_account(
+                current_user.account_id, limit=3
+            )
+        except Exception:
+            pass
 
     return render_template(
         "fb_ads_grader/index.html",
         recent_reports=recent_reports,
+        fb_oauth_approved=_FB_OAUTH_APPROVED,
     )
 
 
@@ -67,24 +70,25 @@ def index():
 # ============================================================================
 @fb_ads_grader_bp.route("/connect")
 def connect():
-    """
-    Initiate OAuth flow to connect Facebook Ads account.
-    """
+    """Initiate OAuth flow to connect Facebook Ads account."""
+    if not _FB_OAUTH_APPROVED:
+        flash(
+            "Facebook Ads integration is coming soon — we're awaiting Facebook app approval. "
+            "You can still explore a demo report below.",
+            "info",
+        )
+        return redirect(url_for("fb_ads_grader_bp.index"))
+
     try:
-        # Check if OAuth credentials are configured
         if not current_app.config.get("FB_APP_ID"):
-            logger.warning("Facebook Ads OAuth not configured - using demo mode")
             flash("Facebook Ads connection not configured. Using demo mode.", "info")
             return redirect(url_for("fb_ads_grader_bp.analyze"))
 
-        # Generate authorization URL
         authorization_url = FacebookAdsOAuthHelper.get_authorization_url()
-
-        # Redirect user to Facebook OAuth consent screen
         return redirect(authorization_url)
 
     except Exception as e:
-        logger.exception(f"Error initiating OAuth flow: {e}")
+        logger.exception("Error initiating OAuth flow: %s", e)
         flash("Error connecting to Facebook Ads. Please try again or use demo mode.", "error")
         return redirect(url_for("fb_ads_grader_bp.index"))
 

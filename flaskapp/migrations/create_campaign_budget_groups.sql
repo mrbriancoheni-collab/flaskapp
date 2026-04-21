@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS campaign_budget_groups (
     id INT AUTO_INCREMENT PRIMARY KEY,
 
     -- Account association
-    account_id INT NOT NULL,
+    account_id BIGINT NOT NULL,
 
     -- Group details
     name VARCHAR(100) NOT NULL,
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS campaign_budget_assignments (
     id INT AUTO_INCREMENT PRIMARY KEY,
 
     -- Campaign and group
-    campaign_id INT NOT NULL,
+    campaign_id BIGINT NOT NULL,
     budget_group_id INT NOT NULL,
 
     -- Assignment metadata
@@ -100,19 +100,3 @@ CREATE TABLE IF NOT EXISTS campaign_budget_group_spend (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
--- ============================================================================
--- Comments
--- ============================================================================
-
-COMMENT ON TABLE campaign_budget_groups IS 'Budget groups for segmenting campaigns with individual budgets';
-COMMENT ON COLUMN campaign_budget_groups.monthly_budget_cents IS 'Total monthly budget allocated to this group in cents';
-COMMENT ON COLUMN campaign_budget_groups.daily_budget_cents IS 'Auto-calculated daily budget (monthly/30)';
-COMMENT ON COLUMN campaign_budget_groups.priority IS 'Higher priority groups get budget allocation first';
-COMMENT ON COLUMN campaign_budget_groups.auto_pause_on_overspend IS 'Automatically pause campaigns when group budget is exhausted';
-
-COMMENT ON TABLE campaign_budget_assignments IS 'Maps campaigns to budget groups (one campaign = one group)';
-COMMENT ON COLUMN campaign_budget_assignments.campaign_id IS 'Unique - each campaign can only belong to one budget group';
-
-COMMENT ON TABLE campaign_budget_group_spend IS 'Monthly spend tracking for budget groups';
-COMMENT ON COLUMN campaign_budget_group_spend.period_month IS 'First day of month (e.g., 2025-01-01 for January 2025)';
-COMMENT ON COLUMN campaign_budget_group_spend.budget_status IS 'active, warning (80%+), exceeded (100%+), paused';

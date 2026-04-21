@@ -2332,6 +2332,89 @@ def ads_debug_ai_savings():
 
 # ------------------------- Google Ads UI -------------------------
 
+@google_bp.route("/value-dashboard", methods=["GET"], endpoint="value_dashboard")
+@login_required
+def value_dashboard():
+    """
+    Aggregate 'Total Value Delivered' dashboard.
+    Combines AI action savings, grader score improvement, quick wins,
+    and budget optimizations into one hero view.
+    """
+    from app.models_ai_actions import AIAction
+    from app.models_ads_grader import GoogleAdsGraderReport
+    from sqlalchemy import func as sqlfunc
+
+    aid = current_account_id()
+
+    # AI Actions: total executed + estimated savings
+    ai_stats = {"count": 0, "savings": 0.0, "pending_review": 0}
+    try:
+        rows = (db.session.query(AIAction.status, sqlfunc.count(AIAction.id),
+                                 sqlfunc.sum(AIAction.estimated_monthly_savings))
+                .filter_by(account_id=aid)
+                .group_by(AIAction.status).all())
+        for status, cnt, sav in rows:
+            if status == "executed":
+                ai_stats["count"] = cnt
+                ai_stats["savings"] = float(sav or 0)
+            elif status == "pending_review":
+                ai_stats["pending_review"] = cnt
+    except Exception:
+        pass
+
+    # Grader report history: score improvement over time
+    grader_history = []
+    grader_improvement = 0.0
+    try:
+        reports = (GoogleAdsGraderReport.query
+                   .filter_by(account_id=aid)
+                   .order_by(GoogleAdsGraderReport.created_at.asc())
+                   .limit(6).all())
+        grader_history = [
+            {"date": r.created_at.strftime("%b %Y"),
+             "score": float(r.overall_score or 0),
+             "grade": r.overall_grade or ""}
+            for r in reports
+        ]
+        if len(reports) >= 2:
+            grader_improvement = grader_history[-1]["score"] - grader_history[0]["score"]
+    except Exception:
+        pass
+
+    # Wasted spend recovered (from latest grader report)
+    wasted_recovered = 0.0
+    wasted_original = 0.0
+    try:
+        latest = (GoogleAdsGraderReport.query
+                  .filter_by(account_id=aid)
+                  .order_by(GoogleAdsGraderReport.created_at.desc())
+                  .first())
+        if latest:
+            wasted_original = float(latest.wasted_spend_90d or 0)
+            # Estimate recovery: each executed AI action reduces wasted spend
+            wasted_recovered = min(ai_stats["savings"] * 3, wasted_original)  # 3-mo impact
+    except Exception:
+        pass
+
+    # Budget forecast projected savings (vs not optimizing)
+    projected_annual = ai_stats["savings"] * 12
+
+    # Quick wins completed (count of executed AI actions as proxy)
+    quick_wins_done = ai_stats["count"]
+
+    return render_template(
+        "google/value_dashboard.html",
+        ai_stats=ai_stats,
+        grader_history=grader_history,
+        grader_improvement=grader_improvement,
+        wasted_original=wasted_original,
+        wasted_recovered=wasted_recovered,
+        projected_annual=projected_annual,
+        quick_wins_done=quick_wins_done,
+        sandbox_mode=_get_ai_sandbox_mode(aid),
+    )
+
+
 @google_bp.route("/ads", methods=["GET"], endpoint="ads_ui")
 @login_required
 def ads_ui():
@@ -3749,6 +3832,113 @@ def get_ai_actions():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+def _get_ai_sandbox_mode(account_id: int) -> bool:
+    """Return True if AI Sandbox mode is enabled for this account."""
+    try:
+        with db.engine.connect() as conn:
+            row = conn.execute(
+                text("SELECT setting_value FROM account_settings "
+                     "WHERE account_id = :aid AND setting_key = 'ai_sandbox_mode' LIMIT 1"),
+                {"aid": account_id},
+            ).first()
+            return (row and row[0] == "1")
+    except Exception:
+        return False
+
+
+@google_bp.route("/ads/ai-actions/sandbox", methods=["GET", "POST"],
+                 endpoint="ai_sandbox_settings")
+@login_required
+def ai_sandbox_settings():
+    """Get or toggle AI Sandbox mode for the account."""
+    aid = current_account_id()
+    if request.method == "GET":
+        return jsonify({"sandbox_mode": _get_ai_sandbox_mode(aid)})
+
+    data = request.get_json(silent=True) or {}
+    enabled = bool(data.get("enabled", False))
+    try:
+        with db.engine.begin() as conn:
+            conn.execute(
+                text("""
+                    INSERT INTO account_settings (account_id, setting_key, setting_value)
+                    VALUES (:aid, 'ai_sandbox_mode', :val)
+                    ON DUPLICATE KEY UPDATE setting_value = :val
+                """),
+                {"aid": aid, "val": "1" if enabled else "0"},
+            )
+        flash(
+            f"AI Sandbox mode {'enabled' if enabled else 'disabled'}. "
+            + ("AI actions will now queue for your review before applying."
+               if enabled else "AI actions will apply automatically."),
+            "success",
+        )
+        return jsonify({"ok": True, "sandbox_mode": enabled})
+    except Exception as e:
+        current_app.logger.exception("ai_sandbox_settings update: %s", e)
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@google_bp.route("/ads/ai-actions/page", methods=["GET"], endpoint="ai_actions_page")
+@login_required
+def ai_actions_page():
+    """Human-readable AI Actions management page with sandbox toggle."""
+    from app.models_ai_actions import AIAction
+    aid = current_account_id()
+    sandbox = _get_ai_sandbox_mode(aid)
+
+    pending_review = (AIAction.query
+                      .filter_by(account_id=aid, status="pending_review")
+                      .order_by(AIAction.created_at.desc())
+                      .limit(50).all())
+    pending = (AIAction.query
+               .filter_by(account_id=aid, status="pending")
+               .order_by(AIAction.created_at.desc())
+               .limit(20).all())
+    recent = (AIAction.query
+              .filter_by(account_id=aid, status="executed")
+              .order_by(AIAction.created_at.desc())
+              .limit(10).all())
+
+    return render_template(
+        "google/ai_actions.html",
+        sandbox_mode=sandbox,
+        pending_review=pending_review,
+        pending=pending,
+        recent=recent,
+    )
+
+
+@google_bp.route("/ads/ai-actions/<int:action_id>/approve", methods=["POST"],
+                 endpoint="ai_action_approve")
+@login_required
+def ai_action_approve(action_id: int):
+    """Approve a pending_review AI action (moves it to pending for next cron run)."""
+    from app.models_ai_actions import AIAction
+    aid = current_account_id()
+    action = AIAction.query.filter_by(id=action_id, account_id=aid,
+                                      status="pending_review").first_or_404()
+    action.status = "pending"
+    db.session.commit()
+    flash(f"Action '{action.title}' approved — will apply on next run.", "success")
+    return redirect(url_for("google_bp.ai_actions_page"))
+
+
+@google_bp.route("/ads/ai-actions/<int:action_id>/dismiss", methods=["POST"],
+                 endpoint="ai_action_dismiss")
+@login_required
+def ai_action_dismiss(action_id: int):
+    """Dismiss (skip) a pending_review action."""
+    from app.models_ai_actions import AIAction
+    aid = current_account_id()
+    action = AIAction.query.filter_by(id=action_id, account_id=aid,
+                                      status="pending_review").first_or_404()
+    action.status = "dismissed"
+    db.session.commit()
+    flash(f"Action dismissed.", "info")
+    return redirect(url_for("google_bp.ai_actions_page"))
+
+
 @google_bp.route("/ads/ai-actions/summary", methods=["GET"], endpoint="get_ai_actions_summary")
 @ajax_login_required
 def get_ai_actions_summary():
@@ -4601,37 +4791,38 @@ def ads_budget():
 
     if not setup_required and connected:
         try:
-            # Fetch budget groups
             with db.engine.connect() as conn:
+                # Fetch budget groups with campaign count
                 result = conn.execute(text("""
                     SELECT
                         g.*,
-                        COUNT(DISTINCT cgm.campaign_id) as campaign_count,
-                        COALESCE(SUM(cgm.current_month_spend), 0) as current_spend
+                        COUNT(DISTINCT cba.campaign_id) as campaign_count,
+                        COALESCE(
+                            (SELECT SUM(total_spend_cents)
+                             FROM campaign_budget_group_spend s
+                             WHERE s.budget_group_id = g.id
+                               AND s.period_month = DATE_FORMAT(NOW(), '%Y-%m-01')), 0
+                        ) as current_spend
                     FROM campaign_budget_groups g
-                    LEFT JOIN campaign_group_memberships cgm ON g.id = cgm.group_id
+                    LEFT JOIN campaign_budget_assignments cba ON g.id = cba.budget_group_id
                     WHERE g.account_id = :aid
                     GROUP BY g.id
                     ORDER BY g.priority DESC, g.name
                 """), {"aid": aid})
                 budget_groups = [dict(row._mapping) for row in result.fetchall()]
 
-            # Fetch all campaigns from ads data
-            ads_data = _get_ads_state(aid)
-            all_campaigns = ads_data.get("campaigns", [])
-
-            # Get assigned campaign IDs
-            with db.engine.connect() as conn:
+                # Get assignment map
                 result = conn.execute(text("""
-                    SELECT cgm.campaign_id, g.name as group_name
-                    FROM campaign_group_memberships cgm
-                    JOIN campaign_budget_groups g ON cgm.group_id = g.id
+                    SELECT cba.campaign_id, g.name as group_name
+                    FROM campaign_budget_assignments cba
+                    JOIN campaign_budget_groups g ON cba.budget_group_id = g.id
                     WHERE g.account_id = :aid
                 """), {"aid": aid})
-                assigned_map = {row.campaign_id: row.group_name for row in result.fetchall()}
+                assigned_map = {str(row.campaign_id): row.group_name for row in result.fetchall()}
 
-            # Build campaigns list with group info
-            for c in all_campaigns:
+            # Fetch all campaigns from ads data
+            ads_data = _get_ads_state(aid)
+            for c in ads_data.get("campaigns", []):
                 campaign = {
                     "id": c.get("id"),
                     "name": c.get("name"),
@@ -10481,7 +10672,8 @@ def ads_pick_account():
 @login_required
 def ads_campaign_wizard():
     """Show campaign creation wizard"""
-    return render_template("google/campaign_wizard.html")
+    prefill = session.pop("campaign_prefill", None)
+    return render_template("google/campaign_wizard.html", prefill=prefill)
 
 @google_bp.route("/ads/campaign/create", methods=["POST"], endpoint="ads_campaign_create")
 @login_required
@@ -10774,60 +10966,262 @@ def ads_campaign_new():
     """Legacy endpoint - redirects to wizard"""
     return redirect(url_for('google_bp.ads_campaign_wizard'))
 
+
+@google_bp.route("/ads/campaign/<int:cid>", methods=["GET"], endpoint="ads_campaign_detail")
+@login_required
+def ads_campaign_detail(cid: int):
+    """Campaign detail page — shows ad groups, recent performance, and edit form."""
+    from app.models_ads import AdsCampaign, AdsAdGroup
+    aid = current_account_id()
+    campaign = AdsCampaign.query.filter_by(id=cid, account_id=aid).first_or_404()
+    ad_groups = AdsAdGroup.query.filter_by(campaign_id=cid).order_by(AdsAdGroup.name).all()
+
+    # Try to pull live 30-day metrics from session cache
+    perf = {}
+    try:
+        state = _get_ads_state(aid)
+        for c in state.get("campaigns", []):
+            if str(c.get("id")) == str(campaign.google_campaign_id):
+                perf = c
+                break
+    except Exception:
+        pass
+
+    return render_template(
+        "google/campaign_detail.html",
+        campaign=campaign,
+        ad_groups=ad_groups,
+        perf=perf,
+    )
+
+
 @google_bp.route("/ads/campaign/<int:cid>/edit", methods=["POST"], endpoint="ads_campaign_edit")
 @login_required
 def ads_campaign_edit(cid: int):
-    return _ads_not_implemented()
+    """Update campaign name, budget, and status from the edit form."""
+    from app.models_ads import AdsCampaign
+    aid = current_account_id()
+    campaign = AdsCampaign.query.filter_by(id=cid, account_id=aid).first_or_404()
+
+    name = (request.form.get("name") or "").strip()
+    status = request.form.get("status", campaign.status).strip()
+    daily_budget_raw = request.form.get("daily_budget_cents", "")
+
+    if name:
+        campaign.name = name
+    if status in ("enabled", "paused", "removed"):
+        campaign.status = status
+    if daily_budget_raw:
+        try:
+            campaign.daily_budget_cents = int(float(daily_budget_raw) * 100)
+        except ValueError:
+            pass
+
+    db.session.commit()
+    flash(f"Campaign '{campaign.name}' updated.", "success")
+    return redirect(url_for("google_bp.ads_campaign_detail", cid=cid))
+
 
 @google_bp.route("/ads/campaign/<int:cid>/delete", methods=["POST"], endpoint="ads_campaign_delete")
 @login_required
 def ads_campaign_delete(cid: int):
-    return _ads_not_implemented()
+    """Delete a campaign (and its ad groups/ads/keywords via cascade)."""
+    from app.models_ads import AdsCampaign
+    aid = current_account_id()
+    campaign = AdsCampaign.query.filter_by(id=cid, account_id=aid).first_or_404()
+    name = campaign.name
+    db.session.delete(campaign)
+    db.session.commit()
+    flash(f"Campaign '{name}' deleted.", "success")
+    return redirect(url_for("google_bp.ads_campaigns"))
 
 @google_bp.route("/ads/adgroup/new/<int:cid>", methods=["POST"], endpoint="ads_adgroup_new")
 @login_required
 def ads_adgroup_new(cid: int):
-    return _ads_not_implemented()
+    from app.models_ads import AdsAdGroup, AdsCampaign
+    aid = current_account_id()
+    campaign = AdsCampaign.query.filter_by(id=cid, account_id=aid).first_or_404()
+    name = (request.form.get("name") or "").strip()
+    if not name:
+        flash("Ad group name is required.", "error")
+        return redirect(url_for("google_bp.ads_campaign_detail", cid=cid))
+    ag = AdsAdGroup(campaign_id=campaign.id, name=name, status="enabled")
+    db.session.add(ag)
+    db.session.commit()
+    flash(f"Ad group '{name}' created.", "success")
+    return redirect(url_for("google_bp.ads_campaign_detail", cid=cid))
 
 @google_bp.route("/ads/adgroup/<int:gid>/edit", methods=["POST"], endpoint="ads_adgroup_edit")
 @login_required
 def ads_adgroup_edit(gid: int):
-    return _ads_not_implemented()
+    from app.models_ads import AdsAdGroup, AdsCampaign
+    aid = current_account_id()
+    ag = AdsAdGroup.query.get_or_404(gid)
+    # verify ownership via campaign
+    AdsCampaign.query.filter_by(id=ag.campaign_id, account_id=aid).first_or_404()
+    name = (request.form.get("name") or "").strip()
+    status = request.form.get("status", ag.status)
+    max_cpc = request.form.get("max_cpc_cents")
+    if name:
+        ag.name = name
+    if status in ("enabled", "paused", "removed"):
+        ag.status = status
+    if max_cpc is not None:
+        try:
+            ag.max_cpc_cents = int(float(max_cpc) * 100)
+        except (ValueError, TypeError):
+            pass
+    db.session.commit()
+    flash("Ad group updated.", "success")
+    return redirect(url_for("google_bp.ads_campaign_detail", cid=ag.campaign_id))
 
 @google_bp.route("/ads/adgroup/<int:gid>/delete", methods=["POST"], endpoint="ads_adgroup_delete")
 @login_required
 def ads_adgroup_delete(gid: int):
-    return _ads_not_implemented()
+    from app.models_ads import AdsAdGroup, AdsCampaign
+    aid = current_account_id()
+    ag = AdsAdGroup.query.get_or_404(gid)
+    AdsCampaign.query.filter_by(id=ag.campaign_id, account_id=aid).first_or_404()
+    cid = ag.campaign_id
+    name = ag.name
+    db.session.delete(ag)
+    db.session.commit()
+    flash(f"Ad group '{name}' deleted.", "success")
+    return redirect(url_for("google_bp.ads_campaign_detail", cid=cid))
 
 @google_bp.route("/ads/ad/new/<int:gid>", methods=["POST"], endpoint="ads_ad_new")
 @login_required
 def ads_ad_new(gid: int):
-    return _ads_not_implemented()
+    from app.models_ads import AdsAd, AdsAdGroup, AdsCampaign
+    aid = current_account_id()
+    ag = AdsAdGroup.query.get_or_404(gid)
+    AdsCampaign.query.filter_by(id=ag.campaign_id, account_id=aid).first_or_404()
+    headline1 = (request.form.get("headline1") or "").strip()
+    final_url = (request.form.get("final_url") or "").strip()
+    if not headline1 or not final_url:
+        flash("Headline and final URL are required.", "error")
+        return redirect(url_for("google_bp.ads_campaign_detail", cid=ag.campaign_id))
+    ad = AdsAd(
+        ad_group_id=gid,
+        headline1=headline1[:30],
+        headline2=(request.form.get("headline2") or "")[:30] or None,
+        headline3=(request.form.get("headline3") or "")[:30] or None,
+        description1=(request.form.get("description1") or "")[:90] or None,
+        description2=(request.form.get("description2") or "")[:90] or None,
+        path1=(request.form.get("path1") or "")[:15] or None,
+        path2=(request.form.get("path2") or "")[:15] or None,
+        final_url=final_url,
+        status="enabled",
+    )
+    db.session.add(ad)
+    db.session.commit()
+    flash("Ad created.", "success")
+    return redirect(url_for("google_bp.ads_campaign_detail", cid=ag.campaign_id))
 
 @google_bp.route("/ads/ad/<int:aid_>/edit", methods=["POST"], endpoint="ads_ad_edit")
 @login_required
 def ads_ad_edit(aid_: int):
-    return _ads_not_implemented()
+    from app.models_ads import AdsAd, AdsAdGroup, AdsCampaign
+    aid = current_account_id()
+    ad = AdsAd.query.get_or_404(aid_)
+    ag = AdsAdGroup.query.get_or_404(ad.ad_group_id)
+    AdsCampaign.query.filter_by(id=ag.campaign_id, account_id=aid).first_or_404()
+    for field, maxlen in [("headline1", 30), ("headline2", 30), ("headline3", 30),
+                          ("description1", 90), ("description2", 90),
+                          ("path1", 15), ("path2", 15)]:
+        val = request.form.get(field)
+        if val is not None:
+            setattr(ad, field, val[:maxlen] or None if field != "headline1" else val[:maxlen])
+    final_url = request.form.get("final_url")
+    if final_url:
+        ad.final_url = final_url
+    status = request.form.get("status")
+    if status in ("enabled", "paused", "removed"):
+        ad.status = status
+    db.session.commit()
+    flash("Ad updated.", "success")
+    return redirect(url_for("google_bp.ads_campaign_detail", cid=ag.campaign_id))
 
 @google_bp.route("/ads/ad/<int:aid_>/delete", methods=["POST"], endpoint="ads_ad_delete")
 @login_required
 def ads_ad_delete(aid_: int):
-    return _ads_not_implemented()
+    from app.models_ads import AdsAd, AdsAdGroup, AdsCampaign
+    aid = current_account_id()
+    ad = AdsAd.query.get_or_404(aid_)
+    ag = AdsAdGroup.query.get_or_404(ad.ad_group_id)
+    AdsCampaign.query.filter_by(id=ag.campaign_id, account_id=aid).first_or_404()
+    cid = ag.campaign_id
+    db.session.delete(ad)
+    db.session.commit()
+    flash("Ad deleted.", "success")
+    return redirect(url_for("google_bp.ads_campaign_detail", cid=cid))
 
 @google_bp.route("/ads/keyword/new/<int:gid>", methods=["POST"], endpoint="ads_keyword_new")
 @login_required
 def ads_keyword_new(gid: int):
-    return _ads_not_implemented()
+    from app.models_ads import AdsKeyword, AdsAdGroup, AdsCampaign
+    from sqlalchemy.exc import IntegrityError
+    aid = current_account_id()
+    ag = AdsAdGroup.query.get_or_404(gid)
+    AdsCampaign.query.filter_by(id=ag.campaign_id, account_id=aid).first_or_404()
+    text_ = (request.form.get("text") or "").strip()
+    match_type = request.form.get("match_type", "broad")
+    if not text_:
+        flash("Keyword text is required.", "error")
+        return redirect(url_for("google_bp.ads_campaign_detail", cid=ag.campaign_id))
+    if match_type not in ("broad", "phrase", "exact"):
+        match_type = "broad"
+    kw = AdsKeyword(ad_group_id=gid, text=text_, match_type=match_type, status="enabled")
+    db.session.add(kw)
+    try:
+        db.session.commit()
+        flash(f"Keyword '{text_}' added.", "success")
+    except IntegrityError:
+        db.session.rollback()
+        flash("That keyword already exists in this ad group.", "error")
+    return redirect(url_for("google_bp.ads_campaign_detail", cid=ag.campaign_id))
 
 @google_bp.route("/ads/keyword/<int:kid>/edit", methods=["POST"], endpoint="ads_keyword_edit")
 @login_required
 def ads_keyword_edit(kid: int):
-    return _ads_not_implemented()
+    from app.models_ads import AdsKeyword, AdsAdGroup, AdsCampaign
+    aid = current_account_id()
+    kw = AdsKeyword.query.get_or_404(kid)
+    ag = AdsAdGroup.query.get_or_404(kw.ad_group_id)
+    AdsCampaign.query.filter_by(id=ag.campaign_id, account_id=aid).first_or_404()
+    text_ = (request.form.get("text") or "").strip()
+    match_type = request.form.get("match_type")
+    status = request.form.get("status")
+    max_cpc = request.form.get("max_cpc_cents")
+    if text_:
+        kw.text = text_
+    if match_type in ("broad", "phrase", "exact"):
+        kw.match_type = match_type
+    if status in ("enabled", "paused", "removed"):
+        kw.status = status
+    if max_cpc is not None:
+        try:
+            kw.max_cpc_cents = int(float(max_cpc) * 100)
+        except (ValueError, TypeError):
+            pass
+    db.session.commit()
+    flash("Keyword updated.", "success")
+    return redirect(url_for("google_bp.ads_campaign_detail", cid=ag.campaign_id))
 
 @google_bp.route("/ads/keyword/<int:kid>/delete", methods=["POST"], endpoint="ads_keyword_delete")
 @login_required
 def ads_keyword_delete(kid: int):
-    return _ads_not_implemented()
+    from app.models_ads import AdsKeyword, AdsAdGroup, AdsCampaign
+    aid = current_account_id()
+    kw = AdsKeyword.query.get_or_404(kid)
+    ag = AdsAdGroup.query.get_or_404(kw.ad_group_id)
+    AdsCampaign.query.filter_by(id=ag.campaign_id, account_id=aid).first_or_404()
+    cid = ag.campaign_id
+    text_ = kw.text
+    db.session.delete(kw)
+    db.session.commit()
+    flash(f"Keyword '{text_}' deleted.", "success")
+    return redirect(url_for("google_bp.ads_campaign_detail", cid=cid))
 
 # ------------------------- Connect shortlinks -------------------------
 

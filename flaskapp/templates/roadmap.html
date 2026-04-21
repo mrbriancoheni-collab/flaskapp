@@ -1,0 +1,293 @@
+{% extends "base_public.html" %}
+{% block title %}Product Roadmap — What's Live, What's Coming | FieldSprout{% endblock %}
+{% block meta_description %}See what's live in FieldSprout today and what we're building next — a transparent look at our product roadmap for home service marketing tools.{% endblock %}
+{% block og_title %}FieldSprout Product Roadmap — Live, In Development, and Coming Soon{% endblock %}
+{% block og_description %}A transparent snapshot of everything FieldSprout has built and what's in the pipeline — so you can make an informed decision about whether we're the right fit today.{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-indigo-50 via-white to-purple-50 pt-20 pb-14">
+  <div class="container-lg text-center">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-100 text-indigo-800 rounded-full text-sm font-semibold mb-6">
+      <i class="fa-solid fa-map"></i> Product Roadmap
+    </div>
+    <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+      What's Live. What's Coming.<br>No Vaporware.
+    </h1>
+    <p class="text-xl text-gray-600 max-w-2xl mx-auto mb-6">
+      We believe in radical transparency. Here's an honest snapshot of everything
+      FieldSprout has shipped, what we're actively building, and what's on deck —
+      so you can make the right call for your business.
+    </p>
+    <div class="flex items-center justify-center gap-6 text-sm flex-wrap">
+      <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-green-500"></div><span class="text-gray-600">Live &amp; available</span></div>
+      <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-amber-400"></div><span class="text-gray-600">In development</span></div>
+      <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-gray-300"></div><span class="text-gray-600">Planned</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- LIVE NOW -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <div class="flex items-center gap-3 mb-8">
+      <div class="w-4 h-4 rounded-full bg-green-500 ring-4 ring-green-100"></div>
+      <h2 class="text-2xl font-bold text-gray-900">Live Now</h2>
+      <span class="text-sm text-gray-500">— available to all paying customers</span>
+    </div>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+
+      {% for icon, color, name, url, tagline, bullets in [
+
+        ('fa-magnifying-glass-chart', 'indigo',
+         'Google Ads Grader', '/ads-grader',
+         'Full A–F account grade in 60 seconds',
+         ['Quality Score, wasted spend, CTR, keyword coverage', '10 scored performance dimensions', 'Shareable PDF report', 'Demo mode — no account connection required', 'ROI calculator with 12-month projections']),
+
+        ('fa-robot', 'purple',
+         'Google Ads AI Optimization', '/products/ads',
+         '24/7 AI agents optimizing your campaigns',
+         ['Negative keyword automation', 'Bid adjustment by time, device, location', 'Quality Score improvement workflows', 'AI action log with approve/dismiss controls', 'Sandbox mode for review before changes apply']),
+
+        ('fa-shield-halved', 'green',
+         'Google Local Services Ads', '/products/glsa',
+         'More booked jobs, fewer junk leads',
+         ['Lead dispute management with pre-built templates', 'Booking rate tracking by ZIP and CSR', 'Budget pacing by capacity and service area', 'Review score coordination', 'Sync with Google Ads for unified reporting']),
+
+        ('fa-brands fa-google', 'blue',
+         'Google Business Profile', '/products/gbp',
+         'Rank higher in the map pack',
+         ['Listing health audit and auto-repair', 'AI-written weekly GBP posts', 'Automated review response drafts', 'Photo cadence management', 'Service area ZIP optimization']),
+
+        ('fa-brands fa-facebook', 'sky',
+         'Facebook &amp; Instagram Ads', '/products/facebook-ads',
+         'Fill slow weeks with social lead gen',
+         ['Lookalike audiences from your top customers', 'Retargeting for unbooked estimates', 'Seasonal offer campaign templates', 'Creative fatigue detection and rotation', 'On-ad lead forms with CRM sync']),
+
+        ('fa-star', 'yellow',
+         'Review Management', '/products/reviews',
+         'Automate review requests after every job',
+         ['Post-job SMS and email review requests', 'AI-powered review response drafts', 'Multi-platform: Google, Yelp, Facebook', 'Negative feedback private routing', 'Tech-level review performance reports']),
+
+        ('fa-calculator', 'orange',
+         'Ad Spend ROI Calculator', '/ads-grader/calculator',
+         'Model your leads and revenue before spending',
+         ['Monthly ad budget → projected leads and revenue', 'Cost per lead benchmarks by trade', 'Waste reduction impact model', '12-month optimization scenarios', 'No account connection needed']),
+
+        ('fa-chart-line', 'teal',
+         'Budget Forecast Tool', '/account/budget-forecast',
+         'Model lead volume at different spend levels',
+         ['Scenario modeling: +10%, +25%, +50% budget', 'Quality Score and waste recapture built in', 'Seasonal demand index by trade', 'Diminishing returns modeling', 'Requires Google Ads account connection']),
+
+        ('fa-chart-bar', 'rose',
+         'Performance Dashboard &amp; Attribution', '/solutions/see-what-works',
+         'See which ads actually generate booked jobs',
+         ['Campaign-level attribution to booked jobs', 'ZIP code and hour-of-day performance', 'CSR booking rate by person', 'Multi-channel: Google, GLSA, Facebook, GBP', 'Owner-ready weekly email report']),
+
+      ] %}
+      <div class="rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition p-6 flex flex-col">
+        <div class="flex items-start justify-between mb-3">
+          <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center">
+            <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+          </div>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+            <div class="w-1.5 h-1.5 rounded-full bg-green-500"></div> Live
+          </span>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-1">{{ name }}</h3>
+        <p class="text-sm text-indigo-600 font-medium mb-3">{{ tagline }}</p>
+        <ul class="space-y-1.5 flex-1">
+          {% for b in bullets %}
+          <li class="text-xs text-gray-600 flex items-start gap-2">
+            <i class="fa-solid fa-check text-green-500 mt-0.5 flex-shrink-0"></i>{{ b }}
+          </li>
+          {% endfor %}
+        </ul>
+        <a href="{{ url }}" class="mt-5 text-sm font-semibold text-{{ color }}-600 hover:text-{{ color }}-700">Learn more →</a>
+      </div>
+      {% endfor %}
+
+    </div>
+  </div>
+</section>
+
+<!-- IN DEVELOPMENT -->
+<section class="py-16 bg-amber-50" id="in-development">
+  <div class="container-lg">
+    <div class="flex items-center gap-3 mb-8">
+      <div class="w-4 h-4 rounded-full bg-amber-400 ring-4 ring-amber-100 animate-pulse"></div>
+      <h2 class="text-2xl font-bold text-gray-900">In Development</h2>
+      <span class="text-sm text-gray-500">— actively being built</span>
+    </div>
+    <div class="grid md:grid-cols-2 gap-6">
+
+      <div id="listings" class="bg-white rounded-2xl border border-amber-200 p-6">
+        <div class="flex items-start justify-between mb-4">
+          <div class="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center">
+            <i class="fa-solid fa-map-location-dot text-teal-600"></i>
+          </div>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">
+            <i class="fa-solid fa-hammer text-xs"></i> Building — Q3 2025
+          </span>
+        </div>
+        <h3 class="font-bold text-gray-900 text-lg mb-1">Local Listings Management</h3>
+        <p class="text-sm text-gray-600 mb-4">Sync your business information across 50+ directories automatically — one update, everywhere, instantly. Stop losing jobs to wrong phone numbers and outdated hours.</p>
+        <div class="grid sm:grid-cols-2 gap-2 mb-5">
+          {% for f in ['50+ directory sync (Google, Yelp, Bing, Angi, Thumbtack)', 'NAP consistency monitoring and auto-repair', 'Duplicate listing detection and suppression', 'Holiday and seasonal hours bulk update', 'Citation building for local SEO', 'Trade-specific directory coverage (Carrier, Trane, HomeAdvisor)'] %}
+          <div class="text-xs text-gray-600 flex items-start gap-1.5">
+            <i class="fa-solid fa-clock text-amber-400 mt-0.5 flex-shrink-0"></i>{{ f }}
+          </div>
+          {% endfor %}
+        </div>
+        <div class="flex items-center gap-3">
+          <a href="/products/listings" class="text-sm font-semibold text-teal-600 hover:text-teal-700">See feature preview →</a>
+          <span class="text-gray-300">|</span>
+          <span class="text-xs text-gray-500">Early access: 3 months free</span>
+        </div>
+      </div>
+
+      <div id="forms-chat" class="bg-white rounded-2xl border border-amber-200 p-6">
+        <div class="flex items-start justify-between mb-4">
+          <div class="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
+            <i class="fa-solid fa-comments text-violet-600"></i>
+          </div>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">
+            <i class="fa-solid fa-hammer text-xs"></i> Building — Q4 2025
+          </span>
+        </div>
+        <h3 class="font-bold text-gray-900 text-lg mb-1">Forms &amp; Chat</h3>
+        <p class="text-sm text-gray-600 mb-4">Smart lead capture that works 24/7 — qualifying job type, urgency, and service area before your team picks up the phone. Emergency triage, after-hours mode, and CRM sync built in.</p>
+        <div class="grid sm:grid-cols-2 gap-2 mb-5">
+          {% for f in ['AI chat widget with emergency triage', 'Smart forms that qualify lead type and urgency', 'After-hours mode with morning callback promise', 'Booking integration for non-urgent scheduling', 'CRM sync: ServiceTitan, Jobber, Housecall Pro', 'Trade-specific pre-built conversation flows'] %}
+          <div class="text-xs text-gray-600 flex items-start gap-1.5">
+            <i class="fa-solid fa-clock text-amber-400 mt-0.5 flex-shrink-0"></i>{{ f }}
+          </div>
+          {% endfor %}
+        </div>
+        <div class="flex items-center gap-3">
+          <a href="/products/forms-chat" class="text-sm font-semibold text-violet-600 hover:text-violet-700">See feature preview →</a>
+          <span class="text-gray-300">|</span>
+          <span class="text-xs text-gray-500">Early access: 3 months free</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- PLANNED -->
+<section class="py-16 bg-white" id="planned">
+  <div class="container-lg">
+    <div class="flex items-center gap-3 mb-8">
+      <div class="w-4 h-4 rounded-full bg-gray-300 ring-4 ring-gray-100"></div>
+      <h2 class="text-2xl font-bold text-gray-900">Planned</h2>
+      <span class="text-sm text-gray-500">— on our roadmap, not yet in development</span>
+    </div>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+
+      {% for icon, color, name, tagline, eta, bullets in [
+
+        ('fa-brands fa-facebook', 'blue',
+         'Facebook Ads Inspector',
+         'Full audit of your Facebook account — creative fatigue, audience overlap, lead form drop-off',
+         '2026',
+         ['Creative fatigue detection across all ad sets', 'Audience overlap analysis', 'Lead form completion rate breakdown', 'Cost-per-lead by ad set and creative']),
+
+        ('fa-location-dot', 'indigo',
+         'Multi-Location Management',
+         'One dashboard to manage Google Ads, GLSA, and GBP across all your locations',
+         '2026',
+         ['Per-location budget and performance tracking', 'Franchise-level reporting rollups', 'Location-specific AI optimization rules', 'Shared negative keyword libraries']),
+
+        ('fa-envelope', 'purple',
+         'Email &amp; SMS Nurture',
+         'Automated follow-up sequences for unbooked estimates and seasonal re-engagement',
+         '2026',
+         ['Post-estimate follow-up sequence', 'Seasonal re-engagement campaigns', 'Win-back campaigns for lapsed customers', 'Integration with ServiceTitan and Jobber']),
+
+        ('fa-gift', 'green',
+         'Referral &amp; Loyalty Programs',
+         'Turn happy customers into a referral engine with automated referral tracking',
+         '2026',
+         ['Unique referral links per customer', 'Automated reward fulfillment', 'Referral source attribution', 'Leaderboard for top referrers']),
+
+        ('fa-microchip', 'orange',
+         'AI Dispatch Assist',
+         'AI-suggested job routing based on tech location, skills, and customer priority',
+         'Future',
+         ['Real-time tech location awareness', 'Skill-to-job matching', 'Travel time optimization', 'Integration with scheduling software']),
+
+        ('fa-brands fa-google', 'red',
+         'Google Analytics 4 Integration',
+         'Native GA4 connection to close the loop from ad click to revenue in your analytics',
+         'Future',
+         ['Conversion import from GA4', 'Revenue attribution in FieldSprout dashboard', 'Audience export to Google Ads', 'Custom event tracking setup']),
+
+      ] %}
+      <div class="rounded-2xl border border-gray-100 p-6 opacity-80 hover:opacity-100 transition">
+        <div class="flex items-start justify-between mb-3">
+          <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+            <i class="fa-solid {{ icon }} text-gray-400"></i>
+          </div>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs font-semibold">
+            Planned {{ eta }}
+          </span>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-1">{{ name }}</h3>
+        <p class="text-sm text-gray-500 mb-3">{{ tagline }}</p>
+        <ul class="space-y-1.5">
+          {% for b in bullets %}
+          <li class="text-xs text-gray-500 flex items-start gap-2">
+            <i class="fa-solid fa-circle text-gray-200 mt-1 flex-shrink-0 text-xs"></i>{{ b }}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
+
+    </div>
+  </div>
+</section>
+
+<!-- Waitlist CTA -->
+<section class="py-16 bg-gray-50">
+  <div class="container-lg max-w-3xl mx-auto">
+    <div class="bg-white rounded-2xl border shadow-soft p-8 text-center">
+      <h2 class="text-2xl font-bold text-gray-900 mb-3">Want to shape what we build next?</h2>
+      <p class="text-gray-600 mb-6 max-w-xl mx-auto">
+        We build based on what home service owners actually need. Tell us the single biggest problem in your marketing right now — it goes directly to our product team.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+        <input type="email" placeholder="Your email address"
+          class="flex-1 px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+        <button class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition text-sm whitespace-nowrap">
+          Join Waitlist
+        </button>
+      </div>
+      <p class="text-xs text-gray-400 mt-3">No spam. We send one update when each feature ships.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Quick nav to live tools -->
+<section class="py-16 bg-white">
+  <div class="container-lg text-center">
+    <h2 class="text-2xl font-bold text-gray-900 mb-3">Ready to start with what's live today?</h2>
+    <p class="text-gray-500 mb-8">All the tools below are fully available right now — no waitlist required.</p>
+    <div class="flex flex-wrap gap-4 justify-center">
+      {% for label, url, color in [
+        ('Grade My Google Ads — Free', '/ads-grader', 'indigo'),
+        ('Calculate My ROI', '/ads-grader/calculator', 'orange'),
+        ('See Pricing', '/pricing', 'gray'),
+        ('Start Free Trial', '/signup' if not has_endpoint('auth_bp.register') else url_for('auth_bp.register'), 'green'),
+      ] %}
+      <a href="{{ url }}" class="px-6 py-3 rounded-xl border-2 border-{{ color }}-200 text-{{ color }}-700 font-semibold text-sm hover:bg-{{ color }}-50 transition">
+        {{ label }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% endblock %}

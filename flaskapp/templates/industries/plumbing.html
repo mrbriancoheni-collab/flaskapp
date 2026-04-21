@@ -1,0 +1,207 @@
+{% extends "base_public.html" %}
+{% block title %}Google Ads for Plumbing Companies — More Service Calls, Lower CPL | FieldSprout{% endblock %}
+{% block meta_description %}FieldSprout's AI agents optimize Google Ads for plumbers 24/7 — cutting wasted spend, capturing emergency searches, and booking more drain, pipe, and water heater jobs.{% endblock %}
+{% block og_title %}Google Ads for Plumbers — AI That Books More Service Calls{% endblock %}
+{% block og_description %}Stop losing emergency plumbing leads to competitors. FieldSprout AI optimizes your Google Ads around the clock — lower CPL, better Quality Scores, more booked jobs.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Google Ads for Plumbing Companies",
+  "description": "AI-powered Google Ads optimization for plumbers — reduce cost per lead, capture emergency searches, book more jobs.",
+  "url": "https://fieldsprout.io/industries/plumbing",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://fieldsprout.io"},
+      {"@type": "ListItem", "position": 2, "name": "Industries", "item": "https://fieldsprout.io/industries"},
+      {"@type": "ListItem", "position": 3, "name": "Plumbing", "item": "https://fieldsprout.io/industries/plumbing"}
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-blue-50 via-white to-cyan-50 pt-20 pb-16">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-3/5 mb-10 md:mb-0">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold mb-6">
+          <i class="fa-solid fa-faucet-drip"></i> Built for Plumbing Companies
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+          Win More Emergency<br>Plumbing Calls on Google
+        </h1>
+        <p class="text-xl text-gray-600 mb-8">
+          FieldSprout's AI agents optimize your Google Ads campaigns around the clock —
+          capturing high-intent emergency searches, eliminating wasted clicks, and
+          filling your schedule with drain, pipe, and water heater jobs.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4">
+          {% if has_endpoint('ads_grader_bp.index') %}
+          <a href="{{ url_for('ads_grader_bp.index') }}"
+             class="btn btn-primary btn-lg">Grade My Plumbing Ads — Free</a>
+          {% endif %}
+          <a href="/pricing" class="btn btn-secondary btn-lg">See Plans &amp; Pricing</a>
+        </div>
+        <p class="text-sm text-gray-500 mt-4">No credit card · 60-second setup · Cancel anytime</p>
+      </div>
+      <div class="md:w-2/5">
+        <div class="bg-white rounded-2xl shadow-card border p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Typical Plumbing Account — Before vs. After FieldSprout</div>
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Cost per Lead</span>
+                <span class="text-green-600 font-bold">$118 → $74</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:63%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Wasted Spend / Month</span>
+                <span class="text-green-600 font-bold">$980 → $145</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:15%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Emergency Call Volume</span>
+                <span class="text-green-600 font-bold">+34% more calls</span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-2 mb-0.5">
+                <div class="bg-gray-400 h-2 rounded-full" style="width:50%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:84%"></div>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-4 text-center">Anonymized averages across plumbing accounts on FieldSprout</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Problems We Solve -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">The plumbing Google Ads problems we fix</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Most plumbing accounts bleed budget on low-intent searches while missing the high-value emergency calls right in their service area.</p>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, desc in [
+        ('fa-money-bill-wave', 'red', 'Budget lost to non-emergency searches', 'Clicks from "plumbing school" and "how to fix a leaky faucet DIY" drain your budget. We block them automatically.'),
+        ('fa-clock', 'orange', 'Missing 24/7 emergency demand', 'Burst pipes happen at midnight. We keep your ads live during off-hours for emergency calls and pause for non-emergency scheduling.'),
+        ('fa-star-half-stroke', 'yellow', 'Low Quality Scores driving up costs', 'Poor ad-to-landing-page relevance means paying 40–60% more per click. We fix QS at the keyword level.'),
+        ('fa-location-dot', 'blue', 'Service area targeting too broad', 'Paying for clicks 40 miles away that your techs can\'t reach profitably. We tighten geo-targeting to your real service radius.'),
+        ('fa-chart-bar', 'purple', 'No visibility into job-level ROI', 'You see leads — not booked jobs. We surface which campaigns actually generate drain, water heater, and pipe repair revenue.'),
+        ('fa-person-digging', 'gray', 'Set-and-forget campaigns losing ground', 'Your ads haven\'t been touched in months while competitors optimize daily. Our AI agents make improvements every 24 hours.'),
+      ] %}
+      <div class="p-6 rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Emergency Intent Section -->
+<section class="py-16 bg-blue-50">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-1/2 mb-8 md:mb-0">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Built for emergency and scheduled plumbing demand</h2>
+        <p class="text-gray-600 mb-6">
+          Plumbing has two distinct customer types: the panicked homeowner with a burst pipe and
+          the planned renovation buyer. FieldSprout segments and bids differently for each —
+          so you capture high-value emergencies at full bid while staying efficient on scheduled work.
+        </p>
+        <ul class="space-y-3 text-gray-700">
+          <li class="flex items-start gap-3"><i class="fa-solid fa-bolt text-yellow-500 mt-0.5"></i>Emergency keywords ("burst pipe", "flooding basement") get priority bids</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-calendar-check text-blue-500 mt-0.5"></i>Scheduled service keywords bid down during off-peak hours</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-phone text-green-500 mt-0.5"></i>Call extensions auto-enabled for mobile emergency searches</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-map-pin text-red-400 mt-0.5"></i>Location bid adjustments favor neighborhoods in your sweet spot</li>
+        </ul>
+      </div>
+      <div class="md:w-1/2">
+        <div class="bg-white rounded-2xl border shadow-soft p-6 space-y-3">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Intent-Based Bidding — Plumbing Keywords</div>
+          {% for intent, keyword, bid_adj, color in [
+            ('Emergency', '"burst pipe repair near me"', '+65% bid', 'red'),
+            ('Emergency', '"water heater not working"', '+50% bid', 'red'),
+            ('Urgent', '"drain clog same day"', '+30% bid', 'orange'),
+            ('Planned', '"bathroom remodel plumber"', 'Base bid', 'blue'),
+            ('Planned', '"water softener installation"', 'Base bid', 'blue'),
+            ('Non-buyer', '"how to unclog a drain"', 'Excluded', 'gray'),
+          ] %}
+          <div class="flex items-center justify-between p-3 rounded-xl bg-{{ color }}-50 border border-{{ color }}-100">
+            <div>
+              <div class="text-xs font-semibold text-{{ color }}-700 mb-0.5">{{ intent }}</div>
+              <div class="text-sm text-gray-700 font-mono">{{ keyword }}</div>
+            </div>
+            <span class="text-sm font-bold text-{{ color }}-700">{{ bid_adj }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Social Proof -->
+<section class="py-16 bg-white">
+  <div class="container-md">
+    <div class="grid md:grid-cols-3 gap-6">
+      {% for quote, name, co, result in [
+        ('"We were wasting $900/month on DIY searchers. FieldSprout killed those keywords in 48 hours and our CPL dropped from $115 to $71."', 'Carlos M.', 'Metro Plumbing Co.', '38% lower CPL'),
+        ('"The emergency keyword bidding is exactly what we needed. Our after-hours call volume jumped 40% in the first month."', 'Sandra L.', 'RapidFlow Plumbing', '+40% after-hours calls'),
+        ('"Finally, someone who understands that "DIY plumbing" clicks are worthless to us. The negative keyword list alone saved us $600/month."', 'Kevin T.', 'Pacific Plumbing Solutions', '$600/mo recovered'),
+      ] %}
+      <div class="bg-gray-50 rounded-2xl p-6 border">
+        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
+        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
+        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
+        <div class="text-xs text-gray-500">{{ co }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-blue-600 to-cyan-600 text-white">
+  <div class="container-md text-center">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Get your free Plumbing Ads Grade now</h2>
+    <p class="text-blue-100 text-lg mb-8 max-w-xl mx-auto">
+      See exactly where your plumbing Google Ads budget is leaking — and get a prioritized action list to fix it. Takes 60 seconds.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('ads_grader_bp.index') %}
+      <a href="{{ url_for('ads_grader_bp.index') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Plans</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

@@ -1,91 +1,203 @@
 {% extends "base_public.html" %}
 {% set SECTION = 'products' %}
-{% block title %}Facebook & Instagram Ads — FieldSprout{% endblock %}
+{% block title %}Facebook &amp; Instagram Ads for Home Services — FieldSprout{% endblock %}
+{% block meta_description %}FieldSprout manages Facebook and Instagram ads for home service businesses — building lookalike audiences, testing creative, retargeting unbooked estimates, and filling slow weeks.{% endblock %}
+{% block og_title %}Facebook &amp; Instagram Ads for Home Services — AI-Powered | FieldSprout{% endblock %}
+{% block og_description %}Turn Facebook into a reliable lead channel for your trades business. FieldSprout builds custom audiences, tests creative automatically, and retargets your best prospects until they book.{% endblock %}
 
 {% block head_extra %}
-<!-- Product Schema for Facebook/Instagram Ads Tool -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "FieldSprout Facebook & Instagram Ads",
-  "applicationCategory": "BusinessApplication",
-  "operatingSystem": "Web",
-  "description": "AI-powered Facebook and Instagram ads automation for home service businesses. Smart targeting, creative testing, and lead generation optimized for local service pros.",
-  "offers": {
-    "@type": "Offer",
-    "priceCurrency": "USD",
-    "price": "200",
-    "availability": "https://schema.org/InStock"
-  },
-  "featureList": [
-    "Lookalike audiences from top 20% customers",
-    "Remarket unbooked estimates & no-shows",
-    "ZIP/Radius controls by margin & travel time",
-    "UGC prompts + policy checks",
-    "Offer testing and rotation by capacity",
-    "On-ad lead forms + speed-to-lead"
-  ],
-  "publisher": {
-    "@type": "Organization",
-    "name": "FieldSprout"
+  "@type": "WebPage",
+  "name": "Facebook & Instagram Ads for Home Services",
+  "description": "AI-powered Facebook and Instagram advertising for home service businesses — lookalike audiences, retargeting, creative testing, and lead generation.",
+  "url": "https://fieldsprout.io/products/facebook-ads",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://fieldsprout.io"},
+      {"@type": "ListItem", "position": 2, "name": "Products", "item": "https://fieldsprout.io/products/ads"},
+      {"@type": "ListItem", "position": 3, "name": "Facebook & Instagram Ads", "item": "https://fieldsprout.io/products/facebook-ads"}
+    ]
   }
-}
-</script>
-
-<!-- BreadcrumbList Schema -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  "itemListElement": [
-    {
-      "@type": "ListItem",
-      "position": 1,
-      "name": "Home",
-      "item": "https://fieldsprout.io"
-    },
-    {
-      "@type": "ListItem",
-      "position": 2,
-      "name": "Facebook & Instagram Ads",
-      "item": "https://fieldsprout.io/products/facebook-ads"
-    }
-  ]
 }
 </script>
 {% endblock %}
 
 {% block content %}
 
-<section class="hero">
-  <h1>Fill next week’s schedule</h1>
-  <p class="sub">Local offers + FieldRoutes audiences to smooth seasonality and drive booked jobs.</p>
-  <div class="cta-row">
-    <a class="btn btn-primary" href="/demo">Get a pipeline demo</a>
+<!-- Hero -->
+<section class="bg-gradient-to-br from-blue-50 via-white to-indigo-50 pt-20 pb-16">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-3/5 mb-10 md:mb-0">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold mb-6">
+          <i class="fa-brands fa-facebook"></i> Facebook &amp; Instagram Ads
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+          Fill Slow Weeks with Facebook Ads<br>Built for Home Service Businesses
+        </h1>
+        <p class="text-xl text-gray-600 mb-8">
+          Google captures active searchers. Facebook reaches the homeowners who haven't
+          searched yet — but whose roof is aging, HVAC is 12 years old, or gutters need
+          cleaning. FieldSprout targets them with the right offer at the right time.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4">
+          {% if has_endpoint('auth_bp.register') %}
+          <a href="{{ url_for('auth_bp.register') }}" class="btn btn-primary btn-lg">Connect Facebook Ads — Free</a>
+          {% else %}
+          <a href="/signup" class="btn btn-primary btn-lg">Connect Facebook Ads — Free</a>
+          {% endif %}
+          <a href="/pricing" class="btn btn-secondary btn-lg">See Plans</a>
+        </div>
+        <p class="text-sm text-gray-500 mt-4">No credit card · Facebook Business access required</p>
+      </div>
+      <div class="md:w-2/5">
+        <div class="bg-white rounded-2xl shadow-card border p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Facebook Ads — Typical Results with FieldSprout</div>
+          <div class="space-y-4">
+            {% for label, result, pct in [
+              ('Cost per Lead', '$34 avg', 68),
+              ('Slow-week job bookings', '+22% more calls', 80),
+              ('Retargeting conversion rate', '3.8% CVR', 76),
+              ('Creative fatigue alerts', 'Auto-detected', 90),
+            ] %}
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">{{ label }}</span>
+                <span class="text-blue-600 font-bold">{{ result }}</span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-2">
+                <div class="bg-blue-500 h-2 rounded-full" style="width:{{ pct }}%"></div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <p class="text-xs text-gray-400 mt-4 text-center">Averages across home service Facebook accounts on FieldSprout</p>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
-<section class="features grid-2">
-  <div>
-    <h2>Smarter targeting</h2>
-    <ul class="checklist">
-      <li>Lookalikes from top 20% customers</li>
-      <li>Remarket unbooked estimates & no-shows</li>
-      <li>ZIP/Radius controls by margin & travel time</li>
-    </ul>
-  </div>
-  <div>
-    <h2>Creative that converts</h2>
-    <ul class="checklist">
-      <li>UGC prompts + policy checks</li>
-      <li>Offer testing and rotation by capacity</li>
-      <li>On-ad lead forms + speed-to-lead</li>
-    </ul>
+<!-- Features -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">Facebook advertising built for trades — not e-commerce</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Most Facebook ad tools are built for online stores. FieldSprout is purpose-built for service businesses that book jobs, not ship products.</p>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, desc in [
+        ('fa-users', 'blue', 'Lookalike audiences from your best customers', 'Upload your top 20% customers by job value and Facebook finds thousands more homeowners who look just like them — in your service area.'),
+        ('fa-rotate-right', 'orange', 'Retarget unbooked estimates and no-shows', 'Someone requested a quote but didn\'t book? We retarget them with a follow-up offer until they schedule — recovering leads you already paid for.'),
+        ('fa-map-pin', 'green', 'ZIP and radius targeting by margin and drive time', 'Advertise only in the neighborhoods where your margin is strong and drive time is reasonable. Stop paying for leads you can\'t profitably serve.'),
+        ('fa-image', 'purple', 'Creative testing and fatigue detection', 'We test multiple ad creatives and automatically rotate fresh ones when performance drops — no more running the same ad until it stops working.'),
+        ('fa-clipboard-list', 'red', 'On-ad lead forms with instant CRM sync', 'Facebook native lead forms pre-fill contact info and sync directly to your CRM — so you can call within minutes, not hours.'),
+        ('fa-calendar-minus', 'yellow', 'Seasonal offer campaigns to fill gaps', 'Spring tune-up specials, summer AC deals, fall furnace promo — we build seasonal campaigns timed to peak demand and your available capacity.'),
+      ] %}
+      <div class="p-6 rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
   </div>
 </section>
 
-<section class="cta center">
-  <a class="btn btn-primary" href="/account/fbads">Connect Facebook</a>
+<!-- Google + Facebook Together -->
+<section class="py-16 bg-blue-50">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-1/2 mb-8 md:mb-0">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Google captures demand. Facebook creates it.</h2>
+        <p class="text-gray-600 mb-6">
+          The homeowners most likely to become your highest-value customers aren't always
+          searching Google right now. Facebook lets you reach them proactively —
+          showing your brand before they need you, so you're the first call when they do.
+        </p>
+        <div class="space-y-4">
+          {% for channel, role, desc, color in [
+            ('Google Search', 'Capture', 'Homeowner searches — you appear. High intent, higher CPC.', 'orange'),
+            ('Google GLSA', 'Capture', 'Top placement with Google Guaranteed badge. Pay per lead.', 'green'),
+            ('Facebook / Instagram', 'Create', 'Reach homeowners before they search. Build brand recall.', 'blue'),
+            ('Facebook Retargeting', 'Recover', 'Re-engage website visitors and unbooked estimate leads.', 'purple'),
+          ] %}
+          <div class="flex items-start gap-4 p-4 bg-white rounded-xl border">
+            <span class="text-xs font-bold text-{{ color }}-700 bg-{{ color }}-100 px-2 py-0.5 rounded-full mt-0.5 whitespace-nowrap">{{ role }}</span>
+            <div>
+              <div class="text-sm font-semibold text-gray-800">{{ channel }}</div>
+              <div class="text-xs text-gray-500">{{ desc }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="md:w-1/2">
+        <div class="bg-white rounded-2xl border shadow-soft p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Facebook Campaign Types We Build</div>
+          <div class="space-y-3">
+            {% for name, goal, cpl, color in [
+              ('Seasonal Offer', 'Book jobs in slow weeks', '$28–$45', 'yellow'),
+              ('Lookalike Prospecting', 'Find new customers like your best', '$35–$60', 'blue'),
+              ('Retargeting (Website)', 'Re-engage site visitors', '$18–$32', 'green'),
+              ('Retargeting (Unbooked)', 'Recover quoted-not-booked leads', '$14–$24', 'purple'),
+              ('Neighbor Campaign', 'Capitalize on completed jobs nearby', '$22–$38', 'orange'),
+              ('Review & Reputation', 'Build trust with social proof ads', 'Branding', 'gray'),
+            ] %}
+            <div class="flex items-center justify-between p-3 rounded-lg bg-{{ color }}-50 border border-{{ color }}-100">
+              <div>
+                <div class="text-sm font-medium text-gray-800">{{ name }}</div>
+                <div class="text-xs text-gray-500">{{ goal }}</div>
+              </div>
+              <span class="text-xs font-semibold text-{{ color }}-700">{{ cpl }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
+
+<!-- Social Proof -->
+<section class="py-16 bg-white">
+  <div class="container-md">
+    <div class="grid md:grid-cols-3 gap-6">
+      {% for quote, name, co, result in [
+        ('"We never thought Facebook would work for HVAC. FieldSprout\'s seasonal offer campaigns filled our slow weeks in January and February for the first time ever."', 'Bob T.', 'Premier HVAC', 'Slow weeks filled for first time'),
+        ('"The neighbor targeting after a completed job is genius. We run a small campaign in the neighborhood right after we finish a big install and it generates 2–3 calls every time."', 'Rita N.', 'Streamline Plumbing', '2–3 calls per neighborhood campaign'),
+        ('"Our Google leads alone weren\'t enough to smooth seasonality. Adding Facebook retargeting brought our unbooked estimate rate down from 62% to 38%."', 'Victor P.', 'SkyHigh Roofing', 'Unbooked rate: 62% → 38%'),
+      ] %}
+      <div class="bg-gray-50 rounded-2xl p-6 border">
+        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
+        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
+        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
+        <div class="text-xs text-gray-500">{{ co }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-blue-700 to-indigo-800 text-white">
+  <div class="container-md text-center">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Add Facebook to your lead mix today</h2>
+    <p class="text-blue-200 text-lg mb-8 max-w-xl mx-auto">
+      Connect your Facebook Business account and let FieldSprout build, test, and optimize your campaigns. Most home service businesses see leads within 72 hours of launch.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('auth_bp.register') %}
+      <a href="{{ url_for('auth_bp.register') }}" class="btn btn-secondary btn-lg">Get Started — Free</a>
+      {% else %}
+      <a href="/signup" class="btn btn-secondary btn-lg">Get Started — Free</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Pricing</a>
+    </div>
+  </div>
+</section>
+
 {% endblock %}

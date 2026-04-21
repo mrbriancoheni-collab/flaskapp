@@ -85,7 +85,11 @@ def run_daily(app, db):
     except Exception:
         app.logger.exception("[CRON] ML model training failed")
 
-    # TODO: email digests, cleanups, churn pings, etc.
+    # Weekly AI Actions digest (runs on Mondays)
+    try:
+        _run_weekly_ai_actions_digest(app)
+    except Exception:
+        app.logger.exception("[CRON] AI actions digest failed")
 
 
 # =========================
@@ -776,3 +780,72 @@ def _run_weekly_ml_training(app) -> None:
         app.logger.warning("[CRON] ML training skipped (ml module not available): %s", e)
     except Exception as e:
         app.logger.exception(f"[CRON] Error during ML training: {e}")
+
+
+def _run_weekly_ai_actions_digest(app):
+    """
+    Send a weekly AI Actions digest email to accounts that had AI activity.
+    Runs every Monday (day-of-week == 0).
+    """
+    if datetime.utcnow().weekday() != 0:  # 0 = Monday
+        return
+
+    app.logger.info("[CRON] Starting weekly AI actions digest")
+
+    with app.app_context():
+        try:
+            from app.models_ai_actions import AIAction
+            from app.models import Account, User
+            from app.emailer import send_email
+            from sqlalchemy import func
+
+            cutoff = datetime.utcnow() - timedelta(days=7)
+
+            # Find accounts with AI activity in the last week
+            rows = (
+                db.session.query(
+                    AIAction.account_id,
+                    func.count(AIAction.id).label("total"),
+                    func.sum(
+                        db.case((AIAction.status == "executed", 1), else_=0)
+                    ).label("executed"),
+                    func.sum(
+                        db.case((AIAction.status == "pending", 1), else_=0)
+                    ).label("pending"),
+                )
+                .filter(AIAction.created_at >= cutoff)
+                .group_by(AIAction.account_id)
+                .all()
+            )
+
+            sent = 0
+            for row in rows:
+                if not row.total:
+                    continue
+                try:
+                    account = Account.query.get(row.account_id)
+                    if not account:
+                        continue
+                    user = User.query.filter_by(account_id=account.id).first()
+                    if not user or not user.email:
+                        continue
+
+                    subject = f"FieldSprout AI: {row.total} actions this week"
+                    body = (
+                        f"Hi {user.first_name or 'there'},\n\n"
+                        f"Your FieldSprout AI made {row.total} change(s) to your Google Ads this week:\n"
+                        f"  • {row.executed or 0} executed\n"
+                        f"  • {row.pending or 0} pending review\n\n"
+                        f"Log in to review, approve, or undo any changes:\n"
+                        f"https://fieldsprout.io/account/google/ads/ai-actions\n\n"
+                        f"— The FieldSprout Team"
+                    )
+                    send_email(to=user.email, subject=subject, body=body)
+                    sent += 1
+                except Exception as e:
+                    app.logger.warning(f"[CRON] AI digest email failed for account {row.account_id}: {e}")
+
+            app.logger.info(f"[CRON] AI actions digest sent to {sent} accounts")
+
+        except Exception as e:
+            app.logger.exception(f"[CRON] AI actions digest error: {e}")

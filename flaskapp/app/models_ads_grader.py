@@ -88,6 +88,9 @@ class GoogleAdsGraderReport(db.Model):
     date_range_start = db.Column(DateTime, nullable=True)
     date_range_end = db.Column(DateTime, nullable=True)
 
+    # Sharing
+    shareable_token = db.Column(String(64), nullable=True, index=True, unique=True)
+
     # Tracking
     pdf_generated = db.Column(Boolean, nullable=False, server_default="0")
     pdf_download_count = db.Column(Integer, nullable=False, server_default="0")

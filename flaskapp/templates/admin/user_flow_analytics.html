@@ -307,7 +307,7 @@
           <td class="px-4 py-3 text-right text-gray-600">{{ "%.1f"|format(percentage) }}%</td>
           <td class="px-4 py-3">
             <div class="w-full bg-gray-200 rounded-full h-2 max-w-xs">
-              <div class="bg-red-600 h-2 rounded-full transition-all duration-500" style="width: {{ min(percentage, 100) }}%"></div>
+              <div class="bg-red-600 h-2 rounded-full transition-all duration-500" style="width: {{ [percentage, 100] | min }}%"></div>
             </div>
           </td>
         </tr>

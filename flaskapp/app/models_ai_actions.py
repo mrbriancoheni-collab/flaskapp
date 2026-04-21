@@ -76,8 +76,9 @@ class AIAction(db.Model):
     data_used = db.Column(db.JSON, nullable=True)  # What data informed the decision
 
     # Status tracking
+    # Using String instead of ENUM so pending_review / dismissed can be added without ALTER TABLE
     status = db.Column(
-        SAEnum("pending", "executed", "failed", "undone", name="ai_action_status_enum"),
+        db.String(20),
         nullable=False,
         default="pending",
         index=True

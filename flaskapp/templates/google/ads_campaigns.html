@@ -147,9 +147,8 @@
           {% set campaign_keywords = _data.keywords | selectattr('ad_group_id', 'in', ad_group_ids) | list %}
           <tr class="campaign-row hover:bg-gray-50" data-status="{{ campaign.status }}" data-type="{{ campaign.type }}">
             <td class="px-4 py-3">
-              <a href="{{ url_for('google_bp.ads_campaign_detail', campaign_id=campaign.id) }}" class="font-medium text-indigo-600 hover:text-indigo-900">
-                {{ campaign.name }}
-              </a>
+              <a href="/account/google/ads/campaign/{{ campaign.id }}"
+                 class="font-medium text-indigo-700 hover:underline">{{ campaign.name }}</a>
               <div class="text-xs text-gray-500">{{ campaign.bidding }}{% if campaign.target %} (${{ campaign.target }}){% endif %}</div>
             </td>
             <td class="px-4 py-3">
@@ -167,9 +166,9 @@
                 <button type="button" class="text-gray-400 hover:text-gray-600" onclick="editCampaign('{{ campaign.id }}')">
                   <i class="fa-solid fa-pen"></i>
                 </button>
-                <a href="{{ url_for('google_bp.ads_campaign_detail', campaign_id=campaign.id) }}" class="text-indigo-600 hover:text-indigo-900">
+                <span class="text-gray-400">
                   <i class="fa-solid fa-arrow-right"></i>
-                </a>
+                </span>
               </div>
             </td>
           </tr>
@@ -230,10 +229,9 @@
                         onclick="editCampaign('{{ campaign.id }}')">
                   <i class="fa-solid fa-pen text-gray-600"></i>
                 </button>
-                <a href="{{ url_for('google_bp.ads_campaign_detail', campaign_id=campaign.id) }}"
-                   class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
+                <span class="inline-flex items-center gap-2 rounded-md bg-gray-300 px-4 py-2 text-white cursor-default">
                   View Details <i class="fa-solid fa-arrow-right"></i>
-                </a>
+                </span>
               </div>
             </div>
           </div>
@@ -368,7 +366,7 @@
         <i class="fa-solid fa-times text-xl"></i>
       </button>
     </div>
-    <form id="editCampaignForm" method="post" action="{{ url_for('google_bp.ads_campaign_update') }}">
+    <form id="editCampaignForm" method="post" action="#">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="id" id="edit_campaign_id">
 
@@ -493,6 +491,7 @@ function editCampaign(campaignId) {
   document.getElementById('edit_campaign_bidding').value = campaign.bidding;
   document.getElementById('edit_campaign_target').value = campaign.target || '';
 
+  document.getElementById('editCampaignForm').action = '/account/google/ads/campaign/' + campaignId + '/edit';
   document.getElementById('editCampaignModal').classList.remove('hidden');
   document.getElementById('editCampaignModal').classList.add('flex');
 }
@@ -510,7 +509,7 @@ function deleteCampaign() {
 
   const form = document.createElement('form');
   form.method = 'POST';
-  form.action = '{{ url_for("google_bp.ads_campaign_delete") }}';
+  form.action = '/account/google/ads/campaign/' + campaignId + '/delete';
 
   const csrfInput = document.createElement('input');
   csrfInput.type = 'hidden';

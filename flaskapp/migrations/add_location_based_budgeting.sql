@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS campaign_location_targets (
 
     -- Campaign
     campaign_id INT NOT NULL,
-    account_id INT NOT NULL,
+    account_id BIGINT NOT NULL,
 
     -- Location targeting
     location_criterion_id VARCHAR(50) NOT NULL COMMENT 'Google Ads location criterion ID',

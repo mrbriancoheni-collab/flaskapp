@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS campaign_budget_groups (
     id INT AUTO_INCREMENT PRIMARY KEY,
 
     -- Account association
-    account_id INT NOT NULL,
+    account_id BIGINT NOT NULL,
 
     -- Group details
     name VARCHAR(100) NOT NULL,

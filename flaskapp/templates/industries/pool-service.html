@@ -1,0 +1,219 @@
+{% extends "base_public.html" %}
+{% block title %}Google Ads for Pool Service Companies — More Contracts, Lower CPL | FieldSprout{% endblock %}
+{% block meta_description %}FieldSprout's AI agents optimize Google Ads for pool service and repair companies 24/7 — capturing pool cleaning, repair, and new pool construction searches year-round.{% endblock %}
+{% block og_title %}Google Ads for Pool Service Companies — AI That Fills Your Service Route{% endblock %}
+{% block og_description %}Stop overpaying for pool service leads. FieldSprout AI optimizes your Google Ads 24/7 — weekly maintenance contracts, repairs, openings and closings, all at lower CPL.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Google Ads for Pool Service Companies",
+  "description": "AI-powered Google Ads optimization for pool service, repair, and construction companies — reduce cost per lead, grow recurring service routes.",
+  "url": "https://fieldsprout.io/industries/pool-service",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://fieldsprout.io"},
+      {"@type": "ListItem", "position": 2, "name": "Industries", "item": "https://fieldsprout.io/industries"},
+      {"@type": "ListItem", "position": 3, "name": "Pool Service", "item": "https://fieldsprout.io/industries/pool-service"}
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-cyan-50 via-white to-blue-50 pt-20 pb-16">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-3/5 mb-10 md:mb-0">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-cyan-100 text-cyan-800 rounded-full text-sm font-semibold mb-6">
+          <i class="fa-solid fa-water-ladder"></i> Built for Pool Service Companies
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+          Grow Your Pool Service Route<br>with Smarter Google Ads
+        </h1>
+        <p class="text-xl text-gray-600 mb-8">
+          FieldSprout's AI agents optimize your Google Ads campaigns 24/7 — landing recurring
+          weekly maintenance contracts, capturing repair and equipment calls, and making sure
+          your ads peak when pool owners are actively searching.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4">
+          {% if has_endpoint('ads_grader_bp.index') %}
+          <a href="{{ url_for('ads_grader_bp.index') }}"
+             class="btn btn-primary btn-lg">Grade My Pool Service Ads — Free</a>
+          {% endif %}
+          <a href="/pricing" class="btn btn-secondary btn-lg">See Plans &amp; Pricing</a>
+        </div>
+        <p class="text-sm text-gray-500 mt-4">No credit card · 60-second setup · Cancel anytime</p>
+      </div>
+      <div class="md:w-2/5">
+        <div class="bg-white rounded-2xl shadow-card border p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Typical Pool Service Account — Before vs. After FieldSprout</div>
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Cost per New Contract</span>
+                <span class="text-green-600 font-bold">$108 → $64</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:59%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Wasted Spend / Month</span>
+                <span class="text-green-600 font-bold">$620 → $80</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:13%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Recurring Contracts Added</span>
+                <span class="text-green-600 font-bold">+31% more stops/route</span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-2 mb-0.5">
+                <div class="bg-gray-400 h-2 rounded-full" style="width:40%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:71%"></div>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-4 text-center">Anonymized averages across pool service accounts on FieldSprout</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Problems We Solve -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">The pool service Google Ads problems we fix</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Pool service is a recurring revenue business — but most Google Ads campaigns are structured for one-time transactions. That means higher CPL and lower lifetime value per acquired customer.</p>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, desc in [
+        ('fa-money-bill-wave', 'red', 'One-time repair and recurring service mixed together', 'A $150 chemical balance call and a $2,400/year maintenance contract need different campaigns. We separate them to optimize for LTV.'),
+        ('fa-sun', 'orange', 'Missing the spring pool opening rush', 'Pool owners search in March and April before the season. Flat budgets or late campaign starts mean missing the most profitable window of the year.'),
+        ('fa-map-pin', 'blue', 'Route-inefficient targeting', 'Acquiring a customer 30 miles from your existing route destroys profitability. We geo-fence your campaigns around your current route density.'),
+        ('fa-star-half-stroke', 'yellow', 'Low Quality Scores on competitive pool terms', '"Pool service near me" and "pool cleaning" are expensive and broad. Tightly themed ad groups by service type cut CPCs significantly.'),
+        ('fa-screwdriver-wrench', 'purple', 'Equipment repair campaigns missing high-value searches', 'Pump, heater, and filter replacement are high-ticket jobs. Many accounts don\'t have dedicated campaigns for equipment repair keywords.'),
+        ('fa-snowflake', 'gray', 'Winter budget entirely off — losing early spring bookers', 'Proactive homeowners book spring openings in February. Zero winter presence means competitors get those contracts first every year.'),
+      ] %}
+      <div class="p-6 rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- LTV Focus Section -->
+<section class="py-16 bg-cyan-50">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-1/2 mb-8 md:mb-0">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Optimize for lifetime value, not just the first call</h2>
+        <p class="text-gray-600 mb-6">
+          A weekly pool maintenance customer is worth $2,000–$3,500 per year — every year.
+          FieldSprout helps you structure campaigns to prioritize those recurring contract
+          leads over one-time repair callers, so every dollar of ad spend goes further.
+        </p>
+        <div class="bg-white rounded-xl border p-5 mb-6">
+          <div class="text-sm font-semibold text-gray-700 mb-3">Customer Lifetime Value Comparison</div>
+          <div class="space-y-2">
+            {% for label, ltv, color in [
+              ('Weekly maintenance contract', '$2,800/yr avg LTV', 'green'),
+              ('Opening + closing only', '$480/yr avg LTV', 'blue'),
+              ('One-time repair caller', '$180 avg LTV', 'gray'),
+            ] %}
+            <div class="flex items-center justify-between p-2.5 rounded-lg bg-{{ color }}-50">
+              <span class="text-sm text-gray-700">{{ label }}</span>
+              <span class="text-sm font-bold text-{{ color }}-700">{{ ltv }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        <ul class="space-y-3 text-gray-700">
+          <li class="flex items-start gap-3"><i class="fa-solid fa-rotate text-cyan-500 mt-0.5"></i>Recurring contract campaigns bid highest — best LTV customers</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-calendar text-blue-400 mt-0.5"></i>Opening/closing campaigns timed to pre-season search windows</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-wrench text-purple-400 mt-0.5"></i>Equipment repair campaigns run year-round with high-intent keywords</li>
+        </ul>
+      </div>
+      <div class="md:w-1/2">
+        <div class="bg-white rounded-2xl border shadow-soft p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Pool Service Search Volume by Month</div>
+          <div class="flex items-end gap-1 h-28">
+            {% for month, h, cls in [
+              ('J',20,'bg-blue-200'), ('F',25,'bg-blue-300'), ('M',60,'bg-cyan-400'),
+              ('A',90,'bg-cyan-500'), ('M',100,'bg-cyan-600'), ('J',95,'bg-cyan-500'),
+              ('J',88,'bg-cyan-500'), ('A',82,'bg-cyan-400'), ('S',55,''),
+              ('O',35,''), ('N',22,''), ('D',18,'bg-blue-200'),
+            ] %}
+            <div class="flex-1 flex flex-col items-center gap-1">
+              <div class="w-full rounded-t {{ cls if cls else 'bg-gray-200' }}" style="height:{{ h }}%;"></div>
+              <span class="text-xs text-gray-400">{{ month }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          <p class="text-xs text-gray-400 mt-2 text-center">FieldSprout ramps budget in spring and maintains winter presence for early bookers</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Social Proof -->
+<section class="py-16 bg-white">
+  <div class="container-md">
+    <div class="grid md:grid-cols-3 gap-6">
+      {% for quote, name, co, result in [
+        ('"We used to stop advertising in October. FieldSprout kept a small winter campaign running and we booked 18 spring openings in February — before our competitors even turned their ads on."', 'Ray A.', 'ClearWater Pool Service', '18 spring contracts in Feb'),
+        ('"Separating our weekly maintenance campaign from our repair campaign changed everything. Our cost per new contract customer dropped from $120 to $58."', 'Donna H.', 'Blue Ridge Pool Care', '52% lower contract CPL'),
+        ('"Our CPCs dropped 35% just from fixing our ad group structure. The negative keyword list was also enormous — we had no idea how much we were wasting."', 'Phil T.', 'AquaPro Pool Service', '35% lower CPCs'),
+      ] %}
+      <div class="bg-gray-50 rounded-2xl p-6 border">
+        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
+        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
+        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
+        <div class="text-xs text-gray-500">{{ co }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-cyan-600 to-blue-700 text-white">
+  <div class="container-md text-center">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Get your free Pool Service Ads Grade now</h2>
+    <p class="text-cyan-100 text-lg mb-8 max-w-xl mx-auto">
+      See exactly where your pool service Google Ads budget is being wasted — and get a prioritized plan to grow your recurring route. Takes 60 seconds.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('ads_grader_bp.index') %}
+      <a href="{{ url_for('ads_grader_bp.index') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Plans</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

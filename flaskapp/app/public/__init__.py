@@ -92,3 +92,28 @@ def industry_electricians():
 @public_bp.route("/industries/roofing", endpoint="industry_roofing")
 def industry_roofing():
     return render_template("industries/roofing.html")
+
+
+@public_bp.route("/industries/pest-control", endpoint="industry_pest_control")
+def industry_pest_control():
+    return render_template("industries/pest-control.html")
+
+
+@public_bp.route("/industries/landscaping", endpoint="industry_landscaping")
+def industry_landscaping():
+    return render_template("industries/landscaping.html")
+
+
+@public_bp.route("/industries/garage-door", endpoint="industry_garage_door")
+def industry_garage_door():
+    return render_template("industries/garage-door.html")
+
+
+@public_bp.route("/industries/pool-service", endpoint="industry_pool_service")
+def industry_pool_service():
+    return render_template("industries/pool-service.html")
+
+
+@public_bp.route("/industries/solar", endpoint="industry_solar")
+def industry_solar():
+    return render_template("industries/solar.html")

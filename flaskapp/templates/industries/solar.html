@@ -1,0 +1,207 @@
+{% extends "base_public.html" %}
+{% block title %}Google Ads for Solar Companies — More Qualified Leads, Lower CPL | FieldSprout{% endblock %}
+{% block meta_description %}FieldSprout's AI agents optimize Google Ads for solar installers 24/7 — filtering out low-quality leads, targeting homeowners with high solar potential, and reducing wasted spend.{% endblock %}
+{% block og_title %}Google Ads for Solar Companies — AI That Delivers Higher-Quality Leads{% endblock %}
+{% block og_description %}Solar leads are expensive — don't waste them. FieldSprout AI optimizes your Google Ads 24/7 to deliver qualified homeowner leads who own their home, have high bills, and are ready to talk.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Google Ads for Solar Companies",
+  "description": "AI-powered Google Ads optimization for solar installation companies — reduce cost per qualified lead, improve lead quality, grow installations.",
+  "url": "https://fieldsprout.io/industries/solar",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://fieldsprout.io"},
+      {"@type": "ListItem", "position": 2, "name": "Industries", "item": "https://fieldsprout.io/industries"},
+      {"@type": "ListItem", "position": 3, "name": "Solar", "item": "https://fieldsprout.io/industries/solar"}
+    ]
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-yellow-50 via-white to-orange-50 pt-20 pb-16">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-3/5 mb-10 md:mb-0">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold mb-6">
+          <i class="fa-solid fa-solar-panel"></i> Built for Solar Installers
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+          Get More Qualified Solar Leads<br>at a Fraction of the Cost
+        </h1>
+        <p class="text-xl text-gray-600 mb-8">
+          Solar leads are among the most expensive in home services. FieldSprout's AI agents
+          optimize your Google Ads 24/7 — filtering out renters and low-intent browsers,
+          targeting qualified homeowners, and cutting cost per installation appointment.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4">
+          {% if has_endpoint('ads_grader_bp.index') %}
+          <a href="{{ url_for('ads_grader_bp.index') }}"
+             class="btn btn-primary btn-lg">Grade My Solar Ads — Free</a>
+          {% endif %}
+          <a href="/pricing" class="btn btn-secondary btn-lg">See Plans &amp; Pricing</a>
+        </div>
+        <p class="text-sm text-gray-500 mt-4">No credit card · 60-second setup · Cancel anytime</p>
+      </div>
+      <div class="md:w-2/5">
+        <div class="bg-white rounded-2xl shadow-card border p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">Typical Solar Account — Before vs. After FieldSprout</div>
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Cost per Qualified Lead</span>
+                <span class="text-green-600 font-bold">$185 → $112</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:61%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Wasted Spend / Month</span>
+                <span class="text-green-600 font-bold">$2,100 → $310</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-400 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:15%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">Lead-to-Appointment Rate</span>
+                <span class="text-green-600 font-bold">18% → 31%</span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-2 mb-0.5">
+                <div class="bg-gray-400 h-2 rounded-full" style="width:18%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:31%"></div>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-4 text-center">Anonymized averages across solar accounts on FieldSprout</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Problems We Solve -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">The solar Google Ads problems we fix</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Solar has the highest CPCs in home services — often $30–$80 per click. Waste hits harder here than anywhere else. Precision targeting isn't optional, it's essential.</p>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, desc in [
+        ('fa-money-bill-wave', 'red', 'Renters and low-equity homeowners burning budget', 'Renters can\'t buy solar. Homeowners underwater on their mortgage won\'t finance it. We layer in audience signals to target likely buyers.'),
+        ('fa-star-half-stroke', 'yellow', 'Generic solar terms with no purchase intent', '"Solar energy" and "how does solar work" are informational, not transactional. We focus spend on "get solar quotes," "solar installation cost," and similar.'),
+        ('fa-location-dot', 'blue', 'Not targeting high-sunlight, high-income zip codes', 'Solar ROI is better in sunnier markets with higher electricity rates. We prioritize zip codes with the best solar economics for your area.'),
+        ('fa-chart-bar', 'purple', 'Tracking form fills, not booked appointments', 'A form fill from a renter is worthless. We help you track downstream quality signals — appointments kept, consultations completed — not just leads.'),
+        ('fa-users', 'orange', 'Not differentiating financing vs. cash buyers', 'Cash buyers and financed buyers need different messages. Showing $0-down financing to cash buyers wastes a key selling point. We segment them.'),
+        ('fa-person-digging', 'gray', 'Missing policy-driven demand surges', 'ITC extensions, net metering changes, and utility rate hikes all spike solar search demand. We\'re positioned to capture these windows quickly.'),
+      ] %}
+      <div class="p-6 rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Lead Quality Section -->
+<section class="py-16 bg-yellow-50">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-1/2 mb-8 md:mb-0">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Quality over quantity — solar leads that close</h2>
+        <p class="text-gray-600 mb-6">
+          In solar, a bad lead costs $150+ and wastes a rep's entire afternoon. FieldSprout
+          uses keyword selection, audience layering, and negative targeting to deliver leads
+          that are far more likely to own their home, qualify for financing, and show up to the consultation.
+        </p>
+        <ul class="space-y-3 text-gray-700">
+          <li class="flex items-start gap-3"><i class="fa-solid fa-house text-yellow-500 mt-0.5"></i>Homeowner intent signals prioritized — renters filtered out</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-bolt text-orange-400 mt-0.5"></i>"High electric bill" keyword targeting identifies motivated buyers</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-dollar-sign text-green-500 mt-0.5"></i>Financing-ready messaging to capture the $0-down buyer segment</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-map text-blue-400 mt-0.5"></i>Zip code bidding prioritizes high-sunlight, high-rate areas</li>
+        </ul>
+      </div>
+      <div class="md:w-1/2">
+        <div class="bg-white rounded-2xl border shadow-soft p-6 space-y-3">
+          <div class="text-sm font-semibold text-gray-500 mb-2">High vs. Low Intent — Solar Keywords</div>
+          {% for intent, keyword, action, color in [
+            ('High intent', '"solar panel installation cost"', 'Bid aggressively', 'green'),
+            ('High intent', '"get solar quotes near me"', 'Bid aggressively', 'green'),
+            ('High intent', '"solar companies in [city]"', 'Bid aggressively', 'green'),
+            ('Medium intent', '"how much do solar panels save"', 'Bid moderately', 'blue'),
+            ('Research', '"how does solar work"', 'Bid low / exclude', 'yellow'),
+            ('Non-buyer', '"solar panels for renters"', 'Excluded', 'red'),
+          ] %}
+          <div class="flex items-center justify-between p-3 rounded-xl bg-{{ color }}-50 border border-{{ color }}-100">
+            <div>
+              <div class="text-xs font-semibold text-{{ color }}-700 mb-0.5">{{ intent }}</div>
+              <div class="text-sm text-gray-700 font-mono">{{ keyword }}</div>
+            </div>
+            <span class="text-xs font-semibold text-{{ color }}-700">{{ action }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Social Proof -->
+<section class="py-16 bg-white">
+  <div class="container-md">
+    <div class="grid md:grid-cols-3 gap-6">
+      {% for quote, name, co, result in [
+        ('"Solar leads are expensive — we can\'t afford bad ones. FieldSprout\'s targeting cut our wasted spend by 80% and our appointment show rate went from 55% to 78%."', 'Alex P.', 'SunPower Southwest', '78% appointment show rate'),
+        ('"We were bidding on \'how solar works\' and \'solar panel cost estimate calculator\' — total research terms. Fixing that alone saved us $1,800/month."', 'Kim R.', 'BrightPath Solar', '$1,800/mo recovered'),
+        ('"The financing vs. cash buyer segmentation was something we\'d never thought about. Our close rate on financed leads jumped 25% with the right messaging."', 'Doug M.', 'Summit Solar', '+25% financed lead close rate'),
+      ] %}
+      <div class="bg-gray-50 rounded-2xl p-6 border">
+        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
+        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
+        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
+        <div class="text-xs text-gray-500">{{ co }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-yellow-500 to-orange-600 text-white">
+  <div class="container-md text-center">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Get your free Solar Ads Grade now</h2>
+    <p class="text-yellow-100 text-lg mb-8 max-w-xl mx-auto">
+      See exactly where your solar Google Ads budget is being wasted on unqualified clicks — and get a prioritized action plan to drive better leads. Takes 60 seconds.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('ads_grader_bp.index') %}
+      <a href="{{ url_for('ads_grader_bp.index') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Plans</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

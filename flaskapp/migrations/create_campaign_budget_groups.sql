@@ -49,8 +49,8 @@ CREATE TABLE IF NOT EXISTS campaign_budget_assignments (
     id INT AUTO_INCREMENT PRIMARY KEY,
 
     -- Campaign and group
-    campaign_id INT NOT NULL,
-    budget_group_id INT NOT NULL,
+    campaign_id BIGINT NOT NULL,
+    budget_group_id BIGINT NOT NULL,
 
     -- Assignment metadata
     assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS campaign_budget_group_spend (
     id INT AUTO_INCREMENT PRIMARY KEY,
 
     -- Group and time period
-    budget_group_id INT NOT NULL,
+    budget_group_id BIGINT NOT NULL,
     period_month DATE NOT NULL,  -- First day of the month (e.g., 2025-01-01)
 
     -- Spend tracking

@@ -1,26 +1,187 @@
 {% extends "base_public.html" %}
 {% set SECTION = 'solutions' %}
-{% block content %}
-<section class="mx-auto max-w-5xl py-12 px-4">
-  <h1 class="text-3xl font-semibold">See What Works</h1>
-  <p class="mt-3 text-lg text-slate-700">One page shows which ads, zips, and hours bring real jobs.</p>
+{% block title %}See What Works — Home Service Ad Analytics &amp; Attribution | FieldSprout{% endblock %}
+{% block meta_description %}FieldSprout shows home service businesses exactly which ads, keywords, ZIPs, and channels generate real booked jobs — not just clicks and impressions. Full attribution, owner-ready reports.{% endblock %}
+{% block og_title %}See What Works — Ad Attribution for Home Services | FieldSprout{% endblock %}
+{% block og_description %}Stop guessing which ads make you money. FieldSprout tracks every click through to booked job, showing exactly where your marketing budget should go — and where to cut.{% endblock %}
 
-  <div class="grid md:grid-cols-3 gap-6 mt-8">
-    <div class="p-6 rounded-xl border">
-      <h3 class="font-medium">Clear Numbers</h3>
-      <p class="text-slate-600 mt-2">Leads, booked jobs, and revenue by source. No fluff.</p>
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "See What Works — Marketing Attribution for Home Services",
+  "description": "Full attribution analytics for home service businesses — from ad click to booked job, across Google, GLSA, Facebook, and more.",
+  "url": "https://fieldsprout.io/solutions/see-what-works"
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-purple-50 via-white to-indigo-50 pt-20 pb-16">
+  <div class="container-lg text-center">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold mb-6">
+      <i class="fa-solid fa-chart-bar"></i> See What Works
     </div>
-    <div class="p-6 rounded-xl border">
-      <h3 class="font-medium">What to Cut</h3>
-      <p class="text-slate-600 mt-2">Find the waste fast. Turn it off in a click.</p>
-    </div>
-    <div class="p-6 rounded-xl border">
-      <h3 class="font-medium">Owner-Ready PDF</h3>
-      <p class="text-slate-600 mt-2">Auto email a simple report each week or month.</p>
+    <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+      Know Exactly Which Ads<br>Are Making You Money
+    </h1>
+    <p class="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+      Clicks and impressions don't pay bills — booked jobs do. FieldSprout tracks your full
+      marketing pipeline from first click to signed job, across every channel, so you
+      always know where to invest and where to cut.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('auth_bp.register') %}
+      <a href="{{ url_for('auth_bp.register') }}" class="btn btn-primary btn-lg">See My Dashboard — Free</a>
+      {% else %}
+      <a href="/signup" class="btn btn-primary btn-lg">See My Dashboard — Free</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-secondary btn-lg">See Plans</a>
     </div>
   </div>
-
-  <a class="inline-flex mt-8 px-5 py-3 rounded-lg bg-emerald-600 text-white" href="/sample-report">Send me a sample report</a>
-  <p class="mt-4 text-sm text-slate-500">Works across Google, GLSA, Facebook, Angi, and Yelp.</p>
 </section>
+
+<!-- What You Can See -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">From ad spend to revenue — every step tracked</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Most marketing dashboards stop at the click or the form fill. FieldSprout connects the full chain — so you see the ROI of every campaign, down to the dollar.</p>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, desc in [
+        ('fa-magnifying-glass', 'indigo', 'Campaign-level attribution', 'See which campaigns, ad groups, and keywords generate actual booked jobs — not just impressions or form fills. Stop funding losers.'),
+        ('fa-map-pin', 'blue', 'ZIP code and neighborhood performance', 'Which ZIPs are delivering your best leads? Where are you paying for clicks you can\'t profitably serve? Geo performance down to neighborhood level.'),
+        ('fa-clock', 'orange', 'Hour-of-day and day-of-week breakdown', 'When do your highest-converting leads come in? See booking rates and CPL by hour so you can allocate budget to your best windows.'),
+        ('fa-phone', 'green', 'Call tracking with recording and tagging', 'Every inbound call tagged by source, campaign, and keyword. Call recordings available for CSR coaching. Missed calls flagged automatically.'),
+        ('fa-users', 'purple', 'CSR and booking team performance', 'See which team members convert the most leads to booked jobs — and which ones need coaching. Lead-to-book rate by person, visible daily.'),
+        ('fa-file-pdf', 'red', 'Owner-ready weekly and monthly reports', 'Auto-generated PDF summaries emailed to you every week or month. One page of what matters: leads, jobs, CPL, and what\'s improving.'),
+      ] %}
+      <div class="p-6 rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Dashboard Preview -->
+<section class="py-16 bg-purple-50">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-1/2 mb-8 md:mb-0">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">One dashboard. Every channel. No spreadsheets.</h2>
+        <p class="text-gray-600 mb-6">
+          Most home service owners manage their marketing by logging into 4–5 different platforms
+          and trying to piece together what's working. FieldSprout pulls everything into one
+          dashboard — Google Ads, GLSA, Facebook, GBP — so you have one source of truth.
+        </p>
+        <ul class="space-y-3 text-gray-700 mb-8">
+          <li class="flex items-start gap-3"><i class="fa-solid fa-brands fa-google text-blue-400 mt-0.5"></i>Google Search Ads: CPL, Quality Score, wasted spend, top keywords</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-shield-halved text-green-500 mt-0.5"></i>GLSA: leads, booking rate, disputes won, cost per booked job</li>
+          <li class="flex items-start gap-3"><i class="fa-brands fa-facebook text-blue-600 mt-0.5"></i>Facebook: CPL, reach, creative performance, retargeting conversions</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-map-pin text-red-400 mt-0.5"></i>GBP: map pack position, profile views, call clicks, review score</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-phone text-purple-400 mt-0.5"></i>Calls: volume, source, booking rate, missed calls, CSR performance</li>
+        </ul>
+      </div>
+      <div class="md:w-1/2">
+        <div class="bg-white rounded-2xl border shadow-soft p-6">
+          <div class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">This Week — Performance Summary</div>
+          <div class="space-y-3">
+            {% for channel, leads, cpb, trend, color in [
+              ('Google Search Ads', '24 leads', '$87 CPL', '↓ 12% vs last week', 'indigo'),
+              ('Google GLSA', '11 leads', '$134 CPBJ', '↑ 3 disputes won', 'green'),
+              ('Facebook Ads', '8 leads', '$42 CPL', '↑ New creative winning', 'blue'),
+              ('GBP / Organic', '14 calls', 'Free channel', '↑ #2 map pack', 'orange'),
+              ('Total', '57 leads', '$78 blended CPL', '↓ 18% vs last month', 'purple'),
+            ] %}
+            <div class="flex items-center justify-between p-3 rounded-xl bg-{{ color }}-50 border border-{{ color }}-100">
+              <span class="text-sm font-medium text-gray-800">{{ channel }}</span>
+              <div class="text-right">
+                <div class="text-sm font-bold text-{{ color }}-700">{{ leads }}</div>
+                <div class="text-xs text-gray-500">{{ cpb }}</div>
+                <div class="text-xs text-green-600">{{ trend }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- What You'll Stop Doing -->
+<section class="py-16 bg-white">
+  <div class="container-lg max-w-3xl mx-auto">
+    <h2 class="text-2xl font-bold text-gray-900 text-center mb-10">What you'll stop doing when you can see what works</h2>
+    <div class="grid sm:grid-cols-2 gap-6">
+      {% for icon, old_way, new_way in [
+        ('fa-table', 'Manually combining data from 5 different dashboards into a spreadsheet each week', 'One unified view across all channels, always up to date'),
+        ('fa-question', 'Guessing which campaigns to scale based on spend alone', 'Scaling campaigns with proven cost per booked job data'),
+        ('fa-person-digging', 'Keeping underperforming campaigns running because you\'re not sure what to cut', 'Confident decisions backed by attribution data'),
+        ('fa-clock', 'Spending hours on reporting instead of running your business', 'Auto-emailed weekly summary — review in 3 minutes'),
+      ] %}
+      <div class="bg-gray-50 rounded-xl border p-5">
+        <div class="flex items-start gap-3 mb-3">
+          <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid {{ icon }} text-red-500 text-xs"></i>
+          </div>
+          <p class="text-sm text-gray-500 line-through">{{ old_way }}</p>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid fa-check text-green-500 text-xs"></i>
+          </div>
+          <p class="text-sm text-gray-700 font-medium">{{ new_way }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Social Proof -->
+<section class="py-16 bg-gray-50">
+  <div class="container-md">
+    <div class="grid md:grid-cols-3 gap-6">
+      {% for quote, name, co, result in [
+        ('"I used to spend 3 hours every Monday pulling numbers from Google Ads, GLSA, and Facebook. Now I get one email on Monday morning with everything I need. Changed my week."', 'Allen K.', 'K&T HVAC', '3 hrs saved every week'),
+        ('"FieldSprout\'s attribution showed us that a $500/mo Facebook campaign was driving 28% of our revenue. We\'d been about to cut it because \'Facebook doesn\'t work for plumbing.\'", "Pete O.", "Reliable Plumbing", "28% of revenue attributed to Facebook"'),
+        ('"Knowing CSR booking rates by person was a game changer. One of our reps was converting 71% of GLSA calls. Another was at 34%. Now we coach the second to copy the first."', 'Lisa M.', 'Pro Electric Services', 'CSR coaching with real data'),
+      ] %}
+      <div class="bg-white rounded-2xl p-6 border">
+        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
+        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
+        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
+        <div class="text-xs text-gray-500">{{ co }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-purple-600 to-indigo-700 text-white">
+  <div class="container-md text-center">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Start with a clear picture of your marketing</h2>
+    <p class="text-purple-200 text-lg mb-8 max-w-xl mx-auto">
+      Connect your Google Ads account and get your first full performance report in minutes. See what's working, what's wasting money, and where to focus next.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('auth_bp.register') %}
+      <a href="{{ url_for('auth_bp.register') }}" class="btn btn-secondary btn-lg">Connect My Account — Free</a>
+      {% else %}
+      <a href="/signup" class="btn btn-secondary btn-lg">Connect My Account — Free</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Pricing</a>
+    </div>
+  </div>
+</section>
+
 {% endblock %}

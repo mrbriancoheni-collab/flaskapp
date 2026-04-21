@@ -1,26 +1,168 @@
 {% extends "base_public.html" %}
 {% set SECTION = 'solutions' %}
-{% block content %}
-<section class="mx-auto max-w-5xl py-12 px-4">
-  <h1 class="text-3xl font-semibold">Lower Ad Cost</h1>
-  <p class="mt-3 text-lg text-slate-700">Pay less for each lead. Keep the good clicks. Stop the bad ones.</p>
+{% block title %}Lower Your Ad Cost — Reduce Cost Per Lead for Home Services | FieldSprout{% endblock %}
+{% block meta_description %}FieldSprout reduces Google Ads cost per lead for home service businesses by 20–40% — cutting wasted spend, improving Quality Scores, and keeping bids sharp 24/7.{% endblock %}
+{% block og_title %}Lower Your Ad Cost — Home Service Google Ads Optimization | FieldSprout{% endblock %}
+{% block og_description %}Stop overpaying for every lead. FieldSprout's AI agents eliminate wasted spend, improve Quality Scores, and optimize bids daily — so you get more leads from the same budget.{% endblock %}
 
-  <div class="grid md:grid-cols-3 gap-6 mt-8">
-    <div class="p-6 rounded-xl border">
-      <h3 class="font-medium">Stop Waste</h3>
-      <p class="text-slate-600 mt-2">We block bad searches and spots that don’t bring jobs.</p>
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Lower Ad Cost for Home Service Businesses",
+  "description": "Reduce Google Ads cost per lead for HVAC, plumbing, electrical, and roofing companies with AI-powered optimization.",
+  "url": "https://fieldsprout.io/solutions/lower-ad-cost"
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-green-50 via-white to-emerald-50 pt-20 pb-16">
+  <div class="container-lg text-center">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-green-100 text-green-800 rounded-full text-sm font-semibold mb-6">
+      <i class="fa-solid fa-arrow-trend-down"></i> Lower Ad Cost
     </div>
-    <div class="p-6 rounded-xl border">
-      <h3 class="font-medium">Spend Smart</h3>
-      <p class="text-slate-600 mt-2">Shift money to the words and zips that win.</p>
+    <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+      Pay Less Per Lead.<br>Get More Jobs from the Same Budget.
+    </h1>
+    <p class="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+      Most home service Google Ads accounts waste 30–45% of their budget on searches that
+      will never produce a booked job. FieldSprout's AI agents find and eliminate that waste —
+      continuously — so every dollar goes further.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('ads_grader_bp.index') %}
+      <a href="{{ url_for('ads_grader_bp.index') }}" class="btn btn-primary btn-lg">See My Wasted Spend — Free</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-secondary btn-lg">See Plans</a>
     </div>
-    <div class="p-6 rounded-xl border">
-      <h3 class="font-medium">Better Leads</h3>
-      <p class="text-slate-600 mt-2">Catch spam and duplicates so your team saves time.</p>
+    <div class="grid grid-cols-3 gap-8 max-w-2xl mx-auto mt-14">
+      {% for stat, label in [('20–40%', 'Avg CPL reduction in 30 days'), ('$1,240', 'Avg wasted spend found per account'), ('24/7', 'Optimization frequency vs. agencies\' monthly')] %}
+      <div>
+        <div class="text-3xl font-extrabold text-green-600">{{ stat }}</div>
+        <div class="text-sm text-gray-500 mt-1">{{ label }}</div>
+      </div>
+      {% endfor %}
     </div>
   </div>
-
-  <a class="inline-flex mt-8 px-5 py-3 rounded-lg bg-emerald-600 text-white" href="/audit">Show my waste report</a>
-  <p class="mt-4 text-sm text-slate-500">Most shops cut cost per lead 15–30% in the first month.</p>
 </section>
+
+<!-- The 5 Sources of Wasted Spend -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">Where your ad budget is leaking — and how we fix it</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Budget waste in home service Google Ads comes from 5 consistent sources. FieldSprout addresses all of them simultaneously, every single day.</p>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, waste_cause, fix in [
+        ('fa-magnifying-glass', 'red', 'Wrong keyword matches', 'Broad match keywords trigger DIY guides, competitor names, and supply searches — none of which call you.', 'We tighten to phrase/exact match and add 200+ negative keywords in the first week.'),
+        ('fa-clock', 'orange', 'Off-hours and off-days bidding', 'Paying for clicks at 2am when no one is booking, or on Sundays when your phones are off.', 'Dayparting schedules adjusted to when your customers actually convert — by trade and market.'),
+        ('fa-star-half-stroke', 'yellow', 'Low Quality Scores inflating CPCs', 'Poor ad-to-keyword-to-landing-page relevance forces you to pay 40–60% more per click than you should.', 'We rebuild ad group structure for tight thematic alignment — improving QS from 4 to 7+ across most accounts.'),
+        ('fa-map-pin', 'blue', 'Geo-targeting too broad', 'Showing ads 40 miles outside your service radius generates clicks you can\'t profitably convert.', 'Service area tightened to your actual radius, with bid adjustments by neighborhood profitability.'),
+        ('fa-list', 'purple', 'Too few negative keywords', 'The average home service account has 15–20 negative keywords. Effective accounts have 200+.', 'We add industry-specific negative keyword lists on day one and update weekly as new waste is detected.'),
+        ('fa-coins', 'green', 'Budget wasted on low-performing campaigns', 'Budget spread equally across campaigns regardless of which ones actually convert to jobs.', 'Budget reallocated daily toward highest-converting campaigns and away from chronic underperformers.'),
+      ] %}
+      <div class="p-6 rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-3">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-1">{{ title }}</h3>
+        <p class="text-xs text-red-600 mb-2 font-medium">Why it wastes: {{ waste_cause }}</p>
+        <p class="text-xs text-green-700 font-medium">How we fix it: {{ fix }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Before / After Calculator -->
+<section class="py-16 bg-green-50">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-1/2 mb-8 md:mb-0">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">The math on waste reduction</h2>
+        <p class="text-gray-600 mb-6">
+          On a typical $4,000/month Google Ads budget, 35% wasted spend means you're effectively
+          running on $2,600/month of productive spend. Cutting waste to 8% recovers $1,080/month —
+          enough for 12+ additional leads every month, at zero additional cost.
+        </p>
+        <ul class="space-y-3 text-gray-700 mb-6">
+          <li class="flex items-start gap-3"><i class="fa-solid fa-circle-check text-green-500 mt-0.5"></i>No need to increase your budget to get more leads</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-circle-check text-green-500 mt-0.5"></i>Improvements compound — less waste = better QS = lower CPCs = more leads</li>
+          <li class="flex items-start gap-3"><i class="fa-solid fa-circle-check text-green-500 mt-0.5"></i>AI agents apply improvements daily — not once a month</li>
+        </ul>
+        <div class="flex gap-4">
+          {% if has_endpoint('ads_grader_bp.calculator') %}
+          <a href="{{ url_for('ads_grader_bp.calculator') }}" class="btn btn-primary">Calculate My Savings</a>
+          {% else %}
+          <a href="/ads-grader/calculator" class="btn btn-primary">Calculate My Savings</a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="md:w-1/2">
+        <div class="bg-white rounded-2xl border shadow-soft p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-5">Before vs. After FieldSprout — $4,000/mo Budget</div>
+          <div class="space-y-4">
+            {% for label, before, after, good in [
+              ('Monthly budget', '$4,000', '$4,000', None),
+              ('Wasted spend', '$1,400 (35%)', '$320 (8%)', True),
+              ('Productive spend', '$2,600', '$3,680', True),
+              ('Avg cost per lead', '$148', '$89', True),
+              ('Monthly leads generated', '18', '41', True),
+              ('Platform fee (FieldSprout)', '—', '$149', None),
+              ('Net additional leads/mo', '—', '+23 leads', True),
+            ] %}
+            <div class="flex justify-between text-sm py-2 border-b border-gray-100 last:border-0">
+              <span class="text-gray-600">{{ label }}</span>
+              <div class="flex gap-6">
+                <span class="text-gray-400 w-24 text-right">{{ before }}</span>
+                <span class="font-semibold {{ 'text-green-600' if good else 'text-gray-800' }} w-28 text-right">{{ after }}</span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Social Proof -->
+<section class="py-16 bg-white">
+  <div class="container-md">
+    <div class="grid md:grid-cols-3 gap-6">
+      {% for quote, name, co, result in [
+        ('"The grader showed us we were wasting $1,800/month. FieldSprout fixed it in the first two weeks. That money now funds 20 more leads every month."', 'Paul W.', 'Comfort Zone HVAC', '$1,800/mo waste eliminated'),
+        ('"We had 22 negative keywords. FieldSprout added 180 more in the first week. Our CPL dropped from $132 to $79 within 30 days. Same budget — 67% more leads."', 'Sandra M.', 'QuickFlow Plumbing', '67% more leads, same budget'),
+        ('"Quality Score was the hidden killer. Once FieldSprout rebuilt our ad groups properly, our average QS went from 4.2 to 7.8 and our CPCs dropped by nearly half."', 'Ray L.', 'Apex Electric', 'CPCs cut nearly in half'),
+      ] %}
+      <div class="bg-gray-50 rounded-2xl p-6 border">
+        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
+        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
+        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
+        <div class="text-xs text-gray-500">{{ co }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-green-600 to-emerald-700 text-white">
+  <div class="container-md text-center">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Find out how much you're wasting — free</h2>
+    <p class="text-green-100 text-lg mb-8 max-w-xl mx-auto">
+      Run a free Google Ads grade and see your wasted spend, Quality Score gaps, and the biggest opportunities to lower your cost per lead. Takes 60 seconds.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('ads_grader_bp.index') %}
+      <a href="{{ url_for('ads_grader_bp.index') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Pricing</a>
+    </div>
+  </div>
+</section>
+
 {% endblock %}

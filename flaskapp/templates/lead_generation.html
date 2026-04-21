@@ -1,38 +1,180 @@
 {% extends "base_public.html" %}
 {% set SECTION = 'solutions' %}
-{% block title %}Lead Generation for Home Services — FieldSprout Solutions{% endblock %}
+{% block title %}Lead Generation for Home Service Businesses — FieldSprout{% endblock %}
+{% block meta_description %}FieldSprout turns ad spend into booked jobs — tracking the full pipeline from click to booked job, reducing cost per lead, and helping home service businesses grow predictably.{% endblock %}
+{% block og_title %}Lead Generation for Home Services — From Click to Booked Job | FieldSprout{% endblock %}
+{% block og_description %}Stop measuring clicks and impressions. FieldSprout tracks the full lead pipeline — click, call, estimate, booked job — so you know exactly which channels are making you money.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Lead Generation for Home Service Businesses",
+  "description": "Full-funnel lead generation solution for HVAC, plumbing, electrical, and roofing companies — from click to booked job.",
+  "url": "https://fieldsprout.io/solutions/lead-generation"
+}
+</script>
+{% endblock %}
+
 {% block content %}
-<section class="hero">
-  <h1>From lead to booked job</h1>
-  <p class="sub">Traffic → Lead → Speed-to-Lead → Estimate → Booked Job. Measure what matters.</p>
-</section>
 
-<section class="framework grid-2">
-  <div>
-    <h2>Pipeline visibility</h2>
-    <ul class="checklist">
-      <li>Channel → call/lead → estimate → job → revenue</li>
-      <li>Spam filtering and source quality scoring</li>
-      <li>CSR outcomes and follow-up alerts</li>
-    </ul>
+<!-- Hero -->
+<section class="bg-gradient-to-br from-indigo-50 via-white to-blue-50 pt-20 pb-16">
+  <div class="container-lg text-center">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-100 text-indigo-800 rounded-full text-sm font-semibold mb-6">
+      <i class="fa-solid fa-bullseye"></i> Lead Generation
+    </div>
+    <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+      More Leads. Lower Cost.<br>A Full Calendar of Booked Jobs.
+    </h1>
+    <p class="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+      FieldSprout manages every channel that generates leads for your home service business —
+      Google Ads, GLSA, Facebook, and organic — optimizing each one to deliver the highest
+      volume of qualified leads at the lowest possible cost per booked job.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('ads_grader_bp.index') %}
+      <a href="{{ url_for('ads_grader_bp.index') }}" class="btn btn-primary btn-lg">Grade My Lead Channels — Free</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-secondary btn-lg">See Plans</a>
+    </div>
+    <!-- Stats Bar -->
+    <div class="grid grid-cols-3 gap-8 max-w-2xl mx-auto mt-14">
+      {% for stat, label in [('20–40%', 'Avg. CPL reduction in 30 days'), ('3.2x', 'Avg. lead volume increase vs. unmanaged'), ('$0', 'Setup cost — connect in 60 seconds')] %}
+      <div class="text-center">
+        <div class="text-3xl font-extrabold text-indigo-600">{{ stat }}</div>
+        <div class="text-sm text-gray-500 mt-1">{{ label }}</div>
+      </div>
+      {% endfor %}
+    </div>
   </div>
-  <div>
-    <h2>Benchmarks by trade</h2>
-    <ul class="bullets">
-      <li>Speed-to-lead: 5–10 minutes</li>
-      <li>Show rate: 60–70%</li>
-      <li>Close rate: 35–55%</li>
-    </ul>
+</section>
+
+<!-- The Pipeline -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">Every stage of your lead pipeline — visible and optimized</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Most home service companies track clicks and calls. FieldSprout tracks all the way to booked job and revenue — so you know what's actually working.</p>
+    <div class="flex flex-col md:flex-row items-stretch gap-0 mb-16">
+      {% for stage, icon, color, desc in [
+        ('Ad Click', 'fa-arrow-pointer', 'indigo', 'Paid search, GLSA, or Facebook ad brings visitor to your site or landing page.'),
+        ('Lead Captured', 'fa-phone', 'blue', 'Call, form submission, or chat — lead is recorded with source, time, and job type.'),
+        ('Estimate Booked', 'fa-calendar-check', 'green', 'Lead converts to a scheduled estimate or service call. Show rate tracked by CSR.'),
+        ('Job Won', 'fa-handshake', 'yellow', 'Estimate converts to a signed job. Conversion rate tracked by job type and channel.'),
+        ('Revenue Attributed', 'fa-dollar-sign', 'orange', 'Job revenue mapped back to the original ad click. True ROI by campaign.'),
+      ] %}
+      <div class="flex-1 relative">
+        <div class="bg-{{ color }}-50 border border-{{ color }}-100 rounded-xl p-5 text-center h-full">
+          <div class="w-10 h-10 rounded-full bg-{{ color }}-200 flex items-center justify-center mx-auto mb-3">
+            <i class="fa-solid {{ icon }} text-{{ color }}-700"></i>
+          </div>
+          <div class="font-bold text-gray-900 text-sm mb-2">{{ stage }}</div>
+          <p class="text-xs text-gray-600">{{ desc }}</p>
+        </div>
+        {% if not loop.last %}
+        <div class="hidden md:flex absolute top-1/2 -right-3 z-10 w-6 h-6 bg-white border border-gray-200 rounded-full items-center justify-center">
+          <i class="fa-solid fa-arrow-right text-gray-400 text-xs"></i>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <h2 class="text-2xl font-bold text-gray-900 text-center mb-10">All the channels FieldSprout manages for you</h2>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, desc in [
+        ('fa-magnifying-glass', 'indigo', 'Google Search Ads', '24/7 AI optimization — negative keywords, bid adjustments, Quality Score improvements, and budget pacing toward highest-converting campaigns.'),
+        ('fa-shield-halved', 'green', 'Google Local Services Ads', 'Lead dispute management, booking rate optimization, review score maintenance, and budget allocation by ZIP and trade.'),
+        ('fa-brands fa-facebook', 'blue', 'Facebook & Instagram Ads', 'Lookalike audiences, retargeting, seasonal campaigns, and creative testing — all optimized for booked jobs, not just impressions.'),
+        ('fa-map-pin', 'yellow', 'Google Business Profile', 'Map pack optimization, weekly posts, review responses, and listing health — converting local searches into calls.'),
+        ('fa-comments', 'purple', 'Website Chat & Forms', '24/7 lead capture with smart qualification, emergency triage, after-hours follow-up, and CRM sync.'),
+        ('fa-chart-bar', 'orange', 'Full Attribution Dashboard', 'See which channels, campaigns, and keywords generate actual booked jobs — not just clicks or form fills.'),
+      ] %}
+      <div class="p-6 rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
   </div>
 </section>
 
-<section class="roi">
-  <h2>How FieldSprout pays for itself</h2>
-  <p>10 more jobs/month at $350 margin = $3,500/mo. Typical customers see 15–35% more booked jobs from the same spend.</p>
-  <a class="btn btn-secondary" href="/calculator">Estimate your CPBJ</a>
+<!-- Benchmarks -->
+<section class="py-16 bg-indigo-50">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-4">Industry benchmarks for home service lead generation</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">How does your cost per lead compare? Here's what well-optimized accounts look like across the trades we serve.</p>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-separate border-spacing-0 rounded-2xl overflow-hidden shadow-soft border border-gray-200 bg-white">
+        <thead>
+          <tr class="bg-gray-50">
+            <th class="py-3 px-5 text-sm font-semibold text-gray-600 border-b border-gray-200">Trade</th>
+            <th class="py-3 px-5 text-sm font-semibold text-gray-600 border-b border-gray-200 text-center">Avg CPL (industry)</th>
+            <th class="py-3 px-5 text-sm font-semibold text-gray-600 border-b border-gray-200 text-center">FieldSprout avg CPL</th>
+            <th class="py-3 px-5 text-sm font-semibold text-gray-600 border-b border-gray-200 text-center">Avg savings</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for trade, industry, fs, savings in [
+            ('HVAC', '$140–$180', '$82–$105', '35–40%'),
+            ('Plumbing', '$110–$145', '$68–$88', '30–38%'),
+            ('Electrical', '$125–$160', '$74–$96', '30–40%'),
+            ('Roofing', '$190–$240', '$118–$148', '35–40%'),
+            ('Pest Control', '$85–$120', '$52–$72', '30–38%'),
+            ('Landscaping', '$75–$110', '$46–$66', '30–40%'),
+          ] %}
+          <tr class="border-b border-gray-100 hover:bg-gray-50">
+            <td class="py-3 px-5 text-sm font-medium text-gray-800">{{ trade }}</td>
+            <td class="py-3 px-5 text-sm text-gray-500 text-center">{{ industry }}</td>
+            <td class="py-3 px-5 text-sm font-semibold text-green-700 text-center">{{ fs }}</td>
+            <td class="py-3 px-5 text-sm font-bold text-indigo-600 text-center">{{ savings }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="text-xs text-gray-400 text-center mt-4">Based on accounts managed on FieldSprout. Individual results vary by market, budget, and competition.</p>
+  </div>
 </section>
 
-<section class="cta center">
-  <a class="btn btn-primary" href="/demo">Get a pipeline demo</a>
+<!-- Social Proof -->
+<section class="py-16 bg-white">
+  <div class="container-md">
+    <div class="grid md:grid-cols-3 gap-6">
+      {% for quote, name, co, result in [
+        ('"FieldSprout showed us that 60% of our leads were coming from one campaign — and two other campaigns were just burning money. We reallocated and CPL dropped 38% in a month."', 'Nathan B.', 'Peak HVAC', '38% lower CPL in 30 days'),
+        ('"We went from tracking \'form fills\' to tracking actual booked jobs. The attribution dashboard showed us that Facebook was driving 30% of our revenue but we had it at 10% of our budget."', 'Chris A.', 'A1 Plumbing', '3x Facebook budget ROI revealed'),
+        ('"Adding GLSA to our Google Ads changed everything. FieldSprout manages both together and disputes the junk — our cost per booked job dropped from $340 to $198."', 'Maria T.', 'TrueShield Roofing', 'CPBJ: $340 → $198'),
+      ] %}
+      <div class="bg-gray-50 rounded-2xl p-6 border">
+        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
+        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
+        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
+        <div class="text-xs text-gray-500">{{ co }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
 </section>
+
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-indigo-600 to-blue-700 text-white">
+  <div class="container-md text-center">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">See where your leads are coming from — and what they cost</h2>
+    <p class="text-indigo-200 text-lg mb-8 max-w-xl mx-auto">
+      Grade your Google Ads account for free — get a full breakdown of your cost per lead, wasted spend, and where the biggest opportunities are. Takes 60 seconds.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('ads_grader_bp.index') %}
+      <a href="{{ url_for('ads_grader_bp.index') }}" class="btn btn-secondary btn-lg">Grade My Account — Free</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Pricing</a>
+    </div>
+  </div>
+</section>
+
 {% endblock %}

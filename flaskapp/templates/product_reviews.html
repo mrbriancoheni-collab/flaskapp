@@ -1,58 +1,192 @@
 {% extends "base_public.html" %}
 {% set SECTION = 'products' %}
-{% block title %}Review Booster for Home Services — FieldSprout{% endblock %}
+{% block title %}Review Management for Home Services — More 5-Star Reviews | FieldSprout{% endblock %}
+{% block meta_description %}FieldSprout automates review requests, responds to every review with AI-crafted replies, and protects your reputation — so you rank higher and win more jobs from online reviews.{% endblock %}
+{% block og_title %}Review Management for Home Service Businesses — FieldSprout{% endblock %}
+{% block og_description %}Stop leaving 5-star reviews on the table. FieldSprout sends automated review requests after every job, responds instantly with on-brand replies, and shields your reputation from unfair reviews.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Review Management for Home Service Businesses",
+  "description": "Automated review requests, AI-powered review responses, and reputation management built for HVAC, plumbing, electrical, and roofing companies.",
+  "url": "https://fieldsprout.io/products/reviews",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://fieldsprout.io"},
+      {"@type": "ListItem", "position": 2, "name": "Products", "item": "https://fieldsprout.io/products/ads"},
+      {"@type": "ListItem", "position": 3, "name": "Reviews", "item": "https://fieldsprout.io/products/reviews"}
+    ]
+  }
+}
+</script>
+{% endblock %}
+
 {% block content %}
-<section class="hero">
-  <h1>Get more 5-star reviews on autopilot</h1>
-  <p class="sub">Turn happy customers into powerful reviews. FieldSprout automates review requests for HVAC, Plumbing, Electrical, Roofing, and Pest — so you rank higher and book more jobs.</p>
-  <div class="cta-row">
-    <a class="btn btn-primary" href="/demo">Get a demo</a>
-    <a class="btn btn-secondary" href="#features">See how it works</a>
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-yellow-50 via-white to-amber-50 pt-20 pb-16">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-3/5 mb-10 md:mb-0">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold mb-6">
+          <i class="fa-solid fa-star"></i> Review Management
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+          Turn Every Completed Job Into<br>a 5-Star Review — Automatically
+        </h1>
+        <p class="text-xl text-gray-600 mb-8">
+          88% of consumers trust online reviews as much as personal recommendations. FieldSprout
+          sends review requests at the perfect moment after every job, responds to every review
+          with AI-crafted replies, and alerts you to reputation risks before they escalate.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4">
+          {% if has_endpoint('auth_bp.register') %}
+          <a href="{{ url_for('auth_bp.register') }}" class="btn btn-primary btn-lg">Start Getting More Reviews</a>
+          {% else %}
+          <a href="/signup" class="btn btn-primary btn-lg">Start Getting More Reviews</a>
+          {% endif %}
+          <a href="/pricing" class="btn btn-secondary btn-lg">See Plans</a>
+        </div>
+        <p class="text-sm text-gray-500 mt-4">No credit card · Setup in 5 minutes</p>
+      </div>
+      <div class="md:w-2/5">
+        <div class="bg-white rounded-2xl shadow-card border p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-5">Review Performance — Before vs. After FieldSprout</div>
+          <div class="space-y-4">
+            {% for label, before, after, pct in [
+              ('Monthly New Reviews', '3/mo', '28/mo', 100),
+              ('Review Response Rate', '8%', '100%', 100),
+              ('Average Star Rating', '3.9★', '4.8★', 96),
+              ('Avg Response Time', '11 days', '< 2 hrs', 5),
+            ] %}
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">{{ label }}</span>
+                <span class="text-green-600 font-bold">{{ before }} → {{ after }}</span>
+              </div>
+              <div class="w-full bg-red-100 rounded-full h-2 mb-0.5">
+                <div class="bg-red-300 h-2 rounded-full" style="width:100%"></div>
+              </div>
+              <div class="w-full bg-green-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:{{ pct }}%"></div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <p class="text-xs text-gray-400 mt-4 text-center">Averages across home service accounts on FieldSprout</p>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
-<section class="proof">
-  <ul class="stats">
-    <li><strong>+127%</strong> more reviews in 90 days</li>
-    <li><strong>4.8★</strong> average rating across clients</li>
-    <li><strong>89%</strong> response rate to automated requests</li>
-  </ul>
+<!-- How It Works -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">How FieldSprout builds your review profile on autopilot</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Most home service companies have 10x more happy customers than reviews. The gap isn't satisfaction — it's asking. FieldSprout handles the asking automatically.</p>
+    <div class="grid md:grid-cols-3 gap-8 mb-16">
+      {% for step, icon, color, title, desc in [
+        ('1', 'fa-wrench', 'blue', 'Job completed', 'Your tech marks the job complete in your CRM. FieldSprout detects the signal and queues a review request for the optimal send window.'),
+        ('2', 'fa-paper-plane', 'yellow', 'Request sent at peak moment', 'SMS and/or email sent 1–4 hours after completion — when satisfaction is highest. One tap takes the customer to their preferred platform.'),
+        ('3', 'fa-star', 'green', 'Review posted & responded to', 'New review appears on Google, Yelp, or Facebook. FieldSprout responds within minutes with a personalized, on-brand reply.'),
+      ] %}
+      <div class="text-center">
+        <div class="w-16 h-16 rounded-2xl bg-{{ color }}-100 flex items-center justify-center mx-auto mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600 text-2xl"></i>
+        </div>
+        <div class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Step {{ step }}</div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <h2 class="text-2xl font-bold text-gray-900 text-center mb-10">Everything in the Review Management tool</h2>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, desc in [
+        ('fa-paper-plane', 'blue', 'Automated SMS & email requests', 'Triggered by job completion in ServiceTitan, Housecall Pro, Jobber, or any CRM via webhook. No manual action needed.'),
+        ('fa-reply', 'indigo', 'AI review response drafts', 'Every review gets a unique response that matches tone (grateful, apologetic, brief) to the review content and job type.'),
+        ('fa-shield-halved', 'red', 'Reputation alert & escalation', 'A 1- or 2-star review triggers an instant alert. A private feedback flow gives unhappy customers a direct channel before they post publicly.'),
+        ('fa-brands fa-google', 'yellow', 'Multi-platform: Google, Yelp, Facebook', 'Customers choose their preferred platform. You get reviews where they matter most — weighted toward Google for map pack ranking.'),
+        ('fa-chart-line', 'green', 'Review velocity & rating tracking', 'Dashboard shows review count, average rating, and response rate over time. See which technicians generate the most reviews.'),
+        ('fa-robot', 'purple', 'Tech-level performance reports', 'Identify your top-rated technicians and share the patterns — messaging, timing, job types — that generate the best reviews.'),
+      ] %}
+      <div class="p-6 rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
 </section>
 
-<section class="features grid-2" id="features">
-  <div>
-    <h2>What's included</h2>
-    <ul class="checklist">
-      <li>Automated review requests via SMS & email after job completion</li>
-      <li>Multi-platform support: Google, Yelp, Facebook, industry sites</li>
-      <li>Smart timing: sends at optimal moment for maximum responses</li>
-      <li>One-click review flow: customers choose their preferred platform</li>
-      <li>Negative feedback filter: unhappy customers routed to private feedback</li>
-      <li>Review monitoring & response templates for quick replies</li>
-    </ul>
-  </div>
-  <div>
-    <h2>Why it works</h2>
-    <ul class="bullets">
-      <li><strong>Strike while it's fresh</strong> — request sent within hours of job completion</li>
-      <li><strong>Make it easy</strong> — one tap to leave review, no account needed</li>
-      <li><strong>Protect your reputation</strong> — catch issues before they go public</li>
-      <li><strong>Multi-platform</strong> — customers choose Google, Yelp, or Facebook</li>
-    </ul>
-  </div>
-</section>
-
-<section class="playbooks">
-  <h2>Built for home services</h2>
-  <div class="cards">
-    <article class="card"><h3>HVAC</h3><p>Request reviews after tune-ups, installations, and emergency repairs. Template messaging for maintenance vs. emergency scenarios.</p></article>
-    <article class="card"><h3>Plumbing</h3><p>Automated follow-up for drain cleaning, water heater installs, and leak repairs with trade-specific messaging.</p></article>
-    <article class="card"><h3>Electrical</h3><p>Review requests for panel upgrades, lighting installs, and emergency calls with safety-focused messaging.</p></article>
+<!-- Industry-specific -->
+<section class="py-16 bg-yellow-50">
+  <div class="container-lg">
+    <h2 class="text-2xl font-bold text-gray-900 text-center mb-10">Review messaging built for your trade</h2>
+    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {% for trade, icon, color, msg in [
+        ('HVAC', 'fa-temperature-half', 'orange', '"Thank you for trusting us with your comfort. We\'re glad the AC repair got you cool again! Your review helps other homeowners find us."'),
+        ('Plumbing', 'fa-faucet-drip', 'blue', '"So glad we could get your water back on quickly. Emergency calls like yours are exactly why we stay available 24/7. Thanks for the review!"'),
+        ('Electrical', 'fa-bolt', 'yellow', '"Your safety is our priority — thank you for letting us upgrade your panel. We appreciate you taking a moment to share your experience."'),
+        ('Roofing', 'fa-house-chimney', 'slate', '"Protecting your home starts with a solid roof. We\'re proud of the work we did and grateful for your trust. Thank you for the kind words!"'),
+      ] %}
+      <div class="bg-white rounded-xl border p-5">
+        <div class="w-8 h-8 rounded-lg bg-{{ color }}-100 flex items-center justify-center mb-3">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600 text-sm"></i>
+        </div>
+        <div class="font-semibold text-gray-900 text-sm mb-2">{{ trade }}</div>
+        <p class="text-xs text-gray-500 italic">{{ msg }}</p>
+      </div>
+      {% endfor %}
+    </div>
   </div>
 </section>
 
-<section class="cta center">
-  <a class="btn btn-primary" href="/signup">Start getting more reviews</a>
-  <p class="fine">Try it free. No credit card required.</p>
+<!-- Social Proof -->
+<section class="py-16 bg-white">
+  <div class="container-md">
+    <div class="grid md:grid-cols-3 gap-6">
+      {% for quote, name, co, result in [
+        ('"We went from 11 Google reviews to 187 in 4 months. We were doing great work but never asking. FieldSprout fixed that completely."', 'James T.', 'CoolBreeze HVAC', '11 → 187 reviews in 4 months'),
+        ('"A customer posted a 2-star review on a Saturday night. FieldSprout flagged it, drafted a response, and I approved it from my phone in 5 minutes. The customer updated to 4 stars."', 'Lynn P.', 'Harbor Plumbing', '2-star updated to 4-star'),
+        ('"Our Google rating went from 3.8 to 4.7 in six months. We didn\'t change anything except asking for reviews. The response templates are also fantastic."', 'Steve A.', 'Ace Electric', '3.8 → 4.7 star rating'),
+      ] %}
+      <div class="bg-gray-50 rounded-2xl p-6 border">
+        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
+        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
+        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
+        <div class="text-xs text-gray-500">{{ co }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
 </section>
+
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-yellow-500 to-amber-600 text-white">
+  <div class="container-md text-center">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Start collecting reviews from every job</h2>
+    <p class="text-yellow-100 text-lg mb-8 max-w-xl mx-auto">
+      Connect your CRM and FieldSprout starts sending review requests automatically. Most accounts triple their monthly review count within 60 days.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('auth_bp.register') %}
+      <a href="{{ url_for('auth_bp.register') }}" class="btn btn-secondary btn-lg">Start Free — No Credit Card</a>
+      {% else %}
+      <a href="/signup" class="btn btn-secondary btn-lg">Start Free — No Credit Card</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Pricing</a>
+    </div>
+  </div>
+</section>
+
 {% endblock %}

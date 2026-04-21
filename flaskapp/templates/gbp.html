@@ -1,35 +1,209 @@
 {% extends "base_public.html" %}
 {% set SECTION = 'products' %}
-{% block title %}Google Business Profile (GBP) — FieldSprout{% endblock %}
+{% block title %}Google Business Profile Management — Rank in the Map Pack | FieldSprout{% endblock %}
+{% block meta_description %}FieldSprout manages your Google Business Profile 24/7 — fixing listing health, posting AI-written updates, responding to reviews, and pushing you higher in Google's local map pack.{% endblock %}
+{% block og_title %}Google Business Profile Management for Home Services — FieldSprout{% endblock %}
+{% block og_description %}Get into the Google map pack and convert more local searches into calls. FieldSprout automates GBP posts, review responses, and listing health for HVAC, plumbing, electrical, and roofing companies.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Google Business Profile Management for Home Services",
+  "description": "AI-powered Google Business Profile optimization for home service businesses — rank higher in the map pack, respond to reviews, and convert more local searches.",
+  "url": "https://fieldsprout.io/products/gbp",
+  "breadcrumb": {
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://fieldsprout.io"},
+      {"@type": "ListItem", "position": 2, "name": "Products", "item": "https://fieldsprout.io/products/ads"},
+      {"@type": "ListItem", "position": 3, "name": "Google Business Profile", "item": "https://fieldsprout.io/products/gbp"}
+    ]
+  }
+}
+</script>
+{% endblock %}
+
 {% block content %}
-<section class="hero">
-  <h1>Rank in the map pack and convert more calls</h1>
-  <p class="sub">Listing health, reviews, posts, and AI replies tuned for home services.</p>
-  <div class="cta-row">
-    <a class="btn btn-primary" href="/demo">Get a pipeline demo</a>
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-blue-50 via-white to-indigo-50 pt-20 pb-16">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-3/5 mb-10 md:mb-0">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold mb-6">
+          <i class="fa-brands fa-google"></i> Google Business Profile
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+          Rank Higher in Google's<br>Map Pack — and Stay There
+        </h1>
+        <p class="text-xl text-gray-600 mb-8">
+          63% of local service calls start with a Google map search. FieldSprout keeps your
+          Google Business Profile fully optimized — fixing listing health issues, posting
+          weekly updates, and responding to every review with AI-crafted replies.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4">
+          {% if has_endpoint('auth_bp.register') %}
+          <a href="{{ url_for('auth_bp.register') }}" class="btn btn-primary btn-lg">Connect My GBP — Free</a>
+          {% else %}
+          <a href="/signup" class="btn btn-primary btn-lg">Connect My GBP — Free</a>
+          {% endif %}
+          <a href="/pricing" class="btn btn-secondary btn-lg">See Plans</a>
+        </div>
+        <p class="text-sm text-gray-500 mt-4">No credit card · Works with your existing profile</p>
+      </div>
+      <div class="md:w-2/5">
+        <div class="bg-white rounded-2xl shadow-card border p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-4">GBP Health — Before vs. After FieldSprout</div>
+          <div class="space-y-4">
+            {% for label, before, after, pct in [
+              ('Map Pack Position', '#7 avg', '#2 avg', 71),
+              ('Review Response Rate', '12%', '100%', 100),
+              ('Profile Completeness', '54%', '98%', 98),
+              ('Weekly Posts Published', '0/mo', '4/mo', 100),
+            ] %}
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="font-medium text-gray-700">{{ label }}</span>
+                <span class="text-green-600 font-bold">{{ before }} → {{ after }}</span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width:{{ pct }}%"></div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <p class="text-xs text-gray-400 mt-4 text-center">Averages across home service accounts on FieldSprout</p>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
-<section class="features grid-2">
-  <div>
-    <h2>Listing health score</h2>
-    <ul class="checklist">
-      <li>Categories, services, hours, service area ZIPs</li>
-      <li>NAP consistency and duplicate suppression</li>
-      <li>Photo cadence and post scheduling by season</li>
-    </ul>
-  </div>
-  <div>
-    <h2>AI review responses</h2>
-    <ul class="checklist">
-      <li>Tone for emergency vs. maintenance jobs</li>
-      <li>Escalation for service recovery</li>
-      <li>Review velocity targets by trade</li>
-    </ul>
+<!-- What We Do -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">Everything your GBP needs to rank and convert</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Most home service GBP profiles are 50–60% complete. Incomplete profiles rank lower, convert less, and lose jobs to fully optimized competitors.</p>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for icon, color, title, desc in [
+        ('fa-stethoscope', 'blue', 'Listing health audit & repair', 'We scan for missing categories, incomplete service lists, wrong hours, missing photos, and NAP inconsistencies — then fix them automatically.'),
+        ('fa-pen-to-square', 'indigo', 'Weekly AI-written posts', 'Consistent GBP posts are a ranking signal Google rewards. We publish 4–8 posts per month: seasonal offers, service spotlights, and local updates.'),
+        ('fa-star', 'yellow', 'Automated review responses', 'Every review gets a thoughtful, on-brand reply within hours — not days. AI tone matches the job type: emergency, maintenance, or installation.'),
+        ('fa-camera', 'green', 'Photo management & cadence', 'Fresh photos improve profile engagement by 35%. We prompt your team for new photos and schedule uploads to maintain regular activity.'),
+        ('fa-map-pin', 'red', 'Service area & ZIP optimization', 'Correctly defining your service area ZIPs signals to Google exactly where you operate — improving rank in the neighborhoods that matter most to you.'),
+        ('fa-chart-line', 'purple', 'Performance tracking dashboard', 'See your map pack position, profile views, call clicks, direction requests, and review velocity — all in one dashboard built for trades owners.'),
+      ] %}
+      <div class="p-6 rounded-2xl border border-gray-100 hover:border-{{ color }}-200 hover:shadow-soft transition">
+        <div class="w-10 h-10 rounded-xl bg-{{ color }}-100 flex items-center justify-center mb-4">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <h3 class="font-bold text-gray-900 mb-2">{{ title }}</h3>
+        <p class="text-sm text-gray-600">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
   </div>
 </section>
 
-<section class="cta center">
-  <a class="btn btn-primary" href="/account/gmb">Connect Google Business</a>
+<!-- Map Pack Ranking Factors -->
+<section class="py-16 bg-blue-50">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-1/2 mb-8 md:mb-0">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">The map pack ranking factors we optimize</h2>
+        <p class="text-gray-600 mb-6">
+          Google ranks local businesses in the map pack based on three core signals: Relevance,
+          Distance, and Prominence. FieldSprout works every angle — so when a homeowner searches
+          "HVAC repair near me," your profile comes up first.
+        </p>
+        <div class="space-y-4">
+          {% for factor, score, items in [
+            ('Relevance', '95', ['Correct primary/secondary categories', 'Complete services list with keywords', 'Accurate business description']),
+            ('Prominence', '88', ['Review volume and rating velocity', 'Regular posts and photo activity', 'Citation consistency across directories']),
+            ('Profile Completeness', '98', ['Hours, holiday hours, service area ZIPs', 'All photo categories filled', 'Q&A and attributes complete']),
+          ] %}
+          <div class="bg-white rounded-xl border p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-semibold text-gray-800">{{ factor }}</span>
+              <span class="text-green-600 font-bold text-sm">{{ score }}/100</span>
+            </div>
+            <ul class="space-y-1">
+              {% for item in items %}
+              <li class="text-xs text-gray-600 flex items-center gap-2"><i class="fa-solid fa-check text-green-500"></i>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="md:w-1/2">
+        <div class="bg-white rounded-2xl border shadow-soft p-6">
+          <div class="text-sm font-semibold text-gray-500 mb-5">What a fully optimized profile looks like</div>
+          <div class="space-y-3 text-sm">
+            {% for check, label in [
+              (True, '5 categories set (primary + 4 secondary)'),
+              (True, '18 services listed with descriptions'),
+              (True, 'Holiday hours updated quarterly'),
+              (True, '47 photos across all categories'),
+              (True, 'Weekly posts: offers, jobs, seasonal'),
+              (True, '100% review response rate'),
+              (True, '4.8★ with 214 reviews'),
+              (True, 'Service area: 23 ZIP codes defined'),
+              (True, 'Q&A: 12 common questions answered'),
+              (True, 'Attributes: licensed, insured, women-owned, etc.'),
+            ] %}
+            <div class="flex items-center gap-3">
+              <div class="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                <i class="fa-solid fa-check text-green-600 text-xs"></i>
+              </div>
+              <span class="text-gray-700">{{ label }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
+
+<!-- Social Proof -->
+<section class="py-16 bg-white">
+  <div class="container-md">
+    <div class="grid md:grid-cols-3 gap-6">
+      {% for quote, name, co, result in [
+        ('"We went from position 8 to position 2 in our market in 6 weeks. FieldSprout fixed things in our profile we didn\'t even know were wrong."', 'Phil A.', 'AirPro HVAC', 'From #8 to #2 in map pack'),
+        ('"We were responding to maybe 10% of reviews. Now every single review has a thoughtful reply within a few hours. Our rating went from 4.2 to 4.7."', 'Sarah J.', 'Hometown Plumbing', '4.2 → 4.7 star rating'),
+        ('"The weekly posts are something we always meant to do but never had time for. FieldSprout just handles it. Our profile views doubled in 3 months."', 'Doug M.', 'TruGreen Electric', '2x profile views in 90 days'),
+      ] %}
+      <div class="bg-gray-50 rounded-2xl p-6 border">
+        <div class="text-green-600 font-bold text-sm mb-3">{{ result }}</div>
+        <p class="text-gray-700 italic mb-4">{{ quote }}</p>
+        <div class="text-sm font-semibold text-gray-900">{{ name }}</div>
+        <div class="text-xs text-gray-500">{{ co }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
+  <div class="container-md text-center">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Start ranking higher in the map pack today</h2>
+    <p class="text-blue-100 text-lg mb-8 max-w-xl mx-auto">
+      Connect your Google Business Profile and let FieldSprout handle the optimization. Most accounts see measurable ranking improvements within 30 days.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('auth_bp.register') %}
+      <a href="{{ url_for('auth_bp.register') }}" class="btn btn-secondary btn-lg">Connect My GBP — Free</a>
+      {% else %}
+      <a href="/signup" class="btn btn-secondary btn-lg">Connect My GBP — Free</a>
+      {% endif %}
+      <a href="/pricing" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">View Pricing</a>
+    </div>
+  </div>
+</section>
+
 {% endblock %}

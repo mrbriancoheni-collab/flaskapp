@@ -96,15 +96,12 @@
       Try a Demo Report
     </h3>
     <p class="text-sm text-gray-600 mb-4">
-      Not ready to connect? See what the report looks like with sample data.
+      Not ready to connect? See what the report looks like with a sample HVAC account.
     </p>
-    <form method="post" action="{{ url_for('ads_grader_bp.analyze') }}">
-      <input type="hidden" name="customer_id" value="demo-123-456-7890">
-      <button type="submit"
-              class="px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition">
-        Generate Demo Report
-      </button>
-    </form>
+    <a href="{{ url_for('ads_grader_bp.demo') }}"
+       class="inline-block px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition">
+      View Demo Report
+    </a>
   </div>
 
   <!-- What We Analyze -->

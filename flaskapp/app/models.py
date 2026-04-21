@@ -398,6 +398,33 @@ class GeoPoint(db.Model):
         return f"<GeoPoint id={self.id} src={self.source!r} zip={self.zip!r}>"
 
 
+class AccountZipcode(db.Model):
+    """Zip codes an account targets for local advertising."""
+    __tablename__ = "account_zipcodes"
+
+    id = db.Column(Integer, primary_key=True)
+    account_id = db.Column(Integer, index=True, nullable=False)
+    zipcode = db.Column(String(16), nullable=False)
+    created_at = db.Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+
+class CampaignSelection(db.Model):
+    """Records a user's seasonal campaign template selections."""
+    __tablename__ = "campaign_selections"
+
+    id = db.Column(Integer, primary_key=True)
+    account_id = db.Column(Integer, index=True, nullable=False)
+    user_id = db.Column(Integer, index=True, nullable=False)
+    slug = db.Column(String(100), nullable=False)
+    title = db.Column(String(255), nullable=True)
+    notes = db.Column(Text, nullable=True)
+    ai_ideas = db.Column(JSONType, nullable=True)  # cached AI suggestions
+    status = db.Column(String(32), default="saved")  # saved, active, archived
+    created_at = db.Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+
 class CampaignUpload(db.Model):
     __tablename__ = "campaign_uploads"
 

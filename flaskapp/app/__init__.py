@@ -787,9 +787,9 @@ def create_app():
         app.logger.exception("Failed to register maps_bp")
 
     try:
-        from app.campaigns import campaigns_bp
-        app.register_blueprint(campaigns_bp, url_prefix="/account/campaigns")
-        app.logger.info("campaigns_bp registered at /account/campaigns")
+        from app.campaigns import campaigns_catalog_bp
+        app.register_blueprint(campaigns_catalog_bp)  # url_prefix set in blueprint
+        app.logger.info("campaigns_catalog_bp registered at /account/campaigns")
     except Exception:
         app.logger.exception("Failed to register campaigns_bp")
 
@@ -889,13 +889,12 @@ def create_app():
         app.logger.exception("Failed to register ads_grader_bp")
 
     # --- Facebook Ads Grader (free for all users) -----------------------------
-    # DISABLED: Pending Facebook app approval for business_management permission
-    # try:
-    #     from app.fb_ads_grader import fb_ads_grader_bp
-    #     app.register_blueprint(fb_ads_grader_bp)  # url_prefix set in blueprint (/account/fbads)
-    #     app.logger.info("fb_ads_grader_bp registered at /account/fbads")
-    # except Exception:
-    #     app.logger.exception("Failed to register fb_ads_grader_bp")
+    try:
+        from app.fb_ads_grader import fb_ads_grader_bp
+        app.register_blueprint(fb_ads_grader_bp)  # url_prefix=/ads-grader/facebook
+        app.logger.info("fb_ads_grader_bp registered at /ads-grader/facebook")
+    except Exception:
+        app.logger.exception("Failed to register fb_ads_grader_bp")
 
     # --- Daily Tasks & Health Score ------------------------------------------
     try:

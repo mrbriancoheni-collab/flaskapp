@@ -1,0 +1,168 @@
+{% extends "base_app.html" %}
+{% block title %}{{ campaign.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+
+  <!-- Breadcrumb -->
+  <nav class="text-sm text-gray-500 mb-4">
+    <a href="{{ url_for('google_bp.ads_campaigns') }}" class="hover:text-indigo-600">Campaigns</a>
+    <span class="mx-2">/</span>
+    <span class="text-gray-800 font-medium">{{ campaign.name }}</span>
+  </nav>
+
+  <!-- Header -->
+  <div class="flex items-start justify-between mb-6 gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">{{ campaign.name }}</h1>
+      <div class="flex items-center gap-3 mt-1 text-sm text-gray-500">
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold
+          {% if campaign.status == 'enabled' %}bg-green-100 text-green-700
+          {% elif campaign.status == 'paused' %}bg-yellow-100 text-yellow-700
+          {% else %}bg-red-100 text-red-700{% endif %}">
+          {{ campaign.status|title }}
+        </span>
+        {% if campaign.network %}<span>{{ campaign.network }}</span>{% endif %}
+        <span>${{ "%.2f"|format(campaign.daily_budget_cents / 100) }}/day</span>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="document.getElementById('editCampaignModal').classList.remove('hidden')"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
+        <i class="fa-solid fa-pen"></i> Edit
+      </button>
+      <form method="post" action="{{ url_for('google_bp.ads_campaign_delete', cid=campaign.id) }}"
+            onsubmit="return confirm('Delete this campaign and all its ad groups?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">
+          <i class="fa-solid fa-trash"></i> Delete
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Live Performance (if available) -->
+  {% if perf %}
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <div class="text-2xl font-bold text-indigo-600">{{ "{:,}".format(perf.get('clicks', 0)|int) }}</div>
+      <div class="text-xs text-gray-500 mt-1">Clicks (30d)</div>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <div class="text-2xl font-bold text-blue-600">{{ "{:,}".format(perf.get('impressions', 0)|int) }}</div>
+      <div class="text-xs text-gray-500 mt-1">Impressions (30d)</div>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <div class="text-2xl font-bold text-green-600">{{ "%.2f"|format(perf.get('ctr', 0)|float) }}%</div>
+      <div class="text-xs text-gray-500 mt-1">CTR</div>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <div class="text-2xl font-bold text-gray-700">${{ "%.2f"|format(perf.get('cost', 0)|float) }}</div>
+      <div class="text-xs text-gray-500 mt-1">Spend (30d)</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Ad Groups -->
+  <div class="bg-white rounded-xl border shadow-sm overflow-hidden mb-6">
+    <div class="flex items-center justify-between px-5 py-4 border-b">
+      <h2 class="font-semibold text-gray-900">Ad Groups ({{ ad_groups|length }})</h2>
+    </div>
+    {% if ad_groups %}
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50 border-b">
+        <tr>
+          <th class="px-4 py-3 text-left font-semibold text-gray-700">Name</th>
+          <th class="px-4 py-3 text-left font-semibold text-gray-700">Status</th>
+          <th class="px-4 py-3 text-right font-semibold text-gray-700">Max CPC</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ag in ad_groups %}
+        <tr class="odd:bg-white even:bg-gray-50 hover:bg-indigo-50">
+          <td class="px-4 py-3 font-medium text-gray-900">{{ ag.name }}</td>
+          <td class="px-4 py-3">
+            <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold
+              {% if ag.status == 'enabled' %}bg-green-100 text-green-700
+              {% elif ag.status == 'paused' %}bg-yellow-100 text-yellow-700
+              {% else %}bg-red-100 text-red-700{% endif %}">
+              {{ ag.status|title }}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-right text-gray-700">
+            {% if ag.max_cpc_cents %}${{ "%.2f"|format(ag.max_cpc_cents / 100) }}{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="py-10 text-center text-gray-500">No ad groups found.</div>
+    {% endif %}
+  </div>
+
+  <!-- Campaign Info -->
+  <div class="bg-white rounded-xl border shadow-sm p-5">
+    <h2 class="font-semibold mb-3">Campaign Details</h2>
+    <dl class="grid md:grid-cols-2 gap-3 text-sm">
+      <div><dt class="text-gray-500">ID</dt><dd class="font-mono">{{ campaign.id }}</dd></div>
+      {% if campaign.google_campaign_id %}
+      <div><dt class="text-gray-500">Google Campaign ID</dt><dd class="font-mono">{{ campaign.google_campaign_id }}</dd></div>
+      {% endif %}
+      {% if campaign.objective %}
+      <div><dt class="text-gray-500">Objective</dt><dd>{{ campaign.objective }}</dd></div>
+      {% endif %}
+      {% if campaign.language %}
+      <div><dt class="text-gray-500">Language</dt><dd>{{ campaign.language }}</dd></div>
+      {% endif %}
+      <div><dt class="text-gray-500">Created</dt><dd>{{ campaign.created_at.strftime('%b %d, %Y') }}</dd></div>
+      <div><dt class="text-gray-500">Updated</dt><dd>{{ campaign.updated_at.strftime('%b %d, %Y') }}</dd></div>
+    </dl>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editCampaignModal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/40"
+       onclick="document.getElementById('editCampaignModal').classList.add('hidden')"></div>
+  <div class="relative bg-white w-full max-w-md mx-4 rounded-2xl shadow-xl border overflow-hidden">
+    <div class="px-5 py-4 border-b flex items-center justify-between">
+      <div class="font-semibold text-lg">Edit Campaign</div>
+      <button class="p-2 hover:bg-gray-100 rounded-lg"
+              onclick="document.getElementById('editCampaignModal').classList.add('hidden')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <form method="post" action="{{ url_for('google_bp.ads_campaign_edit', cid=campaign.id) }}" class="p-5 space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div>
+        <label class="block text-sm font-medium mb-1">Campaign Name</label>
+        <input type="text" name="name" value="{{ campaign.name }}"
+               class="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Status</label>
+        <select name="status" class="w-full rounded-lg border px-3 py-2">
+          <option value="enabled" {% if campaign.status == 'enabled' %}selected{% endif %}>Enabled</option>
+          <option value="paused" {% if campaign.status == 'paused' %}selected{% endif %}>Paused</option>
+          <option value="removed" {% if campaign.status == 'removed' %}selected{% endif %}>Removed</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Daily Budget ($)</label>
+        <input type="number" name="daily_budget_cents" step="0.01" min="0"
+               value="{{ "%.2f"|format(campaign.daily_budget_cents / 100) }}"
+               class="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button type="button" class="px-4 py-2 rounded-lg border hover:bg-gray-50"
+                onclick="document.getElementById('editCampaignModal').classList.add('hidden')">Cancel</button>
+        <button type="submit" class="px-5 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 font-medium">
+          Save Changes
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

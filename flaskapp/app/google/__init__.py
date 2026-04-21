@@ -4601,37 +4601,38 @@ def ads_budget():
 
     if not setup_required and connected:
         try:
-            # Fetch budget groups
             with db.engine.connect() as conn:
+                # Fetch budget groups with campaign count
                 result = conn.execute(text("""
                     SELECT
                         g.*,
-                        COUNT(DISTINCT cgm.campaign_id) as campaign_count,
-                        COALESCE(SUM(cgm.current_month_spend), 0) as current_spend
+                        COUNT(DISTINCT cba.campaign_id) as campaign_count,
+                        COALESCE(
+                            (SELECT SUM(total_spend_cents)
+                             FROM campaign_budget_group_spend s
+                             WHERE s.budget_group_id = g.id
+                               AND s.period_month = DATE_FORMAT(NOW(), '%Y-%m-01')), 0
+                        ) as current_spend
                     FROM campaign_budget_groups g
-                    LEFT JOIN campaign_group_memberships cgm ON g.id = cgm.group_id
+                    LEFT JOIN campaign_budget_assignments cba ON g.id = cba.budget_group_id
                     WHERE g.account_id = :aid
                     GROUP BY g.id
                     ORDER BY g.priority DESC, g.name
                 """), {"aid": aid})
                 budget_groups = [dict(row._mapping) for row in result.fetchall()]
 
-            # Fetch all campaigns from ads data
-            ads_data = _get_ads_state(aid)
-            all_campaigns = ads_data.get("campaigns", [])
-
-            # Get assigned campaign IDs
-            with db.engine.connect() as conn:
+                # Get assignment map
                 result = conn.execute(text("""
-                    SELECT cgm.campaign_id, g.name as group_name
-                    FROM campaign_group_memberships cgm
-                    JOIN campaign_budget_groups g ON cgm.group_id = g.id
+                    SELECT cba.campaign_id, g.name as group_name
+                    FROM campaign_budget_assignments cba
+                    JOIN campaign_budget_groups g ON cba.budget_group_id = g.id
                     WHERE g.account_id = :aid
                 """), {"aid": aid})
-                assigned_map = {row.campaign_id: row.group_name for row in result.fetchall()}
+                assigned_map = {str(row.campaign_id): row.group_name for row in result.fetchall()}
 
-            # Build campaigns list with group info
-            for c in all_campaigns:
+            # Fetch all campaigns from ads data
+            ads_data = _get_ads_state(aid)
+            for c in ads_data.get("campaigns", []):
                 campaign = {
                     "id": c.get("id"),
                     "name": c.get("name"),
@@ -10774,15 +10775,74 @@ def ads_campaign_new():
     """Legacy endpoint - redirects to wizard"""
     return redirect(url_for('google_bp.ads_campaign_wizard'))
 
+
+@google_bp.route("/ads/campaign/<int:cid>", methods=["GET"], endpoint="ads_campaign_detail")
+@login_required
+def ads_campaign_detail(cid: int):
+    """Campaign detail page — shows ad groups, recent performance, and edit form."""
+    from app.models_ads import AdsCampaign, AdsAdGroup
+    aid = current_account_id()
+    campaign = AdsCampaign.query.filter_by(id=cid, account_id=aid).first_or_404()
+    ad_groups = AdsAdGroup.query.filter_by(campaign_id=cid).order_by(AdsAdGroup.name).all()
+
+    # Try to pull live 30-day metrics from session cache
+    perf = {}
+    try:
+        state = _get_ads_state(aid)
+        for c in state.get("campaigns", []):
+            if str(c.get("id")) == str(campaign.google_campaign_id):
+                perf = c
+                break
+    except Exception:
+        pass
+
+    return render_template(
+        "google/campaign_detail.html",
+        campaign=campaign,
+        ad_groups=ad_groups,
+        perf=perf,
+    )
+
+
 @google_bp.route("/ads/campaign/<int:cid>/edit", methods=["POST"], endpoint="ads_campaign_edit")
 @login_required
 def ads_campaign_edit(cid: int):
-    return _ads_not_implemented()
+    """Update campaign name, budget, and status from the edit form."""
+    from app.models_ads import AdsCampaign
+    aid = current_account_id()
+    campaign = AdsCampaign.query.filter_by(id=cid, account_id=aid).first_or_404()
+
+    name = (request.form.get("name") or "").strip()
+    status = request.form.get("status", campaign.status).strip()
+    daily_budget_raw = request.form.get("daily_budget_cents", "")
+
+    if name:
+        campaign.name = name
+    if status in ("enabled", "paused", "removed"):
+        campaign.status = status
+    if daily_budget_raw:
+        try:
+            campaign.daily_budget_cents = int(float(daily_budget_raw) * 100)
+        except ValueError:
+            pass
+
+    db.session.commit()
+    flash(f"Campaign '{campaign.name}' updated.", "success")
+    return redirect(url_for("google_bp.ads_campaign_detail", cid=cid))
+
 
 @google_bp.route("/ads/campaign/<int:cid>/delete", methods=["POST"], endpoint="ads_campaign_delete")
 @login_required
 def ads_campaign_delete(cid: int):
-    return _ads_not_implemented()
+    """Delete a campaign (and its ad groups/ads/keywords via cascade)."""
+    from app.models_ads import AdsCampaign
+    aid = current_account_id()
+    campaign = AdsCampaign.query.filter_by(id=cid, account_id=aid).first_or_404()
+    name = campaign.name
+    db.session.delete(campaign)
+    db.session.commit()
+    flash(f"Campaign '{name}' deleted.", "success")
+    return redirect(url_for("google_bp.ads_campaigns"))
 
 @google_bp.route("/ads/adgroup/new/<int:cid>", methods=["POST"], endpoint="ads_adgroup_new")
 @login_required

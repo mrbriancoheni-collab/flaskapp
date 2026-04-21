@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 fb_ads_grader_bp = Blueprint(
     "fb_ads_grader_bp",
     __name__,
-    url_prefix="/account/fbads",
+    url_prefix="/ads-grader/facebook",
     template_folder="templates",
 )
 

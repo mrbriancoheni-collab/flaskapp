@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from urllib.parse import urlencode, urlparse, parse_qs
 import requests
 from bs4 import BeautifulSoup
+from app.services.serpapi_scraper import should_exclude_domain
 
 logger = logging.getLogger(__name__)
 
@@ -234,7 +235,7 @@ class GoogleSerpScraper:
                     href = link.get('href', '')
                     if href and not href.startswith('#'):
                         extracted = self._extract_domain(href)
-                        if extracted and 'google.com' not in extracted:
+                        if extracted and not should_exclude_domain(extracted):
                             domain = extracted
                             break
 

@@ -43,8 +43,9 @@ def should_exclude_domain(url_or_domain: str) -> bool:
     if domain.endswith('.org') or '.org/' in domain:
         return True
 
-    # Check for review/aggregator sites
+    # Check for review/aggregator/social/forum sites
     excluded_domains = [
+        # Review & aggregator sites
         'yelp.com', 'yelp.',
         'yellowpages.com', 'yellowpages.',
         'thumbtack.com', 'thumbtack.',
@@ -54,10 +55,39 @@ def should_exclude_domain(url_or_domain: str) -> bool:
         'porch.com', 'porch.',
         'houzz.com', 'houzz.',
         'nextdoor.com', 'nextdoor.',
+        'bark.com', 'bark.',
+        'networx.com',
+        'fixr.com',
+        'tasker.com',
+        'tripadvisor.com', 'tripadvisor.',
+        'trustpilot.com', 'trustpilot.',
+        'glassdoor.com', 'glassdoor.',
+        'indeed.com', 'indeed.',
+        'manta.com', 'manta.',
+        'superpages.com',
+        'mapquest.com',
+        'whitepages.com',
+        # Social media
         'facebook.com', 'facebook.',
         'instagram.com', 'instagram.',
         'twitter.com', 'twitter.',
-        'linkedin.com', 'linkedin.'
+        'x.com/x.',
+        'linkedin.com', 'linkedin.',
+        'reddit.com', 'reddit.',
+        'quora.com', 'quora.',
+        'tiktok.com', 'tiktok.',
+        'pinterest.com', 'pinterest.',
+        'snapchat.com', 'snapchat.',
+        'youtube.com', 'youtube.',
+        # Search engines / tech giants (appear in organic results)
+        'google.com', 'google.',
+        'bing.com', 'bing.',
+        'maps.google.',
+        # News & general content
+        'wikipedia.org', 'wikipedia.',
+        'wikihow.com',
+        'forbes.com',
+        'inc.com',
     ]
 
     for excluded in excluded_domains:

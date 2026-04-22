@@ -120,8 +120,10 @@ def create_app():
     # (Optional) .env - load from explicit path for Passenger/production compatibility
     try:
         from dotenv import load_dotenv
-        # Look for .env in the parent directory of this file (flaskapp root)
-        env_path = Path(__file__).resolve().parent.parent / '.env'
+        # Check project root (/home/fieldsprout/flaskapp/.env) then flaskapp/ subdir
+        env_path = Path(__file__).resolve().parent.parent.parent / '.env'
+        if not env_path.exists():
+            env_path = Path(__file__).resolve().parent.parent / '.env'
         if env_path.exists():
             load_dotenv(env_path)
             app.logger.debug(f"Loaded .env from {env_path}")

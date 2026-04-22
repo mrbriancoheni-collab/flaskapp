@@ -6,6 +6,9 @@ class Config:
     # otherwise let the default from create_app() remain.
     _db_uri = os.environ.get("SQLALCHEMY_DATABASE_URI")
     if _db_uri:
+        # Some pymysql versions don't recognise 'utf8mb4' as a charset name;
+        # swap it for 'utf8' which pymysql maps to utf8mb4 internally.
+        _db_uri = _db_uri.replace("charset=utf8mb4", "charset=utf8")
         SQLALCHEMY_DATABASE_URI = _db_uri
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 

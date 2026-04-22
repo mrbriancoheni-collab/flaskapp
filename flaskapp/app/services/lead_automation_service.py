@@ -680,22 +680,19 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
         )
 
         # Cache sequences per campaign (keyed by campaign.id or None).
-        # Falls back to the primary sequence (id=1) if no campaign-specific one exists.
         sequence_cache: Dict = {}
-        _primary_seq: list = [None]  # lazy singleton
-
-        def _primary_sequence():
-            if _primary_seq[0] is None:
-                _primary_seq[0] = EmailSequence.query.get(1)
-            return _primary_seq[0]
 
         def _get_sequence(campaign):
             cid = campaign.id if campaign else None
             if cid not in sequence_cache:
-                seq = EmailSequence.query.filter_by(
-                    campaign_id=cid, step_number=1, is_active=True
-                ).first() if cid else None
-                sequence_cache[cid] = seq or _primary_sequence()
+                if campaign:
+                    # Creates a default sequence for this campaign if none exists
+                    sequence_cache[cid] = self._ensure_campaign_has_sequence(campaign)
+                else:
+                    # No campaign: use any global sequence (campaign_id IS NULL)
+                    sequence_cache[cid] = EmailSequence.query.filter_by(
+                        campaign_id=None, step_number=1, is_active=True
+                    ).first()
             return sequence_cache[cid]
 
         # ── Primary path: LeadContact records with pending status ─────────────

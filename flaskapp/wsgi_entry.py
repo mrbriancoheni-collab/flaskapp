@@ -47,7 +47,10 @@ except Exception:
     pass
 
 # ---- Load .env ---------------------------------------------------------------
-_env_file = os.path.join(APP_ROOT, ".env")
+# Check project root first (/home/fieldsprout/flaskapp/.env), then APP_ROOT
+_env_file = os.path.join(os.path.dirname(APP_ROOT), ".env")
+if not os.path.exists(_env_file):
+    _env_file = os.path.join(APP_ROOT, ".env")
 if os.path.exists(_env_file):
     with open(_env_file) as _ef:
         for _line in _ef:

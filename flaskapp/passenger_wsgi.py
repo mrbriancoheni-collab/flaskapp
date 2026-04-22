@@ -55,8 +55,10 @@ def load_env_file(env_path):
                         if key and not os.environ.get(key):
                             os.environ[key] = value
 
-# Load .env file - check project root first, then same directory as this file
-env_file = os.path.join(os.path.dirname(APP_ROOT), '.env')
+# Load .env - check home dir, then project root, then app dir
+env_file = os.path.join(os.path.dirname(os.path.dirname(APP_ROOT)), '.env')
+if not os.path.exists(env_file):
+    env_file = os.path.join(os.path.dirname(APP_ROOT), '.env')
 if not os.path.exists(env_file):
     env_file = os.path.join(APP_ROOT, '.env')
 load_env_file(env_file)

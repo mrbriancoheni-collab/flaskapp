@@ -80,6 +80,24 @@ _GENERIC_LOCAL_PARTS = {
     'media',
 }
 
+# Domains that are never legitimate business email senders — social media,
+# forums, aggregators, search engines, and review sites.
+_NONCOMPANY_DOMAINS = {
+    # Social media / forums
+    'reddit.com', 'quora.com', 'tiktok.com', 'pinterest.com',
+    'snapchat.com', 'youtube.com', 'tumblr.com', 'twitter.com', 'x.com',
+    'facebook.com', 'instagram.com', 'linkedin.com',
+    # Review / aggregator / directory sites
+    'yelp.com', 'tripadvisor.com', 'trustpilot.com', 'glassdoor.com',
+    'yellowpages.com', 'whitepages.com', 'manta.com', 'superpages.com',
+    'angi.com', 'angieslist.com', 'homeadvisor.com', 'thumbtack.com',
+    'bark.com', 'houzz.com', 'porch.com', 'nextdoor.com', 'bbb.org',
+    # Search engines / tech giants
+    'google.com', 'bing.com', 'yahoo.com', 'duckduckgo.com',
+    # General content / news
+    'wikipedia.org', 'wikihow.com', 'forbes.com', 'inc.com',
+}
+
 # Minimum acceptable length for the local part (before @)
 _MIN_LOCAL_LENGTH = 2
 
@@ -93,12 +111,13 @@ def validate_email_for_outreach(email: str) -> tuple:
         reason is '' when valid, a short error code when invalid.
 
     Error codes:
-        'empty'            — blank or None
-        'bad_format'       — fails basic RFC structure check
-        'free_domain'      — consumer domain (gmail, yahoo, etc.)
-        'typo_free_domain' — looks like a typo of a free domain (yaho.com, gmial.com)
-        'generic_local'    — role-based address (info@, admin@, etc.)
-        'local_too_short'  — local part too short to be a real person
+        'empty'             — blank or None
+        'bad_format'        — fails basic RFC structure check
+        'noncompany_domain' — social media, review site, aggregator, search engine
+        'free_domain'       — consumer domain (gmail, yahoo, etc.)
+        'typo_free_domain'  — looks like a typo of a free domain (yaho.com, gmial.com)
+        'generic_local'     — role-based address (info@, admin@, etc.)
+        'local_too_short'   — local part too short to be a real person
     """
     if not email or not email.strip():
         return False, 'empty'
@@ -112,7 +131,11 @@ def validate_email_for_outreach(email: str) -> tuple:
 
     local, domain = email.rsplit('@', 1)
 
-    # 2. Free/consumer email domain (exact match)
+    # 2. Non-company domain (social media, review sites, aggregators, etc.)
+    if domain in _NONCOMPANY_DOMAINS:
+        return False, 'noncompany_domain'
+
+    # 2b. Free/consumer email domain (exact match)
     if domain in _FREE_DOMAINS:
         return False, 'free_domain'
 

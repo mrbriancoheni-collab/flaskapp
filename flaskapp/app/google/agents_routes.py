@@ -7,7 +7,7 @@ from sqlalchemy import text
 from datetime import datetime
 
 from app import db
-from app.auth.utils import login_required, current_account_id
+from app.auth.utils import login_required, ajax_login_required, current_account_id
 
 agents_bp = Blueprint("agents_bp", __name__, url_prefix="/account/google/ads/agents")
 
@@ -883,7 +883,7 @@ def dashboard():
 
 
 @agents_bp.route("/api/decisions/<int:decision_id>/approve", methods=["POST"])
-@login_required
+@ajax_login_required
 def approve_decision(decision_id):
     """Approve a pending agent decision and execute it."""
     from flask import current_app
@@ -961,34 +961,38 @@ def approve_decision(decision_id):
 
 
 @agents_bp.route("/api/decisions/<int:decision_id>/reject", methods=["POST"])
-@login_required
+@ajax_login_required
 def reject_decision(decision_id):
     """Reject a pending agent decision."""
-    account_id = current_account_id()
+    try:
+        account_id = current_account_id()
 
-    reason = request.json.get("reason", "User rejected") if request.is_json else "User rejected"
+        reason = request.json.get("reason", "User rejected") if request.is_json else "User rejected"
 
-    query = text("""
-        UPDATE agent_decisions
-        SET status = 'rejected',
-            execution_result = :reason,
-            updated_at = NOW()
-        WHERE id = :decision_id
-          AND account_id = :account_id
-          AND status = 'pending'
-    """)
+        query = text("""
+            UPDATE agent_decisions
+            SET status = 'rejected',
+                execution_result = :reason,
+                updated_at = NOW()
+            WHERE id = :decision_id
+              AND account_id = :account_id
+              AND status = 'pending'
+        """)
 
-    with db.engine.begin() as conn:
-        result = conn.execute(query, {
-            "decision_id": decision_id,
-            "account_id": account_id,
-            "reason": reason
-        })
+        with db.engine.begin() as conn:
+            result = conn.execute(query, {
+                "decision_id": decision_id,
+                "account_id": account_id,
+                "reason": reason
+            })
 
-        if result.rowcount == 0:
-            return jsonify({"success": False, "error": "Decision not found or already processed"}), 404
+            if result.rowcount == 0:
+                return jsonify({"success": False, "error": "Decision not found or already processed"}), 404
 
-    return jsonify({"success": True, "message": "Decision rejected"})
+        return jsonify({"success": True, "message": "Decision rejected"})
+    except Exception as e:
+        current_app.logger.error(f"Error rejecting decision {decision_id}: {e}", exc_info=True)
+        return jsonify({"success": False, "error": "Server error rejecting decision"}), 500
 
 
 @agents_bp.route("/api/decisions/auto-execute-low-risk", methods=["POST"])

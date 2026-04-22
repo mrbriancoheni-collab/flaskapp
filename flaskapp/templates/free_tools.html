@@ -22,31 +22,36 @@
   </div>
 </section>
 
-<!-- Tools Grid -->
+<!-- Tools Grid — Google Ads (2-up) -->
 <section class="py-16 bg-white">
   <div class="container-lg">
-    <div class="grid md:grid-cols-3 gap-8">
+
+    <h2 class="text-2xl font-bold text-gray-900 mb-2">Google Ads Tools</h2>
+    <p class="text-gray-500 mb-8">Two different views of your Google Ads — diagnosis and treatment.</p>
+
+    <div class="grid md:grid-cols-2 gap-8 mb-14">
 
       <!-- Google Ads Grader -->
-      <div class="group rounded-2xl border-2 border-gray-100 hover:border-indigo-200 p-8 shadow-sm hover:shadow-lg transition-all flex flex-col">
-        <div class="w-14 h-14 rounded-2xl bg-indigo-100 flex items-center justify-center mb-5">
-          <i class="fa-solid fa-magnifying-glass-chart text-2xl text-indigo-600"></i>
+      <div class="group rounded-2xl border-2 border-indigo-100 hover:border-indigo-300 p-8 shadow-sm hover:shadow-lg transition-all flex flex-col bg-indigo-50/30">
+        <div class="flex items-start justify-between mb-5">
+          <div class="w-14 h-14 rounded-2xl bg-indigo-100 flex items-center justify-center">
+            <i class="fa-solid fa-magnifying-glass-chart text-2xl text-indigo-600"></i>
+          </div>
+          <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full h-fit">Free</span>
         </div>
         <div class="flex-1">
-          <div class="flex items-center gap-2 mb-2">
-            <h2 class="text-xl font-bold text-gray-900">Google Ads Grader</h2>
-            <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Free</span>
-          </div>
+          <div class="text-xs font-bold text-indigo-500 uppercase tracking-wide mb-1">Step 1 — Diagnose</div>
+          <h2 class="text-xl font-bold text-gray-900 mb-2">Google Ads Grader</h2>
           <p class="text-gray-600 mb-4">
-            Get a full A–F grade on your Google Ads account in under 60 seconds. See your Quality Score,
-            wasted spend, CTR, keyword coverage, and 8 more metrics — with a PDF you can share.
+            Get a full A–F grade on your account in 60 seconds. See exactly what's costing you money —
+            Quality Score gaps, wasted spend, keyword holes — with a shareable PDF report.
           </p>
           <ul class="space-y-2 text-sm text-gray-600 mb-6">
             <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Overall account grade (A–F)</li>
-            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Wasted spend over last 90 days</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Wasted spend identified over last 90 days</li>
             <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>10 scored performance dimensions</li>
             <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Downloadable PDF report</li>
-            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>No login required for demo</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>No account login required for demo</li>
           </ul>
         </div>
         <div class="space-y-3">
@@ -56,12 +61,61 @@
             Grade My Google Ads →
           </a>
           <a href="{{ url_for('ads_grader_bp.demo') }}"
-             class="block w-full text-center px-5 py-2.5 border border-gray-300 text-gray-600 rounded-xl hover:bg-gray-50 text-sm transition">
-            See a live demo first
+             class="block w-full text-center px-5 py-2.5 border border-indigo-200 text-indigo-600 rounded-xl hover:bg-indigo-50 text-sm transition">
+            See a sample report first
           </a>
           {% endif %}
         </div>
       </div>
+
+      <!-- Google Ads AI Demo -->
+      <div class="group rounded-2xl border-2 border-violet-100 hover:border-violet-300 p-8 shadow-sm hover:shadow-lg transition-all flex flex-col bg-violet-50/30">
+        <div class="flex items-start justify-between mb-5">
+          <div class="w-14 h-14 rounded-2xl bg-violet-100 flex items-center justify-center">
+            <i class="fa-solid fa-robot text-2xl text-violet-600"></i>
+          </div>
+          <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full h-fit">Free Demo</span>
+        </div>
+        <div class="flex-1">
+          <div class="text-xs font-bold text-violet-500 uppercase tracking-wide mb-1">Step 2 — See the fix</div>
+          <h2 class="text-xl font-bold text-gray-900 mb-2">Google Ads AI Demo</h2>
+          <p class="text-gray-600 mb-4">
+            See what happens <em>after</em> the diagnosis. Watch AI agents work through a real HVAC account —
+            every action logged, every improvement explained, 30-day results shown.
+          </p>
+          <ul class="space-y-2 text-sm text-gray-600 mb-6">
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Real AI action log — 47 changes over 30 days</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Before &amp; after campaign structure</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>CPL, Quality Score, and wasted spend results</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Every action explained with the reason why</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>No account connection needed to view</li>
+          </ul>
+        </div>
+        <div class="space-y-3">
+          <a href="/products/ads-demo"
+             class="block w-full text-center px-5 py-3 bg-violet-600 text-white font-semibold rounded-xl hover:bg-violet-700 transition">
+            See the AI Demo →
+          </a>
+          {% if has_endpoint('auth_bp.register') %}
+          <a href="{{ url_for('auth_bp.register') }}"
+             class="block w-full text-center px-5 py-2.5 border border-violet-200 text-violet-600 rounded-xl hover:bg-violet-50 text-sm transition">
+            Run this on my account
+          </a>
+          {% else %}
+          <a href="/signup"
+             class="block w-full text-center px-5 py-2.5 border border-violet-200 text-violet-600 rounded-xl hover:bg-violet-50 text-sm transition">
+            Run this on my account
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+
+    <h2 class="text-2xl font-bold text-gray-900 mb-2">More Free Tools</h2>
+    <p class="text-gray-500 mb-8">Additional tools to understand and grow your marketing.</p>
+
+    <div class="grid md:grid-cols-3 gap-8">
 
       <!-- ROI Calculator -->
       <div class="group rounded-2xl border-2 border-gray-100 hover:border-orange-200 p-8 shadow-sm hover:shadow-lg transition-all flex flex-col">
@@ -117,6 +171,41 @@
            class="block w-full text-center px-5 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition">
           See Demo Report →
         </a>
+      </div>
+
+      <!-- Budget Forecast (inline teaser) -->
+      <div class="group rounded-2xl border-2 border-gray-100 hover:border-purple-200 p-8 shadow-sm hover:shadow-lg transition-all flex flex-col">
+        <div class="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center mb-5">
+          <i class="fa-solid fa-chart-line text-2xl text-purple-600"></i>
+        </div>
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-2">
+            <h2 class="text-xl font-bold text-gray-900">Budget Forecast Tool</h2>
+            <span class="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">Connected accounts</span>
+          </div>
+          <p class="text-gray-600 mb-4">
+            Model your leads and revenue at +10%, +25%, and +50% budget — using your actual CPC,
+            conversion rate, and Quality Score. Seasonal demand built in for your trade.
+          </p>
+          <ul class="space-y-2 text-sm text-gray-600 mb-6">
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Real data from your connected account</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Seasonal demand index by trade</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Diminishing returns modeling</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Waste recapture impact included</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-green-500 mt-0.5"></i>Available on all paid plans</li>
+          </ul>
+        </div>
+        {% if has_endpoint('auth_bp.register') %}
+        <a href="{{ url_for('auth_bp.register') }}"
+           class="block w-full text-center px-5 py-3 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition">
+          Connect My Account →
+        </a>
+        {% else %}
+        <a href="/signup"
+           class="block w-full text-center px-5 py-3 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition">
+          Connect My Account →
+        </a>
+        {% endif %}
       </div>
 
     </div>

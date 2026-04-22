@@ -259,7 +259,7 @@
         <i class="fa-solid fa-chart-pie text-indigo-600 mr-2"></i>
         Account Diagnostics
       </h2>
-      <i id="accountDiagnosticsChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl transition-transform duration-300"></i>
+      <i id="accountDiagnosticsChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl accordion-chevron"></i>
     </button>
 
     <div id="accountDiagnosticsContent" class="hidden">
@@ -310,7 +310,7 @@
         <i class="fa-solid fa-sliders text-indigo-600 mr-2"></i>
         Performance Analysis
       </h2>
-      <i id="performanceAnalysisChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl transition-transform duration-300"></i>
+      <i id="performanceAnalysisChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl accordion-chevron"></i>
     </button>
 
     <div id="performanceAnalysisContent" class="hidden">
@@ -367,7 +367,7 @@
         <i class="fa-solid fa-check-circle text-indigo-600 mr-2"></i>
         Best Practices Checklist
       </h2>
-      <i id="bestPracticesChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl transition-transform duration-300"></i>
+      <i id="bestPracticesChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl accordion-chevron"></i>
     </button>
 
     <div id="bestPracticesContent" class="hidden">
@@ -748,7 +748,7 @@
         <i class="fa-solid fa-chart-bar text-indigo-600 mr-2"></i>
         Performance Charts
       </h2>
-      <i id="performanceChartsChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl transition-transform duration-300"></i>
+      <i id="performanceChartsChevron" class="fa-solid fa-chevron-down text-gray-600 text-xl accordion-chevron"></i>
     </button>
 
     <div id="performanceChartsContent" class="hidden">
@@ -833,6 +833,10 @@
 {% endblock %}
 
 {% block body_extra %}
+<style>
+  .accordion-chevron { transition: transform 0.3s ease; display: inline-block; }
+  .accordion-chevron.open { transform: rotate(180deg); }
+</style>
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script nonce="{{ g.csp_nonce }}">
@@ -843,10 +847,10 @@ function toggleAccordion(contentId, chevronId) {
 
   if (content.classList.contains('hidden')) {
     content.classList.remove('hidden');
-    chevron.classList.add('rotate-180');
+    chevron.classList.add('open');
   } else {
     content.classList.add('hidden');
-    chevron.classList.remove('rotate-180');
+    chevron.classList.remove('open');
   }
 }
 
@@ -869,6 +873,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   {% if report.detailed_metrics %}
+  if (typeof Chart === 'undefined') return; // Chart.js not loaded
 
   // Quality Score Distribution Chart
   {% if report.detailed_metrics.get('quality_score_distribution') %}

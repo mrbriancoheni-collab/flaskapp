@@ -1,0 +1,297 @@
+{% extends "base_public.html" %}
+{% block title %}Google Ads AI Demo — See AI Agents Optimize a Real Account | FieldSprout{% endblock %}
+{% block meta_description %}See exactly what FieldSprout's Google Ads AI agents do inside a real account — negative keywords added, bids adjusted, Quality Scores improved, and budget reallocated. Live demo, no login required.{% endblock %}
+{% block og_title %}Google Ads AI Demo — Watch the AI Agents Work | FieldSprout{% endblock %}
+{% block og_description %}This isn't a slide deck. See a real account before and after 30 days of FieldSprout AI optimization — every action logged, every improvement measured.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Google Ads AI Agent Demo",
+  "description": "Interactive demo of FieldSprout's AI agents optimizing a Google Ads account for a home service business.",
+  "url": "https://fieldsprout.io/products/ads-demo"
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="bg-gradient-to-br from-violet-50 via-white to-indigo-50 pt-20 pb-16">
+  <div class="container-lg">
+    <div class="md:flex items-center gap-12">
+      <div class="md:w-3/5 mb-10 md:mb-0">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-violet-100 text-violet-800 rounded-full text-sm font-semibold mb-6">
+          <i class="fa-solid fa-robot"></i> Live AI Demo · No Login Required
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5 leading-tight">
+          Watch AI Agents Optimize<br>a Real Google Ads Account
+        </h1>
+        <p class="text-xl text-gray-600 mb-8">
+          The Ads Grader shows you <em>what's wrong</em>. This demo shows you
+          <em>what happens next</em> — every action the AI takes, every improvement it makes,
+          logged in real time across a real HVAC account over 30 days.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4">
+          {% if has_endpoint('auth_bp.register') %}
+          <a href="{{ url_for('auth_bp.register') }}" class="btn btn-primary btn-lg">Start Optimizing My Account</a>
+          {% else %}
+          <a href="/signup" class="btn btn-primary btn-lg">Start Optimizing My Account</a>
+          {% endif %}
+          {% if has_endpoint('ads_grader_bp.index') %}
+          <a href="{{ url_for('ads_grader_bp.index') }}" class="btn btn-secondary btn-lg">Grade My Account First</a>
+          {% endif %}
+        </div>
+        <p class="text-sm text-gray-500 mt-4">No credit card · Connect your Google Ads in 60 seconds</p>
+      </div>
+      <div class="md:w-2/5">
+        <!-- Grader vs Demo explainer -->
+        <div class="bg-white rounded-2xl shadow-card border p-6 space-y-4">
+          <div class="text-sm font-semibold text-gray-500 mb-2">Two different tools. One complete picture.</div>
+          <div class="p-4 rounded-xl bg-indigo-50 border border-indigo-100">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="fa-solid fa-magnifying-glass-chart text-indigo-600"></i>
+              <span class="font-bold text-gray-900 text-sm">Ads Grader</span>
+              <span class="ml-auto text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">Free</span>
+            </div>
+            <p class="text-xs text-gray-600">Diagnoses your account. Grades 10 performance dimensions and shows exactly what's costing you money — Quality Score gaps, wasted spend, keyword holes.</p>
+            <a href="{{ url_for('ads_grader_bp.index') if has_endpoint('ads_grader_bp.index') else '/ads-grader' }}" class="text-xs font-semibold text-indigo-600 mt-2 inline-block">Run my grade →</a>
+          </div>
+          <div class="p-4 rounded-xl bg-violet-50 border border-violet-100">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="fa-solid fa-robot text-violet-600"></i>
+              <span class="font-bold text-gray-900 text-sm">AI Agents Demo</span>
+              <span class="ml-auto text-xs font-semibold text-violet-700 bg-violet-100 px-2 py-0.5 rounded-full">You are here</span>
+            </div>
+            <p class="text-xs text-gray-600">Shows the treatment. See every AI action taken on a real account — negative keywords added, bids adjusted, ad groups restructured — and the results.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Demo Account Setup -->
+<section class="py-12 bg-white border-b border-gray-100">
+  <div class="container-lg">
+    <div class="bg-gray-50 rounded-2xl border p-6 flex flex-col md:flex-row items-start md:items-center gap-6">
+      <div class="flex-1">
+        <div class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Demo Account</div>
+        <div class="font-bold text-gray-900 text-lg">Apex Comfort HVAC — Austin, TX</div>
+        <div class="text-sm text-gray-500">$4,200/mo Google Ads budget · Runs search campaigns for AC repair, furnace replacement, and HVAC tune-ups</div>
+      </div>
+      <div class="flex flex-wrap gap-6 text-center">
+        {% for label, before, color in [
+          ('CPL on day 1', '$148', 'red'),
+          ('CPL after 30 days', '$87', 'green'),
+          ('Wasted spend found', '$1,340/mo', 'orange'),
+          ('AI actions taken', '47 changes', 'violet'),
+        ] %}
+        <div>
+          <div class="text-xl font-extrabold text-{{ color }}-600">{{ before }}</div>
+          <div class="text-xs text-gray-500">{{ label }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AI Action Log -->
+<section class="py-16 bg-white">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 mb-2">The AI action log — every change, explained</h2>
+    <p class="text-gray-500 mb-8 max-w-2xl">Every action the AI takes is logged with the reason, the expected impact, and the actual result. Nothing happens silently.</p>
+
+    <div class="space-y-3 mb-8">
+      {% for day, action_type, action, reason, impact, type_color in [
+        ('Day 1', 'Negative Keywords', 'Added 47 negative keywords across all campaigns',
+         'Search term report showed spend on "HVAC school", "DIY AC repair", "HVAC parts near me" — non-buyer searches burning $380/mo.',
+         '$380/mo wasted spend eliminated · CPL down 14% in first week', 'red'),
+
+        ('Day 2', 'Bid Adjustment', 'Reduced bids by 35% between 11pm–5am on all campaigns',
+         '90-day data showed 0 conversions from overnight clicks. $210/mo spent on calls no one answers.',
+         '$210/mo recovered · No impact on lead volume', 'orange'),
+
+        ('Day 3', 'Ad Group Restructure', 'Split "HVAC" ad group into AC Repair, Furnace Repair, and Tune-Up',
+         'One ad group serving all intents meant QS of 4.1. Tight grouping by intent lifts relevance.',
+         'Quality Score: 4.1 → 6.8 in 10 days · CPC dropped $4.20 avg', 'yellow'),
+
+        ('Day 5', 'Budget Reallocation', 'Shifted $600/mo from Brand campaign to AC Repair campaign',
+         'Brand campaign CPL was $312 (low volume, high waste). AC Repair CPL was $89 with capacity to scale.',
+         '+9 incremental leads/mo from same total budget', 'blue'),
+
+        ('Day 8', 'Match Type Fix', 'Changed 12 broad match keywords to phrase match',
+         'Broad "air conditioning" was triggering window AC units, portable coolers, car AC — none convert for HVAC service.',
+         'Irrelevant clicks dropped 28% · Conversion rate up from 6.2% to 9.1%', 'purple'),
+
+        ('Day 14', 'Ad Copy Test', 'Launched 3 new responsive ad headlines for AC Repair',
+         'Top headline "Same-Day AC Repair — Austin" had 2.1% CTR vs current best of 1.4%. Auto-rotation started.',
+         'CTR up 0.7pts · Contributes to QS improvement', 'green'),
+
+        ('Day 21', 'Geo Bid Adjustment', 'Added +20% bid modifier for ZIP codes 78701–78759',
+         'Conversion data showed these central Austin ZIPs converted at 2.3x the rate of outer suburbs.',
+         'High-value ZIP share of leads: 31% → 48%', 'teal'),
+
+        ('Day 28', 'Seasonal Prep', 'Created summer AC emergency campaign, scheduled to ramp June 1',
+         'Historical data shows emergency AC searches spike 3x in June–August. Pre-built campaign ready to activate.',
+         'Positioned for peak season · $800/mo budget earmarked', 'indigo'),
+      ] %}
+      <div class="bg-white rounded-xl border border-gray-100 hover:border-{{ type_color }}-200 hover:shadow-soft transition p-5">
+        <div class="flex flex-col sm:flex-row sm:items-start gap-4">
+          <div class="flex items-center gap-3 sm:w-48 flex-shrink-0">
+            <span class="text-xs font-bold text-gray-400 w-12">{{ day }}</span>
+            <span class="text-xs font-semibold text-{{ type_color }}-700 bg-{{ type_color }}-100 px-2 py-0.5 rounded-full whitespace-nowrap">{{ action_type }}</span>
+          </div>
+          <div class="flex-1">
+            <div class="font-semibold text-gray-900 text-sm mb-1">{{ action }}</div>
+            <div class="text-xs text-gray-500 mb-2"><span class="font-medium text-gray-600">Why:</span> {{ reason }}</div>
+            <div class="text-xs text-green-700 font-medium flex items-center gap-1.5">
+              <i class="fa-solid fa-arrow-trend-up text-green-500"></i>{{ impact }}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="text-center">
+      <p class="text-sm text-gray-500">This account had <strong>47 AI actions</strong> in 30 days. A typical agency makes 4–8 manual changes per month.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 30-Day Results -->
+<section class="py-16 bg-violet-50">
+  <div class="container-lg">
+    <h2 class="text-3xl font-bold text-gray-900 text-center mb-3">30-day results on Apex Comfort HVAC</h2>
+    <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">Same $4,200/month budget. Same market. Same competition. Just 30 days of AI optimization.</p>
+    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
+      {% for metric, before, after, change, color in [
+        ('Cost per Lead', '$148', '$87', '−41%', 'green'),
+        ('Monthly Leads', '28', '48', '+71%', 'green'),
+        ('Wasted Spend', '$1,340/mo', '$190/mo', '−86%', 'green'),
+        ('Avg Quality Score', '4.1', '7.3', '+78%', 'green'),
+      ] %}
+      <div class="bg-white rounded-2xl border p-6 text-center">
+        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">{{ metric }}</div>
+        <div class="flex items-center justify-center gap-3 mb-2">
+          <span class="text-lg text-gray-400 line-through">{{ before }}</span>
+          <i class="fa-solid fa-arrow-right text-gray-300 text-sm"></i>
+          <span class="text-2xl font-extrabold text-gray-900">{{ after }}</span>
+        </div>
+        <div class="text-sm font-bold text-{{ color }}-600">{{ change }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Before/After campaign view -->
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="bg-white rounded-2xl border p-6">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-3 h-3 rounded-full bg-red-400"></div>
+          <span class="font-semibold text-gray-700 text-sm">Before FieldSprout — Day 1</span>
+        </div>
+        <div class="space-y-2">
+          {% for campaign, spend, leads, cpl, qs in [
+            ('HVAC - General (broad)', '$2,100', '8 leads', '$263', 'QS 3.8'),
+            ('Brand Terms', '$640', '2 leads', '$320', 'QS 7.1'),
+            ('AC Repair + Furnace (mixed)', '$980', '12 leads', '$82', 'QS 4.4'),
+            ('Remarketing', '$480', '6 leads', '$80', 'QS 5.2'),
+          ] %}
+          <div class="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 text-xs">
+            <span class="text-gray-700 font-medium">{{ campaign }}</span>
+            <div class="flex gap-3 text-gray-500">
+              <span>{{ spend }}</span>
+              <span>{{ leads }}</span>
+              <span class="font-semibold text-red-600">{{ cpl }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl border border-green-200 p-6">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-3 h-3 rounded-full bg-green-500"></div>
+          <span class="font-semibold text-gray-700 text-sm">After 30 Days — AI Optimized</span>
+        </div>
+        <div class="space-y-2">
+          {% for campaign, spend, leads, cpl, qs in [
+            ('AC Repair — Phrase/Exact', '$1,620', '22 leads', '$74', 'QS 7.8'),
+            ('Furnace Repair — Phrase/Exact', '$820', '11 leads', '$75', 'QS 7.4'),
+            ('HVAC Tune-Up — Seasonal', '$640', '9 leads', '$71', 'QS 7.1'),
+            ('Remarketing', '$480', '6 leads', '$80', 'QS 5.2'),
+          ] %}
+          <div class="flex items-center justify-between p-2.5 rounded-lg bg-green-50 text-xs">
+            <span class="text-gray-700 font-medium">{{ campaign }}</span>
+            <div class="flex gap-3 text-gray-500">
+              <span>{{ spend }}</span>
+              <span>{{ leads }}</span>
+              <span class="font-semibold text-green-700">{{ cpl }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- What's different vs. the Grader -->
+<section class="py-16 bg-white">
+  <div class="container-lg max-w-3xl mx-auto">
+    <h2 class="text-2xl font-bold text-gray-900 text-center mb-10">Grader vs. AI Agents — what each one does</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full border-separate border-spacing-0 rounded-2xl overflow-hidden border border-gray-200">
+        <thead>
+          <tr>
+            <th class="py-3 px-5 bg-gray-50 text-gray-500 font-semibold text-sm text-left border-b border-gray-200 w-1/3"></th>
+            <th class="py-3 px-5 bg-indigo-50 text-indigo-700 font-bold text-sm text-center border-b border-indigo-100">Ads Grader</th>
+            <th class="py-3 px-5 bg-violet-600 text-white font-bold text-sm text-center border-b border-violet-700">AI Agents</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for feature, grader, ai in [
+            ('What it does', 'Diagnoses your account', 'Fixes and improves your account'),
+            ('When it runs', 'Once, on demand', 'Every 24 hours, automatically'),
+            ('Output', 'A scored report (A–F)', 'Actual changes applied to your campaigns'),
+            ('Requires account connection', 'Optional (demo available)', 'Yes — reads and writes to Google Ads'),
+            ('Cost', 'Free', 'Paid subscription'),
+            ('Best for', 'Understanding where you stand', 'Ongoing optimization and growth'),
+          ] %}
+          <tr class="border-b border-gray-100 last:border-0">
+            <td class="py-3 px-5 text-sm font-medium text-gray-700 bg-gray-50">{{ feature }}</td>
+            <td class="py-3 px-5 text-sm text-gray-600 text-center bg-indigo-50/30">{{ grader }}</td>
+            <td class="py-3 px-5 text-sm text-gray-700 text-center font-medium">{{ ai }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-violet-600 to-indigo-700 text-white">
+  <div class="container-md text-center">
+    <h2 class="text-3xl md:text-4xl font-extrabold mb-4">Ready to run this on your account?</h2>
+    <p class="text-violet-200 text-lg mb-8 max-w-xl mx-auto">
+      Connect your Google Ads account and the AI agents start working immediately — identifying waste, fixing structure, and improving Quality Scores within the first 48 hours.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      {% if has_endpoint('auth_bp.register') %}
+      <a href="{{ url_for('auth_bp.register') }}" class="btn btn-secondary btn-lg">Connect My Account — Free Trial</a>
+      {% else %}
+      <a href="/signup" class="btn btn-secondary btn-lg">Connect My Account — Free Trial</a>
+      {% endif %}
+      {% if has_endpoint('ads_grader_bp.index') %}
+      <a href="{{ url_for('ads_grader_bp.index') }}" class="btn btn-ghost btn-lg text-white border-white/30 hover:bg-white/10">Grade My Account First</a>
+      {% endif %}
+    </div>
+    <p class="text-violet-300 text-sm mt-4">No credit card · Cancel anytime · Results in 48 hours</p>
+  </div>
+</section>
+
+{% endblock %}

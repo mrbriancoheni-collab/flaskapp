@@ -1,4 +1,5 @@
 import os
+import re
 
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "change-this")
@@ -6,11 +7,16 @@ class Config:
     # otherwise let the default from create_app() remain.
     _db_uri = os.environ.get("SQLALCHEMY_DATABASE_URI")
     if _db_uri:
-        # Some pymysql versions don't recognise 'utf8mb4' as a charset name;
-        # swap it for 'utf8' which pymysql maps to utf8mb4 internally.
-        _db_uri = _db_uri.replace("charset=utf8mb4", "charset=utf8")
+        # Strip charset from the URL — some pymysql versions don't recognise
+        # 'utf8mb4' or even 'utf8' via charset_by_name(). Pass it via
+        # SQLALCHEMY_ENGINE_OPTIONS connect_args instead (see below).
+        _db_uri = re.sub(r'[?&]charset=[^&]*', '', _db_uri).rstrip('?&')
         SQLALCHEMY_DATABASE_URI = _db_uri
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "connect_args": {"charset": "utf8mb4"},
+        "pool_pre_ping": True,
+    }
 
     # Stripe keys
     STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")

@@ -4,6 +4,10 @@ from __future__ import annotations
 import io
 import logging
 import os as _os
+
+from dotenv import load_dotenv
+load_dotenv('/home/fieldsprout/.env', override=False)
+
 from datetime import datetime, timedelta
 from logging.handlers import RotatingFileHandler
 from pathlib import Path

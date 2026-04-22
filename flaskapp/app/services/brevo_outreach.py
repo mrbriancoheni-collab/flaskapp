@@ -25,7 +25,8 @@ class BrevoOutreachService:
     """Send cold outreach emails via Brevo (Sendinblue) API"""
 
     def __init__(self):
-        self.api_key = os.getenv('BREVO_API_KEY') or os.getenv('SENDINBLUE_API_KEY')
+        _raw_key = os.getenv('BREVO_API_KEY') or os.getenv('SENDINBLUE_API_KEY')
+        self.api_key = _raw_key.strip() if _raw_key else None
         self.from_email = os.getenv('BREVO_FROM_EMAIL', 'noreply@fieldsprout.io')
         self.from_name = os.getenv('BREVO_FROM_NAME', 'FieldSprout')
         self.base_url_app = os.getenv('BASE_URL', '').rstrip('/')

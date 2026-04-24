@@ -91,6 +91,44 @@ def run_agents_for_all_accounts(layer: str = 'all'):
     return success_count, error_count
 
 
+def _load_autonomous_settings(account_id: int) -> dict:
+    """
+    Read autonomous mode settings for an account from account_settings table.
+    Falls back to sensible defaults so agents always have a complete config.
+    """
+    from app import db
+    KEYS = [
+        'autonomous_mode_enabled', 'autonomy_level', 'growth_mode',
+        'target_cpl', 'monthly_budget', 'geo_targets', 'services_priority',
+    ]
+    DEFAULTS = {
+        'autonomous_mode_enabled': '1',
+        'autonomy_level': '2',
+        'growth_mode': 'balanced',
+        'target_cpl': '80',
+        'monthly_budget': '0',
+        'geo_targets': '',
+        'services_priority': '',
+    }
+    try:
+        keys_ph = ", ".join(f"'{k}'" for k in KEYS)
+        sql = text(f"""
+            SELECT setting_key, setting_value
+            FROM account_settings
+            WHERE account_id = :aid AND setting_key IN ({keys_ph})
+        """)
+        with db.engine.connect() as conn:
+            rows = conn.execute(sql, {"aid": account_id})
+            stored = {r.setting_key: r.setting_value for r in rows}
+    except Exception:
+        stored = {}
+    settings = {k: stored.get(k, DEFAULTS[k]) for k in KEYS}
+    # If autonomous mode is disabled, force L1 (assistive only — log but don't execute)
+    if settings['autonomous_mode_enabled'] == '0':
+        settings['autonomy_level'] = '1'
+    return settings
+
+
 def _ensure_agent_tables():
     """Create agent tables if they don't exist, and add missing columns."""
     from app import db
@@ -259,6 +297,12 @@ def run_agents_for_account(
     account_obj = AccountModel.query.get(account_id)
     business_description = account_obj.get_business_description() or '' if account_obj else ''
     business_services = account_obj.get_business_services() or '' if account_obj else ''
+
+    # Load autonomous mode settings (target_cpl, growth_mode, autonomy_level, etc.)
+    autonomous_settings = _load_autonomous_settings(account_id)
+    _target_cpl    = float(autonomous_settings.get('target_cpl', 80))
+    _autonomy_level = int(autonomous_settings.get('autonomy_level', 2))
+    _growth_mode   = autonomous_settings.get('growth_mode', 'balanced')
 
     # Fetch REAL performance data from Google Ads API (live)
     try:
@@ -597,11 +641,13 @@ def run_agents_for_account(
             'search_terms': search_terms_list,
             'ad_groups': ad_groups_list,
             'total_budget': total_spend / 3,
-            'target_cpa': 80,         # top-level for KeywordOptimizerAgent
-            'target_cpl': 80,         # top-level for CampaignManagerAgent
+            'target_cpa': _target_cpl,
+            'target_cpl': _target_cpl,
+            'growth_mode': _growth_mode,
+            'autonomy_level': _autonomy_level,
             'business_goals': {
                 'target_roas': 3.0,
-                'target_cpl': 80,
+                'target_cpl': _target_cpl,
             }
         }
 
@@ -623,11 +669,18 @@ def run_agents_for_account(
             'search_terms': [],
             'ad_groups': [],
             'total_budget': 0,
-            'business_goals': {'target_roas': 3.0, 'target_cpl': 80}
+            'growth_mode': _growth_mode,
+            'autonomy_level': _autonomy_level,
+            'business_goals': {'target_roas': 3.0, 'target_cpl': _target_cpl}
         }
 
     # Common kwargs for all agents
-    agent_kwargs = dict(event_bus=event_bus, decision_log=decision_log, account_id=account_id)
+    agent_kwargs = dict(
+        event_bus=event_bus,
+        decision_log=decision_log,
+        account_id=account_id,
+        autonomy_level=_autonomy_level,
+    )
 
     # --- ML-powered context enrichment ---
     # Build ML predictions and LLM advice for each agent type

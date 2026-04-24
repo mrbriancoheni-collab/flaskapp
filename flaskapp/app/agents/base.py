@@ -135,6 +135,7 @@ class BaseAgent(ABC):
         event_bus: Optional[Any] = None,
         decision_log: Optional[Any] = None,
         account_id: Optional[int] = None,
+        autonomy_level: int = 2,
     ):
         """
         Initialize agent.
@@ -154,6 +155,7 @@ class BaseAgent(ABC):
         self.event_bus = event_bus
         self.decision_log = decision_log
         self.account_id = account_id
+        self.autonomy_level = autonomy_level  # 1=Assistive, 2=Semi-Auto, 3=Fully Autonomous
 
         # Load configuration from database (global or account-specific)
         self.config = self._load_configuration(account_id)
@@ -438,24 +440,39 @@ class BaseAgent(ABC):
 
     def should_auto_execute(self, decision: AgentDecision) -> bool:
         """
-        Determine if a decision should be auto-executed.
+        Determine if a decision should be auto-executed based on autonomy_level.
 
-        Criteria:
-        - Risk level is LOW
-        - Confidence exceeds threshold
-        - Agent has autonomous execution capability
+        L1 — Assistive:        Never auto-execute; everything goes to approval queue.
+        L2 — Semi-Auto:        Auto-execute LOW risk only (default behavior).
+        L3 — Fully Autonomous: Auto-execute LOW risk normally; also auto-execute HIGH
+                               risk if confidence >= 0.92 (stricter threshold).
         """
+        if self.autonomy_level == 1:
+            return False
+
+        if AgentCapability.AUTONOMOUS_EXECUTION not in self.capabilities:
+            return False
+
         risk = decision.risk_level
         is_low_risk = (
             risk == DecisionRiskLevel.LOW
             or (isinstance(risk, str) and risk.lower() == 'low')
             or (hasattr(risk, 'value') and risk.value == 'low')
         )
-        return (
-            is_low_risk and
-            decision.confidence >= self.auto_execute_threshold and
-            AgentCapability.AUTONOMOUS_EXECUTION in self.capabilities
+        is_high_risk = (
+            risk == DecisionRiskLevel.HIGH
+            or (isinstance(risk, str) and risk.lower() == 'high')
+            or (hasattr(risk, 'value') and risk.value == 'high')
         )
+
+        if is_low_risk:
+            return decision.confidence >= self.auto_execute_threshold
+
+        # Level 3: also auto-execute high-risk actions with elevated confidence
+        if self.autonomy_level == 3 and is_high_risk:
+            return decision.confidence >= 0.92
+
+        return False
 
     def run_cycle(self, context: Dict[str, Any], google_ads_client: Any) -> Dict[str, Any]:
         """

@@ -651,6 +651,20 @@ def run_agents_for_account(
             }
         }
 
+        # Enrich context with real call metrics (CPL from Twilio call tracking)
+        call_metrics: dict = {"has_data": False}
+        try:
+            from app.services.call_tracking_service import get_call_metrics
+            call_metrics = get_call_metrics(account_id, days=30)
+            # Use real CPL if available; fall back to user-configured target
+            if call_metrics.get("real_cpl") and call_metrics["real_cpl"] > 0:
+                context["target_cpa"] = call_metrics["real_cpl"]
+                context["target_cpl"] = call_metrics["real_cpl"]
+                context["business_goals"]["target_cpl"] = call_metrics["real_cpl"]
+        except Exception as _call_exc:
+            current_app.logger.debug("Call metrics unavailable: %s", _call_exc)
+        context["call_metrics"] = call_metrics
+
         # Enrich context with performance memory (seasonal + geo patterns)
         try:
             from app.services.performance_memory import get_seasonal_context, get_top_geo_performers

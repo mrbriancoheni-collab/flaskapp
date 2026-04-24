@@ -136,8 +136,10 @@ def generate_text(
     prefer_provider: Optional[str] = None,
 ) -> str:
     """
-    Generate a text response using the best available AI provider.
+    Generate a text response.
 
+    Provider order: Anthropic (Claude) → OpenAI → empty string.
+    Never raises — returns "" if both providers fail.
     prefer_provider: 'anthropic' | 'openai' | None (auto-select)
     """
     use_anthropic = (prefer_provider == "anthropic") or (
@@ -146,12 +148,23 @@ def generate_text(
 
     if use_anthropic:
         try:
-            return _call_anthropic(system_prompt, user_prompt, max_tokens, temperature)
+            result = _call_anthropic(system_prompt, user_prompt, max_tokens, temperature)
+            log.debug("ai_client: Anthropic responded (%d chars)", len(result))
+            return result
         except Exception as exc:
-            log.warning("Anthropic call failed, falling back to OpenAI: %s", exc)
+            log.warning("Anthropic failed, trying OpenAI fallback: %s", exc)
 
-    return _call_openai(system_prompt, user_prompt,
-                        max_tokens=max_tokens, temperature=temperature)
+    if _get_openai_key():
+        try:
+            result = _call_openai(system_prompt, user_prompt,
+                                  max_tokens=max_tokens, temperature=temperature)
+            log.debug("ai_client: OpenAI fallback responded (%d chars)", len(result))
+            return result
+        except Exception as exc:
+            log.error("OpenAI fallback also failed: %s", exc)
+
+    log.error("ai_client: both providers unavailable — returning empty string")
+    return ""
 
 
 def generate_json(
@@ -162,8 +175,10 @@ def generate_json(
     prefer_provider: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    Generate a JSON response. Parses and returns a dict.
-    Raises ValueError if the response cannot be parsed as JSON.
+    Generate a JSON response and parse it.
+
+    Provider order: Anthropic (Claude) → OpenAI → {}.
+    Never raises — returns {} if both providers fail or response is unparseable.
     """
     use_anthropic = (prefer_provider == "anthropic") or (
         prefer_provider is None and bool(_get_anthropic_key())
@@ -174,14 +189,24 @@ def generate_json(
         try:
             raw = _call_anthropic(system_prompt, user_prompt, max_tokens, temperature,
                                   json_mode=True)
+            log.debug("ai_client: Anthropic responded for JSON request")
         except Exception as exc:
-            log.warning("Anthropic call failed, falling back to OpenAI: %s", exc)
+            log.warning("Anthropic failed for JSON, trying OpenAI fallback: %s", exc)
+            raw = ""
+
+    if not raw and _get_openai_key():
+        try:
+            raw = _call_openai(system_prompt, user_prompt,
+                               max_tokens=max_tokens, temperature=temperature,
+                               json_mode=True)
+            log.debug("ai_client: OpenAI fallback responded for JSON request")
+        except Exception as exc:
+            log.error("OpenAI fallback also failed for JSON: %s", exc)
             raw = ""
 
     if not raw:
-        raw = _call_openai(system_prompt, user_prompt,
-                           max_tokens=max_tokens, temperature=temperature,
-                           json_mode=True)
+        log.error("ai_client: both providers unavailable — returning empty dict")
+        return {}
 
     # Strip markdown fences if present
     text = raw.strip()
@@ -193,9 +218,17 @@ def generate_json(
     if text.endswith("```"):
         text = text[:-3].strip()
 
-    return json.loads(text)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        log.error("ai_client: JSON parse failed: %s — raw: %.200s", exc, text)
+        return {}
 
 
 def active_provider() -> str:
-    """Return which provider will be used ('anthropic' or 'openai')."""
-    return "anthropic" if _get_anthropic_key() else "openai"
+    """Return which provider will be used ('anthropic' or 'openai' or 'none')."""
+    if _get_anthropic_key():
+        return "anthropic"
+    if _get_openai_key():
+        return "openai"
+    return "none"

@@ -665,6 +665,18 @@ def run_agents_for_account(
             current_app.logger.debug("Call metrics unavailable: %s", _call_exc)
         context["call_metrics"] = call_metrics
 
+        # Enrich context with CRM job metrics (CPJ, revenue, close rate)
+        crm_metrics: dict = {"has_data": False}
+        try:
+            from app.services.crm_service import get_crm_metrics
+            crm_metrics = get_crm_metrics(account_id, days=30)
+            # Use real CPJ (cost-per-job) if available
+            if crm_metrics.get("real_cpj") and crm_metrics["real_cpj"] > 0:
+                context["target_cpj"] = crm_metrics["real_cpj"]
+        except Exception as _crm_exc:
+            current_app.logger.debug("CRM metrics unavailable: %s", _crm_exc)
+        context["crm_metrics"] = crm_metrics
+
         # Enrich context with performance memory (seasonal + geo patterns)
         try:
             from app.services.performance_memory import get_seasonal_context, get_top_geo_performers

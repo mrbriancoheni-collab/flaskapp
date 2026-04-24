@@ -1,6 +1,14 @@
 # app/services/call_tracking_service.py
 """
-Call Tracking Service.
+Call Tracking Service — OPTIONAL component.
+
+This module degrades gracefully when:
+- call_events / call_tracking_numbers tables don't exist yet
+- Twilio is not configured
+- No call data has been collected
+
+All public functions return safe defaults (empty dicts / empty lists) and
+never raise, so agent context building never fails due to missing call data.
 
 Bridges Twilio call events with Google Ads campaign attribution to produce
 real CPL (cost per lead) instead of the modeled/estimated value agents
@@ -41,6 +49,75 @@ log = logging.getLogger(__name__)
 
 DEFAULT_QUALIFIED_SECS = 60   # calls longer than 60 s = qualified lead
 
+# Safe empty metrics returned when call tracking is not yet set up
+_EMPTY_METRICS: Dict[str, Any] = {
+    "total_calls": 0,
+    "qualified_leads": 0,
+    "answer_rate": 0.0,
+    "avg_duration_secs": 0.0,
+    "real_cpl": None,
+    "total_spend_30d": 0.0,
+    "by_campaign": [],
+    "period_days": 30,
+    "has_data": False,
+}
+
+
+def _ensure_tables() -> bool:
+    """
+    Create call tracking tables if they don't exist.
+    Returns True on success, False if tables can't be created (non-fatal).
+    """
+    from app import db
+    try:
+        with db.engine.begin() as conn:
+            conn.execute(__import__("sqlalchemy").text("""
+                CREATE TABLE IF NOT EXISTS call_tracking_numbers (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    account_id INT NOT NULL,
+                    phone_number VARCHAR(32) NOT NULL,
+                    label VARCHAR(255),
+                    campaign_id VARCHAR(64),
+                    campaign_name VARCHAR(255),
+                    is_active TINYINT(1) NOT NULL DEFAULT 1,
+                    qualified_duration_secs INT NOT NULL DEFAULT 60,
+                    created_at DATETIME NOT NULL DEFAULT NOW(),
+                    INDEX idx_ctn_account (account_id),
+                    INDEX idx_ctn_phone (phone_number)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """))
+            conn.execute(__import__("sqlalchemy").text("""
+                CREATE TABLE IF NOT EXISTS call_events (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    account_id INT NOT NULL,
+                    call_sid VARCHAR(64) NOT NULL,
+                    parent_call_sid VARCHAR(64),
+                    from_number VARCHAR(32),
+                    to_number VARCHAR(32),
+                    tracking_number_id INT,
+                    campaign_id VARCHAR(64),
+                    campaign_name VARCHAR(255),
+                    call_status VARCHAR(32),
+                    call_duration INT,
+                    is_qualified_lead TINYINT(1) NOT NULL DEFAULT 0,
+                    caller_city VARCHAR(64),
+                    caller_state VARCHAR(32),
+                    caller_zip VARCHAR(16),
+                    call_started_at DATETIME,
+                    call_ended_at DATETIME,
+                    raw_payload JSON,
+                    created_at DATETIME NOT NULL DEFAULT NOW(),
+                    UNIQUE KEY uq_call_sid (call_sid),
+                    INDEX idx_ce_account (account_id),
+                    INDEX idx_ce_campaign (campaign_id),
+                    INDEX idx_ce_created (created_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """))
+        return True
+    except Exception as exc:
+        log.debug("_ensure_tables: %s", exc)
+        return False
+
 
 # ── Record incoming call event ─────────────────────────────────────────────────
 
@@ -50,7 +127,9 @@ def record_call_event(account_id: int, payload: Dict[str, Any]) -> Optional[int]
 
     Returns the new CallEvent.id or None on failure.
     Idempotent — if call_sid already exists, silently returns the existing id.
+    Creates tables if they don't exist yet.
     """
+    _ensure_tables()
     from app import db
     from app.models_calls import CallEvent, CallTrackingNumber
 
@@ -130,8 +209,18 @@ def get_call_metrics(account_id: int, days: int = 30) -> Dict[str, Any]:
     """
     Aggregate call metrics for the last N days.
 
+    Always returns a valid dict — never raises.
+    Returns _EMPTY_METRICS when tables don't exist or no data is available.
     Merges with gads_stats_daily to produce a real CPL where possible.
     """
+    try:
+        return _get_call_metrics_inner(account_id, days)
+    except Exception as exc:
+        log.debug("get_call_metrics failed gracefully for account %d: %s", account_id, exc)
+        return dict(_EMPTY_METRICS)
+
+
+def _get_call_metrics_inner(account_id: int, days: int) -> Dict[str, Any]:
     from app import db
     from app.models_calls import CallEvent
     from sqlalchemy import func

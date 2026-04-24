@@ -4,52 +4,30 @@
 {% block title %}Dashboard · {{ app_name }}{% endblock %}
 
 {% block content %}
+{% set ads_connected = cards.get('ads', {}).get('connected', False) %}
+{% set any_connected = connected_count > 0 %}
+{% set checklist_done = ads_connected and is_paid %}
 <div class="max-w-6xl mx-auto space-y-8">
 
-  <!-- Prominent Upgrade Banner for Non-Paid Users -->
-  {% if not is_paid %}
-  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-600 via-green-700 to-emerald-700 shadow-2xl">
-    <div class="absolute inset-0 opacity-20">
-      <div class="absolute inset-0" style="background-image: url('data:image/svg+xml,%3Csvg width=&quot;60&quot; height=&quot;60&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;%3E%3Cpath d=&quot;M30 0l30 30-30 30L0 30z&quot; fill=&quot;%23fff&quot; fill-opacity=&quot;0.1&quot;/%3E%3C/svg%3E'); background-size: 60px 60px;"></div>
+  {# ── Greeting ────────────────────────────────────────────────────────────── #}
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold text-gray-900">
+        Welcome{% if user and user.name %}, {{ user.name.split()[0] }}{% endif %} 👋
+      </h1>
+      <p class="text-gray-500 mt-1">
+        {{ connected_count }}/{{ total_count }} connections active
+        {% if not checklist_done %} — complete the steps below to unlock your full ROI{% endif %}.
+      </p>
     </div>
-
-    <div class="relative px-6 py-8 md:px-8">
-      <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-        <div class="text-center md:text-left flex-1">
-          <div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-1 text-white text-sm font-semibold mb-3">
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
-            </svg>
-            <span>Limited Time Offer</span>
-          </div>
-          <h2 class="text-3xl md:text-4xl font-extrabold text-white mb-2">
-            Complete Your Setup – Save $2,400/year!
-          </h2>
-          <p class="text-green-50 text-lg max-w-2xl">
-            You're just one step away from unlocking AI-powered campaign optimization, automated lead follow-up, and unlimited service pages. Start saving on your annual plan today.
-          </p>
-          <div class="mt-4 flex items-center gap-6 text-white/90 text-sm">
-            <div class="flex items-center gap-2">
-              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
-              </svg>
-              <span>Cancel anytime</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex flex-col gap-3">
-          <button onclick="upgradeToAnnual()" class="bg-white text-green-700 hover:bg-green-50 font-bold px-8 py-4 text-lg rounded-lg shadow-xl hover:shadow-2xl transition-all transform hover:scale-105">
-            Complete Setup – $2,400/year
-          </button>
-          <button onclick="showPricingDetails()" class="text-white/90 hover:text-white text-sm underline">
-            View all pricing options
-          </button>
-        </div>
-      </div>
-    </div>
+    <a href="{{ request.url }}?refresh=1"
+       class="text-sm text-gray-400 hover:text-gray-600 flex items-center gap-1">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+      </svg>
+      Refresh
+    </a>
   </div>
-  {% endif %}
 
   {# ── AI Agent Requirements Warning ─────────────────────────────────────── #}
   {% if ai_warnings %}
@@ -86,41 +64,114 @@
   </div>
   {% endif %}
 
-  <div class="flex items-center justify-between">
-    <div>
-      <h1 class="text-2xl font-semibold">Welcome to your dashboard</h1>
-      <p class="text-gray-500">
-        {{ connected_count }}/{{ total_count }} connections complete ({{ connected_percent }}%).
-        {% if not is_paid %}
-          <span class="ml-2 text-rose-600 font-medium">Upgrade to unlock full reports.</span>
-        {% endif %}
-      </p>
+  {# ── Activation Checklist (hidden once all done) ─────────────────────────── #}
+  {% if not checklist_done %}
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h2 class="text-base font-semibold text-gray-900">Get started — 4 steps to your first report</h2>
+        <p class="text-sm text-gray-500 mt-0.5">Complete these to start saving on ad spend.</p>
+      </div>
+      <div class="text-right">
+        {% set steps_done = (1 if ads_connected else 0) + (1 if is_paid else 0) + (1 if any_connected else 0) + 1 %}
+        <span class="text-2xl font-bold text-green-600">{{ steps_done }}/4</span>
+        <p class="text-xs text-gray-400">complete</p>
+      </div>
     </div>
-  </div>
 
-  <!-- Getting Started -->
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-    <div class="rounded-lg border bg-white p-4">
-      <div class="text-sm text-gray-500">Step 1</div>
-      <div class="font-medium">Connect your accounts</div>
-      <div class="mt-2 text-sm text-gray-500">Google, Facebook, WordPress…</div>
-    </div>
-    <div class="rounded-lg border bg-white p-4">
-      <div class="text-sm text-gray-500">Step 2</div>
-      <div class="font-medium">Verify data is flowing</div>
-      <div class="mt-2 text-sm text-gray-500">Cards below will switch off sample.</div>
-    </div>
-    <div class="rounded-lg border bg-white p-4">
-      <div class="text-sm text-gray-500">Step 3</div>
-      <div class="font-medium">Review & Optimize Performance</div>
-      <div class="mt-2 text-sm text-gray-500">Use reports to iterate weekly.</div>
-    </div>
-    <div class="rounded-lg border bg-white p-4">
-      <div class="text-sm text-gray-500">Step 4</div>
-      <div class="font-medium">Invite your team</div>
-      <div class="mt-2 text-sm text-gray-500">Share access & collaborate.</div>
+    <div class="space-y-3">
+
+      {# Step 1 — always done (they're here) #}
+      <div class="flex items-center gap-4 p-3 rounded-xl bg-green-50 border border-green-200">
+        <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-semibold text-green-800">Create your account</p>
+          <p class="text-xs text-green-600">Done! Welcome aboard.</p>
+        </div>
+      </div>
+
+      {# Step 2 — Connect Google Ads #}
+      {% set ads_card = cards.get('ads', {}) %}
+      <a href="{{ ads_card.connect_url if not ads_connected else url_for('google_bp.ads_ui') }}"
+         class="flex items-center gap-4 p-3 rounded-xl border transition
+                {% if ads_connected %}bg-green-50 border-green-200{% else %}bg-white border-gray-200 hover:border-green-300 hover:bg-green-50{% endif %}">
+        <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0
+                    {% if ads_connected %}bg-green-500{% else %}bg-gray-100 border-2 border-dashed border-gray-300{% endif %}">
+          {% if ads_connected %}
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+          </svg>
+          {% else %}
+          <span class="text-xs font-bold text-gray-400">2</span>
+          {% endif %}
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-semibold {% if ads_connected %}text-green-800{% else %}text-gray-800{% endif %}">
+            Connect Google Ads
+          </p>
+          <p class="text-xs {% if ads_connected %}text-green-600{% else %}text-gray-500{% endif %}">
+            {% if ads_connected %}Connected — click to view your data{% else %}See where your budget is going and get AI recommendations{% endif %}
+          </p>
+        </div>
+        {% if not ads_connected %}
+        <span class="text-xs font-semibold text-green-600 bg-green-50 border border-green-200 px-2 py-1 rounded-full shrink-0">Start here →</span>
+        {% endif %}
+      </a>
+
+      {# Step 3 — Run Ads Grader #}
+      <a href="{{ url_for('ads_grader_bp.index') }}"
+         class="flex items-center gap-4 p-3 rounded-xl border border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50 transition">
+        <div class="w-8 h-8 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center shrink-0">
+          <span class="text-xs font-bold text-gray-400">3</span>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-semibold text-gray-800">Run your free Ads Grader report</p>
+          <p class="text-xs text-gray-500">60-second audit — find wasted spend instantly</p>
+        </div>
+        <span class="text-xs text-indigo-600 font-medium shrink-0">Run now →</span>
+      </a>
+
+      {# Step 4 — Upgrade #}
+      {% if not is_paid %}
+      <div class="flex items-center gap-4 p-3 rounded-xl border border-gray-200 bg-white">
+        <div class="w-8 h-8 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center shrink-0">
+          <span class="text-xs font-bold text-gray-400">4</span>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-semibold text-gray-800">Unlock full reports &amp; AI optimization</p>
+          <p class="text-xs text-gray-500">$57/mo or $497/yr — cancel anytime</p>
+        </div>
+        <button onclick="openPricingModal()"
+                class="text-xs font-semibold text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-lg shrink-0 transition">
+          Upgrade
+        </button>
+      </div>
+      {% else %}
+      <div class="flex items-center gap-4 p-3 rounded-xl bg-green-50 border border-green-200">
+        <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-semibold text-green-800">Full access unlocked</p>
+          <p class="text-xs text-green-600">All reports and AI features are active.</p>
+        </div>
+      </div>
+      {% endif %}
+
     </div>
   </div>
+  {% endif %}
+
+  {# ── Pricing modal include (needed for upgrade button) ───────────────────── #}
+  {% if not is_paid %}
+  {% include 'components/pricing_modal.html' %}
+  {% endif %}
 
   <!-- Google Ads - Featured Section (Full Width) -->
   {% set ads_card = cards.get('ads') %}
@@ -409,6 +460,44 @@
   </div>
   {% endif %}
 
+  {# ── Autonomous Mode Status + Decision Feed (ads connected only) ──────────── #}
+  {% if ads_connected %}
+  <div class="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+    {# Status card — 1 col #}
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5" id="autonomousStatusCard">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-gray-300" id="autonomousDot"></span>
+          Autonomous Mode
+        </h2>
+        <a href="{{ url_for('autonomous_bp.control_panel') }}"
+           class="text-xs text-indigo-600 hover:text-indigo-700 font-medium">Configure →</a>
+      </div>
+      <div id="autonomousStatusBody" class="space-y-3">
+        <div class="flex items-center justify-center py-4">
+          <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-500"></div>
+        </div>
+      </div>
+    </div>
+
+    {# Decision Feed — 2 cols #}
+    <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-gray-800">What Automation Did</h2>
+        <a href="{{ url_for('autonomous_bp.control_panel') }}"
+           class="text-xs text-indigo-600 hover:text-indigo-700 font-medium">All actions →</a>
+      </div>
+      <ul id="decisionFeedList" class="divide-y divide-gray-100">
+        <li class="px-5 py-4 text-center text-gray-400 text-sm">
+          <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-500 mx-auto"></div>
+        </li>
+      </ul>
+    </div>
+
+  </div>
+  {% endif %}
+
 </div>
 {% endblock %}
 
@@ -507,9 +596,116 @@ function upgradeToAnnual() {
 }
 
 function showPricingDetails() {
-  // Redirect to pricing page or show modal
-  // For now, redirect to home page pricing section
   window.location.href = '/#pricing';
 }
+
+// ── Autonomous Mode widgets (loaded async) ───────────────────────────────────
+(function loadAutonomousWidgets() {
+  const dot      = document.getElementById('autonomousDot');
+  const body     = document.getElementById('autonomousStatusBody');
+  const feedList = document.getElementById('decisionFeedList');
+  if (!body && !feedList) return;
+
+  const ACTION_LABELS = {
+    negative_keyword_added:   'Added negative keyword',
+    negative_keyword_removed: 'Removed negative keyword',
+    keyword_paused:           'Paused keyword',
+    keyword_enabled:          'Enabled keyword',
+    bid_adjusted:             'Adjusted bid',
+    budget_reallocated:       'Reallocated budget',
+    ad_paused:                'Paused ad',
+    ad_enabled:               'Enabled ad',
+    campaign_paused:          'Paused campaign',
+    campaign_enabled:         'Enabled campaign',
+    search_term_blocked:      'Blocked search term',
+    quality_score_fix:        'Fixed quality score',
+  };
+
+  const ICON_MAP = {
+    negative_keyword_added:   { bg: 'bg-red-100',    text: 'text-red-600',    symbol: '–KW' },
+    keyword_paused:           { bg: 'bg-orange-100', text: 'text-orange-600', symbol: '⏸'  },
+    campaign_paused:          { bg: 'bg-orange-100', text: 'text-orange-600', symbol: '⏸'  },
+    budget_reallocated:       { bg: 'bg-blue-100',   text: 'text-blue-600',   symbol: '$'   },
+    bid_adjusted:             { bg: 'bg-purple-100', text: 'text-purple-600', symbol: '↕'   },
+  };
+  const DEFAULT_ICON = { bg: 'bg-green-100', text: 'text-green-600', symbol: '✓' };
+
+  // Load summary for the status card
+  fetch('{{ url_for("autonomous_bp.summary_json") }}')
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (!data || !body) return;
+      const enabled = {{ 'true' if request and request.args else 'false' }}; // will be set below via feed
+      const modeLabel = data.growth_mode || 'balanced';
+
+      body.innerHTML = `
+        <div class="text-xs text-gray-500 leading-relaxed space-y-2">
+          <div class="flex justify-between">
+            <span class="text-gray-400">Actions (7d)</span>
+            <span class="font-semibold text-gray-800">${data.total_actions}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-400">Est. savings</span>
+            <span class="font-semibold text-green-600">$${Math.round(data.total_savings)}/mo</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-400">Extra leads</span>
+            <span class="font-semibold text-blue-600">${data.additional_leads}</span>
+          </div>
+        </div>
+        <a href="{{ url_for('autonomous_bp.control_panel') }}"
+           class="mt-3 block text-center text-xs py-1.5 px-3 rounded-lg border border-indigo-200
+                  text-indigo-600 hover:bg-indigo-50 font-medium transition">
+          Open Control Panel
+        </a>
+      `;
+      if (dot) {
+        dot.className = data.total_actions > 0
+          ? 'w-2 h-2 rounded-full bg-green-500 animate-pulse'
+          : 'w-2 h-2 rounded-full bg-gray-300';
+      }
+    })
+    .catch(() => {
+      if (body) body.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">Unavailable</p>';
+    });
+
+  // Load recent feed
+  fetch('{{ url_for("autonomous_bp.feed_json") }}?limit=5')
+    .then(r => r.ok ? r.json() : [])
+    .then(items => {
+      if (!feedList) return;
+      if (!items || items.length === 0) {
+        feedList.innerHTML = `
+          <li class="px-5 py-6 text-center text-sm text-gray-400">
+            No automated actions yet — agents will populate this once they run.
+          </li>`;
+        return;
+      }
+      feedList.innerHTML = items.map(item => {
+        const icon  = ICON_MAP[item.action_type] || DEFAULT_ICON;
+        const date  = item.executed_at ? item.executed_at.slice(0, 10) : '';
+        const camp  = item.campaign_name ? `${item.campaign_name} · ` : '';
+        const badge = item.savings > 0
+          ? `<span class="shrink-0 text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">saves $${Math.round(item.savings)}/mo</span>`
+          : '';
+        return `
+          <li class="px-5 py-3 flex items-start gap-3">
+            <div class="shrink-0 mt-0.5 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${icon.bg} ${icon.text}">
+              ${icon.symbol}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline justify-between gap-2">
+                <p class="text-sm font-medium text-gray-900 truncate">${item.title}</p>
+                ${badge}
+              </div>
+              <p class="text-xs text-gray-400 mt-0.5 truncate">${camp}${date}</p>
+            </div>
+          </li>`;
+      }).join('');
+    })
+    .catch(() => {
+      if (feedList) feedList.innerHTML = '<li class="px-5 py-4 text-xs text-gray-400 text-center">Could not load feed.</li>';
+    });
+})();
 </script>
 {% endblock %}

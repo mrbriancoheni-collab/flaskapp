@@ -154,6 +154,26 @@ def _set_login_session(user_id, email):
         current_app.logger.warning(f"Flask-Login integration failed: {e}")
 
 
+def _send_welcome_email(name: str, email: str) -> None:
+    """Send a welcome email to a newly registered user. Failures are logged, not raised."""
+    try:
+        from flask import render_template as _rt
+        base_url = current_app.config.get('BASE_URL', 'https://fieldsprout.io').rstrip('/')
+        html = _rt(
+            'emails/welcome.html',
+            name=name.split()[0] if name else 'there',
+            dashboard_url=f"{base_url}/account/dashboard",
+            unsubscribe_url=f"{base_url}/account/unsubscribe",
+        )
+        send_email(
+            to=email,
+            subject="Welcome to FieldSprout — here's how to get started",
+            html_body=html,
+        )
+    except Exception:
+        current_app.logger.warning("Welcome email failed to send", exc_info=True)
+
+
 def _find_user_by_email(email: str):
     """
     Returns mapping row with keys:
@@ -400,8 +420,7 @@ def register():
         elif not _is_valid_email(email):  # <-- server-side email sanity check
             errs.append("Enter a valid email address.")
 
-        # Strong password validation (server-side) - minimum 8 characters
-        ok_pw, msg_pw = validate_strength(password, email, min_length=8)
+        ok_pw, msg_pw = validate_strength(password, email, min_length=12)
         if not ok_pw and msg_pw:
             errs.append(msg_pw)
 
@@ -416,11 +435,8 @@ def register():
             return redirect(url_for("auth_bp.login", next=next_url))
 
         _set_login_session(user_id, email)
-
-        # Welcome the user - no email verification needed
+        _send_welcome_email(name, email)
         flash("Welcome to FieldSprout! Your account has been created.", "success")
-
-        # After registration, land on dashboard (or safe ?next=)
         return redirect(_post_auth_target())
 
     # GET
@@ -742,7 +758,8 @@ def google_callback():
 
         _set_login_session(user_id, email)
 
-        flash(f"Welcome to {current_app.config.get('APP_NAME', 'FieldSprout')}, {name}! Your account has been created.", "success")
+        _send_welcome_email(name, email)
+        flash(f"Welcome to FieldSprout, {name}! Your account has been created.", "success")
 
         next_url = session.pop('google_auth_next', '')
         if next_url and _is_safe_redirect(next_url):

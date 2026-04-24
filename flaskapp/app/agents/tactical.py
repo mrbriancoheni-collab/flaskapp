@@ -401,13 +401,9 @@ class NegativeKeywordAgent(BaseAgent):
         business_services: str,
         negative_keyword_examples: str = ''
     ) -> Dict[str, Dict]:
-        """Use LLM to evaluate search term relevance to the business."""
-        import os
+        """Use Claude (Anthropic) to evaluate search term relevance to the business."""
         import json
-
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            return {}
+        from app.services.ai_client import generate_json, active_provider
 
         terms_list = "\n".join(
             f"- {t.get('query', '')}" for t in search_terms[:50]
@@ -417,61 +413,69 @@ class NegativeKeywordAgent(BaseAgent):
         if business_services:
             business_context += f"\nServices offered: {business_services}"
 
-        # Build the guidance section if the account has provided intent rules / examples
         guidance_section = ""
         if negative_keyword_examples:
-            guidance_section = f"""
-ACCOUNT-SPECIFIC INTENT GUIDANCE (use this as your primary signal):
-{negative_keyword_examples}
-"""
+            guidance_section = (
+                "\nACCOUNT-SPECIFIC INTENT GUIDANCE (use this as your primary signal):\n"
+                + negative_keyword_examples
+                + "\n"
+            )
 
-        prompt = f"""You are a Google Ads negative keyword analyst. Analyze each search term and determine if it is RELEVANT or IRRELEVANT to this business.
+        system_prompt = (
+            "You are a Google Ads negative keyword analyst. "
+            "Your job is to determine whether search terms are relevant or irrelevant "
+            "to a specific business. Always respond with valid JSON only."
+        )
+
+        closing = (
+            "Apply the account-specific intent guidance strictly — if a term clearly "
+            "matches an irrelevant pattern described above, mark it IRRELEVANT. "
+            "Otherwise, when in doubt, mark as RELEVANT."
+            if negative_keyword_examples
+            else "When in doubt, mark as RELEVANT."
+        )
+
+        user_prompt = f"""Analyze each search term and determine if it is RELEVANT or IRRELEVANT to this business.
 
 {business_context}
 {guidance_section}
-A term is RELEVANT if a person searching it could reasonably become a paying customer for the specific services listed. A term is IRRELEVANT if it targets a different service category, indicates the searcher wants to DIY rather than hire a professional, or reflects intent to purchase/install a product rather than engage a service provider.
-
-Foreign language terms that relate to the business services should be marked RELEVANT.
+A term is RELEVANT if a person searching it could reasonably become a paying customer.
+A term is IRRELEVANT if it targets a different category, indicates DIY intent, or wants to buy a product rather than hire a service.
+Foreign language terms related to the business services should be marked RELEVANT.
 
 Search terms:
 {terms_list}
 
-Respond ONLY with valid JSON — an array of objects:
+Return a JSON array:
 [{{"term": "the search term", "irrelevant": true/false, "reason": "brief explanation"}}]
 
-{'Apply the account-specific intent guidance strictly — if a term clearly matches an irrelevant pattern described above, mark it IRRELEVANT. Otherwise, when in doubt, mark as RELEVANT.' if negative_keyword_examples else 'When in doubt, mark as RELEVANT.'}
-"""
+{closing}"""
 
         try:
-            from openai import OpenAI
-            client = OpenAI(api_key=api_key)
+            results_list = generate_json(system_prompt, user_prompt,
+                                         max_tokens=4000, temperature=0.1)
+            if isinstance(results_list, list):
+                pass  # already a list
+            elif isinstance(results_list, dict) and 'results' in results_list:
+                results_list = results_list['results']
+            else:
+                results_list = []
 
-            resp = client.chat.completions.create(
-                model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.1,
-                max_tokens=4000,
-            )
-
-            content = (resp.choices[0].message.content or "").strip()
-            if content.startswith("```"):
-                content = content.split("```")[1]
-                if content.startswith("json"):
-                    content = content[4:]
-                content = content.strip()
-
-            results_list = json.loads(content)
             return {
                 item.get('term', '').lower().strip(): {
                     'irrelevant': item.get('irrelevant', False),
-                    'reason': item.get('reason', '')
+                    'reason': item.get('reason', ''),
                 }
                 for item in results_list
+                if isinstance(item, dict)
             }
 
-        except Exception as e:
+        except Exception as exc:
             import logging
-            logging.getLogger(__name__).error(f"NegativeKeywordAgent LLM evaluation failed: {e}")
+            logging.getLogger(__name__).error(
+                "NegativeKeywordAgent LLM evaluation failed (%s): %s",
+                active_provider(), exc,
+            )
             return {}
 
     def decide(self, opportunities: List[Dict[str, Any]]) -> List[AgentDecision]:

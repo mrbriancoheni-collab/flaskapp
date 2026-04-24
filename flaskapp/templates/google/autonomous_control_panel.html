@@ -1,0 +1,374 @@
+{% extends "base_app.html" %}
+{% block title %}Autonomous Mode · FieldSprout{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8 py-8 px-4">
+
+  {# ── Header ──────────────────────────────────────────────────────────────── #}
+  <div class="flex items-start justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+        <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-600 text-white">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.347.347A3.08 3.08 0 0014 20.82V21a2 2 0 01-4 0v-.18a3.08 3.08 0 00-.793-2.073l-.347-.347z"/>
+          </svg>
+        </span>
+        Autonomous Mode
+      </h1>
+      <p class="text-gray-500 mt-1 text-sm">Set your goals and constraints. The AI handles the rest.</p>
+    </div>
+    <div class="flex gap-3">
+      <a href="{{ url_for('agents_bp.approval_queue') }}"
+         class="text-sm px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium">
+        Approval Queue
+      </a>
+      <a href="{{ url_for('agents_bp.agent_dashboard') }}"
+         class="text-sm px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium">
+        Agent Dashboard
+      </a>
+    </div>
+  </div>
+
+  {# ── 7-Day Impact Summary ─────────────────────────────────────────────────── #}
+  <div class="grid grid-cols-3 gap-4">
+    <div class="bg-white rounded-xl border border-gray-200 p-5 text-center shadow-sm">
+      <div class="text-3xl font-bold text-indigo-600">{{ summary.total_actions }}</div>
+      <div class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Actions taken</div>
+      <div class="text-xs text-gray-400 mt-0.5">last 7 days</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-5 text-center shadow-sm">
+      <div class="text-3xl font-bold text-green-600">${{ "%.0f"|format(summary.total_savings) }}</div>
+      <div class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Est. monthly savings</div>
+      <div class="text-xs text-gray-400 mt-0.5">from waste removal</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-5 text-center shadow-sm">
+      <div class="text-3xl font-bold text-blue-600">{{ summary.additional_leads }}</div>
+      <div class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Additional leads</div>
+      <div class="text-xs text-gray-400 mt-0.5">vs. baseline</div>
+    </div>
+  </div>
+
+  {# ── Control Panel Form ───────────────────────────────────────────────────── #}
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+
+    <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+      <div>
+        <h2 class="text-base font-semibold text-gray-900">System Configuration</h2>
+        <p class="text-sm text-gray-500 mt-0.5">You control goals and constraints. AI controls tactics.</p>
+      </div>
+      {# Enable/Disable toggle #}
+      <label class="relative inline-flex items-center cursor-pointer gap-3">
+        <input type="checkbox" id="autonomousToggle"
+               class="sr-only peer"
+               {% if settings.autonomous_mode_enabled == '1' %}checked{% endif %}>
+        <div class="w-11 h-6 bg-gray-200 rounded-full peer
+                    peer-checked:bg-indigo-600
+                    after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+                    after:bg-white after:rounded-full after:h-5 after:w-5
+                    after:transition-all peer-checked:after:translate-x-full"></div>
+        <span id="toggleLabel" class="text-sm font-medium text-gray-700">
+          {% if settings.autonomous_mode_enabled == '1' %}Active{% else %}Paused{% endif %}
+        </span>
+      </label>
+    </div>
+
+    <div class="p-6 space-y-8">
+
+      {# ── Growth Mode ─────────────────────────────────────────────────────── #}
+      <div>
+        <label class="block text-sm font-semibold text-gray-800 mb-3">Growth Mode</label>
+        <div class="grid grid-cols-3 gap-3" id="growthModeCards">
+          {% for mode, label, desc, color in [
+            ('efficient',  'Efficient',  'Protect margins — cut waste only, minimal bid changes.',           'green'),
+            ('balanced',   'Balanced',   'Default. Optimize spend and scale winners simultaneously.',        'indigo'),
+            ('aggressive', 'Aggressive', 'Maximize leads. Accept higher CPL to capture market share.',      'orange'),
+          ] %}
+          <label class="cursor-pointer">
+            <input type="radio" name="growth_mode" value="{{ mode }}" class="sr-only growth-mode-radio"
+                   {% if settings.growth_mode == mode %}checked{% endif %}>
+            <div class="growth-mode-card border-2 rounded-xl p-4 transition
+                        {% if settings.growth_mode == mode %}border-{{ color }}-500 bg-{{ color }}-50{% else %}border-gray-200 bg-white hover:border-gray-300{% endif %}"
+                 data-mode="{{ mode }}" data-color="{{ color }}">
+              <div class="font-semibold text-gray-900 text-sm">{{ label }}</div>
+              <div class="text-xs text-gray-500 mt-1 leading-snug">{{ desc }}</div>
+            </div>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# ── Autonomy Level ──────────────────────────────────────────────────── #}
+      <div>
+        <label class="block text-sm font-semibold text-gray-800 mb-3">Autonomy Level</label>
+        <div class="grid grid-cols-3 gap-3" id="autonomyLevelCards">
+          {% for level, label, desc in [
+            ('1', 'Assistive',       'Recommendations only. You approve every action.'),
+            ('2', 'Semi-Auto',       'Auto-executes low-risk actions. High-risk requires approval.'),
+            ('3', 'Fully Autonomous','Executes waste removal, bid shifts, and budget moves automatically.'),
+          ] %}
+          <label class="cursor-pointer">
+            <input type="radio" name="autonomy_level" value="{{ level }}" class="sr-only autonomy-level-radio"
+                   {% if settings.autonomy_level == level %}checked{% endif %}>
+            <div class="autonomy-card border-2 rounded-xl p-4 transition
+                        {% if settings.autonomy_level == level %}border-indigo-500 bg-indigo-50{% else %}border-gray-200 bg-white hover:border-gray-300{% endif %}"
+                 data-level="{{ level }}">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs font-bold px-2 py-0.5 rounded-full
+                             {% if settings.autonomy_level == level %}bg-indigo-100 text-indigo-700{% else %}bg-gray-100 text-gray-600{% endif %}">
+                  L{{ level }}
+                </span>
+                <span class="font-semibold text-gray-900 text-sm">{{ label }}</span>
+              </div>
+              <div class="text-xs text-gray-500 leading-snug">{{ desc }}</div>
+            </div>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# ── Target Metrics ──────────────────────────────────────────────────── #}
+      <div class="grid grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-semibold text-gray-800 mb-1">
+            Target CPL
+            <span class="font-normal text-gray-400 ml-1">(cost per lead)</span>
+          </label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+            <input type="number" id="targetCpl" min="0" step="1"
+                   value="{{ settings.target_cpl }}"
+                   class="w-full pl-7 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm
+                          focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"/>
+          </div>
+          <p class="text-xs text-gray-400 mt-1">Agents won't scale keywords above this CPL.</p>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-800 mb-1">
+            Monthly Budget
+            <span class="font-normal text-gray-400 ml-1">(hard cap)</span>
+          </label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+            <input type="number" id="monthlyBudget" min="0" step="50"
+                   value="{{ settings.monthly_budget }}"
+                   class="w-full pl-7 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm
+                          focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"/>
+          </div>
+          <p class="text-xs text-gray-400 mt-1">Automation will never exceed this monthly spend.</p>
+        </div>
+      </div>
+
+      {# ── Services & Geo ──────────────────────────────────────────────────── #}
+      <div class="grid grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-semibold text-gray-800 mb-1">
+            Priority Services
+          </label>
+          <textarea id="servicesPriority" rows="3"
+                    placeholder="e.g. AC repair, furnace tune-up, emergency HVAC"
+                    class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm resize-none
+                           focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">{{ settings.services_priority }}</textarea>
+          <p class="text-xs text-gray-400 mt-1">Agents prioritize budget toward these services.</p>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-800 mb-1">
+            Target Geos
+          </label>
+          <textarea id="geoTargets" rows="3"
+                    placeholder="e.g. Austin TX, Round Rock TX, 78701"
+                    class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm resize-none
+                           focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">{{ settings.geo_targets }}</textarea>
+          <p class="text-xs text-gray-400 mt-1">Zip codes or cities to focus spend.</p>
+        </div>
+      </div>
+
+      {# ── Save ────────────────────────────────────────────────────────────── #}
+      <div class="flex items-center gap-4 pt-2">
+        <button id="saveBtn" onclick="saveSettings()"
+                class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold
+                       rounded-lg transition shadow-sm">
+          Save Configuration
+        </button>
+        <span id="saveStatus" class="text-sm text-gray-400 hidden"></span>
+      </div>
+
+    </div>
+  </div>
+
+  {# ── Decision Feed ────────────────────────────────────────────────────────── #}
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+      <h2 class="text-base font-semibold text-gray-900">What Automation Did</h2>
+      <a href="{{ url_for('agents_bp.agent_dashboard') }}" class="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+        Full history →
+      </a>
+    </div>
+
+    {% if feed %}
+    <ul class="divide-y divide-gray-100">
+      {% for item in feed %}
+      <li class="px-6 py-4 flex items-start gap-4">
+        {# Action type icon/badge #}
+        <div class="shrink-0 mt-0.5">
+          {% if 'negative' in item.action_type or 'blocked' in item.action_type %}
+          <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 text-red-600 text-xs font-bold">–KW</span>
+          {% elif 'paused' in item.action_type %}
+          <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 text-orange-600 text-xs font-bold">⏸</span>
+          {% elif 'budget' in item.action_type %}
+          <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-xs font-bold">$</span>
+          {% elif 'bid' in item.action_type %}
+          <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-600 text-xs font-bold">↕</span>
+          {% else %}
+          <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-600 text-xs font-bold">✓</span>
+          {% endif %}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-baseline justify-between gap-2">
+            <p class="text-sm font-medium text-gray-900 truncate">{{ item.title }}</p>
+            {% if item.savings > 0 %}
+            <span class="shrink-0 text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+              saves ${{ "%.0f"|format(item.savings) }}/mo
+            </span>
+            {% endif %}
+          </div>
+          <p class="text-xs text-gray-500 mt-0.5 truncate">
+            {% if item.campaign_name %}{{ item.campaign_name }} · {% endif %}
+            {{ item.executed_at[:10] if item.executed_at else '' }}
+          </p>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="px-6 py-12 text-center text-gray-400">
+      <svg class="w-10 h-10 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+      </svg>
+      <p class="text-sm font-medium text-gray-500">No actions yet</p>
+      <p class="text-xs text-gray-400 mt-1">Actions will appear here once agents start running.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script nonce="{{ csp_nonce() }}">
+
+// ── Growth Mode card selection ───────────────────────────────────────────────
+const colorMap = { green: 'green', indigo: 'indigo', orange: 'orange' };
+
+document.querySelectorAll('.growth-mode-radio').forEach(radio => {
+  radio.addEventListener('change', () => {
+    document.querySelectorAll('.growth-mode-card').forEach(card => {
+      const color = card.dataset.color;
+      card.classList.remove(
+        `border-${color}-500`, `bg-${color}-50`,
+        'border-green-500', 'bg-green-50',
+        'border-indigo-500', 'bg-indigo-50',
+        'border-orange-500', 'bg-orange-50'
+      );
+      card.classList.add('border-gray-200', 'bg-white');
+    });
+    const selected = document.querySelector('.growth-mode-card[data-mode="' + radio.value + '"]');
+    if (selected) {
+      const c = selected.dataset.color;
+      selected.classList.remove('border-gray-200', 'bg-white');
+      selected.classList.add(`border-${c}-500`, `bg-${c}-50`);
+    }
+  });
+});
+
+// ── Autonomy Level card selection ────────────────────────────────────────────
+document.querySelectorAll('.autonomy-level-radio').forEach(radio => {
+  radio.addEventListener('change', () => {
+    document.querySelectorAll('.autonomy-card').forEach(card => {
+      card.classList.remove('border-indigo-500', 'bg-indigo-50');
+      card.classList.add('border-gray-200', 'bg-white');
+      const badge = card.querySelector('.text-xs.font-bold');
+      if (badge) {
+        badge.classList.remove('bg-indigo-100', 'text-indigo-700');
+        badge.classList.add('bg-gray-100', 'text-gray-600');
+      }
+    });
+    const selected = document.querySelector('.autonomy-card[data-level="' + radio.value + '"]');
+    if (selected) {
+      selected.classList.remove('border-gray-200', 'bg-white');
+      selected.classList.add('border-indigo-500', 'bg-indigo-50');
+      const badge = selected.querySelector('.text-xs.font-bold');
+      if (badge) {
+        badge.classList.remove('bg-gray-100', 'text-gray-600');
+        badge.classList.add('bg-indigo-100', 'text-indigo-700');
+      }
+    }
+  });
+});
+
+// ── Autonomous mode toggle ───────────────────────────────────────────────────
+const toggle = document.getElementById('autonomousToggle');
+const toggleLabel = document.getElementById('toggleLabel');
+if (toggle) {
+  toggle.addEventListener('change', () => {
+    toggleLabel.textContent = toggle.checked ? 'Active' : 'Paused';
+  });
+}
+
+// ── Save settings ────────────────────────────────────────────────────────────
+function saveSettings() {
+  const btn = document.getElementById('saveBtn');
+  const status = document.getElementById('saveStatus');
+
+  const growthMode = document.querySelector('input[name="growth_mode"]:checked');
+  const autonomyLevel = document.querySelector('input[name="autonomy_level"]:checked');
+
+  const payload = {
+    autonomous_mode_enabled: toggle && toggle.checked ? '1' : '0',
+    growth_mode:             growthMode     ? growthMode.value     : 'balanced',
+    autonomy_level:          autonomyLevel  ? autonomyLevel.value  : '2',
+    target_cpl:              document.getElementById('targetCpl').value,
+    monthly_budget:          document.getElementById('monthlyBudget').value,
+    services_priority:       document.getElementById('servicesPriority').value,
+    geo_targets:             document.getElementById('geoTargets').value,
+  };
+
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  status.classList.add('hidden');
+
+  fetch('{{ url_for("autonomous_bp.save_settings") }}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+    body: JSON.stringify(payload),
+  })
+  .then(r => r.json())
+  .then(data => {
+    btn.disabled = false;
+    btn.textContent = 'Save Configuration';
+    status.classList.remove('hidden');
+    if (data.ok) {
+      status.textContent = '✓ Saved';
+      status.className = 'text-sm text-green-600';
+    } else {
+      status.textContent = 'Error saving — try again.';
+      status.className = 'text-sm text-red-500';
+    }
+    setTimeout(() => status.classList.add('hidden'), 3000);
+  })
+  .catch(() => {
+    btn.disabled = false;
+    btn.textContent = 'Save Configuration';
+    status.textContent = 'Network error.';
+    status.className = 'text-sm text-red-500';
+    status.classList.remove('hidden');
+  });
+}
+
+function getCsrf() {
+  const m = document.cookie.match(/csrf_token=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : '';
+}
+</script>
+{% endblock %}

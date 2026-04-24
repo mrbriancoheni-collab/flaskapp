@@ -655,6 +655,13 @@ def create_app():
         app.logger.exception("Failed to import/register agents_bp")
 
     try:
+        from app.google.autonomous_routes import autonomous_bp
+        app.register_blueprint(autonomous_bp)
+        app.logger.info("autonomous_bp registered at /account/google/autonomous")
+    except Exception:
+        app.logger.exception("Failed to import/register autonomous_bp")
+
+    try:
         from app.google.account_wizard_routes import account_wizard_bp
         app.register_blueprint(account_wizard_bp)
         app.logger.info("account_wizard_bp registered at /account/google/ads/setup-wizard")
@@ -806,6 +813,13 @@ def create_app():
         app.register_blueprint(gads_bp)  # no extra prefix here
     except Exception:
         app.logger.exception("Failed to register gads_bp")
+
+    try:
+        from app.telephony import telephony_bp
+        app.register_blueprint(telephony_bp)
+        app.logger.info("telephony_bp registered at /telephony")
+    except Exception:
+        app.logger.exception("Failed to register telephony_bp")
 
     # Disabled old SMTP-based test email route - now using Mailgun API in admin_bp
     # try:

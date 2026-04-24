@@ -9,6 +9,48 @@ writing ad copy, and analyzing search terms.
 from typing import Dict, List, Any
 from .base import BaseAgent, AgentDecision, AgentCapability, DecisionRiskLevel
 
+# Patterns that signal high commercial intent — these keywords are what the
+# business WANTS to rank for, so we never pause them based on conversion data alone.
+_HIGH_INTENT_PATTERNS = (
+    'near me',
+    'near you',
+    'in my area',
+    'local',
+    'best ',
+    'top ',
+    'hire ',
+    'find ',
+    'get a ',
+    'affordable',
+    'cheap',
+    'cost',
+    'price',
+    'quote',
+    'estimate',
+    'reviews',
+    'rated',
+    'licensed',
+    'certified',
+    'professional',
+    'service',
+    'services',
+    'maintenance',
+    'repair',
+    'installation',
+    'company',
+    'companies',
+    'contractor',
+    'contractor',
+    'specialist',
+)
+
+
+def _is_high_intent_keyword(keyword_text: str) -> bool:
+    """Return True if the keyword contains commercial-intent signals that indicate
+    it should never be paused purely on spend-without-conversions logic."""
+    lower = keyword_text.lower()
+    return any(pattern in lower for pattern in _HIGH_INTENT_PATTERNS)
+
 
 class KeywordOptimizerAgent(BaseAgent):
     """
@@ -53,25 +95,35 @@ class KeywordOptimizerAgent(BaseAgent):
 
         target_cpa = context.get('target_cpa', 100)
 
+        # Only suggest pausing keywords based on conversion data when conversions
+        # are actually being tracked. If the entire account has 0 conversions,
+        # the absence of keyword-level conversions is meaningless — it just means
+        # tracking isn't set up, not that the keywords are bad.
+        campaigns = context.get('campaigns', [])
+        total_account_conversions = sum(c.get('conversions', 0) for c in campaigns)
+        conversions_tracked = total_account_conversions > 0
+
         for keyword in keywords:
             keyword_id = keyword.get('id') or keyword.get('keyword_id') or keyword.get('criterion_id', '')
-            keyword_text = keyword.get('text', '')
+            keyword_text = keyword.get('text', '') or ''
             ad_group_id = keyword.get('ad_group_id', '')
             cpa = keyword.get('cpa_30d', 0)
             conversions = keyword.get('conversions_30d', 0)
             spend = keyword.get('spend_30d', 0)
 
-            # 1. Pause underperformers — scaled threshold, not a fixed dollar amount
-            if spend > pause_threshold and conversions == 0:
-                opportunities.append({
-                    'type': 'pause_keyword',
-                    'severity': 'medium',
-                    'keyword_id': keyword_id,
-                    'keyword_text': keyword_text,
-                    'ad_group_id': ad_group_id,
-                    'spend_30d': spend,
-                    'conversions_30d': conversions
-                })
+            # 1. Pause underperformers — only when conversion tracking is active and
+            #    the keyword is not a high-commercial-intent term we want to keep.
+            if conversions_tracked and spend > pause_threshold and conversions == 0:
+                if not _is_high_intent_keyword(keyword_text):
+                    opportunities.append({
+                        'type': 'pause_keyword',
+                        'severity': 'medium',
+                        'keyword_id': keyword_id,
+                        'keyword_text': keyword_text,
+                        'ad_group_id': ad_group_id,
+                        'spend_30d': spend,
+                        'conversions_30d': conversions
+                    })
 
             # 2. Bid adjustments for converters — 2 conversions + scaled min spend
             if conversions >= 2 and cpa != 0 and spend >= bid_min_spend:

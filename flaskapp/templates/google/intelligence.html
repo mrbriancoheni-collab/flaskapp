@@ -1,0 +1,350 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'google' %}
+{% set gads_active = 'intelligence' %}
+{% block title %}Intelligence — FieldSprout{% endblock %}
+
+{% block content %}
+{% include "google/components/gads_nav.html" %}
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+
+  <div class="flex items-start justify-between flex-wrap gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Intelligence</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Competitive landscape · Auction insights · Google Ads alerts</p>
+    </div>
+  </div>
+
+  {# ── tab nav ── #}
+  <div class="border-b border-gray-200 mb-6">
+    <nav class="-mb-px flex gap-6">
+      {% for t, label, icon in [
+        ('competitive', 'Competitive', 'fa-chess'),
+        ('alerts',      'Alerts & Recommendations', 'fa-bell'),
+      ] %}
+      <a href="?tab={{ t }}"
+         class="flex items-center gap-2 py-3 border-b-2 text-sm font-medium transition
+                {{ 'border-indigo-600 text-indigo-700' if tab == t else 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
+        <i class="fas {{ icon }}"></i> {{ label }}
+        {% if t == 'alerts' and (recommendations|length + account_alerts|length) > 0 %}
+        <span class="ml-1 px-1.5 py-0.5 bg-red-100 text-red-700 text-xs rounded-full font-semibold">
+          {{ recommendations|length + account_alerts|length }}
+        </span>
+        {% endif %}
+      </a>
+      {% endfor %}
+    </nav>
+  </div>
+
+  {# ══ TAB: Competitive ══ #}
+  <div id="tab-competitive" class="{{ '' if tab == 'competitive' else 'hidden' }}">
+
+    {% if not is_connected %}
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
+      <i class="fas fa-chess text-blue-300 text-4xl mb-3"></i>
+      <h3 class="text-lg font-semibold text-blue-900 mb-2">Connect Google Ads</h3>
+      <p class="text-blue-700 text-sm mb-4">Connect your account to access competitive auction insights.</p>
+      <a href="{{ url_for('google_bp.index') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg">
+        <i class="fas fa-plug"></i> Connect
+      </a>
+    </div>
+    {% else %}
+
+    {# Market overview cards — populated by JS #}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-5 text-white">
+        <p class="text-xs text-blue-100 mb-1">Your Impression Share</p>
+        <p class="text-3xl font-bold" id="yourShare">—</p>
+      </div>
+      <div class="bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-5 text-white">
+        <p class="text-xs text-purple-100 mb-1">Active Competitors</p>
+        <p class="text-3xl font-bold" id="numCompetitors">—</p>
+      </div>
+      <div class="bg-gradient-to-br from-green-500 to-teal-600 rounded-xl p-5 text-white">
+        <p class="text-xs text-green-100 mb-1">Market Concentration</p>
+        <p class="text-3xl font-bold" id="marketConcentration">—</p>
+      </div>
+      <div class="bg-gradient-to-br from-orange-500 to-red-600 rounded-xl p-5 text-white">
+        <p class="text-xs text-orange-100 mb-1">Critical Threats</p>
+        <p class="text-3xl font-bold" id="numThreats">—</p>
+      </div>
+    </div>
+
+    {# Campaign selector + Fetch #}
+    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm mb-6">
+      <div class="grid grid-cols-3 gap-4 items-end">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Campaign</label>
+          <select id="compCampaign" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm"
+                  {{ 'disabled' if not campaigns }}>
+            <option value="">{{ 'No campaigns synced yet' if not campaigns else 'Select campaign…' }}</option>
+            {% for c in campaigns %}
+            <option value="{{ c.id }}" data-google-id="{{ c.google_campaign_id }}">{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Time Period</label>
+          <select id="compPeriod" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm">
+            <option value="7">Last 7 days</option>
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+        </div>
+        <div>
+          <button id="btnFetchInsights"
+                  class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition">
+            <i class="fas fa-sync-alt"></i> Fetch Auction Insights
+          </button>
+        </div>
+      </div>
+    </div>
+
+    {# Competitive alerts #}
+    {% if comp_alerts %}
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="font-semibold text-gray-900">Competitive Alerts</h2>
+        <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-semibold">{{ comp_alerts|length }}</span>
+      </div>
+      <ul class="divide-y divide-gray-50">
+        {% for alert in comp_alerts %}
+        <li class="px-5 py-3 border-l-4 {{ 'border-red-500' if alert.severity == 'critical' else 'border-orange-400' if alert.severity == 'high' else 'border-yellow-400' }}">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-900">{{ alert.campaign_name }} — {{ alert.alert_type }}</p>
+              <p class="text-xs text-gray-500 mt-0.5">{{ alert.message or '' }}</p>
+            </div>
+            <button onclick="acknowledgeAlert({{ alert.id }})"
+                    class="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded transition ml-4">Dismiss</button>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {# Top competitors table — populated by JS #}
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
+      <div class="px-5 py-4 border-b border-gray-100">
+        <h2 class="font-semibold text-gray-900">Top Competitors</h2>
+      </div>
+      <div id="competitorsContainer" class="p-5">
+        <p class="text-sm text-gray-400">Select a campaign and fetch insights to see competitor data.</p>
+      </div>
+    </div>
+
+    {# Competitor tracking #}
+    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+      <h2 class="font-semibold text-gray-900 mb-3">Track a Competitor</h2>
+      <div class="flex items-center gap-3">
+        <input type="text" id="competitorDomain" placeholder="competitor.com"
+               class="block w-64 rounded-lg border-gray-300 shadow-sm sm:text-sm">
+        <button id="btnTrackCompetitor"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition">
+          <i class="fas fa-binoculars"></i> Track
+        </button>
+      </div>
+      <div id="trackingResults" class="mt-3 hidden"></div>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ══ TAB: Alerts & Recommendations ══ #}
+  <div id="tab-alerts" class="{{ '' if tab == 'alerts' else 'hidden' }}">
+
+    {# Account-level alerts #}
+    {% if account_alerts %}
+    <div class="mb-6 space-y-3">
+      <h2 class="text-base font-semibold text-gray-900">Account Alerts</h2>
+      {% for alert in account_alerts %}
+      <div class="border-l-4 border-amber-400 bg-amber-50 rounded-r-xl p-4">
+        <p class="font-medium text-amber-900">{{ alert.title or alert.get('type', 'Alert') }}</p>
+        {% if alert.description %}<p class="text-sm text-amber-800 mt-1">{{ alert.description }}</p>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {# Recommendations #}
+    {% if recommendations %}
+    <div>
+      <h2 class="text-base font-semibold text-gray-900 mb-3">Recommendations ({{ recommendations|length }})</h2>
+      <div class="space-y-3">
+        {% for rec in recommendations %}
+        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <div class="flex items-start justify-between gap-4 flex-wrap">
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded font-medium">{{ rec.type or rec.get('recommendation_type','') }}</span>
+              </div>
+              <h3 class="text-sm font-semibold text-gray-900">{{ rec.title or rec.get('resource_name','') }}</h3>
+              {% if rec.description %}<p class="text-sm text-gray-600 mt-1">{{ rec.description }}</p>{% endif %}
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              {% if rec.link %}
+              <a href="{{ rec.link }}" target="_blank" class="text-xs px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition">View in Google Ads</a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% elif tab == 'alerts' %}
+    <div class="bg-white border border-gray-200 rounded-xl p-10 text-center">
+      <i class="fas fa-check-circle text-green-400 text-4xl mb-4"></i>
+      <h3 class="text-lg font-semibold text-gray-700 mb-2">No Active Alerts</h3>
+      <p class="text-gray-500 text-sm">Your account looks healthy. Recommendations will appear here when Google Ads has suggestions.</p>
+      <a href="{{ url_for('alerts_bp.alerts_dashboard') }}" class="mt-4 inline-flex items-center gap-2 text-sm text-indigo-600 hover:underline">
+        Refresh from Google <i class="fas fa-sync-alt text-xs"></i>
+      </a>
+    </div>
+    {% endif %}
+
+    {# Change history #}
+    {% if change_history %}
+    <div class="mt-6">
+      <h2 class="text-base font-semibold text-gray-900 mb-3">Recent Change History</h2>
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <ul class="divide-y divide-gray-50 text-sm">
+          {% for ch in change_history %}
+          <li class="px-5 py-3">
+            <p class="font-medium text-gray-900">{{ ch.title or ch.get('change_type','Change') }}</p>
+            {% if ch.description %}<p class="text-xs text-gray-500 mt-0.5">{{ ch.description }}</p>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script nonce="{{ g.csp_nonce }}">
+function getCsrfToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.content || '';
+}
+
+let selCampaign = null;
+let selPeriod = 30;
+
+document.getElementById('compCampaign')?.addEventListener('change', function() {
+  selCampaign = this.value;
+  if (selCampaign) { loadTopCompetitors(); loadMarketShare(); }
+});
+document.getElementById('compPeriod')?.addEventListener('change', function() {
+  selPeriod = parseInt(this.value);
+  if (selCampaign) { loadTopCompetitors(); loadMarketShare(); }
+});
+document.getElementById('btnFetchInsights')?.addEventListener('click', fetchInsights);
+document.getElementById('btnTrackCompetitor')?.addEventListener('click', () => {
+  const domain = document.getElementById('competitorDomain').value.trim();
+  if (!domain || !selCampaign) { alert('Select a campaign and enter a domain.'); return; }
+  trackCompetitor(domain);
+});
+
+async function fetchInsights() {
+  if (!selCampaign) { alert('Please select a campaign.'); return; }
+  const btn = document.getElementById('btnFetchInsights');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Fetching…';
+  try {
+    const res = await fetch('/account/google/ads/competitive/api/fetch-insights', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':getCsrfToken()},
+      body: JSON.stringify({campaign_id: selCampaign, lookback_days: selPeriod}),
+    });
+    const d = await res.json();
+    if (d.success) { loadTopCompetitors(); loadMarketShare(); }
+    else alert('Error: ' + (d.error || 'failed'));
+  } catch(e) { alert('Error: ' + e.message); }
+  finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Fetch Auction Insights'; }
+}
+
+async function loadTopCompetitors() {
+  try {
+    const res = await fetch(`/account/google/ads/competitive/api/top-competitors?days=${selPeriod}`);
+    const d = await res.json();
+    document.getElementById('numCompetitors').textContent = d.competitors?.length ?? '—';
+    const threats = (d.competitors || []).filter(c => c.avg_position_above > 0.3);
+    document.getElementById('numThreats').textContent = threats.length;
+
+    if (d.success && d.competitors?.length > 0) {
+      let html = `<div class="overflow-x-auto"><table class="min-w-full text-sm divide-y divide-gray-100">
+        <thead class="bg-gray-50"><tr>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Competitor</th>
+          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Impr. Share</th>
+          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Above Rate</th>
+          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Overlap</th>
+          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Campaigns</th>
+        </tr></thead><tbody class="divide-y divide-gray-50">`;
+      for (const c of d.competitors) {
+        const cls = c.avg_impression_share > 0.3 ? 'text-red-600 font-semibold' : c.avg_impression_share > 0.2 ? 'text-orange-600' : 'text-gray-900';
+        html += `<tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 font-medium text-gray-900">${c.competitor_domain}</td>
+          <td class="px-4 py-3 text-right ${cls}">${(c.avg_impression_share*100).toFixed(1)}%</td>
+          <td class="px-4 py-3 text-right">${(c.avg_position_above*100).toFixed(1)}%</td>
+          <td class="px-4 py-3 text-right">${(c.avg_overlap*100).toFixed(1)}%</td>
+          <td class="px-4 py-3 text-right">${c.campaigns_competing}</td>
+        </tr>`;
+      }
+      html += '</tbody></table></div>';
+      document.getElementById('competitorsContainer').innerHTML = html;
+    } else {
+      document.getElementById('competitorsContainer').innerHTML = '<p class="text-sm text-gray-400">No competitor data available yet. Fetch auction insights first.</p>';
+    }
+  } catch(e) { console.error(e); }
+}
+
+async function loadMarketShare() {
+  if (!selCampaign) return;
+  try {
+    const res = await fetch(`/account/google/ads/competitive/api/market-share?campaign_id=${selCampaign}&days=${selPeriod}`);
+    const d = await res.json();
+    if (d.success) {
+      document.getElementById('yourShare').textContent = d.your_impression_share.toFixed(1) + '%';
+      document.getElementById('marketConcentration').textContent = d.market_concentration || '—';
+    }
+  } catch(e) {}
+}
+
+async function trackCompetitor(domain) {
+  const el = document.getElementById('trackingResults');
+  el.classList.remove('hidden');
+  el.innerHTML = '<p class="text-sm text-gray-500 animate-pulse">Loading…</p>';
+  try {
+    const res = await fetch('/account/google/ads/competitive/api/track-competitor', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':getCsrfToken()},
+      body: JSON.stringify({campaign_id: selCampaign, competitor_domain: domain, days: selPeriod}),
+    });
+    const d = await res.json();
+    if (d.success) {
+      el.innerHTML = `<div class="bg-gray-50 rounded-lg p-4 text-sm">
+        <p class="font-semibold mb-2">Tracking: ${domain}</p>
+        <div class="grid grid-cols-3 gap-4">
+          <div><p class="text-xs text-gray-500">Avg Share</p><p class="font-semibold">${(d.avg_impression_share*100).toFixed(1)}%</p></div>
+          <div><p class="text-xs text-gray-500">Trend</p><p class="font-semibold ${d.trend>0?'text-red-600':'text-green-600'}">${d.trend>0?'+':''}${(d.trend*100).toFixed(1)}%</p></div>
+          <div><p class="text-xs text-gray-500">Above Rate</p><p class="font-semibold">${(d.position_above_rate*100).toFixed(1)}%</p></div>
+        </div>
+      </div>`;
+    } else { el.innerHTML = `<p class="text-sm text-red-500">${d.error || 'Not found'}</p>`; }
+  } catch(e) { el.innerHTML = `<p class="text-sm text-red-500">${e.message}</p>`; }
+}
+
+async function acknowledgeAlert(id) {
+  try {
+    const res = await fetch(`/account/google/ads/competitive/api/alerts/${id}/acknowledge`, {
+      method: 'POST', headers: {'X-CSRFToken': getCsrfToken()},
+    });
+    if ((await res.json()).success) location.reload();
+  } catch(e) {}
+}
+
+// Auto-load on page open
+document.addEventListener('DOMContentLoaded', () => {
+  if (document.getElementById('compCampaign')) loadTopCompetitors();
+});
+</script>
+{% endblock %}

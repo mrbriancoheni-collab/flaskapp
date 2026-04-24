@@ -1,6 +1,8 @@
 {% extends "base_app.html" %}
+{% set gads_active = 'structure' %}
 {% block title %}Google Ads · Optimize{% endblock %}
 {% block content %}
+{% include "google/components/gads_nav.html" %}
 <div class="max-w-7xl mx-auto">
 
   <!-- Header -->

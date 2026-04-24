@@ -1,0 +1,41 @@
+{# Shared Google Ads sub-navigation — include at top of every Google Ads page.
+   Caller sets `gads_active` to one of: 'performance', 'ai_control', 'budget', 'intelligence', 'structure', 'wizard'
+#}
+{% set _active = gads_active | default('') %}
+<nav class="bg-white border-b border-gray-200 mb-6">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center gap-1 overflow-x-auto py-1 no-scrollbar">
+
+      <a href="{{ url_for('google_bp.ads_performance') }}"
+         class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition
+                {{ 'bg-indigo-50 text-indigo-700' if _active == 'performance' else 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
+        <i class="fas fa-chart-line text-xs"></i> Performance
+      </a>
+
+      <a href="{{ url_for('consolidated_bp.ai_control') }}"
+         class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition
+                {{ 'bg-indigo-50 text-indigo-700' if _active == 'ai_control' else 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
+        <i class="fas fa-robot text-xs"></i> AI Control
+      </a>
+
+      <a href="{{ url_for('consolidated_bp.budget_planning') }}"
+         class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition
+                {{ 'bg-indigo-50 text-indigo-700' if _active == 'budget' else 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
+        <i class="fas fa-wallet text-xs"></i> Budget & Forecast
+      </a>
+
+      <a href="{{ url_for('consolidated_bp.intelligence') }}"
+         class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition
+                {{ 'bg-indigo-50 text-indigo-700' if _active == 'intelligence' else 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
+        <i class="fas fa-chess text-xs"></i> Intelligence
+      </a>
+
+      <a href="{{ url_for('gads_bp.optimize') }}"
+         class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition
+                {{ 'bg-indigo-50 text-indigo-700' if _active == 'structure' else 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
+        <i class="fas fa-sitemap text-xs"></i> Structure
+      </a>
+
+    </div>
+  </div>
+</nav>

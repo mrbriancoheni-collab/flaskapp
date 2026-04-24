@@ -57,18 +57,20 @@ class DecisionLog:
             Decision ID in database
         """
         try:
-            # Deduplication: skip if a pending decision with the same signature already exists
+            # Deduplication: skip if a pending decision with the same signature already exists.
+            # Match on title (not just decision_type) so different agents can't duplicate the
+            # same recommendation, and also deduplicate within the same agent_type.
             dedup_check = text("""
                 SELECT id FROM agent_decisions
                 WHERE account_id = :account_id
-                  AND decision_type = :decision_type
+                  AND title = :title
                   AND (campaign_id = :campaign_id OR (campaign_id IS NULL AND :campaign_id IS NULL))
                   AND status = 'pending'
                 LIMIT 1
             """)
             existing = self.session.execute(dedup_check, {
                 'account_id': decision.account_id,
-                'decision_type': decision.decision_type,
+                'title': decision.title,
                 'campaign_id': decision.campaign_id,
             }).fetchone()
 

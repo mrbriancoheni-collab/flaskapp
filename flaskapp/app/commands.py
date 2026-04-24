@@ -1099,6 +1099,53 @@ def cleanup_email_contacts_command(days, dry_run):
     click.echo(f"{'='*70}\n")
 
 
+@click.command('dedup-decisions')
+@click.option('--dry-run', is_flag=True, help='Show what would be deleted without writing')
+@with_appcontext
+def dedup_decisions_command(dry_run):
+    """Remove duplicate pending agent_decisions, keeping the earliest per (account, title, campaign)."""
+    from sqlalchemy import text
+    from app import db
+
+    find_dupes = text("""
+        SELECT title, account_id, campaign_id, COUNT(*) AS cnt,
+               MIN(id) AS keep_id
+        FROM agent_decisions
+        WHERE status = 'pending'
+        GROUP BY title, account_id, campaign_id
+        HAVING COUNT(*) > 1
+    """)
+    delete_dupes = text("""
+        DELETE FROM agent_decisions
+        WHERE status = 'pending'
+          AND title = :title
+          AND account_id = :account_id
+          AND (campaign_id = :campaign_id OR (campaign_id IS NULL AND :campaign_id IS NULL))
+          AND id != :keep_id
+    """)
+
+    with db.engine.begin() as conn:
+        dupes = conn.execute(find_dupes).fetchall()
+        if not dupes:
+            click.echo("No duplicate pending decisions found.")
+            return
+        total_deleted = 0
+        for row in dupes:
+            click.echo(f"  [{row.cnt - 1} dupes] '{row.title}' account={row.account_id} campaign={row.campaign_id} keep_id={row.keep_id}")
+            if not dry_run:
+                result = conn.execute(delete_dupes, {
+                    'title': row.title,
+                    'account_id': row.account_id,
+                    'campaign_id': row.campaign_id,
+                    'keep_id': row.keep_id,
+                })
+                total_deleted += result.rowcount
+    if dry_run:
+        click.echo("Dry run — no rows deleted.")
+    else:
+        click.echo(f"Deleted {total_deleted} duplicate decision(s).")
+
+
 def register_commands(app):
     """Register all CLI commands with the Flask app."""
     app.cli.add_command(run_agents_command)
@@ -1111,5 +1158,6 @@ def register_commands(app):
     app.cli.add_command(run_all_ai_command)
     app.cli.add_command(train_ml_command)
     app.cli.add_command(cleanup_email_contacts_command)
+    app.cli.add_command(dedup_decisions_command)
     # Note: seed_ai_actions_command intentionally not registered by default
     # It's a development-only tool that should not be used on real accounts

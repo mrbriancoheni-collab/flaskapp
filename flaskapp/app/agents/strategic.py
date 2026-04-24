@@ -106,6 +106,13 @@ class StrategicDirectorAgent(BaseAgent):
         total_budget = context.get('total_budget', 0)
         business_goals = context.get('business_goals', {})
 
+        # Check whether conversion tracking is active. If total conversions across
+        # all campaigns is 0, every ROAS-based metric will be 0 — not a signal of
+        # poor performance. Skip all ROAS-dependent analysis in that case to avoid
+        # misleading "underperforming" suggestions.
+        total_conversions = sum(c.get('conversions', 0) for c in campaigns)
+        conversions_tracked = total_conversions > 0
+
         # Delegate to AccountStructureAgent for detailed structure analysis
         structure_opportunities = self.get_account_structure_analysis(context)
         if structure_opportunities:
@@ -127,11 +134,11 @@ class StrategicDirectorAgent(BaseAgent):
         pmax_campaigns = [c for c in campaigns if c.get('type') == 'PERFORMANCE_MAX']
         search_campaigns = [c for c in campaigns if c.get('type') != 'PERFORMANCE_MAX']
 
-        # 1. Check if we're meeting goals
+        # 1. Check if we're meeting goals (only meaningful when conversions are tracked)
         target_roas = business_goals.get('target_roas', 3.0)
         current_roas = performance.get('roas', 0)
 
-        if current_roas < target_roas * 0.8:  # 20% below target
+        if conversions_tracked and current_roas < target_roas * 0.8:  # 20% below target
             opportunities.append({
                 'type': 'goal_performance_gap',
                 'severity': 'high',
@@ -141,67 +148,65 @@ class StrategicDirectorAgent(BaseAgent):
                 'gap_pct': ((target_roas - current_roas) / target_roas) * 100
             })
 
-        # 2. Identify budget reallocation opportunities
-        # Find top and bottom performers
-        if campaigns:
-            campaign_performance = sorted(
-                campaigns,
-                key=lambda c: c.get('roas', 0),
-                reverse=True
-            )
+        # 2–4. ROAS-based analysis requires real conversion data
+        if conversions_tracked:
+            # 2. Identify budget reallocation opportunities
+            if campaigns:
+                campaign_performance = sorted(
+                    campaigns,
+                    key=lambda c: c.get('roas', 0),
+                    reverse=True
+                )
 
-            top_performers = campaign_performance[:3]
-            bottom_performers = [c for c in campaign_performance if c.get('roas', 0) < 1.0]
+                top_performers = campaign_performance[:3]
+                bottom_performers = [c for c in campaign_performance if c.get('roas', 0) < 1.0]
 
-            if bottom_performers and top_performers:
-                # Calculate potential reallocation
-                bottom_spend = sum(c.get('monthly_spend', 0) for c in bottom_performers)
-                top_roas = sum(c.get('roas', 0) for c in top_performers) / len(top_performers)
+                if bottom_performers and top_performers:
+                    bottom_spend = sum(c.get('monthly_spend', 0) for c in bottom_performers)
+                    top_roas = sum(c.get('roas', 0) for c in top_performers) / len(top_performers)
 
-                if bottom_spend > total_budget * 0.1:  # More than 10% on losers
+                    if bottom_spend > total_budget * 0.1:  # More than 10% on losers
+                        opportunities.append({
+                            'type': 'budget_reallocation',
+                            'severity': 'high',
+                            'from_campaigns': [c['id'] for c in bottom_performers],
+                            'to_campaigns': [c['id'] for c in top_performers],
+                            'amount': bottom_spend * 0.5,
+                            'expected_roas_improvement': top_roas
+                        })
+
+            # 3. Check for scaling opportunities
+            for campaign in campaigns:
+                roas = campaign.get('roas', 0)
+                impression_share = campaign.get('impression_share', 0)
+                monthly_spend = campaign.get('monthly_spend', 0)
+
+                if roas > target_roas * 1.2 and impression_share < 70:
                     opportunities.append({
-                        'type': 'budget_reallocation',
-                        'severity': 'high',
-                        'from_campaigns': [c['id'] for c in bottom_performers],
-                        'to_campaigns': [c['id'] for c in top_performers],
-                        'amount': bottom_spend * 0.5,  # Move 50% of losing budget
-                        'expected_roas_improvement': top_roas
+                        'type': 'scaling_opportunity',
+                        'severity': 'medium',
+                        'campaign_id': campaign['id'],
+                        'campaign_name': campaign.get('name'),
+                        'current_roas': roas,
+                        'impression_share': impression_share,
+                        'current_spend': monthly_spend,
+                        'recommended_increase': monthly_spend * 0.5
                     })
 
-        # 3. Check for scaling opportunities
-        for campaign in campaigns:
-            roas = campaign.get('roas', 0)
-            impression_share = campaign.get('impression_share', 0)
-            monthly_spend = campaign.get('monthly_spend', 0)
+            # 4. Check for campaigns to pause
+            for campaign in campaigns:
+                roas = campaign.get('roas', 0)
+                spend_90d = campaign.get('spend_90d', 0)
 
-            # High ROAS + low impression share = scaling opportunity
-            if roas > target_roas * 1.2 and impression_share < 70:
-                opportunities.append({
-                    'type': 'scaling_opportunity',
-                    'severity': 'medium',
-                    'campaign_id': campaign['id'],
-                    'campaign_name': campaign.get('name'),
-                    'current_roas': roas,
-                    'impression_share': impression_share,
-                    'current_spend': monthly_spend,
-                    'recommended_increase': monthly_spend * 0.5  # Increase by 50%
-                })
-
-        # 4. Check for campaigns to pause
-        for campaign in campaigns:
-            roas = campaign.get('roas', 0)
-            spend_90d = campaign.get('spend_90d', 0)
-
-            # Consistent loser: Low ROAS + significant spend
-            if roas < 0.5 and spend_90d > 1000:  # ROAS < 0.5 and spent >$1000
-                opportunities.append({
-                    'type': 'pause_campaign',
-                    'severity': 'high',
-                    'campaign_id': campaign['id'],
-                    'campaign_name': campaign.get('name'),
-                    'roas': roas,
-                    'wasted_spend_90d': spend_90d * (1 - roas)
-                })
+                if roas < 0.5 and spend_90d > 1000:
+                    opportunities.append({
+                        'type': 'pause_campaign',
+                        'severity': 'high',
+                        'campaign_id': campaign['id'],
+                        'campaign_name': campaign.get('name'),
+                        'roas': roas,
+                        'wasted_spend_90d': spend_90d * (1 - roas)
+                    })
 
         # 5. Seasonality check
         seasonality_multiplier = self._check_seasonality(context)

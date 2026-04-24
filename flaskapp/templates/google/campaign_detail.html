@@ -1,7 +1,9 @@
 {% extends "base_app.html" %}
+{% set gads_active = 'structure' %}
 {% block title %}{{ campaign.name }}{% endblock %}
 
 {% block content %}
+{% include "google/components/gads_nav.html" %}
 <div class="max-w-5xl mx-auto">
 
   <!-- Breadcrumb -->

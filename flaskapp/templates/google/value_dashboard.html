@@ -1,7 +1,9 @@
 {% extends "base_app.html" %}
+{% set gads_active = 'performance' %}
 {% block title %}Value Dashboard — {{ app_name }}{% endblock %}
 
 {% block content %}
+{% include "google/components/gads_nav.html" %}
 <div class="max-w-5xl mx-auto">
 
   <div class="mb-6">

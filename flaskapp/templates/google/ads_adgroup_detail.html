@@ -1,9 +1,11 @@
 {# templates/google/ads_adgroup_detail.html - Level 3: Ad Group Detail with Tabs #}
 {% extends "base_app.html" %}
 {% set SECTION = 'google' %}
+{% set gads_active = 'structure' %}
 {% block title %}{{ ad_group.name }} - {{ campaign.name }} - Google Ads{% endblock %}
 
 {% block content %}
+{% include "google/components/gads_nav.html" %}
 <div class="max-w-7xl mx-auto space-y-6">
   {# Breadcrumbs #}
   <nav class="flex items-center text-sm text-gray-500">

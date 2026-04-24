@@ -1,7 +1,9 @@
 {% extends "base_app.html" %}
+{% set gads_active = 'ai_control' %}
 {% block title %}AI Actions — {{ app_name }}{% endblock %}
 
 {% block content %}
+{% include "google/components/gads_nav.html" %}
 <div class="max-w-4xl mx-auto">
 
   <div class="flex items-start justify-between mb-6 flex-wrap gap-4">

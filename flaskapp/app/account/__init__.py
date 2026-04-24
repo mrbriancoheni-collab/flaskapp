@@ -8,6 +8,7 @@ import requests
 from flask import (
     Blueprint,
     current_app,
+    g,
     redirect,
     render_template,
     url_for,
@@ -476,6 +477,7 @@ def dashboard():
                         total_count=cached["total_count"],
                         connected_percent=cached["connected_percent"],
                         ai_warnings=ai_warnings,
+                        user=g.user,
                     )
             except (ValueError, TypeError, KeyError):
                 pass
@@ -514,6 +516,7 @@ def dashboard():
         total_count=total_count,
         connected_percent=pct,
         ai_warnings=ai_warnings,
+        user=g.user,
     )
 
 @account_bp.route("/connect/<provider>", methods=["GET"], endpoint="connect")

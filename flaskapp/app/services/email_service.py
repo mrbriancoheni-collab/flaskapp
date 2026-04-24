@@ -115,15 +115,60 @@ def send_email(
         )
 
     try:
-        if provider == 'sendgrid':
+        if provider == 'brevo':
+            return _send_via_brevo(to, subject, html_body, text_body, reply_to, config)
+        elif provider == 'sendgrid':
             return _send_via_sendgrid(to, subject, html_body, text_body, reply_to, config)
         elif provider == 'mailgun':
             return _send_via_mailgun(to, subject, html_body, text_body, reply_to, config)
-        else:  # Default to SMTP
+        else:
             return _send_via_smtp(to, subject, html_body, text_body, reply_to, config)
     except Exception as e:
         current_app.logger.error(f"Failed to send email to {to}: {e}", exc_info=True)
         return False
+
+
+def _send_via_brevo(
+    to: str,
+    subject: str,
+    html_body: str,
+    text_body: Optional[str],
+    reply_to: Optional[str],
+    config: Dict[str, Any]
+) -> bool:
+    """Send transactional email via Brevo API v3."""
+    import os as _os
+    api_key = (_os.getenv('BREVO_API_KEY') or '').strip()
+    if not api_key:
+        current_app.logger.error("BREVO_API_KEY not set — cannot send transactional email")
+        return False
+
+    payload = {
+        'sender': {'name': config['from_name'], 'email': config['from_email']},
+        'to': [{'email': to}],
+        'subject': subject,
+        'htmlContent': html_body,
+    }
+    if text_body:
+        payload['textContent'] = text_body
+    if reply_to:
+        payload['replyTo'] = {'email': reply_to}
+
+    try:
+        resp = requests.post(
+            'https://api.brevo.com/v3/smtp/email',
+            headers={'api-key': api_key, 'content-type': 'application/json'},
+            json=payload,
+            timeout=20,
+        )
+        if resp.status_code in (200, 201):
+            current_app.logger.info(f"Email sent via Brevo to {to}: {subject}")
+            return True
+        current_app.logger.error(f"Brevo transactional error {resp.status_code}: {resp.text}")
+        return False
+    except Exception as e:
+        current_app.logger.error(f"Brevo request failed: {e}")
+        raise
 
 
 def _send_via_smtp(

@@ -47,6 +47,10 @@ class CampaignManagerAgent(BaseAgent):
         campaigns = context.get('campaigns', [])
         target_cpl = context.get('target_cpl', 100)
 
+        # Only make conversion-based suggestions when tracking is active
+        total_conversions = sum(c.get('conversions', 0) for c in campaigns)
+        conversions_tracked = total_conversions > 0
+
         for campaign in campaigns:
             campaign_id = campaign['id']
             campaign_name = campaign.get('name', '')
@@ -83,9 +87,7 @@ class CampaignManagerAgent(BaseAgent):
 
             # 3. Bid optimization opportunity
             if current_cpl > target_cpl * 1.1:  # 10% above target
-                # Calculate optimal bid adjustment
                 bid_reduction_pct = min(20, (current_cpl - target_cpl) / target_cpl * 100)
-
                 opportunities.append({
                     'type': 'bid_adjustment',
                     'severity': 'medium',
@@ -94,6 +96,42 @@ class CampaignManagerAgent(BaseAgent):
                     'current_cpl': current_cpl,
                     'target_cpl': target_cpl,
                     'recommended_bid_change_pct': -bid_reduction_pct
+                })
+
+            if not conversions_tracked:
+                continue
+
+            spend_90d = campaign.get('spend_90d', 0)
+            cpl_90d = campaign.get('cpl_90d', current_cpl)
+            impression_share = campaign.get('impression_share', 0)
+            monthly_spend = campaign.get('monthly_spend', 0)
+
+            # 4. Pause campaigns that consistently spend far above target CPL after 90 days
+            if (cpl_90d > target_cpl * 2.0 and spend_90d > 500
+                    and campaign.get('conversions', 0) > 0):
+                opportunities.append({
+                    'type': 'pause_campaign',
+                    'severity': 'high',
+                    'campaign_id': campaign_id,
+                    'campaign_name': campaign_name,
+                    'cpl_90d': cpl_90d,
+                    'target_cpl': target_cpl,
+                    'spend_90d': spend_90d,
+                })
+
+            # 5. Scale campaigns performing significantly below target CPL with room to grow
+            if (cpl_90d > 0 and cpl_90d < target_cpl * 0.7
+                    and impression_share < 70 and monthly_spend > 0):
+                opportunities.append({
+                    'type': 'scale_campaign',
+                    'severity': 'medium',
+                    'campaign_id': campaign_id,
+                    'campaign_name': campaign_name,
+                    'cpl_90d': cpl_90d,
+                    'target_cpl': target_cpl,
+                    'impression_share': impression_share,
+                    'current_spend': monthly_spend,
+                    'recommended_increase': monthly_spend * 0.3,
                 })
 
         return opportunities
@@ -142,13 +180,56 @@ class CampaignManagerAgent(BaseAgent):
                     action_data={
                         'bid_change_pct': opp['recommended_bid_change_pct']
                     },
-                    risk_level=DecisionRiskLevel.LOW,  # Small bid adjustments are low risk
+                    risk_level=DecisionRiskLevel.LOW,
                     requires_approval=False,
                     confidence=0.92,
-                    expected_monthly_savings=(opp['current_cpl'] - opp['target_cpl']) * 100,  # Rough estimate
+                    expected_monthly_savings=(opp['current_cpl'] - opp['target_cpl']) * 100,
                     predicted_outcome={
                         'cpl_reduction': opp['current_cpl'] - opp['target_cpl']
                     }
+                )
+                decisions.append(decision)
+
+            elif opp_type == 'pause_campaign':
+                overspend = opp['spend_90d'] * (1 - opp['target_cpl'] / opp['cpl_90d'])
+                decision = AgentDecision(
+                    agent_id=self.agent_id,
+                    agent_type=self.agent_type,
+                    decision_type='pause_campaign',
+                    title=f"Pause underperforming campaign '{opp['campaign_name']}'",
+                    description=f"90-day CPL ${opp['cpl_90d']:.2f} is {opp['cpl_90d'] / opp['target_cpl']:.1f}x the target ${opp['target_cpl']:.2f}",
+                    reasoning=f"Consistently high CPL after 90 days — estimated ${overspend:,.0f} wasted vs target",
+                    account_id=0,
+                    customer_id='',
+                    campaign_id=opp['campaign_id'],
+                    action_data={'campaign_id': opp['campaign_id'], 'reason': 'high_cpl_90d'},
+                    risk_level=DecisionRiskLevel.HIGH,
+                    requires_approval=True,
+                    confidence=0.82,
+                    expected_monthly_savings=overspend / 3,
+                )
+                decisions.append(decision)
+
+            elif opp_type == 'scale_campaign':
+                decision = AgentDecision(
+                    agent_id=self.agent_id,
+                    agent_type=self.agent_type,
+                    decision_type='scale_campaign',
+                    title=f"Scale '{opp['campaign_name']}' — strong CPL, low impression share",
+                    description=f"CPL ${opp['cpl_90d']:.2f} is {(1 - opp['cpl_90d'] / opp['target_cpl']) * 100:.0f}% below target with only {opp['impression_share']:.0f}% impression share",
+                    reasoning="More budget here will capture reachable demand at a proven CPL",
+                    account_id=0,
+                    customer_id='',
+                    campaign_id=opp['campaign_id'],
+                    action_data={
+                        'current_budget': opp['current_spend'],
+                        'new_budget': opp['current_spend'] + opp['recommended_increase'],
+                        'increase_amount': opp['recommended_increase'],
+                    },
+                    risk_level=DecisionRiskLevel.MEDIUM,
+                    requires_approval=True,
+                    confidence=0.78,
+                    expected_monthly_leads=int(opp['recommended_increase'] / max(opp['cpl_90d'], 1)),
                 )
                 decisions.append(decision)
 

@@ -148,64 +148,30 @@ class StrategicDirectorAgent(BaseAgent):
                 'gap_pct': ((target_roas - current_roas) / target_roas) * 100
             })
 
-        # 2–4. ROAS-based analysis requires real conversion data
-        if conversions_tracked:
-            # 2. Identify budget reallocation opportunities
-            if campaigns:
-                campaign_performance = sorted(
-                    campaigns,
-                    key=lambda c: c.get('roas', 0),
-                    reverse=True
-                )
+        # 2. ROAS-based portfolio reallocation — strategic layer only, requires conversions
+        # Campaign-level pausing and scaling are handled by the operational agent (daily).
+        if conversions_tracked and campaigns:
+            campaign_performance = sorted(
+                campaigns,
+                key=lambda c: c.get('roas', 0),
+                reverse=True
+            )
 
-                top_performers = campaign_performance[:3]
-                bottom_performers = [c for c in campaign_performance if c.get('roas', 0) < 1.0]
+            top_performers = campaign_performance[:3]
+            bottom_performers = [c for c in campaign_performance if c.get('roas', 0) < 1.0]
 
-                if bottom_performers and top_performers:
-                    bottom_spend = sum(c.get('monthly_spend', 0) for c in bottom_performers)
-                    top_roas = sum(c.get('roas', 0) for c in top_performers) / len(top_performers)
+            if bottom_performers and top_performers:
+                bottom_spend = sum(c.get('monthly_spend', 0) for c in bottom_performers)
+                top_roas = sum(c.get('roas', 0) for c in top_performers) / len(top_performers)
 
-                    if bottom_spend > total_budget * 0.1:  # More than 10% on losers
-                        opportunities.append({
-                            'type': 'budget_reallocation',
-                            'severity': 'high',
-                            'from_campaigns': [c['id'] for c in bottom_performers],
-                            'to_campaigns': [c['id'] for c in top_performers],
-                            'amount': bottom_spend * 0.5,
-                            'expected_roas_improvement': top_roas
-                        })
-
-            # 3. Check for scaling opportunities
-            for campaign in campaigns:
-                roas = campaign.get('roas', 0)
-                impression_share = campaign.get('impression_share', 0)
-                monthly_spend = campaign.get('monthly_spend', 0)
-
-                if roas > target_roas * 1.2 and impression_share < 70:
+                if bottom_spend > total_budget * 0.1:  # More than 10% of budget on losers
                     opportunities.append({
-                        'type': 'scaling_opportunity',
-                        'severity': 'medium',
-                        'campaign_id': campaign['id'],
-                        'campaign_name': campaign.get('name'),
-                        'current_roas': roas,
-                        'impression_share': impression_share,
-                        'current_spend': monthly_spend,
-                        'recommended_increase': monthly_spend * 0.5
-                    })
-
-            # 4. Check for campaigns to pause
-            for campaign in campaigns:
-                roas = campaign.get('roas', 0)
-                spend_90d = campaign.get('spend_90d', 0)
-
-                if roas < 0.5 and spend_90d > 1000:
-                    opportunities.append({
-                        'type': 'pause_campaign',
+                        'type': 'budget_reallocation',
                         'severity': 'high',
-                        'campaign_id': campaign['id'],
-                        'campaign_name': campaign.get('name'),
-                        'roas': roas,
-                        'wasted_spend_90d': spend_90d * (1 - roas)
+                        'from_campaigns': [c['id'] for c in bottom_performers],
+                        'to_campaigns': [c['id'] for c in top_performers],
+                        'amount': bottom_spend * 0.5,
+                        'expected_roas_improvement': top_roas
                     })
 
         # 5. Seasonality check
@@ -285,55 +251,6 @@ class StrategicDirectorAgent(BaseAgent):
                     requires_approval=True,
                     confidence=0.75,
                     expected_monthly_savings=opp['amount'] * 0.3,  # Conservative estimate
-                )
-                decisions.append(decision)
-
-            elif opp_type == 'scaling_opportunity':
-                decision = AgentDecision(
-                    agent_id=self.agent_id,
-                    agent_type=self.agent_type,
-                    decision_type='scale_campaign',
-                    title=f"Scale '{opp['campaign_name']}' by 50%",
-                    description=f"Increase budget from ${opp['current_spend']:,.0f} to ${opp['current_spend'] * 1.5:,.0f}/month",
-                    reasoning=f"Campaign has {opp['current_roas']:.2f}x ROAS but only {opp['impression_share']:.0f}% impression share",
-                    account_id=0,
-                    customer_id='',
-                    campaign_id=opp['campaign_id'],
-                    action_data={
-                        'current_budget': opp['current_spend'],
-                        'new_budget': opp['current_spend'] * 1.5,
-                        'increase_amount': opp['recommended_increase']
-                    },
-                    risk_level=DecisionRiskLevel.HIGH,
-                    requires_approval=True,
-                    confidence=0.80,
-                    expected_monthly_leads=int(opp['recommended_increase'] / 50),  # Assume $50 CPL
-                    predicted_outcome={
-                        'roas_change': 0.0,  # Should maintain ROAS
-                        'lead_increase': opp['recommended_increase'] / 50
-                    }
-                )
-                decisions.append(decision)
-
-            elif opp_type == 'pause_campaign':
-                decision = AgentDecision(
-                    agent_id=self.agent_id,
-                    agent_type=self.agent_type,
-                    decision_type='pause_campaign',
-                    title=f"Pause underperforming campaign '{opp['campaign_name']}'",
-                    description=f"Campaign has {opp['roas']:.2f}x ROAS after 90 days",
-                    reasoning=f"Consistent poor performance. Wasted ${opp['wasted_spend_90d']:,.0f} in last 90 days",
-                    account_id=0,
-                    customer_id='',
-                    campaign_id=opp['campaign_id'],
-                    action_data={
-                        'campaign_id': opp['campaign_id'],
-                        'reason': 'low_roas'
-                    },
-                    risk_level=DecisionRiskLevel.HIGH,
-                    requires_approval=True,
-                    confidence=0.85,
-                    expected_monthly_savings=opp['wasted_spend_90d'] / 3  # Monthly equivalent
                 )
                 decisions.append(decision)
 

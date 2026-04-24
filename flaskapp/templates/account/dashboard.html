@@ -460,6 +460,44 @@
   </div>
   {% endif %}
 
+  {# ── Autonomous Mode Status + Decision Feed (ads connected only) ──────────── #}
+  {% if ads_connected %}
+  <div class="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+    {# Status card — 1 col #}
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5" id="autonomousStatusCard">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-gray-300" id="autonomousDot"></span>
+          Autonomous Mode
+        </h2>
+        <a href="{{ url_for('autonomous_bp.control_panel') }}"
+           class="text-xs text-indigo-600 hover:text-indigo-700 font-medium">Configure →</a>
+      </div>
+      <div id="autonomousStatusBody" class="space-y-3">
+        <div class="flex items-center justify-center py-4">
+          <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-500"></div>
+        </div>
+      </div>
+    </div>
+
+    {# Decision Feed — 2 cols #}
+    <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-gray-800">What Automation Did</h2>
+        <a href="{{ url_for('autonomous_bp.control_panel') }}"
+           class="text-xs text-indigo-600 hover:text-indigo-700 font-medium">All actions →</a>
+      </div>
+      <ul id="decisionFeedList" class="divide-y divide-gray-100">
+        <li class="px-5 py-4 text-center text-gray-400 text-sm">
+          <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-500 mx-auto"></div>
+        </li>
+      </ul>
+    </div>
+
+  </div>
+  {% endif %}
+
 </div>
 {% endblock %}
 
@@ -558,9 +596,116 @@ function upgradeToAnnual() {
 }
 
 function showPricingDetails() {
-  // Redirect to pricing page or show modal
-  // For now, redirect to home page pricing section
   window.location.href = '/#pricing';
 }
+
+// ── Autonomous Mode widgets (loaded async) ───────────────────────────────────
+(function loadAutonomousWidgets() {
+  const dot      = document.getElementById('autonomousDot');
+  const body     = document.getElementById('autonomousStatusBody');
+  const feedList = document.getElementById('decisionFeedList');
+  if (!body && !feedList) return;
+
+  const ACTION_LABELS = {
+    negative_keyword_added:   'Added negative keyword',
+    negative_keyword_removed: 'Removed negative keyword',
+    keyword_paused:           'Paused keyword',
+    keyword_enabled:          'Enabled keyword',
+    bid_adjusted:             'Adjusted bid',
+    budget_reallocated:       'Reallocated budget',
+    ad_paused:                'Paused ad',
+    ad_enabled:               'Enabled ad',
+    campaign_paused:          'Paused campaign',
+    campaign_enabled:         'Enabled campaign',
+    search_term_blocked:      'Blocked search term',
+    quality_score_fix:        'Fixed quality score',
+  };
+
+  const ICON_MAP = {
+    negative_keyword_added:   { bg: 'bg-red-100',    text: 'text-red-600',    symbol: '–KW' },
+    keyword_paused:           { bg: 'bg-orange-100', text: 'text-orange-600', symbol: '⏸'  },
+    campaign_paused:          { bg: 'bg-orange-100', text: 'text-orange-600', symbol: '⏸'  },
+    budget_reallocated:       { bg: 'bg-blue-100',   text: 'text-blue-600',   symbol: '$'   },
+    bid_adjusted:             { bg: 'bg-purple-100', text: 'text-purple-600', symbol: '↕'   },
+  };
+  const DEFAULT_ICON = { bg: 'bg-green-100', text: 'text-green-600', symbol: '✓' };
+
+  // Load summary for the status card
+  fetch('{{ url_for("autonomous_bp.summary_json") }}')
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (!data || !body) return;
+      const enabled = {{ 'true' if request and request.args else 'false' }}; // will be set below via feed
+      const modeLabel = data.growth_mode || 'balanced';
+
+      body.innerHTML = `
+        <div class="text-xs text-gray-500 leading-relaxed space-y-2">
+          <div class="flex justify-between">
+            <span class="text-gray-400">Actions (7d)</span>
+            <span class="font-semibold text-gray-800">${data.total_actions}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-400">Est. savings</span>
+            <span class="font-semibold text-green-600">$${Math.round(data.total_savings)}/mo</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-400">Extra leads</span>
+            <span class="font-semibold text-blue-600">${data.additional_leads}</span>
+          </div>
+        </div>
+        <a href="{{ url_for('autonomous_bp.control_panel') }}"
+           class="mt-3 block text-center text-xs py-1.5 px-3 rounded-lg border border-indigo-200
+                  text-indigo-600 hover:bg-indigo-50 font-medium transition">
+          Open Control Panel
+        </a>
+      `;
+      if (dot) {
+        dot.className = data.total_actions > 0
+          ? 'w-2 h-2 rounded-full bg-green-500 animate-pulse'
+          : 'w-2 h-2 rounded-full bg-gray-300';
+      }
+    })
+    .catch(() => {
+      if (body) body.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">Unavailable</p>';
+    });
+
+  // Load recent feed
+  fetch('{{ url_for("autonomous_bp.feed_json") }}?limit=5')
+    .then(r => r.ok ? r.json() : [])
+    .then(items => {
+      if (!feedList) return;
+      if (!items || items.length === 0) {
+        feedList.innerHTML = `
+          <li class="px-5 py-6 text-center text-sm text-gray-400">
+            No automated actions yet — agents will populate this once they run.
+          </li>`;
+        return;
+      }
+      feedList.innerHTML = items.map(item => {
+        const icon  = ICON_MAP[item.action_type] || DEFAULT_ICON;
+        const date  = item.executed_at ? item.executed_at.slice(0, 10) : '';
+        const camp  = item.campaign_name ? `${item.campaign_name} · ` : '';
+        const badge = item.savings > 0
+          ? `<span class="shrink-0 text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">saves $${Math.round(item.savings)}/mo</span>`
+          : '';
+        return `
+          <li class="px-5 py-3 flex items-start gap-3">
+            <div class="shrink-0 mt-0.5 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${icon.bg} ${icon.text}">
+              ${icon.symbol}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline justify-between gap-2">
+                <p class="text-sm font-medium text-gray-900 truncate">${item.title}</p>
+                ${badge}
+              </div>
+              <p class="text-xs text-gray-400 mt-0.5 truncate">${camp}${date}</p>
+            </div>
+          </li>`;
+      }).join('');
+    })
+    .catch(() => {
+      if (feedList) feedList.innerHTML = '<li class="px-5 py-4 text-xs text-gray-400 text-center">Could not load feed.</li>';
+    });
+})();
 </script>
 {% endblock %}

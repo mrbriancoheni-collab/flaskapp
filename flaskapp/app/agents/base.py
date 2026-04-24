@@ -501,13 +501,50 @@ class BaseAgent(ABC):
         auto_executed = []
         pending_approval = []
 
+        # --- Safety gate: check for spend anomaly once per cycle ---
+        # If anomaly detected, cap this cycle at L2 (no high-risk auto-execution)
+        _effective_autonomy = self.autonomy_level
+        if self.autonomy_level == 3:
+            try:
+                from app.services.safety_layer import check_anomaly_gate
+                anomaly, anomaly_msg = check_anomaly_gate(context.get('account_id', 0))
+                if anomaly:
+                    _effective_autonomy = 2
+                    import logging as _log
+                    _log.getLogger(__name__).warning(
+                        "Anomaly gate activated for account %s — downgrading to L2 for this cycle: %s",
+                        context.get('account_id'), anomaly_msg,
+                    )
+            except Exception:
+                pass  # never let safety checks block execution
+
         for decision in decisions:
             # Log decision
             if self.decision_log:
                 self.decision_log.log_decision(decision)
 
-            # Auto-execute or queue for approval
-            if self.should_auto_execute(decision):
+            # --- Cooldown check ---
+            _blocked = False
+            try:
+                from app.services.safety_layer import is_in_cooldown
+                _blocked, _reason = is_in_cooldown(context.get('account_id', 0), decision)
+                if _blocked:
+                    import logging as _log
+                    _log.getLogger(__name__).info("Cooldown blocked: %s", _reason)
+                    decision.status = "skipped_cooldown"
+            except Exception:
+                pass  # never let safety checks block execution
+
+            if _blocked:
+                continue
+
+            # Auto-execute or queue for approval (using effective autonomy level)
+            _original_level = self.autonomy_level
+            self.autonomy_level = _effective_autonomy
+            should_exec = self.should_auto_execute(decision)
+            self.autonomy_level = _original_level
+
+            if should_exec:
                 decision.status = "approved"
                 result = self.execute(decision, google_ads_client)
 

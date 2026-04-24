@@ -73,6 +73,12 @@ def run_daily(app, db):
     except Exception:
         app.logger.exception("[CRON] Lead automation run failed")
 
+    # Safety layer: rollback detection for all autonomous accounts
+    try:
+        _run_daily_safety_checks(app)
+    except Exception:
+        app.logger.exception("[CRON] Safety layer checks failed")
+
     # Send monthly Google Ads performance reports
     try:
         _run_monthly_google_ads_performance_emails(app)
@@ -647,6 +653,61 @@ def _run_monthly_google_ads_performance_emails(app) -> None:
             app.logger.exception(f"[CRON] Error sending monthly report for account {account_id}: {e}")
 
     app.logger.info(f"[CRON] Monthly Google Ads emails completed: {emails_sent} sent, {errors} errors")
+
+
+# =========================
+# Safety Layer Checks
+# =========================
+
+def _run_daily_safety_checks(app) -> None:
+    """
+    Run rollback detection for all accounts that have autonomous mode enabled.
+    Flags any ai_actions where CPL worsened >30% after execution.
+    Anomaly detection runs inline per-cycle in base.py; this covers rollbacks.
+    """
+    with app.app_context():
+        try:
+            from sqlalchemy import text
+            from app import db
+
+            # Find accounts that have autonomous agents active
+            accounts_sql = text("""
+                SELECT DISTINCT a.id AS account_id
+                FROM accounts a
+                JOIN google_oauth_tokens g ON g.account_id = a.id
+                WHERE a.status = 'active'
+                  AND g.credentials_json IS NOT NULL
+                  AND a.google_ads_customer_id IS NOT NULL
+            """)
+            with db.engine.connect() as conn:
+                accounts = conn.execute(accounts_sql).fetchall()
+
+        except Exception:
+            app.logger.exception("[CRON] Safety layer: failed to load accounts")
+            return
+
+        from app.services.safety_layer import run_all_safety_checks_for_account
+
+        total_flags = 0
+        for row in accounts:
+            try:
+                result = run_all_safety_checks_for_account(row.account_id)
+                flags = len(result.get("rollback_flags", []))
+                total_flags += flags
+                if flags or result.get("anomaly"):
+                    app.logger.info(
+                        "[CRON] Safety account=%d anomaly=%s rollback_flags=%d detail=%s",
+                        row.account_id,
+                        result.get("anomaly"),
+                        flags,
+                        result.get("anomaly_detail", ""),
+                    )
+            except Exception:
+                app.logger.exception(
+                    "[CRON] Safety layer failed for account %d", row.account_id
+                )
+
+        app.logger.info("[CRON] Safety checks complete — %d rollback flags raised", total_flags)
 
 
 # =========================

@@ -1,9 +1,11 @@
 {# templates/google/ai_change_log.html - TRANSPARENCY & TRUST #}
 {% extends "base_app.html" %}
 {% set SECTION = 'google' %}
+{% set gads_active = 'ai_control' %}
 {% block title %}AI Change Log - What Your AI Has Done{% endblock %}
 
 {% block content %}
+{% include "google/components/gads_nav.html" %}
 {% from "components/breadcrumbs.html" import render as render_breadcrumbs %}
 {% set _industry = (current_account.industry if current_account and current_account.industry else 'home services') %}
 

@@ -1,6 +1,7 @@
 {# templates/google/ads_opportunities.html - Simplified Version #}
 {% extends "base_app.html" %}
 {% set SECTION = 'google' %}
+{% set gads_active = 'intelligence' %}
 {% block title %}{% if is_demo %}Opportunities Dashboard - Google Ads{% else %}Google Ads{% endif %}{% endblock %}
 
 {% block head_extra %}
@@ -171,6 +172,7 @@
 {% endblock %}
 
 {% block content %}
+{% include "google/components/gads_nav.html" %}
 {% from "components/breadcrumbs.html" import render as render_breadcrumbs %}
 
 <div class="max-w-7xl mx-auto space-y-6">

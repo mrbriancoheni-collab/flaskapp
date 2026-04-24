@@ -1,8 +1,10 @@
 {% extends "base_app.html" %}
+{% set gads_active = 'ai_control' %}
 
 {% block title %}AI Agent Approval Queue - FieldSprout{% endblock %}
 
 {% block content %}
+{% include "google/components/gads_nav.html" %}
 
 {# ── Macro must be defined before any call sites ─────────────────────────── #}
 {% macro render_decision_card(decision, risk_class) %}

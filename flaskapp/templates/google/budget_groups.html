@@ -1,8 +1,10 @@
 {% extends "base_app.html" %}
 {% set SECTION = 'google' %}
+{% set gads_active = 'budget' %}
 {% block title %}Campaign Budget Groups — FieldSprout{% endblock %}
 
 {% block content %}
+{% include "google/components/gads_nav.html" %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
   <!-- Header -->
   <div class="mb-8">

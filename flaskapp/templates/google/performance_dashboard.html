@@ -1,0 +1,324 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'google' %}
+{% set gads_active = 'performance' %}
+{% block title %}Google Ads Performance — FieldSprout{% endblock %}
+
+{% block content %}
+{% include "google/components/gads_nav.html" %}
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 space-y-6">
+
+  {# ── auth error ── #}
+  {% if auth_error %}
+  <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 flex items-start gap-3">
+    <i class="fa-solid fa-triangle-exclamation text-amber-600 text-xl mt-0.5"></i>
+    <div>
+      <p class="font-semibold text-amber-900">Google Ads token expired</p>
+      <p class="text-sm text-amber-700 mt-1">Reconnect to restore live data and let AI agents continue running.</p>
+      <a href="{{ url_for('google_bp.index') }}" class="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-lg transition">
+        <i class="fa-solid fa-plug"></i> Reconnect Google Ads
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── page header ── #}
+  <div class="flex items-start justify-between flex-wrap gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Performance</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Last 30 days · Google Ads</p>
+    </div>
+    <div class="flex items-center gap-2">
+      {% if pending_decisions_count and pending_decisions_count > 0 %}
+      <a href="{{ url_for('google_bp.ai_control') }}?tab=approval"
+         class="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-lg transition">
+        <i class="fas fa-clock"></i>
+        {{ pending_decisions_count }} pending approval
+      </a>
+      {% endif %}
+      <a href="{{ url_for('google_bp.ai_control') }}"
+         class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
+        <i class="fas fa-robot"></i> AI Control
+      </a>
+    </div>
+  </div>
+
+  {# ── not connected state ── #}
+  {% if not connected %}
+  <div class="bg-white border border-gray-200 rounded-xl p-10 text-center">
+    <i class="fas fa-bullhorn text-gray-300 text-5xl mb-4"></i>
+    <h2 class="text-xl font-semibold text-gray-800 mb-2">Connect Google Ads</h2>
+    <p class="text-gray-500 mb-6 max-w-md mx-auto">Link your Google Ads account to see live performance data and enable AI optimisation.</p>
+    <a href="{{ url_for('google_bp.index') }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition">
+      <i class="fas fa-plug"></i> Connect Account
+    </a>
+  </div>
+  {% else %}
+
+  {# ── KPI cards ── #}
+  {% set ap = account_performance or {} %}
+  {% set has_data = ap.get('has_data', false) %}
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+
+    {% macro kpi_card(label, value, change, icon, color_class) %}
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">{{ label }}</span>
+        <i class="fas {{ icon }} {{ color_class }} text-sm"></i>
+      </div>
+      <p class="text-2xl font-bold text-gray-900">{{ value }}</p>
+      {% if change is not none %}
+      <p class="text-xs mt-1 {{ 'text-green-600' if change > 0 else ('text-red-500' if change < 0 else 'text-gray-400') }}">
+        <i class="fas {{ 'fa-arrow-up' if change > 0 else ('fa-arrow-down' if change < 0 else 'fa-minus') }}"></i>
+        {{ '%+.1f'|format(change) }}% vs prior 30d
+      </p>
+      {% endif %}
+    </div>
+    {% endmacro %}
+
+    {{ kpi_card('Spend',
+        '$' ~ ('%.0f'|format(ap.get('cost',0))),
+        ap.get('cost_change') if ap.get('has_comparison') else none,
+        'fa-dollar-sign', 'text-indigo-500') }}
+
+    {{ kpi_card('Conversions',
+        '%.1f'|format(ap.get('conversions',0)),
+        ap.get('conversions_change') if ap.get('has_comparison') else none,
+        'fa-phone-volume', 'text-green-500') }}
+
+    {{ kpi_card('CPL',
+        '$' ~ ('%.2f'|format(ap.get('cost_per_conversion',0))),
+        (ap.get('cpa_change', 0) * -1) if ap.get('has_comparison') else none,
+        'fa-tag', 'text-blue-500') }}
+
+    {{ kpi_card('Clicks',
+        ap.get('clicks',0)|int,
+        ap.get('clicks_change') if ap.get('has_comparison') else none,
+        'fa-cursor', 'text-cyan-500') }}
+
+    {{ kpi_card('CTR',
+        ('%.2f'|format(ap.get('ctr',0))) ~ '%',
+        ap.get('ctr_change') if ap.get('has_comparison') else none,
+        'fa-percent', 'text-purple-500') }}
+
+    {{ kpi_card('Avg CPC',
+        '$' ~ ('%.2f'|format(ap.get('avg_cpc',0))),
+        (ap.get('cpc_change', 0) * -1) if ap.get('has_comparison') else none,
+        'fa-coins', 'text-orange-500') }}
+
+  </div>
+
+  {# ── trend chart + AI summary ── #}
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    {# spend & conversions chart #}
+    <div class="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold text-gray-900">30-Day Trend</h2>
+        <div class="flex items-center gap-3 text-xs text-gray-500">
+          <span class="flex items-center gap-1"><span class="inline-block w-3 h-0.5 bg-indigo-500 rounded"></span>Spend</span>
+          <span class="flex items-center gap-1"><span class="inline-block w-3 h-0.5 bg-green-500 rounded"></span>Conversions</span>
+        </div>
+      </div>
+      {% if daily_performance %}
+      <div style="height:220px;position:relative;">
+        <canvas id="trendChart"></canvas>
+      </div>
+      {% else %}
+      <div class="flex items-center justify-center h-44 text-gray-400 text-sm">
+        <div class="text-center">
+          <i class="fas fa-chart-area text-3xl mb-2"></i><br>No daily data yet
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    {# AI activity summary #}
+    <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+      <h2 class="font-semibold text-gray-900 mb-4">AI Activity (30d)</h2>
+      <div class="space-y-3">
+        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+          <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-bolt text-indigo-400 w-4"></i>Actions taken</span>
+          <span class="text-sm font-semibold text-gray-900">{{ ai_actions_taken }}</span>
+        </div>
+        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+          <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-piggy-bank text-green-400 w-4"></i>Est. savings</span>
+          <span class="text-sm font-semibold text-green-700">${{ '%.0f'|format(wasted_spend_prevented) }}/mo</span>
+        </div>
+        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+          <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-ban text-red-400 w-4"></i>Searches blocked</span>
+          <span class="text-sm font-semibold text-gray-900">{{ blocked_searches_count }}</span>
+        </div>
+        <div class="flex items-center justify-between py-2">
+          <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-clock text-amber-400 w-4"></i>Pending review</span>
+          <span class="text-sm font-semibold {{ 'text-amber-600' if pending_decisions_count else 'text-gray-500' }}">{{ pending_decisions_count }}</span>
+        </div>
+      </div>
+      <a href="{{ url_for('google_bp.ai_control') }}"
+         class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-medium rounded-lg transition">
+        View AI Control <i class="fas fa-arrow-right text-xs"></i>
+      </a>
+    </div>
+
+  </div>
+
+  {# ── campaigns table ── #}
+  {% if campaigns_data %}
+  <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h2 class="font-semibold text-gray-900">Campaigns</h2>
+      <a href="{{ url_for('gads_bp.optimize') }}" class="text-sm text-indigo-600 hover:underline flex items-center gap-1">
+        Edit structure <i class="fas fa-arrow-right text-xs"></i>
+      </a>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-100 text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Campaign</th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Spend</th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Conv.</th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">CPL</th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">CTR</th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Impr. Share</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for c in campaigns_data %}
+          {% set cpl = (c.monthly_spend / c.conversions) if c.conversions > 0 else 0 %}
+          {% set ctr = (c.ctr if c.ctr is defined else 0) %}
+          <tr class="hover:bg-gray-50 transition">
+            <td class="px-5 py-3 font-medium text-gray-900 max-w-xs truncate">{{ c.name }}</td>
+            <td class="px-4 py-3 text-right text-gray-700">${{ '%.0f'|format(c.monthly_spend or 0) }}</td>
+            <td class="px-4 py-3 text-right text-gray-700">{{ c.conversions or 0 }}</td>
+            <td class="px-4 py-3 text-right {{ 'text-red-600' if cpl > target_cpl * 1.2 else 'text-green-600' if cpl > 0 and cpl < target_cpl else 'text-gray-500' }}">
+              {{ '$%.2f'|format(cpl) if cpl > 0 else '—' }}
+            </td>
+            <td class="px-4 py-3 text-right text-gray-700">
+              {{ '%.2f'|format(ctr * 100 if ctr < 1 else ctr) }}%
+            </td>
+            <td class="px-4 py-3 text-right text-gray-700">
+              {% if c.impression_share is defined and c.impression_share %}
+                {{ '%.0f'|format(c.impression_share) }}%
+              {% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3">
+              {% set status_lower = (c.type or '') | lower %}
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ 'bg-green-100 text-green-700' if 'enabled' in (c.status|default('')|lower) else 'bg-gray-100 text-gray-600' }}">
+                {{ c.status | default('—') }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── recent AI action timeline ── #}
+  {% if recent_changes %}
+  <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h2 class="font-semibold text-gray-900">Recent AI Actions</h2>
+      <a href="{{ url_for('google_bp.ai_change_log') }}" class="text-sm text-indigo-600 hover:underline flex items-center gap-1">
+        Full log <i class="fas fa-arrow-right text-xs"></i>
+      </a>
+    </div>
+    <ul class="divide-y divide-gray-50">
+      {% for a in recent_changes[:8] %}
+      <li class="px-5 py-3 flex items-start gap-4 hover:bg-gray-50 transition">
+        <span class="mt-0.5 flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs
+                     {{ 'bg-red-100 text-red-600' if a.color == 'red' else
+                        'bg-green-100 text-green-600' if a.color == 'green' else
+                        'bg-yellow-100 text-yellow-600' if a.color == 'yellow' else
+                        'bg-blue-100 text-blue-600' }}">
+          <i class="fas {{ a.icon }}"></i>
+        </span>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-sm font-medium text-gray-900 truncate">{{ a.title }}</p>
+            <span class="flex-shrink-0 text-xs text-gray-400">{{ a.time }}</span>
+          </div>
+          {% if a.description %}
+          <p class="text-xs text-gray-500 mt-0.5 truncate">{{ a.description }}</p>
+          {% endif %}
+          <div class="flex items-center gap-3 mt-1">
+            {% if a.saved %}<span class="text-xs text-green-600 font-medium">+${{ '%.0f'|format(a.saved) }}/mo saved</span>{% endif %}
+            {% if a.confidence %}<span class="text-xs text-gray-400">{{ '%.0f'|format(a.confidence * 100) }}% confidence</span>{% endif %}
+            <span class="text-xs px-1.5 py-0.5 rounded {{ 'bg-green-50 text-green-700' if a.status == 'executed' else 'bg-amber-50 text-amber-700' }}">
+              {{ a.status | capitalize }}
+            </span>
+          </div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% endif %}{# /connected #}
+
+</div>
+
+{% if daily_performance %}
+<script nonce="{{ g.csp_nonce }}">
+(function() {
+  const raw = {{ daily_performance | tojson }};
+  const labels = raw.map(d => d.date);
+  const spend  = raw.map(d => d.cost);
+  const conv   = raw.map(d => d.conversions);
+
+  new Chart(document.getElementById('trendChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Spend ($)',
+          data: spend,
+          borderColor: '#6366f1',
+          backgroundColor: 'rgba(99,102,241,0.08)',
+          borderWidth: 2,
+          pointRadius: 2,
+          tension: 0.3,
+          fill: true,
+          yAxisID: 'ySpend',
+        },
+        {
+          label: 'Conversions',
+          data: conv,
+          borderColor: '#22c55e',
+          backgroundColor: 'rgba(34,197,94,0)',
+          borderWidth: 2,
+          pointRadius: 2,
+          tension: 0.3,
+          yAxisID: 'yConv',
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: { mode: 'index' } },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 } } },
+        ySpend: {
+          position: 'left',
+          grid: { color: 'rgba(0,0,0,0.04)' },
+          ticks: { font: { size: 10 }, callback: v => '$' + v.toFixed(0) }
+        },
+        yConv: {
+          position: 'right',
+          grid: { display: false },
+          ticks: { font: { size: 10 } }
+        },
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -228,19 +228,94 @@ def calculate_baseline_metrics(campaign_id: int, days: int = 90) -> Dict[str, fl
             "end_date": end_date
         }).first()
 
-        if not result:
+        if result and float(result.avg_daily_cost_cents or 0) > 0:
+            return {
+                "avg_cpl_cents": float(result.avg_cpl_cents or 0),
+                "avg_conversion_rate": float(result.avg_conversion_rate or 0),
+                "avg_roas": float(result.avg_roas or 0),
+                "avg_ctr": float(result.avg_ctr or 0),
+                "avg_daily_cost_cents": float(result.avg_daily_cost_cents or 0),
+                "avg_daily_conversions": float(result.avg_daily_conversions or 0),
+                "stddev_cpl_cents": float(result.stddev_cpl_cents or 0),
+                "stddev_conversion_rate": float(result.stddev_conversion_rate or 0)
+            }
+
+    # Fallback: build baseline from gads_stats_daily using the campaign's google_campaign_id
+    return _baseline_from_gads_stats(campaign_id, days)
+
+
+def _baseline_from_gads_stats(campaign_id: int, days: int) -> Dict[str, float]:
+    """
+    Build baseline metrics from gads_stats_daily when campaign_performance_history is empty.
+    """
+    end_date = date.today()
+    start_date = end_date - timedelta(days=days)
+
+    # Look up the google_campaign_id
+    id_query = text("SELECT google_campaign_id FROM ads_campaigns WHERE id = :id")
+    with db.engine.connect() as conn:
+        row = conn.execute(id_query, {"id": campaign_id}).first()
+        if not row or not row.google_campaign_id:
             return {}
 
-        return {
-            "avg_cpl_cents": float(result.avg_cpl_cents or 0),
-            "avg_conversion_rate": float(result.avg_conversion_rate or 0),
-            "avg_roas": float(result.avg_roas or 0),
-            "avg_ctr": float(result.avg_ctr or 0),
-            "avg_daily_cost_cents": float(result.avg_daily_cost_cents or 0),
-            "avg_daily_conversions": float(result.avg_daily_conversions or 0),
-            "stddev_cpl_cents": float(result.stddev_cpl_cents or 0),
-            "stddev_conversion_rate": float(result.stddev_conversion_rate or 0)
-        }
+        google_campaign_id = str(row.google_campaign_id)
+
+        stats_query = text("""
+            SELECT
+                SUM(cost_micros) / 1e6                          AS total_cost,
+                SUM(conversions)                                 AS total_conversions,
+                SUM(clicks)                                      AS total_clicks,
+                SUM(impressions)                                 AS total_impressions,
+                COUNT(DISTINCT date)                             AS days_with_data,
+                AVG(cost_micros / 1e6)                           AS avg_daily_cost,
+                AVG(conversions)                                 AS avg_daily_conversions,
+                STDDEV(conversions)                              AS stddev_conversions
+            FROM gads_stats_daily
+            WHERE entity_type = 'campaign'
+              AND entity_id    = :gcid
+              AND date BETWEEN :start_date AND :end_date
+        """)
+
+        r = conn.execute(stats_query, {
+            "gcid": google_campaign_id,
+            "start_date": start_date,
+            "end_date": end_date,
+        }).first()
+
+    if not r or not r.days_with_data or float(r.avg_daily_cost or 0) == 0:
+        return {}
+
+    total_cost = float(r.total_cost or 0)
+    total_conversions = float(r.total_conversions or 0)
+    total_clicks = float(r.total_clicks or 0)
+    total_impressions = float(r.total_impressions or 0)
+    avg_daily_cost = float(r.avg_daily_cost or 0)
+    avg_daily_conversions = float(r.avg_daily_conversions or 0)
+
+    avg_cpl = (total_cost / total_conversions) if total_conversions > 0 else 0
+    avg_cpl_cents = avg_cpl * 100
+
+    avg_daily_cost_cents = avg_daily_cost * 100
+
+    avg_conversion_rate = (total_conversions / total_clicks * 100) if total_clicks > 0 else 0
+    avg_ctr = (total_clicks / total_impressions * 100) if total_impressions > 0 else 0
+
+    # ROAS requires revenue; gads_stats_daily doesn't have it, so approximate as 0
+    avg_roas = 0.0
+
+    stddev_cpl_cents = float(r.stddev_conversions or 0) * 100
+    stddev_conversion_rate = 0.0
+
+    return {
+        "avg_cpl_cents": avg_cpl_cents,
+        "avg_conversion_rate": avg_conversion_rate,
+        "avg_roas": avg_roas,
+        "avg_ctr": avg_ctr,
+        "avg_daily_cost_cents": avg_daily_cost_cents,
+        "avg_daily_conversions": avg_daily_conversions,
+        "stddev_cpl_cents": stddev_cpl_cents,
+        "stddev_conversion_rate": stddev_conversion_rate,
+    }
 
 
 def get_year_over_year_comparison(

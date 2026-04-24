@@ -1,0 +1,451 @@
+{% extends "base_app.html" %}
+{% set SECTION = 'google' %}
+{% set gads_active = 'ai_control' %}
+{% block title %}AI Control — FieldSprout{% endblock %}
+
+{% block content %}
+{% include "google/components/gads_nav.html" %}
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+
+  {# ── page header ── #}
+  <div class="flex items-start justify-between flex-wrap gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">AI Control</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Autonomous mode · Agent performance · Approval queue</p>
+    </div>
+    {% if total_pending > 0 %}
+    <span class="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-100 text-amber-800 text-sm font-semibold rounded-full">
+      <span class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
+      {{ total_pending }} action{{ 's' if total_pending != 1 }} awaiting approval
+    </span>
+    {% endif %}
+  </div>
+
+  {# ── impact summary bar ── #}
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white border border-gray-200 rounded-xl p-4 text-center shadow-sm">
+      <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">7-Day Actions</p>
+      <p class="text-3xl font-bold text-indigo-600">{{ summary.total_actions }}</p>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 text-center shadow-sm">
+      <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Est. Monthly Savings</p>
+      <p class="text-3xl font-bold text-green-600">${{ '%.0f'|format(summary.total_savings) }}</p>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 text-center shadow-sm">
+      <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Decisions</p>
+      <p class="text-3xl font-bold text-blue-600">{{ total_decisions }}</p>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 text-center shadow-sm">
+      <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Pending Approval</p>
+      <p class="text-3xl font-bold {{ 'text-amber-600' if total_pending else 'text-gray-400' }}">{{ total_pending }}</p>
+    </div>
+  </div>
+
+  {# ── tab nav ── #}
+  <div class="border-b border-gray-200 mb-6">
+    <nav class="-mb-px flex gap-6" id="aiTabs">
+      {% for t, label, icon in [
+        ('autonomous', 'Autonomous Mode', 'fa-sliders'),
+        ('agents',     'Agent Performance', 'fa-robot'),
+        ('approval',   'Approval Queue', 'fa-clipboard-check'),
+        ('feed',       'Action Feed', 'fa-stream'),
+      ] %}
+      <a href="?tab={{ t }}"
+         class="tab-link flex items-center gap-2 py-3 border-b-2 text-sm font-medium transition
+                {{ 'border-indigo-600 text-indigo-700' if tab == t else 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}"
+         data-tab="{{ t }}">
+        <i class="fas {{ icon }}"></i> {{ label }}
+        {% if t == 'approval' and total_pending > 0 %}
+        <span class="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full font-semibold">{{ total_pending }}</span>
+        {% endif %}
+      </a>
+      {% endfor %}
+    </nav>
+  </div>
+
+  {# ══ TAB: Autonomous Mode ══ #}
+  <div id="tab-autonomous" class="{{ '' if tab == 'autonomous' else 'hidden' }}">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {# Settings form #}
+      <div class="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <h2 class="text-lg font-semibold text-gray-900 mb-5">System Configuration</h2>
+        <form id="autonomousForm" class="space-y-6">
+
+          {# Enable toggle #}
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <div>
+              <p class="font-semibold text-gray-900">Autonomous Mode</p>
+              <p class="text-sm text-gray-500">Allow AI agents to execute optimisations automatically</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer ml-4">
+              <input type="checkbox" id="autonomousEnabled" class="sr-only peer"
+                     {{ 'checked' if settings.autonomous_mode_enabled == '1' }}>
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer
+                          peer-checked:bg-indigo-600 peer-checked:after:translate-x-full
+                          after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+                          after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+            </label>
+          </div>
+
+          {# Growth mode #}
+          <div>
+            <p class="text-sm font-medium text-gray-700 mb-3">Growth Mode</p>
+            <div class="grid grid-cols-3 gap-3" id="growthModeCards">
+              {% for mode, label, desc, color in [
+                ('efficient',  'Efficient',  'Cut waste only, protect margins', 'green'),
+                ('balanced',   'Balanced',   'Optimise spend and scale leads', 'indigo'),
+                ('aggressive', 'Aggressive', 'Maximise leads, accept higher CPL', 'orange'),
+              ] %}
+              <div class="growth-card cursor-pointer rounded-xl border-2 p-4 transition
+                          {{ 'border-' ~ color ~ '-500 bg-' ~ color ~ '-50' if settings.growth_mode == mode else 'border-gray-200 hover:border-gray-300' }}"
+                   data-mode="{{ mode }}">
+                <p class="font-semibold text-gray-900 text-sm">{{ label }}</p>
+                <p class="text-xs text-gray-500 mt-1">{{ desc }}</p>
+              </div>
+              {% endfor %}
+            </div>
+            <input type="hidden" id="growthModeInput" value="{{ settings.growth_mode }}">
+          </div>
+
+          {# Autonomy level #}
+          <div>
+            <p class="text-sm font-medium text-gray-700 mb-3">Autonomy Level</p>
+            <div class="grid grid-cols-3 gap-3" id="autonomyCards">
+              {% for level, label, desc in [
+                ('1', 'L1 — Assist', 'Recommend only, never execute'),
+                ('2', 'L2 — Semi-Auto', 'Auto-execute low-risk actions'),
+                ('3', 'L3 — Full Auto', 'Execute all actions at 92% confidence'),
+              ] %}
+              <div class="autonomy-card cursor-pointer rounded-xl border-2 p-4 transition
+                          {{ 'border-indigo-500 bg-indigo-50' if settings.autonomy_level == level else 'border-gray-200 hover:border-gray-300' }}"
+                   data-level="{{ level }}">
+                <p class="font-semibold text-gray-900 text-sm">{{ label }}</p>
+                <p class="text-xs text-gray-500 mt-1">{{ desc }}</p>
+              </div>
+              {% endfor %}
+            </div>
+            <input type="hidden" id="autonomyLevelInput" value="{{ settings.autonomy_level }}">
+          </div>
+
+          {# Numeric targets #}
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Target CPL ($)</label>
+              <input type="number" id="targetCpl" value="{{ settings.target_cpl }}" min="1" step="1"
+                     class="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Monthly Budget ($)</label>
+              <input type="number" id="monthlyBudget" value="{{ settings.monthly_budget }}" min="0" step="100"
+                     class="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Services Priority</label>
+              <textarea id="servicesPriority" rows="2"
+                        class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm"
+                        placeholder="AC Repair, Water Heater Install…">{{ settings.services_priority }}</textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Geo Targets</label>
+              <textarea id="geoTargets" rows="2"
+                        class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm"
+                        placeholder="Dallas TX, Plano TX…">{{ settings.geo_targets }}</textarea>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-2">
+            <p id="saveMsg" class="text-sm text-green-600 hidden">Settings saved.</p>
+            <button type="button" id="saveSettingsBtn"
+                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition">
+              <i class="fas fa-save"></i> Save Settings
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {# Action type breakdown #}
+      <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <h2 class="text-base font-semibold text-gray-900 mb-4">Action Breakdown (7d)</h2>
+        {% if summary.by_type %}
+        <div class="space-y-3">
+          {% for atype, data in summary.by_type.items() %}
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-700 truncate mr-2">{{ atype.replace('_', ' ').title() }}</span>
+            <div class="text-right flex-shrink-0">
+              <span class="font-semibold text-gray-900">{{ data.count }}</span>
+              {% if data.savings %}<span class="text-green-600 text-xs ml-1">+${{ '%.0f'|format(data.savings) }}</span>{% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm text-gray-400">No actions in the last 7 days.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ══ TAB: Agent Performance ══ #}
+  <div id="tab-agents" class="{{ '' if tab == 'agents' else 'hidden' }}">
+    {% if agent_stats %}
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100">
+        <h2 class="font-semibold text-gray-900">Agent Performance</h2>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-100 text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Agent</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Decisions</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Executed</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Avg Confidence</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Est. Savings/mo</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Est. Leads/mo</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            {% for s in agent_stats %}
+            <tr class="hover:bg-gray-50 transition">
+              <td class="px-5 py-3 font-medium text-gray-900">{{ s.agent_type | replace('Agent','') | replace('_',' ') }}</td>
+              <td class="px-4 py-3 text-right text-gray-700">{{ s.total_decisions }}</td>
+              <td class="px-4 py-3 text-right text-gray-700">{{ s.executed_count or 0 }}</td>
+              <td class="px-4 py-3 text-right text-gray-700">
+                {{ '%.0f'|format((s.avg_confidence or 0) * 100) }}%
+              </td>
+              <td class="px-4 py-3 text-right text-green-700 font-medium">
+                ${{ '%.0f'|format(s.total_expected_savings or 0) }}
+              </td>
+              <td class="px-4 py-3 text-right text-blue-700">
+                {{ '%.1f'|format(s.total_expected_leads or 0) }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="bg-gray-50 border-t border-gray-200">
+            <tr>
+              <td class="px-5 py-3 font-semibold text-gray-900">Total</td>
+              <td class="px-4 py-3 text-right font-semibold text-gray-900">{{ total_decisions }}</td>
+              <td class="px-4 py-3 text-right font-semibold text-gray-900">{{ total_executed }}</td>
+              <td class="px-4 py-3"></td>
+              <td class="px-4 py-3 text-right font-semibold text-green-700">${{ '%.0f'|format(total_savings) }}</td>
+              <td class="px-4 py-3 text-right font-semibold text-blue-700">{{ '%.1f'|format(total_leads) }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+    {% else %}
+    <div class="bg-white border border-gray-200 rounded-xl p-10 text-center">
+      <i class="fas fa-robot text-gray-300 text-5xl mb-4"></i>
+      <h3 class="text-lg font-semibold text-gray-700 mb-2">No Agent Data Yet</h3>
+      <p class="text-gray-500 text-sm">Agents will start recording decisions once they run their first cycle.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ══ TAB: Approval Queue ══ #}
+  <div id="tab-approval" class="{{ '' if tab == 'approval' else 'hidden' }}">
+    {% if pending_decisions %}
+    <div class="space-y-4">
+      {% for decision in pending_decisions %}
+      {% set risk = decision.risk_level or 'medium' %}
+      <div class="bg-white border-l-4 rounded-xl shadow-sm overflow-hidden
+                  {{ 'border-red-500' if risk in ('critical','high') else 'border-yellow-400' if risk == 'medium' else 'border-blue-400' }}"
+           id="decision-{{ decision.id }}">
+        <div class="p-5">
+          <div class="flex items-start justify-between gap-4 flex-wrap">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1 flex-wrap">
+                <span class="text-xs px-2 py-0.5 rounded font-semibold
+                             {{ 'bg-red-100 text-red-700' if risk in ('critical','high') else 'bg-yellow-100 text-yellow-700' if risk == 'medium' else 'bg-blue-100 text-blue-700' }}">
+                  {{ risk | upper }}
+                </span>
+                <span class="text-xs text-gray-500">{{ decision.agent_type | replace('Agent','') }}</span>
+                <span class="text-xs text-gray-400">{{ decision.created_at.strftime('%b %d, %H:%M') if decision.created_at else '' }}</span>
+              </div>
+              <h3 class="text-base font-semibold text-gray-900">{{ decision.title }}</h3>
+              {% if decision.description %}
+              <p class="text-sm text-gray-600 mt-1">{{ decision.description }}</p>
+              {% endif %}
+              {% if decision.reasoning %}
+              <p class="text-xs text-gray-500 mt-2 italic">{{ decision.reasoning[:200] }}{% if decision.reasoning|length > 200 %}…{% endif %}</p>
+              {% endif %}
+              <div class="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                {% if decision.confidence %}<span>Confidence: <strong>{{ '%.0f'|format(decision.confidence * 100) }}%</strong></span>{% endif %}
+                {% if decision.expected_monthly_savings %}<span class="text-green-600">Est. savings: <strong>${{ '%.0f'|format(decision.expected_monthly_savings) }}/mo</strong></span>{% endif %}
+                {% if decision.expected_monthly_leads %}<span class="text-blue-600">Est. leads: <strong>+{{ '%.1f'|format(decision.expected_monthly_leads) }}/mo</strong></span>{% endif %}
+              </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <button onclick="approveDecision({{ decision.id }})"
+                      class="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition">
+                <i class="fas fa-check"></i> Approve
+              </button>
+              <button onclick="rejectDecision({{ decision.id }})"
+                      class="inline-flex items-center gap-1.5 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-sm font-semibold rounded-lg transition">
+                <i class="fas fa-times"></i> Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white border border-gray-200 rounded-xl p-10 text-center">
+      <i class="fas fa-check-circle text-green-400 text-5xl mb-4"></i>
+      <h3 class="text-lg font-semibold text-gray-700 mb-2">Queue is Clear</h3>
+      <p class="text-gray-500 text-sm">All AI decisions have been reviewed. New decisions appear here when they need your approval.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ══ TAB: Action Feed ══ #}
+  <div id="tab-feed" class="{{ '' if tab == 'feed' else 'hidden' }}">
+    {% if feed %}
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+      <ul class="divide-y divide-gray-50">
+        {% for item in feed %}
+        <li class="px-5 py-4 hover:bg-gray-50 transition">
+          <div class="flex items-start gap-4">
+            <span class="mt-0.5 flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs">
+              <i class="fas fa-bolt"></i>
+            </span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-sm font-medium text-gray-900 truncate">{{ item.title }}</p>
+                <span class="flex-shrink-0 text-xs text-gray-400">
+                  {{ item.executed_at[:16].replace('T',' ') if item.executed_at else '—' }}
+                </span>
+              </div>
+              <p class="text-xs text-gray-500 mt-0.5">
+                {{ item.action_type.replace('_',' ').title() }}
+                {% if item.campaign_name %} · {{ item.campaign_name }}{% endif %}
+              </p>
+              {% if item.savings %}
+              <span class="text-xs text-green-600 font-medium mt-1 inline-block">+${{ '%.0f'|format(item.savings) }}/mo saved</span>
+              {% endif %}
+            </div>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% else %}
+    <div class="bg-white border border-gray-200 rounded-xl p-10 text-center">
+      <i class="fas fa-stream text-gray-300 text-4xl mb-4"></i>
+      <p class="text-gray-500">No executed actions yet.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script nonce="{{ g.csp_nonce }}">
+function getCsrfToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.content || '';
+}
+
+// Growth mode card selection
+document.querySelectorAll('.growth-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.growth-card').forEach(c => {
+      c.classList.remove('border-green-500','border-indigo-500','border-orange-500','bg-green-50','bg-indigo-50','bg-orange-50');
+      c.classList.add('border-gray-200');
+    });
+    const mode = card.dataset.mode;
+    const colorMap = {efficient:'green', balanced:'indigo', aggressive:'orange'};
+    const col = colorMap[mode] || 'indigo';
+    card.classList.remove('border-gray-200');
+    card.classList.add(`border-${col}-500`, `bg-${col}-50`);
+    document.getElementById('growthModeInput').value = mode;
+  });
+});
+
+// Autonomy level card selection
+document.querySelectorAll('.autonomy-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.autonomy-card').forEach(c => {
+      c.classList.remove('border-indigo-500','bg-indigo-50');
+      c.classList.add('border-gray-200');
+    });
+    card.classList.remove('border-gray-200');
+    card.classList.add('border-indigo-500','bg-indigo-50');
+    document.getElementById('autonomyLevelInput').value = card.dataset.level;
+  });
+});
+
+// Save settings
+document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('saveSettingsBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+
+  const payload = {
+    autonomous_mode_enabled: document.getElementById('autonomousEnabled').checked ? '1' : '0',
+    growth_mode: document.getElementById('growthModeInput').value,
+    autonomy_level: document.getElementById('autonomyLevelInput').value,
+    target_cpl: document.getElementById('targetCpl').value,
+    monthly_budget: document.getElementById('monthlyBudget').value,
+    services_priority: document.getElementById('servicesPriority').value,
+    geo_targets: document.getElementById('geoTargets').value,
+  };
+
+  try {
+    const res = await fetch('/account/google/autonomous/settings', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':getCsrfToken()},
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    const msg = document.getElementById('saveMsg');
+    msg.textContent = data.ok ? 'Settings saved.' : 'Error: ' + (data.error || 'unknown');
+    msg.className = 'text-sm ' + (data.ok ? 'text-green-600' : 'text-red-600');
+    msg.classList.remove('hidden');
+    setTimeout(() => msg.classList.add('hidden'), 3000);
+  } catch(e) {
+    alert('Save failed: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save"></i> Save Settings';
+  }
+});
+
+async function approveDecision(id) {
+  if (!confirm('Approve and execute this action?')) return;
+  try {
+    const res = await fetch(`/account/google/ads/agents/api/decisions/${id}/approve`, {
+      method: 'POST',
+      headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json'},
+    });
+    const data = await res.json();
+    if (data.success || data.status === 'approved') {
+      document.getElementById(`decision-${id}`)?.remove();
+    } else {
+      alert('Error: ' + (data.error || 'Could not approve'));
+    }
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function rejectDecision(id) {
+  if (!confirm('Reject this action?')) return;
+  try {
+    const res = await fetch(`/account/google/ads/agents/api/decisions/${id}/reject`, {
+      method: 'POST',
+      headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json'},
+    });
+    const data = await res.json();
+    if (data.success || data.status === 'rejected') {
+      document.getElementById(`decision-${id}`)?.remove();
+    } else {
+      alert('Error: ' + (data.error || 'Could not reject'));
+    }
+  } catch(e) { alert('Error: ' + e.message); }
+}
+</script>
+{% endblock %}

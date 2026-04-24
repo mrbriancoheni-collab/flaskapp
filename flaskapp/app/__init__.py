@@ -662,6 +662,13 @@ def create_app():
         app.logger.exception("Failed to import/register autonomous_bp")
 
     try:
+        from app.google.consolidated_routes import consolidated_bp
+        app.register_blueprint(consolidated_bp)
+        app.logger.info("consolidated_bp registered (ai-control, budget-plan, intelligence)")
+    except Exception:
+        app.logger.exception("Failed to import/register consolidated_bp")
+
+    try:
         from app.google.account_wizard_routes import account_wizard_bp
         app.register_blueprint(account_wizard_bp)
         app.logger.info("account_wizard_bp registered at /account/google/ads/setup-wizard")

@@ -3507,8 +3507,26 @@ def ads_performance():
             'status': action_status,
         })
 
+    # Campaigns data for the performance table
+    campaigns_data = []
+    try:
+        ads_state = _get_ads_state(aid)
+        if ads_state:
+            campaigns_data = ads_state.get('campaigns', []) or []
+    except Exception:
+        pass
+
+    # Target CPL from account settings
+    target_cpl = 80.0
+    try:
+        from app.tasks.agent_scheduler import _load_autonomous_settings
+        _asettings = _load_autonomous_settings(aid)
+        target_cpl = float(_asettings.get('target_cpl', 80))
+    except Exception:
+        pass
+
     return render_template(
-        "google/ads_decision_screen.html",
+        "google/performance_dashboard.html",
         connected=connected,
         status=status,
         wasted_spend_prevented=round(wasted_spend_prevented, 2),
@@ -3519,7 +3537,6 @@ def ads_performance():
         blocked_searches_count=blocked_searches_count,
         budget_reallocations=budget_reallocations,
         bids_optimized=bids_optimized,
-        # Savings breakdown counts
         irrelevant_blocked_count=irrelevant_count,
         job_blocked_count=job_count,
         low_quality_count=low_quality_count,
@@ -3530,10 +3547,11 @@ def ads_performance():
         daily_performance=daily_performance,
         auth_error=auth_error,
         epn=request.endpoint,
-        # Pending savings data
         pending_decisions_count=pending_decisions_count,
         pending_savings=round(pending_savings, 2),
         savings_are_pending=savings_are_pending,
+        campaigns_data=campaigns_data,
+        target_cpl=target_cpl,
     )
 
 

@@ -30,13 +30,13 @@
     </div>
     <div class="flex items-center gap-2">
       {% if pending_decisions_count and pending_decisions_count > 0 %}
-      <a href="{{ url_for('google_bp.ai_control') }}?tab=approval"
+      <a href="{{ url_for('consolidated_bp.ai_control') }}?tab=approval"
          class="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-lg transition">
         <i class="fas fa-clock"></i>
         {{ pending_decisions_count }} pending approval
       </a>
       {% endif %}
-      <a href="{{ url_for('google_bp.ai_control') }}"
+      <a href="{{ url_for('consolidated_bp.ai_control') }}"
          class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
         <i class="fas fa-robot"></i> AI Control
       </a>
@@ -154,7 +154,7 @@
           <span class="text-sm font-semibold {{ 'text-amber-600' if pending_decisions_count else 'text-gray-500' }}">{{ pending_decisions_count }}</span>
         </div>
       </div>
-      <a href="{{ url_for('google_bp.ai_control') }}"
+      <a href="{{ url_for('consolidated_bp.ai_control') }}"
          class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-medium rounded-lg transition">
         View AI Control <i class="fas fa-arrow-right text-xs"></i>
       </a>

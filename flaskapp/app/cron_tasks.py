@@ -85,6 +85,12 @@ def run_daily(app, db):
     except Exception:
         app.logger.exception("[CRON] Google Ads monthly performance emails failed")
 
+    # Weekly performance memory update (seasonal + geo patterns)
+    try:
+        _run_weekly_performance_memory(app)
+    except Exception:
+        app.logger.exception("[CRON] Performance memory update failed")
+
     # Weekly ML model retraining (runs on Sundays)
     try:
         _run_weekly_ml_training(app)
@@ -798,6 +804,51 @@ def _send_next_sequence_steps(app):
 # =========================
 # ML Model Training (Weekly)
 # =========================
+
+def _run_weekly_performance_memory(app) -> None:
+    """
+    Recompute seasonal and geo performance patterns for all active Google Ads accounts.
+    Runs weekly (Sunday) so agents always have up-to-date multipliers.
+    """
+    from datetime import datetime as _dt
+    if _dt.utcnow().weekday() != 6:   # 6 = Sunday
+        return
+
+    with app.app_context():
+        try:
+            from sqlalchemy import text as _text
+            from app import db as _db
+            sql = _text("""
+                SELECT DISTINCT a.id AS account_id
+                FROM accounts a
+                JOIN google_oauth_tokens g ON g.account_id = a.id
+                WHERE a.status = 'active'
+                  AND a.google_ads_customer_id IS NOT NULL
+            """)
+            with _db.engine.connect() as conn:
+                accounts = conn.execute(sql).fetchall()
+        except Exception:
+            app.logger.exception("[CRON] Performance memory: failed to load accounts")
+            return
+
+        from app.services.performance_memory import update_all_memory
+        ok = 0
+        for row in accounts:
+            try:
+                result = update_all_memory(row.account_id)
+                app.logger.info(
+                    "[CRON] Performance memory updated: account=%d seasonal=%s geo=%s",
+                    row.account_id,
+                    result.get("seasonal", {}).get("months_stored", 0),
+                    result.get("geo", {}).get("geo_entries", 0),
+                )
+                ok += 1
+            except Exception:
+                app.logger.exception(
+                    "[CRON] Performance memory failed for account %d", row.account_id
+                )
+        app.logger.info("[CRON] Performance memory complete — %d/%d accounts updated", ok, len(accounts))
+
 
 def _run_weekly_ml_training(app) -> None:
     """

@@ -651,6 +651,16 @@ def run_agents_for_account(
             }
         }
 
+        # Enrich context with performance memory (seasonal + geo patterns)
+        try:
+            from app.services.performance_memory import get_seasonal_context, get_top_geo_performers
+            context['seasonal_memory']  = get_seasonal_context(account_id)
+            context['geo_performance']  = get_top_geo_performers(account_id, limit=10)
+        except Exception as _mem_exc:
+            current_app.logger.debug("Performance memory unavailable: %s", _mem_exc)
+            context['seasonal_memory'] = {"available": False}
+            context['geo_performance'] = []
+
     except Exception as e:
         current_app.logger.error(f"Failed to fetch Google Ads data for account {account_id}: {e}")
         import traceback

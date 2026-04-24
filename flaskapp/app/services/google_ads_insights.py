@@ -15,7 +15,6 @@ import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Any
 from flask import current_app
-from openai import OpenAI
 
 from app import db
 from app.models_ads import OptimizerRecommendation, OptimizerAction
@@ -408,25 +407,22 @@ def generate_ai_insights(account_id: int, scope: str = "all", regenerate: bool =
 
 
 def _call_openai_for_insights(account_id: int, perf_data: Dict, scope: str) -> Dict:
-    """Call OpenAI API to generate insights using database-stored prompts."""
+    """Generate AI-powered insights using Anthropic Claude (OpenAI fallback)."""
     from app.services.ai_prompts_init import get_prompt_for_service
-
-    api_key = current_app.config.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise ValueError("OPENAI_API_KEY not configured")
+    from app.services.ai_client import generate_json
 
     # Load prompt from database
     prompt_config = get_prompt_for_service('google_ads_main')
 
     if not prompt_config:
         current_app.logger.warning("Google Ads prompt not found in database, using fallback")
-        # Fallback to basic prompt if database prompt not available
-        system_prompt = "You are an expert Google Ads optimization consultant providing data-driven recommendations in JSON format."
-        model = "gpt-4o-mini"
+        system_prompt = (
+            "You are an expert Google Ads optimization consultant. "
+            "Provide data-driven recommendations as JSON."
+        )
         temperature = 0.3
         max_tokens = 2000
-
-        user_prompt = f"""Analyze this Google Ads account and provide 5-10 optimization recommendations in JSON format.
+        user_prompt = f"""Analyze this Google Ads account and provide 5-10 optimization recommendations.
 
 ACCOUNT PERFORMANCE (Last 30 days):
 - Total Spend: ${perf_data['account_summary']['total_spend']:.2f}
@@ -438,24 +434,22 @@ TOP CAMPAIGNS: {json.dumps(perf_data['campaigns'][:10], indent=2)}
 TOP KEYWORDS: {json.dumps(perf_data['keywords'][:20], indent=2)}
 SEARCH TERMS: {json.dumps(perf_data['search_terms'][:15], indent=2)}
 
-Return JSON with: {{"summary": "...", "recommendations": [...]}}"""
+Return JSON: {{"summary": "...", "recommendations": [...]}}"""
     else:
-        # Use database prompt
         system_prompt = prompt_config.get('system_message', '')
-        model = prompt_config.get('model', 'gpt-4o-mini')
-        temperature = prompt_config.get('temperature', 0.7)
-        max_tokens = prompt_config.get('max_tokens', 2000)
+        temperature = float(prompt_config.get('temperature', 0.3))
+        max_tokens = int(prompt_config.get('max_tokens', 2000))
 
-        # Format the prompt template with actual data
-        performance_summary = f"""- Total Spend: ${perf_data['account_summary']['total_spend']:.2f}
-- Total Conversions: {perf_data['account_summary']['total_conversions']}
-- Average CPA: ${perf_data['account_summary']['avg_cpa']:.2f}
-- Average CTR: {perf_data['account_summary']['avg_ctr']:.2%}
-- Daily Spend: ${perf_data['account_summary']['daily_spend_avg']:.2f}"""
-
-        campaigns_data = json.dumps(perf_data['campaigns'][:10], indent=2)
-        ad_groups_data = json.dumps(perf_data.get('ad_groups', [])[:10], indent=2) if 'ad_groups' in perf_data else "[]"
-        keywords_data = json.dumps(perf_data['keywords'][:20], indent=2)
+        performance_summary = (
+            f"- Total Spend: ${perf_data['account_summary']['total_spend']:.2f}\n"
+            f"- Total Conversions: {perf_data['account_summary']['total_conversions']}\n"
+            f"- Average CPA: ${perf_data['account_summary']['avg_cpa']:.2f}\n"
+            f"- Average CTR: {perf_data['account_summary']['avg_ctr']:.2%}\n"
+            f"- Daily Spend: ${perf_data['account_summary']['daily_spend_avg']:.2f}"
+        )
+        campaigns_data    = json.dumps(perf_data['campaigns'][:10], indent=2)
+        ad_groups_data    = json.dumps(perf_data.get('ad_groups', [])[:10], indent=2)
+        keywords_data     = json.dumps(perf_data['keywords'][:20], indent=2)
         search_terms_data = json.dumps(perf_data['search_terms'][:15], indent=2)
 
         user_prompt = prompt_config.get('prompt_template', '').format(
@@ -463,26 +457,11 @@ Return JSON with: {{"summary": "...", "recommendations": [...]}}"""
             campaigns_data=campaigns_data,
             ad_groups_data=ad_groups_data,
             keywords_data=keywords_data,
-            search_terms_data=search_terms_data
+            search_terms_data=search_terms_data,
         )
 
-    # Call OpenAI
-    client = OpenAI(api_key=api_key)
-
-    response = client.chat.completions.create(
-        model=model,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        timeout=30
-    )
-
-    # Parse response
-    result = json.loads(response.choices[0].message.content)
+    result = generate_json(system_prompt, user_prompt,
+                           max_tokens=max_tokens, temperature=temperature)
 
     # Add metadata
     result["generated_at"] = datetime.utcnow().isoformat()

@@ -227,22 +227,24 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
-    # Google Ads AI Agents - Operational (every 6 hours)
-    # Budget redistribution, pause underperformers, scale winners
+    # Google Ads AI Agents - Operational (every 4 hours)
+    # CPL monitoring, bid adjustments, pause/scale campaigns, budget pacing
     scheduler.add_job(
         func=run_operational_agents,
         trigger='interval',
-        hours=6,
+        hours=4,
         id='run_operational_agents',
         replace_existing=True,
         kwargs={'app': app}
     )
 
-    # Google Ads AI Agents - Strategic (daily at 6 AM UTC)
-    # Campaign structure changes, new keyword themes, A/B test decisions
+    # Google Ads AI Agents - Strategic (weekly, Monday 6 AM UTC)
+    # Portfolio-level decisions: campaign type diversity, major budget reallocation.
+    # Runs weekly so structural suggestions don't flood the approval queue.
     scheduler.add_job(
         func=run_strategic_agents,
         trigger='cron',
+        day_of_week='mon',
         hour=6,
         minute=0,
         id='run_strategic_agents',

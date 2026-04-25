@@ -58,7 +58,7 @@
          data-tab="{{ t }}">
         <i class="fas {{ icon }}"></i> {{ label }}
         {% if t == 'approval' and total_pending > 0 %}
-        <span class="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full font-semibold">{{ total_pending }}</span>
+        <span class="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full font-semibold" data-pending-count>{{ total_pending }}</span>
         {% endif %}
       </a>
       {% endfor %}
@@ -528,10 +528,13 @@ function promptAction(id, action) {
   const label    = document.getElementById(`decision-${id}-confirm-label`);
   if (!actions || !confirm || !yesBtn) return;
 
+  // Walk up: confirm → flex-row → p-5 → card
+  confirm._card = confirm.parentElement?.parentElement?.parentElement || null;
+
   label.textContent = action === 'approve' ? 'Approve this decision?' : 'Reject this decision?';
   yesBtn.className = yesBtn.className.replace(/bg-\S+/g, '') +
     (action === 'approve' ? ' bg-green-600 hover:bg-green-700' : ' bg-red-600 hover:bg-red-700');
-  yesBtn.onclick = () => executeAction(id, action);
+  yesBtn.onclick = () => executeAction(id, action, confirm._card);
 
   actions.classList.add('hidden');
   confirm.classList.remove('hidden');
@@ -545,9 +548,12 @@ function cancelAction(id) {
   confirm.classList.add('hidden');
   confirm.classList.remove('flex');
   actions.classList.remove('hidden');
+  // Restore yes button
+  const yesBtn = document.getElementById(`decision-${id}-confirm-yes`);
+  if (yesBtn) { yesBtn.disabled = false; yesBtn.innerHTML = '<i class="fas fa-check"></i> Yes'; }
 }
 
-async function executeAction(id, action) {
+async function executeAction(id, action, card) {
   const yesBtn = document.getElementById(`decision-${id}-confirm-yes`);
   if (yesBtn) { yesBtn.disabled = true; yesBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
 
@@ -564,8 +570,18 @@ async function executeAction(id, action) {
 
     if (res.ok) {
       showToast(action === 'approve' ? 'Decision approved.' : 'Decision rejected.', action === 'approve' ? 'success' : 'info');
-      const card = document.getElementById(`decision-${id}`);
-      if (card) { card.remove(); }
+      if (card) {
+        card.remove();
+      } else {
+        // fallback: hide the confirm bar at minimum
+        cancelAction(id);
+      }
+      // Update the pending count badge
+      const badge = document.querySelector('[data-pending-count]');
+      if (badge) {
+        const n = parseInt(badge.textContent, 10);
+        if (!isNaN(n) && n > 0) badge.textContent = n - 1;
+      }
     } else {
       const msg = data.error || `Server returned ${res.status}`;
       showToast(`Could not ${action}: ${msg}`, 'error');

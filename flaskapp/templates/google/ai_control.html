@@ -283,11 +283,11 @@
               </div>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
-              <button onclick="approveDecision({{ decision.id }})"
+              <button onclick="approveDecision(this, {{ decision.id }})"
                       class="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition">
                 <i class="fas fa-check"></i> Approve
               </button>
-              <button onclick="rejectDecision({{ decision.id }})"
+              <button onclick="rejectDecision(this, {{ decision.id }})"
                       class="inline-flex items-center gap-1.5 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-sm font-semibold rounded-lg transition">
                 <i class="fas fa-times"></i> Reject
               </button>
@@ -522,8 +522,15 @@ function armButton(btn, label, icon, colorClass, onConfirm) {
   btn.onclick = () => { cancel.remove(); onConfirm(); };
 }
 
-async function approveDecision(id) {
-  const btn = document.querySelector(`#decision-${id} button[onclick*="approveDecision"]`);
+function _removeCard(btn) {
+  const card = btn.closest('[id^="decision-"]');
+  if (!card) return;
+  card.style.transition = 'opacity 0.3s';
+  card.style.opacity = '0';
+  setTimeout(() => card.remove(), 300);
+}
+
+function approveDecision(btn, id) {
   armButton(btn, 'Confirm Approve', 'fa-check', 'bg-green-700', async () => {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -534,11 +541,8 @@ async function approveDecision(id) {
       });
       const data = await res.json();
       if (data.success || data.status === 'approved') {
-        const card = document.getElementById(`decision-${id}`);
-        card.style.transition = 'opacity 0.3s';
-        card.style.opacity = '0';
-        setTimeout(() => card.remove(), 300);
         showToast('Decision approved and queued for execution.', 'success');
+        _removeCard(btn);
       } else {
         showToast('Could not approve: ' + (data.error || 'Unknown error'), 'error');
         btn.disabled = false;
@@ -552,8 +556,7 @@ async function approveDecision(id) {
   });
 }
 
-async function rejectDecision(id) {
-  const btn = document.querySelector(`#decision-${id} button[onclick*="rejectDecision"]`);
+function rejectDecision(btn, id) {
   armButton(btn, 'Confirm Reject', 'fa-times', 'bg-red-600', async () => {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -565,11 +568,8 @@ async function rejectDecision(id) {
       });
       const data = await res.json();
       if (data.success || data.status === 'rejected') {
-        const card = document.getElementById(`decision-${id}`);
-        card.style.transition = 'opacity 0.3s';
-        card.style.opacity = '0';
-        setTimeout(() => card.remove(), 300);
         showToast('Decision rejected.', 'info');
+        _removeCard(btn);
       } else {
         showToast('Could not reject: ' + (data.error || 'Unknown error'), 'error');
         btn.disabled = false;

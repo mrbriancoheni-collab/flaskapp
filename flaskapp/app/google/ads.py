@@ -26,7 +26,7 @@ from app.models_ads import (
     NegativeKeyword,
     SharedNegativeMap,
 )
-from app.auth.utils import login_required, is_paid_account
+from app.auth.utils import login_required, is_paid_account, current_account_id
 
 # Keep this exactly once (don't also pass url_prefix again at register time)
 gads_bp = Blueprint("gads_bp", __name__, url_prefix="/account/google/ads")
@@ -57,7 +57,83 @@ def optimize():
         return redirect(url_for("account_bp.pricing"))
 
     tab = request.args.get("tab", "campaigns")
-    return render_template("google/ads/optimize.html", tab=tab)
+    aid = current_account_id()
+
+    keywords_data: list = []
+    negatives_data: list = []
+    campaigns_list: list = []
+    adgroups_list: list = []
+
+    if tab in ("keywords", "negatives") and aid:
+        try:
+            campaigns_list = [
+                {"id": c.id, "name": c.name}
+                for c in AdsCampaign.query.filter_by(account_id=aid)
+                .order_by(AdsCampaign.name)
+                .all()
+            ]
+            camp_ids = [c["id"] for c in campaigns_list]
+            if camp_ids:
+                adgroups_list = [
+                    {"id": ag.id, "name": ag.name, "campaign_id": ag.campaign_id}
+                    for ag in AdsAdGroup.query.filter(
+                        AdsAdGroup.campaign_id.in_(camp_ids)
+                    )
+                    .order_by(AdsAdGroup.name)
+                    .all()
+                ]
+        except Exception:
+            current_app.logger.exception("Error loading campaigns/adgroups for tab=%s", tab)
+
+    if tab == "keywords" and aid:
+        try:
+            rows = db.session.execute(
+                text("""
+                    SELECT k.id, k.text, k.match_type, k.status, k.max_cpc_cents,
+                           ag.name as adgroup_name, ag.campaign_id,
+                           ac.name as campaign_name
+                    FROM keywords k
+                    JOIN ad_groups ag ON ag.id = k.ad_group_id
+                    JOIN ads_campaigns ac ON ac.id = ag.campaign_id
+                    WHERE ac.account_id = :aid AND k.status != 'removed'
+                    ORDER BY ac.name, ag.name, k.text
+                    LIMIT 1000
+                """),
+                {"aid": aid},
+            ).mappings().all()
+            keywords_data = [dict(r) for r in rows]
+        except Exception:
+            current_app.logger.exception("Error loading keywords for optimize tab")
+
+    if tab == "negatives" and aid:
+        try:
+            rows = db.session.execute(
+                text("""
+                    SELECT nk.id, nk.text, nk.match_type, nk.scope,
+                           nk.campaign_id, nk.ad_group_id,
+                           ac.name as campaign_name,
+                           ag.name as adgroup_name
+                    FROM negative_keywords nk
+                    LEFT JOIN ads_campaigns ac ON ac.id = nk.campaign_id
+                    LEFT JOIN ad_groups ag ON ag.id = nk.ad_group_id
+                    WHERE (ac.account_id = :aid OR (nk.campaign_id IS NULL AND nk.ad_group_id IS NULL))
+                    ORDER BY nk.scope, ac.name, nk.text
+                    LIMIT 1000
+                """),
+                {"aid": aid},
+            ).mappings().all()
+            negatives_data = [dict(r) for r in rows]
+        except Exception:
+            current_app.logger.exception("Error loading negatives for optimize tab")
+
+    return render_template(
+        "google/ads/optimize.html",
+        tab=tab,
+        keywords_data=keywords_data,
+        negatives_data=negatives_data,
+        campaigns_list=campaigns_list,
+        adgroups_list=adgroups_list,
+    )
 
 
 # ---------------------------
@@ -339,3 +415,233 @@ def update_ad_rotation():
 def apply_suggestions():
     # just bounce back to whatever tab (default: campaigns)
     return _back_to(request.args.get("tab"))
+
+
+# ---------------------------
+# Keyword management API
+# ---------------------------
+
+def _verify_keyword_ownership(keyword_id: int, aid: int) -> "AdsKeyword | None":
+    """Return keyword if it belongs to the current account, else None."""
+    row = db.session.execute(
+        text("""
+            SELECT k.id FROM keywords k
+            JOIN ad_groups ag ON ag.id = k.ad_group_id
+            JOIN ads_campaigns ac ON ac.id = ag.campaign_id
+            WHERE k.id = :kid AND ac.account_id = :aid
+        """),
+        {"kid": keyword_id, "aid": aid},
+    ).fetchone()
+    if not row:
+        return None
+    return AdsKeyword.query.get(keyword_id)
+
+
+@gads_bp.post("/keywords/bulk-action")
+@login_required
+def keywords_bulk_action():
+    """
+    Pause, enable, or delete a list of keyword IDs.
+    Body: {"action": "pause"|"enable"|"delete", "ids": [1,2,3]}
+    """
+    if not is_paid_account():
+        return jsonify({"error": "Paid plan required"}), 403
+
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    payload = request.get_json(force=True) or {}
+    action = payload.get("action", "")
+    ids = [int(i) for i in (payload.get("ids") or []) if str(i).isdigit()]
+
+    if action not in ("pause", "enable", "delete") or not ids:
+        return jsonify({"error": "Invalid action or empty ids"}), 400
+
+    updated = 0
+    try:
+        for kid in ids:
+            kw = _verify_keyword_ownership(kid, aid)
+            if not kw:
+                continue
+            if action == "pause":
+                kw.status = "paused"
+            elif action == "enable":
+                kw.status = "enabled"
+            elif action == "delete":
+                kw.status = "removed"
+            updated += 1
+        db.session.commit()
+        return jsonify({"ok": True, "updated": updated})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("keywords_bulk_action error")
+        return jsonify({"error": str(e)}), 500
+
+
+@gads_bp.post("/keywords/add")
+@login_required
+def keywords_add():
+    """
+    Add a keyword to an ad group.
+    Body: {"text": "...", "match_type": "broad|phrase|exact", "max_cpc_cents": 100, "ad_group_id": 5}
+    """
+    if not is_paid_account():
+        return jsonify({"error": "Paid plan required"}), 403
+
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    payload = request.get_json(force=True) or {}
+    kw_text = (payload.get("text") or "").strip()
+    match_type = (payload.get("match_type") or "broad").lower()
+    ad_group_id = payload.get("ad_group_id")
+    max_cpc_cents = payload.get("max_cpc_cents")
+
+    if not kw_text or not ad_group_id:
+        return jsonify({"error": "text and ad_group_id are required"}), 400
+    if match_type not in ("broad", "phrase", "exact"):
+        return jsonify({"error": "match_type must be broad, phrase, or exact"}), 400
+
+    # Verify ad group belongs to this account
+    ag_check = db.session.execute(
+        text("""
+            SELECT ag.id FROM ad_groups ag
+            JOIN ads_campaigns ac ON ac.id = ag.campaign_id
+            WHERE ag.id = :agid AND ac.account_id = :aid
+        """),
+        {"agid": int(ad_group_id), "aid": aid},
+    ).fetchone()
+    if not ag_check:
+        return jsonify({"error": "Ad group not found"}), 404
+
+    try:
+        kw = AdsKeyword(
+            ad_group_id=int(ad_group_id),
+            text=kw_text,
+            match_type=match_type,
+            status="enabled",
+            max_cpc_cents=int(max_cpc_cents) if max_cpc_cents is not None else None,
+        )
+        db.session.add(kw)
+        db.session.commit()
+        return jsonify({"ok": True, "id": kw.id}), 201
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("keywords_add error")
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------
+# Negative keyword management API
+# ---------------------------
+
+@gads_bp.post("/negatives/add")
+@login_required
+def negatives_add():
+    """
+    Add a negative keyword.
+    Body: {"text": "...", "match_type": "PHRASE", "scope": "campaign|ad_group",
+           "campaign_id": 1, "ad_group_id": null}
+    """
+    if not is_paid_account():
+        return jsonify({"error": "Paid plan required"}), 403
+
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    payload = request.get_json(force=True) or {}
+    neg_text = (payload.get("text") or "").strip()
+    match_type = (payload.get("match_type") or "PHRASE").upper()
+    scope = (payload.get("scope") or "campaign").lower()
+    campaign_id = payload.get("campaign_id")
+    ad_group_id = payload.get("ad_group_id")
+
+    if not neg_text:
+        return jsonify({"error": "text is required"}), 400
+    if match_type not in ("BROAD", "PHRASE", "EXACT"):
+        return jsonify({"error": "match_type must be BROAD, PHRASE, or EXACT"}), 400
+    if scope not in ("campaign", "ad_group"):
+        return jsonify({"error": "scope must be campaign or ad_group"}), 400
+    if scope == "campaign" and not campaign_id:
+        return jsonify({"error": "campaign_id required for campaign scope"}), 400
+    if scope == "ad_group" and not ad_group_id:
+        return jsonify({"error": "ad_group_id required for ad_group scope"}), 400
+
+    # Ownership checks
+    if campaign_id:
+        camp_check = db.session.execute(
+            text("SELECT id FROM ads_campaigns WHERE id = :cid AND account_id = :aid"),
+            {"cid": int(campaign_id), "aid": aid},
+        ).fetchone()
+        if not camp_check:
+            return jsonify({"error": "Campaign not found"}), 404
+
+    if ad_group_id:
+        ag_check = db.session.execute(
+            text("""
+                SELECT ag.id FROM ad_groups ag
+                JOIN ads_campaigns ac ON ac.id = ag.campaign_id
+                WHERE ag.id = :agid AND ac.account_id = :aid
+            """),
+            {"agid": int(ad_group_id), "aid": aid},
+        ).fetchone()
+        if not ag_check:
+            return jsonify({"error": "Ad group not found"}), 404
+
+    try:
+        neg = NegativeKeyword(
+            scope=scope,
+            text=neg_text,
+            match_type=match_type,
+            campaign_id=int(campaign_id) if campaign_id else None,
+            ad_group_id=int(ad_group_id) if ad_group_id else None,
+        )
+        db.session.add(neg)
+        db.session.commit()
+        return jsonify({"ok": True, "id": neg.id}), 201
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("negatives_add error")
+        return jsonify({"error": str(e)}), 500
+
+
+@gads_bp.route("/negatives/<int:neg_id>", methods=["DELETE"])
+@login_required
+def negatives_delete(neg_id: int):
+    """Remove a negative keyword by ID (must belong to current account)."""
+    if not is_paid_account():
+        return jsonify({"error": "Paid plan required"}), 403
+
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    # Verify ownership via campaign or ad_group linkage
+    row = db.session.execute(
+        text("""
+            SELECT nk.id FROM negative_keywords nk
+            LEFT JOIN ads_campaigns ac ON ac.id = nk.campaign_id
+            LEFT JOIN ad_groups ag ON ag.id = nk.ad_group_id
+            LEFT JOIN ads_campaigns ac2 ON ac2.id = ag.campaign_id
+            WHERE nk.id = :nid
+              AND (ac.account_id = :aid OR ac2.account_id = :aid)
+        """),
+        {"nid": neg_id, "aid": aid},
+    ).fetchone()
+
+    if not row:
+        return jsonify({"error": "Negative keyword not found"}), 404
+
+    try:
+        neg = NegativeKeyword.query.get(neg_id)
+        if neg:
+            db.session.delete(neg)
+            db.session.commit()
+        return jsonify({"ok": True})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("negatives_delete error")
+        return jsonify({"error": str(e)}), 500

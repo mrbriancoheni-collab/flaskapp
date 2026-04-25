@@ -83,6 +83,29 @@ def ai_control():
         lambda: _load_pending_decisions(account_id), ([], {"high": [], "low": []})
     )
 
+    # ── change log ──
+    cl_total_actions = cl_total_saved = cl_total_optimizations = cl_total_blocks = 0
+    cl_recent_actions = []
+    try:
+        from app.models_ai_actions import AIAction
+        from sqlalchemy import func as _func
+        from datetime import datetime as _dt, timedelta as _td
+        cl_total_actions = AIAction.query.filter_by(account_id=account_id, status='executed').count()
+        cl_total_saved = db.session.query(_func.sum(AIAction.estimated_monthly_savings)).filter_by(
+            account_id=account_id, status='executed'
+        ).scalar() or 0
+        cl_total_blocks = AIAction.query.filter_by(
+            account_id=account_id, status='executed', action_type='negative_keyword_added'
+        ).count()
+        cl_total_optimizations = cl_total_actions - cl_total_blocks
+        cl_recent_actions = AIAction.query.filter(
+            AIAction.account_id == account_id,
+            AIAction.status == 'executed',
+            AIAction.created_at >= _dt.utcnow() - _td(days=30)
+        ).order_by(AIAction.created_at.desc()).limit(50).all()
+    except Exception:
+        pass
+
     return render_template(
         "google/ai_control.html",
         tab=tab,
@@ -100,6 +123,12 @@ def ai_control():
         pending_decisions=pending_decisions,
         decisions_by_risk=decisions_by_risk,
         total_pending=len(pending_decisions),
+        # Change log
+        cl_total_actions=cl_total_actions,
+        cl_total_saved=round(cl_total_saved, 2),
+        cl_total_optimizations=cl_total_optimizations,
+        cl_total_blocks=cl_total_blocks,
+        cl_recent_actions=cl_recent_actions,
     )
 
 

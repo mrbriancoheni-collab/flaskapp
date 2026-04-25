@@ -38,7 +38,7 @@
     </div>
     <div class="bg-white border border-gray-200 rounded-xl p-4 text-center shadow-sm">
       <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Pending Approval</p>
-      <p class="text-3xl font-bold {{ 'text-amber-600' if total_pending else 'text-gray-400' }}">{{ total_pending }}</p>
+      <p class="text-3xl font-bold {{ 'text-amber-600' if total_pending else 'text-gray-400' }}" data-pending-count>{{ total_pending }}</p>
     </div>
   </div>
 
@@ -551,27 +551,31 @@ document.addEventListener('click', function(e) {
     body: action === 'reject' ? JSON.stringify({reason: 'User rejected'}) : undefined,
   })
   .then(function(res) {
-    var ok = res.ok;
+    var ok = res.ok, status = res.status;
     return res.json()
       .catch(function() { return {}; })
-      .then(function(data) { return {ok: ok, data: data}; });
+      .then(function(data) { return {ok: ok, status: status, data: data}; });
   })
   .then(function(r) {
-    if (r.ok) {
+    // Treat a 404 on reject as "already handled" — remove from UI without error
+    var alreadyDone = (r.status === 404 && action === 'reject');
+    if (r.ok || alreadyDone) {
       if (card) card.remove();
-      var badge = document.querySelector('[data-pending-count]');
-      if (badge) {
-        var n = parseInt(badge.textContent, 10);
-        if (!isNaN(n) && n > 0) badge.textContent = n - 1;
-      }
-      var msg   = r.data.message || (action === 'approve' ? 'Decision approved.' : 'Decision rejected.');
-      var type  = (action === 'approve' && r.data.manual) ? 'info' : (action === 'approve' ? 'success' : 'info');
+      document.querySelectorAll('[data-pending-count]').forEach(function(el) {
+        var n = parseInt(el.textContent, 10);
+        if (!isNaN(n) && n > 0) el.textContent = n - 1;
+      });
+      var msg  = alreadyDone
+        ? 'Decision already processed — removed from queue.'
+        : (r.data.message || (action === 'approve' ? 'Decision approved.' : 'Decision rejected.'));
+      var type = (action === 'approve' && r.data && r.data.manual) ? 'info'
+               : (action === 'approve' ? 'success' : 'info');
       showToast(msg, type);
     } else {
       btn.disabled  = false;
       btn.innerHTML = btn._origHTML;
       btn.className = btn._origClass;
-      showToast('Error: ' + (r.data.error || r.data.message || 'Server error'), 'error');
+      showToast('Error: ' + (r.data.error || r.data.message || 'Server error ' + r.status), 'error');
     }
   })
   .catch(function(err) {

@@ -257,7 +257,7 @@
       {% set risk = decision.risk_level or 'medium' %}
       <div class="bg-white border-l-4 rounded-xl shadow-sm overflow-hidden
                   {{ 'border-red-500' if risk in ('critical','high') else 'border-yellow-400' if risk == 'medium' else 'border-blue-400' }}"
-           id="decision-{{ decision.id }}">
+           id="decision-{{ decision.id }}" data-card="1">
         <div class="p-5">
           <div class="flex items-start justify-between gap-4 flex-wrap">
             <div class="flex-1 min-w-0">
@@ -282,26 +282,14 @@
                 {% if decision.expected_monthly_leads %}<span class="text-blue-600">Est. leads: <strong>+{{ '%.1f'|format(decision.expected_monthly_leads) }}/mo</strong></span>{% endif %}
               </div>
             </div>
-            <div class="flex items-center gap-2 flex-shrink-0" id="decision-{{ decision.id }}-actions">
-              <button type="button" onclick="promptAction({{ decision.id }}, 'approve')"
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <button type="button" onclick="decisionAction(this, {{ decision.id }}, 'approve')"
                       class="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition">
                 <i class="fas fa-check"></i> Approve
               </button>
-              <button type="button" onclick="promptAction({{ decision.id }}, 'reject')"
+              <button type="button" onclick="decisionAction(this, {{ decision.id }}, 'reject')"
                       class="inline-flex items-center gap-1.5 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-sm font-semibold rounded-lg transition">
                 <i class="fas fa-times"></i> Reject
-              </button>
-            </div>
-            <!-- Confirm bar (hidden until promptAction shows it) -->
-            <div id="decision-{{ decision.id }}-confirm" class="hidden items-center gap-2 flex-shrink-0">
-              <span class="text-sm font-medium text-gray-700" id="decision-{{ decision.id }}-confirm-label">Are you sure?</span>
-              <button type="button" id="decision-{{ decision.id }}-confirm-yes"
-                      class="inline-flex items-center gap-1.5 px-4 py-2 text-white text-sm font-semibold rounded-lg transition">
-                <i class="fas fa-check"></i> Yes
-              </button>
-              <button type="button" onclick="cancelAction({{ decision.id }})"
-                      class="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition">
-                Cancel
               </button>
             </div>
           </div>
@@ -521,75 +509,70 @@ function showToast(message, type = 'success') {
 }
 
 // ── Approve / Reject ──────────────────────────────────────────────────────────
-function promptAction(id, action) {
-  const actions = document.getElementById(`decision-${id}-actions`);
-  const confirm  = document.getElementById(`decision-${id}-confirm`);
-  const yesBtn   = document.getElementById(`decision-${id}-confirm-yes`);
-  const label    = document.getElementById(`decision-${id}-confirm-label`);
-  if (!actions || !confirm || !yesBtn) return;
+async function decisionAction(btn, id, action) {
+  // First click: arm the button; second click within 3s: fire
+  if (!btn._armed) {
+    const origHTML  = btn.innerHTML;
+    const origClass = btn.className;
+    btn._armed = true;
+    btn._origHTML  = origHTML;
+    btn._origClass = origClass;
+    btn.innerHTML = action === 'approve'
+      ? '<i class="fas fa-check"></i> Confirm?'
+      : '<i class="fas fa-times"></i> Confirm?';
+    btn.className = btn.className
+      .replace(/bg-\S+/g, '')
+      .replace(/text-\S+/g, 'text-white') +
+      (action === 'approve' ? ' bg-green-700' : ' bg-red-600') +
+      ' ring-2 ring-offset-1 ring-current';
+    btn._disarmTimer = setTimeout(() => {
+      btn._armed = false;
+      btn.innerHTML  = btn._origHTML;
+      btn.className  = btn._origClass;
+    }, 3000);
+    return;
+  }
 
-  // Walk up: confirm → flex-row → p-5 → card
-  confirm._card = confirm.parentElement?.parentElement?.parentElement || null;
+  // Second click — execute
+  clearTimeout(btn._disarmTimer);
+  btn._armed = false;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
-  label.textContent = action === 'approve' ? 'Approve this decision?' : 'Reject this decision?';
-  yesBtn.className = yesBtn.className.replace(/bg-\S+/g, '') +
-    (action === 'approve' ? ' bg-green-600 hover:bg-green-700' : ' bg-red-600 hover:bg-red-700');
-  yesBtn.onclick = () => executeAction(id, action, confirm._card);
+  // Walk up from btn to find the card (marked data-card)
+  let card = btn.parentElement;
+  while (card && !card.dataset.card) card = card.parentElement;
 
-  actions.classList.add('hidden');
-  confirm.classList.remove('hidden');
-  confirm.classList.add('flex');
-}
-
-function cancelAction(id) {
-  const actions = document.getElementById(`decision-${id}-actions`);
-  const confirm  = document.getElementById(`decision-${id}-confirm`);
-  if (!actions || !confirm) return;
-  confirm.classList.add('hidden');
-  confirm.classList.remove('flex');
-  actions.classList.remove('hidden');
-  // Restore yes button
-  const yesBtn = document.getElementById(`decision-${id}-confirm-yes`);
-  if (yesBtn) { yesBtn.disabled = false; yesBtn.innerHTML = '<i class="fas fa-check"></i> Yes'; }
-}
-
-async function executeAction(id, action, card) {
-  const yesBtn = document.getElementById(`decision-${id}-confirm-yes`);
-  if (yesBtn) { yesBtn.disabled = true; yesBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
-
-  const url = `/account/google/ads/agents/api/decisions/${id}/${action}`;
-  const body = action === 'reject' ? JSON.stringify({reason: 'User rejected'}) : undefined;
   try {
-    const res  = await fetch(url, {
+    const res = await fetch(`/account/google/ads/agents/api/decisions/${id}/${action}`, {
       method: 'POST',
       headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json'},
-      body,
+      body: action === 'reject' ? JSON.stringify({reason: 'User rejected'}) : undefined,
     });
     let data = {};
-    try { data = await res.json(); } catch(_) {}
+    try { data = await res.json(); } catch (_) {}
 
     if (res.ok) {
-      showToast(action === 'approve' ? 'Decision approved.' : 'Decision rejected.', action === 'approve' ? 'success' : 'info');
-      if (card) {
-        card.remove();
-      } else {
-        // fallback: hide the confirm bar at minimum
-        cancelAction(id);
-      }
-      // Update the pending count badge
+      showToast(action === 'approve' ? 'Decision approved.' : 'Decision rejected.',
+                action === 'approve' ? 'success' : 'info');
+      if (card) card.remove();
       const badge = document.querySelector('[data-pending-count]');
       if (badge) {
         const n = parseInt(badge.textContent, 10);
         if (!isNaN(n) && n > 0) badge.textContent = n - 1;
       }
     } else {
-      const msg = data.error || `Server returned ${res.status}`;
+      const msg = data.error || `Server error ${res.status}`;
       showToast(`Could not ${action}: ${msg}`, 'error');
-      cancelAction(id);
+      btn.disabled  = false;
+      btn.innerHTML = btn._origHTML || '';
+      btn.className = btn._origClass || '';
     }
-  } catch(e) {
+  } catch (e) {
     showToast('Network error: ' + e.message, 'error');
-    cancelAction(id);
+    btn.disabled  = false;
+    btn.innerHTML = btn._origHTML || '';
+    btn.className = btn._origClass || '';
   }
 }
 </script>

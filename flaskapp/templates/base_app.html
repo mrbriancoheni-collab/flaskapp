@@ -230,45 +230,13 @@
       <!-- Google Services (unified) -->
       <div class="pt-2 text-sm font-semibold text-gray-600 uppercase"><i class="fa-brands fa-google mr-1"></i>Google Services</div>
       <a class="block px-3 py-3 rounded nav-link min-h-12" href="{{ url_for('google_bp.index') }}">
-        <i class="fa-solid fa-link"></i><span>Connect Account</span>
+        <i class="fa-solid fa-gauge"></i><span>Overview</span>
       </a>
 
-      {# Google Ads submenu #}
-      <div class="pt-2 pl-3 text-xs font-semibold text-gray-500 uppercase">Google Ads</div>
+      {# Google Ads — single entry point; tab bar handles in-section nav #}
       {% if has_endpoint('google_bp.ads_performance') %}
         <a href="{{ url_for('google_bp.ads_performance') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
-          <i class="fa-solid fa-chart-line"></i><span>Performance</span>
-        </a>
-      {% endif %}
-      {% if has_endpoint('google_bp.ads_campaigns') %}
-        <a href="{{ url_for('google_bp.ads_campaigns') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
-          <i class="fa-solid fa-bullseye"></i><span>Campaigns</span>
-        </a>
-      {% endif %}
-      {% if has_endpoint('google_bp.ads_budget') %}
-        <a href="{{ url_for('google_bp.ads_budget') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
-          <i class="fa-solid fa-wallet"></i><span>Budget Groups</span>
-        </a>
-      {% endif %}
-      {% if has_endpoint('google_bp.ads_forecasting') %}
-        <a href="{{ url_for('google_bp.ads_forecasting') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
-          <i class="fa-solid fa-chart-area"></i><span>Forecasting</span>
-        </a>
-      {% endif %}
-      {% if has_endpoint('google_bp.ads_competitive') %}
-        <a href="{{ url_for('google_bp.ads_competitive') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
-          <i class="fa-solid fa-chess"></i><span>Competitive</span>
-        </a>
-      {% endif %}
-      {% if has_endpoint('google_bp.ads_opportunities') %}
-        <a href="{{ url_for('google_bp.ads_opportunities') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
-          <i class="fa-solid fa-lightbulb"></i><span>Opportunities</span>
-        </a>
-      {% endif %}
-      {% if has_endpoint('google_bp.get_ai_actions') %}
-        <a href="{{ url_for('google_bp.get_ai_actions') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
-          <i class="fa-solid fa-robot"></i><span>AI Actions</span>
-          <span id="ai-actions-badge" class="ml-auto hidden text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full font-bold"></span>
+          <i class="fa-brands fa-google text-blue-600"></i><span>Google Ads</span>
         </a>
       {% endif %}
 
@@ -522,7 +490,9 @@
         'google_bp.ads_opportunities', 'google_bp.gsc_ui', 'google_bp.ga_ui',
         'budget_bp.budget_groups', 'forecasting_bp.forecasting_dashboard',
         'competitive_bp.competitive_dashboard', 'gmb_bp.index', 'gmb_bp.reviews',
-        'gmb_bp.ai_responses', 'gmb_bp.requests_email'
+        'gmb_bp.ai_responses', 'gmb_bp.requests_email',
+        'consolidated_bp.ai_control', 'consolidated_bp.budget_planning',
+        'consolidated_bp.intelligence', 'gads_bp.optimize'
       ] %}
       {% set glsa_endpoints = ['glsa_bp.index', 'glsa_bp.dashboard', 'glsa_bp.select_account',
                                'glsa_bp.leads_page', 'glsa_bp.optimize'] %}
@@ -536,50 +506,21 @@
         {# Google Overview #}
         {% if has_endpoint('google_bp.index') %}
         <a class="secondary-link {% if epn=='google_bp.index' %}active{% endif %}" href="{{ url_for('google_bp.index') }}">
-          <i class="fa-solid fa-link"></i><span>Connect Account</span>
+          <i class="fa-solid fa-gauge"></i><span>Overview</span>
         </a>
         {% endif %}
 
-        {# Google Ads - Expandable #}
-        <div class="nav-section">
-          <div class="nav-section-header" data-section="google-ads-section" id="google-ads-header">
-            <i class="fa-brands fa-google text-blue-600"></i>
-            <span class="font-semibold">Google Ads</span>
-            <i class="fa-solid fa-chevron-down text-xs ml-auto transition-transform duration-200"></i>
-          </div>
-          <div class="nav-section-content" id="google-ads-section">
-            {% if has_endpoint('google_bp.ads_performance') %}
-            <a class="sub-link {% if epn=='google_bp.ads_performance' %}active{% endif %}" href="{{ url_for('google_bp.ads_performance') }}">
-              <i class="fa-solid fa-chart-line"></i><span>Performance</span>
-            </a>
-            {% endif %}
-            {% if has_endpoint('google_bp.ads_campaigns') %}
-            <a class="sub-link {% if epn=='google_bp.ads_campaigns' %}active{% endif %}" href="{{ url_for('google_bp.ads_campaigns') }}">
-              <i class="fa-solid fa-bullseye"></i><span>Campaigns</span>
-            </a>
-            {% endif %}
-            {% if has_endpoint('google_bp.ads_budget') %}
-            <a class="sub-link {% if epn=='google_bp.ads_budget' %}active{% endif %}" href="{{ url_for('google_bp.ads_budget') }}">
-              <i class="fa-solid fa-wallet"></i><span>Budget Groups</span>
-            </a>
-            {% endif %}
-            {% if has_endpoint('google_bp.ads_forecasting') %}
-            <a class="sub-link {% if epn=='google_bp.ads_forecasting' %}active{% endif %}" href="{{ url_for('google_bp.ads_forecasting') }}">
-              <i class="fa-solid fa-chart-area"></i><span>Forecasting</span>
-            </a>
-            {% endif %}
-            {% if has_endpoint('google_bp.ads_competitive') %}
-            <a class="sub-link {% if epn=='google_bp.ads_competitive' %}active{% endif %}" href="{{ url_for('google_bp.ads_competitive') }}">
-              <i class="fa-solid fa-chess"></i><span>Competitive</span>
-            </a>
-            {% endif %}
-            {% if has_endpoint('google_bp.ads_opportunities') %}
-            <a class="sub-link {% if epn=='google_bp.ads_opportunities' %}active{% endif %}" href="{{ url_for('google_bp.ads_opportunities') }}">
-              <i class="fa-solid fa-lightbulb"></i><span>Opportunities</span>
-            </a>
-            {% endif %}
-          </div>
-        </div>
+        {# Google Ads — single entry point; in-page tab bar handles sub-navigation #}
+        {% if has_endpoint('google_bp.ads_performance') %}
+        {% set _gads_active = epn in ['google_bp.ads_performance','google_bp.ads_campaigns',
+          'google_bp.ads_budget','google_bp.ads_forecasting','google_bp.ads_competitive',
+          'google_bp.ads_opportunities','google_bp.get_ai_actions',
+          'consolidated_bp.ai_control','consolidated_bp.budget_planning',
+          'consolidated_bp.intelligence','gads_bp.optimize'] %}
+        <a class="secondary-link {% if _gads_active %}active{% endif %}" href="{{ url_for('google_bp.ads_performance') }}">
+          <i class="fa-brands fa-google text-blue-600"></i><span>Google Ads</span>
+        </a>
+        {% endif %}
 
         {# Local Services Ads #}
         {% if has_endpoint('glsa_bp.dashboard') %}

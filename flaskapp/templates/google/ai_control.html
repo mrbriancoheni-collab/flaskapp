@@ -282,14 +282,26 @@
                 {% if decision.expected_monthly_leads %}<span class="text-blue-600">Est. leads: <strong>+{{ '%.1f'|format(decision.expected_monthly_leads) }}/mo</strong></span>{% endif %}
               </div>
             </div>
-            <div class="flex items-center gap-2 flex-shrink-0">
-              <button onclick="approveDecision(this, {{ decision.id }})"
+            <div class="flex items-center gap-2 flex-shrink-0" id="decision-{{ decision.id }}-actions">
+              <button type="button" onclick="promptAction({{ decision.id }}, 'approve')"
                       class="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition">
                 <i class="fas fa-check"></i> Approve
               </button>
-              <button onclick="rejectDecision(this, {{ decision.id }})"
+              <button type="button" onclick="promptAction({{ decision.id }}, 'reject')"
                       class="inline-flex items-center gap-1.5 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-sm font-semibold rounded-lg transition">
                 <i class="fas fa-times"></i> Reject
+              </button>
+            </div>
+            <!-- Confirm bar (hidden until promptAction shows it) -->
+            <div id="decision-{{ decision.id }}-confirm" class="hidden items-center gap-2 flex-shrink-0">
+              <span class="text-sm font-medium text-gray-700" id="decision-{{ decision.id }}-confirm-label">Are you sure?</span>
+              <button type="button" id="decision-{{ decision.id }}-confirm-yes"
+                      class="inline-flex items-center gap-1.5 px-4 py-2 text-white text-sm font-semibold rounded-lg transition">
+                <i class="fas fa-check"></i> Yes
+              </button>
+              <button type="button" onclick="cancelAction({{ decision.id }})"
+                      class="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition">
+                Cancel
               </button>
             </div>
           </div>
@@ -508,79 +520,62 @@ function showToast(message, type = 'success') {
   }, 3500);
 }
 
-// ── Inline confirm state ─────────────────────────────────────────────────────
-function armButton(btn, label, icon, colorClass, onConfirm) {
-  const original = btn.innerHTML;
-  const originalClass = btn.className;
-  btn.innerHTML = `<i class="fas ${icon}"></i> ${label}`;
-  btn.className = btn.className.replace(/bg-\S+/g, '').replace(/text-\S+/g, 'text-white') + ` ${colorClass} ring-2 ring-offset-1 ring-current`;
-  const cancel = document.createElement('button');
-  cancel.className = 'inline-flex items-center gap-1 px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition';
-  cancel.innerHTML = '<i class="fas fa-times text-xs"></i> Cancel';
-  btn.after(cancel);
-  cancel.onclick = () => { btn.innerHTML = original; btn.className = originalClass; cancel.remove(); };
-  btn.onclick = () => { cancel.remove(); onConfirm(); };
+// ── Approve / Reject ──────────────────────────────────────────────────────────
+function promptAction(id, action) {
+  const actions = document.getElementById(`decision-${id}-actions`);
+  const confirm  = document.getElementById(`decision-${id}-confirm`);
+  const yesBtn   = document.getElementById(`decision-${id}-confirm-yes`);
+  const label    = document.getElementById(`decision-${id}-confirm-label`);
+  if (!actions || !confirm || !yesBtn) return;
+
+  label.textContent = action === 'approve' ? 'Approve this decision?' : 'Reject this decision?';
+  yesBtn.className = yesBtn.className.replace(/bg-\S+/g, '') +
+    (action === 'approve' ? ' bg-green-600 hover:bg-green-700' : ' bg-red-600 hover:bg-red-700');
+  yesBtn.onclick = () => executeAction(id, action);
+
+  actions.classList.add('hidden');
+  confirm.classList.remove('hidden');
+  confirm.classList.add('flex');
 }
 
-function _removeCard(btn) {
-  const card = btn.closest('[id^="decision-"]');
-  if (!card) return;
-  card.style.transition = 'opacity 0.3s';
-  card.style.opacity = '0';
-  setTimeout(() => card.remove(), 300);
+function cancelAction(id) {
+  const actions = document.getElementById(`decision-${id}-actions`);
+  const confirm  = document.getElementById(`decision-${id}-confirm`);
+  if (!actions || !confirm) return;
+  confirm.classList.add('hidden');
+  confirm.classList.remove('flex');
+  actions.classList.remove('hidden');
 }
 
-function approveDecision(btn, id) {
-  armButton(btn, 'Confirm Approve', 'fa-check', 'bg-green-700', async () => {
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    try {
-      const res = await fetch(`/account/google/ads/agents/api/decisions/${id}/approve`, {
-        method: 'POST',
-        headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json'},
-      });
-      const data = await res.json();
-      if (data.success || data.status === 'approved') {
-        showToast('Decision approved and queued for execution.', 'success');
-        _removeCard(btn);
-      } else {
-        showToast('Could not approve: ' + (data.error || 'Unknown error'), 'error');
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-check"></i> Approve';
+async function executeAction(id, action) {
+  const yesBtn = document.getElementById(`decision-${id}-confirm-yes`);
+  if (yesBtn) { yesBtn.disabled = true; yesBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+
+  const url = `/account/google/ads/agents/api/decisions/${id}/${action}`;
+  const body = action === 'reject' ? JSON.stringify({reason: 'User rejected'}) : undefined;
+  try {
+    const res  = await fetch(url, {
+      method: 'POST',
+      headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json'},
+      body,
+    });
+    const data = await res.json();
+    if (data.success || data.status === action + 'd' || data.status === 'approved' || data.status === 'rejected') {
+      showToast(action === 'approve' ? 'Decision approved.' : 'Decision rejected.', action === 'approve' ? 'success' : 'info');
+      const card = document.getElementById(`decision-${id}`);
+      if (card) {
+        card.style.transition = 'opacity 0.3s';
+        card.style.opacity = '0';
+        setTimeout(() => card.remove(), 320);
       }
-    } catch(e) {
-      showToast('Network error: ' + e.message, 'error');
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-check"></i> Approve';
+    } else {
+      showToast((action === 'approve' ? 'Could not approve' : 'Could not reject') + ': ' + (data.error || 'Unknown error'), 'error');
+      cancelAction(id);
     }
-  });
-}
-
-function rejectDecision(btn, id) {
-  armButton(btn, 'Confirm Reject', 'fa-times', 'bg-red-600', async () => {
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    try {
-      const res = await fetch(`/account/google/ads/agents/api/decisions/${id}/reject`, {
-        method: 'POST',
-        headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json'},
-        body: JSON.stringify({reason: 'User rejected'}),
-      });
-      const data = await res.json();
-      if (data.success || data.status === 'rejected') {
-        showToast('Decision rejected.', 'info');
-        _removeCard(btn);
-      } else {
-        showToast('Could not reject: ' + (data.error || 'Unknown error'), 'error');
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-times"></i> Reject';
-      }
-    } catch(e) {
-      showToast('Network error: ' + e.message, 'error');
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-times"></i> Reject';
-    }
-  });
+  } catch(e) {
+    showToast('Network error: ' + e.message, 'error');
+    cancelAction(id);
+  }
 }
 </script>
 {% endblock %}

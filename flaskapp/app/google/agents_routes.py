@@ -831,11 +831,24 @@ def approve_decision(decision_id):
             "result": json.dumps(execution_result)
         })
 
+    executed_ok = execution_result.get('success', False)
+    is_manual   = execution_result.get('manual', False)
+
+    if executed_ok:
+        if is_manual:
+            msg = "Decision approved — manual action required (no automated change made)"
+        else:
+            msg = "Decision approved and executed in Google Ads"
+    else:
+        msg = "Decision approved but execution failed: " + execution_result.get('error', 'Unknown error')
+
+    status_code = 200 if executed_ok else 422
     return jsonify({
-        "success": execution_result.get('success', False),
-        "message": status_msg,
+        "success": executed_ok,
+        "manual":  is_manual,
+        "message": msg,
         "execution_result": execution_result
-    })
+    }), status_code
 
 
 @agents_bp.route("/api/decisions/<int:decision_id>/reject", methods=["POST"])

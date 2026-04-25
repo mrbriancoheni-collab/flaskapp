@@ -138,28 +138,55 @@ def optimize():
             current_app.logger.exception("Error loading negatives for optimize tab")
 
     if tab == "campaigns" and aid:
-        try:
-            rows = db.session.execute(text("""
-                SELECT ac.id, ac.name, ac.status, ac.daily_budget_cents, ac.network,
-                       ac.google_campaign_id, ac.start_date,
-                       COUNT(DISTINCT ag.id) AS adgroup_count,
-                       COUNT(DISTINCT k.id) AS keyword_count,
-                       COALESCE(SUM(gs.cost_micros),0)/1000000.0 AS spend_30d,
-                       COALESCE(SUM(gs.conversions),0) AS conversions_30d,
-                       COALESCE(SUM(gs.clicks),0) AS clicks_30d
-                FROM ads_campaigns ac
-                LEFT JOIN ad_groups ag ON ag.campaign_id = ac.id
-                LEFT JOIN keywords k ON k.ad_group_id = ag.id
-                LEFT JOIN gads_stats_daily gs ON gs.entity_type = 'campaign'
-                    AND gs.entity_id = ac.id
-                    AND gs.date >= (CURRENT_DATE - INTERVAL 30 DAY)
-                WHERE ac.account_id = :aid AND ac.status != 'removed'
-                GROUP BY ac.id
-                ORDER BY ac.name
-            """), {"aid": aid}).mappings().all()
-            campaigns_tab_data = [dict(r) for r in rows]
-        except Exception:
-            current_app.logger.exception("Error loading campaigns tab")
+        # Try Google Ads snapshot first (live/cached data), fall back to local DB
+        if connected:
+            try:
+                from app.google import _get_ads_state
+                ads_state = _get_ads_state(aid)
+                if ads_state and ads_state.get("campaigns"):
+                    for c in ads_state["campaigns"]:
+                        campaigns_tab_data.append({
+                            "id": c.get("id"),
+                            "name": c.get("name", ""),
+                            "status": (c.get("status") or "enabled").lower(),
+                            "daily_budget_cents": int((c.get("daily_budget") or 0) * 100),
+                            "network": c.get("network") or c.get("advertising_channel_type", ""),
+                            "google_campaign_id": c.get("id"),
+                            "start_date": None,
+                            "adgroup_count": 0,
+                            "keyword_count": 0,
+                            "spend_30d": c.get("monthly_spend") or c.get("cost_30d") or 0,
+                            "conversions_30d": c.get("conversions", 0),
+                            "clicks_30d": c.get("clicks", 0),
+                            "source": "google_ads",
+                        })
+            except Exception:
+                current_app.logger.exception("Error loading campaigns from Google Ads state")
+
+        if not campaigns_tab_data:
+            # Fall back to local DB (includes manually created / draft campaigns)
+            try:
+                rows = db.session.execute(text("""
+                    SELECT ac.id, ac.name, ac.status, ac.daily_budget_cents, ac.network,
+                           ac.google_campaign_id, ac.start_date,
+                           COUNT(DISTINCT ag.id) AS adgroup_count,
+                           COUNT(DISTINCT k.id) AS keyword_count,
+                           COALESCE(SUM(gs.cost_micros),0)/1000000.0 AS spend_30d,
+                           COALESCE(SUM(gs.conversions),0) AS conversions_30d,
+                           COALESCE(SUM(gs.clicks),0) AS clicks_30d
+                    FROM ads_campaigns ac
+                    LEFT JOIN ad_groups ag ON ag.campaign_id = ac.id
+                    LEFT JOIN keywords k ON k.ad_group_id = ag.id
+                    LEFT JOIN gads_stats_daily gs ON gs.entity_type = 'campaign'
+                        AND gs.entity_id = ac.id
+                        AND gs.date >= (CURRENT_DATE - INTERVAL 30 DAY)
+                    WHERE ac.account_id = :aid AND ac.status != 'removed'
+                    GROUP BY ac.id
+                    ORDER BY ac.name
+                """), {"aid": aid}).mappings().all()
+                campaigns_tab_data = [dict(r) for r in rows]
+            except Exception:
+                current_app.logger.exception("Error loading campaigns from DB")
 
     if tab == "adgroups" and aid:
         try:

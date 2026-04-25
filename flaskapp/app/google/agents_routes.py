@@ -845,7 +845,7 @@ def reject_decision(decision_id):
     try:
         account_id = current_account_id()
 
-        reason = request.json.get("reason", "User rejected") if request.is_json else "User rejected"
+        reason = (request.get_json(silent=True) or {}).get("reason", "User rejected")
 
         query = text("""
             UPDATE agent_decisions

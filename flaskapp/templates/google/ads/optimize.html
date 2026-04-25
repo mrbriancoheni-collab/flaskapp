@@ -410,12 +410,27 @@
         <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50">
           <i class="fa-solid fa-bullhorn text-indigo-400 text-2xl"></i>
         </div>
+        {% if connected %}
+        <h3 class="text-base font-semibold text-gray-800 mb-1">No campaigns loaded</h3>
+        <p class="text-sm text-gray-500 mb-4">Your Google Ads account is connected but no campaign data has synced yet. Visit the Performance page to trigger a sync, or create a new campaign below.</p>
+        <div class="flex items-center justify-center gap-3">
+          <a href="{{ url_for('google_bp.ads_performance') }}"
+             class="inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm hover:bg-gray-50 transition">
+            <i class="fa-solid fa-rotate-right"></i> Go to Performance (sync)
+          </a>
+          <a href="{{ url_for('gads_bp.optimize') }}?tab=publish"
+             class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
+            <i class="fa-solid fa-plus"></i> Create Campaign
+          </a>
+        </div>
+        {% else %}
         <h3 class="text-base font-semibold text-gray-800 mb-1">No campaigns yet</h3>
         <p class="text-sm text-gray-500 mb-4">Create your first campaign to start running ads.</p>
         <a href="{{ url_for('gads_bp.optimize') }}?tab=publish"
            class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
           <i class="fa-solid fa-plus"></i> Create Campaign
         </a>
+        {% endif %}
       </div>
       {% endif %}
 

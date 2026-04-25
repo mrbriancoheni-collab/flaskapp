@@ -5091,19 +5091,28 @@ def ads_competitive():
 @login_required
 def competitive_fetch_insights():
     """Fetch auction insights from Google Ads API."""
-    aid = current_account_id()
-    data = request.get_json()
-    campaign_id = data.get("campaign_id")
-    lookback_days = data.get("lookback_days", 30)
-
-    if not campaign_id:
-        return jsonify({"success": False, "error": "Campaign ID required"}), 400
-
-    customer_id = _get_ads_customer_id(aid)
-    if not customer_id:
-        return jsonify({"success": False, "error": "No Google Ads account connected"}), 400
-
     try:
+        aid = current_account_id()
+        data = request.get_json(silent=True) or {}
+        campaign_id = data.get("campaign_id")
+        lookback_days = data.get("lookback_days", 30)
+
+        if not campaign_id:
+            return jsonify({"success": False, "error": "Campaign ID required"}), 400
+
+        # Resolve Google campaign ID from DB campaign ID
+        with db.engine.connect() as _conn:
+            _row = _conn.execute(text(
+                "SELECT google_campaign_id FROM ads_campaigns WHERE id = :id AND account_id = :aid"
+            ), {"id": campaign_id, "aid": aid}).first()
+        if not _row or not _row.google_campaign_id:
+            return jsonify({"success": False, "error": "Campaign not found or not linked to Google Ads"}), 404
+        google_campaign_id = str(_row.google_campaign_id)
+
+        customer_id = _get_ads_customer_id(aid)
+        if not customer_id:
+            return jsonify({"success": False, "error": "No Google Ads account connected"}), 400
+
         from google.ads.googleads.client import GoogleAdsClient
         from datetime import datetime, timedelta
 
@@ -5142,7 +5151,7 @@ def competitive_fetch_insights():
                 auction_insight.abs_top_of_page_rate,
                 auction_insight.outranking_share
             FROM campaign_auction_insight_view
-            WHERE campaign.id = {campaign_id}
+            WHERE campaign.id = {google_campaign_id}
               AND segments.date BETWEEN '{start_date.strftime("%Y-%m-%d")}' AND '{end_date.strftime("%Y-%m-%d")}'
         """
 

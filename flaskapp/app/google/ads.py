@@ -59,6 +59,13 @@ def optimize():
     tab = request.args.get("tab", "campaigns")
     aid = current_account_id()
 
+    connected = False
+    try:
+        from app.google import _is_connected
+        connected = _is_connected(aid, "ads")
+    except Exception:
+        pass
+
     keywords_data: list = []
     negatives_data: list = []
     campaigns_list: list = []
@@ -200,6 +207,7 @@ def optimize():
     return render_template(
         "google/ads/optimize.html",
         tab=tab,
+        connected=connected,
         keywords_data=keywords_data,
         negatives_data=negatives_data,
         campaigns_list=campaigns_list,

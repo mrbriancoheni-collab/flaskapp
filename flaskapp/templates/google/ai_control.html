@@ -50,6 +50,7 @@
         ('agents',     'Agent Performance', 'fa-robot'),
         ('approval',   'Approval Queue', 'fa-clipboard-check'),
         ('feed',       'Action Feed', 'fa-stream'),
+        ('history',    'Change Log', 'fa-history'),
       ] %}
       <a href="?tab={{ t }}"
          class="tab-link flex items-center gap-2 py-3 border-b-2 text-sm font-medium transition
@@ -340,6 +341,73 @@
     <div class="bg-white border border-gray-200 rounded-xl p-10 text-center">
       <i class="fas fa-stream text-gray-300 text-4xl mb-4"></i>
       <p class="text-gray-500">No executed actions yet.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ══ TAB: Change Log ══ #}
+  <div id="tab-history" class="{{ '' if tab == 'history' else 'hidden' }}">
+
+    {# Summary stats #}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white border border-gray-200 rounded-xl p-4 text-center shadow-sm">
+        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Actions</p>
+        <p class="text-3xl font-bold text-gray-900">{{ cl_total_actions }}</p>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-xl p-4 text-center shadow-sm">
+        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Waste Prevented</p>
+        <p class="text-3xl font-bold text-red-600">${{ '%.0f'|format(cl_total_saved) }}</p>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-xl p-4 text-center shadow-sm">
+        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Optimizations</p>
+        <p class="text-3xl font-bold text-green-600">{{ cl_total_optimizations }}</p>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-xl p-4 text-center shadow-sm">
+        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Blocks Applied</p>
+        <p class="text-3xl font-bold text-purple-600">{{ cl_total_blocks }}</p>
+      </div>
+    </div>
+
+    {# Action list #}
+    {% if cl_recent_actions %}
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="font-semibold text-gray-900">Recent AI Actions</h2>
+        <span class="text-xs text-gray-500">Last 30 days</span>
+      </div>
+      <ul class="divide-y divide-gray-50">
+        {% for action in cl_recent_actions %}
+        <li class="px-5 py-4 hover:bg-gray-50 transition">
+          <div class="flex items-start gap-4">
+            <span class="mt-0.5 flex-shrink-0 w-8 h-8 rounded-full
+                         {{ 'bg-purple-100 text-purple-600' if 'negative' in (action.action_type or '') else 'bg-green-100 text-green-600' }}
+                         flex items-center justify-center text-xs">
+              <i class="fas {{ 'fa-ban' if 'negative' in (action.action_type or '') else 'fa-check' }}"></i>
+            </span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-sm font-medium text-gray-900 truncate">{{ action.title or action.action_type }}</p>
+                <span class="flex-shrink-0 text-xs text-gray-400">
+                  {{ action.created_at.strftime('%b %d, %H:%M') if action.created_at else '—' }}
+                </span>
+              </div>
+              <p class="text-xs text-gray-500 mt-0.5">{{ (action.action_type or '').replace('_',' ').title() }}</p>
+              {% if action.estimated_monthly_savings %}
+              <span class="text-xs text-green-600 font-medium mt-1 inline-block">
+                +${{ '%.0f'|format(action.estimated_monthly_savings) }}/mo saved
+              </span>
+              {% endif %}
+            </div>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% else %}
+    <div class="bg-white border border-gray-200 rounded-xl p-10 text-center">
+      <i class="fas fa-history text-gray-300 text-4xl mb-4"></i>
+      <h3 class="text-lg font-semibold text-gray-700 mb-2">No Change History Yet</h3>
+      <p class="text-gray-500 text-sm">Executed AI actions will appear here as a full audit trail.</p>
     </div>
     {% endif %}
   </div>

@@ -857,40 +857,37 @@ def reject_decision(decision_id):
     """Reject a pending agent decision."""
     try:
         account_id = current_account_id()
-
         reason = (request.get_json(silent=True) or {}).get("reason", "User rejected")
 
-        # Allow rejecting pending or execution_failed decisions (not already rejected/executed)
-        query = text("""
-            UPDATE agent_decisions
-            SET status = 'rejected',
-                execution_result = :reason,
-                updated_at = NOW()
-            WHERE id = :decision_id
-              AND account_id = :account_id
-              AND status NOT IN ('rejected', 'executed')
-        """)
-
+        rowcount = 0
         with db.engine.begin() as conn:
-            result = conn.execute(query, {
-                "decision_id": decision_id,
-                "account_id": account_id,
-                "reason": reason
-            })
+            result = conn.execute(text("""
+                UPDATE agent_decisions
+                SET status = 'rejected',
+                    execution_result = :reason,
+                    updated_at = NOW()
+                WHERE id = :decision_id
+                  AND account_id = :account_id
+                  AND status NOT IN ('rejected', 'executed')
+            """), {"decision_id": decision_id, "account_id": account_id, "reason": reason})
+            rowcount = result.rowcount
 
-        if result.rowcount == 0:
-            # Already rejected/executed — check if it even exists for this account
-            check = text("SELECT status FROM agent_decisions WHERE id=:id AND account_id=:aid")
+        if rowcount == 0:
+            # Already in terminal state — check ownership
             with db.engine.connect() as conn:
-                row = conn.execute(check, {"id": decision_id, "aid": account_id}).first()
+                row = conn.execute(
+                    text("SELECT status FROM agent_decisions WHERE id=:id AND account_id=:aid"),
+                    {"id": decision_id, "aid": account_id}
+                ).first()
             if not row:
                 return jsonify({"success": False, "error": "Decision not found"}), 404
-            return jsonify({"success": True, "message": "Decision already processed", "status": row[0]}), 200
+            # Exists but already terminal — treat as success so UI cleans up
+            return jsonify({"success": True, "message": "Decision already processed", "already_done": True}), 200
 
         return jsonify({"success": True, "message": "Decision rejected"})
     except Exception as e:
         current_app.logger.error(f"Error rejecting decision {decision_id}: {e}", exc_info=True)
-        return jsonify({"success": False, "error": "Server error rejecting decision"}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @agents_bp.route("/api/decisions/auto-execute-low-risk", methods=["POST"])

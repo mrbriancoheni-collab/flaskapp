@@ -575,7 +575,16 @@ document.addEventListener('click', function(e) {
       btn.disabled  = false;
       btn.innerHTML = btn._origHTML;
       btn.className = btn._origClass;
-      showToast('Error: ' + (r.data.error || r.data.message || 'Server error ' + r.status), 'error');
+      var errMsg = r.data.error || r.data.message || ('HTTP ' + r.status);
+      showToast('Could not ' + action + ': ' + errMsg, 'error');
+      // Also show inline on the card so it's impossible to miss
+      if (card) {
+        var banner = document.createElement('div');
+        banner.className = 'px-4 py-2 bg-red-50 border-t border-red-200 text-red-700 text-sm';
+        banner.innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i>' + errMsg;
+        card.appendChild(banner);
+        setTimeout(function() { banner.remove(); }, 6000);
+      }
     }
   })
   .catch(function(err) {

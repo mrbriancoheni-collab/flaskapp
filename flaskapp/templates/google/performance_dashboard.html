@@ -55,6 +55,63 @@
   </div>
   {% else %}
 
+  {# ── conversion tracking gate ── #}
+  {% if not has_conversion_tracking %}
+  <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 flex items-start gap-3">
+    <i class="fa-solid fa-triangle-exclamation text-amber-500 text-xl mt-0.5 flex-shrink-0"></i>
+    <div class="flex-1">
+      <p class="font-semibold text-amber-900">Conversion tracking not detected</p>
+      <p class="text-sm text-amber-700 mt-1">Without conversion data the AI agents can't reduce your CPL or optimise bids. Set up tracking so every call or form fill is counted.</p>
+      <div class="flex flex-wrap gap-2 mt-3">
+        <a href="https://support.google.com/google-ads/answer/6095821" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-lg transition">
+          <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i> Set up call tracking
+        </a>
+        <a href="https://support.google.com/google-ads/answer/1722022" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-amber-300 hover:bg-amber-50 text-amber-800 text-sm font-medium rounded-lg transition">
+          <i class="fa-solid fa-code text-xs"></i> Website conversion tag
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── what to do next ── #}
+  {% set next_items = [] %}
+  {% if pending_decisions_count > 0 %}
+    {% set _ = next_items.append({'icon': 'fa-clock', 'color': 'amber', 'text': pending_decisions_count ~ ' agent decision' ~ ('s' if pending_decisions_count != 1 else '') ~ ' awaiting your approval', 'href': url_for('consolidated_bp.ai_control') ~ '?tab=approval', 'cta': 'Review now'}) %}
+  {% endif %}
+  {% if unreviewed_search_terms_count > 0 %}
+    {% set _ = next_items.append({'icon': 'fa-ban', 'color': 'red', 'text': unreviewed_search_terms_count ~ ' wasted search term' ~ ('s' if unreviewed_search_terms_count != 1 else '') ~ ' spending budget with zero conversions', 'href': url_for('google_bp.search_terms'), 'cta': 'Block terms'}) %}
+  {% endif %}
+  {% if not has_conversion_tracking %}
+    {% set _ = next_items.append({'icon': 'fa-chart-line', 'color': 'orange', 'text': 'Conversion tracking is off — the AI cannot optimise bids or CPL', 'href': 'https://support.google.com/google-ads/answer/6095821', 'cta': 'Fix now'}) %}
+  {% endif %}
+  {% if next_items %}
+  <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
+      <i class="fas fa-list-check text-indigo-500"></i>
+      <h2 class="font-semibold text-gray-900">What to do next</h2>
+    </div>
+    <ul class="divide-y divide-gray-50">
+      {% for item in next_items %}
+      <li class="px-5 py-3 flex items-center gap-4">
+        <span class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm
+          {{ 'bg-amber-100 text-amber-600' if item.color == 'amber' else
+             'bg-red-100 text-red-600' if item.color == 'red' else
+             'bg-orange-100 text-orange-600' }}">
+          <i class="fas {{ item.icon }}"></i>
+        </span>
+        <p class="flex-1 text-sm text-gray-700">{{ item.text }}</p>
+        <a href="{{ item.href }}" class="flex-shrink-0 text-sm font-medium text-indigo-600 hover:text-indigo-800 whitespace-nowrap">
+          {{ item.cta }} <i class="fas fa-arrow-right text-xs ml-1"></i>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
   {# ── KPI cards ── #}
   {% set ap = account_performance or {} %}
   {% set has_data = ap.get('has_data', false) %}

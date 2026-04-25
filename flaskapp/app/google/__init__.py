@@ -3525,6 +3525,28 @@ def ads_performance():
     except Exception:
         pass
 
+    # Conversion tracking gate: connected but zero conversions recorded
+    has_conversion_tracking = bool(
+        connected and account_performance and account_performance.get('conversions', 0) > 0
+    )
+
+    # Count unreviewed wasted search terms (cost > $5, zero conversions, not yet blocked)
+    unreviewed_search_terms_count = 0
+    try:
+        unreviewed_search_terms_count = db.session.execute(
+            text("""
+                SELECT COUNT(*) FROM search_terms st
+                JOIN ads_campaigns c ON c.id = st.campaign_id
+                WHERE c.account_id = :aid
+                  AND st.added_as_negative = 0
+                  AND st.cost_micros > 5000000
+                  AND st.conversions = 0
+            """),
+            {"aid": aid}
+        ).scalar() or 0
+    except Exception:
+        pass
+
     return render_template(
         "google/performance_dashboard.html",
         connected=connected,
@@ -3552,6 +3574,8 @@ def ads_performance():
         savings_are_pending=savings_are_pending,
         campaigns_data=campaigns_data,
         target_cpl=target_cpl,
+        has_conversion_tracking=has_conversion_tracking,
+        unreviewed_search_terms_count=unreviewed_search_terms_count,
     )
 
 

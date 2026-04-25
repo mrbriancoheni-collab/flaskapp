@@ -510,15 +510,15 @@ function showToast(message, type = 'success') {
   }, 3500);
 }
 
-// ── Approve / Reject (event delegation — no inline onclick needed) ─────────────
+// ── Approve / Reject (event delegation) ──────────────────────────────────────
 document.addEventListener('click', function(e) {
-  const btn = e.target.closest('button[data-decision-id]');
+  var btn = e.target.closest('button[data-decision-id]');
   if (!btn) return;
 
-  const id     = btn.dataset.decisionId;
-  const action = btn.dataset.decisionAction;
+  var id     = btn.dataset.decisionId;
+  var action = btn.dataset.decisionAction;
 
-  // First click: arm; second click within 3s: fire
+  // First click: arm the button; second click within 3s: fire
   if (!btn._armed) {
     btn._armed     = true;
     btn._origHTML  = btn.innerHTML;
@@ -526,36 +526,24 @@ document.addEventListener('click', function(e) {
     btn.innerHTML  = '<i class="fas fa-' + (action === 'approve' ? 'check' : 'times') + '"></i> Confirm?';
     btn.style.cssText = 'background:' + (action === 'approve' ? '#15803d' : '#dc2626') + ';color:#fff;outline:2px solid currentColor;outline-offset:2px';
     btn._disarmTimer = setTimeout(function() {
-      btn._armed         = false;
-      btn.innerHTML      = btn._origHTML;
-      btn.className      = btn._origClass;
-      btn.style.cssText  = '';
+      btn._armed        = false;
+      btn.innerHTML     = btn._origHTML;
+      btn.className     = btn._origClass;
+      btn.style.cssText = '';
     }, 3000);
     return;
   }
 
-  // Second click — execute
+  // Second click — send to server, wait for confirmation before removing card
   clearTimeout(btn._disarmTimer);
   btn._armed        = false;
   btn.disabled      = true;
   btn.style.cssText = '';
   btn.innerHTML     = '<i class="fas fa-spinner fa-spin"></i>';
 
-  // Find card: walk up from btn until data-card attribute
+  // Find card by walking up from button to [data-card]
   var card = btn.parentElement;
   while (card && !card.dataset.card) card = card.parentElement;
-
-  // Optimistically remove the card right away so the user sees instant feedback
-  var cardParent    = card ? card.parentElement : null;
-  var cardNextSib   = card ? card.nextSibling   : null;
-  if (card) card.remove();
-
-  // Update badge immediately
-  var badge = document.querySelector('[data-pending-count]');
-  if (badge) {
-    var n = parseInt(badge.textContent, 10);
-    if (!isNaN(n) && n > 0) badge.textContent = n - 1;
-  }
 
   fetch('/account/google/ads/agents/api/decisions/' + id + '/' + action, {
     method: 'POST',
@@ -563,34 +551,34 @@ document.addEventListener('click', function(e) {
     body: action === 'reject' ? JSON.stringify({reason: 'User rejected'}) : undefined,
   })
   .then(function(res) {
-    return res.json().then(function(data) { return {ok: res.ok, data: data}; })
-             .catch(function() { return {ok: res.ok, data: {}}; });
+    var ok = res.ok;
+    return res.json()
+      .catch(function() { return {}; })
+      .then(function(data) { return {ok: ok, data: data}; });
   })
   .then(function(r) {
     if (r.ok) {
-      showToast(action === 'approve' ? 'Decision approved.' : 'Decision rejected.',
-                action === 'approve' ? 'success' : 'info');
+      if (card) card.remove();
+      var badge = document.querySelector('[data-pending-count]');
+      if (badge) {
+        var n = parseInt(badge.textContent, 10);
+        if (!isNaN(n) && n > 0) badge.textContent = n - 1;
+      }
+      var msg   = r.data.message || (action === 'approve' ? 'Decision approved.' : 'Decision rejected.');
+      var type  = (action === 'approve' && r.data.manual) ? 'info' : (action === 'approve' ? 'success' : 'info');
+      showToast(msg, type);
     } else {
-      // Restore the card and badge on failure
-      if (card && cardParent) cardParent.insertBefore(card, cardNextSib);
-      if (badge) badge.textContent = parseInt(badge.textContent, 10) + 1;
       btn.disabled  = false;
       btn.innerHTML = btn._origHTML;
       btn.className = btn._origClass;
-      showToast('Could not ' + action + ': ' + (r.data.error || 'Server error'), 'error');
+      showToast('Error: ' + (r.data.error || r.data.message || 'Server error'), 'error');
     }
   })
   .catch(function(err) {
-    // Restore on network error
-    if (card && cardParent) cardParent.insertBefore(card, cardNextSib);
-    if (badge) badge.textContent = parseInt(badge.textContent, 10) + 1;
     btn.disabled  = false;
     btn.innerHTML = btn._origHTML;
     btn.className = btn._origClass;
     showToast('Network error: ' + err.message, 'error');
-  });
-    btn.innerHTML = btn._origHTML;
-    btn.className = btn._origClass;
   });
 });
 </script>

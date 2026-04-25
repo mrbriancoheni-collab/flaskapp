@@ -559,17 +559,16 @@ async function executeAction(id, action) {
       headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json'},
       body,
     });
-    const data = await res.json();
-    if (data.success || data.status === action + 'd' || data.status === 'approved' || data.status === 'rejected') {
+    let data = {};
+    try { data = await res.json(); } catch(_) {}
+
+    if (res.ok) {
       showToast(action === 'approve' ? 'Decision approved.' : 'Decision rejected.', action === 'approve' ? 'success' : 'info');
       const card = document.getElementById(`decision-${id}`);
-      if (card) {
-        card.style.transition = 'opacity 0.3s';
-        card.style.opacity = '0';
-        setTimeout(() => card.remove(), 320);
-      }
+      if (card) { card.remove(); }
     } else {
-      showToast((action === 'approve' ? 'Could not approve' : 'Could not reject') + ': ' + (data.error || 'Unknown error'), 'error');
+      const msg = data.error || `Server returned ${res.status}`;
+      showToast(`Could not ${action}: ${msg}`, 'error');
       cancelAction(id);
     }
   } catch(e) {

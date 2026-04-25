@@ -283,11 +283,13 @@
               </div>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
-              <button type="button" onclick="decisionAction(this, {{ decision.id }}, 'approve')"
+              <button type="button"
+                      data-decision-id="{{ decision.id }}" data-decision-action="approve"
                       class="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition">
                 <i class="fas fa-check"></i> Approve
               </button>
-              <button type="button" onclick="decisionAction(this, {{ decision.id }}, 'reject')"
+              <button type="button"
+                      data-decision-id="{{ decision.id }}" data-decision-action="reject"
                       class="inline-flex items-center gap-1.5 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-sm font-semibold rounded-lg transition">
                 <i class="fas fa-times"></i> Reject
               </button>
@@ -508,72 +510,72 @@ function showToast(message, type = 'success') {
   }, 3500);
 }
 
-// ── Approve / Reject ──────────────────────────────────────────────────────────
-async function decisionAction(btn, id, action) {
-  // First click: arm the button; second click within 3s: fire
+// ── Approve / Reject (event delegation — no inline onclick needed) ─────────────
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('button[data-decision-id]');
+  if (!btn) return;
+
+  const id     = btn.dataset.decisionId;
+  const action = btn.dataset.decisionAction;
+
+  // First click: arm; second click within 3s: fire
   if (!btn._armed) {
-    const origHTML  = btn.innerHTML;
-    const origClass = btn.className;
-    btn._armed = true;
-    btn._origHTML  = origHTML;
-    btn._origClass = origClass;
-    btn.innerHTML = action === 'approve'
-      ? '<i class="fas fa-check"></i> Confirm?'
-      : '<i class="fas fa-times"></i> Confirm?';
-    btn.className = btn.className
-      .replace(/bg-\S+/g, '')
-      .replace(/text-\S+/g, 'text-white') +
-      (action === 'approve' ? ' bg-green-700' : ' bg-red-600') +
-      ' ring-2 ring-offset-1 ring-current';
-    btn._disarmTimer = setTimeout(() => {
-      btn._armed = false;
-      btn.innerHTML  = btn._origHTML;
-      btn.className  = btn._origClass;
+    btn._armed     = true;
+    btn._origHTML  = btn.innerHTML;
+    btn._origClass = btn.className;
+    btn.innerHTML  = '<i class="fas fa-' + (action === 'approve' ? 'check' : 'times') + '"></i> Confirm?';
+    btn.style.cssText = 'background:' + (action === 'approve' ? '#15803d' : '#dc2626') + ';color:#fff;outline:2px solid currentColor;outline-offset:2px';
+    btn._disarmTimer = setTimeout(function() {
+      btn._armed         = false;
+      btn.innerHTML      = btn._origHTML;
+      btn.className      = btn._origClass;
+      btn.style.cssText  = '';
     }, 3000);
     return;
   }
 
   // Second click — execute
   clearTimeout(btn._disarmTimer);
-  btn._armed = false;
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  btn._armed        = false;
+  btn.disabled      = true;
+  btn.style.cssText = '';
+  btn.innerHTML     = '<i class="fas fa-spinner fa-spin"></i>';
 
-  // Walk up from btn to find the card (marked data-card)
-  let card = btn.parentElement;
+  // Find card: walk up from btn until data-card attribute
+  var card = btn.parentElement;
   while (card && !card.dataset.card) card = card.parentElement;
 
-  try {
-    const res = await fetch(`/account/google/ads/agents/api/decisions/${id}/${action}`, {
-      method: 'POST',
-      headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json'},
-      body: action === 'reject' ? JSON.stringify({reason: 'User rejected'}) : undefined,
-    });
-    let data = {};
-    try { data = await res.json(); } catch (_) {}
-
-    if (res.ok) {
+  fetch('/account/google/ads/agents/api/decisions/' + id + '/' + action, {
+    method: 'POST',
+    headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json'},
+    body: action === 'reject' ? JSON.stringify({reason: 'User rejected'}) : undefined,
+  })
+  .then(function(res) {
+    return res.json().then(function(data) { return {ok: res.ok, data: data}; });
+  })
+  .then(function(r) {
+    if (r.ok) {
       showToast(action === 'approve' ? 'Decision approved.' : 'Decision rejected.',
                 action === 'approve' ? 'success' : 'info');
       if (card) card.remove();
-      const badge = document.querySelector('[data-pending-count]');
+      var badge = document.querySelector('[data-pending-count]');
       if (badge) {
-        const n = parseInt(badge.textContent, 10);
+        var n = parseInt(badge.textContent, 10);
         if (!isNaN(n) && n > 0) badge.textContent = n - 1;
       }
     } else {
-      const msg = data.error || `Server error ${res.status}`;
-      showToast(`Could not ${action}: ${msg}`, 'error');
+      showToast('Could not ' + action + ': ' + (r.data.error || 'Server error'), 'error');
       btn.disabled  = false;
-      btn.innerHTML = btn._origHTML || '';
-      btn.className = btn._origClass || '';
+      btn.innerHTML = btn._origHTML;
+      btn.className = btn._origClass;
     }
-  } catch (e) {
+  })
+  .catch(function(e) {
     showToast('Network error: ' + e.message, 'error');
     btn.disabled  = false;
-    btn.innerHTML = btn._origHTML || '';
-    btn.className = btn._origClass || '';
-  }
-}
+    btn.innerHTML = btn._origHTML;
+    btn.className = btn._origClass;
+  });
+});
 </script>
 {% endblock %}

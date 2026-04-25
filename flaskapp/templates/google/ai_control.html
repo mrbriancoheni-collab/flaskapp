@@ -484,36 +484,103 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
   }
 });
 
+// ── Toast notification ───────────────────────────────────────────────────────
+function showToast(message, type = 'success') {
+  const colors = {
+    success: 'bg-green-600',
+    error:   'bg-red-600',
+    info:    'bg-indigo-600',
+  };
+  const icons = {
+    success: 'fa-check-circle',
+    error:   'fa-exclamation-circle',
+    info:    'fa-info-circle',
+  };
+  const el = document.createElement('div');
+  el.className = `fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-white text-sm font-medium
+                  ${colors[type] || colors.info} transition-all duration-300 translate-y-2 opacity-0`;
+  el.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i><span>${message}</span>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.replace('translate-y-2','translate-y-0') || el.classList.replace('opacity-0','opacity-100'));
+  setTimeout(() => {
+    el.classList.add('opacity-0','translate-y-2');
+    setTimeout(() => el.remove(), 300);
+  }, 3500);
+}
+
+// ── Inline confirm state ─────────────────────────────────────────────────────
+function armButton(btn, label, icon, colorClass, onConfirm) {
+  const original = btn.innerHTML;
+  const originalClass = btn.className;
+  btn.innerHTML = `<i class="fas ${icon}"></i> ${label}`;
+  btn.className = btn.className.replace(/bg-\S+/g, '').replace(/text-\S+/g, 'text-white') + ` ${colorClass} ring-2 ring-offset-1 ring-current`;
+  const cancel = document.createElement('button');
+  cancel.className = 'inline-flex items-center gap-1 px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition';
+  cancel.innerHTML = '<i class="fas fa-times text-xs"></i> Cancel';
+  btn.after(cancel);
+  cancel.onclick = () => { btn.innerHTML = original; btn.className = originalClass; cancel.remove(); };
+  btn.onclick = () => { cancel.remove(); onConfirm(); };
+}
+
 async function approveDecision(id) {
-  if (!confirm('Approve and execute this action?')) return;
-  try {
-    const res = await fetch(`/account/google/ads/agents/api/decisions/${id}/approve`, {
-      method: 'POST',
-      headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json'},
-    });
-    const data = await res.json();
-    if (data.success || data.status === 'approved') {
-      document.getElementById(`decision-${id}`)?.remove();
-    } else {
-      alert('Error: ' + (data.error || 'Could not approve'));
+  const btn = document.querySelector(`#decision-${id} button[onclick*="approveDecision"]`);
+  armButton(btn, 'Confirm Approve', 'fa-check', 'bg-green-700', async () => {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+      const res = await fetch(`/account/google/ads/agents/api/decisions/${id}/approve`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json'},
+      });
+      const data = await res.json();
+      if (data.success || data.status === 'approved') {
+        const card = document.getElementById(`decision-${id}`);
+        card.style.transition = 'opacity 0.3s';
+        card.style.opacity = '0';
+        setTimeout(() => card.remove(), 300);
+        showToast('Decision approved and queued for execution.', 'success');
+      } else {
+        showToast('Could not approve: ' + (data.error || 'Unknown error'), 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Approve';
+      }
+    } catch(e) {
+      showToast('Network error: ' + e.message, 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check"></i> Approve';
     }
-  } catch(e) { alert('Error: ' + e.message); }
+  });
 }
 
 async function rejectDecision(id) {
-  if (!confirm('Reject this action?')) return;
-  try {
-    const res = await fetch(`/account/google/ads/agents/api/decisions/${id}/reject`, {
-      method: 'POST',
-      headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json'},
-    });
-    const data = await res.json();
-    if (data.success || data.status === 'rejected') {
-      document.getElementById(`decision-${id}`)?.remove();
-    } else {
-      alert('Error: ' + (data.error || 'Could not reject'));
+  const btn = document.querySelector(`#decision-${id} button[onclick*="rejectDecision"]`);
+  armButton(btn, 'Confirm Reject', 'fa-times', 'bg-red-600', async () => {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+      const res = await fetch(`/account/google/ads/agents/api/decisions/${id}/reject`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json'},
+        body: JSON.stringify({reason: 'User rejected'}),
+      });
+      const data = await res.json();
+      if (data.success || data.status === 'rejected') {
+        const card = document.getElementById(`decision-${id}`);
+        card.style.transition = 'opacity 0.3s';
+        card.style.opacity = '0';
+        setTimeout(() => card.remove(), 300);
+        showToast('Decision rejected.', 'info');
+      } else {
+        showToast('Could not reject: ' + (data.error || 'Unknown error'), 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-times"></i> Reject';
+      }
+    } catch(e) {
+      showToast('Network error: ' + e.message, 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-times"></i> Reject';
     }
-  } catch(e) { alert('Error: ' + e.message); }
+  });
 }
 </script>
 {% endblock %}

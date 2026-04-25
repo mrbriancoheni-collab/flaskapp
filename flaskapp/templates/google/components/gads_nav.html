@@ -30,6 +30,12 @@
         <i class="fas fa-chess text-xs"></i> Intelligence
       </a>
 
+      <a href="{{ url_for('google_bp.search_terms') }}"
+         class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition
+                {{ 'bg-indigo-50 text-indigo-700' if _active == 'search_terms' else 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
+        <i class="fas fa-search text-xs"></i> Search Terms
+      </a>
+
       <a href="{{ url_for('gads_bp.optimize') }}"
          class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition
                 {{ 'bg-indigo-50 text-indigo-700' if _active == 'structure' else 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">

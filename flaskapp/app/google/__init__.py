@@ -4962,6 +4962,139 @@ def _check_competitive_tables_exist():
 # (app/google/competitive_routes.py, registered at /account/google/ads/competitive)
 
 
+# ==============================================================================
+# SEARCH TERM REPORT ROUTES
+# ==============================================================================
+
+@google_bp.route("/ads/search-terms", methods=["GET"], endpoint="search_terms")
+@login_required
+def search_terms():
+    """Search term report — see what queries triggered ads, add bad ones as negatives."""
+    aid = current_account_id()
+    days = request.args.get("days", 30, type=int)
+    campaign_filter = request.args.get("campaign_id", type=int)
+
+    from app.models_ads import SearchTerm, AdsCampaign, AdGroup
+    from datetime import date, timedelta
+    import sqlalchemy as sa
+
+    cutoff = date.today() - timedelta(days=days)
+
+    # Load campaigns for filter dropdown
+    campaigns = []
+    try:
+        camp_rows = db.session.execute(
+            text("SELECT id, name FROM ads_campaigns WHERE account_id = :aid ORDER BY name"),
+            {"aid": aid}
+        ).mappings().all()
+        campaigns = [dict(r) for r in camp_rows]
+    except Exception:
+        pass
+
+    # Load search terms
+    terms = []
+    total_wasted = 0.0
+    unreviewed_count = 0
+    try:
+        q = text("""
+            SELECT st.id, st.search_term, st.clicks, st.impressions,
+                   st.cost_micros, st.conversions,
+                   st.added_as_keyword, st.added_as_negative,
+                   ac.name as campaign_name, ac.id as campaign_id
+            FROM search_terms st
+            JOIN ads_campaigns ac ON ac.id = st.campaign_id
+            WHERE ac.account_id = :aid
+              AND st.date >= :cutoff
+              """ + ("AND st.campaign_id = :cid" if campaign_filter else "") + """
+            ORDER BY st.cost_micros DESC
+            LIMIT 500
+        """)
+        params = {"aid": aid, "cutoff": str(cutoff)}
+        if campaign_filter:
+            params["cid"] = campaign_filter
+        rows = db.session.execute(q, params).mappings().all()
+        for r in rows:
+            cost = r["cost_micros"] / 1_000_000
+            conv = float(r["conversions"] or 0)
+            cpl = cost / conv if conv > 0 else 0
+            is_wasted = cost > 5 and conv == 0 and not r["added_as_negative"]
+            if is_wasted:
+                total_wasted += cost
+            if not r["added_as_negative"] and not r["added_as_keyword"]:
+                unreviewed_count += 1
+            terms.append({
+                "id": r["id"],
+                "search_term": r["search_term"],
+                "campaign_name": r["campaign_name"],
+                "campaign_id": r["campaign_id"],
+                "clicks": r["clicks"],
+                "impressions": r["impressions"],
+                "cost": round(cost, 2),
+                "conversions": conv,
+                "cpl": round(cpl, 2),
+                "added_as_negative": bool(r["added_as_negative"]),
+                "added_as_keyword": bool(r["added_as_keyword"]),
+                "is_wasted": is_wasted,
+            })
+    except Exception as e:
+        current_app.logger.warning(f"search_terms query failed: {e}")
+
+    return render_template(
+        "google/search_terms.html",
+        terms=terms,
+        campaigns=campaigns,
+        days=days,
+        campaign_filter=campaign_filter,
+        total_wasted=round(total_wasted, 2),
+        unreviewed_count=unreviewed_count,
+        total_terms=len(terms),
+        blocked_count=sum(1 for t in terms if t["added_as_negative"]),
+    )
+
+
+@google_bp.route("/ads/search-terms/add-negative", methods=["POST"], endpoint="search_terms_add_negative")
+@login_required
+def search_terms_add_negative():
+    """Mark search terms as negatives (adds to NegativeKeyword table + marks SearchTerm)."""
+    aid = current_account_id()
+    try:
+        data = request.get_json(silent=True) or {}
+        term_ids = data.get("term_ids", [])
+        match_type = data.get("match_type", "PHRASE").upper()
+        if match_type not in ("BROAD", "PHRASE", "EXACT"):
+            match_type = "PHRASE"
+
+        if not term_ids:
+            return jsonify({"success": False, "error": "No terms selected"}), 400
+
+        added = 0
+        with db.engine.begin() as conn:
+            for tid in term_ids:
+                row = conn.execute(text(
+                    "SELECT st.search_term, st.campaign_id FROM search_terms st "
+                    "JOIN ads_campaigns ac ON ac.id = st.campaign_id "
+                    "WHERE st.id = :id AND ac.account_id = :aid"
+                ), {"id": tid, "aid": aid}).first()
+                if not row:
+                    continue
+                # Insert into negative_keywords
+                conn.execute(text("""
+                    INSERT IGNORE INTO negative_keywords
+                    (scope, campaign_id, text, match_type, created_at, updated_at)
+                    VALUES ('campaign', :cid, :text, :mt, NOW(), NOW())
+                """), {"cid": row.campaign_id, "text": row.search_term, "mt": match_type})
+                # Mark search term as blocked
+                conn.execute(text(
+                    "UPDATE search_terms SET added_as_negative = 1 WHERE id = :id"
+                ), {"id": tid})
+                added += 1
+
+        return jsonify({"success": True, "added": added})
+    except Exception as e:
+        current_app.logger.error(f"add_negative error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 
 
 def _generate_preview(opt_type: str, opt_data: dict, opt_title: str) -> dict:

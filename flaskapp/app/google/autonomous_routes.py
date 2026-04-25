@@ -76,8 +76,26 @@ def _save_setting(account_id: int, key: str, value: str) -> None:
         VALUES (:aid, :key, :val)
         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
     """)
-    with db.engine.begin() as conn:
-        conn.execute(sql, {"aid": account_id, "key": key, "val": value})
+    try:
+        with db.engine.begin() as conn:
+            conn.execute(sql, {"aid": account_id, "key": key, "val": value})
+    except Exception as exc:
+        err = str(exc).lower()
+        if "doesn't exist" in err or "no such table" in err:
+            # Create table on first use
+            with db.engine.begin() as conn:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS account_settings (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        account_id INT NOT NULL,
+                        setting_key VARCHAR(100) NOT NULL,
+                        setting_value TEXT,
+                        UNIQUE KEY uq_account_setting (account_id, setting_key)
+                    )
+                """))
+                conn.execute(sql, {"aid": account_id, "key": key, "val": value})
+        else:
+            raise
 
 
 def _get_7day_summary(account_id: int) -> dict:
@@ -202,7 +220,8 @@ def save_settings():
             errors[key] = str(exc)
 
     if errors:
-        return jsonify({"ok": False, "saved": saved, "errors": errors}), 500
+        first_error = next(iter(errors.values()), "unknown error")
+        return jsonify({"ok": False, "error": first_error, "saved": saved, "errors": errors}), 500
     return jsonify({"ok": True, "saved": saved})
 
 

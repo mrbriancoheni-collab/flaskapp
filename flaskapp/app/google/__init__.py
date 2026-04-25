@@ -4998,9 +4998,7 @@ def search_terms():
     days = request.args.get("days", 30, type=int)
     campaign_filter = request.args.get("campaign_id", type=int)
 
-    from app.models_ads import SearchTerm, AdsCampaign, AdGroup
     from datetime import date, timedelta
-    import sqlalchemy as sa
 
     cutoff = date.today() - timedelta(days=days)
 

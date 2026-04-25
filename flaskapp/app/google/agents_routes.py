@@ -860,6 +860,7 @@ def reject_decision(decision_id):
 
         reason = (request.get_json(silent=True) or {}).get("reason", "User rejected")
 
+        # Allow rejecting pending or execution_failed decisions (not already rejected/executed)
         query = text("""
             UPDATE agent_decisions
             SET status = 'rejected',
@@ -867,7 +868,7 @@ def reject_decision(decision_id):
                 updated_at = NOW()
             WHERE id = :decision_id
               AND account_id = :account_id
-              AND status = 'pending'
+              AND status NOT IN ('rejected', 'executed')
         """)
 
         with db.engine.begin() as conn:
@@ -877,8 +878,14 @@ def reject_decision(decision_id):
                 "reason": reason
             })
 
-            if result.rowcount == 0:
-                return jsonify({"success": False, "error": "Decision not found or already processed"}), 404
+        if result.rowcount == 0:
+            # Already rejected/executed — check if it even exists for this account
+            check = text("SELECT status FROM agent_decisions WHERE id=:id AND account_id=:aid")
+            with db.engine.connect() as conn:
+                row = conn.execute(check, {"id": decision_id, "aid": account_id}).first()
+            if not row:
+                return jsonify({"success": False, "error": "Decision not found"}), 404
+            return jsonify({"success": True, "message": "Decision already processed", "status": row[0]}), 200
 
         return jsonify({"success": True, "message": "Decision rejected"})
     except Exception as e:

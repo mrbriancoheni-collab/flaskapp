@@ -118,31 +118,559 @@
     <!-- Publish Tab -->
     {% if tab == 'publish' %}
     <section id="publish">
-      <h3 class="text-sm font-medium mb-2">Create & Publish</h3>
-      <p class="text-xs text-gray-500 mb-2">Paste a draft payload to validate/publish. This calls <code>/account/google/ads/drafts</code> and <code>/account/google/ads/publish</code>.</p>
-      <textarea id="draft-json" rows="10" class="w-full rounded-lg border p-3 font-mono text-xs" placeholder='{
-  "campaign": {"name":"Spring Promo","status":"enabled","daily_budget_cents":5000,"language":"en"},
-  "ad_groups": [
-    {"name":"Core","cpc_bid_cents":125,
-     "ads":[{"final_url":"https://example.com","headlines":["Free Quote","Fast Service"],"descriptions":["Book today","Limited slots"]}],
-     "keywords":[{"text":"plumber near me","match_type":"PHRASE"}],
-     "negatives":[{"text":"jobs","match_type":"PHRASE"}]
-    }
-  ],
-  "shared_negative_list_ids":[]
-}'></textarea>
-      <div class="mt-2 flex items-center gap-2">
-        <button id="btn-draft" class="px-3 py-1.5 text-sm rounded border hover:bg-gray-50">Validate Draft</button>
-        <button id="btn-publish" class="px-3 py-1.5 text-sm rounded bg-indigo-600 text-white hover:bg-indigo-500">Publish</button>
-        <span id="draft-status" class="text-xs text-gray-500"></span>
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h2 class="text-lg font-semibold">Create Campaign</h2>
+          <p class="text-xs text-gray-500 mt-0.5">Build a new search campaign with ad groups, keywords, and ads.</p>
+        </div>
+      </div>
+
+      <!-- Step indicator -->
+      <div class="flex items-center gap-0 mb-6">
+        {% for step_num, step_label in [(1,'Campaign'), (2,'Ad Group'), (3,'Keywords'), (4,'Ad Copy'), (5,'Review')] %}
+        <div class="flex items-center">
+          <div id="step-indicator-{{ step_num }}"
+               class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold
+                      {% if loop.first %}bg-indigo-600 text-white{% else %}bg-gray-200 text-gray-500{% endif %}">
+            {{ step_num }}
+          </div>
+          <span id="step-label-{{ step_num }}" class="mx-2 text-xs {% if loop.first %}font-medium text-indigo-700{% else %}text-gray-400{% endif %}">
+            {{ step_label }}
+          </span>
+          {% if not loop.last %}<div class="w-8 h-px bg-gray-200 mr-2"></div>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="bg-white rounded-xl border shadow-sm p-6">
+        <!-- Step 1: Campaign -->
+        <div id="publish-step-1" class="space-y-4">
+          <h3 class="font-medium text-gray-900">Campaign Settings</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Campaign Name <span class="text-red-500">*</span></label>
+              <input id="pub-campaign-name" type="text" placeholder="e.g. Spring HVAC Promo"
+                     class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Daily Budget ($) <span class="text-red-500">*</span></label>
+              <input id="pub-budget" type="number" min="1" step="0.01" placeholder="50.00"
+                     class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Network</label>
+              <select id="pub-network" class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                <option value="SEARCH">Search</option>
+                <option value="DISPLAY">Display</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Language</label>
+              <select id="pub-language" class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Ad Group -->
+        <div id="publish-step-2" class="hidden space-y-4">
+          <h3 class="font-medium text-gray-900">Ad Group</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Ad Group Name <span class="text-red-500">*</span></label>
+              <input id="pub-adgroup-name" type="text" placeholder="e.g. AC Repair"
+                     class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Max CPC Bid ($)</label>
+              <input id="pub-adgroup-cpc" type="number" min="0.01" step="0.01" placeholder="2.00"
+                     class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Keywords -->
+        <div id="publish-step-3" class="hidden space-y-4">
+          <h3 class="font-medium text-gray-900">Keywords</h3>
+          <p class="text-xs text-gray-500">One keyword per line. Prefix with + for broad, wrap in "quotes" for phrase, [brackets] for exact.</p>
+          <textarea id="pub-keywords" rows="6" placeholder='+ac repair&#10;"air conditioning repair"&#10;[emergency ac repair]'
+                    class="w-full rounded-lg border px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300"></textarea>
+        </div>
+
+        <!-- Step 4: Ad Copy -->
+        <div id="publish-step-4" class="hidden space-y-4">
+          <h3 class="font-medium text-gray-900">Ad Copy</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Headline 1 <span class="text-red-500">*</span> <span class="text-gray-400 float-right" id="h1-count">0/30</span></label>
+              <input id="pub-h1" type="text" maxlength="30" placeholder="Fast AC Repair"
+                     class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                     oninput="document.getElementById('h1-count').textContent=this.value.length+'/30'">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Headline 2 <span class="text-gray-400 float-right" id="h2-count">0/30</span></label>
+              <input id="pub-h2" type="text" maxlength="30" placeholder="Same-Day Service"
+                     class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                     oninput="document.getElementById('h2-count').textContent=this.value.length+'/30'">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Headline 3 <span class="text-gray-400 float-right" id="h3-count">0/30</span></label>
+              <input id="pub-h3" type="text" maxlength="30" placeholder="Free Estimates"
+                     class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                     oninput="document.getElementById('h3-count').textContent=this.value.length+'/30'">
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Description 1 <span class="text-gray-400 float-right" id="d1-count">0/90</span></label>
+              <input id="pub-d1" type="text" maxlength="90" placeholder="Licensed technicians available now. Book online."
+                     class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                     oninput="document.getElementById('d1-count').textContent=this.value.length+'/90'">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Description 2 <span class="text-gray-400 float-right" id="d2-count">0/90</span></label>
+              <input id="pub-d2" type="text" maxlength="90" placeholder="Trusted by 500+ homeowners. 24/7 emergency service."
+                     class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                     oninput="document.getElementById('d2-count').textContent=this.value.length+'/90'">
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="sm:col-span-2">
+              <label class="block text-xs text-gray-500 mb-1">Final URL <span class="text-red-500">*</span></label>
+              <input id="pub-url" type="url" placeholder="https://example.com/ac-repair"
+                     class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Display Path</label>
+              <div class="flex items-center gap-1">
+                <input id="pub-path1" type="text" maxlength="15" placeholder="ac-repair"
+                       class="w-1/2 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                <span class="text-gray-400">/</span>
+                <input id="pub-path2" type="text" maxlength="15" placeholder="service"
+                       class="w-1/2 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 5: Review & Publish -->
+        <div id="publish-step-5" class="hidden">
+          <h3 class="font-medium text-gray-900 mb-4">Review &amp; Publish</h3>
+          <pre id="pub-review-json" class="bg-gray-50 rounded-lg p-4 text-xs font-mono overflow-auto max-h-64 border"></pre>
+        </div>
+
+        <!-- Nav buttons -->
+        <div class="mt-6 flex items-center justify-between border-t pt-4">
+          <button id="pub-prev" class="hidden inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm hover:bg-gray-50">
+            <i class="fa-solid fa-arrow-left text-xs"></i> Back
+          </button>
+          <div class="flex items-center gap-2 ml-auto">
+            <span id="pub-status" class="text-xs text-gray-500"></span>
+            <button id="pub-next"
+                    class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
+              Next <i class="fa-solid fa-arrow-right text-xs"></i>
+            </button>
+            <button id="pub-submit" class="hidden inline-flex items-center gap-2 rounded-lg bg-green-600 text-white px-4 py-2 text-sm hover:bg-green-500 transition">
+              <i class="fa-solid fa-rocket"></i> Create Campaign
+            </button>
+          </div>
+        </div>
       </div>
     </section>
     {% endif %}
 
-    <!-- Placeholder content for campaigns/adgroups/ads tabs -->
-    {% if tab in ['campaigns','adgroups','ads'] %}
-    <section class="rounded-xl border bg-white p-4">
-      <p class="text-sm text-gray-500">Use the Optimizer and Create/Publish tabs for the new workflow. Your existing management UIs for <strong>{{ tab }}</strong> can remain here.</p>
+    <!-- ====================================================
+         CAMPAIGNS TAB
+         ==================================================== -->
+    {% if tab == 'campaigns' %}
+    <section id="tab-campaigns">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-semibold">Campaigns</h2>
+          <p class="text-xs text-gray-500 mt-0.5">Manage campaign status and daily budgets. {{ campaigns_tab_data|length }} campaign(s) active.</p>
+        </div>
+        <a href="{{ url_for('gads_bp.optimize') }}?tab=publish"
+           class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
+          <i class="fa-solid fa-plus"></i> New Campaign
+        </a>
+      </div>
+
+      <!-- Filters -->
+      <div class="flex flex-wrap items-center gap-2 mb-3">
+        <input id="camp-filter-text" type="search" placeholder="Search campaigns…"
+               class="rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 min-w-[200px]">
+        <select id="camp-filter-status" class="rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+          <option value="">All Statuses</option>
+          <option value="enabled">Enabled</option>
+          <option value="paused">Paused</option>
+        </select>
+        <span id="camp-count-label" class="text-xs text-gray-400 ml-1"></span>
+      </div>
+
+      {% if campaigns_tab_data %}
+      <div class="overflow-auto rounded-xl border bg-white shadow-sm">
+        <table id="campaigns-table" class="min-w-full text-sm">
+          <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+            <tr>
+              <th class="px-3 py-2 w-8">
+                <input type="checkbox" id="camp-select-all" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+              </th>
+              <th class="text-left px-3 py-2">Campaign</th>
+              <th class="text-left px-3 py-2 w-32">Status</th>
+              <th class="text-left px-3 py-2 w-36">Daily Budget</th>
+              <th class="text-left px-3 py-2 w-28">Network</th>
+              <th class="text-right px-3 py-2 w-24">Ad Groups</th>
+              <th class="text-right px-3 py-2 w-24">Keywords</th>
+              <th class="text-right px-3 py-2 w-28">30d Spend</th>
+              <th class="text-right px-3 py-2 w-28">30d Conv.</th>
+              <th class="text-center px-3 py-2 w-24">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="campaigns-tbody" class="divide-y">
+            {% for c in campaigns_tab_data %}
+            <tr class="hover:bg-gray-50 camp-row"
+                data-id="{{ c.id }}"
+                data-name="{{ c.name | lower | e }}"
+                data-status="{{ c.status }}">
+              <td class="px-3 py-2">
+                <input type="checkbox" class="camp-checkbox h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" data-id="{{ c.id }}">
+              </td>
+              <td class="px-3 py-2 font-medium text-gray-900">{{ c.name }}</td>
+              <td class="px-3 py-2">
+                <span class="camp-status-badge inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium
+                  {{ 'bg-green-100 text-green-700' if c.status == 'enabled' else 'bg-amber-100 text-amber-700' }}">
+                  <span class="w-1.5 h-1.5 rounded-full {{ 'bg-green-500' if c.status == 'enabled' else 'bg-amber-500' }}"></span>
+                  {{ c.status|title }}
+                </span>
+              </td>
+              <td class="px-3 py-2">
+                <span class="camp-budget-display" data-id="{{ c.id }}" data-cents="{{ c.daily_budget_cents or 0 }}">
+                  ${{ "%.2f"|format((c.daily_budget_cents or 0) / 100) }}/day
+                </span>
+                <button class="camp-budget-edit-btn ml-1 text-gray-400 hover:text-indigo-600 transition" data-id="{{ c.id }}" title="Edit budget">
+                  <i class="fa-solid fa-pencil text-xs"></i>
+                </button>
+                <span class="camp-budget-edit-wrap hidden" data-id="{{ c.id }}">
+                  <input type="number" min="0" step="0.01"
+                         class="camp-budget-input w-24 rounded border px-2 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                         data-id="{{ c.id }}"
+                         value="{{ "%.2f"|format((c.daily_budget_cents or 0) / 100) }}">
+                  <button class="camp-budget-save-btn ml-1 text-xs text-indigo-600 hover:text-indigo-800" data-id="{{ c.id }}">Save</button>
+                  <button class="camp-budget-cancel-btn ml-1 text-xs text-gray-400 hover:text-gray-600" data-id="{{ c.id }}">Cancel</button>
+                </span>
+              </td>
+              <td class="px-3 py-2">
+                {% if c.network %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">{{ c.network }}</span>
+                {% else %}
+                <span class="text-gray-400">—</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2 text-right text-gray-700">{{ c.adgroup_count }}</td>
+              <td class="px-3 py-2 text-right text-gray-700">{{ c.keyword_count }}</td>
+              <td class="px-3 py-2 text-right text-gray-700">
+                {% if c.spend_30d and c.spend_30d > 0 %}
+                  ${{ "%.2f"|format(c.spend_30d) }}
+                {% else %}
+                  <span class="text-gray-400">—</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2 text-right text-gray-700">
+                {% if c.conversions_30d and c.conversions_30d > 0 %}
+                  {{ c.conversions_30d|int }}
+                {% else %}
+                  <span class="text-gray-400">—</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2 text-center">
+                <button class="camp-toggle-btn text-xs px-2 py-1 rounded border hover:bg-gray-50 transition"
+                        data-id="{{ c.id }}" data-status="{{ c.status }}" title="{{ 'Pause' if c.status == 'enabled' else 'Enable' }}">
+                  {% if c.status == 'enabled' %}
+                  <i class="fa-solid fa-pause text-amber-500"></i>
+                  {% else %}
+                  <i class="fa-solid fa-play text-green-600"></i>
+                  {% endif %}
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="text-xs text-gray-400 mt-2">Showing <span id="camp-visible-count">{{ campaigns_tab_data|length }}</span> of {{ campaigns_tab_data|length }} campaigns</p>
+
+      {% else %}
+      <!-- Empty state -->
+      <div class="rounded-xl border bg-white p-12 text-center shadow-sm">
+        <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50">
+          <i class="fa-solid fa-bullhorn text-indigo-400 text-2xl"></i>
+        </div>
+        <h3 class="text-base font-semibold text-gray-800 mb-1">No campaigns yet</h3>
+        <p class="text-sm text-gray-500 mb-4">Create your first campaign to start running ads.</p>
+        <a href="{{ url_for('gads_bp.optimize') }}?tab=publish"
+           class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
+          <i class="fa-solid fa-plus"></i> Create Campaign
+        </a>
+      </div>
+      {% endif %}
+
+    </section>
+    {% endif %}
+
+    <!-- ====================================================
+         AD GROUPS TAB
+         ==================================================== -->
+    {% if tab == 'adgroups' %}
+    <section id="tab-adgroups">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-semibold">Ad Groups</h2>
+          <p class="text-xs text-gray-500 mt-0.5">Manage ad group status and bids. {{ adgroups_tab_data|length }} ad group(s) active.</p>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="flex flex-wrap items-center gap-2 mb-3">
+        <input id="ag-filter-text" type="search" placeholder="Search ad groups…"
+               class="rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 min-w-[200px]">
+        <select id="ag-filter-campaign" class="rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 min-w-[160px]">
+          <option value="">All Campaigns</option>
+          {% for c in campaigns_list %}
+          <option value="{{ c.name | e }}">{{ c.name }}</option>
+          {% endfor %}
+        </select>
+        <select id="ag-filter-status" class="rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+          <option value="">All Statuses</option>
+          <option value="enabled">Enabled</option>
+          <option value="paused">Paused</option>
+        </select>
+        <span id="ag-count-label" class="text-xs text-gray-400 ml-1"></span>
+      </div>
+
+      {% if adgroups_tab_data %}
+      <div class="overflow-auto rounded-xl border bg-white shadow-sm">
+        <table id="adgroups-table" class="min-w-full text-sm">
+          <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+            <tr>
+              <th class="px-3 py-2 w-8">
+                <input type="checkbox" id="ag-select-all" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+              </th>
+              <th class="text-left px-3 py-2">Ad Group</th>
+              <th class="text-left px-3 py-2">Campaign</th>
+              <th class="text-left px-3 py-2 w-32">Status</th>
+              <th class="text-right px-3 py-2 w-28">Max CPC</th>
+              <th class="text-right px-3 py-2 w-24">Keywords</th>
+              <th class="text-right px-3 py-2 w-20">Ads</th>
+              <th class="text-right px-3 py-2 w-28">30d Spend</th>
+              <th class="text-right px-3 py-2 w-28">30d Conv.</th>
+              <th class="text-center px-3 py-2 w-24">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="adgroups-tbody" class="divide-y">
+            {% for ag in adgroups_tab_data %}
+            <tr class="hover:bg-gray-50 ag-row"
+                data-id="{{ ag.id }}"
+                data-name="{{ ag.name | lower | e }}"
+                data-status="{{ ag.status }}"
+                data-campaign="{{ ag.campaign_name | e }}">
+              <td class="px-3 py-2">
+                <input type="checkbox" class="ag-checkbox h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" data-id="{{ ag.id }}">
+              </td>
+              <td class="px-3 py-2 font-medium text-gray-900">{{ ag.name }}</td>
+              <td class="px-3 py-2 text-xs text-gray-500">{{ ag.campaign_name }}</td>
+              <td class="px-3 py-2">
+                <span class="ag-status-badge inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium
+                  {{ 'bg-green-100 text-green-700' if ag.status == 'enabled' else 'bg-amber-100 text-amber-700' }}">
+                  <span class="w-1.5 h-1.5 rounded-full {{ 'bg-green-500' if ag.status == 'enabled' else 'bg-amber-500' }}"></span>
+                  {{ ag.status|title }}
+                </span>
+              </td>
+              <td class="px-3 py-2 text-right text-gray-700">
+                {% if ag.max_cpc_cents %}
+                  ${{ "%.2f"|format(ag.max_cpc_cents / 100) }}
+                {% else %}
+                  <span class="text-gray-400">—</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2 text-right text-gray-700">{{ ag.keyword_count }}</td>
+              <td class="px-3 py-2 text-right text-gray-700">{{ ag.ad_count }}</td>
+              <td class="px-3 py-2 text-right text-gray-700">
+                {% if ag.spend_30d and ag.spend_30d > 0 %}
+                  ${{ "%.2f"|format(ag.spend_30d) }}
+                {% else %}
+                  <span class="text-gray-400">—</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2 text-right text-gray-700">
+                {% if ag.conversions_30d and ag.conversions_30d > 0 %}
+                  {{ ag.conversions_30d|int }}
+                {% else %}
+                  <span class="text-gray-400">—</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2 text-center">
+                <button class="ag-toggle-btn text-xs px-2 py-1 rounded border hover:bg-gray-50 transition"
+                        data-id="{{ ag.id }}" data-status="{{ ag.status }}" title="{{ 'Pause' if ag.status == 'enabled' else 'Enable' }}">
+                  {% if ag.status == 'enabled' %}
+                  <i class="fa-solid fa-pause text-amber-500"></i>
+                  {% else %}
+                  <i class="fa-solid fa-play text-green-600"></i>
+                  {% endif %}
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="text-xs text-gray-400 mt-2">Showing <span id="ag-visible-count">{{ adgroups_tab_data|length }}</span> of {{ adgroups_tab_data|length }} ad groups</p>
+
+      {% else %}
+      <!-- Empty state -->
+      <div class="rounded-xl border bg-white p-12 text-center shadow-sm">
+        <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50">
+          <i class="fa-solid fa-layer-group text-indigo-400 text-2xl"></i>
+        </div>
+        <h3 class="text-base font-semibold text-gray-800 mb-1">No ad groups yet</h3>
+        <p class="text-sm text-gray-500 mb-4">Create a campaign with ad groups to get started.</p>
+        <a href="{{ url_for('gads_bp.optimize') }}?tab=publish"
+           class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
+          <i class="fa-solid fa-plus"></i> Create Campaign
+        </a>
+      </div>
+      {% endif %}
+
+    </section>
+    {% endif %}
+
+    <!-- ====================================================
+         ADS TAB
+         ==================================================== -->
+    {% if tab == 'ads' %}
+    <section id="tab-ads">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-semibold">Ads</h2>
+          <p class="text-xs text-gray-500 mt-0.5">Manage ad status. {{ ads_tab_data|length }} ad(s) active (max 500 shown).</p>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="flex flex-wrap items-center gap-2 mb-3">
+        <input id="ad-filter-text" type="search" placeholder="Search headlines…"
+               class="rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 min-w-[200px]">
+        <select id="ad-filter-campaign" class="rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 min-w-[160px]">
+          <option value="">All Campaigns</option>
+          {% for c in campaigns_list %}
+          <option value="{{ c.name | e }}">{{ c.name }}</option>
+          {% endfor %}
+        </select>
+        <select id="ad-filter-status" class="rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+          <option value="">All Statuses</option>
+          <option value="enabled">Enabled</option>
+          <option value="paused">Paused</option>
+        </select>
+        <span id="ad-count-label" class="text-xs text-gray-400 ml-1"></span>
+      </div>
+
+      {% if ads_tab_data %}
+      <div class="overflow-auto rounded-xl border bg-white shadow-sm">
+        <table id="ads-table" class="min-w-full text-sm">
+          <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+            <tr>
+              <th class="px-3 py-2 w-8">
+                <input type="checkbox" id="ad-select-all" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+              </th>
+              <th class="text-left px-3 py-2">Headlines</th>
+              <th class="text-left px-3 py-2 w-48">Description</th>
+              <th class="text-left px-3 py-2 w-40">Campaign / Ad Group</th>
+              <th class="text-left px-3 py-2 w-32">Status</th>
+              <th class="text-left px-3 py-2 w-40">Final URL</th>
+              <th class="text-center px-3 py-2 w-24">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="ads-tbody" class="divide-y">
+            {% for a in ads_tab_data %}
+            <tr class="hover:bg-gray-50 ad-row"
+                data-id="{{ a.id }}"
+                data-text="{{ ((a.headline1 or '') ~ ' ' ~ (a.headline2 or '') ~ ' ' ~ (a.headline3 or '')) | lower | e }}"
+                data-status="{{ a.status }}"
+                data-campaign="{{ a.campaign_name | e }}">
+              <td class="px-3 py-2">
+                <input type="checkbox" class="ad-checkbox h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" data-id="{{ a.id }}">
+              </td>
+              <td class="px-3 py-2 max-w-xs">
+                <div class="font-medium text-gray-900 truncate"
+                     title="{{ [a.headline1, a.headline2, a.headline3] | select | join(' | ') | e }}">
+                  {{ a.headline1 }}{% if a.headline2 %} | {{ a.headline2 }}{% endif %}{% if a.headline3 %} | {{ a.headline3 }}{% endif %}
+                </div>
+              </td>
+              <td class="px-3 py-2 text-xs text-gray-600 truncate max-w-[12rem]"
+                  title="{{ a.description1 | e }}">
+                {{ a.description1 or '—' }}
+              </td>
+              <td class="px-3 py-2">
+                <div class="text-xs font-medium text-gray-700">{{ a.campaign_name }}</div>
+                <div class="text-xs text-gray-400">{{ a.adgroup_name }}</div>
+              </td>
+              <td class="px-3 py-2">
+                <span class="ad-status-badge inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium
+                  {{ 'bg-green-100 text-green-700' if a.status == 'enabled' else 'bg-amber-100 text-amber-700' }}">
+                  <span class="w-1.5 h-1.5 rounded-full {{ 'bg-green-500' if a.status == 'enabled' else 'bg-amber-500' }}"></span>
+                  {{ a.status|title }}
+                </span>
+              </td>
+              <td class="px-3 py-2 text-xs text-indigo-600 truncate max-w-[10rem]">
+                {% if a.final_url %}
+                <a href="{{ a.final_url }}" target="_blank" rel="noopener" class="hover:underline"
+                   title="{{ a.final_url | e }}">
+                  {{ a.final_url[:30] }}{% if a.final_url|length > 30 %}…{% endif %}
+                </a>
+                {% else %}
+                <span class="text-gray-400">—</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2 text-center">
+                <button class="ad-toggle-btn text-xs px-2 py-1 rounded border hover:bg-gray-50 transition"
+                        data-id="{{ a.id }}" data-status="{{ a.status }}" title="{{ 'Pause' if a.status == 'enabled' else 'Enable' }}">
+                  {% if a.status == 'enabled' %}
+                  <i class="fa-solid fa-pause text-amber-500"></i>
+                  {% else %}
+                  <i class="fa-solid fa-play text-green-600"></i>
+                  {% endif %}
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="text-xs text-gray-400 mt-2">Showing <span id="ad-visible-count">{{ ads_tab_data|length }}</span> of {{ ads_tab_data|length }} ads</p>
+
+      {% else %}
+      <!-- Empty state -->
+      <div class="rounded-xl border bg-white p-12 text-center shadow-sm">
+        <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50">
+          <i class="fa-solid fa-rectangle-ad text-indigo-400 text-2xl"></i>
+        </div>
+        <h3 class="text-base font-semibold text-gray-800 mb-1">No ads yet</h3>
+        <p class="text-sm text-gray-500 mb-4">Create a campaign with ads to start showing your ads.</p>
+        <a href="{{ url_for('gads_bp.optimize') }}?tab=publish"
+           class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
+          <i class="fa-solid fa-plus"></i> Create Campaign
+        </a>
+      </div>
+      {% endif %}
+
     </section>
     {% endif %}
 
@@ -609,6 +1137,40 @@
 <script>
 (function(){
   const base = "{{ url_for('gads_bp.overview')|replace('/overview','') }}";
+  const CSRF = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+  // API URL helpers
+  const URLS = {
+    campaignStatus: (id) => `${base}/campaigns/${id}/status`,
+    campaignBudget: (id) => `${base}/campaigns/${id}/budget`,
+    adgroupStatus: (id) => `${base}/adgroups/${id}/status`,
+    adStatus: (id) => `${base}/ads/${id}/status`,
+    publish: `${base}/publish`,
+    kwBulk: `${base}/keywords/bulk-action`,
+    kwAdd: `${base}/keywords/add`,
+    negAdd: `${base}/negatives/add`,
+    negDelete: (id) => `${base}/negatives/${id}`,
+  };
+
+  // --- Toast notification ---
+  function showToast(msg, type) {
+    const t = document.createElement('div');
+    const color = type === 'error' ? 'bg-red-600' : 'bg-green-600';
+    t.className = `fixed bottom-4 right-4 z-50 px-4 py-2 rounded-lg text-white text-sm shadow-lg ${color}`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  }
+
+  // Generic POST helper
+  async function apiPost(url, body) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF() },
+      body: JSON.stringify(body),
+    });
+    return res;
+  }
 
   // --- KPI ---
   async function loadKPI(days) {

@@ -56,3 +56,4 @@ automation_state.json
 
 # WordPress blog — managed independently, not tracked in git
 /blog/
+.claude/

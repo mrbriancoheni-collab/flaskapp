@@ -63,8 +63,12 @@ def optimize():
     negatives_data: list = []
     campaigns_list: list = []
     adgroups_list: list = []
+    campaigns_tab_data: list = []
+    adgroups_tab_data: list = []
+    ads_tab_data: list = []
 
-    if tab in ("keywords", "negatives") and aid:
+    # Always load campaigns/adgroups lists for filter dropdowns on all relevant tabs
+    if aid:
         try:
             campaigns_list = [
                 {"id": c.id, "name": c.name}
@@ -126,6 +130,73 @@ def optimize():
         except Exception:
             current_app.logger.exception("Error loading negatives for optimize tab")
 
+    if tab == "campaigns" and aid:
+        try:
+            rows = db.session.execute(text("""
+                SELECT ac.id, ac.name, ac.status, ac.daily_budget_cents, ac.network,
+                       ac.google_campaign_id, ac.start_date,
+                       COUNT(DISTINCT ag.id) AS adgroup_count,
+                       COUNT(DISTINCT k.id) AS keyword_count,
+                       COALESCE(SUM(gs.cost_micros),0)/1000000.0 AS spend_30d,
+                       COALESCE(SUM(gs.conversions),0) AS conversions_30d,
+                       COALESCE(SUM(gs.clicks),0) AS clicks_30d
+                FROM ads_campaigns ac
+                LEFT JOIN ad_groups ag ON ag.campaign_id = ac.id
+                LEFT JOIN keywords k ON k.ad_group_id = ag.id
+                LEFT JOIN gads_stats_daily gs ON gs.entity_type = 'campaign'
+                    AND gs.entity_id = ac.id
+                    AND gs.date >= (CURRENT_DATE - INTERVAL 30 DAY)
+                WHERE ac.account_id = :aid AND ac.status != 'removed'
+                GROUP BY ac.id
+                ORDER BY ac.name
+            """), {"aid": aid}).mappings().all()
+            campaigns_tab_data = [dict(r) for r in rows]
+        except Exception:
+            current_app.logger.exception("Error loading campaigns tab")
+
+    if tab == "adgroups" and aid:
+        try:
+            rows = db.session.execute(text("""
+                SELECT ag.id, ag.name, ag.status, ag.max_cpc_cents,
+                       ac.id AS campaign_id, ac.name AS campaign_name,
+                       COUNT(DISTINCT k.id) AS keyword_count,
+                       COUNT(DISTINCT a.id) AS ad_count,
+                       COALESCE(SUM(gs.cost_micros),0)/1000000.0 AS spend_30d,
+                       COALESCE(SUM(gs.conversions),0) AS conversions_30d,
+                       COALESCE(SUM(gs.clicks),0) AS clicks_30d
+                FROM ad_groups ag
+                JOIN ads_campaigns ac ON ac.id = ag.campaign_id
+                LEFT JOIN keywords k ON k.ad_group_id = ag.id
+                LEFT JOIN ads a ON a.ad_group_id = ag.id
+                LEFT JOIN gads_stats_daily gs ON gs.entity_type = 'ad_group'
+                    AND gs.entity_id = ag.id
+                    AND gs.date >= (CURRENT_DATE - INTERVAL 30 DAY)
+                WHERE ac.account_id = :aid AND ag.status != 'removed'
+                GROUP BY ag.id
+                ORDER BY ac.name, ag.name
+            """), {"aid": aid}).mappings().all()
+            adgroups_tab_data = [dict(r) for r in rows]
+        except Exception:
+            current_app.logger.exception("Error loading adgroups tab")
+
+    if tab == "ads" and aid:
+        try:
+            rows = db.session.execute(text("""
+                SELECT a.id, a.status, a.headline1, a.headline2, a.headline3,
+                       a.description1, a.final_url, a.path1, a.path2,
+                       ag.id AS adgroup_id, ag.name AS adgroup_name,
+                       ac.id AS campaign_id, ac.name AS campaign_name
+                FROM ads a
+                JOIN ad_groups ag ON ag.id = a.ad_group_id
+                JOIN ads_campaigns ac ON ac.id = ag.campaign_id
+                WHERE ac.account_id = :aid AND a.status != 'removed'
+                ORDER BY ac.name, ag.name, a.id
+                LIMIT 500
+            """), {"aid": aid}).mappings().all()
+            ads_tab_data = [dict(r) for r in rows]
+        except Exception:
+            current_app.logger.exception("Error loading ads tab")
+
     return render_template(
         "google/ads/optimize.html",
         tab=tab,
@@ -133,6 +204,9 @@ def optimize():
         negatives_data=negatives_data,
         campaigns_list=campaigns_list,
         adgroups_list=adgroups_list,
+        campaigns_tab_data=campaigns_tab_data,
+        adgroups_tab_data=adgroups_tab_data,
+        ads_tab_data=ads_tab_data,
     )
 
 
@@ -370,6 +444,73 @@ def publish():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
+
+# ---------------------------
+# (Optional) Legacy UI form posts (keep redirects to tabbed UI)
+# If your template posts to these, leave them; otherwise remove safely.
+# ---------------------------
+@gads_bp.post("/campaigns/<int:cid>/status")
+@login_required
+def campaign_toggle_status(cid):
+    aid = current_account_id()
+    data = request.get_json(silent=True) or {}
+    new_status = data.get("status")  # "enabled" or "paused"
+    if new_status not in ("enabled", "paused"):
+        return jsonify({"error": "Invalid status"}), 400
+    c = AdsCampaign.query.filter_by(id=cid, account_id=aid).first_or_404()
+    c.status = new_status
+    db.session.commit()
+    return jsonify({"ok": True, "status": new_status})
+
+
+@gads_bp.post("/campaigns/<int:cid>/budget")
+@login_required
+def campaign_update_budget(cid):
+    aid = current_account_id()
+    data = request.get_json(silent=True) or {}
+    try:
+        budget_cents = int(float(data.get("daily_budget", 0)) * 100)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid budget"}), 400
+    if budget_cents < 0:
+        return jsonify({"error": "Budget cannot be negative"}), 400
+    c = AdsCampaign.query.filter_by(id=cid, account_id=aid).first_or_404()
+    c.daily_budget_cents = budget_cents
+    db.session.commit()
+    return jsonify({"ok": True, "daily_budget_cents": budget_cents})
+
+
+@gads_bp.post("/adgroups/<int:agid>/status")
+@login_required
+def adgroup_toggle_status(agid):
+    aid = current_account_id()
+    data = request.get_json(silent=True) or {}
+    new_status = data.get("status")
+    if new_status not in ("enabled", "paused"):
+        return jsonify({"error": "Invalid status"}), 400
+    ag = AdsAdGroup.query.join(AdsCampaign).filter(
+        AdsAdGroup.id == agid, AdsCampaign.account_id == aid
+    ).first_or_404()
+    ag.status = new_status
+    db.session.commit()
+    return jsonify({"ok": True, "status": new_status})
+
+
+@gads_bp.post("/ads/<int:adid>/status")
+@login_required
+def ad_toggle_status(adid):
+    aid = current_account_id()
+    data = request.get_json(silent=True) or {}
+    new_status = data.get("status")
+    if new_status not in ("enabled", "paused"):
+        return jsonify({"error": "Invalid status"}), 400
+    ad = AdsAd.query.join(AdsAdGroup).join(AdsCampaign).filter(
+        AdsAd.id == adid, AdsCampaign.account_id == aid
+    ).first_or_404()
+    ad.status = new_status
+    db.session.commit()
+    return jsonify({"ok": True, "status": new_status})
 
 
 # ---------------------------

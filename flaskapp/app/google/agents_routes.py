@@ -858,18 +858,19 @@ def reject_decision(decision_id):
     try:
         account_id = current_account_id()
         reason = (request.get_json(silent=True) or {}).get("reason", "User rejected")
+        reason_json = json.dumps({"reason": reason})
 
         rowcount = 0
         with db.engine.begin() as conn:
             result = conn.execute(text("""
                 UPDATE agent_decisions
                 SET status = 'rejected',
-                    execution_result = :reason,
+                    execution_result = :reason_json,
                     updated_at = NOW()
                 WHERE id = :decision_id
                   AND account_id = :account_id
                   AND status NOT IN ('rejected', 'executed')
-            """), {"decision_id": decision_id, "account_id": account_id, "reason": reason})
+            """), {"decision_id": decision_id, "account_id": account_id, "reason_json": reason_json})
             rowcount = result.rowcount
 
         if rowcount == 0:

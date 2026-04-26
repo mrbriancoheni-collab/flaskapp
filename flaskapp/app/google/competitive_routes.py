@@ -241,41 +241,55 @@ def competitive_dashboard():
 @login_required
 def fetch_insights():
     """Fetch fresh auction insights from Google Ads API."""
-    account_id = current_account_id()
-    data = request.get_json()
-
-    campaign_id = data.get('campaign_id')
-    lookback_days = data.get('lookback_days', 30)
-
-    # Get campaign details
-    campaign_query = text("""
-        SELECT google_campaign_id, google_customer_id, google_refresh_token
-        FROM ads_campaigns ac
-        JOIN google_ads_accounts gaa ON gaa.id = ac.google_ads_account_id
-        WHERE ac.id = :campaign_id AND ac.account_id = :account_id
-    """)
-
-    with db.engine.connect() as conn:
-        result = conn.execute(campaign_query, {
-            "campaign_id": campaign_id,
-            "account_id": account_id
-        })
-        campaign = result.first()
-
-        if not campaign:
-            return jsonify({"success": False, "error": "Campaign not found"}), 404
-
-        campaign = dict(campaign._mapping)
-
-    # Fetch insights
-    end_date = date.today()
-    start_date = end_date - timedelta(days=lookback_days)
-
     try:
+        account_id = current_account_id()
+        data = request.get_json(silent=True) or {}
+
+        campaign_id = data.get('campaign_id')
+        lookback_days = int(data.get('lookback_days', 30))
+
+        if not campaign_id:
+            return jsonify({"success": False, "error": "campaign_id is required"}), 400
+
+        # Get credentials and campaign google_campaign_id from accounts/oauth tables
+        creds_query = text("""
+            SELECT a.google_ads_customer_id AS customer_id,
+                   got.credentials_json,
+                   ac.google_campaign_id
+            FROM google_oauth_tokens got
+            JOIN accounts a ON a.id = got.account_id
+            LEFT JOIN ads_campaigns ac ON ac.id = :campaign_id AND ac.account_id = :account_id
+            WHERE got.account_id = :account_id AND got.product = 'ads'
+            ORDER BY got.id DESC LIMIT 1
+        """)
+
+        with db.engine.connect() as conn:
+            row = conn.execute(creds_query, {
+                "campaign_id": campaign_id,
+                "account_id": account_id
+            }).first()
+
+        if not row:
+            return jsonify({"success": False, "error": "Google Ads not connected"}), 400
+
+        import json as _json
+        import os
+        creds = _json.loads(row.credentials_json) if isinstance(row.credentials_json, str) else (row.credentials_json or {})
+        refresh_token = creds.get('refresh_token')
+        customer_id = (row.customer_id or '').replace('-', '')
+        google_campaign_id = row.google_campaign_id or str(campaign_id)
+
+        if not refresh_token or not customer_id:
+            return jsonify({"success": False, "error": "Incomplete Google Ads credentials"}), 400
+
+        # Fetch insights
+        end_date = date.today()
+        start_date = end_date - timedelta(days=lookback_days)
+
         result = fetch_auction_insights(
-            refresh_token=campaign['google_refresh_token'],
-            customer_id=campaign['google_customer_id'],
-            campaign_id=campaign['google_campaign_id'],
+            refresh_token=refresh_token,
+            customer_id=customer_id,
+            campaign_id=google_campaign_id,
             start_date=start_date,
             end_date=end_date
         )
@@ -283,6 +297,7 @@ def fetch_insights():
         return jsonify(result)
 
     except Exception as e:
+        current_app.logger.error(f"fetch_insights error: {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -311,7 +326,7 @@ def analyze_landscape(campaign_id):
 def track_competitor():
     """Track a specific competitor's position changes over time."""
     account_id = current_account_id()
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     campaign_id = data.get('campaign_id')
     competitor_domain = data.get('competitor_domain')
@@ -336,7 +351,7 @@ def track_competitor():
 def analyze_search_terms():
     """Analyze search terms for competitive intelligence."""
     account_id = current_account_id()
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     campaign_id = data.get('campaign_id')
     lookback_days = data.get('lookback_days', 30)
@@ -383,7 +398,7 @@ def analyze_search_terms():
 @login_required
 def estimate_budget():
     """Estimate a competitor's budget based on impression share."""
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     competitor_share = data.get('competitor_impression_share', 0)
     your_budget = data.get('your_daily_budget', 0)

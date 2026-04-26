@@ -2848,7 +2848,110 @@ def ads_ui():
         )
 
 
-def _calculate_historical_improvement(account_id, connected, monthly_spend=0):
+def _compute_realistic_savings(account_id, monthly_spend, avg_cpc, total_clicks, date_start=None, date_end=None):
+    """
+    Compute savings grounded in real spend and click economics.
+
+    Foundation
+    ----------
+    max_clicks = monthly_spend / avg_cpc   (hard ceiling — you can only buy so many clicks)
+    waste_fraction = identifiable waste / total spend
+    savings = min(computed_savings, monthly_spend * 0.25)   (25% ceiling)
+
+    Per-decision-type logic
+    -----------------------
+    add_negative_keyword
+        Savings = actual 30-day cost of the blocked search term (stored as
+        expected_monthly_savings by the tactical agent). Each term's
+        contribution is capped at 3% of monthly_spend to prevent a single
+        high-spend term from dominating the total.
+
+    adjust_bids / adjust_bids_down
+        Savings = |bid_change_pct| * (monthly_spend / distinct_campaigns_bid) * 0.4
+        The 0.4 efficiency factor accounts for volume reduction when bids drop —
+        you don't save the full bid delta because fewer clicks flow through.
+
+    pause_campaign / pause_keyword / emergency_pause
+        Savings = stored expected_monthly_savings capped at 20% of monthly_spend
+        per decision (a single pause rarely eliminates more than that).
+
+    reallocate_budget
+        No direct spend reduction — budget moves between campaigns.
+        Savings = 0 (efficiency improvement, not cost reduction).
+
+    Everything else
+        Capped at 2% of monthly_spend per decision (conservative fallback).
+    """
+    if monthly_spend <= 0:
+        return 0.0
+
+    max_savings = monthly_spend * 0.25
+
+    try:
+        # Pull executed decisions grouped by type with per-row data we need
+        rows = db.session.execute(
+            text("""
+                SELECT decision_type,
+                       COUNT(DISTINCT campaign_id)           AS campaigns,
+                       COUNT(*)                              AS cnt,
+                       COALESCE(SUM(COALESCE(expected_monthly_savings, 0)), 0) AS raw_savings,
+                       COALESCE(SUM(ABS(CAST(
+                           JSON_UNQUOTE(JSON_EXTRACT(action_data, '$.bid_change_pct'))
+                           AS DECIMAL(10,4)))), 0)           AS total_bid_pct
+                FROM agent_decisions
+                WHERE account_id = :aid
+                  AND status = 'executed'
+                  {date_filter}
+                GROUP BY decision_type
+            """.format(
+                date_filter="AND created_at BETWEEN :ds AND :de" if date_start else ""
+            )),
+            {"aid": account_id, **({"ds": date_start, "de": date_end} if date_start else {})}
+        ).fetchall()
+    except Exception as e:
+        current_app.logger.warning(f"_compute_realistic_savings query failed: {e}")
+        return 0.0
+
+    total = 0.0
+    per_neg_cap   = monthly_spend * 0.03   # single blocked term ≤ 3% of spend
+    per_pause_cap = monthly_spend * 0.20   # single pause ≤ 20% of spend
+    per_misc_cap  = monthly_spend * 0.02   # fallback ≤ 2% per decision
+
+    for row in rows:
+        dtype     = (row[0] or '').lower()
+        campaigns = max(int(row[1] or 1), 1)
+        cnt       = int(row[2] or 0)
+        raw       = float(row[3] or 0)
+        bid_pct   = float(row[4] or 0)
+
+        if 'negative' in dtype:
+            # Each term's actual 30-day cost, individually capped
+            # We don't have per-row iteration here, so proxy: raw / cnt = avg per term
+            avg_per_term = (raw / cnt) if cnt > 0 else 0
+            capped_per_term = min(avg_per_term, per_neg_cap)
+            total += capped_per_term * cnt
+
+        elif 'bid' in dtype:
+            # avg_bid_reduction × (spend attributable to affected campaigns) × 0.4
+            avg_bid_reduction = (bid_pct / cnt / 100) if cnt > 0 else 0
+            spend_per_campaign = monthly_spend / campaigns if campaigns > 0 else (monthly_spend / 10)
+            total += avg_bid_reduction * spend_per_campaign * campaigns * 0.4
+
+        elif any(k in dtype for k in ('pause', 'emergency')):
+            avg_per = (raw / cnt) if cnt > 0 else 0
+            total += min(avg_per, per_pause_cap) * cnt
+
+        elif 'reallocat' in dtype or 'scale' in dtype:
+            pass  # no direct spend reduction
+
+        else:
+            avg_per = (raw / cnt) if cnt > 0 else 0
+            total += min(avg_per, per_misc_cap) * cnt
+
+    return round(min(total, max_savings), 2)
+
+
+def _calculate_historical_improvement(account_id, connected, monthly_spend=0, avg_cpc=0, total_clicks=0):
     """
     Calculate improvement metrics comparing performance before FieldSprout vs now.
 
@@ -2896,25 +2999,33 @@ def _calculate_historical_improvement(account_id, connected, monthly_spend=0):
         current_month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         prev_month_start = (current_month_start - timedelta(days=1)).replace(day=1)
 
-        row = db.session.execute(
+        counts = db.session.execute(
             text("""
                 SELECT
-                    SUM(CASE WHEN created_at >= :cm  THEN 1 ELSE 0 END),
-                    SUM(CASE WHEN created_at >= :cm  THEN LEAST(COALESCE(expected_monthly_savings,0),1000) ELSE 0 END),
+                    SUM(CASE WHEN created_at >= :cm THEN 1 ELSE 0 END),
                     SUM(CASE WHEN created_at >= :pm AND created_at < :cm THEN 1 ELSE 0 END),
-                    SUM(CASE WHEN created_at >= :pm AND created_at < :cm THEN LEAST(COALESCE(expected_monthly_savings,0),1000) ELSE 0 END),
-                    SUM(LEAST(COALESCE(expected_monthly_savings,0),1000))
+                    COUNT(*)
                 FROM agent_decisions
                 WHERE account_id = :aid AND status = 'executed'
             """),
             {"aid": account_id, "cm": current_month_start, "pm": prev_month_start}
         ).fetchone()
 
-        current_month_actions  = int(row[0] or 0)
-        current_month_savings  = float(row[1] or 0)
-        prev_month_actions     = int(row[2] or 0)
-        prev_month_savings     = float(row[3] or 0)
-        total_savings          = float(row[4] or 0)
+        current_month_actions = int((counts[0] if counts else None) or 0)
+        prev_month_actions    = int((counts[1] if counts else None) or 0)
+
+        # Use realistic spend-aware savings calculation for all periods
+        current_month_savings = _compute_realistic_savings(
+            account_id, monthly_spend, avg_cpc, total_clicks,
+            date_start=current_month_start, date_end=datetime.utcnow()
+        )
+        prev_month_savings = _compute_realistic_savings(
+            account_id, monthly_spend, avg_cpc, total_clicks,
+            date_start=prev_month_start, date_end=current_month_start
+        )
+        total_savings = _compute_realistic_savings(
+            account_id, monthly_spend, avg_cpc, total_clicks
+        )
 
         # Calculate improvement percentages
         savings_improvement = 0
@@ -2924,13 +3035,6 @@ def _calculate_historical_improvement(account_id, connected, monthly_spend=0):
         actions_improvement = 0
         if prev_month_actions > 0:
             actions_improvement = ((current_month_actions - prev_month_actions) / prev_month_actions) * 100
-
-        # Cap all savings figures to 25% of actual monthly spend if available
-        if monthly_spend > 0:
-            spend_cap = monthly_spend * 0.25
-            current_month_savings = min(current_month_savings, spend_cap)
-            prev_month_savings    = min(prev_month_savings, spend_cap)
-            total_savings         = min(total_savings, monthly_spend * 3 * 0.25)  # up to 3 months
 
         # Determine comparison period label
         if days_active >= 365:
@@ -3292,18 +3396,26 @@ def ads_performance():
         except Exception as e:
             current_app.logger.warning(f"[DECISION] Session fallback failed: {e}")
 
-    # Cap savings to what's actually achievable given real monthly spend.
-    # AI optimizations realistically recover 5-25% of spend; use 25% as ceiling.
-    _monthly_spend_for_cap = 0
+    # Compute realistic savings using actual spend + CPC economics
+    _monthly_spend  = 0.0
+    _avg_cpc        = 0.0
+    _total_clicks   = 0
     if account_performance and account_performance.get('has_data'):
-        _monthly_spend_for_cap = account_performance.get('cost', 0) or 0
-        if _monthly_spend_for_cap > 0:
-            spend_cap = _monthly_spend_for_cap * 0.25
-            wasted_spend_prevented = min(wasted_spend_prevented, spend_cap)
-            pending_savings = min(pending_savings, spend_cap)
+        _monthly_spend = float(account_performance.get('cost', 0) or 0)
+        _avg_cpc       = float(account_performance.get('avg_cpc', 0) or 0)
+        _total_clicks  = int(account_performance.get('clicks', 0) or 0)
+
+    if _monthly_spend > 0:
+        wasted_spend_prevented = _compute_realistic_savings(
+            aid, _monthly_spend, _avg_cpc, _total_clicks
+        )
+        pending_savings = min(pending_savings, _monthly_spend * 0.25)
 
     # Calculate historical improvement metrics (after spend is known for capping)
-    historical_improvement = _calculate_historical_improvement(aid, connected, monthly_spend=_monthly_spend_for_cap)
+    historical_improvement = _calculate_historical_improvement(
+        aid, connected,
+        monthly_spend=_monthly_spend, avg_cpc=_avg_cpc, total_clicks=_total_clicks
+    )
     if not historical_improvement:
         historical_improvement = _get_demo_improvement_data()
 

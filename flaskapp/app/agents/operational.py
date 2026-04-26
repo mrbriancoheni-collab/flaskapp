@@ -11,6 +11,17 @@ from datetime import datetime, timedelta
 from .base import BaseAgent, AgentDecision, AgentCapability, DecisionRiskLevel
 
 
+def _bid_savings_estimate(opp: Dict) -> float:
+    """Estimate monthly savings from a bid reduction, grounded in actual spend."""
+    monthly_spend = opp.get('monthly_spend', 0) or 0
+    conversions = max(opp.get('conversions', 0) or 0, 1)
+    cpl_gap = opp['current_cpl'] - opp['target_cpl']
+    raw = cpl_gap * conversions
+    # Cap at 20% of monthly spend — bid reductions rarely recover more than that
+    cap = monthly_spend * 0.20 if monthly_spend > 0 else raw
+    return round(min(raw, cap), 2)
+
+
 class CampaignManagerAgent(BaseAgent):
     """
     Campaign Manager - 24/7 performance monitoring.
@@ -95,6 +106,8 @@ class CampaignManagerAgent(BaseAgent):
                     'campaign_name': campaign_name,
                     'current_cpl': current_cpl,
                     'target_cpl': target_cpl,
+                    'monthly_spend': campaign.get('monthly_spend', campaign.get('cost_30d', 0)),
+                    'conversions': campaign.get('conversions', 0),
                     'recommended_bid_change_pct': -bid_reduction_pct
                 })
 
@@ -104,7 +117,7 @@ class CampaignManagerAgent(BaseAgent):
             spend_90d = campaign.get('spend_90d', 0)
             cpl_90d = campaign.get('cpl_90d', current_cpl)
             impression_share = campaign.get('impression_share', 0)
-            monthly_spend = campaign.get('monthly_spend', 0)
+            monthly_spend = campaign.get('monthly_spend', campaign.get('cost_30d', 0))
 
             # 4. Pause campaigns that consistently spend far above target CPL after 90 days
             if (cpl_90d > target_cpl * 2.0 and spend_90d > 500
@@ -183,7 +196,7 @@ class CampaignManagerAgent(BaseAgent):
                     risk_level=DecisionRiskLevel.LOW,
                     requires_approval=False,
                     confidence=0.92,
-                    expected_monthly_savings=(opp['current_cpl'] - opp['target_cpl']) * 100,
+                    expected_monthly_savings=_bid_savings_estimate(opp),
                     predicted_outcome={
                         'cpl_reduction': opp['current_cpl'] - opp['target_cpl']
                     }

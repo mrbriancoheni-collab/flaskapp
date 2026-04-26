@@ -2848,7 +2848,7 @@ def ads_ui():
         )
 
 
-def _calculate_historical_improvement(account_id, connected):
+def _calculate_historical_improvement(account_id, connected, monthly_spend=0):
     """
     Calculate improvement metrics comparing performance before FieldSprout vs now.
 
@@ -2925,10 +2925,16 @@ def _calculate_historical_improvement(account_id, connected):
         if prev_month_actions > 0:
             actions_improvement = ((current_month_actions - prev_month_actions) / prev_month_actions) * 100
 
+        # Cap all savings figures to 25% of actual monthly spend if available
+        if monthly_spend > 0:
+            spend_cap = monthly_spend * 0.25
+            current_month_savings = min(current_month_savings, spend_cap)
+            prev_month_savings    = min(prev_month_savings, spend_cap)
+            total_savings         = min(total_savings, monthly_spend * 3 * 0.25)  # up to 3 months
+
         # Determine comparison period label
         if days_active >= 365:
             comparison_period = "12-month average before FieldSprout"
-            # Use estimated baseline (current spend * 1.3 to account for waste prevented)
             estimated_baseline_spend = (current_month_savings / 0.3) if current_month_savings > 0 else 5000
         else:
             comparison_period = "Last month"
@@ -3207,13 +3213,6 @@ def ads_performance():
     except Exception as e:
         current_app.logger.warning(f"Could not query agent_decisions for timeline: {e}")
 
-    # Calculate historical improvement metrics
-    historical_improvement = _calculate_historical_improvement(aid, connected)
-
-    # Ensure we always have data to display (fallback to demo if function returned None)
-    if not historical_improvement:
-        historical_improvement = _get_demo_improvement_data()
-
     # Fetch account performance stats (last 30 days)
     account_performance = None
     prior_performance = None
@@ -3292,6 +3291,21 @@ def ads_performance():
                     current_app.logger.info(f"[DECISION] Used session fallback for performance data")
         except Exception as e:
             current_app.logger.warning(f"[DECISION] Session fallback failed: {e}")
+
+    # Cap savings to what's actually achievable given real monthly spend.
+    # AI optimizations realistically recover 5-25% of spend; use 25% as ceiling.
+    _monthly_spend_for_cap = 0
+    if account_performance and account_performance.get('has_data'):
+        _monthly_spend_for_cap = account_performance.get('cost', 0) or 0
+        if _monthly_spend_for_cap > 0:
+            spend_cap = _monthly_spend_for_cap * 0.25
+            wasted_spend_prevented = min(wasted_spend_prevented, spend_cap)
+            pending_savings = min(pending_savings, spend_cap)
+
+    # Calculate historical improvement metrics (after spend is known for capping)
+    historical_improvement = _calculate_historical_improvement(aid, connected, monthly_spend=_monthly_spend_for_cap)
+    if not historical_improvement:
+        historical_improvement = _get_demo_improvement_data()
 
     # Fetch daily performance data for the graph (last 30 days)
     daily_performance = []

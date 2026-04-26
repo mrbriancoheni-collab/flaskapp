@@ -96,72 +96,71 @@ class GoogleAdsAgentExecutor:
 
     def reallocate_budget(self, from_campaigns: list, to_campaigns: list, amount: float) -> Dict[str, Any]:
         """
-        Reallocate budget between campaigns.
-
-        Args:
-            from_campaigns: List of campaign IDs to reduce budget from
-            to_campaigns: List of campaign IDs to increase budget to
-            amount: Total amount to reallocate
-
-        Returns:
-            Execution result with details
+        Reallocate budget between campaigns by querying current budgets and adjusting them.
         """
         client = self.get_client()
 
         try:
-            # Calculate per-campaign adjustments
             reduction_per_campaign = amount / len(from_campaigns)
             increase_per_campaign = amount / len(to_campaigns)
 
-            campaign_service = client.get_service("CampaignService")
+            ga_service = client.get_service("GoogleAdsService")
             campaign_budget_service = client.get_service("CampaignBudgetService")
 
+            def _get_budget(campaign_id: str):
+                """Return (budget_resource_name, current_amount_micros) for a campaign."""
+                query = f"""
+                    SELECT campaign.campaign_budget, campaign_budget.amount_micros
+                    FROM campaign
+                    WHERE campaign.id = {campaign_id}
+                """
+                resp = ga_service.search(customer_id=self.client_customer_id, query=query)
+                for row in resp:
+                    return row.campaign.campaign_budget, int(row.campaign_budget.amount_micros)
+                return None, 0
+
+            def _budget_op(budget_resource: str, new_micros: int):
+                op = client.get_type("CampaignBudgetOperation")
+                b = op.update
+                b.resource_name = budget_resource
+                b.amount_micros = max(10_000, new_micros)
+                client.copy_from(op.update_mask, client.get_type("FieldMask")(paths=["amount_micros"]))
+                return op
+
             operations = []
+            updates = []
 
-            # Reduce budgets
-            for campaign_id in from_campaigns:
-                campaign_resource_name = campaign_service.campaign_path(
-                    self.client_customer_id, campaign_id
-                )
+            for cid in from_campaigns:
+                resource, current = _get_budget(str(cid))
+                if resource:
+                    new_micros = int(current - reduction_per_campaign * 1_000_000)
+                    operations.append(_budget_op(resource, new_micros))
+                    updates.append({"campaign_id": cid, "change": -reduction_per_campaign})
 
-                operation = client.get_type("CampaignOperation")
-                campaign = operation.update
-                campaign.resource_name = campaign_resource_name
+            for cid in to_campaigns:
+                resource, current = _get_budget(str(cid))
+                if resource:
+                    new_micros = int(current + increase_per_campaign * 1_000_000)
+                    operations.append(_budget_op(resource, new_micros))
+                    updates.append({"campaign_id": cid, "change": +increase_per_campaign})
 
-                # Note: In reality, need to get current budget and adjust
-                # This is simplified for the example
+            if not operations:
+                return {'success': False, 'error': 'No budget data found for specified campaigns'}
 
-                operations.append(operation)
+            campaign_budget_service.mutate_campaign_budgets(
+                customer_id=self.client_customer_id,
+                operations=operations
+            )
 
-            # Increase budgets
-            for campaign_id in to_campaigns:
-                campaign_resource_name = campaign_service.campaign_path(
-                    self.client_customer_id, campaign_id
-                )
-
-                operation = client.get_type("CampaignOperation")
-                campaign = operation.update
-                campaign.resource_name = campaign_resource_name
-
-                operations.append(operation)
-
-            # Execute mutations
-            if operations:
-                response = campaign_service.mutate_campaigns(
-                    customer_id=self.client_customer_id,
-                    operations=operations
-                )
-
-                return {
-                    'success': True,
-                    'campaigns_updated': len(response.results),
-                    'amount_reallocated': amount
-                }
-
-            return {'success': False, 'error': 'No operations to execute'}
+            return {
+                'success': True,
+                'campaigns_updated': len(operations),
+                'amount_reallocated': amount,
+                'updates': updates
+            }
 
         except GoogleAdsException as ex:
-            logger.error(f"Google Ads API error: {ex}")
+            logger.error(f"Google Ads API error in reallocate_budget: {ex}")
             return {
                 'success': False,
                 'error': str(ex),

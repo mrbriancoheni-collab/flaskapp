@@ -1020,6 +1020,40 @@ def auto_execute_low_risk():
     })
 
 
+@agents_bp.route("/api/decisions/execution-log")
+@login_required
+def execution_log():
+    """Return the last 30 non-pending decisions with their execution results for debugging."""
+    account_id = current_account_id()
+    with db.engine.connect() as conn:
+        rows = conn.execute(text("""
+            SELECT id, decision_type, status, campaign_id, ad_group_id,
+                   title, execution_result, updated_at
+            FROM agent_decisions
+            WHERE account_id = :account_id
+              AND status != 'pending'
+            ORDER BY updated_at DESC
+            LIMIT 30
+        """), {"account_id": account_id}).mappings().all()
+
+    results = []
+    for r in rows:
+        try:
+            exec_result = json.loads(r['execution_result']) if r['execution_result'] else None
+        except Exception:
+            exec_result = r['execution_result']
+        results.append({
+            "id": r['id'],
+            "decision_type": r['decision_type'],
+            "status": r['status'],
+            "campaign_id": r['campaign_id'],
+            "title": r['title'],
+            "execution_result": exec_result,
+            "updated_at": str(r['updated_at']),
+        })
+    return jsonify({"decisions": results})
+
+
 @agents_bp.route("/api/decisions/<int:decision_id>")
 @login_required
 def get_decision(decision_id):

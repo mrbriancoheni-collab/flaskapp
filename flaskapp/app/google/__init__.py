@@ -2892,94 +2892,29 @@ def _calculate_historical_improvement(account_id, connected):
         # This would require historical data storage - for now, we'll estimate improvement
         # based on AI actions and estimated savings
 
-        # Calculate current month metrics
+        # agent_decisions is the single source of truth (ai_actions mirrors every execution)
         current_month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-
-        # Query ai_actions table (executed actions only)
-        current_month_savings = db.session.query(
-            func.sum(AIAction.estimated_monthly_savings)
-        ).filter(
-            AIAction.account_id == account_id,
-            AIAction.status == 'executed',
-            AIAction.created_at >= current_month_start
-        ).scalar() or 0
-
-        current_month_actions = AIAction.query.filter(
-            AIAction.account_id == account_id,
-            AIAction.status == 'executed',
-            AIAction.created_at >= current_month_start
-        ).count()
-
-        # Also query agent_decisions table
-        try:
-            agent_current_savings = db.session.execute(
-                text("""
-                    SELECT COALESCE(SUM(expected_monthly_savings), 0)
-                    FROM agent_decisions
-                    WHERE account_id = :aid AND status = 'executed'
-                    AND created_at >= :start
-                """),
-                {"aid": account_id, "start": current_month_start}
-            ).scalar() or 0
-            current_month_savings += float(agent_current_savings)
-
-            agent_current_actions = db.session.execute(
-                text("""
-                    SELECT COUNT(*)
-                    FROM agent_decisions
-                    WHERE account_id = :aid AND status = 'executed'
-                    AND created_at >= :start
-                """),
-                {"aid": account_id, "start": current_month_start}
-            ).scalar() or 0
-            current_month_actions += agent_current_actions
-        except Exception as e:
-            current_app.logger.warning(f"Could not query agent_decisions for current month: {e}")
-
-        # Calculate previous month metrics (MoM comparison)
         prev_month_start = (current_month_start - timedelta(days=1)).replace(day=1)
 
-        prev_month_savings = db.session.query(
-            func.sum(AIAction.estimated_monthly_savings)
-        ).filter(
-            AIAction.account_id == account_id,
-            AIAction.status == 'executed',
-            AIAction.created_at >= prev_month_start,
-            AIAction.created_at < current_month_start
-        ).scalar() or 0
+        row = db.session.execute(
+            text("""
+                SELECT
+                    SUM(CASE WHEN created_at >= :cm  THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN created_at >= :cm  THEN LEAST(COALESCE(expected_monthly_savings,0),1000) ELSE 0 END),
+                    SUM(CASE WHEN created_at >= :pm AND created_at < :cm THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN created_at >= :pm AND created_at < :cm THEN LEAST(COALESCE(expected_monthly_savings,0),1000) ELSE 0 END),
+                    SUM(LEAST(COALESCE(expected_monthly_savings,0),1000))
+                FROM agent_decisions
+                WHERE account_id = :aid AND status = 'executed'
+            """),
+            {"aid": account_id, "cm": current_month_start, "pm": prev_month_start}
+        ).fetchone()
 
-        prev_month_actions = AIAction.query.filter(
-            AIAction.account_id == account_id,
-            AIAction.status == 'executed',
-            AIAction.created_at >= prev_month_start,
-            AIAction.created_at < current_month_start
-        ).count()
-
-        # Also query agent_decisions for previous month
-        try:
-            agent_prev_savings = db.session.execute(
-                text("""
-                    SELECT COALESCE(SUM(expected_monthly_savings), 0)
-                    FROM agent_decisions
-                    WHERE account_id = :aid AND status = 'executed'
-                    AND created_at >= :start AND created_at < :end
-                """),
-                {"aid": account_id, "start": prev_month_start, "end": current_month_start}
-            ).scalar() or 0
-            prev_month_savings += float(agent_prev_savings)
-
-            agent_prev_actions = db.session.execute(
-                text("""
-                    SELECT COUNT(*)
-                    FROM agent_decisions
-                    WHERE account_id = :aid AND status = 'executed'
-                    AND created_at >= :start AND created_at < :end
-                """),
-                {"aid": account_id, "start": prev_month_start, "end": current_month_start}
-            ).scalar() or 0
-            prev_month_actions += agent_prev_actions
-        except Exception as e:
-            current_app.logger.warning(f"Could not query agent_decisions for prev month: {e}")
+        current_month_actions  = int(row[0] or 0)
+        current_month_savings  = float(row[1] or 0)
+        prev_month_actions     = int(row[2] or 0)
+        prev_month_savings     = float(row[3] or 0)
+        total_savings          = float(row[4] or 0)
 
         # Calculate improvement percentages
         savings_improvement = 0
@@ -2989,23 +2924,6 @@ def _calculate_historical_improvement(account_id, connected):
         actions_improvement = 0
         if prev_month_actions > 0:
             actions_improvement = ((current_month_actions - prev_month_actions) / prev_month_actions) * 100
-
-        # Estimate total cumulative savings (executed decisions only)
-        total_savings = db.session.query(
-            func.sum(AIAction.estimated_monthly_savings)
-        ).filter(
-            AIAction.account_id == account_id,
-            AIAction.status == 'executed'
-        ).scalar() or 0
-
-        try:
-            agent_total_savings = db.session.execute(
-                text("SELECT COALESCE(SUM(expected_monthly_savings), 0) FROM agent_decisions WHERE account_id = :aid AND status = 'executed'"),
-                {"aid": account_id}
-            ).scalar() or 0
-            total_savings += float(agent_total_savings)
-        except Exception as e:
-            current_app.logger.warning(f"Could not query agent_decisions for total savings: {e}")
 
         # Determine comparison period label
         if days_active >= 365:
@@ -3106,42 +3024,27 @@ def ads_performance():
     except Exception as e:
         current_app.logger.warning(f"Could not load LSA missed calls: {e}")
 
-    # Get real AI action data from BOTH ai_actions and agent_decisions tables
+    # agent_decisions is the source of truth. Each execution also writes a mirror
+    # record to ai_actions (see base.py), so counting both tables double-counts everything.
     status = 'green'  # green, yellow, red
 
-    # Get total executed actions from ai_actions table
-    ai_actions_taken = AIAction.query.filter_by(
-        account_id=aid,
-        status='executed'
-    ).count()
-
-    # Also count executed decisions from agent_decisions table
+    ai_actions_taken = 0
+    wasted_spend_prevented = 0.0
     try:
-        agent_decisions_count = db.session.execute(
-            text("SELECT COUNT(*) FROM agent_decisions WHERE account_id = :aid AND status = 'executed'"),
+        stats = db.session.execute(
+            text("""
+                SELECT COUNT(*),
+                       COALESCE(SUM(LEAST(COALESCE(expected_monthly_savings, 0), 1000)), 0)
+                FROM agent_decisions
+                WHERE account_id = :aid AND status = 'executed'
+            """),
             {"aid": aid}
-        ).scalar() or 0
-        ai_actions_taken += agent_decisions_count
+        ).fetchone()
+        if stats:
+            ai_actions_taken = int(stats[0] or 0)
+            wasted_spend_prevented = float(stats[1] or 0)
     except Exception as e:
         current_app.logger.warning(f"Could not query agent_decisions: {e}")
-
-    # Get total estimated savings from ai_actions
-    wasted_spend_prevented = db.session.query(
-        func.sum(AIAction.estimated_monthly_savings)
-    ).filter_by(
-        account_id=aid,
-        status='executed'
-    ).scalar() or 0
-
-    # Also add savings from agent_decisions table
-    try:
-        agent_savings = db.session.execute(
-            text("SELECT COALESCE(SUM(expected_monthly_savings), 0) FROM agent_decisions WHERE account_id = :aid AND status = 'executed'"),
-            {"aid": aid}
-        ).scalar() or 0
-        wasted_spend_prevented += float(agent_savings)
-    except Exception as e:
-        current_app.logger.warning(f"Could not query agent_decisions savings: {e}")
 
     # Get PENDING decisions (awaiting approval) - show as potential savings
     pending_decisions_count = 0
@@ -3168,19 +3071,23 @@ def ads_performance():
 
     savings_are_pending = False
 
-    # Count blocked searches (negative keywords added) - both executed and pending
-    blocked_searches_count = AIAction.query.filter_by(
-        account_id=aid,
-        status='executed',
-        action_type='negative_keyword_added'
-    ).count()
-    # Also count pending negative keywords from agent_decisions
+    # Count blocked searches from agent_decisions (source of truth)
+    blocked_searches_count = 0
     pending_negative_keywords = 0
     try:
-        pending_negative_keywords = db.session.execute(
-            text("SELECT COUNT(*) FROM agent_decisions WHERE account_id = :aid AND status IN ('pending', 'approved') AND decision_type LIKE '%negative%'"),
+        neg_stats = db.session.execute(
+            text("""
+                SELECT
+                    SUM(CASE WHEN status = 'executed' THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN status IN ('pending', 'approved') THEN 1 ELSE 0 END)
+                FROM agent_decisions
+                WHERE account_id = :aid AND decision_type LIKE '%negative%'
+            """),
             {"aid": aid}
-        ).scalar() or 0
+        ).fetchone()
+        if neg_stats:
+            blocked_searches_count = int(neg_stats[0] or 0)
+            pending_negative_keywords = int(neg_stats[1] or 0)
     except Exception:
         pass
 
@@ -3228,35 +3135,23 @@ def ads_performance():
         job_count = 0
         low_quality_count = 0
 
-    # Count budget reallocations
-    budget_reallocations = AIAction.query.filter_by(
-        account_id=aid,
-        status='executed',
-        action_type='budget_reallocated'
-    ).count()
-    # Also count from agent_decisions
+    # Count budget reallocations and bid optimizations from agent_decisions only
+    budget_reallocations = 0
+    bids_optimized = 0
     try:
-        agent_budget_count = db.session.execute(
-            text("SELECT COUNT(*) FROM agent_decisions WHERE account_id = :aid AND status = 'executed' AND decision_type LIKE '%budget%'"),
+        type_counts = db.session.execute(
+            text("""
+                SELECT
+                    SUM(CASE WHEN decision_type LIKE '%budget%' THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN decision_type LIKE '%bid%' THEN 1 ELSE 0 END)
+                FROM agent_decisions
+                WHERE account_id = :aid AND status = 'executed'
+            """),
             {"aid": aid}
-        ).scalar() or 0
-        budget_reallocations += agent_budget_count
-    except Exception:
-        pass
-
-    # Count bids optimized
-    bids_optimized = AIAction.query.filter_by(
-        account_id=aid,
-        status='executed',
-        action_type='bid_adjusted'
-    ).count()
-    # Also count from agent_decisions
-    try:
-        agent_bids_count = db.session.execute(
-            text("SELECT COUNT(*) FROM agent_decisions WHERE account_id = :aid AND status = 'executed' AND decision_type LIKE '%bid%'"),
-            {"aid": aid}
-        ).scalar() or 0
-        bids_optimized += agent_bids_count
+        ).fetchone()
+        if type_counts:
+            budget_reallocations = int(type_counts[0] or 0)
+            bids_optimized = int(type_counts[1] or 0)
     except Exception:
         pass
 
@@ -3273,13 +3168,8 @@ def ads_performance():
     if lsa_missed_calls and lsa_missed_calls.get('high_priority', 0) > 0:
         status = 'red'
 
-    # Get recent AI actions for timeline (last 10) from BOTH tables
-    recent_actions = AIAction.query.filter(
-        AIAction.account_id == aid,
-        AIAction.status.in_(['pending', 'approved', 'executed'])
-    ).order_by(desc(AIAction.created_at)).limit(10).all()
-
-    # Also get recent agent_decisions and convert to compatible format
+    # Timeline: use agent_decisions as source of truth (ai_actions mirrors every execution)
+    recent_actions = []
     try:
         agent_decision_rows = db.session.execute(
             text("""
@@ -3295,7 +3185,6 @@ def ads_performance():
             {"aid": aid}
         ).mappings().all()
 
-        # Convert to objects with matching attributes
         class DecisionProxy:
             def __init__(self, row):
                 self.id = row['id']
@@ -3314,12 +3203,7 @@ def ads_performance():
             def is_undoable(self):
                 return False
 
-        agent_decisions_list = [DecisionProxy(row) for row in agent_decision_rows]
-
-        # Combine and sort by executed_at
-        all_actions = list(recent_actions) + agent_decisions_list
-        all_actions.sort(key=lambda x: x.executed_at or datetime.min, reverse=True)
-        recent_actions = all_actions[:10]
+        recent_actions = [DecisionProxy(row) for row in agent_decision_rows]
     except Exception as e:
         current_app.logger.warning(f"Could not query agent_decisions for timeline: {e}")
 

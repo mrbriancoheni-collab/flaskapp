@@ -2895,18 +2895,18 @@ def _calculate_historical_improvement(account_id, connected):
         # Calculate current month metrics
         current_month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-        # Query ai_actions table (count all non-rejected/failed actions)
+        # Query ai_actions table (executed actions only)
         current_month_savings = db.session.query(
             func.sum(AIAction.estimated_monthly_savings)
         ).filter(
             AIAction.account_id == account_id,
-            AIAction.status.in_(['pending', 'approved', 'executed']),
+            AIAction.status == 'executed',
             AIAction.created_at >= current_month_start
         ).scalar() or 0
 
         current_month_actions = AIAction.query.filter(
             AIAction.account_id == account_id,
-            AIAction.status.in_(['pending', 'approved', 'executed']),
+            AIAction.status == 'executed',
             AIAction.created_at >= current_month_start
         ).count()
 
@@ -2916,7 +2916,7 @@ def _calculate_historical_improvement(account_id, connected):
                 text("""
                     SELECT COALESCE(SUM(expected_monthly_savings), 0)
                     FROM agent_decisions
-                    WHERE account_id = :aid AND status IN ('pending', 'approved', 'executed')
+                    WHERE account_id = :aid AND status = 'executed'
                     AND created_at >= :start
                 """),
                 {"aid": account_id, "start": current_month_start}
@@ -2927,7 +2927,7 @@ def _calculate_historical_improvement(account_id, connected):
                 text("""
                     SELECT COUNT(*)
                     FROM agent_decisions
-                    WHERE account_id = :aid AND status IN ('pending', 'approved', 'executed')
+                    WHERE account_id = :aid AND status = 'executed'
                     AND created_at >= :start
                 """),
                 {"aid": account_id, "start": current_month_start}
@@ -2943,14 +2943,14 @@ def _calculate_historical_improvement(account_id, connected):
             func.sum(AIAction.estimated_monthly_savings)
         ).filter(
             AIAction.account_id == account_id,
-            AIAction.status.in_(['pending', 'approved', 'executed']),
+            AIAction.status == 'executed',
             AIAction.created_at >= prev_month_start,
             AIAction.created_at < current_month_start
         ).scalar() or 0
 
         prev_month_actions = AIAction.query.filter(
             AIAction.account_id == account_id,
-            AIAction.status.in_(['pending', 'approved', 'executed']),
+            AIAction.status == 'executed',
             AIAction.created_at >= prev_month_start,
             AIAction.created_at < current_month_start
         ).count()
@@ -2961,7 +2961,7 @@ def _calculate_historical_improvement(account_id, connected):
                 text("""
                     SELECT COALESCE(SUM(expected_monthly_savings), 0)
                     FROM agent_decisions
-                    WHERE account_id = :aid AND status IN ('pending', 'approved', 'executed')
+                    WHERE account_id = :aid AND status = 'executed'
                     AND created_at >= :start AND created_at < :end
                 """),
                 {"aid": account_id, "start": prev_month_start, "end": current_month_start}
@@ -2972,7 +2972,7 @@ def _calculate_historical_improvement(account_id, connected):
                 text("""
                     SELECT COUNT(*)
                     FROM agent_decisions
-                    WHERE account_id = :aid AND status IN ('pending', 'approved', 'executed')
+                    WHERE account_id = :aid AND status = 'executed'
                     AND created_at >= :start AND created_at < :end
                 """),
                 {"aid": account_id, "start": prev_month_start, "end": current_month_start}
@@ -2990,17 +2990,17 @@ def _calculate_historical_improvement(account_id, connected):
         if prev_month_actions > 0:
             actions_improvement = ((current_month_actions - prev_month_actions) / prev_month_actions) * 100
 
-        # Estimate total cumulative savings (from both tables, all non-rejected decisions)
+        # Estimate total cumulative savings (executed decisions only)
         total_savings = db.session.query(
             func.sum(AIAction.estimated_monthly_savings)
         ).filter(
             AIAction.account_id == account_id,
-            AIAction.status.in_(['pending', 'approved', 'executed'])
+            AIAction.status == 'executed'
         ).scalar() or 0
 
         try:
             agent_total_savings = db.session.execute(
-                text("SELECT COALESCE(SUM(expected_monthly_savings), 0) FROM agent_decisions WHERE account_id = :aid AND status IN ('pending', 'approved', 'executed')"),
+                text("SELECT COALESCE(SUM(expected_monthly_savings), 0) FROM agent_decisions WHERE account_id = :aid AND status = 'executed'"),
                 {"aid": account_id}
             ).scalar() or 0
             total_savings += float(agent_total_savings)
@@ -3166,16 +3166,7 @@ def ads_performance():
         pending_decisions_count = 0
         pending_savings = 0.0
 
-    # If no executed actions but we have pending ones, show pending as the main metric
-    # This ensures users see value even before approving decisions
     savings_are_pending = False
-    try:
-        if wasted_spend_prevented == 0 and pending_savings > 0:
-            wasted_spend_prevented = pending_savings
-            ai_actions_taken = pending_decisions_count
-            savings_are_pending = True
-    except Exception as e:
-        current_app.logger.warning(f"Error setting pending savings display: {e}")
 
     # Count blocked searches (negative keywords added) - both executed and pending
     blocked_searches_count = AIAction.query.filter_by(
@@ -3205,7 +3196,7 @@ def ads_performance():
         irrelevant_count = db.session.execute(
             text("""
                 SELECT COUNT(*) FROM agent_decisions
-                WHERE account_id = :aid AND status IN ('pending', 'approved', 'executed')
+                WHERE account_id = :aid AND status = 'executed'
                 AND decision_type LIKE '%negative%'
                 AND (title NOT LIKE '%job%' AND title NOT LIKE '%career%' AND title NOT LIKE '%hiring%')
             """),
@@ -3216,7 +3207,7 @@ def ads_performance():
         job_count = db.session.execute(
             text("""
                 SELECT COUNT(*) FROM agent_decisions
-                WHERE account_id = :aid AND status IN ('pending', 'approved', 'executed')
+                WHERE account_id = :aid AND status = 'executed'
                 AND decision_type LIKE '%negative%'
                 AND (title LIKE '%job%' OR title LIKE '%career%' OR title LIKE '%hiring%')
             """),
@@ -3227,7 +3218,7 @@ def ads_performance():
         low_quality_count = db.session.execute(
             text("""
                 SELECT COUNT(*) FROM agent_decisions
-                WHERE account_id = :aid AND status IN ('pending', 'approved', 'executed')
+                WHERE account_id = :aid AND status = 'executed'
                 AND (decision_type LIKE '%pause%' OR decision_type LIKE '%quality%')
             """),
             {"aid": aid}

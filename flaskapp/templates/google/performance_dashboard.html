@@ -202,6 +202,12 @@
           <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-piggy-bank text-green-400 w-4"></i>Est. savings</span>
           <span class="text-sm font-semibold text-green-700">${{ '%.0f'|format(wasted_spend_prevented) }}/mo</span>
         </div>
+        {% if pending_savings > 0 %}
+        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+          <span class="text-sm text-gray-500 flex items-center gap-2"><i class="fas fa-clock text-yellow-400 w-4"></i>Potential savings</span>
+          <span class="text-sm font-semibold text-yellow-600">${{ '%.0f'|format(pending_savings) }}/mo</span>
+        </div>
+        {% endif %}
         <div class="flex items-center justify-between py-2 border-b border-gray-100">
           <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-ban text-red-400 w-4"></i>Searches blocked</span>
           <span class="text-sm font-semibold text-gray-900">{{ blocked_searches_count }}</span>
@@ -243,11 +249,11 @@
         </thead>
         <tbody class="divide-y divide-gray-50">
           {% for c in campaigns_data %}
-          {% set cpl = (c.monthly_spend / c.conversions) if c.conversions > 0 else 0 %}
+          {% set cpl = (c.cost_30d / c.conversions) if c.conversions > 0 else 0 %}
           {% set ctr = (c.ctr if c.ctr is defined else 0) %}
           <tr class="hover:bg-gray-50 transition">
             <td class="px-5 py-3 font-medium text-gray-900 max-w-xs truncate">{{ c.name }}</td>
-            <td class="px-4 py-3 text-right text-gray-700">${{ '%.0f'|format(c.monthly_spend or 0) }}</td>
+            <td class="px-4 py-3 text-right text-gray-700">${{ '%.0f'|format(c.cost_30d or 0) }}</td>
             <td class="px-4 py-3 text-right text-gray-700">{{ c.conversions or 0 }}</td>
             <td class="px-4 py-3 text-right {{ 'text-red-600' if cpl > target_cpl * 1.2 else 'text-green-600' if cpl > 0 and cpl < target_cpl else 'text-gray-500' }}">
               {{ '$%.2f'|format(cpl) if cpl > 0 else '—' }}

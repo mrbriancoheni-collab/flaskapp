@@ -738,6 +738,12 @@ def fetch_account_performance_stats(
             current_app.logger.warning(f"No access token found for account {aid}")
             return empty_result
 
+        # Build explicit date range (avoids invalid DURING literals like LAST_60_DAYS)
+        from datetime import date as _date, timedelta as _td
+        _end = _date.today() - _td(days=1)
+        _start = _date.today() - _td(days=days)
+        _date_range = f"'{_start}' AND '{_end}'"
+
         # Query for account-level metrics
         query = f"""
             SELECT
@@ -750,7 +756,7 @@ def fetch_account_performance_stats(
                 metrics.average_cpc,
                 metrics.all_conversions
             FROM customer
-            WHERE segments.date DURING LAST_{days}_DAYS
+            WHERE segments.date BETWEEN {_date_range}
         """.strip()
 
         results = google_ads_search(

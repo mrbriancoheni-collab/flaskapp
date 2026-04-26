@@ -15,9 +15,9 @@
       <p class="text-sm text-gray-500 mt-0.5">Autonomous mode · Agent performance · Approval queue</p>
     </div>
     {% if total_pending > 0 %}
-    <span class="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-100 text-amber-800 text-sm font-semibold rounded-full">
+    <span id="pending-alert" class="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-100 text-amber-800 text-sm font-semibold rounded-full">
       <span class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
-      {{ total_pending }} action{{ 's' if total_pending != 1 }} awaiting approval
+      <span data-pending-count>{{ total_pending }}</span> action{{ 's' if total_pending != 1 }} awaiting approval
     </span>
     {% endif %}
   </div>
@@ -565,6 +565,11 @@ document.addEventListener('click', function(e) {
         var n = parseInt(el.textContent, 10);
         if (!isNaN(n) && n > 0) el.textContent = n - 1;
       });
+      var alert = document.getElementById('pending-alert');
+      if (alert) {
+        var alertCount = parseInt(alert.querySelector('[data-pending-count]').textContent, 10);
+        if (alertCount <= 0) alert.style.display = 'none';
+      }
       var msg  = alreadyDone
         ? 'Decision already processed — removed from queue.'
         : (r.data.message || (action === 'approve' ? 'Decision approved.' : 'Decision rejected.'));

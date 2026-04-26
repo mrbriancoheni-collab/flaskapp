@@ -607,3 +607,265 @@ class GoogleAdsAgentExecutor:
         except GoogleAdsException as ex:
             logger.error(f"Failed to pause ad: {ex}")
             return {'success': False, 'error': str(ex)}
+
+    def create_responsive_search_ad(
+        self,
+        ad_group_id: str,
+        business_description: str = '',
+        keyword_theme: str = '',
+    ) -> Dict[str, Any]:
+        """
+        Generate ad copy with Claude and create a new Responsive Search Ad.
+
+        Queries the ad group's existing ads for URL/headline context, then uses
+        Claude to write new headlines/descriptions, then POSTs via the API.
+        """
+        client = self.get_client()
+
+        try:
+            ga_service = client.get_service("GoogleAdsService")
+
+            # 1. Fetch existing ads to get final_url and headline context
+            query = f"""
+                SELECT
+                    ad_group_ad.ad.final_urls,
+                    ad_group_ad.ad.responsive_search_ad.headlines,
+                    ad_group_ad.ad.responsive_search_ad.descriptions,
+                    ad_group.name
+                FROM ad_group_ad
+                WHERE ad_group.id = {ad_group_id}
+                  AND ad_group_ad.status != 'REMOVED'
+                LIMIT 3
+            """
+            rows = list(ga_service.search(customer_id=self.client_customer_id, query=query))
+
+            final_url = ''
+            existing_headlines = []
+            existing_descriptions = []
+            ad_group_name = ''
+
+            for row in rows:
+                if not final_url:
+                    urls = list(row.ad_group_ad.ad.final_urls)
+                    if urls:
+                        final_url = urls[0]
+                ad_group_name = row.ad_group.name
+                for h in row.ad_group_ad.ad.responsive_search_ad.headlines:
+                    if h.text and h.text not in existing_headlines:
+                        existing_headlines.append(h.text)
+                for d in row.ad_group_ad.ad.responsive_search_ad.descriptions:
+                    if d.text and d.text not in existing_descriptions:
+                        existing_descriptions.append(d.text)
+
+            if not final_url:
+                return {'success': False, 'error': f'No final URL found for ad group {ad_group_id}'}
+
+            # 2. Generate new ad copy with Claude
+            from app.services.ai_client import generate_json
+
+            prompt_system = (
+                "You write Google Ads Responsive Search Ad copy. "
+                "Return valid JSON only — no markdown, no prose."
+            )
+            context_lines = []
+            if business_description:
+                context_lines.append(f"Business: {business_description}")
+            if keyword_theme:
+                context_lines.append(f"Keyword theme: {keyword_theme}")
+            context_lines.append(f"Ad group: {ad_group_name}")
+            if existing_headlines:
+                context_lines.append(f"Existing headlines (do not duplicate): {', '.join(existing_headlines[:6])}")
+            if existing_descriptions:
+                context_lines.append(f"Existing descriptions: {', '.join(existing_descriptions[:3])}")
+
+            prompt_user = (
+                "\n".join(context_lines) + "\n\n"
+                "Write 5 NEW headline variations (max 30 chars each) and "
+                "2 NEW description variations (max 90 chars each). "
+                'Return JSON: {"headlines": [...], "descriptions": [...]}'
+            )
+
+            copy_data = generate_json(prompt_system, prompt_user)
+            new_headlines = (copy_data.get('headlines') or [])[:5]
+            new_descriptions = (copy_data.get('descriptions') or [])[:2]
+
+            if len(new_headlines) < 3 or len(new_descriptions) < 2:
+                return {
+                    'success': False,
+                    'error': f'Claude returned insufficient copy: {len(new_headlines)} headlines, {len(new_descriptions)} descriptions'
+                }
+
+            # 3. Create the RSA
+            ad_group_ad_service = client.get_service("AdGroupAdService")
+            ad_group_resource = client.get_service("AdGroupService").ad_group_path(
+                self.client_customer_id, ad_group_id
+            )
+
+            operation = client.get_type("AdGroupAdOperation")
+            ad_group_ad = operation.create
+            ad_group_ad.status = client.enums.AdGroupAdStatusEnum.ENABLED
+            ad_group_ad.ad_group = ad_group_resource
+
+            rsa = ad_group_ad.ad.responsive_search_ad
+            for text in new_headlines:
+                h = client.get_type("AdTextAsset")
+                h.text = text[:30]
+                rsa.headlines.append(h)
+            for text in new_descriptions:
+                d = client.get_type("AdTextAsset")
+                d.text = text[:90]
+                rsa.descriptions.append(d)
+
+            ad_group_ad.ad.final_urls.append(final_url)
+
+            response = ad_group_ad_service.mutate_ad_group_ads(
+                customer_id=self.client_customer_id,
+                operations=[operation]
+            )
+
+            return {
+                'success': True,
+                'ad_group_id': ad_group_id,
+                'resource': response.results[0].resource_name,
+                'headlines_created': new_headlines,
+                'descriptions_created': new_descriptions,
+            }
+
+        except GoogleAdsException as ex:
+            logger.error(f"Failed to create RSA: {ex}")
+            return {'success': False, 'error': str(ex)}
+
+    def improve_keyword_ad_relevance(
+        self,
+        keyword_text: str,
+        keyword_id: str,
+        business_description: str = '',
+    ) -> Dict[str, Any]:
+        """
+        Find the ad group for a keyword, then add keyword-focused headlines
+        to the existing RSA using Claude to generate the copy.
+        """
+        client = self.get_client()
+
+        try:
+            ga_service = client.get_service("GoogleAdsService")
+
+            # 1. Find ad group for this keyword
+            query = f"""
+                SELECT
+                    ad_group.id,
+                    ad_group.name,
+                    ad_group_criterion.resource_name
+                FROM ad_group_criterion
+                WHERE ad_group_criterion.criterion_id = {keyword_id}
+                  AND ad_group_criterion.status != 'REMOVED'
+                LIMIT 1
+            """
+            rows = list(ga_service.search(customer_id=self.client_customer_id, query=query))
+            if not rows:
+                return {'success': False, 'error': f'Keyword {keyword_id} not found in account'}
+
+            ad_group_id = str(rows[0].ad_group.id)
+            ad_group_name = rows[0].ad_group.name
+
+            # 2. Get existing RSA to update (pick most-impression RSA)
+            ad_query = f"""
+                SELECT
+                    ad_group_ad.ad.id,
+                    ad_group_ad.resource_name,
+                    ad_group_ad.ad.final_urls,
+                    ad_group_ad.ad.responsive_search_ad.headlines,
+                    ad_group_ad.ad.responsive_search_ad.descriptions,
+                    metrics.impressions
+                FROM ad_group_ad
+                WHERE ad_group.id = {ad_group_id}
+                  AND ad_group_ad.status = 'ENABLED'
+                  AND ad_group_ad.ad.type = 'RESPONSIVE_SEARCH_AD'
+                ORDER BY metrics.impressions DESC
+                LIMIT 1
+            """
+            ad_rows = list(ga_service.search(customer_id=self.client_customer_id, query=ad_query))
+            if not ad_rows:
+                # No existing RSA — create one instead
+                return self.create_responsive_search_ad(
+                    ad_group_id=ad_group_id,
+                    business_description=business_description,
+                    keyword_theme=keyword_text,
+                )
+
+            ad_row = ad_rows[0]
+            rsa_resource = ad_row.ad_group_ad.resource_name
+            existing_headlines = [h.text for h in ad_row.ad_group_ad.ad.responsive_search_ad.headlines if h.text]
+            existing_descriptions = [d.text for d in ad_row.ad_group_ad.ad.responsive_search_ad.descriptions if d.text]
+            final_urls = list(ad_row.ad_group_ad.ad.final_urls)
+            final_url = final_urls[0] if final_urls else ''
+
+            # RSA can hold max 15 headlines; only add if there's room
+            if len(existing_headlines) >= 15:
+                return {
+                    'success': True,
+                    'note': 'RSA already has 15 headlines (maximum) — no update needed',
+                    'ad_group_id': ad_group_id,
+                }
+
+            # 3. Generate keyword-focused headlines with Claude
+            from app.services.ai_client import generate_json
+
+            prompt_system = (
+                "You write Google Ads headlines to improve keyword ad relevance. "
+                "Return valid JSON only."
+            )
+            prompt_user = (
+                f"Keyword: {keyword_text}\n"
+                f"Ad group: {ad_group_name}\n"
+                + (f"Business: {business_description}\n" if business_description else "")
+                + f"Existing headlines (do not duplicate): {', '.join(existing_headlines)}\n\n"
+                "Write 3 new headlines (max 30 chars each) that prominently include or closely match "
+                f'the keyword "{keyword_text}". '
+                'Return JSON: {"headlines": ["...", "...", "..."]}'
+            )
+
+            copy_data = generate_json(prompt_system, prompt_user)
+            new_headlines = [h for h in (copy_data.get('headlines') or []) if h not in existing_headlines][:3]
+
+            if not new_headlines:
+                return {'success': False, 'error': 'Claude returned no new headlines for this keyword'}
+
+            # 4. Update the RSA with new headlines appended
+            ad_group_ad_service = client.get_service("AdGroupAdService")
+
+            operation = client.get_type("AdGroupAdOperation")
+            ad_group_ad = operation.update
+            ad_group_ad.resource_name = rsa_resource
+
+            rsa = ad_group_ad.ad.responsive_search_ad
+            all_headlines = existing_headlines + new_headlines
+            for text in all_headlines:
+                h = client.get_type("AdTextAsset")
+                h.text = text[:30]
+                rsa.headlines.append(h)
+            for text in existing_descriptions:
+                d = client.get_type("AdTextAsset")
+                d.text = text[:90]
+                rsa.descriptions.append(d)
+            if final_url:
+                ad_group_ad.ad.final_urls.append(final_url)
+
+            operation.update_mask.paths.extend(['ad.responsive_search_ad.headlines'])
+
+            response = ad_group_ad_service.mutate_ad_group_ads(
+                customer_id=self.client_customer_id,
+                operations=[operation]
+            )
+
+            return {
+                'success': True,
+                'keyword': keyword_text,
+                'ad_group_id': ad_group_id,
+                'resource': response.results[0].resource_name,
+                'headlines_added': new_headlines,
+            }
+
+        except GoogleAdsException as ex:
+            logger.error(f"Failed to improve ad relevance: {ex}")
+            return {'success': False, 'error': str(ex)}

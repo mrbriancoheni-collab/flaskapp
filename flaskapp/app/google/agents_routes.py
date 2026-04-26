@@ -771,8 +771,31 @@ def _execute_agent_decision(account_id: int, decision_row) -> dict:
                 'manual': False
             }
 
+        elif decision_type == 'create_ad_variations':
+            ad_group_id = decision_row.get('ad_group_id') or action_data.get('ad_group_id')
+            if not ad_group_id:
+                return {'success': False, 'error': 'Missing ad_group_id for create_ad_variations'}
+            biz_desc = _get_account_ads_settings(account_id).get('business_description', '')
+            return executor.create_responsive_search_ad(
+                ad_group_id=str(ad_group_id),
+                business_description=biz_desc,
+                keyword_theme=action_data.get('keyword_theme', ''),
+            )
+
+        elif decision_type == 'improve_ad_relevance':
+            keyword_text = action_data.get('keyword_text', '')
+            keyword_id = decision_row.get('keyword_id') or action_data.get('keyword_id', '')
+            if not keyword_id:
+                return {'success': False, 'error': 'Missing keyword_id for improve_ad_relevance'}
+            biz_desc = _get_account_ads_settings(account_id).get('business_description', '')
+            return executor.improve_keyword_ad_relevance(
+                keyword_text=keyword_text,
+                keyword_id=str(keyword_id),
+                business_description=biz_desc,
+            )
+
         else:
-            # Truly manual decision types (create campaigns, ad copy, landing page work)
+            # Truly unimplementable types (create campaigns, landing page work)
             return {
                 'success': True,
                 'result': f'Decision type "{decision_type}" requires manual action',
@@ -1052,6 +1075,93 @@ def execution_log():
             "updated_at": str(r['updated_at']),
         })
     return jsonify({"decisions": results})
+
+
+@agents_bp.route("/api/decisions/re-execute-manual", methods=["POST"])
+@login_required
+def re_execute_manual():
+    """
+    Re-run all decisions that were previously marked executed with manual:true.
+    Now that ad copy decisions are automated, this catches them up.
+    """
+    account_id = current_account_id()
+
+    # Find executed decisions whose execution_result shows manual:true
+    with db.engine.connect() as conn:
+        rows = conn.execute(text("""
+            SELECT id, decision_type, action_data, campaign_id, ad_group_id, keyword_id,
+                   title, description, expected_monthly_savings, reasoning,
+                   agent_id, agent_type, risk_level, confidence
+            FROM agent_decisions
+            WHERE account_id = :account_id
+              AND status = 'executed'
+              AND execution_result LIKE '%"manual": true%'
+            ORDER BY id DESC
+        """), {"account_id": account_id}).mappings().all()
+
+    if not rows:
+        return jsonify({"success": True, "message": "No manual-executed decisions found", "total": 0})
+
+    executed = 0
+    still_manual = 0
+    failed = 0
+    errors = []
+
+    for decision_row in rows:
+        try:
+            result = _execute_agent_decision(account_id, decision_row)
+
+            if result.get('manual'):
+                still_manual += 1
+                continue
+
+            status = 'executed' if result.get('success') else 'execution_failed'
+            with db.engine.begin() as conn:
+                conn.execute(text("""
+                    UPDATE agent_decisions
+                    SET status = :status,
+                        execution_result = :result,
+                        executed_at = CASE WHEN :status = 'executed' THEN NOW() ELSE executed_at END,
+                        updated_at = NOW()
+                    WHERE id = :id
+                """), {
+                    "id": decision_row['id'],
+                    "status": status,
+                    "result": json.dumps(result),
+                })
+
+            if result.get('success'):
+                executed += 1
+                try:
+                    _create_ai_action_from_decision(account_id, decision_row, result)
+                except Exception:
+                    pass
+            else:
+                failed += 1
+                errors.append({
+                    "id": decision_row['id'],
+                    "type": decision_row['decision_type'],
+                    "error": result.get('error', 'unknown'),
+                })
+
+        except Exception as e:
+            failed += 1
+            errors.append({
+                "id": decision_row['id'],
+                "type": decision_row.get('decision_type'),
+                "error": str(e),
+            })
+            current_app.logger.error(f"re-execute failed for decision {decision_row['id']}: {e}", exc_info=True)
+
+    return jsonify({
+        "success": True,
+        "message": f"Re-executed {executed} decisions ({still_manual} still manual, {failed} failed)",
+        "total_found": len(rows),
+        "executed": executed,
+        "still_manual": still_manual,
+        "failed": failed,
+        "errors": errors[:10],
+    })
 
 
 @agents_bp.route("/api/decisions/<int:decision_id>")

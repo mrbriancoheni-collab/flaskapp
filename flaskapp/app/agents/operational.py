@@ -736,6 +736,7 @@ class QualityScoreAgent(BaseAgent):
                     'severity': 'high',
                     'keyword_id': keyword_id,
                     'keyword_text': keyword.get('text', ''),
+                    'ad_group_id': keyword.get('ad_group_id', ''),
                     'quality_score': keyword.get('quality_score', 0),
                     'monthly_spend': keyword.get('monthly_spend', 0),
                     'ad_relevance': keyword.get('ad_relevance', 'AVERAGE'),
@@ -763,10 +764,11 @@ class QualityScoreAgent(BaseAgent):
                     reasoning="Low ad relevance is primary QS issue",
                     account_id=0,
                     customer_id='',
+                    ad_group_id=opp.get('ad_group_id', ''),
                     action_data={
-                        'delegate_to': 'AdCopyAgent',
                         'keyword_id': opp['keyword_id'],
-                        'keyword_text': opp['keyword_text']
+                        'keyword_text': opp['keyword_text'],
+                        'ad_group_id': opp.get('ad_group_id', ''),
                     },
                     risk_level=DecisionRiskLevel.LOW,
                     requires_approval=False,

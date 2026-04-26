@@ -728,19 +728,54 @@ def _execute_agent_decision(account_id: int, decision_row) -> dict:
 
             return executor.adjust_campaign_bids(str(campaign_id), bid_change_pct)
 
-        elif decision_type in ('investigate_cpl_spike', 'investigate_conversion_drop'):
-            # These are delegation/analysis decisions — no direct API action needed
+        elif decision_type == 'scale_campaign':
+            campaign_id = decision_row.get('campaign_id') or action_data.get('campaign_id')
+            new_budget = action_data.get('new_budget')
+            if not campaign_id or new_budget is None:
+                return {'success': False, 'error': 'Missing campaign_id or new_budget'}
+            return executor.scale_campaign_budget(str(campaign_id), float(new_budget))
+
+        elif decision_type == 'emergency_pause':
+            campaign_id = decision_row.get('campaign_id') or action_data.get('campaign_id')
+            if not campaign_id:
+                return {'success': False, 'error': 'Missing campaign_id'}
+            return executor.pause_campaign(str(campaign_id))
+
+        elif decision_type == 'pause_budget_group':
+            campaign_ids = action_data.get('campaign_ids', [])
+            if not campaign_ids:
+                return {'success': False, 'error': 'Missing campaign_ids'}
+            results = [executor.pause_campaign(str(cid)) for cid in campaign_ids]
+            return {
+                'success': all(r.get('success') for r in results),
+                'campaigns_paused': len(results),
+                'results': results
+            }
+
+        elif decision_type == 'adjust_group_daily_budget':
+            campaign_ids = action_data.get('campaign_ids', [])
+            new_daily_budget = action_data.get('new_daily_budget')
+            if not campaign_ids or new_daily_budget is None:
+                return {'success': False, 'error': 'Missing campaign_ids or new_daily_budget'}
+            results = [executor.adjust_daily_budget(str(cid), float(new_daily_budget)) for cid in campaign_ids]
+            return {
+                'success': all(r.get('success') for r in results),
+                'campaigns_updated': len(results),
+                'results': results
+            }
+
+        elif decision_type in ('budget_group_alert', 'investigate_cpl_spike', 'investigate_conversion_drop'):
             return {
                 'success': True,
-                'result': f'Investigation task "{decision_type}" acknowledged and queued',
+                'result': f'Task "{decision_type}" acknowledged',
                 'manual': False
             }
 
         else:
-            # For unhandled decision types, return as manual action
+            # Truly manual decision types (create campaigns, ad copy, landing page work)
             return {
                 'success': True,
-                'result': f'Decision type "{decision_type}" acknowledged (manual action required)',
+                'result': f'Decision type "{decision_type}" requires manual action',
                 'manual': True
             }
 

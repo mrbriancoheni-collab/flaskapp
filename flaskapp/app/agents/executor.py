@@ -45,7 +45,7 @@ class GoogleAdsAgentExecutor:
             )
         self.refresh_token = refresh_token
         self.developer_token = developer_token
-        self.client_customer_id = client_customer_id
+        self.client_customer_id = client_customer_id.replace('-', '')
         self.client = None
 
     def get_client(self) -> GoogleAdsClient:

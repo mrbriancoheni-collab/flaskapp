@@ -12,14 +12,19 @@ from .base import BaseAgent, AgentDecision, AgentCapability, DecisionRiskLevel
 
 
 def _bid_savings_estimate(opp: Dict) -> float:
-    """Estimate monthly savings from a bid reduction, grounded in actual spend."""
-    monthly_spend = opp.get('monthly_spend', 0) or 0
-    conversions = max(opp.get('conversions', 0) or 0, 1)
-    cpl_gap = opp['current_cpl'] - opp['target_cpl']
-    raw = cpl_gap * conversions
-    # Cap at 20% of monthly spend — bid reductions rarely recover more than that
-    cap = monthly_spend * 0.20 if monthly_spend > 0 else raw
-    return round(min(raw, cap), 2)
+    """
+    Estimate monthly savings from a bid reduction.
+
+    Formula: |bid_reduction_pct| × campaign_spend × 0.4
+    The 0.4 factor reflects that lower bids reduce volume proportionally —
+    you don't capture the full delta because fewer clicks flow through.
+    Capped at 20% of campaign spend (hard ceiling for a single bid change).
+    """
+    monthly_spend = opp.get('monthly_spend', opp.get('cost_30d', 0)) or 0
+    bid_reduction_pct = abs(opp.get('recommended_bid_change_pct', 0)) / 100
+    raw = monthly_spend * bid_reduction_pct * 0.4
+    cap = monthly_spend * 0.20
+    return round(min(raw, cap), 2) if monthly_spend > 0 else 0.0
 
 
 class CampaignManagerAgent(BaseAgent):

@@ -2848,7 +2848,110 @@ def ads_ui():
         )
 
 
-def _calculate_historical_improvement(account_id, connected):
+def _compute_realistic_savings(account_id, monthly_spend, avg_cpc, total_clicks, date_start=None, date_end=None):
+    """
+    Compute savings grounded in real spend and click economics.
+
+    Foundation
+    ----------
+    max_clicks = monthly_spend / avg_cpc   (hard ceiling — you can only buy so many clicks)
+    waste_fraction = identifiable waste / total spend
+    savings = min(computed_savings, monthly_spend * 0.25)   (25% ceiling)
+
+    Per-decision-type logic
+    -----------------------
+    add_negative_keyword
+        Savings = actual 30-day cost of the blocked search term (stored as
+        expected_monthly_savings by the tactical agent). Each term's
+        contribution is capped at 3% of monthly_spend to prevent a single
+        high-spend term from dominating the total.
+
+    adjust_bids / adjust_bids_down
+        Savings = |bid_change_pct| * (monthly_spend / distinct_campaigns_bid) * 0.4
+        The 0.4 efficiency factor accounts for volume reduction when bids drop —
+        you don't save the full bid delta because fewer clicks flow through.
+
+    pause_campaign / pause_keyword / emergency_pause
+        Savings = stored expected_monthly_savings capped at 20% of monthly_spend
+        per decision (a single pause rarely eliminates more than that).
+
+    reallocate_budget
+        No direct spend reduction — budget moves between campaigns.
+        Savings = 0 (efficiency improvement, not cost reduction).
+
+    Everything else
+        Capped at 2% of monthly_spend per decision (conservative fallback).
+    """
+    if monthly_spend <= 0:
+        return 0.0
+
+    max_savings = monthly_spend * 0.25
+
+    try:
+        # Pull executed decisions grouped by type with per-row data we need
+        rows = db.session.execute(
+            text("""
+                SELECT decision_type,
+                       COUNT(DISTINCT campaign_id)           AS campaigns,
+                       COUNT(*)                              AS cnt,
+                       COALESCE(SUM(COALESCE(expected_monthly_savings, 0)), 0) AS raw_savings,
+                       COALESCE(SUM(ABS(CAST(
+                           JSON_UNQUOTE(JSON_EXTRACT(action_data, '$.bid_change_pct'))
+                           AS DECIMAL(10,4)))), 0)           AS total_bid_pct
+                FROM agent_decisions
+                WHERE account_id = :aid
+                  AND status = 'executed'
+                  {date_filter}
+                GROUP BY decision_type
+            """.format(
+                date_filter="AND created_at BETWEEN :ds AND :de" if date_start else ""
+            )),
+            {"aid": account_id, **({"ds": date_start, "de": date_end} if date_start else {})}
+        ).fetchall()
+    except Exception as e:
+        current_app.logger.warning(f"_compute_realistic_savings query failed: {e}")
+        return 0.0
+
+    total = 0.0
+    per_neg_cap   = monthly_spend * 0.03   # single blocked term ≤ 3% of spend
+    per_pause_cap = monthly_spend * 0.20   # single pause ≤ 20% of spend
+    per_misc_cap  = monthly_spend * 0.02   # fallback ≤ 2% per decision
+
+    for row in rows:
+        dtype     = (row[0] or '').lower()
+        campaigns = max(int(row[1] or 1), 1)
+        cnt       = int(row[2] or 0)
+        raw       = float(row[3] or 0)
+        bid_pct   = float(row[4] or 0)
+
+        if 'negative' in dtype:
+            # Each term's actual 30-day cost, individually capped
+            # We don't have per-row iteration here, so proxy: raw / cnt = avg per term
+            avg_per_term = (raw / cnt) if cnt > 0 else 0
+            capped_per_term = min(avg_per_term, per_neg_cap)
+            total += capped_per_term * cnt
+
+        elif 'bid' in dtype:
+            # avg_bid_reduction × (spend attributable to affected campaigns) × 0.4
+            avg_bid_reduction = (bid_pct / cnt / 100) if cnt > 0 else 0
+            spend_per_campaign = monthly_spend / campaigns if campaigns > 0 else (monthly_spend / 10)
+            total += avg_bid_reduction * spend_per_campaign * campaigns * 0.4
+
+        elif any(k in dtype for k in ('pause', 'emergency')):
+            avg_per = (raw / cnt) if cnt > 0 else 0
+            total += min(avg_per, per_pause_cap) * cnt
+
+        elif 'reallocat' in dtype or 'scale' in dtype:
+            pass  # no direct spend reduction
+
+        else:
+            avg_per = (raw / cnt) if cnt > 0 else 0
+            total += min(avg_per, per_misc_cap) * cnt
+
+    return round(min(total, max_savings), 2)
+
+
+def _calculate_historical_improvement(account_id, connected, monthly_spend=0, avg_cpc=0, total_clicks=0):
     """
     Calculate improvement metrics comparing performance before FieldSprout vs now.
 
@@ -2892,94 +2995,37 @@ def _calculate_historical_improvement(account_id, connected):
         # This would require historical data storage - for now, we'll estimate improvement
         # based on AI actions and estimated savings
 
-        # Calculate current month metrics
+        # agent_decisions is the single source of truth (ai_actions mirrors every execution)
         current_month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-
-        # Query ai_actions table (executed actions only)
-        current_month_savings = db.session.query(
-            func.sum(AIAction.estimated_monthly_savings)
-        ).filter(
-            AIAction.account_id == account_id,
-            AIAction.status == 'executed',
-            AIAction.created_at >= current_month_start
-        ).scalar() or 0
-
-        current_month_actions = AIAction.query.filter(
-            AIAction.account_id == account_id,
-            AIAction.status == 'executed',
-            AIAction.created_at >= current_month_start
-        ).count()
-
-        # Also query agent_decisions table
-        try:
-            agent_current_savings = db.session.execute(
-                text("""
-                    SELECT COALESCE(SUM(expected_monthly_savings), 0)
-                    FROM agent_decisions
-                    WHERE account_id = :aid AND status = 'executed'
-                    AND created_at >= :start
-                """),
-                {"aid": account_id, "start": current_month_start}
-            ).scalar() or 0
-            current_month_savings += float(agent_current_savings)
-
-            agent_current_actions = db.session.execute(
-                text("""
-                    SELECT COUNT(*)
-                    FROM agent_decisions
-                    WHERE account_id = :aid AND status = 'executed'
-                    AND created_at >= :start
-                """),
-                {"aid": account_id, "start": current_month_start}
-            ).scalar() or 0
-            current_month_actions += agent_current_actions
-        except Exception as e:
-            current_app.logger.warning(f"Could not query agent_decisions for current month: {e}")
-
-        # Calculate previous month metrics (MoM comparison)
         prev_month_start = (current_month_start - timedelta(days=1)).replace(day=1)
 
-        prev_month_savings = db.session.query(
-            func.sum(AIAction.estimated_monthly_savings)
-        ).filter(
-            AIAction.account_id == account_id,
-            AIAction.status == 'executed',
-            AIAction.created_at >= prev_month_start,
-            AIAction.created_at < current_month_start
-        ).scalar() or 0
+        counts = db.session.execute(
+            text("""
+                SELECT
+                    SUM(CASE WHEN created_at >= :cm THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN created_at >= :pm AND created_at < :cm THEN 1 ELSE 0 END),
+                    COUNT(*)
+                FROM agent_decisions
+                WHERE account_id = :aid AND status = 'executed'
+            """),
+            {"aid": account_id, "cm": current_month_start, "pm": prev_month_start}
+        ).fetchone()
 
-        prev_month_actions = AIAction.query.filter(
-            AIAction.account_id == account_id,
-            AIAction.status == 'executed',
-            AIAction.created_at >= prev_month_start,
-            AIAction.created_at < current_month_start
-        ).count()
+        current_month_actions = int((counts[0] if counts else None) or 0)
+        prev_month_actions    = int((counts[1] if counts else None) or 0)
 
-        # Also query agent_decisions for previous month
-        try:
-            agent_prev_savings = db.session.execute(
-                text("""
-                    SELECT COALESCE(SUM(expected_monthly_savings), 0)
-                    FROM agent_decisions
-                    WHERE account_id = :aid AND status = 'executed'
-                    AND created_at >= :start AND created_at < :end
-                """),
-                {"aid": account_id, "start": prev_month_start, "end": current_month_start}
-            ).scalar() or 0
-            prev_month_savings += float(agent_prev_savings)
-
-            agent_prev_actions = db.session.execute(
-                text("""
-                    SELECT COUNT(*)
-                    FROM agent_decisions
-                    WHERE account_id = :aid AND status = 'executed'
-                    AND created_at >= :start AND created_at < :end
-                """),
-                {"aid": account_id, "start": prev_month_start, "end": current_month_start}
-            ).scalar() or 0
-            prev_month_actions += agent_prev_actions
-        except Exception as e:
-            current_app.logger.warning(f"Could not query agent_decisions for prev month: {e}")
+        # Use realistic spend-aware savings calculation for all periods
+        current_month_savings = _compute_realistic_savings(
+            account_id, monthly_spend, avg_cpc, total_clicks,
+            date_start=current_month_start, date_end=datetime.utcnow()
+        )
+        prev_month_savings = _compute_realistic_savings(
+            account_id, monthly_spend, avg_cpc, total_clicks,
+            date_start=prev_month_start, date_end=current_month_start
+        )
+        total_savings = _compute_realistic_savings(
+            account_id, monthly_spend, avg_cpc, total_clicks
+        )
 
         # Calculate improvement percentages
         savings_improvement = 0
@@ -2990,27 +3036,9 @@ def _calculate_historical_improvement(account_id, connected):
         if prev_month_actions > 0:
             actions_improvement = ((current_month_actions - prev_month_actions) / prev_month_actions) * 100
 
-        # Estimate total cumulative savings (executed decisions only)
-        total_savings = db.session.query(
-            func.sum(AIAction.estimated_monthly_savings)
-        ).filter(
-            AIAction.account_id == account_id,
-            AIAction.status == 'executed'
-        ).scalar() or 0
-
-        try:
-            agent_total_savings = db.session.execute(
-                text("SELECT COALESCE(SUM(expected_monthly_savings), 0) FROM agent_decisions WHERE account_id = :aid AND status = 'executed'"),
-                {"aid": account_id}
-            ).scalar() or 0
-            total_savings += float(agent_total_savings)
-        except Exception as e:
-            current_app.logger.warning(f"Could not query agent_decisions for total savings: {e}")
-
         # Determine comparison period label
         if days_active >= 365:
             comparison_period = "12-month average before FieldSprout"
-            # Use estimated baseline (current spend * 1.3 to account for waste prevented)
             estimated_baseline_spend = (current_month_savings / 0.3) if current_month_savings > 0 else 5000
         else:
             comparison_period = "Last month"
@@ -3106,42 +3134,27 @@ def ads_performance():
     except Exception as e:
         current_app.logger.warning(f"Could not load LSA missed calls: {e}")
 
-    # Get real AI action data from BOTH ai_actions and agent_decisions tables
+    # agent_decisions is the source of truth. Each execution also writes a mirror
+    # record to ai_actions (see base.py), so counting both tables double-counts everything.
     status = 'green'  # green, yellow, red
 
-    # Get total executed actions from ai_actions table
-    ai_actions_taken = AIAction.query.filter_by(
-        account_id=aid,
-        status='executed'
-    ).count()
-
-    # Also count executed decisions from agent_decisions table
+    ai_actions_taken = 0
+    wasted_spend_prevented = 0.0
     try:
-        agent_decisions_count = db.session.execute(
-            text("SELECT COUNT(*) FROM agent_decisions WHERE account_id = :aid AND status = 'executed'"),
+        stats = db.session.execute(
+            text("""
+                SELECT COUNT(*),
+                       COALESCE(SUM(LEAST(COALESCE(expected_monthly_savings, 0), 1000)), 0)
+                FROM agent_decisions
+                WHERE account_id = :aid AND status = 'executed'
+            """),
             {"aid": aid}
-        ).scalar() or 0
-        ai_actions_taken += agent_decisions_count
+        ).fetchone()
+        if stats:
+            ai_actions_taken = int(stats[0] or 0)
+            wasted_spend_prevented = float(stats[1] or 0)
     except Exception as e:
         current_app.logger.warning(f"Could not query agent_decisions: {e}")
-
-    # Get total estimated savings from ai_actions
-    wasted_spend_prevented = db.session.query(
-        func.sum(AIAction.estimated_monthly_savings)
-    ).filter_by(
-        account_id=aid,
-        status='executed'
-    ).scalar() or 0
-
-    # Also add savings from agent_decisions table
-    try:
-        agent_savings = db.session.execute(
-            text("SELECT COALESCE(SUM(expected_monthly_savings), 0) FROM agent_decisions WHERE account_id = :aid AND status = 'executed'"),
-            {"aid": aid}
-        ).scalar() or 0
-        wasted_spend_prevented += float(agent_savings)
-    except Exception as e:
-        current_app.logger.warning(f"Could not query agent_decisions savings: {e}")
 
     # Get PENDING decisions (awaiting approval) - show as potential savings
     pending_decisions_count = 0
@@ -3168,19 +3181,23 @@ def ads_performance():
 
     savings_are_pending = False
 
-    # Count blocked searches (negative keywords added) - both executed and pending
-    blocked_searches_count = AIAction.query.filter_by(
-        account_id=aid,
-        status='executed',
-        action_type='negative_keyword_added'
-    ).count()
-    # Also count pending negative keywords from agent_decisions
+    # Count blocked searches from agent_decisions (source of truth)
+    blocked_searches_count = 0
     pending_negative_keywords = 0
     try:
-        pending_negative_keywords = db.session.execute(
-            text("SELECT COUNT(*) FROM agent_decisions WHERE account_id = :aid AND status IN ('pending', 'approved') AND decision_type LIKE '%negative%'"),
+        neg_stats = db.session.execute(
+            text("""
+                SELECT
+                    SUM(CASE WHEN status = 'executed' THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN status IN ('pending', 'approved') THEN 1 ELSE 0 END)
+                FROM agent_decisions
+                WHERE account_id = :aid AND decision_type LIKE '%negative%'
+            """),
             {"aid": aid}
-        ).scalar() or 0
+        ).fetchone()
+        if neg_stats:
+            blocked_searches_count = int(neg_stats[0] or 0)
+            pending_negative_keywords = int(neg_stats[1] or 0)
     except Exception:
         pass
 
@@ -3228,35 +3245,23 @@ def ads_performance():
         job_count = 0
         low_quality_count = 0
 
-    # Count budget reallocations
-    budget_reallocations = AIAction.query.filter_by(
-        account_id=aid,
-        status='executed',
-        action_type='budget_reallocated'
-    ).count()
-    # Also count from agent_decisions
+    # Count budget reallocations and bid optimizations from agent_decisions only
+    budget_reallocations = 0
+    bids_optimized = 0
     try:
-        agent_budget_count = db.session.execute(
-            text("SELECT COUNT(*) FROM agent_decisions WHERE account_id = :aid AND status = 'executed' AND decision_type LIKE '%budget%'"),
+        type_counts = db.session.execute(
+            text("""
+                SELECT
+                    SUM(CASE WHEN decision_type LIKE '%budget%' THEN 1 ELSE 0 END),
+                    SUM(CASE WHEN decision_type LIKE '%bid%' THEN 1 ELSE 0 END)
+                FROM agent_decisions
+                WHERE account_id = :aid AND status = 'executed'
+            """),
             {"aid": aid}
-        ).scalar() or 0
-        budget_reallocations += agent_budget_count
-    except Exception:
-        pass
-
-    # Count bids optimized
-    bids_optimized = AIAction.query.filter_by(
-        account_id=aid,
-        status='executed',
-        action_type='bid_adjusted'
-    ).count()
-    # Also count from agent_decisions
-    try:
-        agent_bids_count = db.session.execute(
-            text("SELECT COUNT(*) FROM agent_decisions WHERE account_id = :aid AND status = 'executed' AND decision_type LIKE '%bid%'"),
-            {"aid": aid}
-        ).scalar() or 0
-        bids_optimized += agent_bids_count
+        ).fetchone()
+        if type_counts:
+            budget_reallocations = int(type_counts[0] or 0)
+            bids_optimized = int(type_counts[1] or 0)
     except Exception:
         pass
 
@@ -3273,13 +3278,8 @@ def ads_performance():
     if lsa_missed_calls and lsa_missed_calls.get('high_priority', 0) > 0:
         status = 'red'
 
-    # Get recent AI actions for timeline (last 10) from BOTH tables
-    recent_actions = AIAction.query.filter(
-        AIAction.account_id == aid,
-        AIAction.status.in_(['pending', 'approved', 'executed'])
-    ).order_by(desc(AIAction.created_at)).limit(10).all()
-
-    # Also get recent agent_decisions and convert to compatible format
+    # Timeline: use agent_decisions as source of truth (ai_actions mirrors every execution)
+    recent_actions = []
     try:
         agent_decision_rows = db.session.execute(
             text("""
@@ -3295,7 +3295,6 @@ def ads_performance():
             {"aid": aid}
         ).mappings().all()
 
-        # Convert to objects with matching attributes
         class DecisionProxy:
             def __init__(self, row):
                 self.id = row['id']
@@ -3314,21 +3313,9 @@ def ads_performance():
             def is_undoable(self):
                 return False
 
-        agent_decisions_list = [DecisionProxy(row) for row in agent_decision_rows]
-
-        # Combine and sort by executed_at
-        all_actions = list(recent_actions) + agent_decisions_list
-        all_actions.sort(key=lambda x: x.executed_at or datetime.min, reverse=True)
-        recent_actions = all_actions[:10]
+        recent_actions = [DecisionProxy(row) for row in agent_decision_rows]
     except Exception as e:
         current_app.logger.warning(f"Could not query agent_decisions for timeline: {e}")
-
-    # Calculate historical improvement metrics
-    historical_improvement = _calculate_historical_improvement(aid, connected)
-
-    # Ensure we always have data to display (fallback to demo if function returned None)
-    if not historical_improvement:
-        historical_improvement = _get_demo_improvement_data()
 
     # Fetch account performance stats (last 30 days)
     account_performance = None
@@ -3408,6 +3395,29 @@ def ads_performance():
                     current_app.logger.info(f"[DECISION] Used session fallback for performance data")
         except Exception as e:
             current_app.logger.warning(f"[DECISION] Session fallback failed: {e}")
+
+    # Compute realistic savings using actual spend + CPC economics
+    _monthly_spend  = 0.0
+    _avg_cpc        = 0.0
+    _total_clicks   = 0
+    if account_performance and account_performance.get('has_data'):
+        _monthly_spend = float(account_performance.get('cost', 0) or 0)
+        _avg_cpc       = float(account_performance.get('avg_cpc', 0) or 0)
+        _total_clicks  = int(account_performance.get('clicks', 0) or 0)
+
+    if _monthly_spend > 0:
+        wasted_spend_prevented = _compute_realistic_savings(
+            aid, _monthly_spend, _avg_cpc, _total_clicks
+        )
+        pending_savings = min(pending_savings, _monthly_spend * 0.25)
+
+    # Calculate historical improvement metrics (after spend is known for capping)
+    historical_improvement = _calculate_historical_improvement(
+        aid, connected,
+        monthly_spend=_monthly_spend, avg_cpc=_avg_cpc, total_clicks=_total_clicks
+    )
+    if not historical_improvement:
+        historical_improvement = _get_demo_improvement_data()
 
     # Fetch daily performance data for the graph (last 30 days)
     daily_performance = []

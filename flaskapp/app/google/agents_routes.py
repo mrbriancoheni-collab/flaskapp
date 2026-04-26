@@ -765,9 +765,6 @@ def dashboard():
 @ajax_login_required
 def approve_decision(decision_id):
     """Approve a pending agent decision and execute it."""
-    from flask import current_app
-    import json
-
     account_id = current_account_id()
 
     # First, get the decision details
@@ -815,7 +812,10 @@ def approve_decision(decision_id):
         status_msg = "Decision approved and executed successfully"
 
         # Create AIAction record for transparency on AI Change Log page
-        _create_ai_action_from_decision(account_id, decision_row, execution_result)
+        try:
+            _create_ai_action_from_decision(account_id, decision_row, execution_result)
+        except Exception as _ai_err:
+            current_app.logger.warning("_create_ai_action_from_decision failed: %s", _ai_err)
     else:
         final_query = text("""
             UPDATE agent_decisions

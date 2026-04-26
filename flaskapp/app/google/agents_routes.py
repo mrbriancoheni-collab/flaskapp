@@ -771,8 +771,31 @@ def _execute_agent_decision(account_id: int, decision_row) -> dict:
                 'manual': False
             }
 
+        elif decision_type == 'create_ad_variations':
+            ad_group_id = decision_row.get('ad_group_id') or action_data.get('ad_group_id')
+            if not ad_group_id:
+                return {'success': False, 'error': 'Missing ad_group_id for create_ad_variations'}
+            biz_desc = _get_account_ads_settings(account_id).get('business_description', '')
+            return executor.create_responsive_search_ad(
+                ad_group_id=str(ad_group_id),
+                business_description=biz_desc,
+                keyword_theme=action_data.get('keyword_theme', ''),
+            )
+
+        elif decision_type == 'improve_ad_relevance':
+            keyword_text = action_data.get('keyword_text', '')
+            keyword_id = decision_row.get('keyword_id') or action_data.get('keyword_id', '')
+            if not keyword_id:
+                return {'success': False, 'error': 'Missing keyword_id for improve_ad_relevance'}
+            biz_desc = _get_account_ads_settings(account_id).get('business_description', '')
+            return executor.improve_keyword_ad_relevance(
+                keyword_text=keyword_text,
+                keyword_id=str(keyword_id),
+                business_description=biz_desc,
+            )
+
         else:
-            # Truly manual decision types (create campaigns, ad copy, landing page work)
+            # Truly unimplementable types (create campaigns, landing page work)
             return {
                 'success': True,
                 'result': f'Decision type "{decision_type}" requires manual action',

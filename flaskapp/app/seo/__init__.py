@@ -14,7 +14,52 @@ seo_bp = Blueprint("seo_bp", __name__, template_folder="../../templates")
 @seo_bp.route("/", methods=["GET"], endpoint="index")
 @login_required
 def index():
-    return render_template("seo/index.html")
+    aid = current_account_id()
+    gsc_connected = False
+    site_url = None
+    summary = {}
+    top_queries = []
+    latest_snapshot = None
+    unread_alerts = 0
+    error = None
+
+    try:
+        from app.google import _fetch_gsc_report, _get_gsc_selected_site, _is_connected
+        import os
+        from datetime import date, timedelta
+
+        gsc_connected = _is_connected(aid, "gsc")
+        site_url = _get_gsc_selected_site(aid) or os.getenv("GSC_SITE")
+
+        if gsc_connected and site_url:
+            end = date.today()
+            start = end - timedelta(days=28)
+            data = _fetch_gsc_report(site_url, start.isoformat(), end.isoformat()) or {}
+            summary = data.get("summary", {})
+            top_queries = (data.get("top_queries") or [])[:5]
+    except Exception as e:
+        error = str(e)
+
+    try:
+        from app.seo.monitor import get_recent_snapshots, get_unread_alerts
+        if site_url:
+            snaps = get_recent_snapshots(site_url, limit=1)
+            latest_snapshot = snaps[0] if snaps else None
+        alerts = get_unread_alerts(account_id=aid, limit=50)
+        unread_alerts = len([a for a in alerts if not a.is_read])
+    except Exception:
+        pass
+
+    return render_template(
+        "seo/index.html",
+        gsc_connected=gsc_connected,
+        site_url=site_url,
+        summary=summary,
+        top_queries=top_queries,
+        latest_snapshot=latest_snapshot,
+        unread_alerts=unread_alerts,
+        error=error,
+    )
 
 
 @seo_bp.route("/rankings", methods=["GET"], endpoint="rankings")

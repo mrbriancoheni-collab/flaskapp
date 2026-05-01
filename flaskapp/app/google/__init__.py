@@ -2888,7 +2888,8 @@ def _compute_realistic_savings(account_id, monthly_spend, avg_cpc, total_clicks,
     max_savings = monthly_spend * 0.25
 
     try:
-        # Pull executed decisions grouped by type with per-row data we need
+        # Deduplicate by (decision_type, title, campaign_id) — keep only the latest row per
+        # unique recommendation so repeated agent runs don't inflate the savings total.
         rows = db.session.execute(
             text("""
                 SELECT decision_type,
@@ -2902,6 +2903,14 @@ def _compute_realistic_savings(account_id, monthly_spend, avg_cpc, total_clicks,
                 WHERE account_id = :aid
                   AND status = 'executed'
                   {date_filter}
+                  AND id IN (
+                      SELECT MAX(id)
+                      FROM agent_decisions
+                      WHERE account_id = :aid
+                        AND status = 'executed'
+                        {date_filter}
+                      GROUP BY decision_type, title, COALESCE(campaign_id, '')
+                  )
                 GROUP BY decision_type
             """.format(
                 date_filter="AND created_at BETWEEN :ds AND :de" if date_start else ""
@@ -3141,12 +3150,21 @@ def ads_performance():
     ai_actions_taken = 0
     wasted_spend_prevented = 0.0
     try:
+        # Deduplicate by (decision_type, title, campaign_id) so repeated agent runs
+        # don't inflate the action count or the fallback savings figure.
         stats = db.session.execute(
             text("""
                 SELECT COUNT(*),
                        COALESCE(SUM(LEAST(COALESCE(expected_monthly_savings, 0), 1000)), 0)
                 FROM agent_decisions
-                WHERE account_id = :aid AND status = 'executed'
+                WHERE account_id = :aid
+                  AND status = 'executed'
+                  AND id IN (
+                      SELECT MAX(id)
+                      FROM agent_decisions
+                      WHERE account_id = :aid AND status = 'executed'
+                      GROUP BY decision_type, title, COALESCE(campaign_id, '')
+                  )
             """),
             {"aid": aid}
         ).fetchone()

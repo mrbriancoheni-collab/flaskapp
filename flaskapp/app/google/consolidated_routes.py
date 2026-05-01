@@ -133,16 +133,24 @@ def ai_control():
 
 
 def _load_agent_stats(account_id: int) -> list:
+    # Deduplicate by (decision_type, title, campaign_id) keeping the latest row per
+    # unique recommendation, so repeated agent runs don't inflate counts or savings.
     rows = db.session.execute(text("""
         SELECT
             agent_type,
-            COUNT(*) as total_decisions,
-            SUM(CASE WHEN status = 'executed' THEN 1 ELSE 0 END) as executed_count,
-            AVG(confidence) as avg_confidence,
-            SUM(expected_monthly_savings) as total_expected_savings,
-            SUM(expected_monthly_leads) as total_expected_leads
+            COUNT(*)                                                    AS total_decisions,
+            SUM(CASE WHEN status = 'executed' THEN 1 ELSE 0 END)       AS executed_count,
+            AVG(confidence)                                             AS avg_confidence,
+            SUM(expected_monthly_savings)                               AS total_expected_savings,
+            SUM(expected_monthly_leads)                                 AS total_expected_leads
         FROM agent_decisions
         WHERE account_id = :aid
+          AND id IN (
+              SELECT MAX(id)
+              FROM agent_decisions
+              WHERE account_id = :aid
+              GROUP BY decision_type, title, COALESCE(campaign_id, '')
+          )
         GROUP BY agent_type
         ORDER BY total_decisions DESC
     """), {"aid": account_id}).mappings().all()

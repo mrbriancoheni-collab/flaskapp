@@ -301,6 +301,77 @@
         {% endif %}
       {% endif %}
 
+      <!-- WordPress & Content Section -->
+      {% if has_endpoint('wp_bp.insights') %}
+        <div class="pt-2 text-sm font-semibold text-gray-600 uppercase"><i class="fa-brands fa-wordpress mr-1"></i>WordPress &amp; Content</div>
+        <a href="{{ url_for('wp_bp.insights') }}" class="block px-3 py-3 nav-link min-h-12">
+          <i class="fa-solid fa-gauge"></i><span>Insights</span>
+        </a>
+        {% if has_endpoint('wp_bp.publisher') %}
+          <a href="{{ url_for('wp_bp.publisher') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-paper-plane"></i><span>Publisher</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.new_post') %}
+          <a href="{{ url_for('wp_bp.new_post') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-pen-to-square"></i><span>New Post</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.edit_lookup') %}
+          <a href="{{ url_for('wp_bp.edit_lookup') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-pencil"></i><span>Edit Post</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.edits') %}
+          <a href="{{ url_for('wp_bp.edits') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-list-check"></i><span>Edits Dashboard</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.seo_audit') %}
+          <a href="{{ url_for('wp_bp.seo_audit') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-magnifying-glass-chart"></i><span>SEO &amp; AEO Audit</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.tech_seo') %}
+          <a href="{{ url_for('wp_bp.tech_seo') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-spider"></i><span>Technical SEO</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.schema_gen') %}
+          <a href="{{ url_for('wp_bp.schema_gen') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-code"></i><span>Schema Generator</span>
+          </a>
+        {% endif %}
+      {% endif %}
+
+      <!-- SEO Section -->
+      {% if has_endpoint('seo_bp.index') %}
+        <div class="pt-2 text-sm font-semibold text-gray-600 uppercase"><i class="fa-solid fa-magnifying-glass-chart mr-1"></i>SEO</div>
+        <a href="{{ url_for('seo_bp.index') }}" class="block px-3 py-3 nav-link min-h-12">
+          <i class="fa-solid fa-gauge"></i><span>Overview</span>
+        </a>
+        {% if has_endpoint('seo_bp.rankings') %}
+          <a href="{{ url_for('seo_bp.rankings') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-chart-line"></i><span>Rankings</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.gaps') %}
+          <a href="{{ url_for('seo_bp.gaps') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-layer-group"></i><span>Keyword Gaps</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.monitor') %}
+          <a href="{{ url_for('seo_bp.monitor') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-bell"></i><span>Monitor &amp; Alerts</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.optimize') %}
+          <a href="{{ url_for('seo_bp.optimize') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-wand-magic-sparkles"></i><span>AI Recommendations</span>
+          </a>
+        {% endif %}
+      {% endif %}
+
       <!-- Facebook Ads Section -->
       {% if has_endpoint('fbads_bp.index') %}
         <div class="pt-2 text-sm font-semibold text-gray-600 uppercase">Facebook Ads</div>
@@ -388,6 +459,12 @@
 
       {# <a href="{{ url_for('strategy_bp.index') }}" class="primary-btn {% if SECTION=='strategy' %}active{% endif %}" title="Strategy"><i class="fa-solid fa-lightbulb"></i></a> #}
       <a href="{{ url_for('google_bp.index') }}" class="primary-btn {% if SECTION in ['google', 'glsa', 'gmb'] %}active{% endif %}" title="Google Services"><i class="fa-brands fa-google"></i></a>
+      {% if has_endpoint('wp_bp.insights') %}
+        <a href="{{ url_for('wp_bp.insights') }}" class="primary-btn {% if SECTION=='wp' %}active{% endif %}" title="WordPress &amp; Content"><i class="fa-brands fa-wordpress"></i></a>
+      {% endif %}
+      {% if has_endpoint('seo_bp.index') %}
+        <a href="{{ url_for('seo_bp.index') }}" class="primary-btn {% if SECTION=='seo' %}active{% endif %}" title="SEO"><i class="fa-solid fa-magnifying-glass-chart"></i></a>
+      {% endif %}
       <a href="{{ url_for('fbads_bp.index') }}" class="primary-btn {% if SECTION=='fbads' %}active{% endif %}" title="Facebook Ads"><i class="fa-brands fa-facebook-f"></i></a>
       {# <a href="{{ url_for('yelp_bp.index') }}" class="primary-btn {% if SECTION=='yelp' %}active{% endif %}" title="Yelp"><i class="fa-brands fa-yelp"></i></a> #}
       {% if has_endpoint('linkedin_bp.index') %}

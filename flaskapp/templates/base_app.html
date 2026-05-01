@@ -555,6 +555,12 @@
         {% if has_endpoint('wp_bp.schema_gen') %}
           <a class="secondary-link {% if epn=='wp_bp.schema_gen' %}active{% endif %}" href="{{ url_for('wp_bp.schema_gen') }}"><i class="fa-solid fa-code"></i><span>Schema Generator</span></a>
         {% endif %}
+        {% if has_endpoint('wp_bp.edit_lookup') %}
+          <a class="secondary-link {% if epn in ('wp_bp.edit_lookup','wp_bp.edit_post','wp_bp.edit_post_submit') %}active{% endif %}" href="{{ url_for('wp_bp.edit_lookup') }}"><i class="fa-solid fa-pen-to-square"></i><span>Edit Post</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.edits') %}
+          <a class="secondary-link {% if epn=='wp_bp.edits' %}active{% endif %}" href="{{ url_for('wp_bp.edits') }}"><i class="fa-solid fa-list-check"></i><span>Edits Dashboard</span></a>
+        {% endif %}
         {% if has_endpoint('wp_bp.analyze') %}
           <a class="secondary-link {% if epn=='wp_bp.analyze' %}active{% endif %}" href="{{ url_for('wp_bp.analyze') }}"><i class="fa-solid fa-microscope"></i><span>Analyze Page</span></a>
         {% endif %}

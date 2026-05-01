@@ -317,6 +317,24 @@ def _process_queue(max_jobs: int = 5) -> dict:
                 msg = f"AI draft created {res.get('id')} → {link}" if link else f"AI draft created {res.get('id')}"
                 db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info", message=msg))
 
+            elif job.kind == "edit":
+                p = job.payload or {}
+                post_id = int(p.get("post_id", 0))
+                if not post_id:
+                    raise ValueError("edit job missing post_id")
+                res = c.create_or_update_post(
+                    post_id=post_id,
+                    title=p.get("title", ""),
+                    html=p.get("html", ""),
+                    excerpt=p.get("excerpt") or None,
+                    status=p.get("status") or "publish",
+                    yoast_title=p.get("title") or None,
+                    yoast_desc=p.get("yoast_desc") or None,
+                )
+                link = res.get("link")
+                msg = f"Edited post {post_id} → {link}" if link else f"Edited post {post_id}"
+                db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info", message=msg))
+
             else:
                 db.session.add(WPLog(site_id=site.id, job_id=job.id, level="warning", message=f"Unknown job kind: {job.kind}"))
 
@@ -1093,9 +1111,114 @@ def queue_post_alias():
 
 @wp_bp.route("/edit", methods=["GET"], endpoint="edit_lookup")
 @login_required
-def edit_lookup_stub():
-    flash("Edit lookup coming soon. Use Publisher to see recent jobs.", "info")
-    return see_other("wp_bp.publisher")
+def edit_lookup():
+    """Browse / search WordPress posts to select one for editing."""
+    site = _current_site()
+    posts = []
+    search = request.args.get("search", "").strip()
+    error = None
+    if site:
+        try:
+            c = WPClient(site.base_url, site.username, site.app_password)
+            posts = c.list_posts(per_page=20, search=search, status="any")
+        except Exception as exc:
+            error = str(exc)
+    return render_template("wp/edit_lookup.html",
+                           site=site, posts=posts, search=search, error=error)
+
+
+@wp_bp.route("/edit/<int:post_id>", methods=["GET"], endpoint="edit_post")
+@login_required
+def edit_post(post_id: int):
+    """Load a live WP post into the editor."""
+    site = _current_site()
+    if not site:
+        flash("Configure WordPress first.", "error")
+        return see_other("wp_bp.settings")
+    try:
+        c = WPClient(site.base_url, site.username, site.app_password)
+        post = c.get_post(post_id)
+    except Exception as exc:
+        flash(f"Could not load post #{post_id}: {exc}", "error")
+        return see_other("wp_bp.edit_lookup")
+
+    import html as _html
+    raw_title   = post.get("title",   {}).get("rendered", "")
+    raw_content = post.get("content", {}).get("rendered", "")
+    raw_excerpt = post.get("excerpt", {}).get("rendered", "")
+    # Strip outer <p> wrapping excerpt WP sometimes adds
+    import re as _re
+    raw_excerpt = _re.sub(r"^\s*<p>(.*?)</p>\s*$", r"\1", raw_excerpt, flags=_re.DOTALL).strip()
+
+    return render_template(
+        "wp/edit_post.html",
+        post_id=post_id,
+        title=_html.unescape(raw_title),
+        html=raw_content,
+        excerpt=raw_excerpt,
+        status=post.get("status", "publish"),
+        post_link=post.get("link", ""),
+    )
+
+
+@wp_bp.route("/edit/<int:post_id>/submit", methods=["POST"], endpoint="edit_post_submit")
+@login_required
+def edit_post_submit(post_id: int):
+    """Queue an edit job for an existing WP post."""
+    site = _current_site()
+    if not site:
+        flash("Configure WordPress first.", "error")
+        return see_other("wp_bp.settings")
+
+    title      = (request.form.get("title")      or "").strip()
+    html_body  = (request.form.get("html")        or "").strip()
+    excerpt    = (request.form.get("excerpt")     or "").strip()
+    yoast_desc = (request.form.get("yoast_desc")  or "").strip()
+    status     = (request.form.get("status")      or "publish").strip()
+    needs_approval = bool(request.form.get("needs_approval"))
+
+    if not title:
+        flash("Title is required.", "error")
+        return see_other("wp_bp.edit_post", post_id=post_id)
+
+    if needs_approval:
+        status = "draft"
+
+    payload = {
+        "post_id":      post_id,
+        "title":        title,
+        "html":         html_body,
+        "excerpt":      excerpt,
+        "yoast_desc":   yoast_desc,
+        "status":       status,
+        "needs_approval": needs_approval,
+    }
+    job = WPJob(site_id=site.id, kind="edit", payload=payload)
+    db.session.add(job)
+    db.session.commit()
+    flash(f"Edit queued for post #{post_id} (Job #{job.id}).", "success")
+    return see_other("wp_bp.edits")
+
+
+@wp_bp.route("/edits", methods=["GET"], endpoint="edits")
+@login_required
+def edits():
+    """Dashboard of all pending / completed edit and refresh jobs."""
+    status_filter = request.args.get("status", "").strip()
+    q = WPJob.query.filter(WPJob.kind.in_(["edit", "refresh"]))
+    if status_filter:
+        q = q.filter_by(status=status_filter)
+    jobs = q.order_by(WPJob.created_at.desc()).limit(200).all()
+
+    counts: Dict[str, int] = {}
+    for s in ("queued", "running", "done", "error"):
+        counts[s] = WPJob.query.filter(
+            WPJob.kind.in_(["edit", "refresh"]),
+            WPJob.status == s,
+        ).count()
+
+    return render_template("wp/edits.html",
+                           jobs=jobs, counts=counts, status_filter=status_filter)
 
 # allow WPLog(...).save() convenience
 def _save(self):

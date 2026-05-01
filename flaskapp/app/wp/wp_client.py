@@ -288,6 +288,15 @@ class WPClient:
         r = self._req("GET", f"/wp/v2/posts/{int(post_id)}")
         return r.json()
 
+    def list_posts(self, per_page: int = 20, search: str = "",
+                   status: str = "any", page: int = 1) -> list:
+        params: dict = {"per_page": min(per_page, 100), "page": page,
+                        "status": status, "orderby": "date", "order": "desc"}
+        if search:
+            params["search"] = search
+        r = self._req("GET", "/wp/v2/posts", params=params)
+        return r.json() if isinstance(r.json(), list) else []
+
     # ---------- diagnostics bundle ----------
 
     def site_health(self) -> dict:

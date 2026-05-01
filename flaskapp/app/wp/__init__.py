@@ -920,6 +920,28 @@ def cron_runner():
 
 # ---------- legacy / compatibility aliases ----------
 
+@wp_bp.route("/seo-audit", methods=["GET", "POST"], endpoint="seo_audit")
+@login_required
+def seo_audit():
+    result = None
+    if request.method == "POST":
+        url = (request.form.get("url") or "").strip()
+        keyword = (request.form.get("keyword") or "").strip()
+        if not url:
+            flash("URL is required.", "error")
+            return see_other("wp_bp.seo_audit")
+        try:
+            from app.wp.seo_audit import audit_url
+            result = audit_url(url, keyword)
+            if result.get("error"):
+                flash(result["error"], "error")
+                result = None
+        except Exception:
+            current_app.logger.exception("SEO audit failed")
+            flash("Audit failed — please try again.", "error")
+    return render_template("wp/seo_audit.html", result=result)
+
+
 @wp_bp.route("/analyze-page", methods=["GET"], endpoint="analyze_page")
 @login_required
 def analyze_page_alias():

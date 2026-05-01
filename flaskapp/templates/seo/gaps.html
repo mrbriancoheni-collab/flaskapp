@@ -1,0 +1,487 @@
+{% extends "base_app.html" %}
+{% block title %}Keyword Gaps & Opportunities · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl space-y-8">
+
+  {# ── Header ───────────────────────────────────────────────────────────── #}
+  <div class="flex items-start justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Keyword Gaps &amp; Opportunities</h1>
+      <p class="text-sm text-gray-500 mt-1">
+        Powered by Google Search Console · Last 28 days
+        {% if result %}<span class="text-gray-400 ml-1">({{ result.period_label }})</span>{% endif %}
+      </p>
+    </div>
+    {% if gsc_connected and site_url %}
+    <a href="{{ url_for('seo_bp.gaps') }}"
+       class="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-300
+              rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+      <i class="fa-solid fa-rotate-right"></i> Refresh
+    </a>
+    {% endif %}
+  </div>
+
+  {# ── Not connected state ──────────────────────────────────────────────── #}
+  {% if not gsc_connected or not site_url %}
+  <div class="bg-white border rounded-xl p-8 text-center space-y-3">
+    <i class="fa-brands fa-google text-4xl text-gray-300"></i>
+    <div class="text-lg font-semibold text-gray-700">Connect Google Search Console</div>
+    <p class="text-sm text-gray-500 max-w-md mx-auto">
+      Keyword gap analysis requires GSC data. Connect your site to unlock
+      quick wins, content gaps, cannibalization warnings, and declining page alerts.
+    </p>
+    <a href="{{ url_for('google_bp.index') }}"
+       class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700
+              text-white rounded-lg font-medium text-sm transition-colors mt-2">
+      <i class="fa-brands fa-google"></i> Connect Google
+    </a>
+  </div>
+
+  {% elif error and not result %}
+  <div class="bg-red-50 border border-red-200 rounded-xl p-5 text-sm text-red-800 flex items-start gap-2">
+    <i class="fa-solid fa-circle-xmark mt-0.5 flex-shrink-0"></i>
+    <div><span class="font-semibold">Analysis error:</span> {{ error }}</div>
+  </div>
+
+  {% elif result %}
+
+  {# ── Summary tiles ────────────────────────────────────────────────────── #}
+  {% set s = result.summary %}
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+    {% set tiles = [
+      ('Quick Wins',     s.quick_wins_count,        'fa-bolt',          'text-yellow-500', 'quick-wins'),
+      ('Content Gaps',   s.content_gaps_count,      'fa-arrow-up-right-dots', 'text-blue-500', 'content-gaps'),
+      ('Missing Pages',  s.missing_count,           'fa-file-circle-plus', 'text-green-500', 'missing'),
+      ('Cannibalization',s.cannibalization_count,   'fa-code-fork',     'text-orange-500', 'cannibalization'),
+      ('Declining',      s.declining_count,         'fa-arrow-trend-down','text-red-500',  'declining'),
+      ('Clusters',       s.clusters_count,          'fa-layer-group',   'text-purple-500', 'clusters'),
+    ] %}
+    {% for label, count, icon, color, anchor in tiles %}
+    <a href="#{{ anchor }}"
+       class="bg-white border rounded-xl p-4 text-center hover:border-indigo-300
+              hover:shadow-sm transition-all cursor-pointer">
+      <i class="fa-solid {{ icon }} {{ color }} text-xl mb-1"></i>
+      <div class="text-2xl font-bold text-gray-900">{{ count }}</div>
+      <div class="text-xs text-gray-500 mt-0.5">{{ label }}</div>
+    </a>
+    {% endfor %}
+  </div>
+
+  {# Opportunity impressions callout #}
+  {% if s.opportunity_impressions > 0 %}
+  <div class="bg-yellow-50 border border-yellow-200 rounded-xl px-5 py-4 flex items-center gap-3">
+    <i class="fa-solid fa-bolt text-yellow-500 text-xl flex-shrink-0"></i>
+    <div>
+      <span class="font-semibold text-yellow-900">
+        {{ "{:,}".format(s.opportunity_impressions) }} monthly impressions
+      </span>
+      <span class="text-yellow-800 text-sm ml-1">
+        on quick-win queries — these could become clicks with targeted optimisation.
+      </span>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ═══════════════════════════════════════════════════════════════════════ #}
+  {# SECTION 1 — Quick Wins                                                 #}
+  {# ═══════════════════════════════════════════════════════════════════════ #}
+  <div id="quick-wins">
+    <h2 class="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+      <i class="fa-solid fa-bolt text-yellow-500"></i> Quick Wins
+    </h2>
+    <p class="text-sm text-gray-500 mb-4">
+      Queries ranking position 4–20 with solid impression volume. A title/content
+      improvement could push these into top 3 and multiply clicks.
+    </p>
+
+    {% if result.quick_wins %}
+    <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+            <th class="px-4 py-3 text-left">Query</th>
+            <th class="px-4 py-3 text-center">Pos.</th>
+            <th class="px-4 py-3 text-center">Impr.</th>
+            <th class="px-4 py-3 text-center">Clicks</th>
+            <th class="px-4 py-3 text-center">CTR</th>
+            <th class="px-4 py-3 text-center">Opp.</th>
+            <th class="px-4 py-3 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          {% for q in result.quick_wins %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 font-medium text-gray-900 max-w-xs truncate">{{ q.query }}</td>
+            <td class="px-4 py-3 text-center">
+              <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold
+                {% if q.position <= 6 %}bg-green-100 text-green-800
+                {% elif q.position <= 10 %}bg-yellow-100 text-yellow-800
+                {% else %}bg-orange-100 text-orange-800{% endif %}">
+                {{ q.position }}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-center text-gray-700">{{ "{:,}".format(q.impressions) }}</td>
+            <td class="px-4 py-3 text-center text-gray-700">{{ q.clicks }}</td>
+            <td class="px-4 py-3 text-center text-gray-500">{{ q.ctr }}%</td>
+            <td class="px-4 py-3 text-center">
+              <span class="text-green-700 font-semibold">+{{ q.opportunity }}</span>
+            </td>
+            <td class="px-4 py-3 text-right">
+              <form method="POST" action="{{ url_for('seo_bp.gaps_queue') }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="new_post">
+                <input type="hidden" name="keyword" value="{{ q.query }}">
+                <button type="submit"
+                        class="px-2.5 py-1 text-xs bg-indigo-50 hover:bg-indigo-100
+                               text-indigo-700 rounded-lg font-medium transition-colors">
+                  Queue Post
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="bg-white border rounded-xl p-6 text-center text-gray-400 text-sm">
+      No quick-win queries found. Your tracked queries may all be ranking in top 3 already.
+    </div>
+    {% endif %}
+  </div>
+
+  {# ═══════════════════════════════════════════════════════════════════════ #}
+  {# SECTION 2 — Content Gaps                                               #}
+  {# ═══════════════════════════════════════════════════════════════════════ #}
+  <div id="content-gaps">
+    <h2 class="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+      <i class="fa-solid fa-arrow-up-right-dots text-blue-500"></i> Content Gaps
+    </h2>
+    <p class="text-sm text-gray-500 mb-4">
+      Queries with 100+ impressions but CTR under 3%. Your page is ranking but not
+      earning clicks — likely a title/meta intent mismatch.
+    </p>
+
+    {% if result.content_gaps %}
+    <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+            <th class="px-4 py-3 text-left">Query</th>
+            <th class="px-4 py-3 text-center">Pos.</th>
+            <th class="px-4 py-3 text-center">Impr.</th>
+            <th class="px-4 py-3 text-center">CTR</th>
+            <th class="px-4 py-3 text-left">Severity</th>
+            <th class="px-4 py-3 text-left">Fix</th>
+            <th class="px-4 py-3 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          {% for g in result.content_gaps %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 font-medium text-gray-900 max-w-xs truncate">{{ g.query }}</td>
+            <td class="px-4 py-3 text-center text-gray-600">{{ g.position }}</td>
+            <td class="px-4 py-3 text-center text-gray-700">{{ "{:,}".format(g.impressions) }}</td>
+            <td class="px-4 py-3 text-center">
+              <span class="font-semibold {% if g.ctr < 1 %}text-red-600{% else %}text-yellow-600{% endif %}">
+                {{ g.ctr }}%
+              </span>
+            </td>
+            <td class="px-4 py-3">
+              {% set sev_cls = {
+                'critical': 'bg-red-100 text-red-800',
+                'high':     'bg-orange-100 text-orange-800',
+                'medium':   'bg-yellow-100 text-yellow-700'
+              }.get(g.gap_severity, 'bg-gray-100 text-gray-700') %}
+              <span class="px-2 py-0.5 rounded-full text-xs font-semibold {{ sev_cls }}">
+                {{ g.gap_severity | title }}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-xs text-gray-500 max-w-xs">{{ g.gap_fix }}</td>
+            <td class="px-4 py-3 text-right">
+              <form method="POST" action="{{ url_for('seo_bp.gaps_queue') }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="new_post">
+                <input type="hidden" name="keyword" value="{{ g.query }}">
+                <button type="submit"
+                        class="px-2.5 py-1 text-xs bg-blue-50 hover:bg-blue-100
+                               text-blue-700 rounded-lg font-medium transition-colors">
+                  Queue Post
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="bg-white border rounded-xl p-6 text-center text-gray-400 text-sm">
+      No content gaps found — your ranking pages are earning good CTR.
+    </div>
+    {% endif %}
+  </div>
+
+  {# ═══════════════════════════════════════════════════════════════════════ #}
+  {# SECTION 3 — Missing Content                                            #}
+  {# ═══════════════════════════════════════════════════════════════════════ #}
+  <div id="missing">
+    <h2 class="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+      <i class="fa-solid fa-file-circle-plus text-green-500"></i> Missing Content
+    </h2>
+    <p class="text-sm text-gray-500 mb-4">
+      Queries with 200+ monthly impressions but no page ranking in the top 20.
+      High-demand topics with no dedicated content — your highest ROI opportunities.
+    </p>
+
+    {% if result.missing_content %}
+    <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+            <th class="px-4 py-3 text-left">Query</th>
+            <th class="px-4 py-3 text-center">Impressions</th>
+            <th class="px-4 py-3 text-center">Avg. Pos.</th>
+            <th class="px-4 py-3 text-center">Clicks</th>
+            <th class="px-4 py-3 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          {% for m in result.missing_content %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 font-medium text-gray-900">{{ m.query }}</td>
+            <td class="px-4 py-3 text-center font-semibold text-green-700">
+              {{ "{:,}".format(m.impressions) }}
+            </td>
+            <td class="px-4 py-3 text-center text-gray-500">
+              {% if m.position > 50 %}50+{% else %}{{ m.position }}{% endif %}
+            </td>
+            <td class="px-4 py-3 text-center text-gray-500">{{ m.clicks }}</td>
+            <td class="px-4 py-3 text-right">
+              <form method="POST" action="{{ url_for('seo_bp.gaps_queue') }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="new_post">
+                <input type="hidden" name="keyword" value="{{ m.query }}">
+                <button type="submit"
+                        class="px-2.5 py-1 text-xs bg-green-50 hover:bg-green-100
+                               text-green-700 rounded-lg font-medium transition-colors">
+                  Create Post
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="bg-white border rounded-xl p-6 text-center text-gray-400 text-sm">
+      No missing content detected — you have pages targeting your high-volume queries.
+    </div>
+    {% endif %}
+  </div>
+
+  {# ═══════════════════════════════════════════════════════════════════════ #}
+  {# SECTION 4 — Cannibalization                                            #}
+  {# ═══════════════════════════════════════════════════════════════════════ #}
+  <div id="cannibalization">
+    <h2 class="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+      <i class="fa-solid fa-code-fork text-orange-500"></i> Keyword Cannibalization
+    </h2>
+    <p class="text-sm text-gray-500 mb-4">
+      Multiple pages ranking for the same query — Google gets confused which to show,
+      diluting your ranking potential.
+    </p>
+
+    {% if result.cannibalization %}
+    <div class="space-y-4">
+      {% for cannibal in result.cannibalization %}
+      <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+        <div class="px-5 py-3 border-b bg-orange-50 flex items-center justify-between">
+          <div class="font-semibold text-gray-900 text-sm flex items-center gap-2">
+            <i class="fa-solid fa-triangle-exclamation text-orange-400"></i>
+            "{{ cannibal.query }}"
+          </div>
+          <span class="text-xs text-gray-500">{{ cannibal.n_pages }} pages competing</span>
+        </div>
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b bg-gray-50 text-xs text-gray-400 uppercase">
+              <th class="px-4 py-2 text-left">Page</th>
+              <th class="px-4 py-2 text-center">Pos.</th>
+              <th class="px-4 py-2 text-center">Clicks</th>
+              <th class="px-4 py-2 text-center">Impr.</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            {% for page in cannibal.pages %}
+            <tr class="hover:bg-gray-50 {% if loop.first %}bg-green-50{% endif %}">
+              <td class="px-4 py-2 text-xs font-mono text-gray-600 max-w-xs truncate">
+                {% if loop.first %}<span class="text-green-700 font-semibold mr-1">✓ Keep</span>{% endif %}
+                {{ page.page }}
+              </td>
+              <td class="px-4 py-2 text-center text-gray-600">{{ page.position }}</td>
+              <td class="px-4 py-2 text-center font-semibold text-gray-800">{{ page.clicks }}</td>
+              <td class="px-4 py-2 text-center text-gray-500">{{ page.impressions }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <div class="px-5 py-3 bg-gray-50 border-t text-xs text-gray-500">
+          <i class="fa-solid fa-lightbulb text-yellow-400 mr-1"></i>
+          <strong>Fix:</strong> Add a canonical tag on lower-performing pages pointing to
+          <span class="font-mono text-gray-700">{{ cannibal.recommended_canonical }}</span>,
+          or merge the pages and redirect.
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white border rounded-xl p-6 text-center text-gray-400 text-sm">
+      No cannibalization detected in top queries.
+    </div>
+    {% endif %}
+  </div>
+
+  {# ═══════════════════════════════════════════════════════════════════════ #}
+  {# SECTION 5 — Declining Pages                                            #}
+  {# ═══════════════════════════════════════════════════════════════════════ #}
+  <div id="declining">
+    <h2 class="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+      <i class="fa-solid fa-arrow-trend-down text-red-500"></i> Declining Content
+    </h2>
+    <p class="text-sm text-gray-500 mb-4">
+      Pages with ≥20% click decline vs the previous 28-day period. Refresh the content
+      or strengthen on-page SEO to recover rankings.
+    </p>
+
+    {% if result.declining_pages %}
+    <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+            <th class="px-4 py-3 text-left">Page</th>
+            <th class="px-4 py-3 text-center">Clicks (now)</th>
+            <th class="px-4 py-3 text-center">Clicks (prev)</th>
+            <th class="px-4 py-3 text-center">Change</th>
+            <th class="px-4 py-3 text-center">Pos. Δ</th>
+            <th class="px-4 py-3 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          {% for page in result.declining_pages %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 text-xs font-mono text-gray-600 max-w-xs truncate"
+                title="{{ page.page }}">
+              {{ page.page | truncate(55, True, '…') }}
+            </td>
+            <td class="px-4 py-3 text-center text-gray-700">{{ page.current_clicks }}</td>
+            <td class="px-4 py-3 text-center text-gray-500">{{ page.prev_clicks }}</td>
+            <td class="px-4 py-3 text-center font-semibold text-red-600">
+              {{ page.change_pct }}%
+            </td>
+            <td class="px-4 py-3 text-center text-xs
+                       {% if page.pos_change > 2 %}text-red-500{% elif page.pos_change < -1 %}text-green-600{% else %}text-gray-400{% endif %}">
+              {% if page.pos_change > 0 %}+{% endif %}{{ page.pos_change }}
+            </td>
+            <td class="px-4 py-3 text-right">
+              {# Extract slug from URL for keyword hint #}
+              {% set slug = page.page.split('/')[-2] if page.page.endswith('/') else page.page.split('/')[-1] %}
+              {% set kw_hint = slug.replace('-', ' ').replace('_', ' ') %}
+              <form method="POST" action="{{ url_for('seo_bp.gaps_queue') }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="refresh">
+                <input type="hidden" name="keyword" value="{{ kw_hint }}">
+                <input type="hidden" name="post_url" value="{{ page.page }}">
+                <button type="submit"
+                        class="px-2.5 py-1 text-xs bg-red-50 hover:bg-red-100
+                               text-red-700 rounded-lg font-medium transition-colors">
+                  Queue Refresh
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="bg-white border rounded-xl p-6 text-center text-gray-400 text-sm">
+      No significant traffic declines detected in this period.
+    </div>
+    {% endif %}
+  </div>
+
+  {# ═══════════════════════════════════════════════════════════════════════ #}
+  {# SECTION 6 — Keyword Clusters                                           #}
+  {# ═══════════════════════════════════════════════════════════════════════ #}
+  <div id="clusters">
+    <h2 class="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+      <i class="fa-solid fa-layer-group text-purple-500"></i> Keyword Clusters
+    </h2>
+    <p class="text-sm text-gray-500 mb-4">
+      Queries grouped by topic root. Each cluster represents a content pillar —
+      dominate the whole cluster rather than chasing individual keywords.
+    </p>
+
+    {% if result.clusters %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {% for cluster in result.clusters %}
+      <div class="bg-white rounded-xl border shadow-sm p-5">
+        <div class="flex items-start justify-between mb-3">
+          <div>
+            <div class="font-semibold text-gray-900 capitalize">{{ cluster.root }}</div>
+            <div class="text-xs text-gray-500 mt-0.5">
+              {{ cluster.n_queries }} queries ·
+              avg pos {{ cluster.avg_position }} ·
+              {{ "{:,}".format(cluster.total_impressions) }} impr.
+            </div>
+          </div>
+          <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-semibold">
+            {{ "{:,}".format(cluster.total_clicks) }} clicks
+          </span>
+        </div>
+        <ul class="space-y-1">
+          {% for q in cluster.queries[:5] %}
+          <li class="flex items-center justify-between text-xs">
+            <span class="text-gray-700 {% if q.query == cluster.best_query %}font-semibold{% endif %}">
+              {% if q.query == cluster.best_query %}
+                <i class="fa-solid fa-star text-yellow-400 mr-1"></i>
+              {% endif %}
+              {{ q.query }}
+            </span>
+            <span class="text-gray-400 ml-2 flex-shrink-0">{{ q.impressions }} impr · p{{ q.position }}</span>
+          </li>
+          {% endfor %}
+          {% if cluster.queries | length > 5 %}
+          <li class="text-xs text-gray-400 italic">+ {{ (cluster.queries | length) - 5 }} more queries</li>
+          {% endif %}
+        </ul>
+        <div class="mt-3 pt-3 border-t">
+          <form method="POST" action="{{ url_for('seo_bp.gaps_queue') }}" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="new_post">
+            <input type="hidden" name="keyword" value="{{ cluster.best_query }}">
+            <button type="submit"
+                    class="text-xs px-3 py-1.5 bg-purple-50 hover:bg-purple-100
+                           text-purple-700 rounded-lg font-medium transition-colors">
+              <i class="fa-solid fa-pen-to-square mr-1"></i>
+              Create Pillar Post for "{{ cluster.root }}"
+            </button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white border rounded-xl p-6 text-center text-gray-400 text-sm">
+      Not enough query variety for clustering — need 2+ queries sharing a topic root.
+    </div>
+    {% endif %}
+  </div>
+
+  {% endif %}{# /elif result #}
+
+</div>
+{% endblock %}

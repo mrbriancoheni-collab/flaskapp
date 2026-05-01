@@ -62,6 +62,117 @@ def rankings():
     )
 
 
+@seo_bp.route("/gaps", methods=["GET"], endpoint="gaps")
+@login_required
+def gaps():
+    """Keyword gap & content opportunity dashboard."""
+    aid = current_account_id()
+    result = None
+    gsc_connected = False
+    site_url = None
+    error = None
+
+    try:
+        from app.google import _is_connected, _get_gsc_selected_site
+        import os
+        gsc_connected = _is_connected(aid, "gsc")
+        site_url = _get_gsc_selected_site(aid) or os.getenv("GSC_SITE")
+    except Exception as exc:
+        logger.exception("GSC status check failed")
+        error = str(exc)
+
+    if gsc_connected and site_url:
+        try:
+            from app.seo.keyword_gaps import run_keyword_gap_analysis
+            result = run_keyword_gap_analysis(aid, site_url)
+            if result.get("error"):
+                error = result["error"]
+                result = None
+        except Exception as exc:
+            logger.exception("Keyword gap analysis failed")
+            error = f"Analysis failed: {exc}"
+
+    return render_template(
+        "seo/gaps.html",
+        result=result,
+        gsc_connected=gsc_connected,
+        site_url=site_url,
+        error=error,
+    )
+
+
+@seo_bp.route("/gaps/queue", methods=["POST"], endpoint="gaps_queue")
+@login_required
+def gaps_queue():
+    """
+    Queue a WPJob (ai_generate or refresh) from a keyword gap opportunity.
+    Redirects back to the gaps page with a flash message.
+    """
+    action   = (request.form.get("action") or "new_post").strip()
+    keyword  = (request.form.get("keyword") or "").strip()
+    post_url = (request.form.get("post_url") or "").strip()
+
+    if not keyword:
+        flash("Keyword is required.", "error")
+        return redirect(url_for("seo_bp.gaps"))
+
+    try:
+        from app.models_wp import WPSite, WPJob
+        from app import db
+        from sqlalchemy import text
+
+        # Find the connected WP site for this account
+        aid = current_account_id()
+        site = None
+        try:
+            row = db.session.execute(
+                text("SELECT id FROM wp_sites WHERE account_id = :aid LIMIT 1"),
+                {"aid": aid},
+            ).fetchone()
+            if row:
+                site = WPSite.query.get(row[0])
+        except Exception:
+            site = WPSite.query.first()
+
+        if not site:
+            flash("Connect a WordPress site first to queue content.", "error")
+            return redirect(url_for("seo_bp.gaps"))
+
+        if action == "refresh" and post_url:
+            # Queue a refresh job pointing at the specific URL
+            payload = {
+                "source_url":      post_url,
+                "primary_keyword": keyword,
+                "action":          "refresh",
+            }
+            job = WPJob(site_id=site.id, kind="ai_generate", payload=payload)
+        else:
+            # Queue a new AI post for the keyword
+            payload = {
+                "primary_keyword": keyword,
+                "prompt": (
+                    f"Write a comprehensive, helpful blog post targeting the keyword "
+                    f"'{keyword}'. Include an FAQ section and step-by-step guidance where "
+                    f"relevant. Optimise for featured snippets."
+                ),
+                "word_count": "1000",
+                "topics": [keyword],
+            }
+            job = WPJob(site_id=site.id, kind="ai_generate", payload=payload)
+
+        db.session.add(job)
+        db.session.commit()
+
+        action_label = "refresh" if action == "refresh" else "new post"
+        flash(f"Queued {action_label} for '{keyword}' (Job #{job.id}).", "success")
+
+    except Exception as exc:
+        logger.exception("Gap queue job creation failed")
+        flash(f"Could not queue job: {exc}", "error")
+
+    return redirect(url_for("seo_bp.gaps"))
+
+
 @seo_bp.route("/optimize", methods=["GET", "POST"], endpoint="optimize")
 @login_required
 def optimize():

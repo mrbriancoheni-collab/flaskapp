@@ -581,6 +581,9 @@
         {% if has_endpoint('wp_bp.schema_gen') %}
           <a class="secondary-link {% if epn=='wp_bp.schema_gen' %}active{% endif %}" href="{{ url_for('wp_bp.schema_gen') }}"><i class="fa-solid fa-code"></i><span>Schema Generator</span></a>
         {% endif %}
+        {% if has_endpoint('seo_bp.gaps') %}
+          <a class="secondary-link {% if epn=='seo_bp.gaps' %}active{% endif %}" href="{{ url_for('seo_bp.gaps') }}"><i class="fa-solid fa-layer-group"></i><span>Keyword Gaps</span></a>
+        {% endif %}
       {% elif SECTION == 'strategy' %}
         <!-- strategy links placeholder -->
       {% elif SECTION == 'fbads' %}

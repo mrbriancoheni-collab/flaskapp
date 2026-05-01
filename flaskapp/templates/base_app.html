@@ -549,6 +549,9 @@
         {% if has_endpoint('wp_bp.seo_audit') %}
           <a class="secondary-link {% if epn=='wp_bp.seo_audit' %}active{% endif %}" href="{{ url_for('wp_bp.seo_audit') }}"><i class="fa-solid fa-magnifying-glass-chart"></i><span>SEO &amp; AEO Audit</span></a>
         {% endif %}
+        {% if has_endpoint('wp_bp.tech_seo') %}
+          <a class="secondary-link {% if epn=='wp_bp.tech_seo' %}active{% endif %}" href="{{ url_for('wp_bp.tech_seo') }}"><i class="fa-solid fa-spider"></i><span>Technical SEO</span></a>
+        {% endif %}
         {% if has_endpoint('wp_bp.analyze') %}
           <a class="secondary-link {% if epn=='wp_bp.analyze' %}active{% endif %}" href="{{ url_for('wp_bp.analyze') }}"><i class="fa-solid fa-microscope"></i><span>Analyze Page</span></a>
         {% endif %}
@@ -568,6 +571,9 @@
         {% endif %}
         {% if has_endpoint('wp_bp.seo_audit') %}
           <a class="secondary-link {% if epn=='wp_bp.seo_audit' %}active{% endif %}" href="{{ url_for('wp_bp.seo_audit') }}"><i class="fa-solid fa-magnifying-glass-chart"></i><span>SEO &amp; AEO Audit</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.tech_seo') %}
+          <a class="secondary-link {% if epn=='wp_bp.tech_seo' %}active{% endif %}" href="{{ url_for('wp_bp.tech_seo') }}"><i class="fa-solid fa-spider"></i><span>Technical SEO</span></a>
         {% endif %}
       {% elif SECTION == 'strategy' %}
         <!-- strategy links placeholder -->

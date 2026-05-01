@@ -920,6 +920,31 @@ def cron_runner():
 
 # ---------- legacy / compatibility aliases ----------
 
+@wp_bp.route("/tech-seo", methods=["GET", "POST"], endpoint="tech_seo")
+@login_required
+def tech_seo():
+    site = _current_site()
+    result = None
+    if request.method == "POST":
+        url = (request.form.get("url") or "").strip()
+        if not url and site:
+            url = site.base_url
+        if not url:
+            flash("Enter a URL or connect a WordPress site first.", "error")
+            return render_template("wp/tech_seo.html", site=site, result=None)
+        try:
+            from app.wp.tech_seo import run_technical_audit
+            psi_key = os.getenv("GOOGLE_PSI_API_KEY") or (current_app.config or {}).get("GOOGLE_PSI_API_KEY")
+            result = run_technical_audit(url, psi_api_key=psi_key)
+            if result.get("error"):
+                flash(result["error"], "error")
+                result = None
+        except Exception:
+            current_app.logger.exception("Technical SEO audit failed")
+            flash("Audit failed — please try again.", "error")
+    return render_template("wp/tech_seo.html", site=site, result=result)
+
+
 @wp_bp.route("/seo-audit", methods=["GET", "POST"], endpoint="seo_audit")
 @login_required
 def seo_audit():

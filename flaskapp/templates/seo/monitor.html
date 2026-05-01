@@ -1,0 +1,297 @@
+{% extends "base_app.html" %}
+{% block title %}SEO Monitor · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold">SEO Monitor &amp; Alerts</h1>
+      {% if site_url %}
+        <p class="text-sm text-gray-500 mt-0.5">Tracking: <span class="font-mono">{{ site_url }}</span></p>
+      {% endif %}
+    </div>
+    {% if site_url %}
+    <form method="post" action="{{ url_for('seo_bp.monitor_run') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="site_url" value="{{ site_url }}">
+      <button type="submit"
+              class="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition">
+        <i class="fa-solid fa-rotate"></i> Run Check Now
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="px-4 py-3 rounded-lg text-sm
+        {% if cat == 'success' %}bg-green-50 text-green-800 border border-green-200
+        {% elif cat == 'warning' %}bg-amber-50 text-amber-800 border border-amber-200
+        {% else %}bg-red-50 text-red-800 border border-red-200{% endif %}">
+        {{ msg }}
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if not site_url %}
+  <div class="rounded-xl border bg-white p-8 text-center">
+    <i class="fa-solid fa-circle-exclamation text-4xl text-amber-400 mb-3"></i>
+    <p class="font-semibold mb-1">No site configured</p>
+    <p class="text-sm text-gray-600">Connect a WordPress site or Google Search Console to enable SEO monitoring.</p>
+    <a href="{{ url_for('google_bp.index') }}" class="mt-4 inline-block px-4 py-2 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700">
+      Connect Google
+    </a>
+  </div>
+  {% else %}
+
+  <!-- Health score trend -->
+  {% if snapshots %}
+  <div class="rounded-xl border bg-white p-5">
+    <h2 class="font-semibold mb-4">Health Score Trend (last {{ snapshots|length }} checks)</h2>
+    <div class="flex items-end gap-1 h-24">
+      {% for snap in snapshots|reverse %}
+        {% set pct = snap.health_score %}
+        <div class="flex-1 flex flex-col items-center gap-1 group relative">
+          <div class="w-full rounded-t transition-all
+            {% if pct >= 80 %}bg-green-400
+            {% elif pct >= 50 %}bg-amber-400
+            {% else %}bg-red-400{% endif %}"
+            style="height: {{ pct }}%"
+            title="{{ snap.created_at.strftime('%b %d') }}: {{ snap.health_score }}"></div>
+          <!-- tooltip -->
+          <div class="absolute bottom-full mb-1 hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+            {{ snap.created_at.strftime('%b %d %H:%M') }}<br>Score: {{ snap.health_score }}
+            {% if snap.gsc_clicks is not none %}<br>Clicks: {{ snap.gsc_clicks }}{% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="flex justify-between text-xs text-gray-400 mt-1">
+      <span>{{ snapshots[-1].created_at.strftime('%b %d') }}</span>
+      <span>{{ snapshots[0].created_at.strftime('%b %d') }}</span>
+    </div>
+  </div>
+
+  <!-- Latest snapshot KPIs -->
+  {% set latest = snapshots[0] %}
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <!-- Health Score -->
+    <div class="rounded-xl border bg-white p-4 flex flex-col items-center">
+      <div class="relative w-20 h-20">
+        {% set pct = latest.health_score %}
+        {% set dash = 2 * 3.14159 * 36 %}
+        {% set offset = dash * (1 - pct / 100) %}
+        <svg viewBox="0 0 80 80" class="w-20 h-20 -rotate-90">
+          <circle cx="40" cy="40" r="36" fill="none" stroke="#e5e7eb" stroke-width="8"/>
+          <circle cx="40" cy="40" r="36" fill="none" stroke-width="8"
+            stroke="{{ '#22c55e' if pct >= 80 else ('#f59e0b' if pct >= 50 else '#ef4444') }}"
+            stroke-dasharray="{{ dash }}" stroke-dashoffset="{{ offset }}"
+            stroke-linecap="round"/>
+        </svg>
+        <span class="absolute inset-0 flex items-center justify-center text-xl font-bold rotate-90">{{ pct }}</span>
+      </div>
+      <p class="text-xs text-gray-500 mt-2 text-center">Health Score</p>
+    </div>
+
+    <!-- Homepage Status -->
+    <div class="rounded-xl border bg-white p-4 flex flex-col items-center justify-center">
+      <div class="text-3xl font-bold
+        {% if latest.homepage_status == 200 %}text-green-600{% else %}text-red-600{% endif %}">
+        {{ latest.homepage_status or '—' }}
+      </div>
+      <p class="text-xs text-gray-500 mt-1">Homepage Status</p>
+      <span class="mt-1 text-xs {% if latest.homepage_status == 200 %}text-green-600{% else %}text-red-600{% endif %}">
+        {{ 'OK' if latest.homepage_status == 200 else 'Error' }}
+      </span>
+    </div>
+
+    <!-- GSC Clicks -->
+    <div class="rounded-xl border bg-white p-4 flex flex-col items-center justify-center">
+      <div class="text-3xl font-bold text-indigo-600">
+        {{ '{:,}'.format(latest.gsc_clicks) if latest.gsc_clicks is not none else '—' }}
+      </div>
+      <p class="text-xs text-gray-500 mt-1">Clicks (28d)</p>
+    </div>
+
+    <!-- Avg Position -->
+    <div class="rounded-xl border bg-white p-4 flex flex-col items-center justify-center">
+      <div class="text-3xl font-bold text-purple-600">
+        {{ latest.gsc_avg_position if latest.gsc_avg_position is not none else '—' }}
+      </div>
+      <p class="text-xs text-gray-500 mt-1">Avg Position</p>
+    </div>
+  </div>
+
+  <!-- Technical checks from latest snapshot -->
+  {% if latest.data and latest.data.tech %}
+  {% set tech = latest.data.tech %}
+  <div class="rounded-xl border bg-white p-5">
+    <h2 class="font-semibold mb-3">Latest Technical Checks</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="flex items-center gap-3 p-3 rounded-lg border
+        {% if tech.sitemap_ok %}border-green-200 bg-green-50{% else %}border-red-200 bg-red-50{% endif %}">
+        <i class="fa-solid {% if tech.sitemap_ok %}fa-circle-check text-green-500{% else %}fa-circle-xmark text-red-500{% endif %}"></i>
+        <div>
+          <div class="text-sm font-medium">Sitemap</div>
+          <div class="text-xs text-gray-500">{{ tech.sitemap_url or 'Not found' }}</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 p-3 rounded-lg border
+        {% if tech.robots_ok %}border-green-200 bg-green-50{% else %}border-red-200 bg-red-50{% endif %}">
+        <i class="fa-solid {% if tech.robots_ok %}fa-circle-check text-green-500{% else %}fa-circle-xmark text-red-500{% endif %}"></i>
+        <div>
+          <div class="text-sm font-medium">Robots.txt</div>
+          <div class="text-xs text-gray-500">
+            {% if tech.robots_blocked %}Blocking crawlers!{% elif tech.robots_ok %}Accessible{% else %}Not accessible{% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 p-3 rounded-lg border
+        {% if tech.homepage_status == 200 %}border-green-200 bg-green-50{% else %}border-red-200 bg-red-50{% endif %}">
+        <i class="fa-solid {% if tech.homepage_status == 200 %}fa-circle-check text-green-500{% else %}fa-circle-xmark text-red-500{% endif %}"></i>
+        <div>
+          <div class="text-sm font-medium">Homepage</div>
+          <div class="text-xs text-gray-500">HTTP {{ tech.homepage_status or 'timeout' }} · {{ tech.homepage_ms }}ms</div>
+        </div>
+      </div>
+    </div>
+    {% if tech.issues %}
+    <div class="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+      <div class="text-xs font-medium text-amber-800 mb-1">Issues detected:</div>
+      <ul class="list-disc ml-4 text-xs text-amber-700 space-y-0.5">
+        {% for issue in tech.issues %}<li>{{ issue }}</li>{% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% endif %}{# end snapshots #}
+
+  <!-- Alerts -->
+  <div class="rounded-xl border bg-white p-5">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <h2 class="font-semibold">Alerts</h2>
+        {% if unread_count %}
+          <span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">{{ unread_count }} unread</span>
+        {% endif %}
+      </div>
+      {% if alerts %}
+      <form method="post" action="{{ url_for('seo_bp.alerts_dismiss') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="dismiss_all" value="1">
+        <button type="submit" class="text-xs text-gray-500 hover:text-gray-800 underline">Mark all read</button>
+      </form>
+      {% endif %}
+    </div>
+
+    {% if alerts %}
+    <ul class="divide-y divide-gray-100">
+      {% for alert in alerts %}
+      <li class="py-3 flex items-start gap-3 {% if not alert.is_read %}bg-amber-50 -mx-5 px-5{% endif %}">
+        <!-- severity dot -->
+        <span class="mt-1.5 shrink-0 w-2.5 h-2.5 rounded-full
+          {% if alert.severity == 'critical' %}bg-red-500
+          {% elif alert.severity == 'warning' %}bg-amber-400
+          {% else %}bg-blue-400{% endif %}"></span>
+
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs px-2 py-0.5 rounded font-medium
+              {% if alert.severity == 'critical' %}bg-red-100 text-red-700
+              {% elif alert.severity == 'warning' %}bg-amber-100 text-amber-700
+              {% else %}bg-blue-100 text-blue-700{% endif %}">
+              {{ alert.severity|upper }}
+            </span>
+            <span class="text-xs text-gray-400">{{ alert.alert_type.replace('_', ' ')|title }}</span>
+            <span class="text-xs text-gray-400">{{ alert.created_at.strftime('%b %d, %H:%M') }}</span>
+          </div>
+          <p class="text-sm mt-0.5 {% if not alert.is_read %}font-medium{% else %}text-gray-700{% endif %}">
+            {{ alert.message }}
+          </p>
+          {% if alert.detail %}
+          <details class="mt-1">
+            <summary class="text-xs text-gray-400 cursor-pointer hover:text-gray-600">Details</summary>
+            <pre class="mt-1 text-xs bg-gray-50 rounded p-2 overflow-x-auto">{{ alert.detail | tojson(indent=2) }}</pre>
+          </details>
+          {% endif %}
+        </div>
+
+        {% if not alert.is_read %}
+        <form method="post" action="{{ url_for('seo_bp.alerts_dismiss') }}" class="shrink-0">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="alert_id" value="{{ alert.id }}">
+          <button type="submit" class="text-xs text-gray-400 hover:text-gray-700 mt-1" title="Mark read">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </form>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="text-center py-8 text-gray-400">
+      <i class="fa-solid fa-shield-halved text-4xl mb-2"></i>
+      <p class="text-sm">No alerts yet.</p>
+      {% if not snapshots %}
+      <p class="text-xs mt-1">Run a check to start monitoring your site.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Snapshot history table -->
+  {% if snapshots|length > 1 %}
+  <div class="rounded-xl border bg-white p-5">
+    <h2 class="font-semibold mb-3">Snapshot History</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-xs text-gray-500 border-b">
+            <th class="pb-2">Date</th>
+            <th class="pb-2 text-center">Score</th>
+            <th class="pb-2 text-center">Homepage</th>
+            <th class="pb-2 text-center">Sitemap</th>
+            <th class="pb-2 text-center">Robots</th>
+            <th class="pb-2 text-right">GSC Clicks</th>
+            <th class="pb-2 text-right">Avg Pos</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for snap in snapshots %}
+          <tr class="hover:bg-gray-50">
+            <td class="py-2 text-gray-600">{{ snap.created_at.strftime('%b %d, %H:%M') }}</td>
+            <td class="py-2 text-center">
+              <span class="font-semibold
+                {% if snap.health_score >= 80 %}text-green-600
+                {% elif snap.health_score >= 50 %}text-amber-600
+                {% else %}text-red-600{% endif %}">
+                {{ snap.health_score }}
+              </span>
+            </td>
+            <td class="py-2 text-center">
+              <span class="{% if snap.homepage_status == 200 %}text-green-600{% else %}text-red-600{% endif %}">
+                {{ snap.homepage_status or '—' }}
+              </span>
+            </td>
+            <td class="py-2 text-center">
+              <i class="fa-solid {% if snap.sitemap_ok %}fa-check text-green-500{% else %}fa-xmark text-red-500{% endif %}"></i>
+            </td>
+            <td class="py-2 text-center">
+              <i class="fa-solid {% if snap.robots_ok %}fa-check text-green-500{% else %}fa-xmark text-red-500{% endif %}"></i>
+            </td>
+            <td class="py-2 text-right text-gray-600">{{ '{:,}'.format(snap.gsc_clicks) if snap.gsc_clicks is not none else '—' }}</td>
+            <td class="py-2 text-right text-gray-600">{{ snap.gsc_avg_position if snap.gsc_avg_position is not none else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% endif %}{# end site_url #}
+</div>
+{% endblock %}

@@ -894,7 +894,19 @@ def insights():
     except Exception:
         pass
 
-    return render_template("wp/insights.html", jobs=jobs, ga=ga, gsc=gsc)
+    seo_alerts = []
+    seo_unread = 0
+    try:
+        from app.seo.monitor import get_unread_alerts
+        aid = _account_id()
+        if aid:
+            seo_alerts = get_unread_alerts(account_id=aid, limit=3)
+            seo_unread = len([a for a in seo_alerts if not a.is_read])
+    except Exception:
+        pass
+
+    return render_template("wp/insights.html", jobs=jobs, ga=ga, gsc=gsc,
+                           seo_alerts=seo_alerts, seo_unread=seo_unread)
 
 # ---------- cron (no login) ----------
 
@@ -916,7 +928,25 @@ def cron_runner():
     current_app.logger.info("wp cron-runner: start at %s (max=%s)", ran_at, max_jobs)
 
     result = _process_queue(max_jobs=max_jobs)
-    return jsonify({"ran_at": ran_at, **result}), 200
+
+    # Hook SEO monitor — runs at most once per 23 h per site (throttled inside)
+    seo_monitor_results = []
+    try:
+        from app.seo.monitor import run_monitoring_check
+        sites = WPSite.query.all()
+        for site in sites:
+            r = run_monitoring_check(
+                site_url=site.base_url,
+                site_id=site.id,
+                account_id=site.account_id,
+            )
+            seo_monitor_results.append({"site": site.base_url, **r})
+    except Exception as exc:
+        current_app.logger.exception("SEO monitor hook failed in cron_runner")
+        seo_monitor_results = [{"error": str(exc)}]
+
+    return jsonify({"ran_at": ran_at, **result,
+                    "seo_monitor": seo_monitor_results}), 200
 
 # ---------- legacy / compatibility aliases ----------
 

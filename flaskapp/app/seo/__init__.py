@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from flask import Blueprint, render_template, request, flash, url_for, redirect, current_app, jsonify
 from app.auth.utils import login_required, is_paid_account, current_account_id
 
@@ -60,6 +61,158 @@ def rankings():
         site_url=site_url,
         error=error,
     )
+
+
+@seo_bp.route("/monitor", methods=["GET"], endpoint="monitor")
+@login_required
+def monitor():
+    """SEO health monitoring dashboard."""
+    from app.auth.utils import current_account_id
+    aid      = current_account_id()
+    site_url = None
+    snapshots = []
+    alerts    = []
+    unread_count = 0
+
+    try:
+        from app.google import _get_gsc_selected_site
+        import os
+        site_url = _get_gsc_selected_site(aid) or os.getenv("GSC_SITE")
+    except Exception:
+        pass
+
+    # Also try WP site URL as fallback
+    if not site_url:
+        try:
+            from app.models_wp import WPSite
+            from sqlalchemy import text
+            from app import db
+            row = db.session.execute(
+                text("SELECT base_url FROM wp_sites WHERE account_id=:aid LIMIT 1"),
+                {"aid": aid},
+            ).fetchone()
+            if row:
+                site_url = row[0]
+        except Exception:
+            pass
+
+    if site_url:
+        from app.seo.monitor import get_recent_snapshots, get_unread_alerts
+        snapshots     = get_recent_snapshots(site_url, limit=14)
+        alerts        = get_unread_alerts(account_id=aid, limit=30)
+        unread_count  = len([a for a in alerts if not a.is_read])
+
+    return render_template(
+        "seo/monitor.html",
+        site_url=site_url,
+        snapshots=snapshots,
+        alerts=alerts,
+        unread_count=unread_count,
+    )
+
+
+@seo_bp.route("/monitor/run", methods=["POST"], endpoint="monitor_run")
+@login_required
+def monitor_run():
+    """Manually trigger an immediate monitoring check."""
+    from app.auth.utils import current_account_id
+    aid      = current_account_id()
+    site_url = request.form.get("site_url", "").strip()
+
+    if not site_url:
+        flash("No site URL to check.", "error")
+        return redirect(url_for("seo_bp.monitor"))
+
+    try:
+        from app.seo.monitor import run_monitoring_check
+        # Find site_id
+        site_id = None
+        try:
+            from app.models_wp import WPSite
+            s = WPSite.query.filter_by(account_id=aid).first()
+            if s:
+                site_id = s.id
+        except Exception:
+            pass
+
+        result = run_monitoring_check(
+            site_url=site_url, site_id=site_id,
+            account_id=aid, force=True,
+        )
+        if result.get("ok"):
+            n = result["alerts_created"]
+            flash(
+                f"Check complete — {n} new alert{'s' if n != 1 else ''} generated." if n
+                else "Check complete — no new issues detected.",
+                "success" if not n else "warning",
+            )
+        else:
+            flash(result.get("error") or "Check failed.", "error")
+    except Exception as exc:
+        logger.exception("Manual monitor run failed")
+        flash(f"Monitor run failed: {exc}", "error")
+
+    return redirect(url_for("seo_bp.monitor"))
+
+
+@seo_bp.route("/monitor/cron", methods=["GET"], endpoint="monitor_cron")
+def monitor_cron():
+    """
+    Cron endpoint — call daily, e.g. 0 6 * * * curl /account/seo/monitor/cron?secret=X
+    Requires the same CRON_SECRET used by the WP cron-runner.
+    """
+    from flask import current_app
+    supplied = (request.args.get("secret") or request.args.get("key") or "").strip()
+    expected = (current_app.config.get("CRON_SECRET") or "").strip()
+    if not (supplied and expected and supplied == expected):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    from app.seo.monitor import run_monitoring_check
+    from app.models_wp import WPSite
+
+    results = []
+    try:
+        sites = WPSite.query.all()
+        for site in sites:
+            r = run_monitoring_check(
+                site_url   = site.base_url,
+                site_id    = site.id,
+                account_id = site.account_id,
+            )
+            results.append({"site": site.base_url, **r})
+    except Exception as exc:
+        logger.exception("SEO monitor cron failed")
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+    return jsonify({"ok": True, "ran_at": datetime.utcnow().isoformat() + "Z",
+                    "results": results})
+
+
+@seo_bp.route("/alerts/dismiss", methods=["POST"], endpoint="alerts_dismiss")
+@login_required
+def alerts_dismiss():
+    """Mark one or all alerts as read."""
+    from app.auth.utils import current_account_id
+    from app import db
+    from app.models_seo import SEOAlert
+
+    aid        = current_account_id()
+    alert_id   = request.form.get("alert_id")
+    dismiss_all = request.form.get("dismiss_all")
+
+    try:
+        if dismiss_all:
+            SEOAlert.query.filter_by(account_id=aid, is_read=False).update({"is_read": True})
+        elif alert_id:
+            a = SEOAlert.query.get(int(alert_id))
+            if a and a.account_id == aid:
+                a.is_read = True
+        db.session.commit()
+    except Exception as exc:
+        logger.exception("Alert dismiss failed")
+        flash(f"Could not dismiss: {exc}", "error")
+
+    return redirect(url_for("seo_bp.monitor"))
 
 
 @seo_bp.route("/gaps", methods=["GET"], endpoint="gaps")

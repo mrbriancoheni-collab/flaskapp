@@ -558,6 +558,9 @@
         {% if has_endpoint('wp_bp.analyze') %}
           <a class="secondary-link {% if epn=='wp_bp.analyze' %}active{% endif %}" href="{{ url_for('wp_bp.analyze') }}"><i class="fa-solid fa-microscope"></i><span>Analyze Page</span></a>
         {% endif %}
+        {% if has_endpoint('seo_bp.monitor') %}
+          <a class="secondary-link {% if epn=='seo_bp.monitor' %}active{% endif %}" href="{{ url_for('seo_bp.monitor') }}"><i class="fa-solid fa-bell"></i><span>SEO Monitor</span></a>
+        {% endif %}
         {% if has_endpoint('wp_bp.settings') %}
           <a class="secondary-link {% if epn=='wp_bp.settings' %}active{% endif %}" href="{{ url_for('wp_bp.settings') }}"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
         {% endif %}
@@ -583,6 +586,9 @@
         {% endif %}
         {% if has_endpoint('seo_bp.gaps') %}
           <a class="secondary-link {% if epn=='seo_bp.gaps' %}active{% endif %}" href="{{ url_for('seo_bp.gaps') }}"><i class="fa-solid fa-layer-group"></i><span>Keyword Gaps</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.monitor') %}
+          <a class="secondary-link {% if epn=='seo_bp.monitor' %}active{% endif %}" href="{{ url_for('seo_bp.monitor') }}"><i class="fa-solid fa-bell"></i><span>Monitor &amp; Alerts</span></a>
         {% endif %}
       {% elif SECTION == 'strategy' %}
         <!-- strategy links placeholder -->

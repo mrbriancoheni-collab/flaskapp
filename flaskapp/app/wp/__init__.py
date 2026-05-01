@@ -317,6 +317,54 @@ def _process_queue(max_jobs: int = 5) -> dict:
                 msg = f"AI draft created {res.get('id')} → {link}" if link else f"AI draft created {res.get('id')}"
                 db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info", message=msg))
 
+            elif job.kind == "seo_fix":
+                p = job.payload or {}
+                post_id = int(p.get("post_id", 0))
+                if not post_id:
+                    raise ValueError("seo_fix job missing post_id")
+
+                # Fetch current post to preserve content
+                existing = c.get_post(post_id)
+                current_content = existing.get("content", {}).get("rendered", "")
+
+                # Inject/replace schema block at end of content
+                schema_html = p.get("schema_html", "")
+                if schema_html:
+                    import re as _re
+                    # Strip any existing JSON-LD blocks to avoid duplication
+                    current_content = _re.sub(
+                        r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>.*?</script>',
+                        "", current_content, flags=_re.DOTALL | _re.IGNORECASE,
+                    ).rstrip()
+                    current_content = current_content + "\n" + schema_html
+
+                fixes_applied = []
+                kwargs: Dict[str, Any] = dict(
+                    post_id=post_id,
+                    title=existing.get("title", {}).get("rendered", ""),
+                    html=current_content,
+                    status=existing.get("status", "publish"),
+                )
+                if p.get("yoast_title"):
+                    kwargs["yoast_title"] = p["yoast_title"]
+                    fixes_applied.append("Yoast title")
+                if p.get("yoast_desc"):
+                    kwargs["yoast_desc"] = p["yoast_desc"]
+                    fixes_applied.append("Yoast meta description")
+                if p.get("excerpt"):
+                    kwargs["excerpt"] = p["excerpt"]
+                    fixes_applied.append("Excerpt")
+                if schema_html:
+                    fixes_applied.append("JSON-LD schema")
+
+                c.create_or_update_post(**kwargs)
+                msg = (
+                    f"SEO auto-fix applied to post {post_id} "
+                    f"[{', '.join(fixes_applied) or 'no changes'}] "
+                    f"(SEO {p.get('seo_score','?')}, AEO {p.get('aeo_score','?')})"
+                )
+                db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info", message=msg))
+
             elif job.kind == "edit":
                 p = job.payload or {}
                 post_id = int(p.get("post_id", 0))
@@ -350,6 +398,136 @@ def _process_queue(max_jobs: int = 5) -> dict:
             db.session.commit()
 
     return {"ok": True, "processed": processed}
+
+# ---------- SEO auto-fix helpers ----------
+
+def _build_seo_fix_payload(site, url: str, keyword: str = "",
+                            source: str = "autopilot") -> Optional[Dict[str, Any]]:
+    """
+    Audit a URL, generate schema, and return an seo_fix job payload.
+    Returns None if the post can't be found on the WP site or no fixes needed.
+    """
+    try:
+        from app.wp.seo_audit import audit_url
+        audit = audit_url(url, target_keyword=keyword)
+        if audit.get("error"):
+            return None
+
+        seo_score = audit.get("seo_score", 100)
+        aeo_score = audit.get("aeo_score", 100)
+
+        # Only fix pages that need it
+        if seo_score >= 80 and aeo_score >= 70 and source == "autopilot":
+            return None
+
+        c = WPClient(site.base_url, site.username, site.app_password)
+        post = c.find_post_by_url(url)
+        if not post:
+            return None
+        post_id = int(post["id"])
+
+        # Generate schema
+        schema_html = ""
+        try:
+            from app.wp.schema_gen import generate_from_url
+            schema_result = generate_from_url(
+                url,
+                include_article=True,
+                include_faq=True,
+                include_howto=True,
+            )
+            if schema_result and schema_result.get("schema_json"):
+                import json as _json
+                schema_html = (
+                    '<script type="application/ld+json">\n'
+                    + _json.dumps(schema_result["schema_json"], indent=2)
+                    + "\n</script>"
+                )
+        except Exception:
+            pass
+
+        # Build Yoast meta from audit findings
+        yoast_desc = ""
+        for chk in audit.get("seo_checks", []):
+            if "meta description" in chk.get("label", "").lower() and chk.get("status") != "pass":
+                # Use first 155 chars of page description if available
+                yoast_desc = (schema_result or {}).get("description", "")[:155] if schema_result else ""
+                break
+
+        if not schema_html and not yoast_desc:
+            return None
+
+        return {
+            "post_id":   post_id,
+            "post_url":  url,
+            "schema_html": schema_html,
+            "yoast_desc":  yoast_desc,
+            "seo_score":   seo_score,
+            "aeo_score":   aeo_score,
+            "source":      source,
+        }
+    except Exception:
+        current_app.logger.exception("_build_seo_fix_payload failed for %s", url)
+        return None
+
+
+def _auto_audit_and_fix(site, account_id: int) -> Dict[str, Any]:
+    """
+    Fetch top GSC pages, audit the lowest-scoring ones, and queue seo_fix jobs.
+    Throttled: skips any URL already fixed within the last 7 days.
+    """
+    import os
+    from datetime import date, timedelta as td
+
+    results: List[Dict] = []
+    try:
+        from app.google import _fetch_gsc_report, _get_gsc_selected_site, _is_connected
+        if not _is_connected(account_id, "gsc"):
+            return {"ok": True, "skipped": "GSC not connected", "fixed": 0}
+
+        site_url = _get_gsc_selected_site(account_id) or os.getenv("GSC_SITE")
+        if not site_url:
+            return {"ok": True, "skipped": "No GSC site URL", "fixed": 0}
+
+        end = date.today()
+        start = end - td(days=28)
+        data = _fetch_gsc_report(site_url, start.isoformat(), end.isoformat()) or {}
+        top_pages = (data.get("top_pages") or [])[:10]
+
+        # Collect recently-fixed URLs (last 7 days) to avoid re-fixing
+        cutoff = datetime.utcnow() - td(days=7)
+        recent_jobs = WPJob.query.filter(
+            WPJob.kind == "seo_fix",
+            WPJob.created_at >= cutoff,
+        ).all()
+        recent_urls = {j.payload.get("post_url") for j in recent_jobs if j.payload}
+
+        fixed = 0
+        for page in top_pages:
+            page_url = page.get("page", "")
+            if not page_url or page_url in recent_urls:
+                continue
+            # Only process pages on this WP site
+            if site.base_url.rstrip("/") not in page_url:
+                continue
+
+            payload = _build_seo_fix_payload(site, page_url, source="autopilot")
+            if payload:
+                job = WPJob(site_id=site.id, kind="seo_fix", payload=payload)
+                db.session.add(job)
+                fixed += 1
+                results.append({"url": page_url, "queued": True,
+                                 "seo": payload["seo_score"], "aeo": payload["aeo_score"]})
+
+        if fixed:
+            db.session.commit()
+
+        return {"ok": True, "fixed": fixed, "pages_checked": len(top_pages), "results": results}
+
+    except Exception as exc:
+        current_app.logger.exception("_auto_audit_and_fix failed")
+        return {"ok": False, "error": str(exc)}
+
 
 # ---------- email approve ----------
 
@@ -963,8 +1141,21 @@ def cron_runner():
         current_app.logger.exception("SEO monitor hook failed in cron_runner")
         seo_monitor_results = [{"error": str(exc)}]
 
+    # Hook SEO auto-fix — audits top GSC pages and queues seo_fix jobs (7-day throttle per URL)
+    seo_fix_results = []
+    try:
+        sites = WPSite.query.all()
+        for site in sites:
+            if site.account_id:
+                r = _auto_audit_and_fix(site, site.account_id)
+                seo_fix_results.append({"site": site.base_url, **r})
+    except Exception as exc:
+        current_app.logger.exception("SEO auto-fix hook failed in cron_runner")
+        seo_fix_results = [{"error": str(exc)}]
+
     return jsonify({"ran_at": ran_at, **result,
-                    "seo_monitor": seo_monitor_results}), 200
+                    "seo_monitor": seo_monitor_results,
+                    "seo_auto_fix": seo_fix_results}), 200
 
 # ---------- legacy / compatibility aliases ----------
 
@@ -1094,6 +1285,49 @@ def seo_audit():
     return render_template("wp/seo_audit.html", result=result)
 
 
+@wp_bp.route("/seo-audit/apply-fixes", methods=["POST"], endpoint="seo_apply_fixes")
+@login_required
+def seo_apply_fixes():
+    """
+    Run SEO/AEO audit on a URL, generate schema, and queue an seo_fix job
+    to apply implementable fixes directly to the WordPress post.
+    """
+    site = _current_site()
+    if not site:
+        flash("Connect a WordPress site first.", "error")
+        return see_other("wp_bp.seo_audit")
+
+    url     = (request.form.get("url")     or "").strip()
+    keyword = (request.form.get("keyword") or "").strip()
+
+    if not url:
+        flash("URL is required.", "error")
+        return see_other("wp_bp.seo_audit")
+
+    payload = _build_seo_fix_payload(site, url, keyword=keyword, source="manual")
+
+    if payload is None:
+        # Could not find post or no fixes to apply — re-run audit to show user
+        flash("Could not match that URL to a WordPress post, or no fixable issues found. "
+              "Make sure the URL belongs to your connected WP site.", "warning")
+        return see_other("wp_bp.seo_audit")
+
+    job = WPJob(site_id=site.id, kind="seo_fix", payload=payload)
+    db.session.add(job)
+    db.session.commit()
+
+    fixes = []
+    if payload.get("schema_html"):  fixes.append("JSON-LD schema")
+    if payload.get("yoast_desc"):   fixes.append("Yoast meta description")
+
+    flash(
+        f"SEO fix queued for post #{payload['post_id']} "
+        f"(Job #{job.id}) — will apply: {', '.join(fixes) or 'available fixes'}.",
+        "success",
+    )
+    return see_other("wp_bp.edits")
+
+
 @wp_bp.route("/analyze-page", methods=["GET"], endpoint="analyze_page")
 @login_required
 def analyze_page_alias():
@@ -1205,7 +1439,8 @@ def edit_post_submit(post_id: int):
 def edits():
     """Dashboard of all pending / completed edit and refresh jobs."""
     status_filter = request.args.get("status", "").strip()
-    q = WPJob.query.filter(WPJob.kind.in_(["edit", "refresh"]))
+    EDIT_KINDS = ["edit", "refresh", "seo_fix"]
+    q = WPJob.query.filter(WPJob.kind.in_(EDIT_KINDS))
     if status_filter:
         q = q.filter_by(status=status_filter)
     jobs = q.order_by(WPJob.created_at.desc()).limit(200).all()
@@ -1213,7 +1448,7 @@ def edits():
     counts: Dict[str, int] = {}
     for s in ("queued", "running", "done", "error"):
         counts[s] = WPJob.query.filter(
-            WPJob.kind.in_(["edit", "refresh"]),
+            WPJob.kind.in_(EDIT_KINDS),
             WPJob.status == s,
         ).count()
 

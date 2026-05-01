@@ -137,6 +137,33 @@
   </div>
   {% endif %}
 
+  {# ── Auto-fix panel ───────────────────────────────────────────────────── #}
+  <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+    <div class="flex-1">
+      <h2 class="font-bold text-indigo-900 flex items-center gap-2">
+        <i class="fa-solid fa-wand-magic-sparkles text-indigo-500"></i>
+        Apply Fixes to WordPress
+      </h2>
+      <p class="text-sm text-indigo-700 mt-1">
+        Automatically inject JSON-LD schema and update Yoast meta on this post — no manual editing required.
+        <span class="text-indigo-500">Requires a connected WordPress site.</span>
+      </p>
+      <ul class="mt-2 text-xs text-indigo-600 space-y-0.5">
+        <li><i class="fa-solid fa-check mr-1"></i>JSON-LD schema (Article, FAQ, HowTo)</li>
+        <li><i class="fa-solid fa-check mr-1"></i>Yoast SEO meta description</li>
+      </ul>
+    </div>
+    <form method="POST" action="{{ url_for('wp_bp.seo_apply_fixes') }}" class="shrink-0">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="url"     value="{{ result.url }}">
+      <input type="hidden" name="keyword" value="{{ result.target_keyword or '' }}">
+      <button type="submit"
+              class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm transition-colors whitespace-nowrap">
+        <i class="fa-solid fa-bolt"></i> Apply Fixes Now
+      </button>
+    </form>
+  </div>
+
   {# ── Detailed checks ──────────────────────────────────────────────────── #}
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 

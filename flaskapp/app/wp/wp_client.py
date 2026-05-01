@@ -297,6 +297,33 @@ class WPClient:
         r = self._req("GET", "/wp/v2/posts", params=params)
         return r.json() if isinstance(r.json(), list) else []
 
+    def find_post_by_url(self, url: str) -> Optional[dict]:
+        """
+        Resolve a public URL to a WP post dict by matching the slug.
+        Returns the post dict or None if not found.
+        """
+        from urllib.parse import urlparse
+        path = urlparse(url).path.rstrip("/")
+        slug = path.split("/")[-1] if path else ""
+        if not slug:
+            return None
+        try:
+            r = self._req("GET", "/wp/v2/posts", params={"slug": slug, "status": "any", "per_page": 1})
+            posts = r.json()
+            if isinstance(posts, list) and posts:
+                return posts[0]
+        except Exception:
+            pass
+        # Also try pages (slug may be a page not a post)
+        try:
+            r = self._req("GET", "/wp/v2/pages", params={"slug": slug, "status": "any", "per_page": 1})
+            pages = r.json()
+            if isinstance(pages, list) and pages:
+                return pages[0]
+        except Exception:
+            pass
+        return None
+
     # ---------- diagnostics bundle ----------
 
     def site_health(self) -> dict:

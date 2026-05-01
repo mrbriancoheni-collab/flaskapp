@@ -552,6 +552,9 @@
         {% if has_endpoint('wp_bp.tech_seo') %}
           <a class="secondary-link {% if epn=='wp_bp.tech_seo' %}active{% endif %}" href="{{ url_for('wp_bp.tech_seo') }}"><i class="fa-solid fa-spider"></i><span>Technical SEO</span></a>
         {% endif %}
+        {% if has_endpoint('wp_bp.schema_gen') %}
+          <a class="secondary-link {% if epn=='wp_bp.schema_gen' %}active{% endif %}" href="{{ url_for('wp_bp.schema_gen') }}"><i class="fa-solid fa-code"></i><span>Schema Generator</span></a>
+        {% endif %}
         {% if has_endpoint('wp_bp.analyze') %}
           <a class="secondary-link {% if epn=='wp_bp.analyze' %}active{% endif %}" href="{{ url_for('wp_bp.analyze') }}"><i class="fa-solid fa-microscope"></i><span>Analyze Page</span></a>
         {% endif %}
@@ -574,6 +577,9 @@
         {% endif %}
         {% if has_endpoint('wp_bp.tech_seo') %}
           <a class="secondary-link {% if epn=='wp_bp.tech_seo' %}active{% endif %}" href="{{ url_for('wp_bp.tech_seo') }}"><i class="fa-solid fa-spider"></i><span>Technical SEO</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.schema_gen') %}
+          <a class="secondary-link {% if epn=='wp_bp.schema_gen' %}active{% endif %}" href="{{ url_for('wp_bp.schema_gen') }}"><i class="fa-solid fa-code"></i><span>Schema Generator</span></a>
         {% endif %}
       {% elif SECTION == 'strategy' %}
         <!-- strategy links placeholder -->

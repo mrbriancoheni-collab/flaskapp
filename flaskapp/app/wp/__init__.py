@@ -920,6 +920,85 @@ def cron_runner():
 
 # ---------- legacy / compatibility aliases ----------
 
+@wp_bp.route("/schema-gen", methods=["GET", "POST"], endpoint="schema_gen")
+@login_required
+def schema_gen():
+    site   = _current_site()
+    result = None
+    injected = None
+
+    if request.method == "POST":
+        action = (request.form.get("action") or "generate").strip()
+
+        # ── shared form values ──────────────────────────────────────────────
+        source_type = (request.form.get("source_type") or "url").strip()
+        post_id_raw = (request.form.get("post_id") or "").strip()
+        source_url  = (request.form.get("source_url") or "").strip()
+
+        schema_kwargs = dict(
+            include_article       = bool(request.form.get("include_article")),
+            include_faq           = bool(request.form.get("include_faq")),
+            include_howto         = bool(request.form.get("include_howto")),
+            include_local_business= bool(request.form.get("include_local_business")),
+            override_title        = (request.form.get("override_title") or "").strip(),
+            override_author       = (request.form.get("override_author") or "").strip(),
+            override_description  = (request.form.get("override_description") or "").strip(),
+            override_image_url    = (request.form.get("override_image_url") or "").strip(),
+            business_name         = (request.form.get("business_name") or "").strip(),
+            business_phone        = (request.form.get("business_phone") or "").strip(),
+            business_address      = (request.form.get("business_address") or "").strip(),
+            business_type         = (request.form.get("business_type") or "LocalBusiness").strip(),
+        )
+
+        if action == "generate":
+            try:
+                from app.wp.schema_gen import generate_from_url, generate_from_wp_post
+                if source_type == "post" and post_id_raw and site:
+                    from app.wp.wp_client import WPClient
+                    client = WPClient(site.base_url, site.username, site.app_password)
+                    result = generate_from_wp_post(client, int(post_id_raw), **schema_kwargs)
+                elif source_url:
+                    result = generate_from_url(source_url, **schema_kwargs)
+                else:
+                    flash("Enter a Post ID or URL to generate schema.", "error")
+                if result and result.get("error"):
+                    flash(result["error"], "error")
+                    result = None
+            except Exception:
+                current_app.logger.exception("Schema generation failed")
+                flash("Schema generation failed — please try again.", "error")
+
+        elif action == "inject":
+            if not site:
+                flash("Connect a WordPress site first.", "error")
+            else:
+                inject_post_id = int(request.form.get("inject_post_id") or 0)
+                schemas_json   = request.form.get("schemas_json") or "[]"
+                replace        = bool(request.form.get("replace_existing"))
+                if not inject_post_id:
+                    flash("Post ID required for injection.", "error")
+                else:
+                    try:
+                        import json as _json
+                        from app.wp.schema_gen import inject_schema_into_post
+                        from app.wp.wp_client import WPClient
+                        schemas = _json.loads(schemas_json)
+                        if not isinstance(schemas, list):
+                            schemas = [schemas]
+                        client  = WPClient(site.base_url, site.username, site.app_password)
+                        injected = inject_schema_into_post(client, inject_post_id,
+                                                           schemas, replace_existing=replace)
+                        if injected.get("ok"):
+                            flash(f"Schema injected into post #{inject_post_id}.", "success")
+                        else:
+                            flash(injected.get("error") or "Injection failed.", "error")
+                    except Exception:
+                        current_app.logger.exception("Schema injection failed")
+                        flash("Injection failed — please try again.", "error")
+
+    return render_template("wp/schema_gen.html", site=site, result=result, injected=injected)
+
+
 @wp_bp.route("/tech-seo", methods=["GET", "POST"], endpoint="tech_seo")
 @login_required
 def tech_seo():

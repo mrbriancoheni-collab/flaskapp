@@ -1,0 +1,355 @@
+{% extends "base_app.html" %}
+{% block title %}Schema Generator · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl space-y-8">
+
+  {# ── Header ───────────────────────────────────────────────────────────── #}
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">Schema Markup Generator</h1>
+    <p class="text-sm text-gray-500 mt-1">
+      Auto-detects and generates JSON-LD structured data (Article, FAQPage, HowTo,
+      LocalBusiness) from any page or WordPress post. Inject directly into WordPress
+      with one click.
+    </p>
+  </div>
+
+  {# ── Source + options form ─────────────────────────────────────────────── #}
+  <div class="bg-white rounded-xl border shadow-sm p-6 space-y-6">
+    <form method="POST" action="{{ url_for('wp_bp.schema_gen') }}" id="gen-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="generate">
+
+      {# Source selector #}
+      <div>
+        <div class="text-sm font-semibold text-gray-700 mb-2">Source</div>
+        <div class="flex gap-4 mb-3">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="source_type" value="url"
+                   id="src-url" class="accent-indigo-600"
+                   {% if not (result and result.get('post_id')) %}checked{% endif %}>
+            <span class="text-sm text-gray-700">Public URL</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer {% if not site %}opacity-40{% endif %}">
+            <input type="radio" name="source_type" value="post"
+                   id="src-post" class="accent-indigo-600"
+                   {% if result and result.get('post_id') %}checked{% endif %}
+                   {% if not site %}disabled{% endif %}>
+            <span class="text-sm text-gray-700">WordPress Post ID</span>
+          </label>
+        </div>
+
+        <div id="url-input" class="{% if result and result.get('post_id') %}hidden{% endif %}">
+          <input name="source_url" type="url" placeholder="https://example.com/your-post"
+                 value="{{ result.url if result and not result.get('post_id') else '' }}"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                        focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+        </div>
+        <div id="post-input" class="{% if not (result and result.get('post_id')) %}hidden{% endif %}">
+          <input name="post_id" type="number" placeholder="e.g. 42"
+                 value="{{ result.post_id if result and result.get('post_id') else '' }}"
+                 class="w-48 border border-gray-300 rounded-lg px-3 py-2 text-sm
+                        focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+          {% if not site %}
+          <p class="text-xs text-gray-400 mt-1">Connect a WordPress site in Settings to use this option.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Schema type checkboxes #}
+      <div>
+        <div class="text-sm font-semibold text-gray-700 mb-2">Schema Types</div>
+        <div class="flex flex-wrap gap-4">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="include_article" value="1"
+                   class="accent-indigo-600 w-4 h-4"
+                   {% if result is none or result.get('include_article', True) %}checked{% endif %}>
+            <span class="text-sm">Article</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="include_faq" value="1"
+                   class="accent-indigo-600 w-4 h-4"
+                   {% if result is none or result.get('include_faq', True) %}checked{% endif %}>
+            <span class="text-sm">FAQPage <span class="text-gray-400">(auto-detected)</span></span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="include_howto" value="1"
+                   class="accent-indigo-600 w-4 h-4"
+                   {% if result is none or result.get('include_howto', True) %}checked{% endif %}>
+            <span class="text-sm">HowTo <span class="text-gray-400">(auto-detected)</span></span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer" id="lb-label">
+            <input type="checkbox" name="include_local_business" value="1"
+                   id="lb-check" class="accent-indigo-600 w-4 h-4">
+            <span class="text-sm">LocalBusiness</span>
+          </label>
+        </div>
+      </div>
+
+      {# Optional overrides (collapsed by default) #}
+      <details {% if result and (result.override_title or result.override_author) %}open{% endif %}>
+        <summary class="text-sm font-semibold text-gray-700 cursor-pointer select-none flex items-center gap-1">
+          <i class="fa-solid fa-chevron-right text-xs text-gray-400 transition-transform"></i>
+          Optional overrides
+        </summary>
+        <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Title override</label>
+            <input name="override_title" type="text" placeholder="Auto-detected"
+                   value="{{ result.title if result else '' }}"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Author override</label>
+            <input name="override_author" type="text" placeholder="Auto-detected"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-medium text-gray-600 mb-1">Description override</label>
+            <input name="override_description" type="text" placeholder="Auto-detected from meta description"
+                   value="{{ result.description if result else '' }}"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-medium text-gray-600 mb-1">Image URL override</label>
+            <input name="override_image_url" type="url" placeholder="https://..."
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+          </div>
+        </div>
+      </details>
+
+      {# LocalBusiness fields (hidden unless checked) #}
+      <div id="lb-fields" class="hidden border border-purple-200 rounded-xl bg-purple-50 p-4 space-y-3">
+        <div class="text-sm font-semibold text-purple-900">LocalBusiness Details</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Business Name <span class="text-red-500">*</span></label>
+            <input name="business_name" type="text" placeholder="Acme Plumbing Co."
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+            <input name="business_phone" type="text" placeholder="+1 555 000 0000"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Street Address</label>
+            <input name="business_address" type="text" placeholder="123 Main St, City, State"
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Business Type</label>
+            <select name="business_type"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+              <option value="LocalBusiness">LocalBusiness (generic)</option>
+              <option value="Plumber">Plumber</option>
+              <option value="Electrician">Electrician</option>
+              <option value="HVACBusiness">HVAC / Heating & Cooling</option>
+              <option value="RoofingContractor">Roofing Contractor</option>
+              <option value="GeneralContractor">General Contractor</option>
+              <option value="Locksmith">Locksmith</option>
+              <option value="AutoRepair">Auto Repair</option>
+              <option value="DentalClinic">Dental Clinic</option>
+              <option value="MedicalClinic">Medical Clinic</option>
+              <option value="Restaurant">Restaurant</option>
+              <option value="LegalService">Legal Service</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" id="gen-btn"
+              class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600
+                     hover:bg-indigo-700 text-white rounded-lg font-medium text-sm transition-colors">
+        <i class="fa-solid fa-code" id="gen-icon"></i>
+        <span id="gen-label">Generate Schema</span>
+      </button>
+    </form>
+  </div>
+
+  {% if result %}
+
+  {# ── Detected types banner ────────────────────────────────────────────── #}
+  <div class="flex flex-wrap items-center gap-2">
+    <span class="text-sm font-semibold text-gray-700">Detected schema types:</span>
+    {% for t in result.detected_types %}
+    {% set badge_cls = {
+      'Article': 'bg-blue-100 text-blue-800',
+      'FAQPage': 'bg-green-100 text-green-800',
+      'HowTo':   'bg-orange-100 text-orange-800',
+      'LocalBusiness': 'bg-purple-100 text-purple-800',
+      'BreadcrumbList': 'bg-gray-100 text-gray-700'
+    }.get(t, 'bg-gray-100 text-gray-700') %}
+    <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold {{ badge_cls }}">{{ t }}</span>
+    {% else %}
+    <span class="text-sm text-gray-400">None — no schemas were generated.</span>
+    {% endfor %}
+  </div>
+
+  {# ── FAQ preview ──────────────────────────────────────────────────────── #}
+  {% if result.faq_pairs %}
+  <div class="bg-green-50 border border-green-200 rounded-xl overflow-hidden">
+    <div class="px-5 py-3 border-b border-green-200 bg-green-100 flex items-center gap-2">
+      <i class="fa-solid fa-circle-question text-green-600"></i>
+      <span class="font-semibold text-green-900 text-sm">FAQPage — {{ result.faq_pairs | length }} Q&amp;As detected</span>
+    </div>
+    <ul class="divide-y divide-green-100">
+      {% for pair in result.faq_pairs %}
+      <li class="px-5 py-3">
+        <div class="text-sm font-semibold text-gray-900">{{ pair.q }}</div>
+        <div class="text-sm text-gray-600 mt-0.5 line-clamp-2">{{ pair.a }}</div>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {# ── HowTo steps preview ──────────────────────────────────────────────── #}
+  {% if result.howto_steps %}
+  <div class="bg-orange-50 border border-orange-200 rounded-xl overflow-hidden">
+    <div class="px-5 py-3 border-b border-orange-200 bg-orange-100 flex items-center gap-2">
+      <i class="fa-solid fa-list-ol text-orange-600"></i>
+      <span class="font-semibold text-orange-900 text-sm">HowTo — {{ result.howto_steps | length }} steps detected</span>
+    </div>
+    <ol class="divide-y divide-orange-100 list-none">
+      {% for step in result.howto_steps %}
+      <li class="px-5 py-3 flex items-start gap-3">
+        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-orange-200 text-orange-800
+                     text-xs font-bold flex items-center justify-center mt-0.5">
+          {{ loop.index }}
+        </span>
+        <div>
+          <div class="text-sm font-semibold text-gray-900">{{ step.name }}</div>
+          {% if step.text != step.name %}
+          <div class="text-xs text-gray-500 mt-0.5 line-clamp-2">{{ step.text }}</div>
+          {% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
+  {% endif %}
+
+  {# ── JSON-LD preview + copy ───────────────────────────────────────────── #}
+  {% if result.combined_json %}
+  <div class="bg-gray-900 rounded-xl overflow-hidden">
+    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+      <div class="flex items-center gap-2 text-sm text-gray-300">
+        <i class="fa-solid fa-code text-indigo-400"></i>
+        <span>JSON-LD Output</span>
+        <span class="text-gray-500 text-xs ml-1">(paste into &lt;head&gt; or use Inject below)</span>
+      </div>
+      <button onclick="copySchema()" id="copy-btn"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-700
+                     hover:bg-gray-600 text-gray-200 rounded-lg text-xs font-medium transition-colors">
+        <i class="fa-regular fa-copy"></i>
+        <span id="copy-label">Copy</span>
+      </button>
+    </div>
+    <pre id="schema-preview"
+         class="px-5 py-4 text-sm text-green-300 overflow-x-auto leading-relaxed whitespace-pre max-h-96 overflow-y-auto font-mono">{{ result.combined_json }}</pre>
+  </div>
+
+  {# ── Inject into WordPress ────────────────────────────────────────────── #}
+  {% if site %}
+  {% set inj_post_id = result.post_id if result.get('post_id') else '' %}
+  <div class="bg-white border rounded-xl p-5 space-y-4">
+    <div class="flex items-center gap-2">
+      <i class="fa-brands fa-wordpress text-blue-500 text-lg"></i>
+      <span class="font-semibold text-gray-900">Inject into WordPress</span>
+      <span class="text-xs text-gray-400 ml-1">Appends the JSON-LD block to the post content</span>
+    </div>
+    <form method="POST" action="{{ url_for('wp_bp.schema_gen') }}" class="flex flex-wrap items-end gap-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="inject">
+      <input type="hidden" name="schemas_json" value="{{ result.schemas | tojson }}">
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">WordPress Post ID <span class="text-red-500">*</span></label>
+        <input name="inject_post_id" type="number" placeholder="e.g. 42"
+               value="{{ inj_post_id }}"
+               class="w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm
+                      focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <label class="flex items-center gap-2 cursor-pointer pb-2">
+        <input type="checkbox" name="replace_existing" value="1"
+               class="accent-indigo-600 w-4 h-4">
+        <span class="text-sm text-gray-700">Replace existing schema</span>
+      </label>
+      <button type="submit"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600
+                     hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors">
+        <i class="fa-brands fa-wordpress"></i>
+        Inject into Post
+      </button>
+    </form>
+
+    {% if injected %}
+    <div class="{% if injected.ok %}bg-green-50 border-green-200 text-green-800{% else %}bg-red-50 border-red-200 text-red-800{% endif %} border rounded-lg px-4 py-3 text-sm flex items-center gap-2">
+      {% if injected.ok %}
+        <i class="fa-solid fa-circle-check"></i>
+        Schema injected successfully.
+        {% if injected.link %}<a href="{{ injected.link }}" target="_blank" rel="noopener" class="underline ml-1">View post →</a>{% endif %}
+      {% else %}
+        <i class="fa-solid fa-circle-xmark"></i>
+        {{ injected.error }}
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="bg-gray-50 border rounded-xl p-4 text-sm text-gray-500 flex items-center gap-2">
+    <i class="fa-solid fa-circle-info"></i>
+    <span><a href="{{ url_for('wp_bp.settings') }}" class="text-indigo-600 hover:underline">Connect a WordPress site</a>
+    to inject schema directly into posts.</span>
+  </div>
+  {% endif %}
+
+  {% endif %}{# /if combined_json #}
+  {% endif %}{# /if result #}
+
+</div>
+
+<script>
+// Source toggle
+document.querySelectorAll('input[name="source_type"]').forEach(function(radio) {
+  radio.addEventListener('change', function() {
+    document.getElementById('url-input').classList.toggle('hidden', this.value !== 'url');
+    document.getElementById('post-input').classList.toggle('hidden', this.value !== 'post');
+  });
+});
+
+// LocalBusiness toggle
+document.getElementById('lb-check').addEventListener('change', function() {
+  document.getElementById('lb-fields').classList.toggle('hidden', !this.checked);
+});
+
+// details chevron rotation
+document.querySelectorAll('details').forEach(function(el) {
+  el.addEventListener('toggle', function() {
+    const chevron = el.querySelector('summary i.fa-chevron-right');
+    if (chevron) chevron.style.transform = el.open ? 'rotate(90deg)' : '';
+  });
+});
+
+// Loading state
+document.getElementById('gen-form').addEventListener('submit', function() {
+  const btn   = document.getElementById('gen-btn');
+  const icon  = document.getElementById('gen-icon');
+  const label = document.getElementById('gen-label');
+  btn.disabled = true;
+  btn.classList.add('opacity-75', 'cursor-wait');
+  icon.className  = 'fa-solid fa-spinner fa-spin';
+  label.textContent = 'Generating…';
+});
+
+// Copy to clipboard
+function copySchema() {
+  const text = document.getElementById('schema-preview').textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    const lbl = document.getElementById('copy-label');
+    lbl.textContent = 'Copied!';
+    setTimeout(function() { lbl.textContent = 'Copy'; }, 2000);
+  });
+}
+</script>
+{% endblock %}

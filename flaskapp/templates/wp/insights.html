@@ -39,6 +39,33 @@
     </div>
   </div>
 
+  <!-- SEO Monitoring Alerts widget -->
+  {% if seo_alerts %}
+  <div class="rounded-xl border bg-white p-5">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-bell text-amber-500"></i>
+        <h2 class="font-semibold">SEO Alerts</h2>
+        {% if seo_unread %}
+          <span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">{{ seo_unread }} unread</span>
+        {% endif %}
+      </div>
+      <a href="{{ url_for('seo_bp.monitor') }}" class="text-sm text-indigo-600 hover:underline">View all →</a>
+    </div>
+    <ul class="space-y-2">
+      {% for alert in seo_alerts %}
+      <li class="flex items-start gap-3 text-sm">
+        <span class="mt-0.5 shrink-0 w-2 h-2 rounded-full
+          {% if alert.severity == 'critical' %}bg-red-500
+          {% elif alert.severity == 'warning' %}bg-amber-400
+          {% else %}bg-blue-400{% endif %}"></span>
+        <span class="{% if not alert.is_read %}font-medium{% else %}text-gray-600{% endif %}">{{ alert.message }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
   <!-- Recent analyses/publish drafts -->
   <div class="space-y-4">
     <h2 class="text-lg font-semibold">Recent Content Analyses & Drafts</h2>

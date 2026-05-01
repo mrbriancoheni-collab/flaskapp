@@ -1,33 +1,129 @@
 {% extends "base_app.html" %}
 {% block title %}Edit Post #{{ post_id }} · {{ app_name }}{% endblock %}
+
 {% block content %}
-<div class="max-w-3xl space-y-6">
-  <h1 class="text-2xl font-semibold">Edit Post #{{ post_id }}</h1>
-  <form method="post" action="{{ url_for('wp_bp.edit_post_submit', post_id=post_id) }}" class="space-y-4">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="max-w-4xl space-y-6">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <label class="block text-sm font-medium">New Title</label>
-      <input name="title" class="w-full border rounded px-3 py-2" value="{{ title }}">
-    </div>
-    <div>
-      <label class="block text-sm font-medium">Yoast Meta Description (optional)</label>
-      <textarea name="yoast_desc" class="w-full border rounded px-3 py-2" rows="2"></textarea>
-    </div>
-    <p class="text-xs text-gray-500">Note: This form queues an update job (refresh). To change the body HTML itself, use the WordPress editor or paste a new HTML outline into a “Compose” draft.</p>
-    <div class="flex items-center gap-3">
-      <label class="inline-flex items-center gap-2">
-        <input type="checkbox" name="publish_now" value="1">
-        <span>Publish immediately</span>
-      </label>
-      <label class="inline-flex items-center gap-2">
-        <input type="checkbox" name="needs_approval" value="1">
-        <span>Require approval</span>
-      </label>
+      <h1 class="text-2xl font-bold text-gray-900">Edit Post #{{ post_id }}</h1>
+      {% if post_link %}
+      <a href="{{ post_link }}" target="_blank"
+         class="text-sm text-indigo-600 hover:underline mt-0.5 inline-flex items-center gap-1">
+        {{ post_link }} <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+      </a>
+      {% endif %}
     </div>
     <div class="flex gap-2">
-      <button class="px-4 py-2 rounded bg-[var(--brand)] text-white">Submit Edit</button>
-      <a class="px-4 py-2 rounded border" href="{{ url_for('wp_bp.publisher') }}">Cancel</a>
+      <a href="{{ url_for('wp_bp.edit_lookup') }}"
+         class="px-4 py-2 rounded-lg border text-sm hover:bg-gray-50 flex items-center gap-2">
+        <i class="fa-solid fa-arrow-left"></i> Back
+      </a>
+      <a href="{{ url_for('wp_bp.edits') }}"
+         class="px-4 py-2 rounded-lg border text-sm hover:bg-gray-50 flex items-center gap-2">
+        <i class="fa-solid fa-list-check"></i> Edits Dashboard
+      </a>
+    </div>
+  </div>
+
+  <form method="post" action="{{ url_for('wp_bp.edit_post_submit', post_id=post_id) }}"
+        class="space-y-5">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <!-- Title -->
+    <div class="bg-white rounded-xl border p-5 space-y-4">
+      <h2 class="font-semibold text-gray-800">Post Details</h2>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Title <span class="text-red-500">*</span></label>
+        <input name="title" type="text" required value="{{ title }}"
+               class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Excerpt</label>
+        <textarea name="excerpt" rows="2"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none">{{ excerpt }}</textarea>
+        <p class="text-xs text-gray-400 mt-1">Short summary shown in search results and archive pages.</p>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Yoast Meta Description</label>
+        <textarea name="yoast_desc" rows="2"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none"
+                  placeholder="Leave blank to keep existing Yoast description…"></textarea>
+        <p class="text-xs text-gray-400 mt-1">155–160 characters for best results.</p>
+      </div>
+    </div>
+
+    <!-- HTML Content -->
+    <div class="bg-white rounded-xl border p-5 space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="font-semibold text-gray-800">Content (HTML)</h2>
+        <button type="button" id="togglePreviewBtn"
+                class="text-xs text-indigo-600 hover:underline">
+          Show Preview
+        </button>
+      </div>
+      <textarea name="html" id="htmlEditor" rows="20"
+                class="w-full border border-gray-300 rounded-lg px-4 py-3 font-mono text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-y">{{ html }}</textarea>
+      <div id="htmlPreview" class="hidden prose max-w-none border rounded-lg p-4 bg-gray-50 overflow-auto max-h-96"></div>
+      <p class="text-xs text-gray-400">Editing raw HTML. The cron runner will push this directly to WordPress.</p>
+    </div>
+
+    <!-- Publish settings -->
+    <div class="bg-white rounded-xl border p-5">
+      <h2 class="font-semibold text-gray-800 mb-4">Publish Settings</h2>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Post Status</label>
+          <select name="status"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500">
+            <option value="publish" {% if status == 'publish' %}selected{% endif %}>Published</option>
+            <option value="draft"   {% if status == 'draft'   %}selected{% endif %}>Draft</option>
+            <option value="private" {% if status == 'private' %}selected{% endif %}>Private</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <label class="inline-flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="needs_approval" value="1"
+                   class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+            <span class="text-sm text-gray-700">Require approval before pushing</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-3">
+      <button type="submit"
+              class="px-6 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition flex items-center gap-2">
+        <i class="fa-solid fa-clock"></i> Queue Edit
+      </button>
+      <a href="{{ url_for('wp_bp.edit_lookup') }}"
+         class="px-4 py-2.5 rounded-lg border text-sm hover:bg-gray-50">Cancel</a>
     </div>
   </form>
 </div>
+
+<script>
+(function () {
+  const btn = document.getElementById('togglePreviewBtn');
+  const editor = document.getElementById('htmlEditor');
+  const preview = document.getElementById('htmlPreview');
+  let showing = false;
+  btn.addEventListener('click', function () {
+    showing = !showing;
+    if (showing) {
+      preview.innerHTML = editor.value;
+      preview.classList.remove('hidden');
+      btn.textContent = 'Hide Preview';
+    } else {
+      preview.classList.add('hidden');
+      btn.textContent = 'Show Preview';
+    }
+  });
+})();
+</script>
 {% endblock %}

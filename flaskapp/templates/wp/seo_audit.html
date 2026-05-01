@@ -1,0 +1,240 @@
+{% extends "base_app.html" %}
+{% block title %}SEO & AEO Audit · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl space-y-8">
+
+  {# ── Page header ──────────────────────────────────────────────────────── #}
+  <div class="flex items-start justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">SEO &amp; AEO Page Audit</h1>
+      <p class="text-sm text-gray-500 mt-1">
+        On-page SEO analysis + Answer Engine Optimisation score for Google AI Overviews,
+        ChatGPT &amp; Perplexity.
+      </p>
+    </div>
+  </div>
+
+  {# ── Input form ───────────────────────────────────────────────────────── #}
+  <div class="bg-white rounded-xl border shadow-sm p-6">
+    <form method="POST" action="{{ url_for('wp_bp.seo_audit') }}" class="space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Page URL <span class="text-red-500">*</span></label>
+          <input name="url" type="url" required placeholder="https://example.com/your-page"
+                 value="{{ result.url if result else '' }}"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Target Keyword <span class="text-gray-400 font-normal">(optional)</span></label>
+          <input name="keyword" type="text" placeholder="e.g. emergency plumber london"
+                 value="{{ result.target_keyword if result else '' }}"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button type="submit"
+                class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm transition-colors">
+          <i class="fa-solid fa-magnifying-glass-chart"></i>
+          Run Audit
+        </button>
+        {% if result %}
+        <span class="text-sm text-gray-500">Audited: <span class="font-mono text-xs">{{ result.url }}</span></span>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  {% if result %}
+
+  {# ── Score overview ───────────────────────────────────────────────────── #}
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+    {# SEO Score card #}
+    {% set seo_color = 'text-green-600' if result.seo_score >= 75 else ('text-yellow-500' if result.seo_score >= 50 else 'text-red-500') %}
+    {% set seo_ring  = 'stroke-green-500' if result.seo_score >= 75 else ('stroke-yellow-400' if result.seo_score >= 50 else 'stroke-red-500') %}
+    {% set seo_bg    = 'bg-green-50 border-green-200' if result.seo_score >= 75 else ('bg-yellow-50 border-yellow-200' if result.seo_score >= 50 else 'bg-red-50 border-red-200') %}
+    <div class="bg-white rounded-xl border shadow-sm p-6 flex items-center gap-6 {{ seo_bg }}">
+      <div class="relative flex-shrink-0">
+        <svg class="w-24 h-24 -rotate-90" viewBox="0 0 36 36">
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" stroke-width="3"/>
+          <circle cx="18" cy="18" r="15.9" fill="none" {{ seo_ring }}
+                  stroke-width="3"
+                  stroke-dasharray="{{ result.seo_score }}, 100"
+                  stroke-linecap="round"/>
+        </svg>
+        <span class="absolute inset-0 flex items-center justify-center text-2xl font-bold {{ seo_color }}">
+          {{ result.seo_score }}
+        </span>
+      </div>
+      <div>
+        <div class="text-lg font-bold text-gray-900">SEO Score</div>
+        <div class="text-sm text-gray-500 mt-0.5">On-page optimisation</div>
+        {% if result.seo_score >= 75 %}
+          <span class="mt-2 inline-block px-2 py-0.5 rounded-full bg-green-100 text-green-800 text-xs font-semibold">Strong</span>
+        {% elif result.seo_score >= 50 %}
+          <span class="mt-2 inline-block px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-semibold">Needs Work</span>
+        {% else %}
+          <span class="mt-2 inline-block px-2 py-0.5 rounded-full bg-red-100 text-red-800 text-xs font-semibold">Critical Issues</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {# AEO Score card #}
+    {% set aeo_color = 'text-purple-600' if result.aeo_score >= 75 else ('text-yellow-500' if result.aeo_score >= 50 else 'text-red-500') %}
+    {% set aeo_ring  = 'stroke-purple-500' if result.aeo_score >= 75 else ('stroke-yellow-400' if result.aeo_score >= 50 else 'stroke-red-500') %}
+    {% set aeo_bg    = 'bg-purple-50 border-purple-200' if result.aeo_score >= 75 else ('bg-yellow-50 border-yellow-200' if result.aeo_score >= 50 else 'bg-red-50 border-red-200') %}
+    <div class="bg-white rounded-xl border shadow-sm p-6 flex items-center gap-6 {{ aeo_bg }}">
+      <div class="relative flex-shrink-0">
+        <svg class="w-24 h-24 -rotate-90" viewBox="0 0 36 36">
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" stroke-width="3"/>
+          <circle cx="18" cy="18" r="15.9" fill="none" {{ aeo_ring }}
+                  stroke-width="3"
+                  stroke-dasharray="{{ result.aeo_score }}, 100"
+                  stroke-linecap="round"/>
+        </svg>
+        <span class="absolute inset-0 flex items-center justify-center text-2xl font-bold {{ aeo_color }}">
+          {{ result.aeo_score }}
+        </span>
+      </div>
+      <div>
+        <div class="text-lg font-bold text-gray-900">AEO Score</div>
+        <div class="text-sm text-gray-500 mt-0.5">Answer engine readiness</div>
+        {% if result.aeo_score >= 75 %}
+          <span class="mt-2 inline-block px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs font-semibold">AI-Ready</span>
+        {% elif result.aeo_score >= 50 %}
+          <span class="mt-2 inline-block px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-semibold">Partial Coverage</span>
+        {% else %}
+          <span class="mt-2 inline-block px-2 py-0.5 rounded-full bg-red-100 text-red-800 text-xs font-semibold">Not AI-Optimised</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ── Priority fixes ───────────────────────────────────────────────────── #}
+  {% if result.priority_fixes %}
+  <div class="bg-amber-50 border border-amber-200 rounded-xl p-5">
+    <h2 class="text-base font-bold text-amber-900 flex items-center gap-2 mb-3">
+      <i class="fa-solid fa-triangle-exclamation text-amber-500"></i>
+      Priority Fixes
+    </h2>
+    <ol class="space-y-3">
+      {% for fix in result.priority_fixes %}
+      <li class="flex items-start gap-3">
+        <span class="flex-shrink-0 w-6 h-6 rounded-full
+              {% if fix.status == 'fail' %}bg-red-100 text-red-700{% else %}bg-yellow-100 text-yellow-800{% endif %}
+              text-xs font-bold flex items-center justify-center mt-0.5">
+          {{ loop.index }}
+        </span>
+        <div>
+          <span class="font-semibold text-gray-900 text-sm">{{ fix.label }}:</span>
+          <span class="text-sm text-gray-700 ml-1">{{ fix.fix }}</span>
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
+  {% endif %}
+
+  {# ── Detailed checks ──────────────────────────────────────────────────── #}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    {# SEO checks panel #}
+    <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b bg-gray-50 flex items-center gap-2">
+        <i class="fa-brands fa-google text-blue-500"></i>
+        <h2 class="font-bold text-gray-900">SEO Checks</h2>
+        <span class="ml-auto text-sm font-medium text-gray-500">
+          {{ result.seo_checks | selectattr('status','eq','pass') | list | length }}/{{ result.seo_checks | length }} passed
+        </span>
+      </div>
+      <ul class="divide-y">
+        {% for chk in result.seo_checks %}
+        <li class="px-5 py-3 flex items-start gap-3">
+          {% if chk.status == 'pass' %}
+            <i class="fa-solid fa-circle-check text-green-500 mt-0.5 flex-shrink-0"></i>
+          {% elif chk.status == 'warn' %}
+            <i class="fa-solid fa-circle-exclamation text-yellow-500 mt-0.5 flex-shrink-0"></i>
+          {% else %}
+            <i class="fa-solid fa-circle-xmark text-red-500 mt-0.5 flex-shrink-0"></i>
+          {% endif %}
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-sm font-semibold text-gray-800">{{ chk.label }}</span>
+              <span class="text-xs text-gray-400 flex-shrink-0">{{ chk.score }}/{{ chk.max_score }}</span>
+            </div>
+            <p class="text-xs text-gray-600 mt-0.5">{{ chk.detail }}</p>
+            {% if chk.fix %}
+            <p class="text-xs text-indigo-700 mt-1 italic">→ {{ chk.fix }}</p>
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    {# AEO checks panel #}
+    <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b bg-gray-50 flex items-center gap-2">
+        <i class="fa-solid fa-robot text-purple-500"></i>
+        <h2 class="font-bold text-gray-900">AEO Checks</h2>
+        <span class="text-xs text-gray-400 ml-1">(AI Overviews, ChatGPT, Perplexity)</span>
+        <span class="ml-auto text-sm font-medium text-gray-500">
+          {{ result.aeo_checks | selectattr('status','eq','pass') | list | length }}/{{ result.aeo_checks | length }} passed
+        </span>
+      </div>
+      <ul class="divide-y">
+        {% for chk in result.aeo_checks %}
+        <li class="px-5 py-3 flex items-start gap-3">
+          {% if chk.status == 'pass' %}
+            <i class="fa-solid fa-circle-check text-green-500 mt-0.5 flex-shrink-0"></i>
+          {% elif chk.status == 'warn' %}
+            <i class="fa-solid fa-circle-exclamation text-yellow-500 mt-0.5 flex-shrink-0"></i>
+          {% else %}
+            <i class="fa-solid fa-circle-xmark text-red-500 mt-0.5 flex-shrink-0"></i>
+          {% endif %}
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-sm font-semibold text-gray-800">{{ chk.label }}</span>
+              <span class="text-xs text-gray-400 flex-shrink-0">{{ chk.score }}/{{ chk.max_score }}</span>
+            </div>
+            <p class="text-xs text-gray-600 mt-0.5">{{ chk.detail }}</p>
+            {% if chk.fix %}
+            <p class="text-xs text-purple-700 mt-1 italic">→ {{ chk.fix }}</p>
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+  </div>{# /grid #}
+
+  {# ── AEO explainer ────────────────────────────────────────────────────── #}
+  <details class="bg-gray-50 border rounded-xl">
+    <summary class="px-5 py-4 cursor-pointer font-semibold text-sm text-gray-700 flex items-center gap-2">
+      <i class="fa-solid fa-circle-info text-gray-400"></i>
+      What is AEO (Answer Engine Optimisation)?
+    </summary>
+    <div class="px-5 pb-5 text-sm text-gray-600 space-y-2 pt-2">
+      <p>AEO optimises your content to be cited and surfaced by AI-powered answer engines — Google AI Overviews,
+         ChatGPT, Perplexity, Bing Copilot, and voice assistants.</p>
+      <p>Unlike traditional SEO (which targets ranked blue links), AEO targets <strong>zero-click answers</strong> — where
+         the AI summarises your content directly without the user clicking through.</p>
+      <ul class="list-disc ml-5 space-y-1">
+        <li><strong>Direct answers</strong> — concise, definition-style intro paragraphs</li>
+        <li><strong>FAQ structure</strong> — question headings + FAQPage JSON-LD schema</li>
+        <li><strong>Short paragraphs</strong> — 2–4 sentences so AI can extract cleanly</li>
+        <li><strong>Structured lists</strong> — bullet points and numbered steps</li>
+        <li><strong>Freshness signals</strong> — visible published/updated dates</li>
+      </ul>
+      <p class="text-gray-500">A page can rank well for SEO but score poorly for AEO — optimising for both
+         maximises visibility across both traditional and AI-powered search.</p>
+    </div>
+  </details>
+
+  {% endif %}{# /if result #}
+
+</div>
+{% endblock %}

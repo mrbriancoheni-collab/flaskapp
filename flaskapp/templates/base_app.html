@@ -535,6 +535,67 @@
         </a>
         {% endif %}
 
+      {% elif SECTION == 'wp' %}
+        <div class="sidebar-label"><i class="fa-brands fa-wordpress"></i>WordPress</div>
+        {% if has_endpoint('wp_bp.insights') %}
+          <a class="secondary-link {% if epn=='wp_bp.insights' %}active{% endif %}" href="{{ url_for('wp_bp.insights') }}"><i class="fa-solid fa-gauge"></i><span>Insights</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.publisher') %}
+          <a class="secondary-link {% if epn=='wp_bp.publisher' %}active{% endif %}" href="{{ url_for('wp_bp.publisher') }}"><i class="fa-solid fa-paper-plane"></i><span>Publisher</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.new_post') %}
+          <a class="secondary-link {% if epn=='wp_bp.new_post' %}active{% endif %}" href="{{ url_for('wp_bp.new_post') }}"><i class="fa-solid fa-pen-to-square"></i><span>New Post</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.seo_audit') %}
+          <a class="secondary-link {% if epn=='wp_bp.seo_audit' %}active{% endif %}" href="{{ url_for('wp_bp.seo_audit') }}"><i class="fa-solid fa-magnifying-glass-chart"></i><span>SEO &amp; AEO Audit</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.tech_seo') %}
+          <a class="secondary-link {% if epn=='wp_bp.tech_seo' %}active{% endif %}" href="{{ url_for('wp_bp.tech_seo') }}"><i class="fa-solid fa-spider"></i><span>Technical SEO</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.schema_gen') %}
+          <a class="secondary-link {% if epn=='wp_bp.schema_gen' %}active{% endif %}" href="{{ url_for('wp_bp.schema_gen') }}"><i class="fa-solid fa-code"></i><span>Schema Generator</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.edit_lookup') %}
+          <a class="secondary-link {% if epn in ('wp_bp.edit_lookup','wp_bp.edit_post','wp_bp.edit_post_submit') %}active{% endif %}" href="{{ url_for('wp_bp.edit_lookup') }}"><i class="fa-solid fa-pen-to-square"></i><span>Edit Post</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.edits') %}
+          <a class="secondary-link {% if epn=='wp_bp.edits' %}active{% endif %}" href="{{ url_for('wp_bp.edits') }}"><i class="fa-solid fa-list-check"></i><span>Edits Dashboard</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.analyze') %}
+          <a class="secondary-link {% if epn=='wp_bp.analyze' %}active{% endif %}" href="{{ url_for('wp_bp.analyze') }}"><i class="fa-solid fa-microscope"></i><span>Analyze Page</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.monitor') %}
+          <a class="secondary-link {% if epn=='seo_bp.monitor' %}active{% endif %}" href="{{ url_for('seo_bp.monitor') }}"><i class="fa-solid fa-bell"></i><span>SEO Monitor</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.settings') %}
+          <a class="secondary-link {% if epn=='wp_bp.settings' %}active{% endif %}" href="{{ url_for('wp_bp.settings') }}"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
+        {% endif %}
+      {% elif SECTION == 'seo' %}
+        <div class="sidebar-label"><i class="fa-solid fa-magnifying-glass"></i>SEO</div>
+        {% if has_endpoint('seo_bp.index') %}
+          <a class="secondary-link {% if epn=='seo_bp.index' %}active{% endif %}" href="{{ url_for('seo_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Overview</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.rankings') %}
+          <a class="secondary-link {% if epn=='seo_bp.rankings' %}active{% endif %}" href="{{ url_for('seo_bp.rankings') }}"><i class="fa-solid fa-chart-line"></i><span>Rankings</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.optimize') %}
+          <a class="secondary-link {% if epn=='seo_bp.optimize' %}active{% endif %}" href="{{ url_for('seo_bp.optimize') }}"><i class="fa-solid fa-wand-magic-sparkles"></i><span>AI Recommendations</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.seo_audit') %}
+          <a class="secondary-link {% if epn=='wp_bp.seo_audit' %}active{% endif %}" href="{{ url_for('wp_bp.seo_audit') }}"><i class="fa-solid fa-magnifying-glass-chart"></i><span>SEO &amp; AEO Audit</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.tech_seo') %}
+          <a class="secondary-link {% if epn=='wp_bp.tech_seo' %}active{% endif %}" href="{{ url_for('wp_bp.tech_seo') }}"><i class="fa-solid fa-spider"></i><span>Technical SEO</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.schema_gen') %}
+          <a class="secondary-link {% if epn=='wp_bp.schema_gen' %}active{% endif %}" href="{{ url_for('wp_bp.schema_gen') }}"><i class="fa-solid fa-code"></i><span>Schema Generator</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.gaps') %}
+          <a class="secondary-link {% if epn=='seo_bp.gaps' %}active{% endif %}" href="{{ url_for('seo_bp.gaps') }}"><i class="fa-solid fa-layer-group"></i><span>Keyword Gaps</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.monitor') %}
+          <a class="secondary-link {% if epn=='seo_bp.monitor' %}active{% endif %}" href="{{ url_for('seo_bp.monitor') }}"><i class="fa-solid fa-bell"></i><span>Monitor &amp; Alerts</span></a>
+        {% endif %}
       {% elif SECTION == 'strategy' %}
         <!-- strategy links placeholder -->
       {% elif SECTION == 'fbads' %}

@@ -317,6 +317,24 @@ def _process_queue(max_jobs: int = 5) -> dict:
                 msg = f"AI draft created {res.get('id')} → {link}" if link else f"AI draft created {res.get('id')}"
                 db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info", message=msg))
 
+            elif job.kind == "edit":
+                p = job.payload or {}
+                post_id = int(p.get("post_id", 0))
+                if not post_id:
+                    raise ValueError("edit job missing post_id")
+                res = c.create_or_update_post(
+                    post_id=post_id,
+                    title=p.get("title", ""),
+                    html=p.get("html", ""),
+                    excerpt=p.get("excerpt") or None,
+                    status=p.get("status") or "publish",
+                    yoast_title=p.get("title") or None,
+                    yoast_desc=p.get("yoast_desc") or None,
+                )
+                link = res.get("link")
+                msg = f"Edited post {post_id} → {link}" if link else f"Edited post {post_id}"
+                db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info", message=msg))
+
             else:
                 db.session.add(WPLog(site_id=site.id, job_id=job.id, level="warning", message=f"Unknown job kind: {job.kind}"))
 
@@ -894,7 +912,19 @@ def insights():
     except Exception:
         pass
 
-    return render_template("wp/insights.html", jobs=jobs, ga=ga, gsc=gsc)
+    seo_alerts = []
+    seo_unread = 0
+    try:
+        from app.seo.monitor import get_unread_alerts
+        aid = _account_id()
+        if aid:
+            seo_alerts = get_unread_alerts(account_id=aid, limit=3)
+            seo_unread = len([a for a in seo_alerts if not a.is_read])
+    except Exception:
+        pass
+
+    return render_template("wp/insights.html", jobs=jobs, ga=ga, gsc=gsc,
+                           seo_alerts=seo_alerts, seo_unread=seo_unread)
 
 # ---------- cron (no login) ----------
 
@@ -916,9 +946,153 @@ def cron_runner():
     current_app.logger.info("wp cron-runner: start at %s (max=%s)", ran_at, max_jobs)
 
     result = _process_queue(max_jobs=max_jobs)
-    return jsonify({"ran_at": ran_at, **result}), 200
+
+    # Hook SEO monitor — runs at most once per 23 h per site (throttled inside)
+    seo_monitor_results = []
+    try:
+        from app.seo.monitor import run_monitoring_check
+        sites = WPSite.query.all()
+        for site in sites:
+            r = run_monitoring_check(
+                site_url=site.base_url,
+                site_id=site.id,
+                account_id=site.account_id,
+            )
+            seo_monitor_results.append({"site": site.base_url, **r})
+    except Exception as exc:
+        current_app.logger.exception("SEO monitor hook failed in cron_runner")
+        seo_monitor_results = [{"error": str(exc)}]
+
+    return jsonify({"ran_at": ran_at, **result,
+                    "seo_monitor": seo_monitor_results}), 200
 
 # ---------- legacy / compatibility aliases ----------
+
+@wp_bp.route("/schema-gen", methods=["GET", "POST"], endpoint="schema_gen")
+@login_required
+def schema_gen():
+    site   = _current_site()
+    result = None
+    injected = None
+
+    if request.method == "POST":
+        action = (request.form.get("action") or "generate").strip()
+
+        # ── shared form values ──────────────────────────────────────────────
+        source_type = (request.form.get("source_type") or "url").strip()
+        post_id_raw = (request.form.get("post_id") or "").strip()
+        source_url  = (request.form.get("source_url") or "").strip()
+
+        schema_kwargs = dict(
+            include_article       = bool(request.form.get("include_article")),
+            include_faq           = bool(request.form.get("include_faq")),
+            include_howto         = bool(request.form.get("include_howto")),
+            include_local_business= bool(request.form.get("include_local_business")),
+            override_title        = (request.form.get("override_title") or "").strip(),
+            override_author       = (request.form.get("override_author") or "").strip(),
+            override_description  = (request.form.get("override_description") or "").strip(),
+            override_image_url    = (request.form.get("override_image_url") or "").strip(),
+            business_name         = (request.form.get("business_name") or "").strip(),
+            business_phone        = (request.form.get("business_phone") or "").strip(),
+            business_address      = (request.form.get("business_address") or "").strip(),
+            business_type         = (request.form.get("business_type") or "LocalBusiness").strip(),
+        )
+
+        if action == "generate":
+            try:
+                from app.wp.schema_gen import generate_from_url, generate_from_wp_post
+                if source_type == "post" and post_id_raw and site:
+                    from app.wp.wp_client import WPClient
+                    client = WPClient(site.base_url, site.username, site.app_password)
+                    result = generate_from_wp_post(client, int(post_id_raw), **schema_kwargs)
+                elif source_url:
+                    result = generate_from_url(source_url, **schema_kwargs)
+                else:
+                    flash("Enter a Post ID or URL to generate schema.", "error")
+                if result and result.get("error"):
+                    flash(result["error"], "error")
+                    result = None
+            except Exception:
+                current_app.logger.exception("Schema generation failed")
+                flash("Schema generation failed — please try again.", "error")
+
+        elif action == "inject":
+            if not site:
+                flash("Connect a WordPress site first.", "error")
+            else:
+                inject_post_id = int(request.form.get("inject_post_id") or 0)
+                schemas_json   = request.form.get("schemas_json") or "[]"
+                replace        = bool(request.form.get("replace_existing"))
+                if not inject_post_id:
+                    flash("Post ID required for injection.", "error")
+                else:
+                    try:
+                        import json as _json
+                        from app.wp.schema_gen import inject_schema_into_post
+                        from app.wp.wp_client import WPClient
+                        schemas = _json.loads(schemas_json)
+                        if not isinstance(schemas, list):
+                            schemas = [schemas]
+                        client  = WPClient(site.base_url, site.username, site.app_password)
+                        injected = inject_schema_into_post(client, inject_post_id,
+                                                           schemas, replace_existing=replace)
+                        if injected.get("ok"):
+                            flash(f"Schema injected into post #{inject_post_id}.", "success")
+                        else:
+                            flash(injected.get("error") or "Injection failed.", "error")
+                    except Exception:
+                        current_app.logger.exception("Schema injection failed")
+                        flash("Injection failed — please try again.", "error")
+
+    return render_template("wp/schema_gen.html", site=site, result=result, injected=injected)
+
+
+@wp_bp.route("/tech-seo", methods=["GET", "POST"], endpoint="tech_seo")
+@login_required
+def tech_seo():
+    site = _current_site()
+    result = None
+    if request.method == "POST":
+        url = (request.form.get("url") or "").strip()
+        if not url and site:
+            url = site.base_url
+        if not url:
+            flash("Enter a URL or connect a WordPress site first.", "error")
+            return render_template("wp/tech_seo.html", site=site, result=None)
+        try:
+            from app.wp.tech_seo import run_technical_audit
+            psi_key = os.getenv("GOOGLE_PSI_API_KEY") or (current_app.config or {}).get("GOOGLE_PSI_API_KEY")
+            result = run_technical_audit(url, psi_api_key=psi_key)
+            if result.get("error"):
+                flash(result["error"], "error")
+                result = None
+        except Exception:
+            current_app.logger.exception("Technical SEO audit failed")
+            flash("Audit failed — please try again.", "error")
+    return render_template("wp/tech_seo.html", site=site, result=result)
+
+
+@wp_bp.route("/seo-audit", methods=["GET", "POST"], endpoint="seo_audit")
+@login_required
+def seo_audit():
+    result = None
+    if request.method == "POST":
+        url = (request.form.get("url") or "").strip()
+        keyword = (request.form.get("keyword") or "").strip()
+        if not url:
+            flash("URL is required.", "error")
+            return see_other("wp_bp.seo_audit")
+        try:
+            from app.wp.seo_audit import audit_url
+            result = audit_url(url, keyword)
+            if result.get("error"):
+                flash(result["error"], "error")
+                result = None
+        except Exception:
+            current_app.logger.exception("SEO audit failed")
+            flash("Audit failed — please try again.", "error")
+    return render_template("wp/seo_audit.html", result=result)
+
 
 @wp_bp.route("/analyze-page", methods=["GET"], endpoint="analyze_page")
 @login_required
@@ -937,9 +1111,114 @@ def queue_post_alias():
 
 @wp_bp.route("/edit", methods=["GET"], endpoint="edit_lookup")
 @login_required
-def edit_lookup_stub():
-    flash("Edit lookup coming soon. Use Publisher to see recent jobs.", "info")
-    return see_other("wp_bp.publisher")
+def edit_lookup():
+    """Browse / search WordPress posts to select one for editing."""
+    site = _current_site()
+    posts = []
+    search = request.args.get("search", "").strip()
+    error = None
+    if site:
+        try:
+            c = WPClient(site.base_url, site.username, site.app_password)
+            posts = c.list_posts(per_page=20, search=search, status="any")
+        except Exception as exc:
+            error = str(exc)
+    return render_template("wp/edit_lookup.html",
+                           site=site, posts=posts, search=search, error=error)
+
+
+@wp_bp.route("/edit/<int:post_id>", methods=["GET"], endpoint="edit_post")
+@login_required
+def edit_post(post_id: int):
+    """Load a live WP post into the editor."""
+    site = _current_site()
+    if not site:
+        flash("Configure WordPress first.", "error")
+        return see_other("wp_bp.settings")
+    try:
+        c = WPClient(site.base_url, site.username, site.app_password)
+        post = c.get_post(post_id)
+    except Exception as exc:
+        flash(f"Could not load post #{post_id}: {exc}", "error")
+        return see_other("wp_bp.edit_lookup")
+
+    import html as _html
+    raw_title   = post.get("title",   {}).get("rendered", "")
+    raw_content = post.get("content", {}).get("rendered", "")
+    raw_excerpt = post.get("excerpt", {}).get("rendered", "")
+    # Strip outer <p> wrapping excerpt WP sometimes adds
+    import re as _re
+    raw_excerpt = _re.sub(r"^\s*<p>(.*?)</p>\s*$", r"\1", raw_excerpt, flags=_re.DOTALL).strip()
+
+    return render_template(
+        "wp/edit_post.html",
+        post_id=post_id,
+        title=_html.unescape(raw_title),
+        html=raw_content,
+        excerpt=raw_excerpt,
+        status=post.get("status", "publish"),
+        post_link=post.get("link", ""),
+    )
+
+
+@wp_bp.route("/edit/<int:post_id>/submit", methods=["POST"], endpoint="edit_post_submit")
+@login_required
+def edit_post_submit(post_id: int):
+    """Queue an edit job for an existing WP post."""
+    site = _current_site()
+    if not site:
+        flash("Configure WordPress first.", "error")
+        return see_other("wp_bp.settings")
+
+    title      = (request.form.get("title")      or "").strip()
+    html_body  = (request.form.get("html")        or "").strip()
+    excerpt    = (request.form.get("excerpt")     or "").strip()
+    yoast_desc = (request.form.get("yoast_desc")  or "").strip()
+    status     = (request.form.get("status")      or "publish").strip()
+    needs_approval = bool(request.form.get("needs_approval"))
+
+    if not title:
+        flash("Title is required.", "error")
+        return see_other("wp_bp.edit_post", post_id=post_id)
+
+    if needs_approval:
+        status = "draft"
+
+    payload = {
+        "post_id":      post_id,
+        "title":        title,
+        "html":         html_body,
+        "excerpt":      excerpt,
+        "yoast_desc":   yoast_desc,
+        "status":       status,
+        "needs_approval": needs_approval,
+    }
+    job = WPJob(site_id=site.id, kind="edit", payload=payload)
+    db.session.add(job)
+    db.session.commit()
+    flash(f"Edit queued for post #{post_id} (Job #{job.id}).", "success")
+    return see_other("wp_bp.edits")
+
+
+@wp_bp.route("/edits", methods=["GET"], endpoint="edits")
+@login_required
+def edits():
+    """Dashboard of all pending / completed edit and refresh jobs."""
+    status_filter = request.args.get("status", "").strip()
+    q = WPJob.query.filter(WPJob.kind.in_(["edit", "refresh"]))
+    if status_filter:
+        q = q.filter_by(status=status_filter)
+    jobs = q.order_by(WPJob.created_at.desc()).limit(200).all()
+
+    counts: Dict[str, int] = {}
+    for s in ("queued", "running", "done", "error"):
+        counts[s] = WPJob.query.filter(
+            WPJob.kind.in_(["edit", "refresh"]),
+            WPJob.status == s,
+        ).count()
+
+    return render_template("wp/edits.html",
+                           jobs=jobs, counts=counts, status_filter=status_filter)
 
 # allow WPLog(...).save() convenience
 def _save(self):

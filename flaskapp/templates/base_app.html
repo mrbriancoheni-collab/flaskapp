@@ -312,6 +312,16 @@
             <i class="fa-solid fa-paper-plane"></i><span>Publisher</span>
           </a>
         {% endif %}
+        {% if has_endpoint('wp_bp.approvals') %}
+          <a href="{{ url_for('wp_bp.approvals') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-inbox"></i><span>Approvals</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.schedule') %}
+          <a href="{{ url_for('wp_bp.schedule') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-calendar-days"></i><span>Schedule</span>
+          </a>
+        {% endif %}
         {% if has_endpoint('wp_bp.new_post') %}
           <a href="{{ url_for('wp_bp.new_post') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
             <i class="fa-solid fa-pen-to-square"></i><span>New Post</span>
@@ -619,6 +629,12 @@
         {% endif %}
         {% if has_endpoint('wp_bp.publisher') %}
           <a class="secondary-link {% if epn=='wp_bp.publisher' %}active{% endif %}" href="{{ url_for('wp_bp.publisher') }}"><i class="fa-solid fa-paper-plane"></i><span>Publisher</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.approvals') %}
+          <a class="secondary-link {% if epn=='wp_bp.approvals' %}active{% endif %}" href="{{ url_for('wp_bp.approvals') }}"><i class="fa-solid fa-inbox"></i><span>Approvals</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.schedule') %}
+          <a class="secondary-link {% if epn=='wp_bp.schedule' %}active{% endif %}" href="{{ url_for('wp_bp.schedule') }}"><i class="fa-solid fa-calendar-days"></i><span>Schedule</span></a>
         {% endif %}
         {% if has_endpoint('wp_bp.new_post') %}
           <a class="secondary-link {% if epn=='wp_bp.new_post' %}active{% endif %}" href="{{ url_for('wp_bp.new_post') }}"><i class="fa-solid fa-pen-to-square"></i><span>New Post</span></a>

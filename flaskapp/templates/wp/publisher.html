@@ -51,10 +51,10 @@
         <div class="text-3xl font-bold">{{ jobs|selectattr('status', 'eq', 'done')|list|length }}</div>
         <div class="text-sm text-indigo-200">Published</div>
       </div>
-      <div class="bg-white/10 rounded-xl p-4">
+      <a href="{{ url_for('wp_bp.approvals') }}" class="bg-white/10 rounded-xl p-4 hover:bg-white/20 transition block">
         <div class="text-3xl font-bold">{{ jobs|selectattr('payload.needs_approval')|list|length if jobs else 0 }}</div>
-        <div class="text-sm text-indigo-200">Pending Approval</div>
-      </div>
+        <div class="text-sm text-indigo-200">Pending Approval <i class="fa-solid fa-arrow-right text-xs ml-1"></i></div>
+      </a>
       <div class="bg-white/10 rounded-xl p-4">
         <div class="text-3xl font-bold">{{ site.autopilot_daily_new or 0 }}</div>
         <div class="text-sm text-indigo-200">Daily Target</div>

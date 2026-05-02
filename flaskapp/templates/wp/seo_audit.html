@@ -138,6 +138,7 @@
   {% endif %}
 
   {# ── Auto-fix panel ───────────────────────────────────────────────────── #}
+  {% if site %}
   <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center gap-4">
     <div class="flex-1">
       <h2 class="font-bold text-indigo-900 flex items-center gap-2">
@@ -146,7 +147,6 @@
       </h2>
       <p class="text-sm text-indigo-700 mt-1">
         Automatically inject JSON-LD schema and update Yoast meta on this post — no manual editing required.
-        <span class="text-indigo-500">Requires a connected WordPress site.</span>
       </p>
       <ul class="mt-2 text-xs text-indigo-600 space-y-0.5">
         <li><i class="fa-solid fa-check mr-1"></i>JSON-LD schema (Article, FAQ, HowTo)</li>
@@ -163,6 +163,18 @@
       </button>
     </form>
   </div>
+  {% else %}
+  <div class="bg-gray-50 border border-gray-200 rounded-xl p-5 flex items-center gap-4">
+    <i class="fa-brands fa-wordpress text-3xl text-gray-300"></i>
+    <div>
+      <p class="font-semibold text-gray-700">Connect WordPress to auto-apply fixes</p>
+      <p class="text-sm text-gray-500 mt-0.5">Schema injection and Yoast meta updates require a connected WP site.</p>
+      <a href="{{ url_for('wp_bp.settings') }}" class="mt-2 inline-block text-sm text-indigo-600 hover:underline">
+        Connect WordPress →
+      </a>
+    </div>
+  </div>
+  {% endif %}
 
   {# ── Detailed checks ──────────────────────────────────────────────────── #}
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">

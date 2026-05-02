@@ -1072,6 +1072,87 @@ def approve():
     flash("Approved. It will publish on the next runner tick.", "success")
     return see_other("wp_bp.publisher")
 
+# ---------- approval inbox ----------
+
+@wp_bp.route("/approvals", methods=["GET"], endpoint="approvals")
+@login_required
+def approvals():
+    """In-app approval queue for AI-generated and human-drafted posts awaiting review."""
+    pending_jobs = (WPJob.query
+                    .filter(WPJob.status == "queued")
+                    .order_by(WPJob.created_at.desc())
+                    .limit(200).all())
+    # Filter in Python — JSON field querying is dialect-dependent
+    pending = [j for j in pending_jobs if (j.payload or {}).get("needs_approval")]
+    return render_template("wp/approvals.html", pending=pending)
+
+
+@wp_bp.route("/approvals/<int:job_id>/approve", methods=["POST"], endpoint="approval_approve")
+@login_required
+def approval_approve(job_id: int):
+    job = WPJob.query.get_or_404(job_id)
+    p = dict(job.payload or {})
+    p["needs_approval"] = False
+    p["status"] = "future" if p.get("status") == "future" else "publish"
+    job.payload = p
+    db.session.commit()
+    flash(f"Job #{job_id} approved — will publish on next cron tick.", "success")
+    return see_other("wp_bp.approvals")
+
+
+@wp_bp.route("/approvals/<int:job_id>/reject", methods=["POST"], endpoint="approval_reject")
+@login_required
+def approval_reject(job_id: int):
+    job = WPJob.query.get_or_404(job_id)
+    job.status = "error"
+    job.last_error = "Rejected in approval inbox"
+    db.session.commit()
+    flash(f"Job #{job_id} rejected and removed from queue.", "info")
+    return see_other("wp_bp.approvals")
+
+
+# ---------- schedule view ----------
+
+@wp_bp.route("/schedule", methods=["GET"], endpoint="schedule")
+@login_required
+def schedule():
+    """Timeline view of scheduled and recently published posts."""
+    now = datetime.utcnow()
+
+    scheduled = (WPJob.query
+                 .filter(WPJob.status == "queued",
+                         WPJob.run_at != None)  # noqa: E711
+                 .order_by(WPJob.run_at.asc())
+                 .all())
+
+    # Queued without run_at (publish ASAP)
+    asap = (WPJob.query
+            .filter(WPJob.status == "queued",
+                    WPJob.run_at == None)  # noqa: E711
+            .filter(WPJob.kind.in_(["publish", "ai_generate"]))
+            .order_by(WPJob.created_at.asc())
+            .limit(20).all())
+
+    # Pending approval — these are scheduled but blocked
+    pending_approval = [j for j in asap if (j.payload or {}).get("needs_approval")]
+    asap_ready = [j for j in asap if not (j.payload or {}).get("needs_approval")]
+
+    recently_published = (WPJob.query
+                          .filter(WPJob.status == "done",
+                                  WPJob.kind.in_(["publish", "ai_generate"]))
+                          .order_by(WPJob.updated_at.desc())
+                          .limit(10).all())
+
+    return render_template(
+        "wp/schedule.html",
+        scheduled=scheduled,
+        asap_ready=asap_ready,
+        pending_approval=pending_approval,
+        recently_published=recently_published,
+        now=now,
+    )
+
+
 # ---------- insights ----------
 
 @wp_bp.route("/insights", methods=["GET"], endpoint="insights")
@@ -1282,7 +1363,7 @@ def seo_audit():
         except Exception:
             current_app.logger.exception("SEO audit failed")
             flash("Audit failed — please try again.", "error")
-    return render_template("wp/seo_audit.html", result=result)
+    return render_template("wp/seo_audit.html", result=result, site=_current_site())
 
 
 @wp_bp.route("/seo-audit/apply-fixes", methods=["POST"], endpoint="seo_apply_fixes")

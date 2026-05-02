@@ -65,12 +65,13 @@ def index():
 @seo_bp.route("/rankings", methods=["GET"], endpoint="rankings")
 @login_required
 def rankings():
-    """Pull top search queries directly from the GSC integration."""
+    """Pull top search queries with position history sparklines."""
     aid = current_account_id()
     rows = []
     gsc_connected = False
     site_url = None
     error = None
+    history: dict = {}  # {query: [pos, pos, ...]} oldest→newest
 
     try:
         from app.google import _fetch_gsc_report, _get_gsc_selected_site, _is_connected
@@ -93,6 +94,22 @@ def rankings():
                         "ctr":    f"{q.get('ctr', 0) * 100:.1f}%",
                         "pos":    round(q.get("position", 0), 1),
                     })
+
+            # Build position history from stored snapshots
+            try:
+                from app.seo.monitor import get_recent_snapshots
+                snapshots = get_recent_snapshots(site_url, limit=14)
+                snapshots_asc = list(reversed(snapshots))
+                query_names = {r["query"] for r in rows}
+                for snap in snapshots_asc:
+                    gsc_snap = (snap.data or {}).get("gsc") or {}
+                    for q in (gsc_snap.get("queries") or []):
+                        qname = q.get("query", "")
+                        if qname in query_names:
+                            history.setdefault(qname, []).append(round(q.get("position", 0), 1))
+            except Exception:
+                pass
+
         elif not gsc_connected:
             error = "Connect Google Search Console to see real rankings."
     except Exception as e:
@@ -104,6 +121,7 @@ def rankings():
         rows=rows,
         gsc_connected=gsc_connected,
         site_url=site_url,
+        history=history,
         error=error,
     )
 

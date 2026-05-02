@@ -1366,6 +1366,171 @@ def seo_audit():
     return render_template("wp/seo_audit.html", result=result, site=_current_site())
 
 
+@wp_bp.route("/internal-links", methods=["GET", "POST"], endpoint="internal_links")
+@login_required
+def internal_links():
+    """Find and insert internal link opportunities for a WordPress post."""
+    import html as _html_mod
+    site = _current_site()
+    posts: List[Dict] = []
+    suggestions: List[Dict] = []
+    source_post: Optional[Dict] = None
+    error = None
+
+    if site:
+        try:
+            c = WPClient(site.base_url, site.username, site.app_password)
+            posts = c.list_posts(per_page=100, status="publish")
+        except Exception as exc:
+            error = str(exc)
+
+    if request.method == "POST":
+        action  = (request.form.get("action") or "suggest").strip()
+        post_id = int(request.form.get("post_id") or 0)
+
+        if not site:
+            flash("Connect a WordPress site first.", "error")
+            return see_other("wp_bp.settings")
+        if not post_id:
+            flash("Select a post.", "error")
+            return render_template("wp/internal_links.html",
+                                   site=site, posts=posts, suggestions=[], source_post=None, error=error)
+        try:
+            c = WPClient(site.base_url, site.username, site.app_password)
+            source_post = c.get_post(post_id)
+            source_html  = source_post.get("content", {}).get("rendered", "")
+            source_title = _html_mod.unescape(source_post.get("title", {}).get("rendered", "") or "")
+
+            from app.wp.internal_links import find_link_opportunities, insert_links
+            suggestions = find_link_opportunities(post_id, source_html, source_title, posts)
+
+            if action == "apply" and suggestions:
+                selected_indices = [int(i) for i in request.form.getlist("link_idx") if i.isdigit()]
+                chosen = [suggestions[i] for i in selected_indices if i < len(suggestions)]
+
+                if not chosen:
+                    flash("Select at least one link to insert.", "warning")
+                else:
+                    new_html, count = insert_links(source_html, chosen)
+                    if count:
+                        payload = {
+                            "post_id":        post_id,
+                            "title":          source_title,
+                            "html":           new_html,
+                            "status":         source_post.get("status", "publish"),
+                            "source":         "internal_links",
+                            "links_inserted": count,
+                        }
+                        job = WPJob(site_id=site.id, kind="edit", payload=payload)
+                        db.session.add(job)
+                        db.session.commit()
+                        flash(f"Queued {count} internal link{'s' if count != 1 else ''} "
+                              f"for post #{post_id} (Job #{job.id}).", "success")
+                        return see_other("wp_bp.edits")
+                    else:
+                        flash("Anchor text not found verbatim in post content. "
+                              "Try editing the anchor text manually.", "warning")
+        except Exception as exc:
+            current_app.logger.exception("Internal links failed")
+            error = str(exc)
+
+    return render_template("wp/internal_links.html",
+                           site=site, posts=posts, suggestions=suggestions,
+                           source_post=source_post, error=error)
+
+
+@wp_bp.route("/content-brief", methods=["GET", "POST"], endpoint="content_brief")
+@login_required
+def content_brief():
+    """Generate a comprehensive content brief from a keyword + GSC data."""
+    if not is_paid_account():
+        flash("Content briefs are available on paid plans.", "warning")
+        return redirect(url_for("main_bp.pricing"))
+
+    brief = None
+    keyword = ""
+    error = None
+
+    if request.method == "POST":
+        keyword = (request.form.get("keyword") or "").strip()
+        if not keyword:
+            flash("Keyword is required.", "error")
+            return render_template("wp/content_brief.html", brief=None, keyword="", error=None)
+
+        try:
+            aid = _account_id()
+            gsc_data: Dict[str, Any] = {}
+            related_queries: List[str] = []
+
+            # Pull GSC data for this keyword
+            try:
+                from app.google import _is_connected, _get_gsc_selected_site
+                from app.seo.keyword_gaps import _gsc_fetch, _rows_to_dicts, _date_range
+                if aid and _is_connected(aid, "gsc"):
+                    site_url = _get_gsc_selected_site(aid) or os.getenv("GSC_SITE", "")
+                    if site_url:
+                        end, start = _date_range(3, 30)
+                        rows = _gsc_fetch(aid, site_url, start, end, ["query"], row_limit=200)
+                        all_q = _rows_to_dicts(rows, ["query"])
+                        for q in all_q:
+                            if keyword.lower() in q.get("query", "").lower():
+                                gsc_data = q
+                            elif any(w in q.get("query", "").lower()
+                                     for w in keyword.lower().split()):
+                                related_queries.append(q.get("query", ""))
+                        related_queries = related_queries[:10]
+            except Exception:
+                pass
+
+            pos_text = (f"currently ranking at position {round(gsc_data.get('position', 0), 1)}, "
+                        f"{int(gsc_data.get('impressions', 0))} impressions/month, "
+                        f"{int(gsc_data.get('clicks', 0))} clicks/month"
+                        if gsc_data else "no current ranking data")
+
+            prompt = f"""You are an expert SEO content strategist for local service businesses (HVAC, plumbing, electrical, roofing, landscaping).
+
+Target keyword: "{keyword}"
+GSC data: {pos_text}
+Related queries from GSC: {', '.join(related_queries) if related_queries else 'none available'}
+
+Generate a comprehensive content brief as a JSON object with exactly these keys:
+- recommended_title: SEO-optimized title (55-60 chars)
+- meta_description: compelling meta description (145-155 chars)
+- word_count_target: recommended word count as integer
+- h1: the exact H1 heading
+- outline: array of strings like ["H2: Section Name", "H3: Sub-section", ...]
+- semantic_terms: array of 12-15 semantically related terms to include naturally
+- questions_to_answer: array of 6-8 questions this post must answer
+- schema_types: array of schema markup types to include
+- tone: recommended tone (one of: informational, commercial, local, how-to)
+- cta: recommended call-to-action text
+- positioning: 2-sentence description of the content angle and why it will rank
+- estimated_difficulty: easy | medium | hard"""
+
+            from app.ai_clients import get_ai_client
+            import json as _json, re as _re
+            client = get_ai_client()
+            response = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=1500,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw = response.content[0].text
+            match = _re.search(r'\{.*\}', raw, _re.DOTALL)
+            if match:
+                brief = _json.loads(match.group())
+                brief["keyword"] = keyword
+                brief["gsc_data"] = gsc_data
+            else:
+                error = "Could not parse AI response. Please try again."
+
+        except Exception as exc:
+            current_app.logger.exception("Content brief generation failed")
+            error = f"Brief generation failed: {exc}"
+
+    return render_template("wp/content_brief.html", brief=brief, keyword=keyword, error=error)
+
+
 @wp_bp.route("/seo-audit/apply-fixes", methods=["POST"], endpoint="seo_apply_fixes")
 @login_required
 def seo_apply_fixes():

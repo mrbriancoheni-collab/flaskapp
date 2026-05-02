@@ -352,6 +352,16 @@
             <i class="fa-solid fa-code"></i><span>Schema Generator</span>
           </a>
         {% endif %}
+        {% if has_endpoint('wp_bp.internal_links') %}
+          <a href="{{ url_for('wp_bp.internal_links') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-link"></i><span>Internal Links</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.content_brief') %}
+          <a href="{{ url_for('wp_bp.content_brief') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-file-pen"></i><span>Content Brief</span>
+          </a>
+        {% endif %}
       {% endif %}
 
       <!-- SEO Section -->
@@ -647,6 +657,12 @@
         {% endif %}
         {% if has_endpoint('wp_bp.schema_gen') %}
           <a class="secondary-link {% if epn=='wp_bp.schema_gen' %}active{% endif %}" href="{{ url_for('wp_bp.schema_gen') }}"><i class="fa-solid fa-code"></i><span>Schema Generator</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.internal_links') %}
+          <a class="secondary-link {% if epn=='wp_bp.internal_links' %}active{% endif %}" href="{{ url_for('wp_bp.internal_links') }}"><i class="fa-solid fa-link"></i><span>Internal Links</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.content_brief') %}
+          <a class="secondary-link {% if epn=='wp_bp.content_brief' %}active{% endif %}" href="{{ url_for('wp_bp.content_brief') }}"><i class="fa-solid fa-file-pen"></i><span>Content Brief</span></a>
         {% endif %}
         {% if has_endpoint('wp_bp.edit_lookup') %}
           <a class="secondary-link {% if epn in ('wp_bp.edit_lookup','wp_bp.edit_post','wp_bp.edit_post_submit') %}active{% endif %}" href="{{ url_for('wp_bp.edit_lookup') }}"><i class="fa-solid fa-pen-to-square"></i><span>Edit Post</span></a>

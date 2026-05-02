@@ -407,6 +407,16 @@
             <i class="fa-solid fa-check-double"></i><span>SEO Foundation</span>
           </a>
         {% endif %}
+        {% if has_endpoint('wp_bp.index_coverage') %}
+          <a href="{{ url_for('wp_bp.index_coverage') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-eye"></i><span>Index Coverage</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.orphan_pages') %}
+          <a href="{{ url_for('wp_bp.orphan_pages') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-unlink"></i><span>Orphan Pages</span>
+          </a>
+        {% endif %}
       {% endif %}
 
       <!-- SEO Section -->
@@ -463,6 +473,21 @@
         {% if has_endpoint('seo_bp.eeat') %}
           <a href="{{ url_for('seo_bp.eeat') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
             <i class="fa-solid fa-shield-halved"></i><span>E-E-A-T Checker</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.aeo_optimizer') %}
+          <a href="{{ url_for('seo_bp.aeo_optimizer') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-robot"></i><span>AEO Optimizer</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.cannibalization') %}
+          <a href="{{ url_for('seo_bp.cannibalization') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-code-fork"></i><span>Cannibalization</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.llm_citations') %}
+          <a href="{{ url_for('seo_bp.llm_citations') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-comments"></i><span>LLM Citations</span>
           </a>
         {% endif %}
       {% endif %}
@@ -766,6 +791,12 @@
         {% if has_endpoint('wp_bp.seo_foundation') %}
           <a class="secondary-link {% if epn=='wp_bp.seo_foundation' %}active{% endif %}" href="{{ url_for('wp_bp.seo_foundation') }}"><i class="fa-solid fa-check-double"></i><span>SEO Foundation</span></a>
         {% endif %}
+        {% if has_endpoint('wp_bp.index_coverage') %}
+          <a class="secondary-link {% if epn=='wp_bp.index_coverage' %}active{% endif %}" href="{{ url_for('wp_bp.index_coverage') }}"><i class="fa-solid fa-eye"></i><span>Index Coverage</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.orphan_pages') %}
+          <a class="secondary-link {% if epn=='wp_bp.orphan_pages' %}active{% endif %}" href="{{ url_for('wp_bp.orphan_pages') }}"><i class="fa-solid fa-unlink"></i><span>Orphan Pages</span></a>
+        {% endif %}
         {% if has_endpoint('wp_bp.edit_lookup') %}
           <a class="secondary-link {% if epn in ('wp_bp.edit_lookup','wp_bp.edit_post','wp_bp.edit_post_submit') %}active{% endif %}" href="{{ url_for('wp_bp.edit_lookup') }}"><i class="fa-solid fa-pen-to-square"></i><span>Edit Post</span></a>
         {% endif %}
@@ -824,6 +855,15 @@
         {% endif %}
         {% if has_endpoint('seo_bp.eeat') %}
           <a class="secondary-link {% if epn=='seo_bp.eeat' %}active{% endif %}" href="{{ url_for('seo_bp.eeat') }}"><i class="fa-solid fa-shield-halved"></i><span>E-E-A-T Checker</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.aeo_optimizer') %}
+          <a class="secondary-link {% if epn=='seo_bp.aeo_optimizer' %}active{% endif %}" href="{{ url_for('seo_bp.aeo_optimizer') }}"><i class="fa-solid fa-robot"></i><span>AEO Optimizer</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.cannibalization') %}
+          <a class="secondary-link {% if epn=='seo_bp.cannibalization' %}active{% endif %}" href="{{ url_for('seo_bp.cannibalization') }}"><i class="fa-solid fa-code-fork"></i><span>Cannibalization</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.llm_citations') %}
+          <a class="secondary-link {% if epn=='seo_bp.llm_citations' %}active{% endif %}" href="{{ url_for('seo_bp.llm_citations') }}"><i class="fa-solid fa-comments"></i><span>LLM Citations</span></a>
         {% endif %}
       {% elif SECTION == 'strategy' %}
         <!-- strategy links placeholder -->

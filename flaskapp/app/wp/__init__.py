@@ -2595,6 +2595,94 @@ def seo_foundation():
     )
 
 
+@wp_bp.route("/index-coverage", methods=["GET"], endpoint="index_coverage")
+@login_required
+def index_coverage():
+    """Index Coverage Monitor — find published pages with zero GSC presence."""
+    site = _current_site()
+    result = None
+    error = None
+    gsc_connected = False
+
+    aid = _account_id()
+    site_url = None
+
+    try:
+        from app.google import _is_connected, _get_gsc_selected_site
+        import os
+        gsc_connected = _is_connected(aid, "gsc")
+        site_url = _get_gsc_selected_site(aid) or os.getenv("GSC_SITE")
+    except Exception as exc:
+        error = str(exc)
+
+    if site and gsc_connected and site_url:
+        try:
+            from app.wp.wp_client import WPClient
+            from app.wp.index_coverage import check_index_coverage
+            c = WPClient(site)
+            posts = c.list_posts(per_page=100, status="publish")
+            pages = []
+            try:
+                pages = c.get(f"{site.base_url.rstrip('/')}/wp-json/wp/v2/pages",
+                              params={"per_page": 100, "status": "publish"}) or []
+            except Exception:
+                pass
+            all_content = posts + pages
+            result = check_index_coverage(all_content, aid, site_url)
+        except Exception as exc:
+            logger.exception("Index coverage check failed")
+            error = f"Check failed: {exc}"
+    elif not site:
+        pass  # template handles no-site state
+    elif not gsc_connected:
+        error = "Connect Google Search Console to check index coverage."
+    elif not site_url:
+        error = "Select a GSC property in your Google settings."
+
+    return render_template(
+        "wp/index_coverage.html",
+        site=site,
+        result=result,
+        gsc_connected=gsc_connected,
+        site_url=site_url,
+        error=error,
+    )
+
+
+@wp_bp.route("/orphan-pages", methods=["GET"], endpoint="orphan_pages")
+@login_required
+def orphan_pages():
+    """Orphan Page Detector — find published pages with no internal links pointing to them."""
+    site = _current_site()
+    result = None
+    error = None
+
+    if site:
+        try:
+            from app.wp.wp_client import WPClient
+            from app.wp.orphan_pages import detect_orphans
+            c = WPClient(site)
+            posts = c.list_posts(per_page=100, status="publish")
+            pages = []
+            try:
+                pages = c.get(f"{site.base_url.rstrip('/')}/wp-json/wp/v2/pages",
+                              params={"per_page": 100, "status": "publish"}) or []
+            except Exception:
+                pass
+            all_content = posts + pages
+            result = detect_orphans(all_content, site.base_url)
+        except Exception as exc:
+            logger.exception("Orphan page detection failed")
+            error = f"Detection failed: {exc}"
+
+    return render_template(
+        "wp/orphan_pages.html",
+        site=site,
+        result=result,
+        error=error,
+    )
+
+
 # allow WPLog(...).save() convenience
 def _save(self):
     db.session.add(self)

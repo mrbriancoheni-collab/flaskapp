@@ -919,3 +919,139 @@ def eeat():
         site_url=site_url,
         url_checked=url_checked,
     )
+
+
+@seo_bp.route("/aeo-optimizer", methods=["GET", "POST"], endpoint="aeo_optimizer")
+@login_required
+def aeo_optimizer():
+    """AI Overview (AEO) Optimizer — score pages for Google AI Overview inclusion."""
+    aid = current_account_id()
+    result = None
+    url_checked = None
+
+    site_url = None
+    try:
+        from app.google import _get_gsc_selected_site
+        import os
+        site_url = _get_gsc_selected_site(aid) or os.getenv("GSC_SITE")
+    except Exception:
+        pass
+    if not site_url:
+        try:
+            from app.models_wp import WPSite
+            s = WPSite.query.filter_by(account_id=aid).first()
+            if s:
+                site_url = s.base_url
+        except Exception:
+            pass
+
+    url_to_check = (request.form.get("url") or site_url or "").strip().rstrip("/")
+
+    if request.method == "POST" and url_to_check:
+        url_checked = url_to_check
+        try:
+            from app.seo.aeo_optimizer import audit_aeo
+            result = audit_aeo(url_to_check)
+            if result.get("error"):
+                flash(result["error"], "error")
+                result = None
+        except Exception as exc:
+            logger.exception("AEO audit failed")
+            flash(f"Audit failed: {exc}", "error")
+
+    return render_template(
+        "seo/aeo_optimizer.html",
+        result=result,
+        site_url=site_url,
+        url_checked=url_checked,
+    )
+
+
+@seo_bp.route("/cannibalization", methods=["GET"], endpoint="cannibalization")
+@login_required
+def cannibalization():
+    """Keyword Cannibalization Detector — find pages competing for the same queries."""
+    aid = current_account_id()
+    result = None
+    gsc_connected = False
+    site_url = None
+    error = None
+
+    try:
+        from app.google import _is_connected, _get_gsc_selected_site
+        import os
+        gsc_connected = _is_connected(aid, "gsc")
+        site_url = _get_gsc_selected_site(aid) or os.getenv("GSC_SITE")
+    except Exception as exc:
+        error = str(exc)
+
+    if gsc_connected and site_url:
+        try:
+            from app.seo.cannibalization import detect_cannibalization
+            result = detect_cannibalization(aid, site_url)
+            if result.get("error"):
+                error = result["error"]
+                result = None
+        except Exception as exc:
+            logger.exception("Cannibalization detection failed")
+            error = f"Analysis failed: {exc}"
+    elif not gsc_connected:
+        error = "Connect Google Search Console to detect keyword cannibalization."
+
+    return render_template(
+        "seo/cannibalization.html",
+        result=result,
+        gsc_connected=gsc_connected,
+        site_url=site_url,
+        error=error,
+    )
+
+
+@seo_bp.route("/llm-citations", methods=["GET", "POST"], endpoint="llm_citations")
+@login_required
+def llm_citations():
+    """LLM Citation Tracker — check if your brand appears in AI-generated answers."""
+    aid = current_account_id()
+    result = None
+    error = None
+
+    # Pre-fill from WP site
+    prefill_domain = ""
+    prefill_brand = ""
+    try:
+        from app.models_wp import WPSite
+        s = WPSite.query.filter_by(account_id=aid).first()
+        if s:
+            prefill_domain = s.base_url
+    except Exception:
+        pass
+
+    if request.method == "POST":
+        brand = (request.form.get("brand") or "").strip()
+        domain = (request.form.get("domain") or prefill_domain).strip()
+        industry = (request.form.get("industry") or "").strip()
+        raw_queries = request.form.get("queries", "")
+        queries = [q.strip() for q in raw_queries.splitlines() if q.strip()]
+
+        if not brand and not domain:
+            flash("Enter a brand name or domain to check.", "error")
+        elif not queries:
+            flash("Enter at least one query.", "error")
+        else:
+            try:
+                from app.seo.llm_citations import run_citation_check
+                result = run_citation_check(brand, domain, queries, industry)
+                if result.get("error"):
+                    flash(result["error"], "error")
+                    result = None
+            except Exception as exc:
+                logger.exception("LLM citation check failed")
+                flash(f"Check failed: {exc}", "error")
+
+    return render_template(
+        "seo/llm_citations.html",
+        result=result,
+        prefill_domain=prefill_domain,
+        prefill_brand=prefill_brand,
+        error=error,
+    )

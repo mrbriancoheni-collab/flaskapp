@@ -2304,6 +2304,297 @@ def content_quality():
     )
 
 
+@wp_bp.route("/geo-pages", methods=["GET", "POST"], endpoint="geo_pages")
+@login_required
+def geo_pages():
+    """Geo Landing Page Generator — queue unique location pages per city × service."""
+    if not is_paid_account():
+        flash("Geo page generation is available on paid plans.", "warning")
+        return redirect(url_for("main_bp.pricing"))
+
+    site = _current_site()
+    queued_results = None
+    error = None
+
+    if request.method == "POST" and site:
+        service       = (request.form.get("service") or "").strip()
+        cities_raw    = (request.form.get("cities") or "").strip()
+        business_name = (request.form.get("business_name") or "").strip()
+        phone         = (request.form.get("phone") or "").strip()
+        extra_context = (request.form.get("extra_context") or "").strip()
+
+        if not service or not cities_raw:
+            flash("Service and at least one city are required.", "error")
+        else:
+            # Parse "City, ST" lines
+            cities: List[Dict] = []
+            for line in cities_raw.splitlines():
+                line = line.strip().strip(",")
+                if not line:
+                    continue
+                parts = [p.strip() for p in line.split(",")]
+                cities.append({"city": parts[0], "state": parts[1] if len(parts) > 1 else ""})
+
+            if not cities:
+                flash("No valid cities parsed. Use one city per line (e.g. Austin, TX).", "error")
+            else:
+                try:
+                    from app.wp.geo_pages import generate_geo_pages
+                    from app import db
+                    queued_results = generate_geo_pages(
+                        service=service,
+                        cities=cities,
+                        business_name=business_name,
+                        phone=phone,
+                        extra_context=extra_context,
+                        site_id=site.id,
+                        db_session=db.session,
+                    )
+                    n = len(queued_results["queued"])
+                    s = len(queued_results["skipped"])
+                    msg = f"Queued {n} geo page{'s' if n != 1 else ''} for generation."
+                    if s:
+                        msg += f" {s} skipped (already exist)."
+                    flash(msg, "success" if n else "warning")
+                except Exception as exc:
+                    logger.exception("Geo page generation failed")
+                    error = f"Generation failed: {exc}"
+                    flash(error, "error")
+
+    # Pre-fill business name from WP site
+    prefill_name = ""
+    prefill_phone = ""
+    if site:
+        try:
+            from app.wp.wp_client import WPClient
+            c = WPClient(site)
+            info = c._req("GET", "/wp/v2/settings").json()
+            prefill_name = info.get("title", "")
+        except Exception:
+            pass
+
+    return render_template(
+        "wp/geo_pages.html",
+        site=site,
+        queued_results=queued_results,
+        prefill_name=prefill_name,
+        error=error,
+    )
+
+
+@wp_bp.route("/redirects", methods=["GET", "POST"], endpoint="redirects")
+@login_required
+def redirects():
+    """Redirect chain detector — find chains and 404s across all posts/pages."""
+    site = _current_site()
+    report = None
+    error = None
+
+    if request.method == "POST" and site:
+        try:
+            from app.wp.wp_client import WPClient
+            from app.wp.redirect_checker import check_redirects
+            c = WPClient(site)
+            posts = c.list_posts(per_page=60, status="publish")
+            # Also check pages
+            try:
+                pages_r = c._req("GET", "/wp/v2/pages",
+                                  params={"per_page": 20, "status": "publish"})
+                posts += (pages_r.json() if isinstance(pages_r.json(), list) else [])
+            except Exception:
+                pass
+            report = check_redirects(posts)
+        except Exception as exc:
+            logger.exception("Redirect check failed")
+            error = f"Check failed: {exc}"
+
+    return render_template(
+        "wp/redirects.html",
+        site=site,
+        report=report,
+        error=error,
+    )
+
+
+@wp_bp.route("/seo-foundation", methods=["GET", "POST"], endpoint="seo_foundation")
+@login_required
+def seo_foundation():
+    """WordPress SEO foundation checker — sitemap, robots.txt, indexing, Yoast, canonicals."""
+    site = _current_site()
+    checks = []
+    score = None
+    error = None
+    site_url_checked = None
+
+    if (request.method == "POST" or request.args.get("run")) and site:
+        import requests as _req
+        base = site.base_url.rstrip("/")
+        site_url_checked = base
+
+        def _chk(label: str, status: str, detail: str, fix: str = "") -> Dict:
+            return {"label": label, "status": status, "detail": detail, "fix": fix}
+
+        # 1. HTTPS
+        checks.append(_chk(
+            "HTTPS / SSL",
+            "pass" if base.startswith("https://") else "fail",
+            "Site uses HTTPS." if base.startswith("https://") else "Site is not HTTPS.",
+            "" if base.startswith("https://") else "Install an SSL certificate — required by Google since 2014.",
+        ))
+
+        # 2. Robots.txt
+        try:
+            from app.wp.wp_client import WPClient
+            c = WPClient(site)
+            r = _req.get(f"{base}/robots.txt", timeout=8,
+                         headers={"User-Agent": "FieldSprout/1.0"})
+            robots = r.text if r.status_code == 200 else ""
+            blocks_all = bool(re.search(r"Disallow:\s*/\s*$", robots, re.MULTILINE))
+            blocks_wp  = bool(re.search(r"Disallow:\s*/wp-admin", robots, re.MULTILINE))
+            checks.append(_chk(
+                "Robots.txt",
+                "fail" if blocks_all else "pass",
+                f"robots.txt returned {r.status_code}." + (" ⚠ Disallow: / found — blocking ALL crawlers!" if blocks_all else ""),
+                "" if not blocks_all else "Remove 'Disallow: /' from robots.txt immediately.",
+            ))
+        except Exception as e:
+            checks.append(_chk("Robots.txt", "warn", f"Could not fetch robots.txt: {e}", "Check your server config."))
+            c = None
+
+        # 3. XML Sitemap
+        sitemap_found = False
+        for path in ("/sitemap.xml", "/sitemap_index.xml", "/wp-sitemap.xml"):
+            try:
+                r = _req.get(f"{base}{path}", timeout=8,
+                             headers={"User-Agent": "FieldSprout/1.0"})
+                if r.status_code == 200 and "<urlset" in r.text or "<sitemapindex" in r.text:
+                    sitemap_found = True
+                    break
+            except Exception:
+                pass
+        checks.append(_chk(
+            "XML Sitemap",
+            "pass" if sitemap_found else "fail",
+            "XML sitemap found and accessible." if sitemap_found else "No XML sitemap found at /sitemap.xml or /wp-sitemap.xml.",
+            "" if sitemap_found else "Enable the Yoast SEO sitemap or the built-in WordPress sitemap (Settings → Reading).",
+        ))
+
+        # 4. WordPress search engine visibility (reading settings)
+        try:
+            if c:
+                settings = c._req("GET", "/wp/v2/settings").json()
+                # WordPress "blog_public" = 0 means "discourage search engines"
+                # The REST API doesn't expose this directly, but we can check the homepage
+                r2 = _req.get(base, timeout=8, headers={"User-Agent": "Googlebot"})
+                has_noindex = "noindex" in r2.text.lower() and "robots" in r2.text.lower()
+                checks.append(_chk(
+                    "Search Engine Indexing",
+                    "fail" if has_noindex else "pass",
+                    "Homepage is blocking search engines (noindex detected)!" if has_noindex
+                    else "Homepage is indexable.",
+                    "" if not has_noindex else
+                    "Go to Settings → Reading → uncheck 'Discourage search engines'.",
+                ))
+        except Exception:
+            checks.append(_chk("Search Engine Indexing", "warn", "Could not verify indexing status.", "Check Settings → Reading in WordPress admin."))
+
+        # 5. Yoast / RankMath / SEOPress active
+        seo_plugin = None
+        try:
+            if c:
+                # Check for Yoast meta tags on homepage
+                r3 = _req.get(base, timeout=8, headers={"User-Agent": "FieldSprout/1.0"})
+                if "yoast" in r3.text.lower() or "wpseo" in r3.text.lower():
+                    seo_plugin = "Yoast SEO"
+                elif "rank-math" in r3.text.lower() or "rankmath" in r3.text.lower():
+                    seo_plugin = "Rank Math"
+                elif "seopress" in r3.text.lower():
+                    seo_plugin = "SEOPress"
+                elif "all-in-one-seo" in r3.text.lower() or "aioseo" in r3.text.lower():
+                    seo_plugin = "All in One SEO"
+        except Exception:
+            pass
+        checks.append(_chk(
+            "SEO Plugin Active",
+            "pass" if seo_plugin else "warn",
+            f"{seo_plugin} detected." if seo_plugin else "No common SEO plugin detected (Yoast, Rank Math, SEOPress, AIOSEO).",
+            "" if seo_plugin else "Install and configure Yoast SEO or Rank Math for title/meta control.",
+        ))
+
+        # 6. Canonical tags on homepage
+        try:
+            r4 = _req.get(base, timeout=8, headers={"User-Agent": "FieldSprout/1.0"})
+            has_canonical = bool(re.search(r'<link[^>]+rel=["\']canonical["\']', r4.text, re.IGNORECASE))
+            checks.append(_chk(
+                "Canonical Tags",
+                "pass" if has_canonical else "warn",
+                "Canonical tag found on homepage." if has_canonical else "No canonical tag on homepage.",
+                "" if has_canonical else "Configure your SEO plugin to output canonical tags on every page.",
+            ))
+
+            # 7. Open Graph tags
+            has_og = bool(re.search(r'<meta[^>]+property=["\']og:', r4.text, re.IGNORECASE))
+            checks.append(_chk(
+                "Open Graph / Social Meta Tags",
+                "pass" if has_og else "warn",
+                "Open Graph tags found." if has_og else "No Open Graph meta tags on homepage.",
+                "" if has_og else "Enable social meta tags in your SEO plugin (improves social sharing previews).",
+            ))
+
+            # 8. Title tag present and non-empty
+            title_m = re.search(r"<title[^>]*>(.*?)</title>", r4.text, re.IGNORECASE | re.DOTALL)
+            title_text = re.sub(r"<[^>]+>", "", title_m.group(1)).strip() if title_m else ""
+            title_ok = bool(title_text and len(title_text) >= 20)
+            checks.append(_chk(
+                "Homepage Title Tag",
+                "pass" if title_ok else ("warn" if title_text else "fail"),
+                f"Title: \"{title_text[:70]}\"" if title_text else "No title tag found.",
+                "" if title_ok else "Set a descriptive 50-60 character title tag on your homepage.",
+            ))
+
+            # 9. Meta description
+            meta_m = re.search(r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']*)["\']',
+                                r4.text, re.IGNORECASE)
+            meta_desc = meta_m.group(1).strip() if meta_m else ""
+            meta_ok = bool(meta_desc and 70 <= len(meta_desc) <= 160)
+            checks.append(_chk(
+                "Homepage Meta Description",
+                "pass" if meta_ok else ("warn" if meta_desc else "fail"),
+                f"Meta desc ({len(meta_desc)} chars): \"{meta_desc[:100]}\"" if meta_desc else "No meta description found.",
+                "" if meta_ok else (
+                    "Meta description is too short or too long — aim for 145-155 chars." if meta_desc
+                    else "Add a 145-155 char meta description to your homepage."
+                ),
+            ))
+
+        except Exception as e:
+            checks.append(_chk("Homepage Checks", "warn", f"Could not fetch homepage: {e}", "Ensure the site is publicly accessible."))
+
+        # 10. Structured data on homepage
+        try:
+            has_schema = bool(re.search(r'application/ld\+json', r4.text if 'r4' in dir() else "", re.IGNORECASE))
+            checks.append(_chk(
+                "Structured Data (Schema)",
+                "pass" if has_schema else "warn",
+                "JSON-LD schema found on homepage." if has_schema else "No JSON-LD schema on homepage.",
+                "" if has_schema else "Add LocalBusiness or Organization schema. Use the Schema Generator tool.",
+            ))
+        except Exception:
+            pass
+
+        weights = {"pass": 2, "warn": 1, "fail": 0}
+        score = round(sum(weights[c["status"]] for c in checks) / (len(checks) * 2) * 100) if checks else 0
+
+    return render_template(
+        "wp/seo_foundation.html",
+        site=site,
+        checks=checks,
+        score=score,
+        site_url_checked=site_url_checked,
+        error=error,
+    )
+
+
 # allow WPLog(...).save() convenience
 def _save(self):
     db.session.add(self)

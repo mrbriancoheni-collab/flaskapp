@@ -392,6 +392,21 @@
             <i class="fa-solid fa-spell-check"></i><span>Content Quality</span>
           </a>
         {% endif %}
+        {% if has_endpoint('wp_bp.geo_pages') %}
+          <a href="{{ url_for('wp_bp.geo_pages') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-location-dot"></i><span>Geo Pages</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.redirects') %}
+          <a href="{{ url_for('wp_bp.redirects') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-route"></i><span>Redirects</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.seo_foundation') %}
+          <a href="{{ url_for('wp_bp.seo_foundation') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-check-double"></i><span>SEO Foundation</span>
+          </a>
+        {% endif %}
       {% endif %}
 
       <!-- SEO Section -->
@@ -741,6 +756,15 @@
         {% endif %}
         {% if has_endpoint('wp_bp.content_quality') %}
           <a class="secondary-link {% if epn=='wp_bp.content_quality' %}active{% endif %}" href="{{ url_for('wp_bp.content_quality') }}"><i class="fa-solid fa-spell-check"></i><span>Content Quality</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.geo_pages') %}
+          <a class="secondary-link {% if epn=='wp_bp.geo_pages' %}active{% endif %}" href="{{ url_for('wp_bp.geo_pages') }}"><i class="fa-solid fa-location-dot"></i><span>Geo Pages</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.redirects') %}
+          <a class="secondary-link {% if epn=='wp_bp.redirects' %}active{% endif %}" href="{{ url_for('wp_bp.redirects') }}"><i class="fa-solid fa-route"></i><span>Redirects</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.seo_foundation') %}
+          <a class="secondary-link {% if epn=='wp_bp.seo_foundation' %}active{% endif %}" href="{{ url_for('wp_bp.seo_foundation') }}"><i class="fa-solid fa-check-double"></i><span>SEO Foundation</span></a>
         {% endif %}
         {% if has_endpoint('wp_bp.edit_lookup') %}
           <a class="secondary-link {% if epn in ('wp_bp.edit_lookup','wp_bp.edit_post','wp_bp.edit_post_submit') %}active{% endif %}" href="{{ url_for('wp_bp.edit_lookup') }}"><i class="fa-solid fa-pen-to-square"></i><span>Edit Post</span></a>

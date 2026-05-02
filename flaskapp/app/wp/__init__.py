@@ -1901,6 +1901,22 @@ def broken_links():
             c = WPClient(site)
             raw = c.list_posts(per_page=30, status="publish")
             report = scan_broken_links(raw, site.base_url)
+            if report and site:
+                try:
+                    from app.models_seo import SEOScanResult
+                    SEOScanResult.save_result(
+                        account_id=_account_id(), site_id=site.id,
+                        scan_type="broken_links",
+                        issue_count=report.get("broken_count", 0),
+                        item_count=report.get("total_links_checked"),
+                        data={
+                            "broken_count": report.get("broken_count"),
+                            "total_links_checked": report.get("total_links_checked"),
+                            "broken": report.get("broken", [])[:30],
+                        },
+                    )
+                except Exception:
+                    pass
         except Exception as exc:
             logger.exception("Broken link scan failed")
             error = f"Scan failed: {exc}"
@@ -2291,6 +2307,28 @@ def content_quality():
             severity_order = {"fail": 0, "warn": 1}
             issues.sort(key=lambda x: severity_order.get(x["severity"], 2))
 
+            if site and issues is not None:
+                try:
+                    from app.models_seo import SEOScanResult
+                    SEOScanResult.save_result(
+                        account_id=_account_id(), site_id=site.id,
+                        scan_type="content_quality",
+                        issue_count=len(issues),
+                        item_count=total,
+                        data={
+                            "stats": stats,
+                            "issue_count": len(issues),
+                            "total": total,
+                            "issues_summary": [
+                                {"type": i["type"], "severity": i["severity"],
+                                 "url": i.get("url"), "title": i.get("title")}
+                                for i in issues[:50]
+                            ],
+                        },
+                    )
+                except Exception:
+                    pass
+
         except Exception as exc:
             logger.exception("Content quality check failed")
             error = f"Could not analyse posts: {exc}"
@@ -2404,6 +2442,24 @@ def redirects():
             except Exception:
                 pass
             report = check_redirects(posts)
+            if report and site:
+                try:
+                    from app.models_seo import SEOScanResult
+                    SEOScanResult.save_result(
+                        account_id=_account_id(), site_id=site.id,
+                        scan_type="redirects",
+                        issue_count=(report.get("chains_count", 0) + report.get("broken_count", 0)),
+                        item_count=report.get("total"),
+                        data={
+                            "total": report.get("total"),
+                            "chains_count": report.get("chains_count"),
+                            "broken_count": report.get("broken_count"),
+                            "chains": report.get("chains", [])[:20],
+                            "broken": report.get("broken", [])[:20],
+                        },
+                    )
+                except Exception:
+                    pass
         except Exception as exc:
             logger.exception("Redirect check failed")
             error = f"Check failed: {exc}"
@@ -2585,6 +2641,21 @@ def seo_foundation():
         weights = {"pass": 2, "warn": 1, "fail": 0}
         score = round(sum(weights[c["status"]] for c in checks) / (len(checks) * 2) * 100) if checks else 0
 
+        if checks and site:
+            try:
+                from app.models_seo import SEOScanResult
+                SEOScanResult.save_result(
+                    account_id=_account_id(), site_id=site.id,
+                    scan_type="seo_foundation", url=site_url_checked,
+                    score=score,
+                    pass_count=sum(1 for c in checks if c["status"] == "pass"),
+                    warn_count=sum(1 for c in checks if c["status"] == "warn"),
+                    fail_count=sum(1 for c in checks if c["status"] == "fail"),
+                    data={"checks": checks, "score": score},
+                )
+            except Exception:
+                pass
+
     return render_template(
         "wp/seo_foundation.html",
         site=site,
@@ -2629,6 +2700,25 @@ def index_coverage():
                 pass
             all_content = posts + pages
             result = check_index_coverage(all_content, aid, site_url)
+            if result:
+                try:
+                    from app.models_seo import SEOScanResult
+                    SEOScanResult.save_result(
+                        account_id=aid, site_id=site.id,
+                        scan_type="index_coverage",
+                        issue_count=result.get("unindexed_count"),
+                        item_count=result.get("total"),
+                        score=result.get("pct_indexed"),
+                        data={
+                            "indexed_count": result.get("indexed_count"),
+                            "unindexed_count": result.get("unindexed_count"),
+                            "total": result.get("total"),
+                            "pct_indexed": result.get("pct_indexed"),
+                            "unindexed_urls": [p["url"] for p in result.get("unindexed", [])],
+                        },
+                    )
+                except Exception:
+                    pass
         except Exception as exc:
             logger.exception("Index coverage check failed")
             error = f"Check failed: {exc}"
@@ -2671,6 +2761,24 @@ def orphan_pages():
                 pass
             all_content = posts + pages
             result = detect_orphans(all_content, site.base_url)
+            if result:
+                try:
+                    from app.models_seo import SEOScanResult
+                    SEOScanResult.save_result(
+                        account_id=_account_id(), site_id=site.id,
+                        scan_type="orphan_pages",
+                        issue_count=result.get("orphan_count"),
+                        item_count=result.get("total"),
+                        data={
+                            "orphan_count": result.get("orphan_count"),
+                            "linked_count": result.get("linked_count"),
+                            "total": result.get("total"),
+                            "pct_orphaned": result.get("pct_orphaned"),
+                            "orphan_urls": [p["url"] for p in result.get("orphans", [])],
+                        },
+                    )
+                except Exception:
+                    pass
         except Exception as exc:
             logger.exception("Orphan page detection failed")
             error = f"Detection failed: {exc}"

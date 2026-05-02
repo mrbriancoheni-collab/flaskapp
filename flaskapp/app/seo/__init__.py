@@ -909,6 +909,19 @@ def eeat():
             if result.get("error"):
                 flash(result["error"], "error")
                 result = None
+            elif result:
+                try:
+                    from app.models_seo import SEOScanResult
+                    SEOScanResult.save_result(
+                        account_id=aid, scan_type="eeat", url=url_to_check,
+                        score=result.get("score"),
+                        pass_count=result.get("pass_count"),
+                        warn_count=result.get("warn_count"),
+                        fail_count=result.get("fail_count"),
+                        data=result,
+                    )
+                except Exception:
+                    pass
         except Exception as exc:
             logger.exception("E-E-A-T audit failed")
             flash(f"Audit failed: {exc}", "error")
@@ -955,6 +968,19 @@ def aeo_optimizer():
             if result.get("error"):
                 flash(result["error"], "error")
                 result = None
+            elif result:
+                try:
+                    from app.models_seo import SEOScanResult
+                    SEOScanResult.save_result(
+                        account_id=aid, scan_type="aeo_audit", url=url_to_check,
+                        score=result.get("score"),
+                        pass_count=result.get("pass_count"),
+                        warn_count=result.get("warn_count"),
+                        fail_count=result.get("fail_count"),
+                        data=result,
+                    )
+                except Exception:
+                    pass
         except Exception as exc:
             logger.exception("AEO audit failed")
             flash(f"Audit failed: {exc}", "error")
@@ -992,6 +1018,24 @@ def cannibalization():
             if result.get("error"):
                 error = result["error"]
                 result = None
+            elif result:
+                try:
+                    from app.models_seo import SEOScanResult
+                    SEOScanResult.save_result(
+                        account_id=aid, scan_type="cannibalization",
+                        issue_count=result.get("conflict_count"),
+                        item_count=result.get("total_keywords_checked"),
+                        data={
+                            "conflict_count": result.get("conflict_count"),
+                            "high_count": result.get("high_count"),
+                            "medium_count": result.get("medium_count"),
+                            "low_count": result.get("low_count"),
+                            "total_keywords_checked": result.get("total_keywords_checked"),
+                            "conflicts": result.get("conflicts", [])[:20],
+                        },
+                    )
+                except Exception:
+                    pass
         except Exception as exc:
             logger.exception("Cannibalization detection failed")
             error = f"Analysis failed: {exc}"
@@ -1044,6 +1088,26 @@ def llm_citations():
                 if result.get("error"):
                     flash(result["error"], "error")
                     result = None
+                elif result:
+                    try:
+                        from app.models_seo import SEOScanResult
+                        SEOScanResult.save_result(
+                            account_id=aid, scan_type="llm_citations",
+                            url=domain or None,
+                            score=result.get("score"),
+                            item_count=result.get("total_queries"),
+                            data={
+                                "brand": result.get("brand"),
+                                "domain": result.get("domain"),
+                                "score": result.get("score"),
+                                "cited_count": result.get("cited_count"),
+                                "total_queries": result.get("total_queries"),
+                                "results": result.get("results", []),
+                                "recommendations": result.get("recommendations", []),
+                            },
+                        )
+                    except Exception:
+                        pass
             except Exception as exc:
                 logger.exception("LLM citation check failed")
                 flash(f"Check failed: {exc}", "error")

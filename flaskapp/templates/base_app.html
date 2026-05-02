@@ -362,6 +362,21 @@
             <i class="fa-solid fa-file-pen"></i><span>Content Brief</span>
           </a>
         {% endif %}
+        {% if has_endpoint('wp_bp.freshness') %}
+          <a href="{{ url_for('wp_bp.freshness') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-seedling"></i><span>Content Freshness</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.broken_links') %}
+          <a href="{{ url_for('wp_bp.broken_links') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-link-slash"></i><span>Broken Links</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.seo_audit_review') %}
+          <a href="{{ url_for('wp_bp.seo_audit_review') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-shield-halved"></i><span>AI Audit Review</span>
+          </a>
+        {% endif %}
       {% endif %}
 
       <!-- SEO Section -->
@@ -388,6 +403,16 @@
         {% if has_endpoint('seo_bp.optimize') %}
           <a href="{{ url_for('seo_bp.optimize') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
             <i class="fa-solid fa-wand-magic-sparkles"></i><span>AI Recommendations</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.snippets') %}
+          <a href="{{ url_for('seo_bp.snippets') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-award"></i><span>Snippet Optimizer</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.pagespeed') %}
+          <a href="{{ url_for('seo_bp.pagespeed') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-gauge-high"></i><span>Page Speed</span>
           </a>
         {% endif %}
       {% endif %}
@@ -664,6 +689,15 @@
         {% if has_endpoint('wp_bp.content_brief') %}
           <a class="secondary-link {% if epn=='wp_bp.content_brief' %}active{% endif %}" href="{{ url_for('wp_bp.content_brief') }}"><i class="fa-solid fa-file-pen"></i><span>Content Brief</span></a>
         {% endif %}
+        {% if has_endpoint('wp_bp.freshness') %}
+          <a class="secondary-link {% if epn=='wp_bp.freshness' %}active{% endif %}" href="{{ url_for('wp_bp.freshness') }}"><i class="fa-solid fa-seedling"></i><span>Content Freshness</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.broken_links') %}
+          <a class="secondary-link {% if epn=='wp_bp.broken_links' %}active{% endif %}" href="{{ url_for('wp_bp.broken_links') }}"><i class="fa-solid fa-link-slash"></i><span>Broken Links</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.seo_audit_review') %}
+          <a class="secondary-link {% if epn=='wp_bp.seo_audit_review' %}active{% endif %}" href="{{ url_for('wp_bp.seo_audit_review') }}"><i class="fa-solid fa-shield-halved"></i><span>AI Audit Review</span></a>
+        {% endif %}
         {% if has_endpoint('wp_bp.edit_lookup') %}
           <a class="secondary-link {% if epn in ('wp_bp.edit_lookup','wp_bp.edit_post','wp_bp.edit_post_submit') %}active{% endif %}" href="{{ url_for('wp_bp.edit_lookup') }}"><i class="fa-solid fa-pen-to-square"></i><span>Edit Post</span></a>
         {% endif %}
@@ -704,6 +738,12 @@
         {% endif %}
         {% if has_endpoint('seo_bp.monitor') %}
           <a class="secondary-link {% if epn=='seo_bp.monitor' %}active{% endif %}" href="{{ url_for('seo_bp.monitor') }}"><i class="fa-solid fa-bell"></i><span>Monitor &amp; Alerts</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.snippets') %}
+          <a class="secondary-link {% if epn=='seo_bp.snippets' %}active{% endif %}" href="{{ url_for('seo_bp.snippets') }}"><i class="fa-solid fa-award"></i><span>Snippet Optimizer</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.pagespeed') %}
+          <a class="secondary-link {% if epn=='seo_bp.pagespeed' %}active{% endif %}" href="{{ url_for('seo_bp.pagespeed') }}"><i class="fa-solid fa-gauge-high"></i><span>Page Speed</span></a>
         {% endif %}
       {% elif SECTION == 'strategy' %}
         <!-- strategy links placeholder -->

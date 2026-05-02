@@ -1,0 +1,175 @@
+{% extends "base_app.html" %}
+{% block title %}Page Speed · {{ app_name }}{% endblock %}
+
+{% macro score_ring(score, label) %}
+{% set color = 'green' if score >= 90 else ('amber' if score >= 50 else 'red') %}
+<div class="flex flex-col items-center">
+  <div class="relative w-16 h-16">
+    <svg viewBox="0 0 36 36" class="w-16 h-16 -rotate-90">
+      <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" stroke-width="3"/>
+      <circle cx="18" cy="18" r="15.9" fill="none"
+        stroke="{{ '#22c55e' if color == 'green' else ('#f59e0b' if color == 'amber' else '#ef4444') }}"
+        stroke-width="3"
+        stroke-dasharray="{{ (score or 0) }}, 100"
+        stroke-linecap="round"/>
+    </svg>
+    <span class="absolute inset-0 flex items-center justify-center text-sm font-bold
+      {% if color == 'green' %}text-green-700{% elif color == 'amber' %}text-amber-600{% else %}text-red-600{% endif %}">
+      {{ score if score is not none else '?' }}
+    </span>
+  </div>
+  <span class="text-xs text-gray-500 mt-1 text-center">{{ label }}</span>
+</div>
+{% endmacro %}
+
+{% macro metric_pill(m, label) %}
+{% set score = m.score if m else none %}
+{% set color = 'green' if score is not none and score >= 0.9 else ('amber' if score is not none and score >= 0.5 else 'red') %}
+<div class="bg-gray-50 rounded-lg p-3 text-center">
+  <p class="text-xs text-gray-400 mb-0.5">{{ label }}</p>
+  <p class="font-semibold text-sm {% if color == 'green' %}text-green-700{% elif color == 'amber' %}text-amber-600{% else %}text-red-600{% endif %}">
+    {{ m.value if m else '—' }}
+  </p>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">Page Speed & Core Web Vitals</h1>
+    <p class="text-gray-500 text-sm mt-1">Powered by Google PageSpeed Insights API</p>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm font-medium border
+      {% if cat == 'success' %}bg-green-50 border-green-300 text-green-800
+      {% elif cat == 'error' %}bg-red-50 border-red-300 text-red-800
+      {% else %}bg-blue-50 border-blue-300 text-blue-800{% endif %}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if error %}
+  <div class="bg-red-50 border border-red-200 rounded-xl p-5">
+    <p class="text-red-800 font-medium"><i class="fa-solid fa-circle-xmark mr-2 text-red-500"></i>{{ error }}</p>
+  </div>
+  {% endif %}
+
+  <!-- URL input -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <form method="POST" action="{{ url_for('seo_bp.pagespeed') }}" class="flex flex-wrap gap-3 items-end">
+      <div class="flex-1 min-w-64">
+        <label class="block text-xs font-medium text-gray-600 mb-1">URL to analyse</label>
+        <input type="url" name="url" value="{{ url_checked or site_url or '' }}" required
+               placeholder="https://example.com"
+               class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 focus:outline-none">
+      </div>
+      <button type="submit"
+              class="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
+        <i class="fa-solid fa-gauge-high mr-1"></i>Analyse
+      </button>
+    </form>
+    {% if url_checked %}
+    <p class="text-xs text-gray-400 mt-3">Results for: <span class="font-mono">{{ url_checked }}</span></p>
+    {% endif %}
+  </div>
+
+  {% if result %}
+  <!-- Tab switcher -->
+  <div class="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
+    <button id="tab-mobile" onclick="showTab('mobile')"
+            class="tab-btn px-4 py-1.5 rounded-md text-sm font-medium bg-white shadow text-indigo-700">
+      <i class="fa-solid fa-mobile-screen-button mr-1"></i>Mobile
+    </button>
+    <button id="tab-desktop" onclick="showTab('desktop')"
+            class="tab-btn px-4 py-1.5 rounded-md text-sm font-medium text-gray-600 hover:text-gray-800">
+      <i class="fa-solid fa-desktop mr-1"></i>Desktop
+    </button>
+  </div>
+
+  {% for strategy in ['mobile', 'desktop'] %}
+  {% set s = result[strategy] %}
+  <div id="panel-{{ strategy }}" class="strategy-panel space-y-4 {% if strategy == 'desktop' %}hidden{% endif %}">
+    {% if s %}
+
+    <!-- Score rings -->
+    <div class="bg-white rounded-xl shadow-sm border p-6">
+      <h2 class="text-sm font-semibold text-gray-600 uppercase mb-4">Lighthouse Scores</h2>
+      <div class="flex flex-wrap justify-around gap-4">
+        {{ score_ring(s.performance, 'Performance') }}
+        {{ score_ring(s.accessibility, 'Accessibility') }}
+        {{ score_ring(s.best_practices, 'Best Practices') }}
+        {{ score_ring(s.seo, 'SEO') }}
+      </div>
+    </div>
+
+    <!-- Core Web Vitals -->
+    <div class="bg-white rounded-xl shadow-sm border p-6">
+      <h2 class="text-sm font-semibold text-gray-600 uppercase mb-4">Core Web Vitals</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        {{ metric_pill(s.lcp,  'LCP') }}
+        {{ metric_pill(s.fid,  'TBT (proxy FID)') }}
+        {{ metric_pill(s.cls,  'CLS') }}
+        {{ metric_pill(s.ttfb, 'TTFB') }}
+        {{ metric_pill(s.si,   'Speed Index') }}
+      </div>
+      <p class="text-xs text-gray-400 mt-3">
+        LCP &lt; 2.5s · CLS &lt; 0.1 · TBT &lt; 200ms = good. Data from Lighthouse simulation.
+      </p>
+    </div>
+
+    <!-- Opportunities -->
+    {% if s.opportunities %}
+    <div class="bg-white rounded-xl shadow-sm border p-6">
+      <h2 class="text-sm font-semibold text-gray-600 uppercase mb-4">Top Opportunities</h2>
+      <div class="space-y-3">
+        {% for opp in s.opportunities %}
+        <div class="flex items-start gap-3 p-3 rounded-lg bg-amber-50 border border-amber-100">
+          <i class="fa-solid fa-circle-exclamation text-amber-500 mt-0.5 flex-shrink-0"></i>
+          <div>
+            <p class="text-sm font-semibold text-gray-800">{{ opp.title }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">{{ opp.description | truncate(160) }}</p>
+            {% if opp.savings %}
+            <span class="text-xs text-amber-700 font-medium mt-1 inline-block">{{ opp.savings }}</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="bg-gray-50 rounded-xl border p-8 text-center text-gray-400">
+      <p>No {{ strategy }} data available.</p>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  {% elif not error %}
+  <!-- Empty state -->
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">
+    <i class="fa-solid fa-gauge-high text-5xl mb-4"></i>
+    <p class="text-gray-600 mb-1">Enter a URL above to run a PageSpeed analysis.</p>
+    <p class="text-xs text-gray-400">Uses the free Google PageSpeed Insights API — no API key required.</p>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+function showTab(strategy) {
+  document.querySelectorAll('.strategy-panel').forEach(p => p.classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.remove('bg-white', 'shadow', 'text-indigo-700');
+    b.classList.add('text-gray-600');
+  });
+  document.getElementById('panel-' + strategy).classList.remove('hidden');
+  const btn = document.getElementById('tab-' + strategy);
+  btn.classList.add('bg-white', 'shadow', 'text-indigo-700');
+  btn.classList.remove('text-gray-600');
+}
+</script>
+{% endblock %}

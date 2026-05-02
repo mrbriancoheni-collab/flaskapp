@@ -1366,6 +1366,111 @@ def seo_audit():
     return render_template("wp/seo_audit.html", result=result, site=_current_site())
 
 
+@wp_bp.route("/seo-audit/ai-review", methods=["GET", "POST"], endpoint="seo_audit_review")
+@login_required
+def seo_audit_review():
+    """
+    AI-powered SEO audit quality gate.
+    Runs the standard audit then passes every finding through Claude to:
+    - Validate it's a genuine issue (not a false positive)
+    - Add evidence and confidence score
+    - Generate a developer-ready ticket with exact fix instructions
+    Paid users only.
+    """
+    if not is_paid_account():
+        flash("AI Audit Review is available on paid plans.", "warning")
+        return redirect(url_for("main_bp.pricing"))
+
+    result = None
+    url_checked = None
+
+    if request.method == "POST":
+        url = (request.form.get("url") or "").strip()
+        keyword = (request.form.get("keyword") or "").strip()
+        if not url:
+            flash("URL is required.", "error")
+            return render_template("wp/seo_audit_review.html", result=None, site=_current_site())
+
+        url_checked = url
+        try:
+            from app.wp.seo_audit import audit_url
+            raw = audit_url(url, keyword)
+            if raw.get("error"):
+                flash(raw["error"], "error")
+                return render_template("wp/seo_audit_review.html", result=None, site=_current_site())
+
+            issues = raw.get("issues") or []
+            if not issues:
+                flash("No issues found — nothing to review.", "info")
+                return render_template("wp/seo_audit_review.html", result=raw, site=_current_site(),
+                                       url_checked=url_checked)
+
+            # Build prompt for AI reviewer
+            issue_lines = []
+            for i, iss in enumerate(issues[:20], 1):
+                issue_lines.append(
+                    f"{i}. [{iss.get('severity','?').upper()}] {iss.get('issue','')}: {iss.get('detail','')}"
+                )
+
+            prompt = f"""You are a senior SEO engineer reviewing automated audit findings for: {url}
+{"Target keyword: " + keyword if keyword else ""}
+
+Audit findings to validate:
+{chr(10).join(issue_lines)}
+
+For each finding, apply the "Google engineer test": would a Google engineer confirm this is a genuine, correctly-diagnosed SEO problem?
+
+Return a JSON array with one object per finding (same order), each with:
+- finding_number: int (1-based)
+- valid: true | false
+- confidence: "high" | "medium" | "low"
+- false_positive_reason: string or null (why it might not be a real issue)
+- evidence: string (what to look for to confirm the issue)
+- priority: "critical" | "high" | "medium" | "low"
+- dev_ticket: string (exact developer-ready instruction: what file/element to change, what to change it to)
+- estimated_impact: string (brief description of ranking/UX benefit if fixed)"""
+
+            from app.ai_clients import get_ai_client
+            import json as _json, re as _re
+            client = get_ai_client()
+            response = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=2000,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw_text = response.content[0].text
+            match = _re.search(r'\[.*\]', raw_text, _re.DOTALL)
+            reviews = _json.loads(match.group()) if match else []
+
+            # Merge reviews back onto issues
+            review_map = {r.get("finding_number"): r for r in reviews}
+            reviewed_issues = []
+            for i, iss in enumerate(issues[:20], 1):
+                review = review_map.get(i, {})
+                reviewed_issues.append({**iss, "review": review})
+
+            result = {
+                **raw,
+                "reviewed_issues": reviewed_issues,
+                "valid_count":   sum(1 for r in reviews if r.get("valid")),
+                "invalid_count": sum(1 for r in reviews if not r.get("valid")),
+                "critical_count": sum(1 for r in reviews if r.get("priority") == "critical" and r.get("valid")),
+            }
+            flash(f"AI review complete — {result['valid_count']} confirmed issues, "
+                  f"{result['invalid_count']} possible false positives.", "success")
+
+        except Exception as exc:
+            current_app.logger.exception("SEO AI audit review failed")
+            flash(f"Review failed: {exc}", "error")
+
+    return render_template(
+        "wp/seo_audit_review.html",
+        result=result,
+        site=_current_site(),
+        url_checked=url_checked,
+    )
+
+
 @wp_bp.route("/internal-links", methods=["GET", "POST"], endpoint="internal_links")
 @login_required
 def internal_links():
@@ -1700,6 +1805,114 @@ def edits():
 
     return render_template("wp/edits.html",
                            jobs=jobs, counts=counts, status_filter=status_filter)
+
+@wp_bp.route("/freshness", methods=["GET"], endpoint="freshness")
+@login_required
+def freshness():
+    """Content Freshness Dashboard — ranks posts by staleness + traffic decay."""
+    aid = _account_id()
+    site = _current_site()
+    posts = []
+    error = None
+
+    if site:
+        try:
+            from app.wp.wp_client import WPClient
+            c = WPClient(site)
+            raw = c.list_posts(per_page=50, status="publish")
+
+            # Build a map of declining pages from GSC if available
+            declining_map: dict = {}
+            try:
+                from app.google import _is_connected, _get_gsc_selected_site
+                from app.seo.keyword_gaps import run_keyword_gap_analysis
+                import os
+                if aid and _is_connected(aid, "gsc"):
+                    gsc_url = _get_gsc_selected_site(aid) or os.getenv("GSC_SITE", "")
+                    if gsc_url:
+                        gap = run_keyword_gap_analysis(aid, gsc_url)
+                        for dp in (gap.get("declining_pages") or []):
+                            pg = dp.get("page", "").rstrip("/")
+                            declining_map[pg] = dp.get("change_pct", 0)
+            except Exception:
+                pass
+
+            from datetime import datetime, timezone
+            import re as _re
+            now = datetime.now(timezone.utc)
+
+            for p in raw:
+                modified_str = p.get("modified_gmt") or p.get("modified", "")
+                try:
+                    modified = datetime.fromisoformat(
+                        modified_str.replace("Z", "+00:00") if modified_str else ""
+                    )
+                    if modified.tzinfo is None:
+                        modified = modified.replace(tzinfo=timezone.utc)
+                    days_old = (now - modified).days
+                except Exception:
+                    days_old = 0
+
+                post_url = (p.get("link") or "").rstrip("/")
+                traffic_change = declining_map.get(post_url)
+
+                # Staleness score: 0-100 (higher = staler)
+                age_score = min(days_old / 365 * 50, 50)
+                decay_score = min(abs(traffic_change) / 2, 50) if traffic_change and traffic_change < 0 else 0
+                staleness = round(age_score + decay_score)
+
+                posts.append({
+                    "id":             p.get("id"),
+                    "title":          _re.sub(r"<[^>]+>", "", p.get("title", {}).get("rendered", "")),
+                    "url":            post_url,
+                    "days_old":       days_old,
+                    "modified":       modified_str[:10] if modified_str else "—",
+                    "traffic_change": round(traffic_change, 1) if traffic_change is not None else None,
+                    "staleness":      staleness,
+                })
+
+            posts.sort(key=lambda x: x["staleness"], reverse=True)
+        except Exception as exc:
+            logger.exception("Freshness dashboard failed")
+            error = f"Could not load posts: {exc}"
+
+    return render_template(
+        "wp/freshness.html",
+        site=site,
+        posts=posts,
+        error=error,
+    )
+
+
+@wp_bp.route("/broken-links", methods=["GET", "POST"], endpoint="broken_links")
+@login_required
+def broken_links():
+    """Scan published posts for broken links."""
+    site = _current_site()
+    report = None
+    error = None
+    scanning = False
+
+    if request.method == "POST" and site:
+        scanning = True
+        try:
+            from app.wp.wp_client import WPClient
+            from app.wp.broken_links import scan_broken_links
+            c = WPClient(site)
+            raw = c.list_posts(per_page=30, status="publish")
+            report = scan_broken_links(raw, site.base_url)
+        except Exception as exc:
+            logger.exception("Broken link scan failed")
+            error = f"Scan failed: {exc}"
+
+    return render_template(
+        "wp/broken_links.html",
+        site=site,
+        report=report,
+        error=error,
+        scanning=scanning,
+    )
+
 
 # allow WPLog(...).save() convenience
 def _save(self):

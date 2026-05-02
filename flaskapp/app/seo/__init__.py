@@ -465,3 +465,190 @@ def optimize():
         flash(f"Could not generate suggestions: {e}", "error")
 
     return render_template("seo/optimize.html", suggestions=suggestions)
+
+
+@seo_bp.route("/snippets", methods=["GET"], endpoint="snippets")
+@login_required
+def snippets():
+    """Featured Snippet Optimizer — find position 2-10 queries ripe for snippet capture."""
+    aid = current_account_id()
+    opportunities = []
+    gsc_connected = False
+    site_url = None
+    error = None
+
+    try:
+        from app.google import _is_connected, _get_gsc_selected_site
+        import os
+        gsc_connected = _is_connected(aid, "gsc")
+        site_url = _get_gsc_selected_site(aid) or os.getenv("GSC_SITE")
+    except Exception as exc:
+        error = str(exc)
+
+    if gsc_connected and site_url:
+        try:
+            from app.seo.keyword_gaps import _gsc_fetch, _rows_to_dicts, _date_range
+            end, start = _date_range(3, 28)
+            rows = _gsc_fetch(aid, site_url, start, end,
+                              ["query", "page"], row_limit=200)
+            qp_data = _rows_to_dicts(rows, ["query", "page"])
+
+            # Filter to position 2-10, meaningful impressions
+            candidates = [
+                r for r in qp_data
+                if 1.5 < r.get("position", 99) <= 10
+                and r.get("impressions", 0) >= 50
+            ]
+            candidates.sort(key=lambda x: x["impressions"], reverse=True)
+            candidates = candidates[:30]
+
+            for c in candidates:
+                query = c.get("query", "")
+                pos   = round(c.get("position", 0), 1)
+                impr  = int(c.get("impressions", 0))
+                clicks = int(c.get("clicks", 0))
+                ctr   = round(c.get("ctr", 0) * 100, 1) if c.get("ctr") else 0
+
+                q_lower = query.lower()
+                if any(q_lower.startswith(w) for w in ("what is", "what are", "define", "meaning")):
+                    snippet_type, tip = "definition", "Add a concise 40-50 word definition paragraph directly below the H2."
+                elif any(q_lower.startswith(w) for w in ("how to", "how do", "steps to", "how can")):
+                    snippet_type, tip = "steps", "Use a numbered <ol> list with imperative step headings (verb-first)."
+                elif any(q_lower.startswith(w) for w in ("best", "top", "list of", "types of")):
+                    snippet_type, tip = "list", "Add a <ul> or <ol> list near the top of the page with 5-8 concise items."
+                elif any(w in q_lower for w in ("vs", "versus", "compare", "difference")):
+                    snippet_type, tip = "table", "Add an HTML comparison table with a clear header row and 2-4 columns."
+                elif any(w in q_lower for w in ("cost", "price", "how much")):
+                    snippet_type, tip = "table", "Add a pricing table or cost breakdown near the top of the page."
+                else:
+                    snippet_type, tip = "paragraph", "Add a direct, concise answer (40-60 words) in the first paragraph after the H1."
+
+                difficulty = "easy" if pos <= 3 else ("medium" if pos <= 6 else "hard")
+
+                opportunities.append({
+                    "query":        query,
+                    "page":         c.get("page", ""),
+                    "position":     pos,
+                    "impressions":  impr,
+                    "clicks":       clicks,
+                    "ctr":          ctr,
+                    "snippet_type": snippet_type,
+                    "tip":          tip,
+                    "difficulty":   difficulty,
+                })
+        except Exception as exc:
+            logger.exception("Snippet optimizer failed")
+            error = f"Could not load data: {exc}"
+    elif not gsc_connected:
+        error = "Connect Google Search Console to find snippet opportunities."
+
+    return render_template(
+        "seo/snippets.html",
+        opportunities=opportunities,
+        gsc_connected=gsc_connected,
+        site_url=site_url,
+        error=error,
+    )
+
+
+@seo_bp.route("/pagespeed", methods=["GET", "POST"], endpoint="pagespeed")
+@login_required
+def pagespeed():
+    """Page Speed & Core Web Vitals dashboard via Google PageSpeed Insights API."""
+    aid = current_account_id()
+    result = None
+    error = None
+    url_checked = None
+
+    site_url = None
+    try:
+        from app.google import _get_gsc_selected_site
+        import os
+        site_url = _get_gsc_selected_site(aid) or os.getenv("GSC_SITE")
+    except Exception:
+        pass
+    if not site_url:
+        try:
+            from app.models_wp import WPSite
+            s = WPSite.query.filter_by(account_id=aid).first()
+            if s:
+                site_url = s.base_url
+        except Exception:
+            pass
+
+    url_to_check = (request.form.get("url") or site_url or "").strip().rstrip("/")
+
+    if request.method == "POST" and url_to_check:
+        url_checked = url_to_check
+        try:
+            import requests as _req
+            api_key = current_app.config.get("GOOGLE_PAGESPEED_KEY", "")
+            scores = {}
+            for strategy in ("mobile", "desktop"):
+                params: dict = {
+                    "url": url_to_check,
+                    "strategy": strategy,
+                    "category": ["performance", "accessibility", "best-practices", "seo"],
+                }
+                if api_key:
+                    params["key"] = api_key
+
+                r = _req.get(
+                    "https://www.googleapis.com/pagespeedonline/v5/runPagespeed",
+                    params=params,
+                    timeout=30,
+                )
+                r.raise_for_status()
+                data = r.json()
+
+                cats   = data.get("lighthouseResult", {}).get("categories", {})
+                audits = data.get("lighthouseResult", {}).get("audits", {})
+
+                def _score(key):
+                    v = cats.get(key, {}).get("score")
+                    return round(v * 100) if v is not None else None
+
+                def _metric(key):
+                    a = audits.get(key, {})
+                    return {"value": a.get("displayValue", "—"), "score": a.get("score")}
+
+                opps = []
+                for audit_id, audit in audits.items():
+                    if audit.get("score") is not None and audit["score"] < 0.9:
+                        if audit.get("details", {}).get("type") in ("opportunity", "table"):
+                            opps.append({
+                                "title":       audit.get("title", ""),
+                                "description": audit.get("description", ""),
+                                "savings":     audit.get("displayValue", ""),
+                                "score":       audit.get("score"),
+                            })
+                opps.sort(key=lambda x: x["score"] or 1)
+                opps = opps[:6]
+
+                scores[strategy] = {
+                    "performance":    _score("performance"),
+                    "accessibility":  _score("accessibility"),
+                    "best_practices": _score("best-practices"),
+                    "seo":            _score("seo"),
+                    "lcp":  _metric("largest-contentful-paint"),
+                    "fid":  _metric("total-blocking-time"),
+                    "cls":  _metric("cumulative-layout-shift"),
+                    "ttfb": _metric("server-response-time"),
+                    "si":   _metric("speed-index"),
+                    "opportunities": opps,
+                }
+
+            result = {"mobile": scores.get("mobile"), "desktop": scores.get("desktop")}
+            flash("PageSpeed analysis complete.", "success")
+
+        except Exception as exc:
+            logger.exception("PageSpeed API failed")
+            error = f"PageSpeed check failed: {exc}"
+
+    return render_template(
+        "seo/pagespeed.html",
+        result=result,
+        site_url=site_url,
+        url_checked=url_checked,
+        error=error,
+    )

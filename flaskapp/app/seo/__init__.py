@@ -652,3 +652,158 @@ def pagespeed():
         url_checked=url_checked,
         error=error,
     )
+
+
+@seo_bp.route("/local", methods=["GET", "POST"], endpoint="local_seo")
+@login_required
+def local_seo():
+    """Local SEO audit — NAP, LocalBusiness schema, location signals."""
+    aid = current_account_id()
+    result = None
+    url_checked = None
+
+    # Auto-detect site URL
+    site_url = None
+    try:
+        from app.google import _get_gsc_selected_site
+        import os
+        site_url = _get_gsc_selected_site(aid) or os.getenv("GSC_SITE")
+    except Exception:
+        pass
+    if not site_url:
+        try:
+            from app.models_wp import WPSite
+            s = WPSite.query.filter_by(account_id=aid).first()
+            if s:
+                site_url = s.base_url
+        except Exception:
+            pass
+
+    url_to_check = (request.form.get("url") or site_url or "").strip().rstrip("/")
+    city          = (request.form.get("city") or "").strip()
+    business_name = (request.form.get("business_name") or "").strip()
+
+    if request.method == "POST" and url_to_check:
+        url_checked = url_to_check
+        try:
+            from app.seo.local_seo import audit_local_seo
+            result = audit_local_seo(url_to_check, city=city, business_name=business_name)
+            if result.get("error"):
+                flash(result["error"], "error")
+                result = None
+        except Exception as exc:
+            logger.exception("Local SEO audit failed")
+            flash(f"Audit failed: {exc}", "error")
+
+    return render_template(
+        "seo/local_seo.html",
+        result=result,
+        site_url=site_url,
+        url_checked=url_checked,
+        city=city,
+        business_name=business_name,
+    )
+
+
+@seo_bp.route("/calendar", methods=["GET"], endpoint="content_calendar")
+@login_required
+def content_calendar():
+    """AI-generated content calendar from keyword gap + freshness signals."""
+    aid = current_account_id()
+    calendar_items = []
+    signals_summary = {}
+    gsc_connected = False
+    site_url = None
+    error = None
+
+    try:
+        from app.google import _is_connected, _get_gsc_selected_site
+        import os
+        gsc_connected = _is_connected(aid, "gsc")
+        site_url = _get_gsc_selected_site(aid) or os.getenv("GSC_SITE")
+    except Exception as exc:
+        error = str(exc)
+
+    if gsc_connected and site_url:
+        try:
+            from app.seo.keyword_gaps import run_keyword_gap_analysis
+            gap = run_keyword_gap_analysis(aid, site_url)
+
+            missing   = (gap.get("missing_content")  or [])[:8]
+            quick     = (gap.get("quick_wins")        or [])[:6]
+            declining = (gap.get("declining_pages")   or [])[:5]
+            cannibal  = (gap.get("cannibalization")   or [])[:3]
+
+            signals_summary = {
+                "missing_count":   len(missing),
+                "quick_wins":      len(quick),
+                "declining_count": len(declining),
+                "cannibal_count":  len(cannibal),
+            }
+
+            # Build prompt context
+            def _fmt_list(items, key_fn, limit=5):
+                return [key_fn(i) for i in items[:limit]]
+
+            context = []
+            if missing:
+                context.append("Untapped keywords (high impressions, no ranking page): " +
+                                ", ".join(_fmt_list(missing, lambda x: f"{x['query']} ({x['impressions']} impr)")))
+            if quick:
+                context.append("Quick win keywords (position 4-20, high impressions): " +
+                                ", ".join(_fmt_list(quick, lambda x: f"{x['query']} (pos {round(x['position'],1)})")))
+            if declining:
+                context.append("Declining pages needing refresh: " +
+                                ", ".join(_fmt_list(declining, lambda x: f"{x['page'].split('/')[-1] or x['page']} ({round(x.get('change_pct',0),0)}% drop)")))
+            if cannibal:
+                context.append("Cannibalisation to resolve: " +
+                                ", ".join(_fmt_list(cannibal, lambda x: f"{x['query']} ({x['n_pages']} pages competing)")))
+
+            prompt = f"""You are a content strategist for a local service business (HVAC, plumbing, electrical, roofing, landscaping).
+
+Site: {site_url}
+SEO signals:
+{chr(10).join(context) if context else 'No GSC data available yet.'}
+
+Create a prioritised 12-week content calendar. Return a JSON array of exactly 12 items.
+Each item must have:
+- week: integer 1-12
+- action: "new_post" | "refresh" | "consolidate"
+- title: suggested post/page title
+- keyword: primary target keyword
+- reason: one sentence explaining the SEO opportunity
+- impact: "high" | "medium" | "low"
+- source_url: existing page URL to refresh/consolidate (or null for new posts)
+
+Prioritise: high-impression untapped keywords first, then quick wins, then refreshes, then consolidations.
+Make titles specific to local service businesses. Do not repeat keywords."""
+
+            from app.ai_clients import get_ai_client
+            import json as _json, re as _re
+            client = get_ai_client()
+            response = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=2000,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw = response.content[0].text
+            match = _re.search(r'\[.*\]', raw, _re.DOTALL)
+            if match:
+                calendar_items = _json.loads(match.group())
+            else:
+                error = "Could not parse AI response."
+
+        except Exception as exc:
+            logger.exception("Content calendar generation failed")
+            error = f"Calendar generation failed: {exc}"
+    elif not gsc_connected:
+        error = "Connect Google Search Console to generate a data-driven content calendar."
+
+    return render_template(
+        "seo/content_calendar.html",
+        calendar_items=calendar_items,
+        signals_summary=signals_summary,
+        gsc_connected=gsc_connected,
+        site_url=site_url,
+        error=error,
+    )

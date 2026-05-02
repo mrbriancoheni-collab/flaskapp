@@ -377,6 +377,11 @@
             <i class="fa-solid fa-shield-halved"></i><span>AI Audit Review</span>
           </a>
         {% endif %}
+        {% if has_endpoint('wp_bp.bulk_meta') %}
+          <a href="{{ url_for('wp_bp.bulk_meta') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-tags"></i><span>Bulk Meta Editor</span>
+          </a>
+        {% endif %}
       {% endif %}
 
       <!-- SEO Section -->
@@ -413,6 +418,16 @@
         {% if has_endpoint('seo_bp.pagespeed') %}
           <a href="{{ url_for('seo_bp.pagespeed') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
             <i class="fa-solid fa-gauge-high"></i><span>Page Speed</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.local_seo') %}
+          <a href="{{ url_for('seo_bp.local_seo') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-location-dot"></i><span>Local SEO</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.content_calendar') %}
+          <a href="{{ url_for('seo_bp.content_calendar') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-calendar-days"></i><span>Content Calendar</span>
           </a>
         {% endif %}
       {% endif %}
@@ -744,6 +759,15 @@
         {% endif %}
         {% if has_endpoint('seo_bp.pagespeed') %}
           <a class="secondary-link {% if epn=='seo_bp.pagespeed' %}active{% endif %}" href="{{ url_for('seo_bp.pagespeed') }}"><i class="fa-solid fa-gauge-high"></i><span>Page Speed</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.local_seo') %}
+          <a class="secondary-link {% if epn=='seo_bp.local_seo' %}active{% endif %}" href="{{ url_for('seo_bp.local_seo') }}"><i class="fa-solid fa-location-dot"></i><span>Local SEO</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.content_calendar') %}
+          <a class="secondary-link {% if epn=='seo_bp.content_calendar' %}active{% endif %}" href="{{ url_for('seo_bp.content_calendar') }}"><i class="fa-solid fa-calendar-days"></i><span>Content Calendar</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.bulk_meta') %}
+          <a class="secondary-link {% if epn=='wp_bp.bulk_meta' %}active{% endif %}" href="{{ url_for('wp_bp.bulk_meta') }}"><i class="fa-solid fa-tags"></i><span>Bulk Meta Editor</span></a>
         {% endif %}
       {% elif SECTION == 'strategy' %}
         <!-- strategy links placeholder -->

@@ -1914,6 +1914,118 @@ def broken_links():
     )
 
 
+@wp_bp.route("/bulk-meta", methods=["GET", "POST"], endpoint="bulk_meta")
+@login_required
+def bulk_meta():
+    """Bulk meta editor — update titles and meta descriptions across multiple posts."""
+    site = _current_site()
+    posts = []
+    error = None
+    saved_count = 0
+
+    if site:
+        try:
+            from app.wp.wp_client import WPClient
+            import re as _re
+            c = WPClient(site)
+
+            if request.method == "POST":
+                action = request.form.get("action", "save")
+
+                if action == "ai_generate":
+                    # Generate AI title + meta for selected posts
+                    selected_ids = request.form.getlist("selected_ids")
+                    if not selected_ids:
+                        flash("Select at least one post to generate meta for.", "warning")
+                        return redirect(url_for("wp_bp.bulk_meta"))
+
+                    raw = c.list_posts(per_page=100, status="publish")
+                    sel_set = set(int(i) for i in selected_ids)
+                    to_generate = [p for p in raw if p.get("id") in sel_set]
+
+                    from app.ai_clients import get_ai_client
+                    import json as _json, re as _re2
+                    ai_client = get_ai_client()
+
+                    generated = {}
+                    for p in to_generate[:10]:
+                        pid = p.get("id")
+                        title_raw = _re.sub(r"<[^>]+>", "", p.get("title", {}).get("rendered", ""))
+                        snippet = _re.sub(r"<[^>]+>", " ", p.get("excerpt", {}).get("rendered", "") or "")[:300]
+                        prompt = (
+                            f"Write an SEO-optimised title tag (50-60 chars) and meta description (145-155 chars) "
+                            f"for this blog post.\n\nCurrent title: {title_raw}\nContent excerpt: {snippet}\n\n"
+                            f"Return JSON with keys: title, meta_description"
+                        )
+                        try:
+                            resp = ai_client.messages.create(
+                                model="claude-haiku-4-5-20251001",
+                                max_tokens=300,
+                                messages=[{"role": "user", "content": prompt}],
+                            )
+                            m = _re2.search(r'\{.*\}', resp.content[0].text, _re2.DOTALL)
+                            if m:
+                                data = _json.loads(m.group())
+                                generated[pid] = data
+                        except Exception:
+                            pass
+
+                    # Store generated values in session for pre-fill
+                    from flask import session as flask_session
+                    flask_session["bulk_meta_generated"] = generated
+                    flash(f"Generated meta for {len(generated)} post(s). Review and save below.", "success")
+                    return redirect(url_for("wp_bp.bulk_meta"))
+
+                elif action == "save":
+                    # Save changed titles and excerpts
+                    post_ids = request.form.getlist("post_id")
+                    for pid_str in post_ids:
+                        try:
+                            pid = int(pid_str)
+                            new_title = request.form.get(f"title_{pid}", "").strip()
+                            new_meta  = request.form.get(f"meta_{pid}", "").strip()
+                            if not new_title:
+                                continue
+                            payload = {"title": new_title}
+                            if new_meta:
+                                payload["excerpt"] = new_meta
+                                payload["meta"] = {"_yoast_wpseo_metadesc": new_meta}
+                            c._req("POST", f"/wp/v2/posts/{pid}", json_body=payload)
+                            saved_count += 1
+                        except Exception:
+                            pass
+                    flash(f"Saved {saved_count} post(s).", "success" if saved_count else "warning")
+
+            # Load posts for display
+            raw = c.list_posts(per_page=50, status="publish")
+            from flask import session as flask_session
+            generated = flask_session.pop("bulk_meta_generated", {})
+
+            for p in raw:
+                pid = p.get("id")
+                title = _re.sub(r"<[^>]+>", "", p.get("title", {}).get("rendered", ""))
+                excerpt = _re.sub(r"<[^>]+>", " ", p.get("excerpt", {}).get("rendered", "") or "").strip()
+                gen = generated.get(pid) or generated.get(str(pid)) or {}
+                posts.append({
+                    "id":      pid,
+                    "title":   gen.get("title") or title,
+                    "meta":    gen.get("meta_description") or excerpt[:160],
+                    "url":     p.get("link", ""),
+                    "ai_generated": bool(gen),
+                })
+
+        except Exception as exc:
+            logger.exception("Bulk meta editor failed")
+            error = f"Could not load posts: {exc}"
+
+    return render_template(
+        "wp/bulk_meta.html",
+        site=site,
+        posts=posts,
+        error=error,
+    )
+
+
 # allow WPLog(...).save() convenience
 def _save(self):
     db.session.add(self)

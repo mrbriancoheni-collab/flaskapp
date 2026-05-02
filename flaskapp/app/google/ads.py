@@ -173,7 +173,10 @@ def optimize():
                            COUNT(DISTINCT k.id) AS keyword_count,
                            COALESCE(SUM(gs.cost_micros),0)/1000000.0 AS spend_30d,
                            COALESCE(SUM(gs.conversions),0) AS conversions_30d,
-                           COALESCE(SUM(gs.clicks),0) AS clicks_30d
+                           COALESCE(SUM(gs.clicks),0) AS clicks_30d,
+                           AVG(gs.search_impr_share) AS avg_impr_share,
+                           AVG(gs.lost_is_budget) AS avg_lost_is_budget,
+                           AVG(gs.lost_is_rank) AS avg_lost_is_rank
                     FROM ads_campaigns ac
                     LEFT JOIN ad_groups ag ON ag.campaign_id = ac.id
                     LEFT JOIN keywords k ON k.ad_group_id = ag.id
@@ -821,3 +824,173 @@ def negatives_delete(neg_id: int):
         db.session.rollback()
         current_app.logger.exception("negatives_delete error")
         return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------
+# Cron: daily data sync
+# ---------------------------
+@gads_bp.post("/sync")
+@login_required
+def sync():
+    """
+    Trigger a full Google Ads data sync for the current account.
+    Pulls campaign / ad group / keyword stats + search terms from the API,
+    upserts GadsStatsDaily and SearchTerm, then re-runs the optimizer engine.
+    Returns JSON summary.
+    """
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    days = int(request.args.get("days", 30))
+    result = {"sync": {}, "optimizer": {}, "errors": []}
+
+    try:
+        from app.services.google_ads_sync import sync_account
+        result["sync"] = sync_account(aid, days=days)
+    except Exception as exc:
+        current_app.logger.exception("Google Ads sync failed for account %s", aid)
+        result["errors"].append(f"Sync: {exc}")
+
+    try:
+        from app.services.google_ads_optimizer_engine import generate_recommendations
+        result["optimizer"] = generate_recommendations(aid)
+    except Exception as exc:
+        current_app.logger.exception("Optimizer engine failed for account %s", aid)
+        result["errors"].append(f"Optimizer: {exc}")
+
+    status = 200 if not result["errors"] else 207
+    return jsonify(result), status
+
+
+# ---------------------------
+# Search Terms tab
+# ---------------------------
+@gads_bp.get("/search-terms")
+@login_required
+def search_terms():
+    """
+    Render the search terms tab — shows the latest search term report
+    with one-click Add as Keyword / Add as Negative actions.
+    """
+    aid = current_account_id()
+    if not aid:
+        return redirect(url_for("gads_bp.optimize"))
+
+    try:
+        rows = db.session.execute(text("""
+            SELECT st.id, st.search_term, st.clicks, st.impressions,
+                   st.cost_micros, st.conversions,
+                   st.added_as_keyword, st.added_as_negative,
+                   ac.name AS campaign_name, ac.id AS campaign_id,
+                   ag.name AS adgroup_name, ag.id AS adgroup_id
+            FROM search_terms st
+            LEFT JOIN ads_campaigns ac ON ac.id = st.campaign_id
+            LEFT JOIN ad_groups ag ON ag.id = st.ad_group_id
+            WHERE (ac.account_id = :aid OR st.campaign_id IS NULL)
+              AND st.date >= (CURRENT_DATE - INTERVAL 30 DAY)
+            ORDER BY st.cost_micros DESC, st.clicks DESC
+            LIMIT 500
+        """), {"aid": aid}).mappings().all()
+        terms_data = [dict(r) for r in rows]
+    except Exception:
+        current_app.logger.exception("Error loading search terms")
+        terms_data = []
+
+    campaigns_list = [
+        {"id": c.id, "name": c.name}
+        for c in AdsCampaign.query.filter_by(account_id=aid).order_by(AdsCampaign.name).all()
+    ]
+
+    return render_template(
+        "google/ads/search_terms.html",
+        terms_data=terms_data,
+        campaigns_list=campaigns_list,
+    )
+
+
+@gads_bp.post("/search-terms/<int:term_id>/add-keyword")
+@login_required
+def search_term_add_keyword(term_id: int):
+    """Add a search term as an exact-match keyword in its ad group."""
+    from app.models_ads import SearchTerm, AdsKeyword
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    st = SearchTerm.query.get_or_404(term_id)
+
+    # Verify account ownership via campaign link
+    if st.campaign_id:
+        camp = AdsCampaign.query.filter_by(id=st.campaign_id, account_id=aid).first()
+        if not camp:
+            return jsonify({"error": "Forbidden"}), 403
+
+    if not st.ad_group_id:
+        return jsonify({"error": "No ad group associated with this search term"}), 400
+
+    match_type = request.json.get("match_type", "exact") if request.is_json else "exact"
+
+    try:
+        # Check for duplicate
+        existing = AdsKeyword.query.filter_by(
+            ad_group_id=st.ad_group_id,
+            text=st.search_term,
+            match_type=match_type,
+        ).first()
+        if existing:
+            st.added_as_keyword = True
+            db.session.commit()
+            return jsonify({"ok": True, "duplicate": True, "keyword_id": existing.id})
+
+        kw = AdsKeyword(
+            ad_group_id=st.ad_group_id,
+            text=st.search_term,
+            match_type=match_type,
+            status="enabled",
+        )
+        db.session.add(kw)
+        st.added_as_keyword = True
+        db.session.commit()
+        return jsonify({"ok": True, "keyword_id": kw.id}), 201
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception("search_term_add_keyword error")
+        return jsonify({"error": str(exc)}), 500
+
+
+@gads_bp.post("/search-terms/<int:term_id>/add-negative")
+@login_required
+def search_term_add_negative(term_id: int):
+    """Add a search term as a campaign-level negative keyword."""
+    from app.models_ads import SearchTerm
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    st = SearchTerm.query.get_or_404(term_id)
+
+    if st.campaign_id:
+        camp = AdsCampaign.query.filter_by(id=st.campaign_id, account_id=aid).first()
+        if not camp:
+            return jsonify({"error": "Forbidden"}), 403
+
+    scope = request.json.get("scope", "campaign") if request.is_json else "campaign"
+    match_type = request.json.get("match_type", "exact") if request.is_json else "exact"
+
+    try:
+        neg = NegativeKeyword(
+            scope=scope,
+            campaign_id=st.campaign_id if scope == "campaign" else None,
+            ad_group_id=st.ad_group_id if scope == "ad_group" else None,
+            text=st.search_term,
+            match_type=match_type.upper(),
+        )
+        db.session.add(neg)
+        st.added_as_negative = True
+        db.session.commit()
+        return jsonify({"ok": True, "negative_id": neg.id}), 201
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception("search_term_add_negative error")
+        return jsonify({"error": str(exc)}), 500

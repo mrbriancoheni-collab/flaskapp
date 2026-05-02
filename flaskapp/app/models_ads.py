@@ -211,23 +211,37 @@ class GadsStatsDaily(db.Model):
     __tablename__ = "gads_stats_daily"
 
     id = db.Column(db.BigInteger, primary_key=True)
-    entity_type = db.Column(db.String(32), nullable=False, index=True)  # account|campaign|ad_group|ad|keyword
-    entity_id = db.Column(db.BigInteger, nullable=False, index=True)
-    date = db.Column(db.Date, nullable=False, index=True)
+    account_id   = db.Column(db.Integer, nullable=True, index=True)  # local accounts.id
+    entity_type  = db.Column(db.String(32), nullable=False, index=True)  # account|campaign|ad_group|keyword
+    entity_id    = db.Column(db.BigInteger, nullable=False, index=True)  # local DB id
+    google_entity_id = db.Column(db.BigInteger, nullable=True, index=True)  # raw Google Ads resource ID
+    date         = db.Column(db.Date, nullable=False, index=True)
 
-    impressions = db.Column(db.BigInteger, nullable=False, default=0)
-    clicks = db.Column(db.BigInteger, nullable=False, default=0)
-    cost_micros = db.Column(db.BigInteger, nullable=False, default=0)
-    conversions = db.Column(db.Float, nullable=False, default=0.0)
+    impressions      = db.Column(db.BigInteger, nullable=False, default=0)
+    clicks           = db.Column(db.BigInteger, nullable=False, default=0)
+    cost_micros      = db.Column(db.BigInteger, nullable=False, default=0)
+    conversions      = db.Column(db.Float, nullable=False, default=0.0)
     conversion_value = db.Column(db.Float, nullable=False, default=0.0)
-    avg_cpc = db.Column(db.Float, nullable=True)
+    avg_cpc          = db.Column(db.Float, nullable=True)
     search_impr_share = db.Column(db.Float, nullable=True)
-    lost_is_budget = db.Column(db.Float, nullable=True)
-    lost_is_rank = db.Column(db.Float, nullable=True)
+    lost_is_budget   = db.Column(db.Float, nullable=True)
+    lost_is_rank     = db.Column(db.Float, nullable=True)
+
+    # Quality Score — populated for entity_type='keyword' rows
+    quality_score    = db.Column(db.Integer, nullable=True)   # 1-10
+    landing_page_exp = db.Column(db.String(32), nullable=True)  # BELOW_AVERAGE|AVERAGE|ABOVE_AVERAGE
+    ad_relevance     = db.Column(db.String(32), nullable=True)
+    expected_ctr     = db.Column(db.String(32), nullable=True)
 
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
 
-    __table_args__ = (db.Index("ix_stats_entity_date", "entity_type", "entity_id", "date"),)
+    __table_args__ = (
+        db.Index("ix_stats_entity_date", "entity_type", "entity_id", "date"),
+        db.Index("ix_stats_account_date", "account_id", "date"),
+        db.UniqueConstraint("account_id", "entity_type", "google_entity_id", "date",
+                            name="uq_gads_stats_daily"),
+        {"extend_existing": True},
+    )
 
 
 class SearchTerm(db.Model):

@@ -382,6 +382,16 @@
             <i class="fa-solid fa-tags"></i><span>Bulk Meta Editor</span>
           </a>
         {% endif %}
+        {% if has_endpoint('wp_bp.image_seo') %}
+          <a href="{{ url_for('wp_bp.image_seo') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-image"></i><span>Image SEO</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.content_quality') %}
+          <a href="{{ url_for('wp_bp.content_quality') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-spell-check"></i><span>Content Quality</span>
+          </a>
+        {% endif %}
       {% endif %}
 
       <!-- SEO Section -->
@@ -428,6 +438,16 @@
         {% if has_endpoint('seo_bp.content_calendar') %}
           <a href="{{ url_for('seo_bp.content_calendar') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
             <i class="fa-solid fa-calendar-days"></i><span>Content Calendar</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.page_performance') %}
+          <a href="{{ url_for('seo_bp.page_performance') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-chart-bar"></i><span>Page Performance</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.eeat') %}
+          <a href="{{ url_for('seo_bp.eeat') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-shield-halved"></i><span>E-E-A-T Checker</span>
           </a>
         {% endif %}
       {% endif %}
@@ -713,6 +733,15 @@
         {% if has_endpoint('wp_bp.seo_audit_review') %}
           <a class="secondary-link {% if epn=='wp_bp.seo_audit_review' %}active{% endif %}" href="{{ url_for('wp_bp.seo_audit_review') }}"><i class="fa-solid fa-shield-halved"></i><span>AI Audit Review</span></a>
         {% endif %}
+        {% if has_endpoint('wp_bp.bulk_meta') %}
+          <a class="secondary-link {% if epn=='wp_bp.bulk_meta' %}active{% endif %}" href="{{ url_for('wp_bp.bulk_meta') }}"><i class="fa-solid fa-tags"></i><span>Bulk Meta Editor</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.image_seo') %}
+          <a class="secondary-link {% if epn=='wp_bp.image_seo' %}active{% endif %}" href="{{ url_for('wp_bp.image_seo') }}"><i class="fa-solid fa-image"></i><span>Image SEO</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.content_quality') %}
+          <a class="secondary-link {% if epn=='wp_bp.content_quality' %}active{% endif %}" href="{{ url_for('wp_bp.content_quality') }}"><i class="fa-solid fa-spell-check"></i><span>Content Quality</span></a>
+        {% endif %}
         {% if has_endpoint('wp_bp.edit_lookup') %}
           <a class="secondary-link {% if epn in ('wp_bp.edit_lookup','wp_bp.edit_post','wp_bp.edit_post_submit') %}active{% endif %}" href="{{ url_for('wp_bp.edit_lookup') }}"><i class="fa-solid fa-pen-to-square"></i><span>Edit Post</span></a>
         {% endif %}
@@ -766,8 +795,11 @@
         {% if has_endpoint('seo_bp.content_calendar') %}
           <a class="secondary-link {% if epn=='seo_bp.content_calendar' %}active{% endif %}" href="{{ url_for('seo_bp.content_calendar') }}"><i class="fa-solid fa-calendar-days"></i><span>Content Calendar</span></a>
         {% endif %}
-        {% if has_endpoint('wp_bp.bulk_meta') %}
-          <a class="secondary-link {% if epn=='wp_bp.bulk_meta' %}active{% endif %}" href="{{ url_for('wp_bp.bulk_meta') }}"><i class="fa-solid fa-tags"></i><span>Bulk Meta Editor</span></a>
+        {% if has_endpoint('seo_bp.page_performance') %}
+          <a class="secondary-link {% if epn=='seo_bp.page_performance' %}active{% endif %}" href="{{ url_for('seo_bp.page_performance') }}"><i class="fa-solid fa-chart-bar"></i><span>Page Performance</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.eeat') %}
+          <a class="secondary-link {% if epn=='seo_bp.eeat' %}active{% endif %}" href="{{ url_for('seo_bp.eeat') }}"><i class="fa-solid fa-shield-halved"></i><span>E-E-A-T Checker</span></a>
         {% endif %}
       {% elif SECTION == 'strategy' %}
         <!-- strategy links placeholder -->

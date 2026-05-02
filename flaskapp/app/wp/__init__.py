@@ -2026,6 +2026,284 @@ def bulk_meta():
     )
 
 
+@wp_bp.route("/image-seo", methods=["GET", "POST"], endpoint="image_seo")
+@login_required
+def image_seo():
+    """Image SEO optimizer — audit alt texts across all posts, AI-generate missing ones."""
+    site = _current_site()
+    posts_data = []
+    error = None
+    saved_count = 0
+
+    if site:
+        try:
+            from app.wp.wp_client import WPClient
+            import re as _re
+            c = WPClient(site)
+
+            if request.method == "POST":
+                action = request.form.get("action", "")
+                if action == "save_alts":
+                    # Apply edited alt texts back to post content
+                    post_ids = request.form.getlist("post_id")
+                    for pid_str in post_ids:
+                        try:
+                            pid = int(pid_str)
+                            post = c.get_post(pid)
+                            content = post.get("content", {}).get("raw") or \
+                                      post.get("content", {}).get("rendered", "")
+                            # Find all img src → new alt mapping
+                            changed = False
+                            for key, val in request.form.items():
+                                if key.startswith(f"alt_{pid}_"):
+                                    img_idx = key[len(f"alt_{pid}_"):]
+                                    src_key = f"src_{pid}_{img_idx}"
+                                    src = request.form.get(src_key, "")
+                                    if src and val:
+                                        # Replace alt="" or add alt to matching img
+                                        pattern = (r'(<img[^>]*src=["\']' +
+                                                   _re.escape(src) +
+                                                   r'["\'][^>]*)(alt=["\'][^"\']*["\'])?([^>]*>)')
+                                        new_tag = rf'\1 alt="{val}"\3'
+                                        new_content, n = _re.subn(
+                                            pattern, new_tag, content,
+                                            flags=_re.IGNORECASE | _re.DOTALL,
+                                        )
+                                        if n:
+                                            content = new_content
+                                            changed = True
+                            if changed:
+                                c._req("POST", f"/wp/v2/posts/{pid}",
+                                       json_body={"content": content})
+                                saved_count += 1
+                        except Exception:
+                            pass
+                    flash(f"Saved alt texts for {saved_count} post(s).", "success")
+
+                elif action == "ai_generate":
+                    # AI-generate alt texts for selected images
+                    if not is_paid_account():
+                        flash("AI alt text generation is available on paid plans.", "warning")
+                        return redirect(url_for("wp_bp.image_seo"))
+
+                    selected = request.form.getlist("selected_img")
+                    if selected:
+                        from app.ai_clients import get_ai_client
+                        ai_client = get_ai_client()
+                        import json as _json, re as _re2
+
+                        generated: dict = {}
+                        for img_key in selected[:20]:
+                            src = request.form.get(f"src_val_{img_key}", img_key)
+                            filename = src.split("/")[-1].split("?")[0]
+                            # Infer context from filename
+                            prompt = (
+                                f"Write a concise, descriptive alt text (under 125 chars) "
+                                f"for a website image with filename: {filename}. "
+                                f"Context: local service business (HVAC, plumbing, electrical, roofing). "
+                                f"Return only the alt text, no quotes or punctuation at end."
+                            )
+                            try:
+                                resp = ai_client.messages.create(
+                                    model="claude-haiku-4-5-20251001",
+                                    max_tokens=60,
+                                    messages=[{"role": "user", "content": prompt}],
+                                )
+                                generated[img_key] = resp.content[0].text.strip().strip('"\'')
+                            except Exception:
+                                pass
+                        from flask import session as fs
+                        fs["img_seo_generated"] = generated
+                        flash(f"Generated {len(generated)} alt text(s). Review and save.", "success")
+                        return redirect(url_for("wp_bp.image_seo"))
+
+            # Load posts and extract image data
+            from flask import session as fs
+            generated = fs.pop("img_seo_generated", {})
+
+            raw = c.list_posts(per_page=30, status="publish")
+            IMG_RE = _re.compile(
+                r'<img([^>]*?)(?:src=["\']([^"\']+)["\'])([^>]*?)(?:alt=["\']([^"\']*)["\'])?([^>]*?)>',
+                _re.IGNORECASE | _re.DOTALL,
+            )
+            for p in raw:
+                pid = p.get("id")
+                title = _re.sub(r"<[^>]+>", "", p.get("title", {}).get("rendered", ""))
+                content = p.get("content", {}).get("rendered", "") or ""
+                images = []
+                for idx, m in enumerate(_re.finditer(
+                    r'<img[^>]*src=["\']([^"\']+)["\'][^>]*>',
+                    content, _re.IGNORECASE,
+                )):
+                    full_tag = m.group(0)
+                    src = m.group(1)
+                    alt_m = _re.search(r'alt=["\']([^"\']*)["\']', full_tag, _re.IGNORECASE)
+                    alt = alt_m.group(1) if alt_m else None
+                    img_key = f"{pid}_{idx}"
+                    filename = src.split("/")[-1].split("?")[0]
+                    is_decorative = bool(_re.match(r'(icon|logo|bg|background|divider)', filename, _re.I))
+                    suggested = generated.get(img_key, "")
+                    images.append({
+                        "idx":      idx,
+                        "src":      src,
+                        "filename": filename,
+                        "alt":      alt,
+                        "missing":  alt is None or alt.strip() == "",
+                        "generic":  alt and bool(_re.match(r'(image|img|photo|picture|\d+)', alt.strip(), _re.I)),
+                        "key":      img_key,
+                        "suggested": suggested,
+                        "decorative": is_decorative,
+                    })
+
+                if images:
+                    missing = sum(1 for i in images if i["missing"] and not i["decorative"])
+                    posts_data.append({
+                        "id": pid, "title": title,
+                        "url": p.get("link", ""),
+                        "images": images,
+                        "missing_count": missing,
+                        "total": len(images),
+                    })
+
+            posts_data.sort(key=lambda x: x["missing_count"], reverse=True)
+
+        except Exception as exc:
+            logger.exception("Image SEO failed")
+            error = f"Could not load posts: {exc}"
+
+    return render_template(
+        "wp/image_seo.html",
+        site=site,
+        posts_data=posts_data,
+        error=error,
+    )
+
+
+@wp_bp.route("/content-quality", methods=["GET"], endpoint="content_quality")
+@login_required
+def content_quality():
+    """Thin & duplicate content detector — word counts, duplicate metas, near-duplicate titles."""
+    site = _current_site()
+    issues = []
+    stats = {}
+    error = None
+
+    if site:
+        try:
+            from app.wp.wp_client import WPClient
+            import re as _re
+            from collections import defaultdict
+            c = WPClient(site)
+            raw = c.list_posts(per_page=100, status="publish")
+
+            titles = []
+            metas = defaultdict(list)
+            thin_threshold = 300
+
+            total = len(raw)
+            thin_count = 0
+            no_meta_count = 0
+
+            for p in raw:
+                pid = p.get("id")
+                title = _re.sub(r"<[^>]+>", "", p.get("title", {}).get("rendered", ""))
+                content_html = p.get("content", {}).get("rendered", "") or ""
+                content_text = _re.sub(r"<[^>]+>", " ", content_html)
+                word_count = len(content_text.split())
+                excerpt = _re.sub(r"<[^>]+>", " ", p.get("excerpt", {}).get("rendered", "") or "").strip()
+                url = p.get("link", "")
+
+                titles.append({"id": pid, "title": title, "url": url, "words": word_count})
+
+                # Track duplicate metas
+                meta_key = excerpt[:100].lower().strip()
+                if meta_key:
+                    metas[meta_key].append({"id": pid, "title": title, "url": url})
+                else:
+                    no_meta_count += 1
+                    issues.append({
+                        "type": "no_meta",
+                        "severity": "warn",
+                        "post_id": pid,
+                        "title": title,
+                        "url": url,
+                        "detail": "No meta description / excerpt set.",
+                        "fix": "Add a 145-155 character meta description.",
+                    })
+
+                if word_count < thin_threshold:
+                    thin_count += 1
+                    issues.append({
+                        "type": "thin",
+                        "severity": "fail" if word_count < 150 else "warn",
+                        "post_id": pid,
+                        "title": title,
+                        "url": url,
+                        "detail": f"Only {word_count} words — below the {thin_threshold}-word minimum.",
+                        "fix": "Expand the content to at least 500 words for better ranking potential.",
+                        "words": word_count,
+                    })
+
+            # Duplicate meta descriptions
+            for meta_key, posts in metas.items():
+                if len(posts) > 1:
+                    for post in posts:
+                        issues.append({
+                            "type": "dup_meta",
+                            "severity": "warn",
+                            "post_id": post["id"],
+                            "title": post["title"],
+                            "url": post["url"],
+                            "detail": f"Same meta description shared by {len(posts)} posts.",
+                            "fix": "Write a unique meta description for each post.",
+                            "duplicates": [p["title"] for p in posts if p["id"] != post["id"]][:3],
+                        })
+
+            # Near-duplicate titles (Jaccard similarity on word tokens)
+            def _tokens(t):
+                return set(_re.findall(r"[a-z]{3,}", t.lower()))
+
+            for i, a in enumerate(titles):
+                for b in titles[i + 1:]:
+                    ta, tb = _tokens(a["title"]), _tokens(b["title"])
+                    if not ta or not tb:
+                        continue
+                    jaccard = len(ta & tb) / len(ta | tb)
+                    if jaccard >= 0.7:
+                        issues.append({
+                            "type": "dup_title",
+                            "severity": "warn",
+                            "post_id": a["id"],
+                            "title": a["title"],
+                            "url": a["url"],
+                            "detail": f"Title is very similar to: \"{b['title']}\" (similarity {round(jaccard*100)}%).",
+                            "fix": "Differentiate titles to avoid keyword cannibalization.",
+                        })
+
+            stats = {
+                "total": total,
+                "thin": thin_count,
+                "no_meta": no_meta_count,
+                "issues": len(issues),
+            }
+
+            # Sort: fail first, then warn; within severity by type
+            severity_order = {"fail": 0, "warn": 1}
+            issues.sort(key=lambda x: severity_order.get(x["severity"], 2))
+
+        except Exception as exc:
+            logger.exception("Content quality check failed")
+            error = f"Could not analyse posts: {exc}"
+
+    return render_template(
+        "wp/content_quality.html",
+        site=site,
+        issues=issues,
+        stats=stats,
+        error=error,
+    )
+
+
 # allow WPLog(...).save() convenience
 def _save(self):
     db.session.add(self)

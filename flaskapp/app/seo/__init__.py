@@ -807,3 +807,115 @@ Make titles specific to local service businesses. Do not repeat keywords."""
         site_url=site_url,
         error=error,
     )
+
+
+@seo_bp.route("/pages", methods=["GET"], endpoint="page_performance")
+@login_required
+def page_performance():
+    """Per-page GSC performance — clicks, impressions, CTR, position per URL."""
+    aid = current_account_id()
+    pages = []
+    gsc_connected = False
+    site_url = None
+    error = None
+
+    try:
+        from app.google import _is_connected, _get_gsc_selected_site
+        import os
+        gsc_connected = _is_connected(aid, "gsc")
+        site_url = _get_gsc_selected_site(aid) or os.getenv("GSC_SITE")
+    except Exception as exc:
+        error = str(exc)
+
+    if gsc_connected and site_url:
+        try:
+            from app.seo.keyword_gaps import _gsc_fetch, _rows_to_dicts, _date_range
+            # Current period (28 days)
+            end_c, start_c = _date_range(3, 28)
+            rows_c = _gsc_fetch(aid, site_url, start_c, end_c, ["page"], row_limit=100)
+            pages_c = _rows_to_dicts(rows_c, ["page"])
+
+            # Previous period (29-56 days ago) for trend
+            end_p, start_p = _date_range(31, 56)
+            rows_p = _gsc_fetch(aid, site_url, start_p, end_p, ["page"], row_limit=100)
+            prev_map = {r["page"]: r for r in _rows_to_dicts(rows_p, ["page"])}
+
+            for p in pages_c:
+                pg = p.get("page", "")
+                prev = prev_map.get(pg, {})
+                prev_clicks = prev.get("clicks", 0)
+                curr_clicks = p.get("clicks", 0)
+                if prev_clicks > 0:
+                    trend = round((curr_clicks - prev_clicks) / prev_clicks * 100, 1)
+                else:
+                    trend = None
+
+                pages.append({
+                    "page":       pg,
+                    "clicks":     int(curr_clicks),
+                    "impressions": int(p.get("impressions", 0)),
+                    "ctr":        round(p.get("ctr", 0) * 100, 1),
+                    "position":   round(p.get("position", 0), 1),
+                    "trend":      trend,
+                })
+
+            pages.sort(key=lambda x: x["clicks"], reverse=True)
+        except Exception as exc:
+            logger.exception("Page performance failed")
+            error = f"Could not load data: {exc}"
+    elif not gsc_connected:
+        error = "Connect Google Search Console to view per-page performance."
+
+    return render_template(
+        "seo/page_performance.html",
+        pages=pages,
+        gsc_connected=gsc_connected,
+        site_url=site_url,
+        error=error,
+    )
+
+
+@seo_bp.route("/eeat", methods=["GET", "POST"], endpoint="eeat")
+@login_required
+def eeat():
+    """E-E-A-T checker — trust, expertise, authority, and experience signals."""
+    aid = current_account_id()
+    result = None
+    url_checked = None
+
+    site_url = None
+    try:
+        from app.google import _get_gsc_selected_site
+        import os
+        site_url = _get_gsc_selected_site(aid) or os.getenv("GSC_SITE")
+    except Exception:
+        pass
+    if not site_url:
+        try:
+            from app.models_wp import WPSite
+            s = WPSite.query.filter_by(account_id=aid).first()
+            if s:
+                site_url = s.base_url
+        except Exception:
+            pass
+
+    url_to_check = (request.form.get("url") or site_url or "").strip().rstrip("/")
+
+    if request.method == "POST" and url_to_check:
+        url_checked = url_to_check
+        try:
+            from app.seo.eeat import audit_eeat
+            result = audit_eeat(url_to_check)
+            if result.get("error"):
+                flash(result["error"], "error")
+                result = None
+        except Exception as exc:
+            logger.exception("E-E-A-T audit failed")
+            flash(f"Audit failed: {exc}", "error")
+
+    return render_template(
+        "seo/eeat.html",
+        result=result,
+        site_url=site_url,
+        url_checked=url_checked,
+    )

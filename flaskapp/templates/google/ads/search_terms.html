@@ -1,0 +1,237 @@
+{% extends "base_app.html" %}
+{% block title %}Search Terms · Google Ads · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Search Term Report</h1>
+      <p class="text-gray-500 text-sm mt-1">Last 30 days · {{ terms_data | length }} terms · Add high-performers as keywords or block irrelevant ones as negatives</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button id="sync-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 flex items-center gap-2">
+        <i class="fa-solid fa-rotate"></i>Sync from Google Ads
+      </button>
+      <a href="{{ url_for('gads_bp.optimize', tab='campaigns') }}" class="text-sm text-gray-500 hover:text-indigo-600">
+        ← Back to Optimizer
+      </a>
+    </div>
+  </div>
+
+  <!-- Sync status -->
+  <div id="sync-status" class="hidden rounded-xl px-4 py-3 text-sm border bg-blue-50 border-blue-200 text-blue-800"></div>
+
+  {% if not terms_data %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center">
+    <i class="fa-solid fa-magnifying-glass-chart text-gray-300 text-5xl mb-4"></i>
+    <p class="text-gray-600 mb-2">No search term data yet.</p>
+    <p class="text-sm text-gray-400">Click "Sync from Google Ads" to pull the last 30 days of search terms.</p>
+  </div>
+  {% else %}
+
+  <!-- Filter bar -->
+  <div class="bg-white rounded-xl shadow-sm border p-4 flex flex-wrap gap-3 items-center">
+    <input id="term-filter" type="text" placeholder="Filter search terms…"
+           class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 focus:outline-none flex-1 min-w-48">
+    <select id="camp-filter" class="border rounded-lg px-3 py-2 text-sm focus:outline-none">
+      <option value="">All campaigns</option>
+      {% for c in campaigns_list %}
+      <option value="{{ c.id }}">{{ c.name }}</option>
+      {% endfor %}
+    </select>
+    <select id="action-filter" class="border rounded-lg px-3 py-2 text-sm focus:outline-none">
+      <option value="">All terms</option>
+      <option value="unactioned">Not actioned</option>
+      <option value="keyword">Added as keyword</option>
+      <option value="negative">Added as negative</option>
+    </select>
+    <span class="text-xs text-gray-400 ml-auto">Showing <span id="visible-count">{{ terms_data | length }}</span> terms</span>
+  </div>
+
+  <!-- Table -->
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm" id="terms-table">
+        <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+          <tr>
+            <th class="text-left px-4 py-3">Search Term</th>
+            <th class="text-left px-4 py-3">Campaign</th>
+            <th class="text-right px-4 py-3 w-20">Impr.</th>
+            <th class="text-right px-4 py-3 w-20">Clicks</th>
+            <th class="text-right px-4 py-3 w-24">Spend</th>
+            <th class="text-right px-4 py-3 w-20">Conv.</th>
+            <th class="text-center px-4 py-3 w-40">Status</th>
+            <th class="text-center px-4 py-3 w-48">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y" id="terms-tbody">
+          {% for t in terms_data %}
+          <tr class="hover:bg-gray-50 term-row"
+              data-id="{{ t.id }}"
+              data-term="{{ t.search_term | lower | e }}"
+              data-campaign="{{ t.campaign_id or '' }}"
+              data-added-kw="{{ 'true' if t.added_as_keyword else 'false' }}"
+              data-added-neg="{{ 'true' if t.added_as_negative else 'false' }}">
+            <td class="px-4 py-3 font-mono text-gray-800 max-w-xs truncate">{{ t.search_term }}</td>
+            <td class="px-4 py-3 text-gray-600 text-xs max-w-32 truncate">{{ t.campaign_name or '—' }}</td>
+            <td class="px-4 py-3 text-right text-gray-700">{{ t.impressions | int }}</td>
+            <td class="px-4 py-3 text-right text-gray-700">{{ t.clicks | int }}</td>
+            <td class="px-4 py-3 text-right text-gray-700">
+              ${{ "%.2f" | format((t.cost_micros or 0) / 1000000) }}
+            </td>
+            <td class="px-4 py-3 text-right {% if t.conversions and t.conversions > 0 %}text-green-600 font-semibold{% else %}text-gray-400{% endif %}">
+              {{ t.conversions | int if t.conversions else '0' }}
+            </td>
+            <td class="px-4 py-3 text-center">
+              <span class="term-status-{{ t.id }}">
+                {% if t.added_as_keyword %}
+                  <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Keyword</span>
+                {% elif t.added_as_negative %}
+                  <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Negative</span>
+                {% else %}
+                  <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Unactioned</span>
+                {% endif %}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-center">
+              <div class="flex justify-center gap-2">
+                {% if not t.added_as_keyword %}
+                <button class="add-kw-btn text-xs px-2.5 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+                        data-id="{{ t.id }}" title="Add as exact-match keyword">
+                  <i class="fa-solid fa-plus mr-1"></i>Keyword
+                </button>
+                {% endif %}
+                {% if not t.added_as_negative %}
+                <button class="add-neg-btn text-xs px-2.5 py-1 border border-red-300 text-red-600 rounded hover:bg-red-50 transition"
+                        data-id="{{ t.id }}" title="Add as campaign-level negative">
+                  <i class="fa-solid fa-ban mr-1"></i>Block
+                </button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% endif %}
+
+</div>
+
+<script>
+(function () {
+  // Filter
+  const termFilter = document.getElementById('term-filter');
+  const campFilter = document.getElementById('camp-filter');
+  const actionFilter = document.getElementById('action-filter');
+  const visibleCount = document.getElementById('visible-count');
+
+  function applyFilters() {
+    const term = (termFilter?.value || '').toLowerCase();
+    const camp = campFilter?.value || '';
+    const action = actionFilter?.value || '';
+    let count = 0;
+    document.querySelectorAll('.term-row').forEach(row => {
+      const matchTerm = !term || row.dataset.term.includes(term);
+      const matchCamp = !camp || row.dataset.campaign === camp;
+      const matchAction = !action ||
+        (action === 'unactioned' && row.dataset.addedKw === 'false' && row.dataset.addedNeg === 'false') ||
+        (action === 'keyword' && row.dataset.addedKw === 'true') ||
+        (action === 'negative' && row.dataset.addedNeg === 'true');
+      const show = matchTerm && matchCamp && matchAction;
+      row.style.display = show ? '' : 'none';
+      if (show) count++;
+    });
+    if (visibleCount) visibleCount.textContent = count;
+  }
+
+  termFilter?.addEventListener('input', applyFilters);
+  campFilter?.addEventListener('change', applyFilters);
+  actionFilter?.addEventListener('change', applyFilters);
+
+  // Add as keyword
+  document.querySelectorAll('.add-kw-btn').forEach(btn => {
+    btn.addEventListener('click', async function () {
+      const id = this.dataset.id;
+      this.disabled = true;
+      this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+      try {
+        const r = await fetch(`/account/google/ads/search-terms/${id}/add-keyword`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({match_type: 'exact'}),
+        });
+        const data = await r.json();
+        if (data.ok) {
+          const statusEl = document.querySelector(`.term-status-${id}`);
+          if (statusEl) statusEl.innerHTML = '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Keyword</span>';
+          this.closest('td').querySelector('.add-kw-btn')?.remove();
+          const row = this.closest('tr');
+          if (row) {
+            row.dataset.addedKw = 'true';
+          }
+        }
+      } catch (e) {
+        this.disabled = false;
+        this.innerHTML = '<i class="fa-solid fa-plus mr-1"></i>Keyword';
+      }
+    });
+  });
+
+  // Add as negative
+  document.querySelectorAll('.add-neg-btn').forEach(btn => {
+    btn.addEventListener('click', async function () {
+      const id = this.dataset.id;
+      this.disabled = true;
+      this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+      try {
+        const r = await fetch(`/account/google/ads/search-terms/${id}/add-negative`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({scope: 'campaign', match_type: 'exact'}),
+        });
+        const data = await r.json();
+        if (data.ok) {
+          const statusEl = document.querySelector(`.term-status-${id}`);
+          if (statusEl) statusEl.innerHTML = '<span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Negative</span>';
+          this.closest('td').querySelector('.add-neg-btn')?.remove();
+          const row = this.closest('tr');
+          if (row) row.dataset.addedNeg = 'true';
+        }
+      } catch (e) {
+        this.disabled = false;
+        this.innerHTML = '<i class="fa-solid fa-ban mr-1"></i>Block';
+      }
+    });
+  });
+
+  // Sync button
+  const syncBtn = document.getElementById('sync-btn');
+  const syncStatus = document.getElementById('sync-status');
+  syncBtn?.addEventListener('click', async function () {
+    syncBtn.disabled = true;
+    syncBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Syncing…';
+    syncStatus?.classList.remove('hidden');
+    if (syncStatus) syncStatus.textContent = 'Pulling data from Google Ads API…';
+    try {
+      const r = await fetch('/account/google/ads/sync', {method: 'POST'});
+      const data = await r.json();
+      const s = data.sync || {};
+      if (syncStatus) {
+        syncStatus.textContent = `Sync complete — ${s.campaigns_synced || 0} campaign rows, ` +
+          `${s.keywords_synced || 0} keyword rows, ${s.search_terms_synced || 0} search terms. ` +
+          `${data.optimizer?.created || 0} recommendations generated. Refresh to see updated data.`;
+      }
+    } catch (e) {
+      if (syncStatus) syncStatus.textContent = `Sync failed: ${e.message}`;
+    } finally {
+      syncBtn.disabled = false;
+      syncBtn.innerHTML = '<i class="fa-solid fa-rotate mr-2"></i>Sync from Google Ads';
+    }
+  });
+})();
+</script>
+{% endblock %}

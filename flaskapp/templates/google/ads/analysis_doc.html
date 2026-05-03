@@ -1,0 +1,669 @@
+{% extends "base_app.html" %}
+{% block title %}Google Ads Tool — Analysis Document{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6 pb-16">
+
+  <!-- Page actions bar -->
+  <div class="flex items-center justify-between no-print">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Google Ads Tool — Analysis Document</h1>
+      <p class="text-sm text-gray-500 mt-1">Updated {{ now }}  ·  Complete feature breakdown, architecture, and enhancement roadmap</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button onclick="window.print()"
+              class="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm hover:bg-gray-900 flex items-center gap-2">
+        <i class="fa-solid fa-print"></i>Print / Save PDF
+      </button>
+      <a id="download-btn" href="#" download="google-ads-tool-analysis.html"
+         class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 flex items-center gap-2">
+        <i class="fa-solid fa-download"></i>Download HTML
+      </a>
+      <a href="{{ url_for('gads_bp.optimize') }}" class="text-sm text-gray-500 hover:text-indigo-600">
+        ← Back to Optimizer
+      </a>
+    </div>
+  </div>
+
+  <!-- ── Document ──────────────────────────────────────────────────────── -->
+  <div id="doc-body" class="space-y-8 font-sans">
+
+    <!-- Cover -->
+    <div class="bg-gradient-to-r from-indigo-700 to-indigo-500 text-white rounded-2xl px-10 py-10">
+      <div class="text-xs uppercase tracking-widest opacity-75 mb-2">Internal Analysis · Confidential</div>
+      <h1 class="text-3xl font-bold mb-2">Google Ads Tool</h1>
+      <h2 class="text-xl font-light opacity-90 mb-6">Complete Feature Analysis &amp; Architecture Document</h2>
+      <div class="grid grid-cols-3 gap-6 text-sm">
+        <div><div class="opacity-60 mb-0.5">Updated</div><div class="font-semibold">{{ now }}</div></div>
+        <div><div class="opacity-60 mb-0.5">Items Built</div><div class="font-semibold">10 of 10</div></div>
+        <div><div class="opacity-60 mb-0.5">Status</div><div class="font-semibold text-green-300">✓ Complete (v1)</div></div>
+      </div>
+    </div>
+
+    <!-- Table of Contents -->
+    <div class="bg-white rounded-xl border p-6">
+      <h2 class="text-lg font-bold text-gray-900 mb-4">Table of Contents</h2>
+      <ol class="space-y-1 text-sm text-indigo-700">
+        <li><a href="#sec-overview" class="hover:underline">1. Executive Overview</a></li>
+        <li><a href="#sec-architecture" class="hover:underline">2. System Architecture</a></li>
+        <li><a href="#sec-datamodel" class="hover:underline">3. Data Model</a></li>
+        <li><a href="#sec-api" class="hover:underline">4. Google Ads API Integration</a></li>
+        <li><a href="#sec-features" class="hover:underline">5. Feature Inventory (Items 1–10)</a></li>
+        <li><a href="#sec-routes" class="hover:underline">6. Route Reference</a></li>
+        <li><a href="#sec-optimizer" class="hover:underline">7. Optimizer Engine Deep-Dive</a></li>
+        <li><a href="#sec-ruleengine" class="hover:underline">8. Automation Rule Engine Deep-Dive</a></li>
+        <li><a href="#sec-ui" class="hover:underline">9. UI / UX Overview</a></li>
+        <li><a href="#sec-gaps" class="hover:underline">10. Known Gaps &amp; Next Improvements</a></li>
+        <li><a href="#sec-roadmap" class="hover:underline">11. Recommended Roadmap (v2)</a></li>
+      </ol>
+    </div>
+
+    <!-- 1 Executive Overview -->
+    <div id="sec-overview" class="bg-white rounded-xl border p-6 space-y-4">
+      <h2 class="text-xl font-bold text-gray-900 border-b pb-3">1. Executive Overview</h2>
+      <p class="text-gray-700 leading-relaxed">
+        The Google Ads Tool is a full-lifecycle PPC management suite embedded inside the platform.
+        It connects to the Google Ads REST API via GAQL, pulls live performance data, surfaces
+        actionable recommendations, and lets users (or the automation rule engine) execute changes —
+        all without leaving the dashboard.
+      </p>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+        {% for label, value, color in [
+          ('API Routes', '40+', 'indigo'),
+          ('DB Models', '16', 'purple'),
+          ('Service Files', '4', 'blue'),
+          ('Templates', '10', 'green'),
+        ] %}
+        <div class="rounded-xl border p-4 text-center">
+          <div class="text-2xl font-bold text-{{ color }}-600">{{ value }}</div>
+          <div class="text-xs text-gray-500 mt-1">{{ label }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="bg-indigo-50 rounded-lg p-4 text-sm text-indigo-900">
+        <strong>Core value proposition:</strong> The tool eliminates the need to log in to the Google Ads
+        interface for day-to-day optimizations. Synced data + AI recommendations + one-click execution
+        means faster iteration cycles and less wasted spend.
+      </div>
+    </div>
+
+    <!-- 2 Architecture -->
+    <div id="sec-architecture" class="bg-white rounded-xl border p-6 space-y-4">
+      <h2 class="text-xl font-bold text-gray-900 border-b pb-3">2. System Architecture</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+        <div class="border rounded-lg p-4">
+          <h3 class="font-semibold text-gray-800 mb-2"><i class="fa-solid fa-layer-group text-indigo-500 mr-1"></i>Data Layer</h3>
+          <ul class="space-y-1 text-gray-600 list-disc list-inside">
+            <li>MySQL / SQLAlchemy ORM</li>
+            <li>16 ad-specific models</li>
+            <li>GadsStatsDaily for time-series</li>
+            <li>UniqueConstraints for upsert safety</li>
+            <li>SEOScanResult for AI agent recall</li>
+          </ul>
+        </div>
+        <div class="border rounded-lg p-4">
+          <h3 class="font-semibold text-gray-800 mb-2"><i class="fa-solid fa-gears text-purple-500 mr-1"></i>Service Layer</h3>
+          <ul class="space-y-1 text-gray-600 list-disc list-inside">
+            <li>google_ads_sync.py — API pull</li>
+            <li>google_ads_optimizer_engine.py</li>
+            <li>google_ads_rule_engine.py</li>
+            <li>GAQL query registry (gaql_queries.py)</li>
+            <li>Token / OAuth management</li>
+          </ul>
+        </div>
+        <div class="border rounded-lg p-4">
+          <h3 class="font-semibold text-gray-800 mb-2"><i class="fa-solid fa-display text-green-500 mr-1"></i>Presentation Layer</h3>
+          <ul class="space-y-1 text-gray-600 list-disc list-inside">
+            <li>Flask Blueprint: gads_bp (/account/google/ads)</li>
+            <li>Jinja2 + Tailwind CSS templates</li>
+            <li>Fetch-based AJAX (no page reloads)</li>
+            <li>Font Awesome icons</li>
+            <li>Mobile-responsive tables</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3 class="font-semibold text-gray-800 mt-4">Data Flow</h3>
+      <div class="bg-gray-50 rounded-lg p-4 text-sm font-mono text-gray-700 leading-loose">
+        Google Ads API (GAQL)
+          → google_ads_search() [utils_ads.py]
+            → sync_account() / sync_search_terms() / sync_conversions()
+              → GadsStatsDaily / SearchTerm / ConversionAction (DB upsert)
+                → generate_recommendations() → OptimizerRecommendation
+                → run_rules() → AIAction
+                  → UI tabs (optimizer, campaigns, keywords, search terms, conversions, rules, A/B tests)
+                    → User action (one-click apply / auto-execute)
+                      → AdsCampaign / AdsKeyword / NegativeKeyword (DB update)
+                        → Google Ads API write (via apply_suggestion stub — v2)
+      </div>
+
+      <h3 class="font-semibold text-gray-800 mt-4">Authentication Flow</h3>
+      <p class="text-gray-600 text-sm">
+        OAuth 2.0 tokens stored per account via <code class="bg-gray-100 px-1 rounded">token_utils.ensure_access_token()</code>.
+        <code class="bg-gray-100 px-1 rounded">resolve_ads_context(account_id)</code> returns
+        <code class="bg-gray-100 px-1 rounded">{customer_id, login_customer_id}</code> for MCC setups.
+        All sync functions validate token before hitting the API and surface errors as JSON.
+      </p>
+    </div>
+
+    <!-- 3 Data Model -->
+    <div id="sec-datamodel" class="bg-white rounded-xl border p-6 space-y-4">
+      <h2 class="text-xl font-bold text-gray-900 border-b pb-3">3. Data Model</h2>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm border rounded-lg overflow-hidden">
+          <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+            <tr>
+              <th class="text-left px-4 py-2">Table</th>
+              <th class="text-left px-4 py-2">Model Class</th>
+              <th class="text-left px-4 py-2">Purpose</th>
+              <th class="text-left px-4 py-2">Key Columns</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y text-gray-700">
+            {% for row in [
+              ('ads_campaigns','AdsCampaign','Campaign hierarchy root','name, status, daily_budget_cents, bid_strategy, target_cpa_micros, target_roas, google_campaign_id'),
+              ('ad_groups','AdsAdGroup','Ad group within campaign','campaign_id, name, status, max_cpc_cents, google_ad_group_id'),
+              ('ads','AdsAd','Individual ad creative (RSA)','ad_group_id, headline1-3, description1-2, final_url, variant_group, is_control, test_name'),
+              ('keywords','AdsKeyword','Keyword targets','ad_group_id, text, match_type, status, max_cpc_cents, google_keyword_id'),
+              ('negative_keywords','NegativeKeyword','Negative keyword exclusions','scope (ad_group|campaign|list), campaign_id, ad_group_id, text, match_type'),
+              ('shared_negative_lists','SharedNegativeList','Reusable negative keyword lists','name, description'),
+              ('gads_stats_daily','GadsStatsDaily','Time-series performance data','account_id, entity_type, entity_id, google_entity_id, date, impressions, clicks, cost_micros, conversions, search_impr_share, lost_is_budget, lost_is_rank, quality_score'),
+              ('search_terms','SearchTerm','Search term report rows','search_term, campaign_id, ad_group_id, clicks, impressions, cost_micros, conversions, added_as_keyword, added_as_negative'),
+              ('conversion_actions','ConversionAction','Google Ads conversion actions','google_conversion_id, name, category, type, status, counting_type, conversions_30d, conversion_value_30d'),
+              ('optimizer_recommendations','OptimizerRecommendation','AI-generated optimization suggestions','account_id, category, title, details, severity, suggested_action_json, status'),
+              ('optimizer_actions','OptimizerAction','Log of applied optimizer actions','recommendation_id, applied_by, change_set_json, result_json, status'),
+              ('ai_action_rules','AIActionRule','Automation rule definitions','rule_name, action_type, conditions JSON, auto_execute, min_confidence, max_actions_per_day'),
+              ('ai_actions','AIAction','Audit log of AI-driven changes','action_type, title, before_value, after_value, confidence_score, status, executed_at, can_undo'),
+              ('labels','Label','Campaign/keyword labels','name'),
+              ('performance_metrics','PerformanceMetrics','Cross-platform unified metrics','source_type, entity_type, date, impressions, clicks, spend, conversions'),
+              ('customer_impact','CustomerImpact','ROI tracking vs baseline','total_savings, total_additional_leads, baseline_monthly_spend'),
+            ] %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-2 font-mono text-xs text-indigo-700">{{ row[0] }}</td>
+              <td class="px-4 py-2 font-medium">{{ row[1] }}</td>
+              <td class="px-4 py-2 text-gray-600">{{ row[2] }}</td>
+              <td class="px-4 py-2 text-xs text-gray-500 max-w-xs">{{ row[3] }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 4 API Integration -->
+    <div id="sec-api" class="bg-white rounded-xl border p-6 space-y-4">
+      <h2 class="text-xl font-bold text-gray-900 border-b pb-3">4. Google Ads API Integration</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h3 class="font-semibold text-gray-800 mb-2">GAQL Queries (gaql_queries.py)</h3>
+          <table class="w-full text-sm border rounded overflow-hidden">
+            <thead class="bg-gray-50 text-xs text-gray-500">
+              <tr><th class="text-left px-3 py-2">Query</th><th class="text-left px-3 py-2">Resource</th><th class="text-right px-3 py-2">Est. Rows</th></tr>
+            </thead>
+            <tbody class="divide-y text-gray-700">
+              {% for q, res, rows in [
+                ('ACCOUNT_STATS_90D','customer','1/account'),
+                ('CAMPAIGN_STATS','campaign','1/camp/day'),
+                ('ADGROUP_STATS','ad_group','1/ag/day'),
+                ('KEYWORD_STATS','keyword_view','1/kw/day'),
+                ('SEARCH_TERMS_30D','search_term_view','≤5,000'),
+                ('BUDGET_STATS','campaign_budget','1/budget/day'),
+                ('CONVERSION_ACTIONS','conversion_action','1/action'),
+              ] %}
+              <tr class="hover:bg-gray-50">
+                <td class="px-3 py-2 font-mono text-xs">{{ q }}</td>
+                <td class="px-3 py-2 text-xs text-gray-500">{{ res }}</td>
+                <td class="px-3 py-2 text-right text-xs text-gray-500">{{ rows }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-800 mb-2">Sync Functions (google_ads_sync.py)</h3>
+          <div class="space-y-2 text-sm">
+            {% for fn, desc in [
+              ('sync_account(account_id, days=30)', 'Pulls campaign, ad group, and keyword stats. Auto-creates local entities for unmapped Google IDs. Upserts GadsStatsDaily rows with QS sub-scores and IS fields.'),
+              ('sync_search_terms(account_id)', 'Pulls SEARCH_TERMS_30D, upserts SearchTerm rows. Preserves added_as_keyword / added_as_negative flags on existing rows.'),
+              ('sync_conversions(account_id)', 'Pulls CONVERSION_ACTIONS, upserts ConversionAction rows with 30-day aggregate totals.'),
+            ] %}
+            <div class="border rounded-lg p-3">
+              <div class="font-mono text-xs text-indigo-700 mb-1">{{ fn }}</div>
+              <div class="text-gray-600 text-xs">{{ desc }}</div>
+            </div>
+            {% endfor %}
+          </div>
+          <div class="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+            <strong>Current limitation:</strong> API writes (pause keyword, increase budget, etc.) apply
+            changes locally in the DB only. The <code>apply_suggestion()</code> stub in
+            <code>google_ads_service.py</code> needs to be wired to the Google Ads mutate API to
+            push changes upstream.
+          </div>
+        </div>
+      </div>
+
+      <h3 class="font-semibold text-gray-800 mt-2">Key Quality Score Fields (fixed)</h3>
+      <p class="text-sm text-gray-600">
+        Quality Score is a <em>criterion attribute</em>, not a metric. The correct GAQL path is
+        <code class="bg-gray-100 px-1 rounded text-xs">ad_group_criterion.quality_info.quality_score</code>
+        (not <code class="bg-gray-100 px-1 rounded text-xs">metrics.quality_score</code> which is invalid).
+        Sub-score fields: <code class="bg-gray-100 px-1 rounded text-xs">.ad_relevance</code>,
+        <code class="bg-gray-100 px-1 rounded text-xs">.landing_page_experience</code>,
+        <code class="bg-gray-100 px-1 rounded text-xs">.creative_quality_score</code>.
+      </p>
+    </div>
+
+    <!-- 5 Feature Inventory -->
+    <div id="sec-features" class="bg-white rounded-xl border p-6 space-y-4">
+      <h2 class="text-xl font-bold text-gray-900 border-b pb-3">5. Feature Inventory — Items 1–10</h2>
+
+      <div class="space-y-4">
+        {% set items = [
+          (1, 'Google Ads API Sync', 'completed',
+           'Full daily sync of campaign, ad group, keyword, search term, and conversion action data from the Google Ads REST API via GAQL.',
+           ['sync_account() in google_ads_sync.py','POST /sync route','Auto-creates local entities for unmapped Google IDs','Date-segmented GAQL for per-day GadsStatsDaily rows','GadsStatsDaily.google_entity_id + UniqueConstraint for safe upsert']),
+          (2, 'Search Terms Ingestion & Actions', 'completed',
+           'Pull last-30-day search term report into DB. One-click actions: add as exact-match keyword or block as campaign-level negative.',
+           ['sync_search_terms() pulling SEARCH_TERMS_30D','GET /search-terms renders search_terms.html','POST /search-terms/<id>/add-keyword (exact match, duplicate-safe)','POST /search-terms/<id>/add-negative (campaign-level exact negative)','Filter bar: text search, campaign dropdown, action status']),
+          (3, 'Optimizer Engine', 'completed',
+           'SQL-based analysis of GadsStatsDaily generates prioritized OptimizerRecommendation rows with severity 1–3 and suggested_action_json.',
+           ['Pass 1: Wasted spend (≥$5 spend, 0 conversions over 30d)','Pass 2: Budget IS loss (avg lost_is_budget ≥ 20%, suggests +30% budget)','Pass 3: Low Quality Score (QS ≤ 4, ≥100 impressions — targeted fix hints from sub-scores)','Pass 4: Rank IS loss (avg lost_is_rank ≥ 30%, fix via QS then bids)','Clears stale open recs before re-run; severity-sorted in UI']),
+          (4, 'Quality Score Analysis', 'completed',
+           'Per-keyword QS (1–10) synced and stored in GadsStatsDaily. Optimizer generates targeted recommendations based on the weakest sub-score.',
+           ['Fields: quality_score, landing_page_exp, ad_relevance, expected_ctr','Fix hint logic: Landing Page → "Improve LP relevance", Ad Relevance → "Add KW to headlines", Expected CTR → "Improve ad copy CTA"','CPC reduction estimate: (10 - QS) × 8%','Keywords tab shows QS badge; Optimizer tab surfaces top offenders']),
+          (5, 'Impression Share Visibility', 'completed',
+           '3 IS columns added to campaigns table: Search IS, Lost to Budget %, Lost to Rank %. Color-coded thresholds surface problems instantly.',
+           ['search_impr_share, lost_is_budget, lost_is_rank stored in GadsStatsDaily','Green ≥70% IS, Amber ≥40%, Red <40%','Red badge for Lost/Budget >20%, Amber for Lost/Rank >30%','Optimizer auto-generates budget increase and rank improvement recs']),
+          (6, 'Conversion Tracking', 'completed',
+           'All Google Ads conversion actions synced from the API with 30-day aggregate totals. Dedicated Conversions page.',
+           ['ConversionAction model (conversion_actions table)','CONVERSION_ACTIONS GAQL query','sync_conversions() function — auto-called on every /sync','GET /conversions page: summary KPI cards + sortable table','Auto-syncs with each full data sync']),
+          (7, 'Automated Rule Engine', 'completed',
+           'User-defined rules that evaluate GadsStatsDaily and take automated actions. Full audit trail via AIAction log.',
+           ['5 rule types: pause_wasted_keywords, add_negative_search_terms, increase_budget, adjust_bid_up, adjust_bid_down','AIActionRule model: conditions JSON, auto_execute, min_confidence, max_actions_per_day / per_campaign','POST /rules/run evaluates all enabled rules, creates AIAction rows, auto-executes if configured','GET /rules: management UI with create modal, toggle, delete','Recent Actions log on rules page (last 50 actions with status, confidence, reasoning)']),
+          (8, 'Campaign Cloning', 'completed',
+           'Deep-copy a campaign with its full hierarchy — ad groups, ads, keywords, and negatives. Clone starts paused.',
+           ['POST /campaigns/<id>/clone copies AdsCampaign → AdsAdGroup → AdsAd + AdsKeyword + NegativeKeyword','Preserves bid_strategy, target_cpa_micros, target_roas, geo_targets, network','Clone button in campaigns table with name prompt','Clone status always "paused" to prevent unintended spend']),
+          (9, 'Bid Strategy Management', 'completed',
+           '6 bid strategies selectable per campaign. Stored in DB and surfaced in the campaigns table.',
+           ['Fields: bid_strategy, target_cpa_micros, target_roas on AdsCampaign','Strategies: manual_cpc, enhanced_cpc, target_cpa, target_roas, maximize_conversions, maximize_conversion_value','Inline <select> in campaigns table saves immediately via POST /campaigns/<id>/bid-strategy','Target CPA / Target ROAS prompt for numeric input','Cloned campaigns inherit bid strategy from source']),
+          (10, 'A/B Ad Testing Framework', 'completed',
+           'Create split tests between ad variants within the same ad group. Track performance and pick a winner.',
+           ['Fields: variant_group (UUID), is_control, test_name on AdsAd','GET /ab-tests: per-test 30-day aggregate metrics (impressions, clicks, conversions, spend)','POST /ab-tests creates test with 2+ variants (control + variants A/B/C…)','POST /ab-tests/<group>/pick-winner pauses all non-winning ads','Create modal with dynamic variant rows; "Add another variant" button']),
+        ] %}
+
+        {% for num, title, status, desc, details in items %}
+        <div class="border rounded-xl overflow-hidden">
+          <div class="flex items-start gap-4 px-5 py-4 bg-gray-50">
+            <div class="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-sm font-bold">{{ num }}</div>
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <h3 class="font-semibold text-gray-900">{{ title }}</h3>
+                <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">✓ Complete</span>
+              </div>
+              <p class="text-sm text-gray-600 mt-1">{{ desc }}</p>
+            </div>
+          </div>
+          <div class="px-5 py-3 border-t">
+            <ul class="text-xs text-gray-600 space-y-1">
+              {% for d in details %}
+              <li class="flex items-start gap-1.5"><span class="text-indigo-400 mt-0.5">▸</span>{{ d }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- 6 Route Reference -->
+    <div id="sec-routes" class="bg-white rounded-xl border p-6 space-y-4">
+      <h2 class="text-xl font-bold text-gray-900 border-b pb-3">6. Route Reference</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+            <tr>
+              <th class="text-left px-3 py-2 w-20">Method</th>
+              <th class="text-left px-3 py-2">Path</th>
+              <th class="text-left px-3 py-2">Function</th>
+              <th class="text-left px-3 py-2">Description</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y text-xs text-gray-700">
+            {% for method, path, fn, desc in [
+              ('GET','/account/google/ads/','optimize','Main tabbed UI (campaigns, ads, keywords, etc.)'),
+              ('GET','/account/google/ads/overview','overview','Account-level overview widget data'),
+              ('GET','/account/google/ads/optimizer/data','optimizer_data','JSON feed for optimizer recommendations'),
+              ('POST','/account/google/ads/optimizer/apply','optimizer_apply','Apply a single recommendation, create OptimizerAction'),
+              ('POST','/account/google/ads/drafts','create_draft','Create a draft campaign in DB'),
+              ('POST','/account/google/ads/publish','publish','Publish draft campaign (DB + API write stub)'),
+              ('POST','/account/google/ads/campaigns/<id>/status','campaign_toggle_status','Pause / enable campaign'),
+              ('POST','/account/google/ads/campaigns/<id>/budget','campaign_update_budget','Update daily budget'),
+              ('POST','/account/google/ads/campaigns/<id>/clone','campaign_clone','Deep-copy campaign hierarchy (item 8)'),
+              ('POST','/account/google/ads/campaigns/<id>/bid-strategy','campaign_bid_strategy','Set bid strategy + targets (item 9)'),
+              ('POST','/account/google/ads/adgroups/<id>/status','adgroup_toggle_status','Pause / enable ad group'),
+              ('POST','/account/google/ads/ads/<id>/status','ad_toggle_status','Pause / enable ad'),
+              ('POST','/account/google/ads/keywords/add','keywords_add','Add keyword to ad group'),
+              ('POST','/account/google/ads/keywords/bulk-action','keywords_bulk_action','Bulk pause/enable/remove keywords'),
+              ('POST','/account/google/ads/negatives/add','negatives_add','Add negative keyword'),
+              ('DELETE','/account/google/ads/negatives/<id>','negatives_delete','Remove negative keyword'),
+              ('POST','/account/google/ads/sync','sync','Full sync: account stats + search terms + conversions + optimizer'),
+              ('GET','/account/google/ads/search-terms','search_terms','Search term report page'),
+              ('POST','/account/google/ads/search-terms/<id>/add-keyword','search_term_add_keyword','Add search term as exact keyword'),
+              ('POST','/account/google/ads/search-terms/<id>/add-negative','search_term_add_negative','Block search term as negative'),
+              ('GET','/account/google/ads/conversions','conversions','Conversion actions page (item 6)'),
+              ('POST','/account/google/ads/conversions/sync','conversions_sync','Sync conversion actions from API (item 6)'),
+              ('GET','/account/google/ads/rules','rules_list','Automation rules management page (item 7)'),
+              ('POST','/account/google/ads/rules','rules_create','Create new automation rule (item 7)'),
+              ('POST','/account/google/ads/rules/<id>/toggle','rules_toggle','Enable/disable a rule (item 7)'),
+              ('DELETE','/account/google/ads/rules/<id>','rules_delete','Delete a rule (item 7)'),
+              ('POST','/account/google/ads/rules/run','rules_run','Run all enabled rules now (item 7)'),
+              ('GET','/account/google/ads/ab-tests','ab_tests','A/B ad test management page (item 10)'),
+              ('POST','/account/google/ads/ab-tests','ab_tests_create','Create new A/B test (item 10)'),
+              ('POST','/account/google/ads/ab-tests/<group>/pick-winner','ab_test_pick_winner','Select winner, pause others (item 10)'),
+            ] %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-3 py-2">
+                <span class="font-mono px-1.5 py-0.5 rounded text-xs
+                  {{ 'bg-blue-100 text-blue-700' if method=='GET' else ('bg-green-100 text-green-700' if method=='POST' else 'bg-red-100 text-red-700') }}">
+                  {{ method }}
+                </span>
+              </td>
+              <td class="px-3 py-2 font-mono text-indigo-700">{{ path }}</td>
+              <td class="px-3 py-2 text-gray-600">{{ fn }}</td>
+              <td class="px-3 py-2 text-gray-500">{{ desc }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 7 Optimizer Engine Deep-Dive -->
+    <div id="sec-optimizer" class="bg-white rounded-xl border p-6 space-y-4">
+      <h2 class="text-xl font-bold text-gray-900 border-b pb-3">7. Optimizer Engine Deep-Dive</h2>
+      <p class="text-sm text-gray-600">
+        <code class="bg-gray-100 px-1 rounded">generate_recommendations(account_id)</code> in
+        <code class="bg-gray-100 px-1 rounded">app/services/google_ads_optimizer_engine.py</code>
+        runs 4 SQL analysis passes against GadsStatsDaily and upserts OptimizerRecommendation rows.
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {% for pass_num, title, logic, threshold, action, impact in [
+          (1,'Wasted Spend',
+           'Keywords with spend ≥ $5 and 0 conversions over last 30 days',
+           'WASTED_SPEND_MIN_MICROS = 5,000,000 ($5)',
+           'Pause keyword',
+           'Severity 1 if spend >$50, 2 if >$20, else 3'),
+          (2,'Budget IS Loss',
+           'Campaigns losing >20% impression share due to daily budget running out',
+           'BUDGET_IS_LOSS_THRESHOLD = 0.20 (20%)',
+           'Increase daily budget by 30%',
+           'Severity 2 if loss >40%, else 3'),
+          (3,'Low Quality Score',
+           'Keywords with QS ≤ 4 and ≥100 impressions over last 14 days',
+           'LOW_QS_THRESHOLD = 4, MIN_IMPRESSIONS = 100',
+           'Fix LP / ad relevance / CTR based on weakest sub-score',
+           'Estimated CPC reduction: (10 − QS) × 8%'),
+          (4,'Rank IS Loss',
+           'Campaigns losing >30% impression share due to Ad Rank',
+           'RANK_IS_LOSS_THRESHOLD = 0.30 (30%)',
+           'Fix QS first, then raise bids on top performers',
+           'Severity 2 if loss >50%, else 3'),
+        ] %}
+        <div class="border rounded-lg p-4">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-full">Pass {{ pass_num }}</span>
+            <h3 class="font-semibold text-gray-800">{{ title }}</h3>
+          </div>
+          <div class="text-xs space-y-1 text-gray-600">
+            <div><span class="font-medium text-gray-700">Logic:</span> {{ logic }}</div>
+            <div><span class="font-medium text-gray-700">Threshold:</span> {{ threshold }}</div>
+            <div><span class="font-medium text-gray-700">Suggested action:</span> {{ action }}</div>
+            <div><span class="font-medium text-gray-700">Severity:</span> {{ impact }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
+        <strong>Recommended additions for v2:</strong> Add Pass 5 (Paused performer — keywords historically
+        converting that are now paused), Pass 6 (RSA strength — ad groups with no EXCELLENT strength ads),
+        Pass 7 (Audience bid adjustments — in-market segments with strong conversion signals).
+      </div>
+    </div>
+
+    <!-- 8 Rule Engine Deep-Dive -->
+    <div id="sec-ruleengine" class="bg-white rounded-xl border p-6 space-y-4">
+      <h2 class="text-xl font-bold text-gray-900 border-b pb-3">8. Automation Rule Engine Deep-Dive</h2>
+      <p class="text-sm text-gray-600">
+        <code class="bg-gray-100 px-1 rounded">run_rules(account_id)</code> in
+        <code class="bg-gray-100 px-1 rounded">app/services/google_ads_rule_engine.py</code>
+        evaluates all enabled AIActionRules, creates AIAction log entries, and optionally executes
+        changes within configured rate limits.
+      </p>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm border rounded-lg overflow-hidden">
+          <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+            <tr>
+              <th class="text-left px-3 py-2">Rule Type</th>
+              <th class="text-left px-3 py-2">Required Conditions</th>
+              <th class="text-left px-3 py-2">Default Thresholds</th>
+              <th class="text-left px-3 py-2">Execution Effect</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y text-xs text-gray-700">
+            {% for rt, conds, defaults, effect in [
+              ('pause_wasted_keywords','spend_above_dollars, conversions_below, lookback_days','$5, 0 conv, 30d','Sets AdsKeyword.status = "paused"'),
+              ('add_negative_search_terms','spend_above_dollars, ctr_below, lookback_days','$10, 2% CTR, 30d','Sets SearchTerm.added_as_negative = True (API write in v2)'),
+              ('increase_budget','lost_is_budget_above, lookback_days','20% IS loss, 14d','Sets AdsCampaign.daily_budget_cents to suggested value'),
+              ('adjust_bid_up','conversion_rate_above, bid_increase_pct, lookback_days','10% CR, +15% bid, 14d','Sets AdsKeyword.max_cpc_cents to new value'),
+              ('adjust_bid_down','conversion_rate_below, spend_above_dollars, bid_decrease_pct, lookback_days','2% CR, $20, −10% bid, 14d','Sets AdsKeyword.max_cpc_cents to reduced value'),
+            ] %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-3 py-2 font-mono text-indigo-700">{{ rt }}</td>
+              <td class="px-3 py-2">{{ conds }}</td>
+              <td class="px-3 py-2 text-gray-500">{{ defaults }}</td>
+              <td class="px-3 py-2">{{ effect }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="font-semibold text-gray-800">Rate Limiting</h3>
+      <p class="text-sm text-gray-600">
+        Each rule enforces two limits: <code class="bg-gray-100 px-1 rounded">max_actions_per_day</code>
+        (default 50) counts all AI actions created today for the account;
+        <code class="bg-gray-100 px-1 rounded">max_actions_per_campaign</code> (default 10) counts
+        actions from the current rule run per campaign. Once either limit is hit, the remaining
+        candidates for that rule are skipped.
+      </p>
+    </div>
+
+    <!-- 9 UI/UX -->
+    <div id="sec-ui" class="bg-white rounded-xl border p-6 space-y-4">
+      <h2 class="text-xl font-bold text-gray-900 border-b pb-3">9. UI / UX Overview</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        {% for page, url, desc in [
+          ('Optimize (main tabs)','/account/google/ads/?tab=campaigns','7 tabs: Campaigns, Ad Groups, Ads, Keywords, Negatives, Optimizer, Create/Publish. Header KPI cards with 7d/30d/90d toggle.'),
+          ('Search Terms','/account/google/ads/search-terms','Full term report with filter bar (text + campaign + action status). One-click Add as Keyword / Block as Negative buttons.'),
+          ('Conversions','/account/google/ads/conversions','Conversion action list with 30d summary cards (total conv, total value, avg value/conv). Status badges.'),
+          ('Rules','/account/google/ads/rules','Rule management: create modal with dynamic condition fields per rule type, toggle, delete. Recent Actions log (last 50).'),
+          ('A/B Tests','/account/google/ads/ab-tests','Per-test aggregate metrics, side-by-side variant comparison. Pick Winner button pauses all other variants.'),
+          ('Apply Suggestions','/account/google/ads/apply_suggestions','AI-generated optimizer suggestions with confidence scoring and one-click apply.'),
+        ] %}
+        <div class="border rounded-lg p-4">
+          <div class="font-semibold text-gray-800 mb-1">{{ page }}</div>
+          <div class="font-mono text-xs text-indigo-600 mb-2">{{ url }}</div>
+          <div class="text-gray-600 text-xs">{{ desc }}</div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <h3 class="font-semibold text-gray-800">Tab Navigation (optimize.html)</h3>
+      <div class="flex flex-wrap gap-2 text-xs">
+        {% for t in ['Campaigns','Ad Groups','Ads','Keywords','Negatives','Optimizer','Create/Publish','Search Terms','Conversions','Rules','A/B Tests'] %}
+        <span class="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full border border-indigo-200">{{ t }}</span>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- 10 Known Gaps -->
+    <div id="sec-gaps" class="bg-white rounded-xl border p-6 space-y-4">
+      <h2 class="text-xl font-bold text-gray-900 border-b pb-3">10. Known Gaps &amp; Current Limitations</h2>
+
+      <div class="space-y-3">
+        {% for priority, title, detail, fix in [
+          ('P1','API writes are DB-only (no upstream push)',
+           'All optimizations (pause keyword, increase budget, set bid) apply changes locally in the MySQL DB. They do NOT call the Google Ads mutate API, so changes are invisible in Google Ads until synced back manually.',
+           'Implement google_ads_service.apply_suggestion() using the Google Ads REST mutate endpoint for each action_type. Add a "status: synced_to_google" flag on AIAction.'),
+          ('P1','No scheduled / cron sync',
+           'Data sync and rule evaluation are triggered manually by clicking "Sync Data". There is no automatic daily job.',
+           'Add a background scheduler (APScheduler or Celery beat) to call POST /sync and POST /rules/run daily per connected account.'),
+          ('P2','Search term negatives not pushed to API',
+           'add_negative_search_terms rule creates a DB NegativeKeyword row but does not call the campaign negative keyword mutate endpoint.',
+           'Wire NegativeKeyword inserts through the mutate API in the rule engine execute step.'),
+          ('P2','A/B test performance data relies on GadsStatsDaily entity_type=ad',
+           'AdsAd.id is used as entity_id in GadsStatsDaily, but the sync service currently only populates keyword and campaign stats. Ad-level stats need a dedicated GAQL query.',
+           'Add AD_STATS GAQL query (FROM ad_group_ad WHERE segments.date BETWEEN ...) and sync ad-level impressions/clicks/conversions into GadsStatsDaily.'),
+          ('P2','Bid strategy changes not sent to API',
+           'POST /campaigns/<id>/bid-strategy saves bid_strategy + targets to the DB. The campaign bidding strategy change is not submitted via the Google Ads campaign mutate endpoint.',
+           'Add mutate call in campaign_bid_strategy() to update campaign.bidding_strategy_type in Google Ads.'),
+          ('P3','No RSA asset performance',
+           'Responsive Search Ad headline/description performance (individual asset performance labels) is not tracked.',
+           'Add RSA asset report GAQL query; store asset-level performance in a new rsa_asset_stats table.'),
+          ('P3','Audience / demographic bid adjustments not exposed',
+           'No UI or data for audience, device, gender, age, or location bid adjustments.',
+           'Add campaign criterion GAQL queries; expose in a new Bid Adjustments tab.'),
+          ('P3','No alert / notification system',
+           'Rule-generated actions are logged to the DB but there is no email/Slack/push notification when actions are taken or when spend anomalies are detected.',
+           'Add a notification hook in run_rules() that fires after auto-executed actions.'),
+        ] %}
+        <div class="border rounded-xl overflow-hidden">
+          <div class="flex items-center gap-3 px-4 py-3 bg-gray-50">
+            <span class="text-xs font-bold px-2 py-0.5 rounded
+              {{ 'bg-red-100 text-red-700' if priority=='P1' else ('bg-amber-100 text-amber-700' if priority=='P2' else 'bg-gray-100 text-gray-600') }}">
+              {{ priority }}
+            </span>
+            <h3 class="font-semibold text-gray-800 text-sm">{{ title }}</h3>
+          </div>
+          <div class="px-4 py-3 border-t text-xs space-y-1">
+            <p class="text-gray-600"><span class="font-medium text-gray-700">Issue:</span> {{ detail }}</p>
+            <p class="text-gray-600"><span class="font-medium text-green-700">Fix:</span> {{ fix }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- 11 Roadmap -->
+    <div id="sec-roadmap" class="bg-white rounded-xl border p-6 space-y-4">
+      <h2 class="text-xl font-bold text-gray-900 border-b pb-3">11. Recommended Roadmap — v2</h2>
+
+      <div class="space-y-6">
+        {% for phase, label, color, items in [
+          ('Phase 1','Immediate (1–2 weeks)','red',[
+            'Wire apply_suggestion() to Google Ads mutate REST endpoints for: pause/enable keyword, update budget, set bid strategy',
+            'Add Celery/APScheduler cron job: daily sync + rule evaluation per connected account',
+            'Add AD_STATS GAQL query to enable A/B test performance data',
+            'Add NegativeKeyword mutate API call in rule engine execution',
+          ]),
+          ('Phase 2','Short-term (2–4 weeks)','amber',[
+            'RSA asset performance report: individual headline/description performance labels from the ad_group_ad GAQL resource',
+            'Audience & device bid adjustments tab with campaign_criterion GAQL',
+            'Notification system: email/Slack alert when auto-executed actions exceed configurable spend thresholds',
+            'Optimizer Pass 5: paused performers (keywords historically converting, now paused)',
+            'Smart Budget Allocation: distribute budget across campaigns based on ROAS/CPA targets',
+          ]),
+          ('Phase 3','Medium-term (1–2 months)','green',[
+            'Performance Max campaign support (GAQL asset group metrics)',
+            'Change history log: surface Google Ads change history in the UI alongside internal changes',
+            'Forecast modeling: predict impact of budget changes using historical IS data',
+            'Multi-account (MCC) support: aggregate dashboard across all managed accounts',
+            'Anomaly detection: flag unusual spend/conversion rate changes using rolling z-score',
+            'Landing page performance correlation: link QS landing_page_experience to site speed metrics',
+          ]),
+        ] %}
+        <div>
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-xs font-bold px-3 py-1 rounded-full
+              {{ 'bg-red-100 text-red-700' if color=='red' else ('bg-amber-100 text-amber-700' if color=='amber' else 'bg-green-100 text-green-700') }}">
+              {{ phase }}
+            </span>
+            <h3 class="font-semibold text-gray-800">{{ label }}</h3>
+          </div>
+          <ul class="space-y-2">
+            {% for item in items %}
+            <li class="flex items-start gap-2 text-sm text-gray-700">
+              <span class="text-{{ color }}-400 mt-0.5 flex-shrink-0">◆</span>
+              {{ item }}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="text-center text-xs text-gray-400 pt-4 border-t">
+      Google Ads Tool Analysis Document · Generated {{ now }} · Confidential &amp; Internal Use Only
+    </div>
+
+  </div>
+</div>
+
+<style>
+@media print {
+  .no-print { display: none !important; }
+  body { font-size: 11px; }
+  .rounded-2xl, .rounded-xl, .rounded-lg { border-radius: 4px !important; }
+  a { text-decoration: none; color: inherit; }
+  #doc-body { max-width: 100% !important; }
+}
+</style>
+
+<script>
+// Build downloadable HTML file from the rendered document
+document.addEventListener('DOMContentLoaded', function () {
+  const dlBtn = document.getElementById('download-btn');
+  if (!dlBtn) return;
+
+  dlBtn.addEventListener('click', function (e) {
+    e.preventDefault();
+    const docHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google Ads Tool — Analysis Document</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    body { font-family: ui-sans-serif, system-ui, sans-serif; background: #f9fafb; padding: 2rem; }
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+${document.getElementById('doc-body').outerHTML}
+</body>
+</html>`;
+
+    const blob = new Blob([docHtml], {type: 'text/html'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'google-ads-tool-analysis.html';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+});
+</script>
+{% endblock %}

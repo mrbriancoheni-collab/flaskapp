@@ -1,0 +1,197 @@
+{% extends "base_app.html" %}
+{% block title %}Content Brief · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Content Brief Generator</h1>
+      <p class="text-gray-500 text-sm mt-1">AI-powered briefs built from real search data</p>
+    </div>
+    {% if brief %}
+    <a href="{{ url_for('wp_bp.new_post') }}?keyword={{ keyword | urlencode }}&title={{ (brief.recommended_title or brief.h1 or '') | urlencode }}"
+       class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
+      <i class="fa-solid fa-pen-to-square"></i> Use This Brief
+    </a>
+    {% endif %}
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm font-medium border
+      {% if cat == 'success' %}bg-green-50 border-green-300 text-green-800
+      {% elif cat == 'error' %}bg-red-50 border-red-300 text-red-800
+      {% elif cat == 'warning' %}bg-yellow-50 border-yellow-300 text-yellow-800
+      {% else %}bg-blue-50 border-blue-300 text-blue-800{% endif %}">
+      {{ msg }}
+    </div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- Keyword input -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <form method="POST" action="{{ url_for('wp_bp.content_brief') }}" class="flex flex-wrap gap-3 items-end">
+      <div class="flex-1 min-w-48">
+        <label class="block text-xs font-medium text-gray-600 mb-1">Target Keyword</label>
+        <input type="text" name="keyword" value="{{ keyword or '' }}" required
+               placeholder="e.g. HVAC maintenance tips"
+               class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 focus:outline-none">
+      </div>
+      <button type="submit"
+              class="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
+        <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Generate Brief
+      </button>
+    </form>
+  </div>
+
+  {% if brief %}
+  <!-- Brief display -->
+  <div class="space-y-4">
+
+    <!-- Title & Meta -->
+    <div class="bg-white rounded-xl shadow-sm border p-6 space-y-4">
+      <h2 class="text-base font-semibold text-gray-800 border-b pb-2">
+        <i class="fa-solid fa-heading text-indigo-400 mr-2"></i>Title &amp; Meta
+      </h2>
+      <div>
+        <p class="text-xs text-gray-400 uppercase font-semibold mb-1">Suggested Title</p>
+        <p class="text-gray-900 font-medium">{{ brief.recommended_title or brief.title or '—' }}</p>
+      </div>
+      {% if brief.h1 and brief.h1 != brief.recommended_title %}
+      <div>
+        <p class="text-xs text-gray-400 uppercase font-semibold mb-1">H1 Heading</p>
+        <p class="text-gray-700 text-sm">{{ brief.h1 }}</p>
+      </div>
+      {% endif %}
+      {% if brief.meta_description %}
+      <div>
+        <p class="text-xs text-gray-400 uppercase font-semibold mb-1">Meta Description</p>
+        <p class="text-gray-700 text-sm">{{ brief.meta_description }}</p>
+      </div>
+      {% endif %}
+      <div class="flex flex-wrap gap-4 text-sm">
+        {% if brief.word_count_target %}
+        <div><span class="text-gray-400">Target length:</span> <span class="font-medium text-gray-800">{{ brief.word_count_target }} words</span></div>
+        {% endif %}
+        {% if brief.tone %}
+        <div><span class="text-gray-400">Tone:</span> <span class="font-medium text-gray-800">{{ brief.tone }}</span></div>
+        {% endif %}
+        {% if brief.estimated_difficulty %}
+        <div><span class="text-gray-400">Difficulty:</span>
+          <span class="font-medium {% if brief.estimated_difficulty == 'easy' %}text-green-700{% elif brief.estimated_difficulty == 'hard' %}text-red-600{% else %}text-amber-600{% endif %}">{{ brief.estimated_difficulty }}</span>
+        </div>
+        {% endif %}
+        {% if brief.schema_types %}
+        <div><span class="text-gray-400">Schema:</span> <span class="font-medium text-gray-800">{{ brief.schema_types | join(', ') }}</span></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Outline -->
+    {% if brief.outline %}
+    <div class="bg-white rounded-xl shadow-sm border p-6">
+      <h2 class="text-base font-semibold text-gray-800 border-b pb-2 mb-4">
+        <i class="fa-solid fa-list-ol text-indigo-400 mr-2"></i>Content Outline
+      </h2>
+      <ol class="space-y-2">
+        {% for section in brief.outline %}
+        <li class="flex gap-3">
+          <span class="text-indigo-500 font-bold min-w-5 text-sm">{{ loop.index }}.</span>
+          <div>
+            <p class="font-medium text-gray-800 text-sm">{{ section.heading if section is mapping else section }}</p>
+            {% if section is mapping and section.subpoints %}
+            <ul class="mt-1 space-y-0.5 list-disc list-inside text-xs text-gray-500 ml-2">
+              {% for sub in section.subpoints %}
+              <li>{{ sub }}</li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ol>
+    </div>
+    {% endif %}
+
+    <!-- Semantic terms & Questions -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {% if brief.semantic_terms %}
+      <div class="bg-white rounded-xl shadow-sm border p-6">
+        <h2 class="text-base font-semibold text-gray-800 border-b pb-2 mb-4">
+          <i class="fa-solid fa-tags text-indigo-400 mr-2"></i>Semantic Terms to Include
+        </h2>
+        <div class="flex flex-wrap gap-2">
+          {% for term in brief.semantic_terms %}
+          <span class="bg-indigo-50 text-indigo-700 text-xs px-2.5 py-1 rounded-full font-medium">{{ term }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if brief.questions_to_answer %}
+      <div class="bg-white rounded-xl shadow-sm border p-6">
+        <h2 class="text-base font-semibold text-gray-800 border-b pb-2 mb-4">
+          <i class="fa-solid fa-circle-question text-indigo-400 mr-2"></i>Questions to Answer
+        </h2>
+        <ul class="space-y-1.5">
+          {% for q in brief.questions_to_answer %}
+          <li class="text-sm text-gray-700 flex gap-2">
+            <span class="text-indigo-400 mt-0.5">›</span>{{ q }}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Positioning & CTA -->
+    {% if brief.positioning or brief.cta %}
+    <div class="bg-white rounded-xl shadow-sm border p-6 space-y-3">
+      <h2 class="text-base font-semibold text-gray-800 border-b pb-2">
+        <i class="fa-solid fa-bullseye text-indigo-400 mr-2"></i>Strategy
+      </h2>
+      {% if brief.positioning %}
+      <div>
+        <p class="text-xs text-gray-400 uppercase font-semibold mb-1">Positioning Angle</p>
+        <p class="text-gray-700 text-sm">{{ brief.positioning }}</p>
+      </div>
+      {% endif %}
+      {% if brief.cta %}
+      <div>
+        <p class="text-xs text-gray-400 uppercase font-semibold mb-1">Call to Action</p>
+        <p class="text-gray-700 text-sm">{{ brief.cta }}</p>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- GSC data note -->
+    {% set gsc = brief.gsc_data if brief.gsc_data else {} %}
+    {% if gsc and gsc.impressions %}
+    <div class="bg-gray-50 rounded-xl border p-4 text-xs text-gray-500">
+      <i class="fa-brands fa-google mr-1 text-gray-400"></i>
+      GSC data for <strong>{{ keyword }}</strong>:
+      {{ gsc.clicks | int }} clicks · {{ gsc.impressions | int }} impressions · avg position {{ gsc.position | round(1) }}
+    </div>
+    {% endif %}
+
+    <!-- Use brief CTA -->
+    <div class="text-center py-2">
+      <a href="{{ url_for('wp_bp.new_post') }}?keyword={{ keyword | urlencode }}&title={{ (brief.title or '') | urlencode }}"
+         class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium">
+        <i class="fa-solid fa-pen-to-square"></i> Write This Post
+      </a>
+    </div>
+  </div>
+
+  {% elif keyword %}
+  <!-- Loading state was triggered but something went wrong -->
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">
+    <i class="fa-solid fa-file-circle-question text-5xl mb-4"></i>
+    <p>No brief generated. Check the flash message above for details.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "base_app.html" %}
+{% block title %}Cannibalization Detector · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Keyword Cannibalization Detector</h1>
+      <p class="text-gray-500 text-sm mt-1">Find queries where multiple pages compete, diluting rankings and click-through rates</p>
+    </div>
+    {% if result %}
+    <div class="flex gap-3 text-sm">
+      <span class="px-3 py-1.5 rounded-full bg-red-100 text-red-700 font-semibold">{{ result.high_count }} High</span>
+      <span class="px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 font-semibold">{{ result.medium_count }} Medium</span>
+      <span class="px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 font-semibold">{{ result.low_count }} Low</span>
+    </div>
+    {% endif %}
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm border
+      {% if cat == 'error' %}bg-red-50 border-red-200 text-red-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if not gsc_connected %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center">
+    <i class="fa-brands fa-google text-gray-300 text-5xl mb-4"></i>
+    <p class="text-gray-600 mb-4">Connect Google Search Console to detect keyword cannibalization.</p>
+    <a href="{{ url_for('google_bp.connect') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">Connect GSC</a>
+  </div>
+  {% elif error %}
+  <div class="bg-red-50 border border-red-200 rounded-xl p-5 text-red-800 text-sm">{{ error }}</div>
+  {% elif result %}
+
+  {% if result.conflict_count == 0 %}
+  <div class="bg-green-50 border border-green-200 rounded-xl p-8 text-center">
+    <i class="fa-solid fa-circle-check text-green-500 text-4xl mb-3"></i>
+    <p class="text-green-800 font-semibold">No cannibalization detected!</p>
+    <p class="text-green-600 text-sm mt-1">Checked {{ result.total_keywords_checked }} keywords — each URL appears to own its queries.</p>
+  </div>
+  {% else %}
+
+  <!-- Summary -->
+  <div class="grid grid-cols-3 gap-4">
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <p class="text-2xl font-bold text-gray-800">{{ result.total_keywords_checked }}</p>
+      <p class="text-xs text-gray-500 mt-1">Keywords Analysed</p>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <p class="text-2xl font-bold {% if result.conflict_count %}text-red-600{% else %}text-green-600{% endif %}">{{ result.conflict_count }}</p>
+      <p class="text-xs text-gray-500 mt-1">Conflicts Found</p>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
+      <p class="text-2xl font-bold text-amber-600">{{ result.conflicts | sum(attribute='lost_clicks_est') }}</p>
+      <p class="text-xs text-gray-500 mt-1">Est. Lost Clicks/mo</p>
+    </div>
+  </div>
+
+  <!-- Conflict list -->
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div class="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
+      <h2 class="font-semibold text-gray-800">Cannibalization Conflicts</h2>
+      <span class="text-xs text-gray-400">Sorted by severity · 90-day GSC data</span>
+    </div>
+    <div class="divide-y">
+      {% for conflict in result.conflicts %}
+      <div class="px-5 py-4">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold px-2 py-0.5 rounded
+              {% if conflict.severity == 'high' %}bg-red-100 text-red-700
+              {% elif conflict.severity == 'medium' %}bg-amber-100 text-amber-700
+              {% else %}bg-gray-100 text-gray-600{% endif %}">
+              {{ conflict.severity | title }}
+            </span>
+            <p class="font-medium text-gray-900">{{ conflict.keyword }}</p>
+          </div>
+          <div class="flex gap-3 text-xs text-gray-500 flex-shrink-0">
+            <span>{{ conflict.page_count }} pages</span>
+            <span>{{ conflict.total_impressions }} impr.</span>
+            {% if conflict.lost_clicks_est %}<span class="text-red-500">~{{ conflict.lost_clicks_est }} lost clicks</span>{% endif %}
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          {% for p in conflict.pages %}
+          <div class="flex items-center gap-3 text-sm bg-gray-50 rounded-lg px-3 py-2">
+            <span class="w-16 text-xs font-bold {% if loop.first %}text-indigo-600{% else %}text-gray-400{% endif %} flex-shrink-0">
+              #{{ p.position }} pos
+            </span>
+            <a href="{{ p.url }}" target="_blank" rel="noopener"
+               class="flex-1 text-xs font-mono text-gray-600 hover:text-indigo-500 truncate min-w-0">{{ p.url }}</a>
+            <span class="text-xs text-gray-400 flex-shrink-0">{{ p.impressions }} impr · {{ p.clicks }} clicks</span>
+          </div>
+          {% endfor %}
+        </div>
+
+        <p class="text-xs text-indigo-700 mt-2 bg-indigo-50 rounded px-2 py-1 inline-block">
+          <i class="fa-solid fa-lightbulb mr-1"></i>
+          Fix: consolidate into one definitive page via 301 redirect, or clearly differentiate intent between pages.
+        </p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% endif %}
+  {% else %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">
+    <i class="fa-solid fa-magnifying-glass-chart text-5xl mb-4"></i>
+    <p class="text-gray-600">Analysing keyword cannibalization from your GSC data…</p>
+    <p class="text-xs mt-1">Refresh the page if results don't appear.</p>
+  </div>
+  {% endif %}
+
+  <!-- What is cannibalization -->
+  <div class="bg-amber-50 border border-amber-100 rounded-xl p-5 text-sm text-amber-800 space-y-2">
+    <p class="font-semibold"><i class="fa-solid fa-lightbulb mr-2 text-amber-500"></i>What causes cannibalization?</p>
+    <ul class="list-disc list-inside space-y-1 text-amber-700">
+      <li>Multiple blog posts targeting the same keyword from different angles</li>
+      <li>A service page and a blog post both ranking for the same commercial query</li>
+      <li>Category pages competing with individual post pages</li>
+      <li>Fix: 301-redirect the weaker page to the stronger one, or rewrite to target different intents</li>
+    </ul>
+  </div>
+
+</div>
+{% endblock %}

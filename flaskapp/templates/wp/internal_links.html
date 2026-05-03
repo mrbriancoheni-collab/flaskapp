@@ -1,0 +1,152 @@
+{% extends "base_app.html" %}
+{% block title %}Internal Links · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Internal Linking Engine</h1>
+      <p class="text-gray-500 text-sm mt-1">Find and insert contextually relevant internal links into your posts</p>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="rounded-xl px-4 py-3 text-sm font-medium border
+      {% if cat == 'success' %}bg-green-50 border-green-300 text-green-800
+      {% elif cat == 'error' %}bg-red-50 border-red-300 text-red-800
+      {% else %}bg-blue-50 border-blue-300 text-blue-800{% endif %}">
+      {{ msg }}
+    </div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- Post selector -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h2 class="text-base font-semibold text-gray-800 mb-4">
+      <i class="fa-solid fa-file-lines text-indigo-500 mr-2"></i>Select Source Post
+    </h2>
+    <form method="GET" action="{{ url_for('wp_bp.internal_links') }}" class="flex flex-wrap gap-3 items-end">
+      <input type="hidden" name="action" value="suggest">
+      <div class="flex-1 min-w-48">
+        <label class="block text-xs text-gray-500 mb-1">Post</label>
+        {% if posts %}
+        <select name="post_id" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 focus:outline-none">
+          {% for p in posts %}
+          <option value="{{ p.id }}" {% if selected_post and selected_post.id == p.id %}selected{% endif %}>
+            {{ p.title.rendered | striptags | truncate(60) }}
+          </option>
+          {% endfor %}
+        </select>
+        {% else %}
+        <p class="text-sm text-gray-400 italic">No published posts found — connect a WordPress site first.</p>
+        {% endif %}
+      </div>
+      {% if posts %}
+      <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
+        <i class="fa-solid fa-magnifying-glass mr-1"></i>Find Links
+      </button>
+      {% endif %}
+    </form>
+  </div>
+
+  {% if suggestions is not none %}
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div class="px-6 py-4 border-b flex items-center justify-between">
+      <h2 class="text-base font-semibold text-gray-800">
+        Link Opportunities
+        <span class="ml-2 text-xs bg-indigo-100 text-indigo-700 rounded-full px-2 py-0.5">{{ suggestions | length }}</span>
+      </h2>
+      {% if selected_post %}
+      <span class="text-xs text-gray-400">for: <span class="font-medium text-gray-600">{{ selected_post.title.rendered | striptags | truncate(50) }}</span></span>
+      {% endif %}
+    </div>
+
+    {% if suggestions %}
+    <form method="POST" action="{{ url_for('wp_bp.internal_links') }}">
+      <input type="hidden" name="action" value="apply">
+      <input type="hidden" name="post_id" value="{{ selected_post.id if selected_post else '' }}">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 border-b">
+          <tr>
+            <th class="px-4 py-3 w-8">
+              <input type="checkbox" id="check-all" class="rounded">
+            </th>
+            <th class="px-4 py-3 text-left font-semibold text-gray-700">Target Post</th>
+            <th class="px-4 py-3 text-left font-semibold text-gray-700">Anchor Text</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-700">Score</th>
+            <th class="px-4 py-3 text-center font-semibold text-gray-700">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for s in suggestions %}
+          <tr class="hover:bg-indigo-50 transition {% if s.already_linked %}opacity-50{% endif %}">
+            <td class="px-4 py-3">
+              <input type="checkbox" name="selected_ids" value="{{ s.post_id }}"
+                     class="suggestion-cb rounded" {% if s.already_linked %}disabled{% endif %}>
+            </td>
+            <td class="px-4 py-3">
+              <div class="font-medium text-gray-900 truncate max-w-xs">{{ s.title }}</div>
+              <div class="text-xs text-gray-400 truncate">{{ s.url }}</div>
+            </td>
+            <td class="px-4 py-3">
+              <span class="bg-indigo-50 text-indigo-700 text-xs px-2 py-0.5 rounded font-mono">{{ s.anchor_text }}</span>
+            </td>
+            <td class="px-4 py-3 text-right">
+              <span class="font-semibold {% if s.score >= 5 %}text-green-700{% elif s.score >= 2 %}text-amber-600{% else %}text-gray-500{% endif %}">
+                {{ s.score }}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-center text-xs">
+              {% if s.already_linked %}
+              <span class="text-green-600 font-medium"><i class="fa-solid fa-check mr-1"></i>Linked</span>
+              {% else %}
+              <span class="text-gray-400">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="px-6 py-4 border-t bg-gray-50 flex items-center justify-between gap-3">
+        <p class="text-xs text-gray-500">
+          <i class="fa-solid fa-info-circle mr-1"></i>
+          Selected links will be inserted into the post content and queued for publishing.
+        </p>
+        <button type="submit"
+                class="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">
+          <i class="fa-solid fa-link mr-1"></i>Apply Selected Links
+        </button>
+      </div>
+    </form>
+
+    {% else %}
+    <div class="px-6 py-12 text-center text-gray-400">
+      <i class="fa-solid fa-link-slash text-4xl mb-3"></i>
+      <p>No strong link opportunities found for this post.</p>
+      <p class="text-xs mt-1">Try a post with more content, or publish more posts to link between.</p>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- How it works -->
+  <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-5 text-sm text-indigo-800">
+    <p class="font-semibold mb-2"><i class="fa-solid fa-circle-info mr-1"></i>How It Works</p>
+    <ul class="space-y-1 text-indigo-700 list-disc list-inside">
+      <li>Scans all published posts for topical keyword overlap with the source post</li>
+      <li>Ranks candidates by title match (×3) and body match (×0.4)</li>
+      <li>Selects the best 2–3 word anchor phrase from each candidate title</li>
+      <li>Inserts links safely — never inside existing <code>&lt;a&gt;</code> tags</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+document.getElementById('check-all')?.addEventListener('change', function() {
+  document.querySelectorAll('.suggestion-cb:not([disabled])').forEach(cb => cb.checked = this.checked);
+});
+</script>
+{% endblock %}

@@ -31,6 +31,12 @@ class AdsCampaign(db.Model):
     start_date = db.Column(db.Date, nullable=True)
     end_date = db.Column(db.Date, nullable=True)
 
+    # Bid strategy (item 9)
+    bid_strategy = db.Column(db.String(32), nullable=True, default="manual_cpc")
+    # manual_cpc | target_cpa | target_roas | maximize_conversions | maximize_conversion_value | enhanced_cpc
+    target_cpa_micros = db.Column(db.BigInteger, nullable=True)   # e.g. 5000000 = $5 CPA
+    target_roas = db.Column(db.Float, nullable=True)              # e.g. 4.0 = 400% ROAS
+
     # External IDs (optional)
     google_customer_id = db.Column(db.String(32), nullable=True, index=True)
     google_campaign_id = db.Column(db.String(64), nullable=True, index=True)
@@ -101,6 +107,11 @@ class AdsAd(db.Model):
     final_url = db.Column(db.String(2048), nullable=False)
 
     google_ad_id = db.Column(db.String(64), nullable=True, index=True)
+
+    # A/B testing (item 10)
+    variant_group = db.Column(db.String(64), nullable=True, index=True)  # shared test identifier
+    is_control = db.Column(db.Boolean, nullable=False, default=False)    # True = control ad
+    test_name = db.Column(db.String(128), nullable=True)                 # human label for the test
 
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
@@ -211,23 +222,37 @@ class GadsStatsDaily(db.Model):
     __tablename__ = "gads_stats_daily"
 
     id = db.Column(db.BigInteger, primary_key=True)
-    entity_type = db.Column(db.String(32), nullable=False, index=True)  # account|campaign|ad_group|ad|keyword
-    entity_id = db.Column(db.BigInteger, nullable=False, index=True)
-    date = db.Column(db.Date, nullable=False, index=True)
+    account_id   = db.Column(db.Integer, nullable=True, index=True)  # local accounts.id
+    entity_type  = db.Column(db.String(32), nullable=False, index=True)  # account|campaign|ad_group|keyword
+    entity_id    = db.Column(db.BigInteger, nullable=False, index=True)  # local DB id
+    google_entity_id = db.Column(db.BigInteger, nullable=True, index=True)  # raw Google Ads resource ID
+    date         = db.Column(db.Date, nullable=False, index=True)
 
-    impressions = db.Column(db.BigInteger, nullable=False, default=0)
-    clicks = db.Column(db.BigInteger, nullable=False, default=0)
-    cost_micros = db.Column(db.BigInteger, nullable=False, default=0)
-    conversions = db.Column(db.Float, nullable=False, default=0.0)
+    impressions      = db.Column(db.BigInteger, nullable=False, default=0)
+    clicks           = db.Column(db.BigInteger, nullable=False, default=0)
+    cost_micros      = db.Column(db.BigInteger, nullable=False, default=0)
+    conversions      = db.Column(db.Float, nullable=False, default=0.0)
     conversion_value = db.Column(db.Float, nullable=False, default=0.0)
-    avg_cpc = db.Column(db.Float, nullable=True)
+    avg_cpc          = db.Column(db.Float, nullable=True)
     search_impr_share = db.Column(db.Float, nullable=True)
-    lost_is_budget = db.Column(db.Float, nullable=True)
-    lost_is_rank = db.Column(db.Float, nullable=True)
+    lost_is_budget   = db.Column(db.Float, nullable=True)
+    lost_is_rank     = db.Column(db.Float, nullable=True)
+
+    # Quality Score — populated for entity_type='keyword' rows
+    quality_score    = db.Column(db.Integer, nullable=True)   # 1-10
+    landing_page_exp = db.Column(db.String(32), nullable=True)  # BELOW_AVERAGE|AVERAGE|ABOVE_AVERAGE
+    ad_relevance     = db.Column(db.String(32), nullable=True)
+    expected_ctr     = db.Column(db.String(32), nullable=True)
 
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
 
-    __table_args__ = (db.Index("ix_stats_entity_date", "entity_type", "entity_id", "date"),)
+    __table_args__ = (
+        db.Index("ix_stats_entity_date", "entity_type", "entity_id", "date"),
+        db.Index("ix_stats_account_date", "account_id", "date"),
+        db.UniqueConstraint("account_id", "entity_type", "google_entity_id", "date",
+                            name="uq_gads_stats_daily"),
+        {"extend_existing": True},
+    )
 
 
 class SearchTerm(db.Model):
@@ -266,6 +291,40 @@ class LabelMap(db.Model):
     entity_id = db.Column(db.BigInteger, nullable=False)
 
     __table_args__ = (db.UniqueConstraint("label_id", "entity_type", "entity_id", name="uq_label_entity"),)
+
+
+class ConversionAction(db.Model):
+    """Google Ads conversion actions synced from the API (item 6)."""
+    __tablename__ = "conversion_actions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.Integer, nullable=False, index=True)
+
+    google_conversion_id = db.Column(db.String(64), nullable=True, index=True)
+    name = db.Column(db.String(255), nullable=False)
+    category = db.Column(db.String(64), nullable=True)       # PURCHASE, LEAD, SIGNUP, PAGE_VIEW, etc.
+    type_ = db.Column("type", db.String(64), nullable=True)  # WEBPAGE, PHONE_CALL, IMPORT, etc.
+    status = db.Column(db.String(32), nullable=True)         # ENABLED | REMOVED | HIDDEN
+    counting_type = db.Column(db.String(32), nullable=True)  # ONE_PER_CLICK | MANY_PER_CLICK
+    value_settings_default = db.Column(db.Float, nullable=True)
+    value_settings_currency = db.Column(db.String(8), nullable=True)
+    include_in_conversions = db.Column(db.Boolean, nullable=True, default=True)
+    click_through_window_days = db.Column(db.Integer, nullable=True)
+    view_through_window_days = db.Column(db.Integer, nullable=True)
+
+    # 30-day aggregate totals refreshed on each sync
+    conversions_30d = db.Column(db.Float, nullable=True, default=0.0)
+    conversion_value_30d = db.Column(db.Float, nullable=True, default=0.0)
+
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("account_id", "google_conversion_id", name="uq_conversion_action"),
+    )
+
+    def __repr__(self):
+        return f"<ConversionAction {self.id} {self.name!r}>"
 
 
 class Snapshot(db.Model):

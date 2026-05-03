@@ -312,6 +312,16 @@
             <i class="fa-solid fa-paper-plane"></i><span>Publisher</span>
           </a>
         {% endif %}
+        {% if has_endpoint('wp_bp.approvals') %}
+          <a href="{{ url_for('wp_bp.approvals') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-inbox"></i><span>Approvals</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.schedule') %}
+          <a href="{{ url_for('wp_bp.schedule') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-calendar-days"></i><span>Schedule</span>
+          </a>
+        {% endif %}
         {% if has_endpoint('wp_bp.new_post') %}
           <a href="{{ url_for('wp_bp.new_post') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
             <i class="fa-solid fa-pen-to-square"></i><span>New Post</span>
@@ -342,6 +352,71 @@
             <i class="fa-solid fa-code"></i><span>Schema Generator</span>
           </a>
         {% endif %}
+        {% if has_endpoint('wp_bp.internal_links') %}
+          <a href="{{ url_for('wp_bp.internal_links') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-link"></i><span>Internal Links</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.content_brief') %}
+          <a href="{{ url_for('wp_bp.content_brief') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-file-pen"></i><span>Content Brief</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.freshness') %}
+          <a href="{{ url_for('wp_bp.freshness') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-seedling"></i><span>Content Freshness</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.broken_links') %}
+          <a href="{{ url_for('wp_bp.broken_links') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-link-slash"></i><span>Broken Links</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.seo_audit_review') %}
+          <a href="{{ url_for('wp_bp.seo_audit_review') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-shield-halved"></i><span>AI Audit Review</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.bulk_meta') %}
+          <a href="{{ url_for('wp_bp.bulk_meta') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-tags"></i><span>Bulk Meta Editor</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.image_seo') %}
+          <a href="{{ url_for('wp_bp.image_seo') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-image"></i><span>Image SEO</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.content_quality') %}
+          <a href="{{ url_for('wp_bp.content_quality') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-spell-check"></i><span>Content Quality</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.geo_pages') %}
+          <a href="{{ url_for('wp_bp.geo_pages') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-location-dot"></i><span>Geo Pages</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.redirects') %}
+          <a href="{{ url_for('wp_bp.redirects') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-route"></i><span>Redirects</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.seo_foundation') %}
+          <a href="{{ url_for('wp_bp.seo_foundation') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-check-double"></i><span>SEO Foundation</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.index_coverage') %}
+          <a href="{{ url_for('wp_bp.index_coverage') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-eye"></i><span>Index Coverage</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.orphan_pages') %}
+          <a href="{{ url_for('wp_bp.orphan_pages') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-unlink"></i><span>Orphan Pages</span>
+          </a>
+        {% endif %}
       {% endif %}
 
       <!-- SEO Section -->
@@ -368,6 +443,51 @@
         {% if has_endpoint('seo_bp.optimize') %}
           <a href="{{ url_for('seo_bp.optimize') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
             <i class="fa-solid fa-wand-magic-sparkles"></i><span>AI Recommendations</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.snippets') %}
+          <a href="{{ url_for('seo_bp.snippets') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-award"></i><span>Snippet Optimizer</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.pagespeed') %}
+          <a href="{{ url_for('seo_bp.pagespeed') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-gauge-high"></i><span>Page Speed</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.local_seo') %}
+          <a href="{{ url_for('seo_bp.local_seo') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-location-dot"></i><span>Local SEO</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.content_calendar') %}
+          <a href="{{ url_for('seo_bp.content_calendar') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-calendar-days"></i><span>Content Calendar</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.page_performance') %}
+          <a href="{{ url_for('seo_bp.page_performance') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-chart-bar"></i><span>Page Performance</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.eeat') %}
+          <a href="{{ url_for('seo_bp.eeat') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-shield-halved"></i><span>E-E-A-T Checker</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.aeo_optimizer') %}
+          <a href="{{ url_for('seo_bp.aeo_optimizer') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-robot"></i><span>AEO Optimizer</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.cannibalization') %}
+          <a href="{{ url_for('seo_bp.cannibalization') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-code-fork"></i><span>Cannibalization</span>
+          </a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.llm_citations') %}
+          <a href="{{ url_for('seo_bp.llm_citations') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-comments"></i><span>LLM Citations</span>
           </a>
         {% endif %}
       {% endif %}
@@ -620,6 +740,12 @@
         {% if has_endpoint('wp_bp.publisher') %}
           <a class="secondary-link {% if epn=='wp_bp.publisher' %}active{% endif %}" href="{{ url_for('wp_bp.publisher') }}"><i class="fa-solid fa-paper-plane"></i><span>Publisher</span></a>
         {% endif %}
+        {% if has_endpoint('wp_bp.approvals') %}
+          <a class="secondary-link {% if epn=='wp_bp.approvals' %}active{% endif %}" href="{{ url_for('wp_bp.approvals') }}"><i class="fa-solid fa-inbox"></i><span>Approvals</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.schedule') %}
+          <a class="secondary-link {% if epn=='wp_bp.schedule' %}active{% endif %}" href="{{ url_for('wp_bp.schedule') }}"><i class="fa-solid fa-calendar-days"></i><span>Schedule</span></a>
+        {% endif %}
         {% if has_endpoint('wp_bp.new_post') %}
           <a class="secondary-link {% if epn=='wp_bp.new_post' %}active{% endif %}" href="{{ url_for('wp_bp.new_post') }}"><i class="fa-solid fa-pen-to-square"></i><span>New Post</span></a>
         {% endif %}
@@ -631,6 +757,45 @@
         {% endif %}
         {% if has_endpoint('wp_bp.schema_gen') %}
           <a class="secondary-link {% if epn=='wp_bp.schema_gen' %}active{% endif %}" href="{{ url_for('wp_bp.schema_gen') }}"><i class="fa-solid fa-code"></i><span>Schema Generator</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.internal_links') %}
+          <a class="secondary-link {% if epn=='wp_bp.internal_links' %}active{% endif %}" href="{{ url_for('wp_bp.internal_links') }}"><i class="fa-solid fa-link"></i><span>Internal Links</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.content_brief') %}
+          <a class="secondary-link {% if epn=='wp_bp.content_brief' %}active{% endif %}" href="{{ url_for('wp_bp.content_brief') }}"><i class="fa-solid fa-file-pen"></i><span>Content Brief</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.freshness') %}
+          <a class="secondary-link {% if epn=='wp_bp.freshness' %}active{% endif %}" href="{{ url_for('wp_bp.freshness') }}"><i class="fa-solid fa-seedling"></i><span>Content Freshness</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.broken_links') %}
+          <a class="secondary-link {% if epn=='wp_bp.broken_links' %}active{% endif %}" href="{{ url_for('wp_bp.broken_links') }}"><i class="fa-solid fa-link-slash"></i><span>Broken Links</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.seo_audit_review') %}
+          <a class="secondary-link {% if epn=='wp_bp.seo_audit_review' %}active{% endif %}" href="{{ url_for('wp_bp.seo_audit_review') }}"><i class="fa-solid fa-shield-halved"></i><span>AI Audit Review</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.bulk_meta') %}
+          <a class="secondary-link {% if epn=='wp_bp.bulk_meta' %}active{% endif %}" href="{{ url_for('wp_bp.bulk_meta') }}"><i class="fa-solid fa-tags"></i><span>Bulk Meta Editor</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.image_seo') %}
+          <a class="secondary-link {% if epn=='wp_bp.image_seo' %}active{% endif %}" href="{{ url_for('wp_bp.image_seo') }}"><i class="fa-solid fa-image"></i><span>Image SEO</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.content_quality') %}
+          <a class="secondary-link {% if epn=='wp_bp.content_quality' %}active{% endif %}" href="{{ url_for('wp_bp.content_quality') }}"><i class="fa-solid fa-spell-check"></i><span>Content Quality</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.geo_pages') %}
+          <a class="secondary-link {% if epn=='wp_bp.geo_pages' %}active{% endif %}" href="{{ url_for('wp_bp.geo_pages') }}"><i class="fa-solid fa-location-dot"></i><span>Geo Pages</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.redirects') %}
+          <a class="secondary-link {% if epn=='wp_bp.redirects' %}active{% endif %}" href="{{ url_for('wp_bp.redirects') }}"><i class="fa-solid fa-route"></i><span>Redirects</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.seo_foundation') %}
+          <a class="secondary-link {% if epn=='wp_bp.seo_foundation' %}active{% endif %}" href="{{ url_for('wp_bp.seo_foundation') }}"><i class="fa-solid fa-check-double"></i><span>SEO Foundation</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.index_coverage') %}
+          <a class="secondary-link {% if epn=='wp_bp.index_coverage' %}active{% endif %}" href="{{ url_for('wp_bp.index_coverage') }}"><i class="fa-solid fa-eye"></i><span>Index Coverage</span></a>
+        {% endif %}
+        {% if has_endpoint('wp_bp.orphan_pages') %}
+          <a class="secondary-link {% if epn=='wp_bp.orphan_pages' %}active{% endif %}" href="{{ url_for('wp_bp.orphan_pages') }}"><i class="fa-solid fa-unlink"></i><span>Orphan Pages</span></a>
         {% endif %}
         {% if has_endpoint('wp_bp.edit_lookup') %}
           <a class="secondary-link {% if epn in ('wp_bp.edit_lookup','wp_bp.edit_post','wp_bp.edit_post_submit') %}active{% endif %}" href="{{ url_for('wp_bp.edit_lookup') }}"><i class="fa-solid fa-pen-to-square"></i><span>Edit Post</span></a>
@@ -672,6 +837,33 @@
         {% endif %}
         {% if has_endpoint('seo_bp.monitor') %}
           <a class="secondary-link {% if epn=='seo_bp.monitor' %}active{% endif %}" href="{{ url_for('seo_bp.monitor') }}"><i class="fa-solid fa-bell"></i><span>Monitor &amp; Alerts</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.snippets') %}
+          <a class="secondary-link {% if epn=='seo_bp.snippets' %}active{% endif %}" href="{{ url_for('seo_bp.snippets') }}"><i class="fa-solid fa-award"></i><span>Snippet Optimizer</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.pagespeed') %}
+          <a class="secondary-link {% if epn=='seo_bp.pagespeed' %}active{% endif %}" href="{{ url_for('seo_bp.pagespeed') }}"><i class="fa-solid fa-gauge-high"></i><span>Page Speed</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.local_seo') %}
+          <a class="secondary-link {% if epn=='seo_bp.local_seo' %}active{% endif %}" href="{{ url_for('seo_bp.local_seo') }}"><i class="fa-solid fa-location-dot"></i><span>Local SEO</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.content_calendar') %}
+          <a class="secondary-link {% if epn=='seo_bp.content_calendar' %}active{% endif %}" href="{{ url_for('seo_bp.content_calendar') }}"><i class="fa-solid fa-calendar-days"></i><span>Content Calendar</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.page_performance') %}
+          <a class="secondary-link {% if epn=='seo_bp.page_performance' %}active{% endif %}" href="{{ url_for('seo_bp.page_performance') }}"><i class="fa-solid fa-chart-bar"></i><span>Page Performance</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.eeat') %}
+          <a class="secondary-link {% if epn=='seo_bp.eeat' %}active{% endif %}" href="{{ url_for('seo_bp.eeat') }}"><i class="fa-solid fa-shield-halved"></i><span>E-E-A-T Checker</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.aeo_optimizer') %}
+          <a class="secondary-link {% if epn=='seo_bp.aeo_optimizer' %}active{% endif %}" href="{{ url_for('seo_bp.aeo_optimizer') }}"><i class="fa-solid fa-robot"></i><span>AEO Optimizer</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.cannibalization') %}
+          <a class="secondary-link {% if epn=='seo_bp.cannibalization' %}active{% endif %}" href="{{ url_for('seo_bp.cannibalization') }}"><i class="fa-solid fa-code-fork"></i><span>Cannibalization</span></a>
+        {% endif %}
+        {% if has_endpoint('seo_bp.llm_citations') %}
+          <a class="secondary-link {% if epn=='seo_bp.llm_citations' %}active{% endif %}" href="{{ url_for('seo_bp.llm_citations') }}"><i class="fa-solid fa-comments"></i><span>LLM Citations</span></a>
         {% endif %}
       {% elif SECTION == 'strategy' %}
         <!-- strategy links placeholder -->

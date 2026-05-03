@@ -1,0 +1,272 @@
+{% extends "base_app.html" %}
+{% block title %}A/B Ad Tests · Google Ads{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">A/B Ad Tests</h1>
+      <p class="text-gray-500 text-sm mt-1">Compare ad variants and pick winners — last 30 days data</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button id="create-btn"
+              class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 flex items-center gap-2">
+        <i class="fa-solid fa-plus"></i>New Test
+      </button>
+      <a href="{{ url_for('gads_bp.optimize', tab='ads') }}" class="text-sm text-gray-500 hover:text-indigo-600">
+        ← Back to Ads
+      </a>
+    </div>
+  </div>
+
+  {% if not tests %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center">
+    <i class="fa-solid fa-flask text-gray-300 text-5xl mb-4"></i>
+    <p class="text-gray-600 mb-2">No A/B tests running.</p>
+    <p class="text-sm text-gray-400">Create a test to compare ad headlines and descriptions side by side.</p>
+  </div>
+  {% else %}
+
+  <div class="space-y-6">
+    {% for test in tests %}
+    <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+      <!-- Test header -->
+      <div class="px-5 py-4 border-b bg-gray-50 flex items-center justify-between">
+        <div>
+          <h2 class="font-semibold text-gray-900">{{ test.test_name or 'Unnamed Test' }}</h2>
+          <p class="text-xs text-gray-500 mt-0.5">
+            {{ test.camp_name }} › {{ test.adgroup_name }} ·
+            {{ test.variant_count }} variants ·
+            {{ test.total_impr | int if test.total_impr else 0 }} impressions (30d)
+          </p>
+        </div>
+        <div class="text-xs text-gray-400 font-mono">{{ test.variant_group }}</div>
+      </div>
+
+      <!-- Aggregate metrics -->
+      <div class="grid grid-cols-4 divide-x border-b text-center">
+        <div class="py-3">
+          <div class="text-xs text-gray-500">Impressions</div>
+          <div class="font-semibold text-gray-900">{{ test.total_impr | int if test.total_impr else 0 }}</div>
+        </div>
+        <div class="py-3">
+          <div class="text-xs text-gray-500">Clicks</div>
+          <div class="font-semibold text-gray-900">{{ test.total_clicks | int if test.total_clicks else 0 }}</div>
+        </div>
+        <div class="py-3">
+          <div class="text-xs text-gray-500">Conversions</div>
+          <div class="font-semibold text-green-600">{{ test.total_conv | int if test.total_conv else 0 }}</div>
+        </div>
+        <div class="py-3">
+          <div class="text-xs text-gray-500">Spend</div>
+          <div class="font-semibold text-gray-900">
+            ${{ "%.2f" | format((test.total_cost or 0) / 1000000) }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Variants -->
+      <div class="divide-y">
+        {% for v in test.variants %}
+        <div class="px-5 py-4 flex items-start gap-4">
+          <div class="flex-shrink-0 mt-0.5">
+            {% if v.is_control %}
+              <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Control</span>
+            {% else %}
+              <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Variant</span>
+            {% endif %}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-gray-900">{{ v.headline1 }}{% if v.headline2 %} | {{ v.headline2 }}{% endif %}</div>
+            {% if v.description1 %}
+            <div class="text-xs text-gray-500 mt-0.5 truncate">{{ v.description1 }}</div>
+            {% endif %}
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <span class="text-xs {% if v.status == 'enabled' %}text-green-600{% else %}text-gray-400{% endif %}">
+              {{ v.status | title }}
+            </span>
+            {% if not v.is_control and v.status == 'enabled' %}
+            <button class="pick-winner-btn text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition"
+                    data-group="{{ test.variant_group }}" data-winner="{{ v.id }}">
+              Pick Winner
+            </button>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- Create test modal -->
+<div id="create-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-screen overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white">
+      <h2 class="font-semibold text-gray-900">Create A/B Test</h2>
+      <button id="close-modal" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+    </div>
+    <div class="px-6 py-4 space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Test Name <span class="text-red-500">*</span></label>
+          <input id="test-name" type="text" placeholder="e.g. Headline CTA Test"
+                 class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Ad Group ID <span class="text-red-500">*</span></label>
+          <input id="test-ag-id" type="number" placeholder="Local ad group ID"
+                 class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+        </div>
+        <div class="col-span-2">
+          <label class="block text-xs text-gray-500 mb-1">Final URL <span class="text-red-500">*</span></label>
+          <input id="test-url" type="url" placeholder="https://example.com/page"
+                 class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+        </div>
+      </div>
+
+      <div id="variants-container" class="space-y-4">
+        <!-- Variant 1 (control) -->
+        <div class="border rounded-lg p-4 space-y-3" data-variant="0">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-medium text-blue-700">Control Ad</h3>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <input class="var-h1 rounded border px-2 py-1.5 text-sm" placeholder="Headline 1 (30 chars)">
+            <input class="var-h2 rounded border px-2 py-1.5 text-sm" placeholder="Headline 2">
+            <input class="var-h3 rounded border px-2 py-1.5 text-sm" placeholder="Headline 3">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <input class="var-d1 col-span-2 rounded border px-2 py-1.5 text-sm" placeholder="Description 1 (90 chars)">
+          </div>
+        </div>
+        <!-- Variant 2 -->
+        <div class="border rounded-lg p-4 space-y-3" data-variant="1">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-medium text-purple-700">Variant A</h3>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <input class="var-h1 rounded border px-2 py-1.5 text-sm" placeholder="Headline 1 (30 chars)">
+            <input class="var-h2 rounded border px-2 py-1.5 text-sm" placeholder="Headline 2">
+            <input class="var-h3 rounded border px-2 py-1.5 text-sm" placeholder="Headline 3">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <input class="var-d1 col-span-2 rounded border px-2 py-1.5 text-sm" placeholder="Description 1 (90 chars)">
+          </div>
+        </div>
+      </div>
+
+      <button id="add-variant" class="text-sm text-indigo-600 hover:text-indigo-800">
+        <i class="fa-solid fa-plus mr-1"></i>Add another variant
+      </button>
+    </div>
+    <div class="px-6 py-4 border-t flex justify-end gap-3 sticky bottom-0 bg-white">
+      <button id="cancel-modal" class="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50">Cancel</button>
+      <button id="save-test" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+        <i class="fa-solid fa-flask mr-1"></i>Launch Test
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="action-status" class="fixed bottom-4 right-4 hidden z-50 max-w-sm rounded-xl px-4 py-3 text-sm shadow-lg"></div>
+
+<script>
+(function () {
+  // Modal
+  const modal = document.getElementById('create-modal');
+  document.getElementById('create-btn').addEventListener('click', () => modal.classList.remove('hidden'));
+  document.getElementById('close-modal').addEventListener('click', () => modal.classList.add('hidden'));
+  document.getElementById('cancel-modal').addEventListener('click', () => modal.classList.add('hidden'));
+
+  let variantCount = 2;
+  document.getElementById('add-variant').addEventListener('click', () => {
+    const container = document.getElementById('variants-container');
+    const label = String.fromCharCode(65 + variantCount - 1); // B, C, D...
+    const div = document.createElement('div');
+    div.className = 'border rounded-lg p-4 space-y-3';
+    div.dataset.variant = variantCount;
+    div.innerHTML = `
+      <h3 class="text-sm font-medium text-purple-700">Variant ${label}</h3>
+      <div class="grid grid-cols-3 gap-2">
+        <input class="var-h1 rounded border px-2 py-1.5 text-sm" placeholder="Headline 1">
+        <input class="var-h2 rounded border px-2 py-1.5 text-sm" placeholder="Headline 2">
+        <input class="var-h3 rounded border px-2 py-1.5 text-sm" placeholder="Headline 3">
+      </div>
+      <input class="var-d1 w-full rounded border px-2 py-1.5 text-sm" placeholder="Description 1">
+    `;
+    container.appendChild(div);
+    variantCount++;
+  });
+
+  document.getElementById('save-test').addEventListener('click', async () => {
+    const testName = document.getElementById('test-name').value.trim();
+    const agId = parseInt(document.getElementById('test-ag-id').value);
+    const finalUrl = document.getElementById('test-url').value.trim();
+
+    if (!testName || !agId || !finalUrl) {
+      alert('Test name, ad group ID and URL are required.');
+      return;
+    }
+
+    const variantEls = document.querySelectorAll('#variants-container [data-variant]');
+    const variants = Array.from(variantEls).map((el, i) => ({
+      headline1: el.querySelector('.var-h1').value.trim(),
+      headline2: el.querySelector('.var-h2')?.value.trim() || null,
+      headline3: el.querySelector('.var-h3')?.value.trim() || null,
+      description1: el.querySelector('.var-d1')?.value.trim() || null,
+      final_url: finalUrl,
+      is_control: i === 0,
+    }));
+
+    if (variants.some(v => !v.headline1)) {
+      alert('All variants need at least Headline 1.');
+      return;
+    }
+
+    const r = await fetch('/account/google/ads/ab-tests', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({test_name: testName, ad_group_id: agId, variants}),
+    });
+    const data = await r.json();
+    if (data.ok) {
+      window.location.reload();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  });
+
+  // Pick winner
+  document.querySelectorAll('.pick-winner-btn').forEach(btn => {
+    btn.addEventListener('click', async function () {
+      const group = this.dataset.group;
+      const winnerId = parseInt(this.dataset.winner);
+      if (!confirm('Pause all other variants and declare this ad the winner?')) return;
+
+      const r = await fetch(`/account/google/ads/ab-tests/${group}/pick-winner`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({winner_ad_id: winnerId}),
+      });
+      const data = await r.json();
+      const status = document.getElementById('action-status');
+      if (data.ok) {
+        if (status) {
+          status.textContent = `Winner selected — ${data.paused?.length || 0} variant(s) paused.`;
+          status.className = 'fixed bottom-4 right-4 z-50 max-w-sm rounded-xl px-4 py-3 text-sm shadow-lg bg-green-600 text-white';
+          status.classList.remove('hidden');
+          setTimeout(() => window.location.reload(), 2000);
+        }
+      } else {
+        alert('Error: ' + data.error);
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

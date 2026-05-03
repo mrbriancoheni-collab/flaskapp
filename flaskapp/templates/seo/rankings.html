@@ -1,27 +1,61 @@
 {% extends "base_app.html" %}
-{% block title %}SEO Rankings{% endblock %}
+{% block title %}SEO Rankings · {{ app_name }}{% endblock %}
+
+{% macro sparkline(positions) %}
+{%- if positions | length >= 2 %}
+{%- set w = 64 %}{%- set h = 24 %}{%- set pad = 2 %}
+{%- set pts = positions %}
+{%- set mn = pts | min %}{%- set mx = pts | max %}
+{%- set rng = (mx - mn) if mx != mn else 1 %}
+{%- set step = (w - pad*2) / ([pts|length - 1, 1]|max) %}
+{%- set coords = [] %}
+{%- for p in pts %}
+  {%- set x = pad + loop.index0 * step %}
+  {%- set y = pad + ((p - mn) / rng) * (h - pad*2) %}
+  {%- set _ = coords.append(x|round(1)|string + ',' + y|round(1)|string) %}
+{%- endfor %}
+{%- set first = pts[0] %}{%- set last = pts[-1] %}
+{%- set improving = last < first %}
+<svg width="{{ w }}" height="{{ h }}" viewBox="0 0 {{ w }} {{ h }}">
+  <polyline points="{{ coords | join(' ') }}"
+    fill="none" stroke="{{ '#22c55e' if improving else '#ef4444' }}" stroke-width="1.5"
+    stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="{{ pad + (pts|length - 1) * step }}"
+          cy="{{ pad + ((last - mn) / rng) * (h - pad*2) }}"
+          r="2" fill="{{ '#22c55e' if improving else '#ef4444' }}"/>
+</svg>
+{%- endif %}
+{%- endmacro %}
+
 {% block content %}
-<div class="max-w-5xl mx-auto">
-  <div class="flex items-center justify-between mb-6">
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-bold">Search Rankings</h1>
+      <h1 class="text-2xl font-bold text-gray-900">Search Rankings</h1>
       <p class="text-gray-500 text-sm mt-1">
-        {% if site_url %}{{ site_url }} &mdash; {% endif %}Last 28 days via Google Search Console
+        {% if site_url %}{{ site_url }} · {% endif %}Last 28 days · Google Search Console
       </p>
     </div>
-    <a href="{{ url_for('seo_bp.optimize') }}"
-       class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
-      <i class="fa-solid fa-wand-magic-sparkles"></i> AI Recommendations
-    </a>
+    <div class="flex gap-2">
+      <a href="{{ url_for('wp_bp.content_brief') }}"
+         class="inline-flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 text-sm">
+        <i class="fa-solid fa-file-pen"></i> Content Brief
+      </a>
+      <a href="{{ url_for('seo_bp.optimize') }}"
+         class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> AI Recommendations
+      </a>
+    </div>
   </div>
 
   {% if error %}
-  <div class="bg-yellow-50 border border-yellow-300 rounded-xl p-6 mb-6 flex items-start gap-4">
-    <i class="fa-solid fa-triangle-exclamation text-yellow-500 text-2xl mt-0.5"></i>
+  <div class="bg-yellow-50 border border-yellow-300 rounded-xl p-5 flex items-start gap-4">
+    <i class="fa-solid fa-triangle-exclamation text-yellow-500 text-xl mt-0.5"></i>
     <div>
       <p class="font-semibold text-yellow-900">{{ error }}</p>
       {% if not gsc_connected %}
-      <a href="{{ url_for('google_bp.connect_search_console') }}"
+      <a href="{{ url_for('google_bp.index') }}"
          class="inline-block mt-3 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
         Connect Google Search Console
       </a>
@@ -31,7 +65,7 @@
   {% endif %}
 
   {% if rows %}
-  <div class="bg-white rounded-xl shadow border overflow-hidden">
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
     <table class="min-w-full text-sm">
       <thead class="bg-gray-50 border-b">
         <tr>
@@ -39,33 +73,66 @@
           <th class="px-4 py-3 text-right font-semibold text-gray-700">Clicks</th>
           <th class="px-4 py-3 text-right font-semibold text-gray-700">Impressions</th>
           <th class="px-4 py-3 text-right font-semibold text-gray-700">CTR</th>
-          <th class="px-4 py-3 text-right font-semibold text-gray-700">Avg Position</th>
+          <th class="px-4 py-3 text-right font-semibold text-gray-700">Position</th>
+          <th class="px-4 py-3 text-center font-semibold text-gray-700">Trend</th>
+          <th class="px-4 py-3"></th>
         </tr>
       </thead>
-      <tbody>
+      <tbody class="divide-y divide-gray-100">
         {% for r in rows %}
-        <tr class="odd:bg-white even:bg-gray-50 hover:bg-indigo-50 transition">
-          <td class="px-4 py-2 text-gray-900 font-medium">{{ r.query }}</td>
-          <td class="px-4 py-2 text-right text-gray-700">{{ "{:,}".format(r.clicks) }}</td>
-          <td class="px-4 py-2 text-right text-gray-500">{{ "{:,}".format(r.impr) }}</td>
-          <td class="px-4 py-2 text-right
-            {% if r.ctr|float > 5 %}text-green-700 font-semibold
-            {% elif r.ctr|float > 2 %}text-yellow-700
+        {% set hist = history.get(r.query, []) %}
+        {% set prev_pos = hist[-2] if hist|length >= 2 else none %}
+        {% set delta = (prev_pos - r.pos) | round(1) if prev_pos else none %}
+        <tr class="hover:bg-indigo-50 transition">
+          <td class="px-4 py-2.5 font-medium text-gray-900 max-w-xs">
+            <div class="truncate">{{ r.query }}</div>
+          </td>
+          <td class="px-4 py-2.5 text-right text-gray-700">{{ "{:,}".format(r.clicks) }}</td>
+          <td class="px-4 py-2.5 text-right text-gray-500">{{ "{:,}".format(r.impr) }}</td>
+          <td class="px-4 py-2.5 text-right
+            {% set ctr_val = r.ctr | replace('%','') | float %}
+            {% if ctr_val > 5 %}text-green-700 font-semibold
+            {% elif ctr_val > 2 %}text-amber-700
             {% else %}text-red-600{% endif %}">{{ r.ctr }}</td>
-          <td class="px-4 py-2 text-right
-            {% if r.pos <= 3 %}text-green-700 font-semibold
-            {% elif r.pos <= 10 %}text-yellow-700
-            {% else %}text-red-600{% endif %}">{{ r.pos }}</td>
+          <td class="px-4 py-2.5 text-right">
+            <span class="font-semibold
+              {% if r.pos <= 3 %}text-green-700
+              {% elif r.pos <= 10 %}text-amber-700
+              {% else %}text-red-600{% endif %}">{{ r.pos }}</span>
+            {% if delta is not none and delta != 0 %}
+            <span class="text-xs ml-1 {% if delta > 0 %}text-green-600{% else %}text-red-500{% endif %}">
+              {% if delta > 0 %}▲{{ delta }}{% else %}▼{{ delta | abs }}{% endif %}
+            </span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-2.5 text-center">
+            {% if hist | length >= 2 %}
+              {{ sparkline(hist) }}
+            {% else %}
+              <span class="text-xs text-gray-300">—</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-2.5 text-right">
+            <a href="{{ url_for('wp_bp.content_brief') }}?keyword={{ r.query | urlencode }}"
+               class="text-xs text-indigo-600 hover:underline whitespace-nowrap">Brief →</a>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+
+  <p class="text-xs text-gray-400 text-center">
+    Trend sparklines show position history from monitoring snapshots (lower = better ranking).
+    {% if not history %}Run a monitoring check to start building history.{% endif %}
+  </p>
+
   {% elif gsc_connected %}
   <div class="bg-white rounded-xl shadow p-12 text-center">
     <i class="fa-solid fa-magnifying-glass text-gray-300 text-5xl mb-4"></i>
     <p class="text-gray-600">No ranking data found for the last 28 days.</p>
   </div>
   {% endif %}
+
 </div>
 {% endblock %}

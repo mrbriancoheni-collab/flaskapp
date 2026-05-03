@@ -1,0 +1,125 @@
+{% extends "base_app.html" %}
+{% block title %}Page Performance · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Page Performance</h1>
+      <p class="text-gray-500 text-sm mt-1">
+        {% if site_url %}{{ site_url }} · {% endif %}Per-page GSC data — last 28 days vs previous 28 days
+      </p>
+    </div>
+    {% if pages %}
+    <span class="text-xs text-gray-400">{{ pages | length }} pages</span>
+    {% endif %}
+  </div>
+
+  {% if error %}
+  <div class="bg-yellow-50 border border-yellow-300 rounded-xl p-5 flex items-start gap-4">
+    <i class="fa-solid fa-triangle-exclamation text-yellow-500 text-xl mt-0.5"></i>
+    <div>
+      <p class="font-semibold text-yellow-900">{{ error }}</p>
+      {% if not gsc_connected %}
+      <a href="{{ url_for('google_bp.index') }}"
+         class="inline-block mt-3 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
+        Connect Google Search Console
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if pages %}
+
+  <!-- Top-level KPIs -->
+  {% set total_clicks = pages | sum(attribute='clicks') %}
+  {% set total_impr   = pages | sum(attribute='impressions') %}
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="bg-white rounded-xl border shadow-sm p-4">
+      <p class="text-xs text-gray-400 uppercase font-semibold mb-1">Total Clicks</p>
+      <p class="text-2xl font-bold text-gray-800">{{ "{:,}".format(total_clicks) }}</p>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-4">
+      <p class="text-xs text-gray-400 uppercase font-semibold mb-1">Total Impressions</p>
+      <p class="text-2xl font-bold text-gray-800">{{ "{:,}".format(total_impr) }}</p>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-4">
+      <p class="text-xs text-gray-400 uppercase font-semibold mb-1">Pages Tracked</p>
+      <p class="text-2xl font-bold text-gray-800">{{ pages | length }}</p>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-4">
+      <p class="text-xs text-gray-400 uppercase font-semibold mb-1">Improving Pages</p>
+      <p class="text-2xl font-bold text-green-600">
+        {{ pages | selectattr('trend', '>', 0) | list | length }}
+      </p>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50 border-b">
+        <tr>
+          <th class="px-4 py-3 text-left font-semibold text-gray-700">Page</th>
+          <th class="px-4 py-3 text-right font-semibold text-gray-700">Clicks</th>
+          <th class="px-4 py-3 text-right font-semibold text-gray-700">Impressions</th>
+          <th class="px-4 py-3 text-right font-semibold text-gray-700">CTR</th>
+          <th class="px-4 py-3 text-right font-semibold text-gray-700">Position</th>
+          <th class="px-4 py-3 text-center font-semibold text-gray-700">vs Prev 28d</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for p in pages %}
+        <tr class="hover:bg-indigo-50 transition">
+          <td class="px-4 py-2.5 max-w-xs">
+            <a href="{{ p.page }}" target="_blank" rel="noopener"
+               class="text-gray-800 hover:text-indigo-600 truncate block text-xs font-mono">
+              {{ p.page | replace(site_url, '') | truncate(55) or '/' }}
+            </a>
+          </td>
+          <td class="px-4 py-2.5 text-right font-semibold text-gray-800">{{ "{:,}".format(p.clicks) }}</td>
+          <td class="px-4 py-2.5 text-right text-gray-500">{{ "{:,}".format(p.impressions) }}</td>
+          <td class="px-4 py-2.5 text-right
+            {% if p.ctr > 5 %}text-green-700 font-semibold
+            {% elif p.ctr > 2 %}text-amber-700
+            {% else %}text-red-600{% endif %}">{{ p.ctr }}%</td>
+          <td class="px-4 py-2.5 text-right">
+            <span class="font-semibold
+              {% if p.position <= 3 %}text-green-700
+              {% elif p.position <= 10 %}text-amber-700
+              {% else %}text-red-600{% endif %}">{{ p.position }}</span>
+          </td>
+          <td class="px-4 py-2.5 text-center text-xs">
+            {% if p.trend is not none %}
+              <span class="font-semibold {% if p.trend > 0 %}text-green-600{% elif p.trend < 0 %}text-red-500{% else %}text-gray-400{% endif %}">
+                {% if p.trend > 0 %}▲ +{{ p.trend }}%{% elif p.trend < 0 %}▼ {{ p.trend }}%{% else %}—{% endif %}
+              </span>
+            {% else %}
+              <span class="text-gray-300">New</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-2.5 text-right">
+            <a href="{{ url_for('wp_bp.seo_audit') }}?url={{ p.page | urlencode }}"
+               class="text-xs text-indigo-500 hover:underline whitespace-nowrap">Audit →</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="text-xs text-gray-400 text-center">
+    Data from Google Search Console. Trend compares last 28 days vs the prior 28 days.
+  </p>
+
+  {% elif gsc_connected %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">
+    <i class="fa-solid fa-file-circle-question text-5xl mb-4"></i>
+    <p class="text-gray-600">No page data found for the last 28 days.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

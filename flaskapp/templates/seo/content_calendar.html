@@ -1,0 +1,166 @@
+{% extends "base_app.html" %}
+{% block title %}Content Calendar · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">AI Content Calendar</h1>
+      <p class="text-gray-500 text-sm mt-1">
+        12-week publishing plan built from your keyword gaps, quick wins, and declining pages
+      </p>
+    </div>
+    {% if calendar_items %}
+    <a href="{{ url_for('seo_bp.content_calendar') }}"
+       class="inline-flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 text-sm text-gray-600">
+      <i class="fa-solid fa-rotate"></i> Regenerate
+    </a>
+    {% endif %}
+  </div>
+
+  {% if error %}
+  <div class="bg-yellow-50 border border-yellow-300 rounded-xl p-5 flex items-start gap-4">
+    <i class="fa-solid fa-triangle-exclamation text-yellow-500 text-xl mt-0.5"></i>
+    <div>
+      <p class="font-semibold text-yellow-900">{{ error }}</p>
+      {% if not gsc_connected %}
+      <a href="{{ url_for('google_bp.index') }}"
+         class="inline-block mt-3 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
+        Connect Google Search Console
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if signals_summary %}
+  <!-- Signals used -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div class="bg-white rounded-xl border shadow-sm p-3 text-center">
+      <p class="text-xl font-bold text-gray-800">{{ signals_summary.missing_count }}</p>
+      <p class="text-xs text-gray-500 mt-0.5">Untapped Keywords</p>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-3 text-center">
+      <p class="text-xl font-bold text-amber-600">{{ signals_summary.quick_wins }}</p>
+      <p class="text-xs text-gray-500 mt-0.5">Quick Wins</p>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-3 text-center">
+      <p class="text-xl font-bold text-red-500">{{ signals_summary.declining_count }}</p>
+      <p class="text-xs text-gray-500 mt-0.5">Declining Pages</p>
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-3 text-center">
+      <p class="text-xl font-bold text-purple-500">{{ signals_summary.cannibal_count }}</p>
+      <p class="text-xs text-gray-500 mt-0.5">Cannibalisations</p>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if calendar_items %}
+  <!-- Calendar grid — group by week -->
+  {% set ns = namespace(current_week=0) %}
+  <div class="space-y-2">
+    {% for item in calendar_items | sort(attribute='week') %}
+    {% if item.week != ns.current_week %}
+      {% set ns.current_week = item.week %}
+      <div class="pt-2">
+        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest px-1 mb-1">
+          Week {{ item.week }}
+        </h3>
+      </div>
+    {% endif %}
+
+    <div class="bg-white rounded-xl shadow-sm border p-4 flex flex-wrap items-start gap-4
+      {% if item.impact == 'high' %}border-l-4 border-l-green-400
+      {% elif item.impact == 'medium' %}border-l-4 border-l-amber-300
+      {% else %}border-l-4 border-l-gray-200{% endif %}">
+
+      <div class="flex-1 min-w-0">
+        <div class="flex flex-wrap items-center gap-2 mb-1">
+          <!-- Action badge -->
+          {% if item.action == 'new_post' %}
+          <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+            <i class="fa-solid fa-plus mr-0.5"></i>New Post
+          </span>
+          {% elif item.action == 'refresh' %}
+          <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+            <i class="fa-solid fa-rotate mr-0.5"></i>Refresh
+          </span>
+          {% else %}
+          <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">
+            <i class="fa-solid fa-compress mr-0.5"></i>Consolidate
+          </span>
+          {% endif %}
+          <!-- Impact badge -->
+          <span class="text-xs font-medium
+            {% if item.impact == 'high' %}text-green-600{% elif item.impact == 'medium' %}text-amber-600{% else %}text-gray-400{% endif %}">
+            {{ item.impact | capitalize }} impact
+          </span>
+        </div>
+
+        <p class="font-semibold text-gray-900">{{ item.title }}</p>
+        <p class="text-xs text-indigo-600 mt-0.5 font-mono">{{ item.keyword }}</p>
+        <p class="text-sm text-gray-500 mt-1">{{ item.reason }}</p>
+
+        {% if item.source_url %}
+        <p class="text-xs text-gray-400 mt-1 truncate">
+          <i class="fa-solid fa-link mr-1"></i>
+          <a href="{{ item.source_url }}" target="_blank" rel="noopener" class="hover:text-indigo-500">
+            {{ item.source_url | truncate(70) }}
+          </a>
+        </p>
+        {% endif %}
+      </div>
+
+      <div class="flex flex-col gap-2 flex-shrink-0">
+        {% if item.action == 'new_post' %}
+        <a href="{{ url_for('wp_bp.content_brief') }}?keyword={{ item.keyword | urlencode }}"
+           class="text-xs px-3 py-1.5 border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 whitespace-nowrap">
+          <i class="fa-solid fa-file-pen mr-1"></i>Brief
+        </a>
+        <a href="{{ url_for('wp_bp.new_post') }}?keyword={{ item.keyword | urlencode }}&title={{ item.title | urlencode }}"
+           class="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 whitespace-nowrap">
+          <i class="fa-solid fa-pen mr-1"></i>Write
+        </a>
+        {% elif item.action in ('refresh', 'consolidate') and item.source_url %}
+        <form method="POST" action="{{ url_for('wp_bp.queue_refresh') }}">
+          <input type="hidden" name="post_url" value="{{ item.source_url }}">
+          <button type="submit"
+                  class="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap">
+            <i class="fa-solid fa-rotate mr-1"></i>Queue Refresh
+          </button>
+        </form>
+        {% else %}
+        <a href="{{ url_for('wp_bp.new_post') }}?keyword={{ item.keyword | urlencode }}&title={{ item.title | urlencode }}"
+           class="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 whitespace-nowrap">
+          <i class="fa-solid fa-pen mr-1"></i>Write
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <p class="text-xs text-gray-400 text-center">
+    Calendar generated from your Google Search Console data. Regenerate anytime — it updates as your rankings change.
+  </p>
+
+  {% elif gsc_connected %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">
+    <i class="fa-solid fa-calendar-days text-5xl mb-4"></i>
+    <p class="text-gray-600">No keyword data found to generate a calendar.</p>
+    <p class="text-xs mt-1">Build up some GSC data by running a monitoring check first.</p>
+  </div>
+  {% elif not error %}
+  <div class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">
+    <i class="fa-solid fa-calendar-days text-5xl mb-4"></i>
+    <p class="text-gray-600 mb-4">Connect Google Search Console to generate a data-driven content calendar.</p>
+    <a href="{{ url_for('google_bp.index') }}"
+       class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
+      Connect GSC
+    </a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -1422,3 +1422,17 @@ def ab_test_pick_winner(group_id: str):
     except Exception as exc:
         db.session.rollback()
         return jsonify({"error": str(exc)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Google Ads Tool — Analysis Document
+# ---------------------------------------------------------------------------
+@gads_bp.get("/analysis")
+@login_required
+def analysis_doc():
+    """Render the Google Ads Tool analysis & architecture document."""
+    import datetime
+    return render_template(
+        "google/ads/analysis_doc.html",
+        now=datetime.datetime.utcnow().strftime("%B %d, %Y"),
+    )

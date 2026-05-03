@@ -78,6 +78,18 @@
        class="whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-gray-500 hover:text-gray-700">
       Search Terms
     </a>
+    <a href="{{ url_for('gads_bp.conversions') }}"
+       class="whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-gray-500 hover:text-gray-700">
+      Conversions
+    </a>
+    <a href="{{ url_for('gads_bp.rules_list') }}"
+       class="whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-gray-500 hover:text-gray-700">
+      Rules
+    </a>
+    <a href="{{ url_for('gads_bp.ab_tests') }}"
+       class="whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-gray-500 hover:text-gray-700">
+      A/B Tests
+    </a>
     <div class="ml-auto flex-shrink-0 pb-1">
       <button id="gads-sync-btn"
               class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 flex items-center gap-1.5">
@@ -341,7 +353,8 @@
               <th class="text-right px-3 py-2 w-24" title="Search Impression Share">Impr. Share</th>
               <th class="text-right px-3 py-2 w-24" title="IS Lost to Budget">Lost/Budget</th>
               <th class="text-right px-3 py-2 w-24" title="IS Lost to Rank">Lost/Rank</th>
-              <th class="text-center px-3 py-2 w-24">Actions</th>
+              <th class="text-left px-3 py-2 w-36">Bid Strategy</th>
+              <th class="text-center px-3 py-2 w-32">Actions</th>
             </tr>
           </thead>
           <tbody id="campaigns-tbody" class="divide-y">
@@ -421,15 +434,36 @@
                   </span>
                 {% else %}<span class="text-gray-300">—</span>{% endif %}
               </td>
+              <td class="px-3 py-2">
+                <select class="bid-strategy-select text-xs rounded border px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-300 w-full"
+                        data-id="{{ c.id }}">
+                  {% for strat, label in [
+                    ('manual_cpc','Manual CPC'),
+                    ('enhanced_cpc','Enhanced CPC'),
+                    ('target_cpa','Target CPA'),
+                    ('target_roas','Target ROAS'),
+                    ('maximize_conversions','Max Conversions'),
+                    ('maximize_conversion_value','Max Conv. Value'),
+                  ] %}
+                  <option value="{{ strat }}" {{ 'selected' if (c.bid_strategy or 'manual_cpc') == strat else '' }}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </td>
               <td class="px-3 py-2 text-center">
-                <button class="camp-toggle-btn text-xs px-2 py-1 rounded border hover:bg-gray-50 transition"
-                        data-id="{{ c.id }}" data-status="{{ c.status }}" title="{{ 'Pause' if c.status == 'enabled' else 'Enable' }}">
-                  {% if c.status == 'enabled' %}
-                  <i class="fa-solid fa-pause text-amber-500"></i>
-                  {% else %}
-                  <i class="fa-solid fa-play text-green-600"></i>
-                  {% endif %}
-                </button>
+                <div class="flex justify-center gap-1">
+                  <button class="camp-toggle-btn text-xs px-2 py-1 rounded border hover:bg-gray-50 transition"
+                          data-id="{{ c.id }}" data-status="{{ c.status }}" title="{{ 'Pause' if c.status == 'enabled' else 'Enable' }}">
+                    {% if c.status == 'enabled' %}
+                    <i class="fa-solid fa-pause text-amber-500"></i>
+                    {% else %}
+                    <i class="fa-solid fa-play text-green-600"></i>
+                    {% endif %}
+                  </button>
+                  <button class="camp-clone-btn text-xs px-2 py-1 rounded border hover:bg-gray-50 transition text-gray-500"
+                          data-id="{{ c.id }}" data-name="{{ c.name | e }}" title="Clone campaign">
+                    <i class="fa-solid fa-copy"></i>
+                  </button>
+                </div>
               </td>
             </tr>
             {% endfor %}
@@ -1483,6 +1517,72 @@
     loadKPI(30);
     if (tab === "optimizer") loadOptimizer();
   } catch(_) {}
+})();
+
+// Bid strategy selects (item 9)
+(function () {
+  document.querySelectorAll('.bid-strategy-select').forEach(sel => {
+    sel.addEventListener('change', async function () {
+      const id = this.dataset.id;
+      const strategy = this.value;
+      let targetCpa = null, targetRoas = null;
+      if (strategy === 'target_cpa') {
+        targetCpa = prompt('Enter target CPA ($):');
+        if (!targetCpa) { this.value = this.dataset.prev || 'manual_cpc'; return; }
+      } else if (strategy === 'target_roas') {
+        targetRoas = prompt('Enter target ROAS (e.g. 4.0 for 400%):');
+        if (!targetRoas) { this.value = this.dataset.prev || 'manual_cpc'; return; }
+      }
+      this.dataset.prev = strategy;
+      try {
+        const r = await fetch(`/account/google/ads/campaigns/${id}/bid-strategy`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({bid_strategy: strategy, target_cpa: targetCpa, target_roas: targetRoas}),
+        });
+        const data = await r.json();
+        if (!data.ok) alert('Error saving bid strategy: ' + data.error);
+      } catch (e) {
+        alert('Request failed: ' + e.message);
+      }
+    });
+    // Store initial value
+    sel.dataset.prev = sel.value;
+  });
+})();
+
+// Campaign clone buttons (item 8)
+(function () {
+  document.querySelectorAll('.camp-clone-btn').forEach(btn => {
+    btn.addEventListener('click', async function () {
+      const id = this.dataset.id;
+      const srcName = this.dataset.name;
+      const newName = prompt('Clone name:', srcName + ' (Copy)');
+      if (!newName) return;
+      this.disabled = true;
+      this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+      try {
+        const r = await fetch(`/account/google/ads/campaigns/${id}/clone`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({name: newName}),
+        });
+        const data = await r.json();
+        if (data.ok) {
+          this.innerHTML = '<i class="fa-solid fa-check text-green-600"></i>';
+          setTimeout(() => window.location.reload(), 800);
+        } else {
+          alert('Clone failed: ' + data.error);
+          this.innerHTML = '<i class="fa-solid fa-copy"></i>';
+          this.disabled = false;
+        }
+      } catch (e) {
+        alert('Request failed: ' + e.message);
+        this.innerHTML = '<i class="fa-solid fa-copy"></i>';
+        this.disabled = false;
+      }
+    });
+  });
 })();
 
 // Sync button

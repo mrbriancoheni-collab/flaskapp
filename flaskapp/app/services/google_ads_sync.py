@@ -509,3 +509,83 @@ def sync_search_terms(
         return {"synced": 0, "error": str(exc)}
 
     return {"synced": synced}
+
+
+def sync_conversions(account_id: int) -> Dict[str, Any]:
+    """
+    Pull conversion actions from Google Ads and upsert into conversion_actions table.
+    Returns {"synced": N, "error": str|None}.
+    """
+    from app import db
+    from app.models_ads import ConversionAction
+    from app.google.gaql_queries import CONVERSION_ACTIONS
+
+    try:
+        from app.google.utils_ads import google_ads_search, resolve_ads_context
+        from app.auth.token_utils import ensure_access_token
+    except ImportError as exc:
+        return {"synced": 0, "error": f"Import error: {exc}"}
+
+    ctx = resolve_ads_context(account_id)
+    if not ctx:
+        return {"synced": 0, "error": "No Google Ads context"}
+
+    token = ensure_access_token(account_id, ["google_ads"])
+    if not token:
+        return {"synced": 0, "error": "No access token"}
+
+    rows = google_ads_search(
+        customer_id=ctx["customer_id"],
+        login_customer_id=ctx.get("login_customer_id"),
+        access_token=token,
+        query=CONVERSION_ACTIONS,
+    )
+
+    synced = 0
+    for row in rows:
+        ca = row.get("conversionAction", {})
+        metrics = row.get("metrics", {})
+        vs = ca.get("valueSettings", {})
+
+        gid = _digits(ca.get("id"))
+        if not gid:
+            continue
+
+        existing = ConversionAction.query.filter_by(
+            account_id=account_id,
+            google_conversion_id=gid,
+        ).first()
+
+        fields = dict(
+            name=ca.get("name") or "",
+            category=ca.get("category"),
+            type_=ca.get("type"),
+            status=ca.get("status"),
+            counting_type=ca.get("countingType"),
+            value_settings_default=_float(vs.get("defaultValue")),
+            value_settings_currency=vs.get("currencyCode"),
+            include_in_conversions=ca.get("includeInConversionsMetric", True),
+            click_through_window_days=_int(ca.get("clickThroughLookbackWindowDays")) or None,
+            view_through_window_days=_int(ca.get("viewThroughLookbackWindowDays")) or None,
+            conversions_30d=_float(metrics.get("conversions")),
+            conversion_value_30d=_float(metrics.get("conversionsValue")),
+        )
+
+        if existing:
+            for k, v in fields.items():
+                setattr(existing, k, v)
+        else:
+            db.session.add(ConversionAction(
+                account_id=account_id,
+                google_conversion_id=gid,
+                **fields,
+            ))
+        synced += 1
+
+    try:
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        return {"synced": 0, "error": str(exc)}
+
+    return {"synced": synced}

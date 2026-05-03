@@ -1670,15 +1670,15 @@ def ads_ai_summary_json():
 @google_bp.route("/", methods=["GET"], endpoint="index")
 @login_required
 def index():
-    """Google integrations index with session caching to prevent OOM."""
+    """Google integrations overview dashboard."""
     from datetime import datetime, timedelta
 
     aid = current_account_id()
-
-    # Use session cache to prevent repeated DB calls (1 hour cache)
     force_refresh = request.args.get('refresh') == '1'
     cache_key = f"google_connected_{aid}"
 
+    # ── Connection status (cached 1 h, busted on ?refresh=1) ──────────────
+    connected = {}
     try:
         if not force_refresh and cache_key in session:
             cached = session.get(cache_key)
@@ -1686,63 +1686,136 @@ def index():
                 try:
                     cache_time = datetime.fromisoformat(cached["__cached_at"])
                     if datetime.utcnow() - cache_time < timedelta(hours=1):
-                        current_app.logger.info(f"Using cached connection status for account {aid}")
                         connected = {k: v for k, v in cached.items() if k != "__cached_at"}
-                        return render_template("google/index.html", connected=connected, epn=request.endpoint)
                 except (ValueError, TypeError):
                     pass
 
-        # Fetch fresh connection status with error handling for each check
-        connected = {}
-        try:
-            connected["ga"] = _is_connected(aid, "ga")
-        except Exception as e:
-            current_app.logger.error(f"Error checking GA connection: {e}")
-            connected["ga"] = False
-
-        try:
-            connected["ads"] = _is_connected(aid, "ads")
-        except Exception as e:
-            current_app.logger.error(f"Error checking Ads connection: {e}")
-            connected["ads"] = False
-
-        try:
-            connected["gsc"] = _is_connected(aid, "gsc")
-        except Exception as e:
-            current_app.logger.error(f"Error checking GSC connection: {e}")
-            connected["gsc"] = False
-
-        try:
-            connected["gmb"] = _is_connected(aid, "gmb")
-        except Exception as e:
-            current_app.logger.error(f"Error checking GMB connection: {e}")
-            connected["gmb"] = False
-
-        try:
-            connected["lsa"] = _is_connected(aid, "lsa")
-        except Exception as e:
-            current_app.logger.error(f"Error checking LSA connection: {e}")
-            connected["lsa"] = False
-
-        # Cache the result
-        connected["__cached_at"] = datetime.utcnow().isoformat()
-        session[cache_key] = connected
-
-        # Remove timestamp before rendering
-        display_connected = {k: v for k, v in connected.items() if k != "__cached_at"}
-
-        return render_template("google/index.html", connected=display_connected, epn=request.endpoint)
-
+        if not connected:
+            for prod in ("ads", "ga", "gsc", "gmb", "lsa"):
+                try:
+                    connected[prod] = _is_connected(aid, prod)
+                except Exception:
+                    connected[prod] = False
+            session[cache_key] = {**connected, "__cached_at": datetime.utcnow().isoformat()}
     except Exception as e:
-        current_app.logger.error(f"Error in Google index route: {e}", exc_info=True)
-        # Fallback to all disconnected
-        return render_template("google/index.html", connected={
-            "ga": False,
-            "ads": False,
-            "gsc": False,
-            "gmb": False,
-            "lsa": False
-        }, epn=request.endpoint)
+        current_app.logger.error(f"Error checking connections: {e}")
+        connected = {p: False for p in ("ads", "ga", "gsc", "gmb", "lsa")}
+
+    # ── Token health: last updated timestamp per product ──────────────────
+    token_health = {}
+    try:
+        rows = db.session.execute(text("""
+            SELECT product, updated_at
+            FROM google_oauth_tokens
+            WHERE account_id = :aid
+        """), {"aid": aid}).mappings().all()
+        now = datetime.utcnow()
+        for r in rows:
+            age = now - r["updated_at"] if r["updated_at"] else None
+            token_health[r["product"]] = {
+                "updated_at": r["updated_at"],
+                "age_days": age.days if age else None,
+                "stale": age.days > 45 if age else False,  # refresh tokens typically last 60d
+            }
+    except Exception:
+        pass
+
+    # ── Mini-KPIs per product from local DB ───────────────────────────────
+    kpis = {}
+
+    # Ads: 30d spend + conversions from GadsStatsDaily
+    if connected.get("ads"):
+        try:
+            r = db.session.execute(text("""
+                SELECT
+                    SUM(cost_micros) / 1000000.0 AS spend,
+                    SUM(conversions)              AS conversions,
+                    SUM(clicks)                   AS clicks,
+                    MAX(date)                     AS last_date
+                FROM gads_stats_daily
+                WHERE account_id = :aid
+                  AND entity_type = 'campaign'
+                  AND date >= (CURRENT_DATE - INTERVAL 30 DAY)
+            """), {"aid": aid}).mappings().first()
+            if r and r["spend"]:
+                kpis["ads"] = {
+                    "spend": round(float(r["spend"] or 0), 2),
+                    "conversions": round(float(r["conversions"] or 0), 1),
+                    "clicks": int(r["clicks"] or 0),
+                    "last_sync": str(r["last_date"]) if r["last_date"] else None,
+                }
+        except Exception:
+            pass
+
+    # GSC: 30d clicks + impressions from seo_keyword_positions or gads fallback
+    if connected.get("gsc"):
+        try:
+            r = db.session.execute(text("""
+                SELECT SUM(clicks) AS clicks, SUM(impressions) AS impressions,
+                       ROUND(AVG(position), 1) AS avg_pos, MAX(date_end) AS last_date
+                FROM seo_keyword_positions
+                WHERE account_id = :aid
+                  AND date_end >= (CURRENT_DATE - INTERVAL 30 DAY)
+            """), {"aid": aid}).mappings().first()
+            if r and r["clicks"]:
+                kpis["gsc"] = {
+                    "clicks": int(r["clicks"] or 0),
+                    "impressions": int(r["impressions"] or 0),
+                    "avg_pos": float(r["avg_pos"] or 0),
+                    "last_sync": str(r["last_date"]) if r["last_date"] else None,
+                }
+        except Exception:
+            pass
+
+    # Optimizer: open recommendation count
+    optimizer_count = 0
+    try:
+        optimizer_count = db.session.execute(text(
+            "SELECT COUNT(*) FROM optimizer_recommendations WHERE account_id=:aid AND status='open'"
+        ), {"aid": aid}).scalar() or 0
+    except Exception:
+        pass
+
+    # Automation rules: enabled count + actions today
+    rules_count = 0
+    actions_today = 0
+    try:
+        rules_count = db.session.execute(text(
+            "SELECT COUNT(*) FROM ai_action_rules WHERE account_id=:aid AND enabled=1"
+        ), {"aid": aid}).scalar() or 0
+        actions_today = db.session.execute(text(
+            "SELECT COUNT(*) FROM ai_actions WHERE account_id=:aid AND DATE(created_at)=CURDATE()"
+        ), {"aid": aid}).scalar() or 0
+    except Exception:
+        pass
+
+    # Last sync timestamp (most recent GadsStatsDaily date)
+    last_ads_sync = None
+    try:
+        r = db.session.execute(text(
+            "SELECT MAX(date) AS d FROM gads_stats_daily WHERE account_id=:aid"
+        ), {"aid": aid}).mappings().first()
+        last_ads_sync = str(r["d"]) if r and r["d"] else None
+    except Exception:
+        pass
+
+    # Connected count for progress bar
+    connected_count = sum(1 for v in connected.values() if v)
+    total_products = len(connected)
+
+    return render_template(
+        "google/index.html",
+        connected=connected,
+        token_health=token_health,
+        kpis=kpis,
+        optimizer_count=optimizer_count,
+        rules_count=rules_count,
+        actions_today=actions_today,
+        last_ads_sync=last_ads_sync,
+        connected_count=connected_count,
+        total_products=total_products,
+        epn=request.endpoint,
+    )
 
 # ------------------------- GA Insights (ChatGPT) -------------------------
 
@@ -3420,8 +3493,11 @@ def ads_performance():
         historical_improvement = _get_demo_improvement_data()
 
     # Fetch daily performance data for the graph (last 30 days)
+    # Try live API first; fall back to GadsStatsDaily (local DB) if unavailable.
     daily_performance = []
-    if connected and account_performance and account_performance.get('has_data'):
+    daily_performance_error = None
+
+    if connected:
         try:
             from app.google.utils_ads import (
                 google_ads_search, resolve_ads_context
@@ -3461,7 +3537,40 @@ def ads_performance():
                             "impressions": int(m.get("impressions", 0)),
                         })
         except Exception as e:
-            current_app.logger.warning(f"Could not fetch daily performance for graph: {e}")
+            current_app.logger.warning(f"Could not fetch daily performance from API: {e}")
+            daily_performance_error = "Live data unavailable — showing cached data"
+
+    # Fallback: pull from GadsStatsDaily (populated by sync) if API returned nothing
+    if not daily_performance:
+        try:
+            fallback_rows = db.session.execute(text("""
+                SELECT date,
+                       SUM(cost_micros) / 1000000.0 AS cost,
+                       SUM(conversions)              AS conversions,
+                       SUM(clicks)                   AS clicks,
+                       SUM(impressions)              AS impressions
+                FROM gads_stats_daily
+                WHERE account_id = :aid
+                  AND entity_type = 'campaign'
+                  AND date >= (CURRENT_DATE - INTERVAL 30 DAY)
+                GROUP BY date
+                ORDER BY date ASC
+            """), {"aid": aid}).mappings().all()
+
+            for r in fallback_rows:
+                daily_performance.append({
+                    "date": str(r["date"]),
+                    "cost": round(float(r["cost"] or 0), 2),
+                    "conversions": round(float(r["conversions"] or 0), 1),
+                    "clicks": int(r["clicks"] or 0),
+                    "impressions": int(r["impressions"] or 0),
+                })
+            if daily_performance and daily_performance_error:
+                daily_performance_error = "Showing synced data (live API unavailable)"
+            elif not daily_performance:
+                daily_performance_error = None  # let template show "sync your account"
+        except Exception as e:
+            current_app.logger.warning(f"GadsStatsDaily fallback failed: {e}")
 
     # Transform actions into timeline format
     recent_changes = []
@@ -3568,6 +3677,7 @@ def ads_performance():
         historical_improvement=historical_improvement,
         account_performance=account_performance,
         daily_performance=daily_performance,
+        daily_performance_error=daily_performance_error,
         auth_error=auth_error,
         epn=request.endpoint,
         pending_decisions_count=pending_decisions_count,

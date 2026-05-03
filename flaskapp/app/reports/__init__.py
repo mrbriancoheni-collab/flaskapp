@@ -232,13 +232,154 @@ def index():
     )
 
 
-# ---- Stub for base_app link: prevents BuildError on url_for('reports_bp.cpl_dashboard') ----
 @reports_bp.route("/cpl", methods=["GET"], endpoint="cpl_dashboard")
 @login_required
 def cpl_dashboard():
-    # Redirect to index until a dedicated CPL view/template is implemented.
-    flash("Cost per Lead dashboard coming soon. Showing account reports overview for now.", "info")
-    return redirect(url_for("reports_bp.index"))
+    """Cross-source ROI: spend, leads, CPL, booking rate, revenue by channel."""
+    from datetime import datetime, timedelta
+    from decimal import Decimal
+
+    aid = current_account_id()
+    days = int(request.args.get("days", 30))
+    cutoff = datetime.utcnow() - timedelta(days=days)
+
+    # ── Source metadata ──────────────────────────────────────────────────────
+    SOURCE_META = {
+        "networx":    {"label": "Networx",       "icon": "fa-bolt",       "color": "blue"},
+        "elocal":     {"label": "eLocal",         "icon": "fa-phone",      "color": "orange"},
+        "glsa":       {"label": "GLSA",           "icon": "fa-google",     "color": "green"},
+        "google-ads": {"label": "Google Ads",     "icon": "fa-google",     "color": "blue"},
+        "facebook":   {"label": "Facebook Ads",   "icon": "fa-facebook",   "color": "indigo"},
+        "yelp":       {"label": "Yelp",           "icon": "fa-yelp",       "color": "red"},
+        "phone":      {"label": "Direct Calls",   "icon": "fa-phone",      "color": "purple"},
+        "webform":    {"label": "Web Form",       "icon": "fa-globe",      "color": "teal"},
+    }
+
+    is_sample = False
+    rows_map: dict = {}  # source -> {spend, leads, booked, revenue}
+
+    def _bucket(src):
+        rows_map.setdefault(src, {"spend": 0.0, "leads": 0, "booked": 0, "revenue": 0.0})
+        return rows_map[src]
+
+    # ── Lead counts from LeadIngest ──────────────────────────────────────────
+    try:
+        with db.engine.connect() as conn:
+            rows = conn.execute(text(
+                "SELECT source, COUNT(*) as cnt, "
+                "SUM(CASE WHEN status IN ('booked','completed') THEN 1 ELSE 0 END) as booked, "
+                "SUM(COALESCE(lead_cost, 0)) as total_cost "
+                "FROM lead_ingest WHERE account_id=:aid AND created_at>=:cutoff GROUP BY source"
+            ), {"aid": aid, "cutoff": cutoff}).fetchall()
+            for r in rows:
+                b = _bucket(r[0])
+                b["leads"] += int(r[1])
+                b["booked"] += int(r[2])
+                b["spend"] += float(r[3] or 0)
+    except Exception as exc:
+        current_app.logger.warning("cpl_dashboard lead_ingest query failed: %s", exc)
+
+    # ── Spend from AdSpend table (covers Google Ads, GLSA, etc.) ────────────
+    try:
+        with db.engine.connect() as conn:
+            spend_rows = conn.execute(text(
+                "SELECT source, SUM(amount) FROM ad_spend "
+                "WHERE account_id=:aid AND spend_date>=:cutoff GROUP BY source"
+            ), {"aid": aid, "cutoff": cutoff.date()}).fetchall()
+            for src, amt in spend_rows:
+                _bucket(src)["spend"] += float(amt or 0)
+    except Exception as exc:
+        current_app.logger.warning("cpl_dashboard ad_spend query failed: %s", exc)
+
+    # ── Revenue from CRM jobs ─────────────────────────────────────────────────
+    try:
+        with db.engine.connect() as conn:
+            rev_rows = conn.execute(text(
+                "SELECT lead_source, SUM(revenue_cents)/100.0 "
+                "FROM crm_jobs WHERE account_id=:aid AND job_date>=:cutoff "
+                "AND job_status='completed' GROUP BY lead_source"
+            ), {"aid": aid, "cutoff": cutoff.date()}).fetchall()
+            for src, rev in rev_rows:
+                if src:
+                    _bucket(src.lower().replace(" ", "-"))["revenue"] += float(rev or 0)
+    except Exception as exc:
+        current_app.logger.warning("cpl_dashboard crm_jobs query failed: %s", exc)
+
+    # ── Fall back to sample data if nothing real ─────────────────────────────
+    if not rows_map:
+        is_sample = True
+        rows_map = {
+            "google-ads": {"spend": 1200, "leads": 38, "booked": 12, "revenue": 8400},
+            "glsa":       {"spend": 780,  "leads": 22, "booked": 9,  "revenue": 6300},
+            "networx":    {"spend": 450,  "leads": 10, "booked": 4,  "revenue": 2800},
+            "elocal":     {"spend": 280,  "leads": 8,  "booked": 3,  "revenue": 2100},
+            "yelp":       {"spend": 0,    "leads": 5,  "booked": 1,  "revenue": 700},
+        }
+
+    # ── Build display rows ───────────────────────────────────────────────────
+    display_rows = []
+    for src, data in sorted(rows_map.items(), key=lambda x: -x[1]["leads"]):
+        meta = SOURCE_META.get(src, {"label": src.replace("-", " ").title(), "icon": "fa-circle", "color": "gray"})
+        leads = data["leads"]
+        booked = data["booked"]
+        spend = data["spend"]
+        revenue = data["revenue"]
+        cpl = spend / leads if leads and spend else None
+        book_rate = booked / leads if leads else None
+        roas = revenue / spend if spend else None
+        display_rows.append({
+            "source": src,
+            "label": meta["label"],
+            "icon": meta["icon"],
+            "color": meta["color"],
+            "leads": leads,
+            "booked": booked,
+            "spend": spend,
+            "revenue": revenue,
+            "cpl": cpl,
+            "book_rate": book_rate,
+            "roas": roas,
+        })
+
+    # ── Totals row ────────────────────────────────────────────────────────────
+    total_leads = sum(r["leads"] for r in display_rows)
+    total_booked = sum(r["booked"] for r in display_rows)
+    total_spend = sum(r["spend"] for r in display_rows)
+    total_revenue = sum(r["revenue"] for r in display_rows)
+    totals = {
+        "leads": total_leads,
+        "booked": total_booked,
+        "spend": total_spend,
+        "revenue": total_revenue,
+        "cpl": total_spend / total_leads if total_leads else None,
+        "book_rate": total_booked / total_leads if total_leads else None,
+        "roas": total_revenue / total_spend if total_spend else None,
+    }
+
+    present_sources = set(rows_map.keys())
+    missing_sources = []
+    if "networx" not in present_sources:
+        missing_sources.append("networx")
+    if "elocal" not in present_sources:
+        missing_sources.append("elocal")
+    try:
+        with db.engine.connect() as conn:
+            crm_row = conn.execute(text(
+                "SELECT id FROM crm_connections WHERE account_id=:aid LIMIT 1"
+            ), {"aid": aid}).first()
+        if not crm_row:
+            missing_sources.append("crm")
+    except Exception:
+        missing_sources.append("crm")
+
+    return render_template(
+        "reports/cpl.html",
+        rows=display_rows,
+        totals=totals,
+        days=days,
+        is_sample=is_sample,
+        missing_sources=missing_sources,
+    )
 
 
 # ---- Per-channel report pages (kept from original) ----

@@ -95,6 +95,12 @@ class AIAction(db.Model):
     undone_by = db.Column(db.Integer, nullable=True)  # User ID who undid the action (no FK to avoid constraint issues)
     undo_reason = db.Column(db.String(255), nullable=True)
 
+    # One-tap approval (Viktor-inspired: agent proposes → owner approves via link)
+    approval_token = db.Column(db.String(64), nullable=True, unique=True, index=True)
+    approval_sent_at = db.Column(db.DateTime, nullable=True)
+    approved_at = db.Column(db.DateTime, nullable=True)
+    rejected_at = db.Column(db.DateTime, nullable=True)
+
     # Timestamps
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -1,0 +1,80 @@
+{% extends "base_app.html" %}
+{% block title %}Pending Agent Actions – FieldSprout{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Pending Agent Actions</h1>
+    <p class="text-gray-500 text-sm mt-1">Review and approve or reject AI-proposed changes before they execute.</p>
+  </div>
+
+  {% if not actions %}
+    <div class="bg-white rounded-xl border border-gray-200 p-10 text-center">
+      <i class="fa-solid fa-circle-check text-4xl text-green-400 mb-3"></i>
+      <p class="font-semibold text-gray-900">All caught up!</p>
+      <p class="text-gray-500 text-sm mt-1">No actions awaiting approval.</p>
+    </div>
+  {% else %}
+    <div class="space-y-4">
+      {% for action in actions %}
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5" id="action-{{ action.id }}">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+                  Pending Approval
+                </span>
+                {% if action.confidence_score %}
+                  <span class="text-xs text-gray-400">{{ "%.0f"|format(action.confidence_score * 100) }}% confidence</span>
+                {% endif %}
+              </div>
+              <h3 class="font-semibold text-gray-900">{{ action.title }}</h3>
+              <p class="text-sm text-gray-600 mt-1">{{ action.description }}</p>
+              {% if action.reasoning %}
+                <p class="text-xs text-gray-500 mt-2 italic">{{ action.reasoning }}</p>
+              {% endif %}
+              <div class="flex gap-4 mt-2 text-xs text-gray-400">
+                {% if action.campaign_name %}
+                  <span><i class="fa-solid fa-bullhorn mr-1"></i>{{ action.campaign_name }}</span>
+                {% endif %}
+                {% if action.estimated_monthly_savings %}
+                  <span class="text-green-600 font-semibold">~${{ "%.0f"|format(action.estimated_monthly_savings) }}/mo savings</span>
+                {% endif %}
+                <span>{{ action.created_at.strftime('%b %-d, %-I:%M %p') }}</span>
+              </div>
+            </div>
+            <div class="flex flex-col gap-2 min-w-[120px]">
+              <button onclick="act({{ action.id }}, 'approve')"
+                      class="px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors">
+                <i class="fa-solid fa-check mr-1"></i> Approve
+              </button>
+              <button onclick="act({{ action.id }}, 'reject')"
+                      class="px-4 py-2 bg-white text-gray-600 text-sm font-semibold rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                <i class="fa-solid fa-xmark mr-1"></i> Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
+
+<script nonce="{{ g.csp_nonce }}">
+function act(id, action) {
+  fetch(`/api/agent-actions/${id}/${action}`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content },
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      const el = document.getElementById('action-' + id);
+      el.classList.add('opacity-40', 'pointer-events-none');
+      el.querySelector('h3').insertAdjacentHTML('afterend',
+        `<span class="inline-block mt-1 text-xs font-semibold text-${action === 'approve' ? 'green' : 'red'}-600">
+          ${action === 'approve' ? '✓ Approved & executing' : '✗ Rejected'}
+        </span>`);
+    }
+  });
+}
+</script>
+{% endblock %}

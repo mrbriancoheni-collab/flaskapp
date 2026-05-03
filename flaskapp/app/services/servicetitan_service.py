@@ -402,12 +402,23 @@ class ServiceTitanService:
         job.st_data = job_data
 
         # Parse dates
+        prev_status = job.job_status
         if job_data.get("scheduledOn"):
             job.scheduled_date = datetime.fromisoformat(job_data["scheduledOn"].replace("Z", "+00:00"))
         if job_data.get("completedOn"):
             job.completed_date = datetime.fromisoformat(job_data["completedOn"].replace("Z", "+00:00"))
 
         db.session.commit()
+
+        # Fire review request when a job transitions to completed for the first time
+        new_status = (job.job_status or "").lower()
+        if new_status == "completed" and (prev_status or "").lower() != "completed":
+            try:
+                from app.services.review_request_service import on_crm_job_completed
+                on_crm_job_completed(self.account_id, job)
+            except Exception:
+                pass  # never block the sync
+
         return job
 
     def calculate_capacity_metrics(self, target_date: datetime) -> Optional[ServiceTitanCapacity]:

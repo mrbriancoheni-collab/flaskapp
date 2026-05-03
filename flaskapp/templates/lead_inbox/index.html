@@ -1,0 +1,227 @@
+{% extends "base_app.html" %}
+{% block title %}Lead Inbox – FieldSprout{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 max-w-7xl mx-auto">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Lead Inbox</h1>
+      <p class="text-gray-500 text-sm mt-0.5">All leads from every source in one place.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <select onchange="window.location.search='?days='+this.value+'&source={{ source_filter }}'"
+              class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+        {% for d in [7, 14, 30, 60, 90] %}
+          <option value="{{ d }}" {% if days == d %}selected{% endif %}>Last {{ d }} days</option>
+        {% endfor %}
+      </select>
+      <a href="{{ url_for('lead_intake_bp.setup') }}"
+         class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+        <i class="fa-solid fa-gear"></i> Setup Sources
+      </a>
+    </div>
+  </div>
+
+  <!-- Summary strip -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Total Leads</p>
+      <p class="text-2xl font-bold text-gray-900 mt-1">{{ total }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">New / Unworked</p>
+      <p class="text-2xl font-bold text-orange-600 mt-1">{{ new_count }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Booked / Won</p>
+      <p class="text-2xl font-bold text-green-600 mt-1">{{ booked_count }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Total Lead Spend</p>
+      <p class="text-2xl font-bold text-gray-900 mt-1">${{ "%.0f"|format(total_cost) }}</p>
+    </div>
+  </div>
+
+  <!-- Source filter pills -->
+  <div class="flex flex-wrap gap-2 mb-5">
+    <a href="?days={{ days }}&source=all"
+       class="px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors
+              {% if source_filter == 'all' %}bg-gray-900 text-white border-gray-900{% else %}bg-white text-gray-600 border-gray-200 hover:border-gray-400{% endif %}">
+      All <span class="ml-1 opacity-70">{{ total }}</span>
+    </a>
+    {% for key, count in source_counts.items() %}
+      {% set meta = source_labels.get(key, source_labels['other']) %}
+      <a href="?days={{ days }}&source={{ key }}"
+         class="px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors
+                {% if source_filter == key %}bg-gray-900 text-white border-gray-900{% else %}bg-white text-gray-600 border-gray-200 hover:border-gray-400{% endif %}">
+        <i class="fa-brands {{ meta.icon }} mr-1"></i>{{ meta.label }}
+        <span class="ml-1 opacity-70">{{ count }}</span>
+      </a>
+    {% endfor %}
+  </div>
+
+  <!-- Kanban board -->
+  <div class="overflow-x-auto pb-4">
+    <div class="flex gap-4 min-w-max">
+      {% set status_meta = {
+        'new':       {'label': 'New',       'bg': 'bg-gray-100',   'dot': 'bg-gray-400'},
+        'contacted': {'label': 'Contacted', 'bg': 'bg-blue-50',    'dot': 'bg-blue-500'},
+        'booked':    {'label': 'Booked',    'bg': 'bg-yellow-50',  'dot': 'bg-yellow-500'},
+        'completed': {'label': 'Completed', 'bg': 'bg-green-50',   'dot': 'bg-green-500'},
+        'lost':      {'label': 'Lost',      'bg': 'bg-red-50',     'dot': 'bg-red-400'},
+      } %}
+      {% for status in statuses %}
+        {% set meta = status_meta[status] %}
+        {% set col_leads = kanban[status] %}
+        <div class="w-72 flex-shrink-0">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="w-2 h-2 rounded-full {{ meta.dot }}"></span>
+            <span class="font-semibold text-sm text-gray-700">{{ meta.label }}</span>
+            <span class="ml-auto text-xs text-gray-400 font-medium">{{ col_leads|length }}</span>
+          </div>
+          <div class="space-y-3" id="col-{{ status }}">
+            {% for lead in col_leads %}
+              <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow"
+                   onclick="openLeadModal('{{ lead.id }}')">
+                <!-- Source badge -->
+                <div class="flex items-center justify-between mb-2">
+                  <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold
+                               bg-{{ lead.source_color }}-100 text-{{ lead.source_color }}-800">
+                    <i class="fa-brands {{ lead.source_icon }} text-[10px]"></i>
+                    {{ lead.source_label }}
+                  </span>
+                  {% if lead.lead_cost %}
+                    <span class="text-xs text-gray-400">${{ "%.0f"|format(lead.lead_cost) }}</span>
+                  {% endif %}
+                </div>
+                <!-- Name + contact -->
+                <p class="font-semibold text-gray-900 text-sm truncate">{{ lead.name }}</p>
+                {% if lead.service_type %}
+                  <p class="text-xs text-gray-500 mt-0.5 truncate">{{ lead.service_type }}</p>
+                {% endif %}
+                <div class="flex items-center gap-3 mt-2">
+                  {% if lead.phone %}
+                    <a href="tel:{{ lead.phone }}" onclick="event.stopPropagation()"
+                       class="text-xs text-indigo-600 hover:underline">
+                      <i class="fa-solid fa-phone text-[10px] mr-0.5"></i>{{ lead.phone }}
+                    </a>
+                  {% endif %}
+                  {% if lead.city %}
+                    <span class="text-xs text-gray-400">{{ lead.city }}</span>
+                  {% endif %}
+                </div>
+                <!-- Time -->
+                <p class="text-xs text-gray-400 mt-2">
+                  {{ lead.occurred_at.strftime('%b %-d, %-I:%M %p') if lead.occurred_at else '' }}
+                </p>
+                <!-- Status actions -->
+                <div class="flex gap-1.5 mt-3 flex-wrap" onclick="event.stopPropagation()">
+                  {% for s in statuses %}
+                    {% if s != lead.status and s != 'lost' %}
+                      <button onclick="updateStatus('{{ lead.id }}', '{{ s }}')"
+                              class="px-2 py-1 text-xs rounded-md border border-gray-200 hover:bg-gray-50 text-gray-600 transition-colors">
+                        → {{ s|capitalize }}
+                      </button>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              </div>
+            {% else %}
+              <div class="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center">
+                <p class="text-xs text-gray-400">No leads</p>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<!-- Lead detail modal -->
+<div id="lead-modal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/50" onclick="closeLeadModal()"></div>
+  <div class="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-900 text-lg" id="modal-name">Lead Detail</h2>
+      <button onclick="closeLeadModal()" class="text-gray-400 hover:text-gray-600">
+        <i class="fa-solid fa-xmark text-xl"></i>
+      </button>
+    </div>
+    <div id="modal-body" class="px-6 py-5 space-y-4">
+      <div class="animate-pulse space-y-3">
+        <div class="h-4 bg-gray-100 rounded w-3/4"></div>
+        <div class="h-4 bg-gray-100 rounded w-1/2"></div>
+        <div class="h-4 bg-gray-100 rounded w-2/3"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script nonce="{{ g.csp_nonce }}">
+function updateStatus(leadId, newStatus) {
+  if (!leadId.startsWith('li_')) {
+    alert('Status updates are only available for Networx/eLocal/direct leads right now.');
+    return;
+  }
+  const rawId = leadId.replace('li_', '');
+  fetch(`/api/leads/${rawId}/status`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content,
+    },
+    body: JSON.stringify({ status: newStatus }),
+  }).then(r => r.json()).then(d => {
+    if (d.ok) window.location.reload();
+    else alert('Update failed: ' + (d.error || 'unknown'));
+  });
+}
+
+function openLeadModal(leadId) {
+  document.getElementById('lead-modal').classList.remove('hidden');
+  fetch(`/account/leads/${leadId}`)
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('modal-name').textContent = d.name || 'Lead Detail';
+      document.getElementById('modal-body').innerHTML = `
+        <div class="space-y-3">
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div class="bg-gray-50 rounded-lg px-3 py-2">
+              <p class="text-xs text-gray-500 font-medium">Source</p>
+              <p class="font-semibold text-gray-900 mt-0.5">${d.source_label || '—'}</p>
+            </div>
+            <div class="bg-gray-50 rounded-lg px-3 py-2">
+              <p class="text-xs text-gray-500 font-medium">Status</p>
+              <p class="font-semibold text-gray-900 mt-0.5 capitalize">${d.status || '—'}</p>
+            </div>
+            <div class="bg-gray-50 rounded-lg px-3 py-2">
+              <p class="text-xs text-gray-500 font-medium">Phone</p>
+              <p class="font-semibold text-gray-900 mt-0.5">${d.phone || '—'}</p>
+            </div>
+            <div class="bg-gray-50 rounded-lg px-3 py-2">
+              <p class="text-xs text-gray-500 font-medium">Email</p>
+              <p class="font-semibold text-gray-900 mt-0.5 truncate">${d.email || '—'}</p>
+            </div>
+            <div class="bg-gray-50 rounded-lg px-3 py-2">
+              <p class="text-xs text-gray-500 font-medium">Service</p>
+              <p class="font-semibold text-gray-900 mt-0.5">${d.service_type || '—'}</p>
+            </div>
+            <div class="bg-gray-50 rounded-lg px-3 py-2">
+              <p class="text-xs text-gray-500 font-medium">Lead Cost</p>
+              <p class="font-semibold text-gray-900 mt-0.5">${d.lead_cost ? '$' + d.lead_cost.toFixed(2) : '—'}</p>
+            </div>
+          </div>
+          ${d.notes ? `<div class="bg-yellow-50 border border-yellow-100 rounded-lg px-3 py-2 text-sm text-yellow-800">${d.notes}</div>` : ''}
+        </div>`;
+    });
+}
+
+function closeLeadModal() {
+  document.getElementById('lead-modal').classList.add('hidden');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base_public.html" %}
+{% block title %}Agent Action – FieldSprout{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+  <div class="max-w-md w-full">
+    <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+      <div class="{% if success %}bg-green-600{% else %}bg-gray-400{% endif %} px-8 py-6 text-center">
+        <div class="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3">
+          <i class="fa-solid {% if success %}fa-check{% else %}fa-xmark{% endif %} text-white text-2xl"></i>
+        </div>
+        <h1 class="text-white font-bold text-xl">
+          {% if success %}Done!{% else %}Already Processed{% endif %}
+        </h1>
+      </div>
+      <div class="px-8 py-6 text-center">
+        <p class="text-gray-700 text-base">{{ message }}</p>
+        {% if action %}
+          <div class="mt-4 bg-gray-50 rounded-xl p-4 text-left text-sm">
+            <p class="font-semibold text-gray-900">{{ action.title }}</p>
+            <p class="text-gray-500 mt-1">{{ action.description }}</p>
+          </div>
+        {% endif %}
+        <a href="/" class="mt-6 inline-block px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors text-sm">
+          Go to Dashboard
+        </a>
+      </div>
+    </div>
+    <p class="text-center text-gray-400 text-xs mt-4">Powered by FieldSprout AI</p>
+  </div>
+</div>
+{% endblock %}

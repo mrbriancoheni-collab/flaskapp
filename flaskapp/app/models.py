@@ -275,11 +275,17 @@ class BusinessProfile(db.Model):
     account_id = db.Column(Integer, index=True, nullable=False)
     user_id = db.Column(Integer, index=True, nullable=False)
 
-    # Step 1
+    # Step 1 — business basics
     business_name = db.Column(String(255), nullable=False, default="Your Business")
+    industry = db.Column(String(128), nullable=True)           # plumbing|hvac|electrical|etc.
     phone = db.Column(String(64))
     website = db.Column(String(255))
+    years_in_business = db.Column(String(16), nullable=True)   # 'under_1'|'1_3'|'3_10'|'10_plus'
+
+    # Step 2 — geography + scale
     service_area = db.Column(String(512))
+    employee_count = db.Column(String(16), nullable=True)      # 'solo'|'2_5'|'6_15'|'15_plus'
+    avg_job_ticket = db.Column(Integer, nullable=True)         # dollars
 
     # Step 2
     services = db.Column(JSONType)                # list[str]
@@ -289,16 +295,15 @@ class BusinessProfile(db.Model):
         nullable=True,
     )
 
-    # Step 3
+    # Step 3 — ICP
     ideal_customers = db.Column(JSONType)         # list[str]
     urgency = db.Column(SAEnum("emergency", "scheduled", "both", name="urgency_enum"), nullable=True)
     tone = db.Column(SAEnum("friendly", "professional", "direct", name="tone_enum"), nullable=True)
-    lead_channels = db.Column(JSONType)           # list[str]
+    lead_channels = db.Column(JSONType)           # list[str] — current lead sources
+    main_challenges = db.Column(JSONType)         # list[str] — biggest pain points selected
 
-    # Step 4
+    # Step 4 — brand voice
     why_choose_us = db.Column(Text)               # multiline
-
-    # Step 5
     current_promo = db.Column(String(255))
     hours = db.Column(String(255))
 

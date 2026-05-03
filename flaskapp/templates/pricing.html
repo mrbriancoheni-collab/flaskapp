@@ -1,5 +1,6 @@
 {% extends 'base_public.html' %}
-{% block title %}Pricing · {{ app_name }}{% endblock %}
+{% block title %}Pricing — AI Marketing for Home Service Businesses | FieldSprout{% endblock %}
+{% block meta_description %}FieldSprout starts at $200/month (billed annually). AI-powered Google Ads, review management, and lead generation for HVAC, plumbing, roofing, and electrical companies. No contracts. Cancel anytime.{% endblock %}
 
 {% block head_extra %}
 <!-- BreadcrumbList Schema -->
@@ -69,6 +70,64 @@
   ]
 }
 </script>
+
+<!-- FAQ Schema for pricing page — helps AI search engines answer pricing questions -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How much does FieldSprout cost?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "FieldSprout costs $200 per month billed annually ($2,400/year) or $250 per month on a flexible monthly plan. The Managed plan, where FieldSprout's team runs your marketing, costs $997 per month. All plans cover one business location."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is there a free trial for FieldSprout?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, FieldSprout offers a 14-day free trial with full access to all features. No credit card is required to start."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does FieldSprout have a money-back guarantee?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, FieldSprout offers a 30-day money-back guarantee. If you're not satisfied within the first 30 days, you'll receive a full refund — no questions asked."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What does FieldSprout's subscription include?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Every FieldSprout subscription includes AI-powered Google Ads optimization, Google Local Service Ads management, Facebook Ads management, Google Business Profile optimization, review generation and management, lead intake, call tracking integration, and a full marketing health score dashboard. Each subscription covers one business location."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I cancel FieldSprout anytime?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. There are no long-term contracts. You can cancel your FieldSprout subscription at any time and will retain access through the end of your current billing period."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the difference between the Monthly and Annual FieldSprout plans?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The Monthly plan costs $250 per month with no commitment. The Annual plan costs $200 per month ($2,400 billed once per year), saving you 20%. Both plans include all the same AI marketing features. The Annual plan also includes budget forecasting, journey visualization, shareable reports, and priority support."
+      }
+    }
+  ]
+}
+</script>
 {% endblock %}
 
 {% block content %}
@@ -81,10 +140,10 @@
         Simple, transparent pricing
       </span>
       <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-gray-900">
-        Pick a plan. <span class="gradient-text">Start growing.</span>
+        More leads. Less waste. <span class="gradient-text">From $200/mo.</span>
       </h1>
       <p class="mt-6 text-xl text-gray-600 leading-relaxed">
-        Start with what fits today and upgrade anytime. No hidden fees, no long-term contracts.
+        One flat fee covers AI-powered Google Ads, reviews, and lead management for your entire business location. No hidden fees, no long-term contracts, 30-day money-back guarantee.
       </p>
     </div>
 
@@ -306,6 +365,59 @@
         {% endif %}
       </div>
 
+    </div>
+
+    <!-- Trust strip — below pricing cards -->
+    <div class="mt-10 flex flex-wrap items-center justify-center gap-6 text-sm text-gray-600" data-aos="fade-up">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 flex-shrink-0">
+          <i class="fa-solid fa-shield-halved text-sm"></i>
+        </div>
+        <span><strong class="text-gray-900">30-day money-back guarantee</strong></span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
+          <i class="fa-solid fa-lock text-sm"></i>
+        </div>
+        <span>No contracts · Cancel anytime</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 flex-shrink-0">
+          <i class="fa-solid fa-star text-sm"></i>
+        </div>
+        <span><strong class="text-gray-900">4.9/5</strong> from 500+ home service pros</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 flex-shrink-0">
+          <i class="fa-solid fa-clock text-sm"></i>
+        </div>
+        <span>14-day free trial · Full access</span>
+      </div>
+    </div>
+
+    <!-- Social proof quotes -->
+    <div class="mt-10 grid md:grid-cols-3 gap-6" data-aos="fade-up" data-aos-delay="100">
+      <div class="bg-gray-50 rounded-2xl p-6">
+        <div class="flex items-center gap-1 mb-3 text-yellow-400">
+          {% for _ in range(5) %}<i class="fa-solid fa-star text-xs"></i>{% endfor %}
+        </div>
+        <p class="text-gray-700 text-sm leading-relaxed">"Cut our cost per HVAC lead from $140 to $78 in the first 30 days. Pays for itself 10x over."</p>
+        <div class="mt-3 text-xs text-gray-500 font-semibold">Marcus T. · HVAC Company, Texas</div>
+      </div>
+      <div class="bg-gray-50 rounded-2xl p-6">
+        <div class="flex items-center gap-1 mb-3 text-yellow-400">
+          {% for _ in range(5) %}<i class="fa-solid fa-star text-xs"></i>{% endfor %}
+        </div>
+        <p class="text-gray-700 text-sm leading-relaxed">"Finally replaced our $3,500/mo agency. FieldSprout gets us more leads and costs 90% less. Wish we switched years ago."</p>
+        <div class="mt-3 text-xs text-gray-500 font-semibold">Jennifer R. · Plumbing Company, Arizona</div>
+      </div>
+      <div class="bg-gray-50 rounded-2xl p-6">
+        <div class="flex items-center gap-1 mb-3 text-yellow-400">
+          {% for _ in range(5) %}<i class="fa-solid fa-star text-xs"></i>{% endfor %}
+        </div>
+        <p class="text-gray-700 text-sm leading-relaxed">"Setup took 2 minutes. Saw the AI make 12 optimizations on day one. Our Quality Score went from 4 to 8 in two weeks."</p>
+        <div class="mt-3 text-xs text-gray-500 font-semibold">Derek M. · Electrical Contractor, Florida</div>
+      </div>
     </div>
   </div>
 </section>

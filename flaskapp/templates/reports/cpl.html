@@ -1,13 +1,172 @@
 {% extends "base_app.html" %}
-{% block title %}Reporting – CPL/Customer{% endblock %}
+{% block title %}Cross-Source ROI – FieldSprout{% endblock %}
+
 {% block content %}
-<h1 class="text-2xl font-semibold mb-4">Cost per Lead / Customer</h1>
-<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-  <div class="border rounded p-3"><div class="text-sm text-gray-500">Period</div><div class="text-xl font-semibold">{{ stats.period }}</div></div>
-  <div class="border rounded p-3"><div class="text-sm text-gray-500">Spend</div><div class="text-xl font-semibold">${{ '%.2f'|format(stats.spend) }}</div></div>
-  <div class="border rounded p-3"><div class="text-sm text-gray-500">Leads</div><div class="text-xl font-semibold">{{ stats.leads }}</div></div>
-  <div class="border rounded p-3"><div class="text-sm text-gray-500">Customers</div><div class="text-xl font-semibold">{{ stats.customers }}</div></div>
-  <div class="border rounded p-3"><div class="text-sm text-gray-500">CPL</div><div class="text-xl font-semibold">{% if stats.cpl is not none %}${{ '%.2f'|format(stats.cpl) }}{% else %}-{% endif %}</div></div>
-  <div class="border rounded p-3"><div class="text-sm text-gray-500">Cost / Customer</div><div class="text-xl font-semibold">{% if stats.cpcust is not none %}${{ '%.2f'|format(stats.cpcust) }}{% else %}-{% endif %}</div></div>
+<div class="max-w-6xl mx-auto px-4 py-8">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Cross-Source ROI</h1>
+      <p class="text-gray-500 text-sm mt-0.5">Cost per lead, booking rate, and revenue across every channel.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <select onchange="window.location.search='?days='+this.value"
+              class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+        {% for d in [7, 14, 30, 60, 90] %}
+          <option value="{{ d }}" {% if days == d %}selected{% endif %}>Last {{ d }} days</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  {% if is_sample %}
+    <div class="mb-5 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800 flex items-center gap-2">
+      <i class="fa-solid fa-circle-info"></i>
+      Showing sample data. Connect lead sources and CRM to see real ROI numbers.
+    </div>
+  {% endif %}
+
+  <!-- Top KPI strip -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Total Spend</p>
+      <p class="text-2xl font-bold text-gray-900 mt-1">${{ "%.0f"|format(totals.spend) }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Total Leads</p>
+      <p class="text-2xl font-bold text-gray-900 mt-1">{{ totals.leads }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Avg CPL</p>
+      <p class="text-2xl font-bold text-gray-900 mt-1">
+        {% if totals.cpl %}${{ "%.0f"|format(totals.cpl) }}{% else %}—{% endif %}
+      </p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Revenue Attributed</p>
+      <p class="text-2xl font-bold text-green-600 mt-1">${{ "%.0f"|format(totals.revenue) }}</p>
+    </div>
+  </div>
+
+  <!-- Source breakdown table -->
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-6">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h2 class="font-semibold text-gray-900">By Lead Source</h2>
+      <span class="text-xs text-gray-400">Last {{ days }} days</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-50 text-left">
+            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Source</th>
+            <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right">Spend</th>
+            <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right">Leads</th>
+            <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right">CPL</th>
+            <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right">Booked</th>
+            <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right">Book Rate</th>
+            <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right">Revenue</th>
+            <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right">ROAS</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for row in rows %}
+            <tr class="hover:bg-gray-50 transition-colors">
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-lg bg-{{ row.color }}-100 flex items-center justify-center">
+                    <i class="fa-brands {{ row.icon }} text-{{ row.color }}-600 text-xs"></i>
+                  </div>
+                  <span class="font-semibold text-gray-900">{{ row.label }}</span>
+                </div>
+              </td>
+              <td class="px-4 py-4 text-right text-gray-700">
+                {% if row.spend %}<span>${{ "%.0f"|format(row.spend) }}</span>
+                {% else %}<span class="text-gray-400">—</span>{% endif %}
+              </td>
+              <td class="px-4 py-4 text-right font-semibold text-gray-900">{{ row.leads }}</td>
+              <td class="px-4 py-4 text-right">
+                {% if row.cpl %}
+                  <span class="{% if row.cpl < 40 %}text-green-600{% elif row.cpl < 70 %}text-yellow-600{% else %}text-red-600{% endif %} font-semibold">
+                    ${{ "%.0f"|format(row.cpl) }}
+                  </span>
+                {% else %}<span class="text-gray-400">—</span>{% endif %}
+              </td>
+              <td class="px-4 py-4 text-right text-gray-700">{{ row.booked }}</td>
+              <td class="px-4 py-4 text-right">
+                {% if row.book_rate is not none %}
+                  <div class="flex items-center justify-end gap-2">
+                    <div class="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div class="h-full bg-indigo-500 rounded-full" style="width:{{ [row.book_rate * 100, 100]|min }}%"></div>
+                    </div>
+                    <span class="text-gray-700 font-medium">{{ "%.0f"|format(row.book_rate * 100) }}%</span>
+                  </div>
+                {% else %}<span class="text-gray-400">—</span>{% endif %}
+              </td>
+              <td class="px-4 py-4 text-right text-gray-700">
+                {% if row.revenue %}<span class="text-green-700 font-semibold">${{ "%.0f"|format(row.revenue) }}</span>
+                {% else %}<span class="text-gray-400">—</span>{% endif %}
+              </td>
+              <td class="px-4 py-4 text-right">
+                {% if row.roas %}
+                  <span class="{% if row.roas >= 5 %}text-green-600{% elif row.roas >= 2 %}text-yellow-600{% else %}text-red-600{% endif %} font-bold">
+                    {{ "%.1f"|format(row.roas) }}x
+                  </span>
+                {% else %}<span class="text-gray-400">—</span>{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr class="bg-gray-50 font-bold border-t-2 border-gray-200">
+            <td class="px-6 py-3 text-gray-900">Total</td>
+            <td class="px-4 py-3 text-right text-gray-900">${{ "%.0f"|format(totals.spend) }}</td>
+            <td class="px-4 py-3 text-right text-gray-900">{{ totals.leads }}</td>
+            <td class="px-4 py-3 text-right text-gray-900">
+              {% if totals.cpl %}${{ "%.0f"|format(totals.cpl) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right text-gray-900">{{ totals.booked }}</td>
+            <td class="px-4 py-3 text-right text-gray-900">
+              {% if totals.book_rate %}{{ "%.0f"|format(totals.book_rate * 100) }}%{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right text-green-700">${{ "%.0f"|format(totals.revenue) }}</td>
+            <td class="px-4 py-3 text-right text-gray-900">
+              {% if totals.roas %}{{ "%.1f"|format(totals.roas) }}x{% else %}—{% endif %}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Setup prompts for unconnected sources -->
+  {% if missing_sources %}
+    <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-5">
+      <h3 class="font-semibold text-indigo-900 mb-2">
+        <i class="fa-solid fa-plug mr-1"></i> Connect more sources for complete ROI data
+      </h3>
+      <div class="flex flex-wrap gap-2 mt-3">
+        {% if 'networx' in missing_sources %}
+          <a href="{{ url_for('lead_intake_bp.setup') }}"
+             class="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700">
+            Connect Networx
+          </a>
+        {% endif %}
+        {% if 'elocal' in missing_sources %}
+          <a href="{{ url_for('lead_intake_bp.setup') }}"
+             class="px-3 py-1.5 bg-orange-600 text-white text-xs font-semibold rounded-lg hover:bg-orange-700">
+            Connect eLocal
+          </a>
+        {% endif %}
+        {% if 'crm' in missing_sources %}
+          <a href="/admin/servicetitan"
+             class="px-3 py-1.5 bg-gray-800 text-white text-xs font-semibold rounded-lg hover:bg-gray-900">
+            Connect CRM for Revenue Data
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+
 </div>
 {% endblock %}

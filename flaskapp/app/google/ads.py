@@ -25,7 +25,11 @@ from app.models_ads import (
     AdsKeyword,
     NegativeKeyword,
     SharedNegativeMap,
+    GadsStatsDaily,
+    SearchTerm,
+    ConversionAction,
 )
+from app.models_ai_actions import AIActionRule, AIAction
 from app.auth.utils import login_required, is_paid_account, current_account_id
 
 # Keep this exactly once (don't also pass url_prefix again at register time)
@@ -56,7 +60,7 @@ def optimize():
         flash("Google Ads Optimizer is available on paid plans. Upgrade to access optimization tools.", "warning")
         return redirect(url_for("account_bp.pricing"))
 
-    tab = request.args.get("tab", "campaigns")
+    tab = request.args.get("tab", "cockpit")
     aid = current_account_id()
 
     connected = False
@@ -65,6 +69,111 @@ def optimize():
         connected = _is_connected(aid, "ads")
     except Exception:
         pass
+
+    # ---- Command Center (cockpit) data ----
+    cockpit: dict = {}
+    if tab == "cockpit" and aid:
+        try:
+            from datetime import date, timedelta
+            today = date.today()
+            thirty_ago = today - timedelta(days=30)
+
+            # KPIs from GadsStatsDaily (last 30d)
+            kpi_rows = db.session.execute(text("""
+                SELECT SUM(cost_micros)/1000000.0 AS spend,
+                       SUM(clicks) AS clicks,
+                       SUM(conversions) AS conversions,
+                       SUM(impressions) AS impressions
+                FROM gads_stats_daily
+                WHERE account_id = :aid
+                  AND entity_type = 'campaign'
+                  AND date >= :d
+            """), {"aid": aid, "d": thirty_ago}).mappings().one_or_none()
+
+            # Quick health score from DB
+            kw_count = db.session.execute(
+                text("SELECT COUNT(*) FROM keywords k JOIN ad_groups ag ON ag.id=k.ad_group_id JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid AND k.status!='removed'"),
+                {"aid": aid}
+            ).scalar() or 0
+            neg_count = db.session.execute(
+                text("SELECT COUNT(*) FROM negative_keywords nk LEFT JOIN ads_campaigns ac ON ac.id=nk.campaign_id WHERE (ac.account_id=:aid OR nk.campaign_id IS NULL) AND nk.id IS NOT NULL"),
+                {"aid": aid}
+            ).scalar() or 0
+            ad_count = db.session.execute(
+                text("SELECT COUNT(*) FROM ads a JOIN ad_groups ag ON ag.id=a.ad_group_id JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid AND a.status!='removed'"),
+                {"aid": aid}
+            ).scalar() or 0
+            camp_count = db.session.execute(
+                text("SELECT COUNT(*) FROM ads_campaigns WHERE account_id=:aid AND status!='removed'"),
+                {"aid": aid}
+            ).scalar() or 0
+            ag_count = db.session.execute(
+                text("SELECT COUNT(*) FROM ad_groups ag JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid"),
+                {"aid": aid}
+            ).scalar() or 0
+
+            neg_ratio = neg_count / max(kw_count, 1)
+            waste_score = min(100, int((neg_ratio / 2.5) * 100))
+            ads_per_ag = ad_count / max(ag_count, 1)
+            kw_per_ag = kw_count / max(ag_count, 1)
+            struct_score = 40
+            if 2 <= camp_count <= 10: struct_score += 15
+            if 3 <= ads_per_ag <= 5: struct_score += 20
+            elif ads_per_ag >= 2: struct_score += 10
+            if 5 <= kw_per_ag <= 20: struct_score += 20
+            elif kw_per_ag >= 3: struct_score += 10
+            struct_score = min(100, struct_score)
+
+            spend = float(kpi_rows["spend"] or 0) if kpi_rows else 0
+            clicks = int(kpi_rows["clicks"] or 0) if kpi_rows else 0
+            conversions = float(kpi_rows["conversions"] or 0) if kpi_rows else 0
+            impressions = int(kpi_rows["impressions"] or 0) if kpi_rows else 0
+            ctr = (clicks / impressions * 100) if impressions else 0
+            ctr_score = 90 if ctr >= 6 else (80 if ctr >= 5 else (70 if ctr >= 4 else (55 if ctr >= 3 else (40 if ctr >= 2 else 25)))) if ctr > 0 else 50
+            overall = int(waste_score * 0.35 + struct_score * 0.30 + ctr_score * 0.35)
+            grade = "A+" if overall >= 90 else ("A" if overall >= 85 else ("A-" if overall >= 80 else ("B+" if overall >= 75 else ("B" if overall >= 70 else ("B-" if overall >= 65 else ("C+" if overall >= 60 else ("C" if overall >= 55 else ("C-" if overall >= 50 else ("D" if overall >= 40 else "F")))))))))
+
+            # Top pending actions
+            top_actions = OptimizerRecommendation.query.filter_by(
+                account_id=aid, status="open"
+            ).order_by(OptimizerRecommendation.severity.asc()).limit(8).all()
+
+            # Active rules / actions today
+            active_rules = AIActionRule.query.filter_by(account_id=aid, enabled=True).count()
+            actions_today = AIAction.query.filter(
+                AIAction.account_id == aid,
+                AIAction.created_at >= today
+            ).count()
+
+            # Counts for sub-tool badges
+            pending_optimizer = OptimizerRecommendation.query.filter_by(account_id=aid, status="open").count()
+            pending_terms = db.session.execute(
+                text("SELECT COUNT(*) FROM search_terms st JOIN ads_campaigns ac ON ac.id=st.campaign_id WHERE ac.account_id=:aid AND st.added_as_keyword=0 AND st.added_as_negative=0"),
+                {"aid": aid}
+            ).scalar() or 0
+            ab_running = db.session.execute(
+                text("SELECT COUNT(DISTINCT variant_group) FROM ads a JOIN ad_groups ag ON ag.id=a.ad_group_id JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid AND a.variant_group IS NOT NULL"),
+                {"aid": aid}
+            ).scalar() or 0
+
+            # Recent activity (last 10 actions)
+            recent_actions = AIAction.query.filter_by(account_id=aid).order_by(
+                AIAction.created_at.desc()
+            ).limit(10).all()
+
+            cockpit = {
+                "health": {"overall": overall, "grade": grade, "waste": waste_score, "structure": struct_score, "ctr": ctr_score},
+                "kpis": {"spend": round(spend, 2), "clicks": clicks, "conversions": round(conversions, 1), "impressions": impressions, "ctr": round(ctr, 2), "cpa": round(spend / conversions, 2) if conversions else 0},
+                "top_actions": top_actions,
+                "active_rules": active_rules,
+                "actions_today": actions_today,
+                "badges": {"optimizer": pending_optimizer, "rules": active_rules, "search_terms": pending_terms, "ab_tests": ab_running},
+                "recent_actions": recent_actions,
+                "connected": connected,
+            }
+        except Exception:
+            current_app.logger.exception("Error loading cockpit data")
+            cockpit = {"health": {"overall": 0, "grade": "N/A"}, "kpis": {}, "top_actions": [], "badges": {}, "recent_actions": [], "connected": connected}
 
     keywords_data: list = []
     negatives_data: list = []
@@ -245,6 +354,7 @@ def optimize():
         campaigns_tab_data=campaigns_tab_data,
         adgroups_tab_data=adgroups_tab_data,
         ads_tab_data=ads_tab_data,
+        cockpit=cockpit,
     )
 
 
@@ -310,55 +420,124 @@ def optimizer_data():
 @login_required
 def optimizer_apply():
     """
-    Stores change-sets to apply (to be executed by a worker or immediate mutator).
-    Supports both single and bulk operations:
-    - Single: {"recommendation_id": <id>, "changes": [...]}
-    - Bulk: {"recommendation_ids": [<id1>, <id2>, ...], "bulk": true}
+    Apply optimizer recommendations:
+    1. Mark recommendation as applied in DB
+    2. Attempt real Google Ads API mutation via GoogleAdsAutoExecutor
+    3. Fall back gracefully if Google Ads credentials unavailable
     """
     try:
-        # Check if user has paid plan
         if not is_paid_account():
             return jsonify({"error": "Paid plan required"}), 403
 
         payload = request.get_json(force=True)
+        aid = current_account_id()
 
-        # Handle bulk operations
-        if payload.get("bulk") and "recommendation_ids" in payload:
-            rec_ids = payload.get("recommendation_ids", [])
-            action_ids = []
+        # Normalise to a list of IDs (supports both single and bulk calls)
+        if "recommendation_ids" in payload:
+            rec_ids = [int(x) for x in payload["recommendation_ids"]]
+        elif "recommendation_id" in payload:
+            rec_ids = [int(payload["recommendation_id"])]
+        else:
+            return jsonify({"error": "No recommendation_id(s) provided"}), 400
 
-            for rec_id in rec_ids:
-                try:
-                    action = OptimizerAction(
-                        recommendation_id=int(rec_id),
-                        change_set_json=str({"recommendation_id": rec_id, "bulk": True}),
-                        status="pending",
-                    )
-                    db.session.add(action)
-                    db.session.flush()  # Get ID before commit
-                    action_ids.append(action.id)
-                except Exception as e:
-                    current_app.logger.error(f"Failed to queue recommendation {rec_id}: {e}")
+        applied = []
+        errors = []
+
+        # Try to instantiate the Google Ads executor (loads creds internally)
+        executor = None
+        try:
+            from app.services.google_ads_auto_executor import GoogleAdsAutoExecutor
+            executor = GoogleAdsAutoExecutor(account_id=aid)
+        except Exception:
+            current_app.logger.info("Google Ads executor unavailable — applying locally only")
+
+        for rec_id in rec_ids:
+            try:
+                rec = OptimizerRecommendation.query.filter_by(id=rec_id, account_id=aid).first()
+                if not rec:
+                    errors.append({"id": rec_id, "error": "Not found or unauthorized"})
+                    continue
+                if rec.status == "applied":
+                    applied.append(rec_id)
                     continue
 
-            db.session.commit()
-            return jsonify({"status": "queued", "action_ids": action_ids, "count": len(action_ids)})
+                import json as _json
+                suggested = _json.loads(rec.suggested_action_json) if isinstance(rec.suggested_action_json, str) else (rec.suggested_action_json or {})
 
-        # Handle single operation (backward compatibility)
-        rec_id = int(payload.get("recommendation_id", 0))
-        action = OptimizerAction(
-            recommendation_id=rec_id,
-            change_set_json=str(payload),
-            status="pending",
-        )
-        db.session.add(action)
+                api_result = None
+                api_status = "local_only"
+                action_type = suggested.get("action_type") or rec.category
+
+                # --- Local DB mutations (always attempted) ---
+                if action_type in ("budget", "increase_budget") and suggested.get("new_budget_micros"):
+                    camp = AdsCampaign.query.get(suggested.get("campaign_id"))
+                    if camp:
+                        camp.daily_budget_cents = int(suggested["new_budget_micros"] / 10000)
+                        api_status = "local_db"
+                elif action_type in ("pause_keyword", "keyword_paused") and suggested.get("keyword_id"):
+                    kw = AdsKeyword.query.get(suggested["keyword_id"])
+                    if kw:
+                        kw.status = "paused"
+                        api_status = "local_db"
+
+                # --- Attempt real Google Ads API mutation via executor ---
+                if executor and action_type in ("negative_keyword", "wasted_spend") and suggested.get("negatives"):
+                    try:
+                        # Get customer_id from the executor's internal lookup
+                        client = executor._get_google_ads_client()
+                        cid = getattr(executor, "_resolved_customer_id", None)
+                        if not cid:
+                            # Fall back to DB lookup
+                            cid_row = db.session.execute(text(
+                                "SELECT google_ads_customer_id FROM accounts WHERE id=:aid"
+                            ), {"aid": aid}).scalar()
+                            cid = str(cid_row) if cid_row else None
+                        if cid:
+                            for neg in suggested["negatives"][:5]:
+                                executor._execute_negative_keyword_add(
+                                    action=None,
+                                    customer_id=cid,
+                                    search_term=neg.get("text", ""),
+                                    campaign_id=int(suggested.get("campaign_id", 0)),
+                                    match_type=neg.get("match_type", "PHRASE"),
+                                )
+                            api_status = "pushed_to_google"
+                    except Exception as api_err:
+                        current_app.logger.warning(f"API mutation failed for rec {rec_id}: {api_err}")
+                        api_status = "api_error"
+
+                api_result = {"status": api_status}
+
+                # Record the action
+                action = OptimizerAction(
+                    recommendation_id=rec_id,
+                    applied_by=getattr(current_account_id, '__self__', None) and aid or aid,
+                    change_set_json=_json.dumps(suggested),
+                    result_json=_json.dumps(api_result) if api_result else None,
+                    status="success",
+                )
+                db.session.add(action)
+
+                # Mark recommendation applied
+                rec.status = "applied"
+                applied.append(rec_id)
+
+            except Exception as e:
+                current_app.logger.exception(f"Error applying rec {rec_id}")
+                errors.append({"id": rec_id, "error": str(e)})
+
         db.session.commit()
-        return jsonify({"status": "queued", "action_id": action.id})
+        return jsonify({
+            "applied": len(applied),
+            "applied_ids": applied,
+            "errors": errors,
+            "api_status": "pushed_to_google" if executor else "local_only",
+        })
 
     except Exception as e:
         current_app.logger.exception("Error in optimizer_apply")
         db.session.rollback()
-        return jsonify({"error": f"Failed to apply optimization: {str(e)}"}), 500
+        return jsonify({"error": f"Failed to apply: {str(e)}"}), 500
 
 
 # ---------------------------

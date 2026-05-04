@@ -3657,8 +3657,81 @@ def ads_performance():
     except Exception:
         pass
 
+    # ── Device & Daypart segmentation (GAQL, best-effort) ──────────────────
+    device_data = []
+    daypart_data = []
+    try:
+        if connected:
+            from app.google.utils_ads import google_ads_search
+            creds_row = db.session.execute(text(
+                "SELECT customer_id, refresh_token, credentials_json FROM google_oauth_tokens "
+                "WHERE account_id=:aid AND LOWER(product) IN ('ads','lsa') "
+                "ORDER BY updated_at DESC LIMIT 1"
+            ), {"aid": aid}).mappings().one_or_none()
+            if creds_row:
+                import json as _jj
+                rt = creds_row.get("refresh_token") or (_jj.loads(creds_row.get("credentials_json") or "{}").get("refresh_token"))
+                cid = creds_row.get("customer_id")
+                if rt and cid:
+                    # Device performance
+                    dev_rows = google_ads_search(str(cid), rt, """
+                        SELECT segments.device,
+                               metrics.impressions, metrics.clicks,
+                               metrics.cost_micros, metrics.conversions
+                        FROM campaign
+                        WHERE segments.date DURING LAST_30_DAYS
+                    """) or []
+                    dev_agg = {}
+                    for r in dev_rows:
+                        dev = r.get("segments.device", "UNKNOWN")
+                        dev_agg.setdefault(dev, {"device": dev, "impressions": 0, "clicks": 0, "cost": 0.0, "conversions": 0.0})
+                        dev_agg[dev]["impressions"] += int(r.get("metrics.impressions", 0))
+                        dev_agg[dev]["clicks"] += int(r.get("metrics.clicks", 0))
+                        dev_agg[dev]["cost"] += int(r.get("metrics.cost_micros", 0)) / 1e6
+                        dev_agg[dev]["conversions"] += float(r.get("metrics.conversions", 0))
+                    for v in dev_agg.values():
+                        v["ctr"] = round(v["clicks"] / v["impressions"] * 100, 2) if v["impressions"] else 0
+                        v["cpa"] = round(v["cost"] / v["conversions"], 2) if v["conversions"] else None
+                        v["cost"] = round(v["cost"], 2)
+                    device_data = sorted(dev_agg.values(), key=lambda x: x["cost"], reverse=True)
+
+                    # Daypart (by hour) performance
+                    hour_rows = google_ads_search(str(cid), rt, """
+                        SELECT segments.hour, segments.day_of_week,
+                               metrics.impressions, metrics.clicks,
+                               metrics.cost_micros, metrics.conversions
+                        FROM campaign
+                        WHERE segments.date DURING LAST_30_DAYS
+                    """) or []
+                    hour_agg = {}
+                    dow_agg = {}
+                    for r in hour_rows:
+                        h = int(r.get("segments.hour", 0))
+                        dow = r.get("segments.day_of_week", "UNKNOWN")
+                        impr = int(r.get("metrics.impressions", 0))
+                        clks = int(r.get("metrics.clicks", 0))
+                        cost = int(r.get("metrics.cost_micros", 0)) / 1e6
+                        conv = float(r.get("metrics.conversions", 0))
+                        hour_agg.setdefault(h, {"hour": h, "impressions": 0, "clicks": 0, "cost": 0.0, "conversions": 0.0})
+                        hour_agg[h]["impressions"] += impr; hour_agg[h]["clicks"] += clks
+                        hour_agg[h]["cost"] += cost; hour_agg[h]["conversions"] += conv
+                        dow_agg.setdefault(dow, {"dow": dow, "impressions": 0, "clicks": 0, "cost": 0.0, "conversions": 0.0})
+                        dow_agg[dow]["impressions"] += impr; dow_agg[dow]["clicks"] += clks
+                        dow_agg[dow]["cost"] += cost; dow_agg[dow]["conversions"] += conv
+                    for v in list(hour_agg.values()) + list(dow_agg.values()):
+                        v["ctr"] = round(v["clicks"] / v["impressions"] * 100, 2) if v["impressions"] else 0
+                        v["cost"] = round(v["cost"], 2)
+                    daypart_data = {
+                        "hours": [hour_agg[h] for h in range(24) if h in hour_agg],
+                        "days": sorted(dow_agg.values(), key=lambda x: ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"].index(x["dow"]) if x["dow"] in ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"] else 99),
+                    }
+    except Exception:
+        current_app.logger.debug("Device/daypart GAQL query skipped")
+
     return render_template(
         "google/performance_dashboard.html",
+        device_data=device_data,
+        daypart_data=daypart_data,
         connected=connected,
         status=status,
         wasted_spend_prevented=round(wasted_spend_prevented, 2),

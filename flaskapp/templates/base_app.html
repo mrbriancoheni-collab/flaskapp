@@ -447,6 +447,36 @@
         <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('marketing_bp.seasonal') }}">
           <i class="fa-solid fa-calendar-days"></i><span>Seasonal Planner</span>
         </a>
+        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('marketing_bp.capacity_check') }}">
+          <i class="fa-solid fa-calendar-check"></i><span>Capacity Bridge</span>
+        </a>
+        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('marketing_bp.aggregator_quality') }}">
+          <i class="fa-solid fa-shield-halved"></i><span>Lead Quality</span>
+        </a>
+        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('marketing_bp.revenue_upsells') }}">
+          <i class="fa-solid fa-circle-plus"></i><span>Upsell Opportunities</span>
+        </a>
+        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('marketing_bp.notification_settings') }}">
+          <i class="fa-solid fa-bell"></i><span>Alert Settings</span>
+        </a>
+      {% endif %}
+
+      {% if has_endpoint('agreements_bp.index') %}
+        <div class="pt-2 text-sm font-semibold text-gray-600 uppercase">Service Agreements</div>
+        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('agreements_bp.index') }}">
+          <i class="fa-solid fa-file-contract"></i><span>Agreements</span>
+        </a>
+      {% endif %}
+
+      {% if has_endpoint('digest_bp.preview') %}
+        {% if has_endpoint('reputation_bp.competitor_radar') %}
+          <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('reputation_bp.competitor_radar') }}">
+            <i class="fa-solid fa-binoculars"></i><span>Competitor Radar</span>
+          </a>
+        {% endif %}
+        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('digest_bp.preview') }}">
+          <i class="fa-solid fa-sun"></i><span>Daily Digest</span>
+        </a>
       {% endif %}
 
       {% if has_endpoint('ads_grader_bp.index') %}

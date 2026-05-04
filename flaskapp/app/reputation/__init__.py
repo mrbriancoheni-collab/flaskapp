@@ -263,3 +263,165 @@ def draft_response():
     rating = int(data.get("rating", 5))
     draft = _generate_response_draft(review_text, rating)
     return jsonify({"draft": draft})
+
+
+# ── Competitor Radar ───────────────────────────────────────────────────────────
+
+@reputation_bp.route("/account/reputation/competitors", methods=["GET"])
+@_login_required
+def competitor_radar():
+    """Track competitor GMB review counts, ratings, and monthly velocity."""
+    from sqlalchemy import text as sqlt
+    aid = _current_account_id()
+
+    try:
+        competitors = db.session.execute(sqlt("""
+            SELECT cr.id, cr.competitor_name, cr.google_place_id, cr.website_url,
+                   cr.notes, cr.is_active,
+                   latest.review_count, latest.avg_rating, latest.new_reviews,
+                   latest.snapshot_date
+            FROM competitor_radar cr
+            LEFT JOIN (
+                SELECT competitor_id,
+                       review_count, avg_rating, new_reviews, snapshot_date
+                FROM competitor_snapshots
+                WHERE (competitor_id, snapshot_date) IN (
+                    SELECT competitor_id, MAX(snapshot_date)
+                    FROM competitor_snapshots GROUP BY competitor_id
+                )
+            ) latest ON latest.competitor_id = cr.id
+            WHERE cr.account_id = :a AND cr.is_active = 1
+            ORDER BY cr.created_at ASC
+        """), {"a": aid}).fetchall()
+        competitors = [dict(r._mapping) for r in competitors]
+    except Exception:
+        competitors = []
+
+    # Get account's own GMB stats for comparison
+    try:
+        my_stats = db.session.execute(sqlt("""
+            SELECT AVG(rating) as avg_rating, COUNT(*) as total_reviews
+            FROM gmb_reviews WHERE account_id = :a
+        """), {"a": aid}).fetchone()
+    except Exception:
+        my_stats = None
+
+    # Recent snapshot history for trend charts (last 6 months)
+    try:
+        history = db.session.execute(sqlt("""
+            SELECT cs.competitor_id, cr.competitor_name,
+                   cs.snapshot_date, cs.review_count, cs.avg_rating, cs.new_reviews
+            FROM competitor_snapshots cs
+            JOIN competitor_radar cr ON cr.id = cs.competitor_id
+            WHERE cs.account_id = :a
+              AND cs.snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+            ORDER BY cs.competitor_id, cs.snapshot_date
+        """), {"a": aid}).fetchall()
+        history = [dict(r._mapping) for r in history]
+    except Exception:
+        history = []
+
+    try:
+        alert_threshold = db.session.execute(sqlt("""
+            SELECT competitor_alert_threshold
+            FROM account_notification_settings WHERE account_id = :a
+        """), {"a": aid}).scalar() or 15
+    except Exception:
+        alert_threshold = 15
+
+    return render_template(
+        "reputation/competitor_radar.html",
+        competitors=competitors,
+        my_stats=my_stats,
+        history=history,
+        alert_threshold=alert_threshold,
+    )
+
+
+@reputation_bp.route("/account/reputation/competitors/add", methods=["POST"])
+@_login_required
+def competitor_add():
+    from sqlalchemy import text as sqlt
+    aid = _current_account_id()
+    f = request.form
+    name = f.get("competitor_name", "").strip()
+    if not name:
+        flash("Competitor name is required.", "warning")
+        return redirect(url_for("reputation_bp.competitor_radar"))
+    try:
+        # Limit to 5 competitors per account
+        count = db.session.execute(sqlt(
+            "SELECT COUNT(*) FROM competitor_radar WHERE account_id=:a AND is_active=1"
+        ), {"a": aid}).scalar() or 0
+        if count >= 5:
+            flash("Maximum 5 competitors. Deactivate one to add another.", "warning")
+            return redirect(url_for("reputation_bp.competitor_radar"))
+
+        db.session.execute(sqlt("""
+            INSERT INTO competitor_radar (account_id, competitor_name, google_place_id, website_url, notes)
+            VALUES (:a, :name, :pid, :url, :notes)
+        """), {
+            "a": aid,
+            "name": name,
+            "pid": f.get("google_place_id", "").strip() or None,
+            "url": f.get("website_url", "").strip() or None,
+            "notes": f.get("notes", "").strip() or None,
+        })
+        db.session.commit()
+        flash(f"Added {name} to competitor radar.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("Failed to add competitor.", "danger")
+    return redirect(url_for("reputation_bp.competitor_radar"))
+
+
+@reputation_bp.route("/account/reputation/competitors/<int:comp_id>/snapshot", methods=["POST"])
+@_login_required
+def competitor_snapshot(comp_id: int):
+    """Manually record a competitor's current review count and rating."""
+    from sqlalchemy import text as sqlt
+    from datetime import date as dt_date
+    aid = _current_account_id()
+    f = request.form
+    try:
+        review_count = int(f.get("review_count", 0))
+        avg_rating = float(f.get("avg_rating", 0))
+
+        # Calculate new_reviews vs last snapshot
+        last = db.session.execute(sqlt("""
+            SELECT review_count FROM competitor_snapshots
+            WHERE competitor_id=:cid ORDER BY snapshot_date DESC LIMIT 1
+        """), {"cid": comp_id}).fetchone()
+        new_reviews = max(0, review_count - (last[0] if last else 0))
+
+        db.session.execute(sqlt("""
+            INSERT INTO competitor_snapshots
+              (competitor_id, account_id, snapshot_date, review_count, avg_rating, new_reviews)
+            VALUES (:cid, :a, :dt, :rc, :ar, :nr)
+            ON DUPLICATE KEY UPDATE
+              review_count=VALUES(review_count), avg_rating=VALUES(avg_rating),
+              new_reviews=VALUES(new_reviews)
+        """), {
+            "cid": comp_id, "a": aid,
+            "dt": dt_date.today().isoformat(),
+            "rc": review_count, "ar": avg_rating, "nr": new_reviews,
+        })
+        db.session.commit()
+        flash("Snapshot recorded.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("Failed to record snapshot.", "danger")
+    return redirect(url_for("reputation_bp.competitor_radar"))
+
+
+@reputation_bp.route("/account/reputation/competitors/<int:comp_id>/delete", methods=["POST"])
+@_login_required
+def competitor_delete(comp_id: int):
+    from sqlalchemy import text as sqlt
+    aid = _current_account_id()
+    db.session.execute(sqlt(
+        "UPDATE competitor_radar SET is_active=0 WHERE id=:id AND account_id=:a"
+    ), {"id": comp_id, "a": aid})
+    db.session.commit()
+    flash("Competitor removed.", "info")
+    return redirect(url_for("reputation_bp.competitor_radar"))

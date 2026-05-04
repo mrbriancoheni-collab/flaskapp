@@ -93,6 +93,52 @@ OFFLINE_CHANNELS = [
 
 ALL_CHANNELS = list(CHANNEL_META.keys())
 
+INDUSTRY_BENCHMARKS: Dict[str, Dict] = {
+    "google_ads":   {"cpl": 45,  "cac": 210, "label": "Home Svc avg"},
+    "glsa":         {"cpl": 28,  "cac": 140, "label": "Home Svc avg"},
+    "facebook":     {"cpl": 38,  "cac": 280, "label": "Home Svc avg"},
+    "yelp":         {"cpl": 52,  "cac": 260, "label": "Home Svc avg"},
+    "angi":         {"cpl": 25,  "cac": 190, "label": "Home Svc avg"},
+    "homeadvisor":  {"cpl": 28,  "cac": 200, "label": "Home Svc avg"},
+    "thumbtack":    {"cpl": 22,  "cac": 175, "label": "Home Svc avg"},
+    "nextdoor":     {"cpl": 18,  "cac": 145, "label": "Home Svc avg"},
+    "billboard":    {"cpl": 85,  "cac": 420, "label": "Home Svc avg"},
+    "direct_mail":  {"cpl": 70,  "cac": 350, "label": "Home Svc avg"},
+    "radio":        {"cpl": 95,  "cac": 480, "label": "Home Svc avg"},
+    "phone":        {"cpl": 15,  "cac": 90,  "label": "Inbound calls"},
+}
+
+SEASONAL_PROFILES: Dict[str, list] = {
+    "hvac":        [0.6, 0.6, 0.8, 1.0, 1.4, 1.6, 1.6, 1.4, 1.2, 1.0, 0.8, 0.6],
+    "plumbing":    [1.2, 1.0, 1.2, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+    "roofing":     [0.5, 0.5, 0.8, 1.4, 1.6, 1.4, 1.2, 1.0, 1.2, 1.0, 0.6, 0.4],
+    "electrical":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.3],
+    "landscaping": [0.3, 0.3, 0.8, 1.4, 1.6, 1.6, 1.4, 1.4, 1.2, 0.8, 0.4, 0.2],
+    "pest":        [0.6, 0.6, 0.8, 1.2, 1.6, 1.6, 1.6, 1.4, 1.2, 0.8, 0.4, 0.4],
+    "default":     [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+}
+
+UPSELL_SUGGESTIONS: Dict[str, list] = {
+    "hvac":         [("UV Air Purifier", 350, 189, "Maintenance customers convert at 40%"),
+                     ("Smart Thermostat Install", 250, 189, "Easy add-on during any HVAC visit"),
+                     ("Annual Filter Plan", 120, 0, "Recurring revenue, near-zero effort")],
+    "plumbing":     [("Water Heater Flush", 150, 75, "Suggest on all service calls > 3yr units"),
+                     ("Water Softener Install", 2500, 0, "High-ticket upsell for hard-water areas"),
+                     ("Leak Detection", 200, 100, "Bundle with any pipe repair")],
+    "electrical":   [("Surge Protector Install", 300, 150, "Upsell on every panel visit"),
+                     ("EV Charger Install", 800, 0, "Fast-growing demand, high margin"),
+                     ("Smoke Detector Replacement", 200, 80, "Easy during any service call")],
+    "pest":         [("Annual Prevention Plan", 600, 0, "Convert one-time to recurring"),
+                     ("Mosquito Treatment", 350, 0, "Seasonal add-on, Apr–Sep"),
+                     ("Termite Bond", 1200, 0, "High LTV, annual renewal")],
+    "landscaping":  [("Irrigation System Check", 250, 0, "Spring upsell to all lawn customers"),
+                     ("Mulch Package", 400, 0, "Easy add-on, high margin"),
+                     ("Holiday Lighting", 800, 0, "Oct–Dec seasonal revenue")],
+    "roofing":      [("Gutter Guards", 1200, 0, "Upsell after every roof job"),
+                     ("Attic Inspection", 200, 0, "Bundle with roof repair"),
+                     ("Roof Coating", 2000, 0, "Extend life of aging roofs")],
+}
+
 
 def _date_range(days: int = 30):
     end = date.today()
@@ -279,6 +325,7 @@ def cac_dashboard():
         blended_cac=blended_cac,
         blended_cpl=blended_cpl,
         channel_meta=CHANNEL_META,
+        benchmarks=INDUSTRY_BENCHMARKS,
     )
 
 
@@ -967,3 +1014,563 @@ def aggregator_webhook(platform: str):
         db.session.rollback()
         log.exception("aggregator_webhook failed for %s: %s", platform, e)
         return jsonify({"error": "ingestion failed"}), 500
+
+
+# ── 10. Aggregator Lead Quality Scoring ────────────────────────────────────────
+
+def _score_aggregator_lead(lead: Dict, service_zips: list) -> Dict:
+    """Score a single aggregator lead on quality signals."""
+    score = 100
+    flags = []
+    lead_zip = (lead.get("zip") or "").strip()
+    phone = (lead.get("phone") or "").replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+    name = (lead.get("name") or "").strip()
+
+    # ZIP match check
+    if service_zips and lead_zip:
+        if lead_zip not in service_zips:
+            score -= 30
+            flags.append("Out-of-area ZIP")
+    elif not lead_zip:
+        score -= 10
+        flags.append("No ZIP provided")
+
+    # Phone validity check
+    if phone:
+        digits = "".join(c for c in phone if c.isdigit())
+        if len(digits) < 10:
+            score -= 25
+            flags.append("Invalid phone")
+        elif digits.startswith("0000") or digits == "1234567890":
+            score -= 40
+            flags.append("Fake phone")
+    else:
+        score -= 20
+        flags.append("No phone")
+
+    # Name check
+    if not name or len(name) < 3:
+        score -= 15
+        flags.append("Missing name")
+    elif name.lower() in ("test", "testing", "asdf", "na", "n/a"):
+        score -= 50
+        flags.append("Test lead")
+
+    score = max(0, min(100, score))
+    if score >= 80:
+        quality = "high"
+    elif score >= 50:
+        quality = "medium"
+    else:
+        quality = "low"
+
+    return {"score": score, "quality": quality, "flags": flags}
+
+
+@marketing_bp.get("/aggregators/quality")
+@login_required
+def aggregator_quality():
+    """Lead quality scoring report for all aggregator platforms."""
+    aid = _account_id()
+    days = int(request.args.get("days", 30))
+    start, end = _date_range(days)
+
+    # Get account service ZIPs for geo validation
+    try:
+        zip_row = db.session.execute(text("""
+            SELECT service_area FROM business_profiles WHERE account_id=:a LIMIT 1
+        """), {"a": aid}).fetchone()
+        service_zips = []
+        if zip_row and zip_row[0]:
+            import re
+            service_zips = re.findall(r'\b\d{5}\b', zip_row[0])
+    except Exception:
+        service_zips = []
+
+    # Pull recent aggregator leads
+    leads = db.session.execute(text("""
+        SELECT id, platform, name, phone, email, service_type, city, zip,
+               lead_cost, status, occurred_at
+        FROM aggregator_leads
+        WHERE account_id=:a AND occurred_at BETWEEN :s AND :e
+        ORDER BY occurred_at DESC
+    """), {"a": aid, "s": str(start) + " 00:00:00", "e": str(end) + " 23:59:59"}).fetchall()
+
+    scored_leads = []
+    platform_quality: Dict[str, Dict] = {}
+    for r in leads:
+        lead = dict(r._mapping)
+        result = _score_aggregator_lead(lead, service_zips)
+        lead["quality_score"] = result["score"]
+        lead["quality_level"] = result["quality"]
+        lead["quality_flags"] = result["flags"]
+        scored_leads.append(lead)
+
+        # Aggregate per platform
+        p = lead["platform"]
+        if p not in platform_quality:
+            platform_quality[p] = {"total": 0, "high": 0, "medium": 0, "low": 0,
+                                   "out_of_area": 0, "invalid_phone": 0, "total_cost": 0}
+        platform_quality[p]["total"] += 1
+        platform_quality[p][result["quality"]] += 1
+        if "Out-of-area ZIP" in result["flags"]:
+            platform_quality[p]["out_of_area"] += 1
+        if "Invalid phone" in result["flags"] or "Fake phone" in result["flags"]:
+            platform_quality[p]["invalid_phone"] += 1
+        platform_quality[p]["total_cost"] += float(lead.get("lead_cost") or 0)
+
+    for p, stats in platform_quality.items():
+        total = stats["total"] or 1
+        stats["quality_pct"] = round((stats["high"] + stats["medium"] * 0.5) / total * 100)
+        stats["wasted_cost"] = round(stats["low"] / total * stats["total_cost"], 2)
+
+    return render_template(
+        "marketing/aggregator_quality.html",
+        scored_leads=scored_leads[:100],
+        platform_quality=platform_quality,
+        days=days,
+        channel_meta=CHANNEL_META,
+    )
+
+
+# ── 11. Multi-Touch Attribution ────────────────────────────────────────────────
+
+def _multi_touch_attribution(aid: int, start: date, end: date, model: str = "last") -> Dict[str, float]:
+    """
+    Calculate attributed revenue per channel using first-touch, last-touch, or linear models.
+    Falls back to last-touch if lead_touches table is sparse.
+    """
+    try:
+        touches = db.session.execute(text("""
+            SELECT lt.lead_ingest_id, lt.touch_channel, lt.occurred_at,
+                   ljl.revenue_cents
+            FROM lead_touches lt
+            JOIN lead_job_links ljl ON ljl.lead_id = lt.lead_ingest_id
+              AND ljl.lead_source = 'lead_ingest'
+            WHERE lt.account_id = :a
+              AND lt.occurred_at BETWEEN :s AND :e
+              AND lt.lead_ingest_id IS NOT NULL
+            ORDER BY lt.lead_ingest_id, lt.occurred_at
+        """), {"a": aid, "s": str(start) + " 00:00:00", "e": str(end) + " 23:59:59"}).fetchall()
+
+        # Group touches by lead
+        from collections import defaultdict
+        lead_touches: Dict[int, list] = defaultdict(list)
+        lead_revenue: Dict[int, float] = {}
+        for r in touches:
+            lead_id = r[0]
+            lead_touches[lead_id].append({"channel": r[1], "at": r[2]})
+            lead_revenue[lead_id] = float(r[3] or 0) / 100.0
+
+        result: Dict[str, float] = defaultdict(float)
+        for lead_id, touch_list in lead_touches.items():
+            rev = lead_revenue.get(lead_id, 0)
+            if not rev:
+                continue
+            if model == "first":
+                result[touch_list[0]["channel"]] += rev
+            elif model == "linear":
+                share = rev / len(touch_list)
+                for t in touch_list:
+                    result[t["channel"]] += share
+            else:  # last
+                result[touch_list[-1]["channel"]] += rev
+
+        return dict(result)
+    except Exception:
+        return _revenue_by_channel(aid, start, end)
+
+
+@marketing_bp.get("/attribution/multi-touch")
+@login_required
+def attribution_multi():
+    """Multi-touch attribution comparison (first / last / linear)."""
+    aid = _account_id()
+    days = int(request.args.get("days", 30))
+    start, end = _date_range(days)
+
+    first_touch = _multi_touch_attribution(aid, start, end, "first")
+    last_touch  = _multi_touch_attribution(aid, start, end, "last")
+    linear      = _multi_touch_attribution(aid, start, end, "linear")
+
+    all_channels = set(list(first_touch.keys()) + list(last_touch.keys()) + list(linear.keys()))
+    rows = []
+    for ch in sorted(all_channels):
+        meta = CHANNEL_META.get(ch, CHANNEL_META["other"])
+        rows.append({
+            "channel": ch,
+            "label": meta["label"],
+            "icon": meta["icon"],
+            "color": meta["color"],
+            "first_touch": first_touch.get(ch, 0),
+            "last_touch": last_touch.get(ch, 0),
+            "linear": linear.get(ch, 0),
+        })
+    rows.sort(key=lambda x: x["last_touch"], reverse=True)
+
+    return render_template(
+        "marketing/attribution_multi.html",
+        rows=rows,
+        days=days,
+        channel_meta=CHANNEL_META,
+    )
+
+
+# ── 12. Promo Code Attribution ─────────────────────────────────────────────────
+
+@marketing_bp.post("/promo/redeem")
+@login_required
+def promo_redeem():
+    """Record a promo code redemption and link it to an offline spend entry."""
+    aid = _account_id()
+    d = request.get_json(silent=True) or request.form.to_dict()
+    code = (d.get("promo_code") or "").strip().upper()
+    if not code:
+        return jsonify({"error": "promo_code required"}), 400
+
+    # Find matching offline spend entry
+    spend_row = db.session.execute(text("""
+        SELECT id FROM offline_channel_spend
+        WHERE account_id=:a AND UPPER(promo_code)=:code
+        ORDER BY spend_date DESC LIMIT 1
+    """), {"a": aid, "code": code}).fetchone()
+
+    try:
+        db.session.execute(text("""
+            INSERT INTO promo_redemptions
+              (account_id, promo_code, offline_spend_id, lead_ingest_id, revenue_cents, notes)
+            VALUES (:a, :code, :sid, :lid, :rev, :notes)
+        """), {
+            "a": aid,
+            "code": code,
+            "sid": spend_row[0] if spend_row else None,
+            "lid": d.get("lead_ingest_id"),
+            "rev": int(float(d.get("revenue", 0)) * 100),
+            "notes": d.get("notes"),
+        })
+        db.session.commit()
+        return jsonify({"ok": True, "matched_spend": bool(spend_row)})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
+
+@marketing_bp.get("/promo/stats")
+@login_required
+def promo_stats():
+    """Show promo code redemption stats per offline channel."""
+    aid = _account_id()
+    rows = db.session.execute(text("""
+        SELECT pr.promo_code,
+               o.channel_label, o.channel_type, o.amount as spend,
+               COUNT(pr.id) as redemptions,
+               COALESCE(SUM(pr.revenue_cents),0)/100 as revenue
+        FROM promo_redemptions pr
+        LEFT JOIN offline_channel_spend o ON o.id = pr.offline_spend_id
+        WHERE pr.account_id = :a
+        GROUP BY pr.promo_code, o.channel_label, o.channel_type, o.amount
+        ORDER BY redemptions DESC
+    """), {"a": aid}).fetchall()
+    return render_template(
+        "marketing/promo_stats.html",
+        rows=[dict(r._mapping) for r in rows],
+        channel_meta=CHANNEL_META,
+    )
+
+
+# ── 13. Seasonal Planner — CSV Export ─────────────────────────────────────────
+
+@marketing_bp.get("/seasonal/export.csv")
+@login_required
+def seasonal_export_csv():
+    import csv, io
+    from flask import make_response
+    aid = _account_id()
+    year = int(request.args.get("year", date.today().year))
+    MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+    MONTH_COLS = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"]
+
+    plans = db.session.execute(text("""
+        SELECT channel, jan_cents, feb_cents, mar_cents, apr_cents, may_cents, jun_cents,
+               jul_cents, aug_cents, sep_cents, oct_cents, nov_cents, dec_cents
+        FROM seasonal_budget_plans
+        WHERE account_id=:a AND plan_year=:y
+    """), {"a": aid, "y": year}).fetchall()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Channel"] + MONTHS + ["Annual Total"])
+    for r in plans:
+        ch = r[0]
+        label = CHANNEL_META.get(ch, CHANNEL_META["other"])["label"]
+        amounts = [r[i+1]/100.0 for i in range(12)]
+        writer.writerow([label] + [f"{a:.0f}" for a in amounts] + [f"{sum(amounts):.0f}"])
+
+    resp = make_response(output.getvalue())
+    resp.headers["Content-Type"] = "text/csv"
+    resp.headers["Content-Disposition"] = f"attachment; filename=seasonal_budget_{year}.csv"
+    return resp
+
+
+@marketing_bp.get("/seasonal/suggest")
+@login_required
+def seasonal_suggest():
+    """Return suggested monthly budgets based on industry + annual total."""
+    aid = _account_id()
+    annual = float(request.args.get("annual", 0))
+    industry = request.args.get("industry", "default").lower()
+
+    profile = SEASONAL_PROFILES.get(industry, SEASONAL_PROFILES["default"])
+    total_weight = sum(profile)
+    monthly = [round(annual * w / total_weight) for w in profile]
+
+    return jsonify({"months": monthly, "industry": industry})
+
+
+# ── 15. CAC Dashboard with Benchmarks ─────────────────────────────────────────
+
+@marketing_bp.get("/cac/benchmarks")
+@login_required
+def cac_benchmarks():
+    """Return benchmark data for each channel as JSON (used by CAC dashboard)."""
+    return jsonify(INDUSTRY_BENCHMARKS)
+
+
+# ── 16. Capacity → Ad Spend Bridge ────────────────────────────────────────────
+
+@marketing_bp.get("/capacity")
+@login_required
+def capacity_check():
+    """Check ServiceTitan capacity and return budget adjustment suggestions."""
+    aid = _account_id()
+    try:
+        # Get current week's booked vs available slots from ServiceTitan
+        capacity_rows = db.session.execute(text("""
+            SELECT available_slots, booked_slots, capacity_pct
+            FROM servicetitan_capacity
+            WHERE account_id=:a
+            ORDER BY week_start DESC LIMIT 4
+        """), {"a": aid}).fetchall()
+        current = capacity_rows[0] if capacity_rows else None
+    except Exception:
+        current = None
+
+    # Get notification threshold settings
+    try:
+        settings = db.session.execute(text("""
+            SELECT capacity_high_threshold, capacity_low_threshold
+            FROM account_notification_settings
+            WHERE account_id=:a
+        """), {"a": aid}).fetchone()
+        high_thresh = settings[0] if settings else 85
+        low_thresh  = settings[1] if settings else 60
+    except Exception:
+        high_thresh, low_thresh = 85, 60
+
+    suggestion = None
+    if current:
+        pct = float(current[2] or 0)
+        if pct >= high_thresh:
+            suggestion = {
+                "type": "reduce",
+                "capacity_pct": pct,
+                "message": (
+                    f"You're at {pct:.0f}% capacity — running full-price ads now means leads "
+                    f"can't get booked for 2–3 weeks. Consider reducing Google Ads and LSA budgets "
+                    f"by 30–40% until capacity drops below {high_thresh}%."
+                ),
+                "recommended_change": -35,
+            }
+        elif pct <= low_thresh:
+            suggestion = {
+                "type": "increase",
+                "capacity_pct": pct,
+                "message": (
+                    f"You're at {pct:.0f}% capacity with open slots this week. "
+                    f"This is the ideal time to increase Google Ads and LSA budgets by 20–30% "
+                    f"to fill your schedule."
+                ),
+                "recommended_change": 25,
+            }
+        else:
+            suggestion = {
+                "type": "hold",
+                "capacity_pct": pct,
+                "message": f"Capacity at {pct:.0f}% — your current budget level looks appropriate.",
+                "recommended_change": 0,
+            }
+
+    return render_template(
+        "marketing/capacity.html",
+        current=current,
+        capacity_rows=capacity_rows if current else [],
+        suggestion=suggestion,
+        high_thresh=high_thresh,
+        low_thresh=low_thresh,
+    )
+
+
+# ── 17. Notification Settings ─────────────────────────────────────────────────
+
+@marketing_bp.get("/settings/notifications")
+@login_required
+def notification_settings():
+    aid = _account_id()
+    try:
+        settings = db.session.execute(text("""
+            SELECT daily_digest_enabled, daily_digest_channel, daily_digest_phone,
+                   daily_digest_email, daily_digest_hour,
+                   pacing_alert_enabled, pacing_alert_threshold_pct, pacing_alert_channel,
+                   auto_response_sms_enabled, auto_response_sms_template, auto_response_delay_seconds,
+                   review_request_auto_enabled, review_request_delay_hours,
+                   review_request_template, review_request_link,
+                   capacity_alert_enabled, capacity_high_threshold, capacity_low_threshold,
+                   competitor_alert_enabled, competitor_alert_threshold
+            FROM account_notification_settings
+            WHERE account_id=:a
+        """), {"a": aid}).fetchone()
+    except Exception:
+        settings = None
+
+    # Defaults
+    defaults = {
+        "daily_digest_enabled": 1,
+        "daily_digest_channel": "sms",
+        "daily_digest_phone": "",
+        "daily_digest_email": "",
+        "daily_digest_hour": 7,
+        "pacing_alert_enabled": 1,
+        "pacing_alert_threshold_pct": 120,
+        "pacing_alert_channel": "sms",
+        "auto_response_sms_enabled": 0,
+        "auto_response_sms_template": "Hi {name}, thanks for reaching out! We'll call you back within 30 minutes.",
+        "auto_response_delay_seconds": 60,
+        "review_request_auto_enabled": 0,
+        "review_request_delay_hours": 2,
+        "review_request_template": "Hi {name}, thanks for choosing us! We'd love your review: {link}",
+        "review_request_link": "",
+        "capacity_alert_enabled": 1,
+        "capacity_high_threshold": 85,
+        "capacity_low_threshold": 60,
+        "competitor_alert_enabled": 1,
+        "competitor_alert_threshold": 15,
+    }
+
+    if settings:
+        s = dict(settings._mapping)
+    else:
+        s = defaults
+
+    return render_template("marketing/notification_settings.html", s=s)
+
+
+@marketing_bp.post("/settings/notifications/save")
+@login_required
+def notification_settings_save():
+    aid = _account_id()
+    f = request.form
+    try:
+        db.session.execute(text("""
+            INSERT INTO account_notification_settings
+              (account_id, daily_digest_enabled, daily_digest_channel, daily_digest_phone,
+               daily_digest_email, daily_digest_hour,
+               pacing_alert_enabled, pacing_alert_threshold_pct, pacing_alert_channel,
+               auto_response_sms_enabled, auto_response_sms_template, auto_response_delay_seconds,
+               review_request_auto_enabled, review_request_delay_hours,
+               review_request_template, review_request_link,
+               capacity_alert_enabled, capacity_high_threshold, capacity_low_threshold,
+               competitor_alert_enabled, competitor_alert_threshold)
+            VALUES
+              (:a, :dde, :ddc, :ddp, :dde2, :ddh,
+               :pae, :pat, :pac,
+               :arse, :arst, :ards,
+               :rrae, :rrdh, :rrte, :rrl,
+               :cae, :cht, :clt,
+               :cale, :calt)
+            ON DUPLICATE KEY UPDATE
+              daily_digest_enabled=VALUES(daily_digest_enabled),
+              daily_digest_channel=VALUES(daily_digest_channel),
+              daily_digest_phone=VALUES(daily_digest_phone),
+              daily_digest_email=VALUES(daily_digest_email),
+              daily_digest_hour=VALUES(daily_digest_hour),
+              pacing_alert_enabled=VALUES(pacing_alert_enabled),
+              pacing_alert_threshold_pct=VALUES(pacing_alert_threshold_pct),
+              pacing_alert_channel=VALUES(pacing_alert_channel),
+              auto_response_sms_enabled=VALUES(auto_response_sms_enabled),
+              auto_response_sms_template=VALUES(auto_response_sms_template),
+              auto_response_delay_seconds=VALUES(auto_response_delay_seconds),
+              review_request_auto_enabled=VALUES(review_request_auto_enabled),
+              review_request_delay_hours=VALUES(review_request_delay_hours),
+              review_request_template=VALUES(review_request_template),
+              review_request_link=VALUES(review_request_link),
+              capacity_alert_enabled=VALUES(capacity_alert_enabled),
+              capacity_high_threshold=VALUES(capacity_high_threshold),
+              capacity_low_threshold=VALUES(capacity_low_threshold),
+              competitor_alert_enabled=VALUES(competitor_alert_enabled),
+              competitor_alert_threshold=VALUES(competitor_alert_threshold),
+              updated_at=NOW()
+        """), {
+            "a": aid,
+            "dde": 1 if f.get("daily_digest_enabled") else 0,
+            "ddc": f.get("daily_digest_channel", "sms"),
+            "ddp": f.get("daily_digest_phone", "").strip() or None,
+            "dde2": f.get("daily_digest_email", "").strip() or None,
+            "ddh": int(f.get("daily_digest_hour", 7)),
+            "pae": 1 if f.get("pacing_alert_enabled") else 0,
+            "pat": int(f.get("pacing_alert_threshold_pct", 120)),
+            "pac": f.get("pacing_alert_channel", "sms"),
+            "arse": 1 if f.get("auto_response_sms_enabled") else 0,
+            "arst": f.get("auto_response_sms_template", "").strip() or None,
+            "ards": int(f.get("auto_response_delay_seconds", 60)),
+            "rrae": 1 if f.get("review_request_auto_enabled") else 0,
+            "rrdh": int(f.get("review_request_delay_hours", 2)),
+            "rrte": f.get("review_request_template", "").strip() or None,
+            "rrl": f.get("review_request_link", "").strip() or None,
+            "cae": 1 if f.get("capacity_alert_enabled") else 0,
+            "cht": int(f.get("capacity_high_threshold", 85)),
+            "clt": int(f.get("capacity_low_threshold", 60)),
+            "cale": 1 if f.get("competitor_alert_enabled") else 0,
+            "calt": int(f.get("competitor_alert_threshold", 15)),
+        })
+        db.session.commit()
+        flash("Notification settings saved.", "success")
+    except Exception as e:
+        db.session.rollback()
+        log.exception("notification_settings_save failed: %s", e)
+        flash("Failed to save settings.", "danger")
+    return redirect(url_for("marketing_bp.notification_settings"))
+
+
+@marketing_bp.get("/revenue/upsells")
+@login_required
+def revenue_upsells():
+    """Upsell opportunities based on job types from ServiceTitan."""
+    aid = _account_id()
+    try:
+        top_job_types = db.session.execute(text("""
+            SELECT job_type_name, COUNT(*) as cnt, AVG(total) as avg_ticket
+            FROM servicetitan_jobs
+            WHERE account_id=:a AND status IN ('Completed','Done')
+            ORDER BY cnt DESC LIMIT 5
+        """), {"a": aid}).fetchall()
+    except Exception:
+        top_job_types = []
+
+    # Get industry from business profile
+    try:
+        bp_row = db.session.execute(text("""
+            SELECT industry FROM business_profiles WHERE account_id=:a LIMIT 1
+        """), {"a": aid}).fetchone()
+        industry = (bp_row[0] or "").lower() if bp_row else "hvac"
+    except Exception:
+        industry = "hvac"
+
+    # Match industry to upsell suggestions
+    suggestions = UPSELL_SUGGESTIONS.get(industry, UPSELL_SUGGESTIONS.get("hvac", []))
+
+    return render_template(
+        "marketing/upsells.html",
+        suggestions=suggestions,
+        top_job_types=top_job_types,
+        industry=industry,
+    )

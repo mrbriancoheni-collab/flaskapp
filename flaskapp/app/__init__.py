@@ -1013,6 +1013,22 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register marketing_bp")
 
+    # --- Service Agreements (recurring maintenance plans) --------------------
+    try:
+        from app.agreements import agreements_bp
+        app.register_blueprint(agreements_bp)
+        app.logger.info("agreements_bp registered at /account/agreements")
+    except Exception:
+        app.logger.exception("Failed to register agreements_bp")
+
+    # --- Daily Health Digest -------------------------------------------------
+    try:
+        from app.digest import digest_bp
+        app.register_blueprint(digest_bp)
+        app.logger.info("digest_bp registered at /account/digest")
+    except Exception:
+        app.logger.exception("Failed to register digest_bp")
+
     # ---- Apply CSRF exemptions AFTER blueprints are registered -------------
     try:
         for ep in (

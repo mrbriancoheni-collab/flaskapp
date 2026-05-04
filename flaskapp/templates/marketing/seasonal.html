@@ -14,6 +14,13 @@
           <option value="{{ y }}" {% if y==year %}selected{% endif %}>{{ y }}</option>
         {% endfor %}
       </select>
+      <a href="{{ url_for('marketing_bp.seasonal_export_csv', year=year) }}"
+         class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+        <i class="fa-solid fa-download"></i> CSV
+      </a>
+      <button onclick="showSuggestModal()" class="flex items-center gap-2 px-3 py-2 border border-indigo-300 rounded-lg text-sm text-indigo-600 hover:bg-indigo-50">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Suggest
+      </button>
       <button onclick="savePlan()" class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
         <i class="fa-solid fa-floppy-disk"></i> Save Plan
       </button>
@@ -197,5 +204,73 @@ function savePlan() {
     } else alert('Save failed: ' + d.error);
   });
 }
+
+function showSuggestModal() {
+  document.getElementById('suggestModal').classList.remove('hidden');
+}
+
+function applySuggestion() {
+  const annual = parseFloat(document.getElementById('suggestAnnual').value) || 0;
+  const industry = document.getElementById('suggestIndustry').value;
+  const channel = document.getElementById('suggestChannel').value;
+  if (!annual || !channel) { alert('Enter an annual budget and select a channel.'); return; }
+
+  fetch(`{{ url_for("marketing_bp.seasonal_suggest") }}?annual=${annual}&industry=${industry}`)
+    .then(r => r.json()).then(d => {
+      d.months.forEach((val, i) => {
+        const inp = document.querySelector(`.plan-input[data-channel="${channel}"][data-month="${i}"]`);
+        if (inp) inp.value = val > 0 ? val : '';
+      });
+      recalc();
+      document.getElementById('suggestModal').classList.add('hidden');
+    });
+}
 </script>
+
+<!-- Suggest Modal -->
+<div id="suggestModal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-bold text-gray-900">Suggest Monthly Budget</h3>
+      <button onclick="document.getElementById('suggestModal').classList.add('hidden')"
+              class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Annual Budget for this Channel ($)</label>
+        <input type="number" id="suggestAnnual" min="0" step="100" placeholder="12000"
+               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Apply to Channel</label>
+        <select id="suggestChannel" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+          {% for ch in all_channels %}
+          {% set meta = channel_meta.get(ch, channel_meta['other']) %}
+          <option value="{{ ch }}">{{ meta.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Industry (for seasonal weighting)</label>
+        <select id="suggestIndustry" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+          <option value="default">General / Even spread</option>
+          <option value="hvac">HVAC</option>
+          <option value="plumbing">Plumbing</option>
+          <option value="roofing">Roofing</option>
+          <option value="electrical">Electrical</option>
+          <option value="landscaping">Landscaping</option>
+          <option value="pest">Pest Control</option>
+        </select>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button onclick="document.getElementById('suggestModal').classList.add('hidden')"
+                class="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600">Cancel</button>
+        <button onclick="applySuggestion()"
+                class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
+          Apply Suggestion
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

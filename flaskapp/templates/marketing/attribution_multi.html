@@ -1,0 +1,122 @@
+{% extends "base_app.html" %}
+{% block title %}Multi-Touch Attribution — FieldSprout{% endblock %}
+{% block content %}
+<div class="px-4 py-6 max-w-7xl mx-auto">
+
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Multi-Touch Attribution</h1>
+      <p class="text-gray-500 text-sm mt-0.5">Compare first-touch, last-touch, and linear revenue attribution models.</p>
+    </div>
+    <select onchange="window.location.search='?days='+this.value"
+            class="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+      {% for d in [30,60,90,180] %}
+        <option value="{{ d }}" {% if days==d %}selected{% endif %}>Last {{ d }} days</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <!-- Model explainer -->
+  <div class="grid md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-blue-50 rounded-xl border border-blue-200 p-4">
+      <div class="flex items-center gap-2 mb-2">
+        <i class="fa-solid fa-flag text-blue-500"></i>
+        <span class="font-semibold text-blue-900">First Touch</span>
+      </div>
+      <p class="text-xs text-blue-700">100% of credit goes to the first channel that touched the lead. Best for measuring top-of-funnel awareness channels.</p>
+    </div>
+    <div class="bg-indigo-50 rounded-xl border border-indigo-200 p-4">
+      <div class="flex items-center gap-2 mb-2">
+        <i class="fa-solid fa-flag-checkered text-indigo-500"></i>
+        <span class="font-semibold text-indigo-900">Last Touch</span>
+      </div>
+      <p class="text-xs text-indigo-700">100% of credit goes to the final channel before conversion. Standard model — best for direct response channels.</p>
+    </div>
+    <div class="bg-purple-50 rounded-xl border border-purple-200 p-4">
+      <div class="flex items-center gap-2 mb-2">
+        <i class="fa-solid fa-share-nodes text-purple-500"></i>
+        <span class="font-semibold text-purple-900">Linear</span>
+      </div>
+      <p class="text-xs text-purple-700">Credit split equally across every touchpoint. Most balanced view when channels work together to win a job.</p>
+    </div>
+  </div>
+
+  {% if rows %}
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-900">Revenue by Channel × Attribution Model</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="bg-gray-50 border-b border-gray-200 text-left">
+          <th class="px-4 py-3 font-semibold text-gray-600">Channel</th>
+          <th class="px-4 py-3 font-semibold text-blue-600 text-right">First Touch</th>
+          <th class="px-4 py-3 font-semibold text-indigo-600 text-right">Last Touch</th>
+          <th class="px-4 py-3 font-semibold text-purple-600 text-right">Linear</th>
+          <th class="px-4 py-3 font-semibold text-gray-600">Comparison</th>
+        </tr></thead>
+        <tbody class="divide-y divide-gray-100">
+          {% set max_rev = rows | map(attribute='last_touch') | max if rows else 1 %}
+          {% for row in rows %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded bg-{{ row.color }}-100 flex items-center justify-center text-{{ row.color }}-600 text-xs flex-shrink-0">
+                  <i class="fa-solid {{ row.icon }}"></i>
+                </div>
+                <span class="font-medium text-gray-800">{{ row.label }}</span>
+              </div>
+            </td>
+            <td class="px-4 py-3 text-right font-semibold text-blue-700">
+              {% if row.first_touch > 0 %}${{ "%.0f"|format(row.first_touch) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right font-semibold text-indigo-700">
+              {% if row.last_touch > 0 %}${{ "%.0f"|format(row.last_touch) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right font-semibold text-purple-700">
+              {% if row.linear > 0 %}${{ "%.0f"|format(row.linear) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3">
+              {% if row.last_touch > 0 and row.first_touch > 0 %}
+              {% set diff_pct = ((row.first_touch - row.last_touch) / row.last_touch * 100)|round(0)|int %}
+              <span class="text-xs {% if diff_pct > 15 %}text-blue-600 font-medium{% elif diff_pct < -15 %}text-red-500 font-medium{% else %}text-gray-400{% endif %}">
+                {% if diff_pct > 0 %}First-touch +{{ diff_pct }}% vs Last-touch{% elif diff_pct < 0 %}First-touch {{ diff_pct }}% vs Last-touch{% else %}Models agree{% endif %}
+              </span>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Insight -->
+  <div class="bg-indigo-50 rounded-xl border border-indigo-200 p-5 mt-6">
+    <div class="flex gap-3">
+      <i class="fa-solid fa-flask text-indigo-500 mt-0.5 flex-shrink-0"></i>
+      <div class="text-sm text-indigo-900">
+        <strong>How to use this:</strong> If a channel looks strong in First-Touch but weak in Last-Touch,
+        it's great at building awareness but customers convert through another channel.
+        This happens often with Facebook Ads (builds awareness) and Google Ads (captures intent right before booking).
+        Cutting your Facebook budget might hurt your Google results more than you'd expect.
+        Touch events are recorded when leads visit your site — requires the FieldSprout tracking pixel.
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+    <i class="fa-solid fa-share-nodes text-4xl text-gray-300 mb-4"></i>
+    <h3 class="text-lg font-semibold text-gray-700 mb-2">No multi-touch data yet</h3>
+    <p class="text-gray-500 text-sm">Multi-touch attribution requires the FieldSprout tracking pixel on your website and linked lead-to-job revenue. Check back after more lead data accumulates.</p>
+  </div>
+  {% endif %}
+
+  <div class="mt-4">
+    <a href="{{ url_for('marketing_bp.attribution') }}" class="text-sm text-indigo-600 hover:text-indigo-800">
+      ← Back to standard attribution
+    </a>
+  </div>
+</div>
+{% endblock %}

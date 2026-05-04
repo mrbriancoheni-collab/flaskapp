@@ -1,0 +1,187 @@
+{% extends "base_app.html" %}
+{% block title %}Service Agreements — FieldSprout{% endblock %}
+{% block content %}
+<div class="px-4 py-6 max-w-7xl mx-auto">
+
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Service Agreements</h1>
+      <p class="text-gray-500 text-sm mt-0.5">Track recurring maintenance plans, renewal dates, and MRR.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="{{ url_for('agreements_bp.export_csv') }}"
+         class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+        <i class="fa-solid fa-download"></i> Export CSV
+      </a>
+      <a href="{{ url_for('agreements_bp.new_form') }}"
+         class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
+        <i class="fa-solid fa-plus"></i> Add Agreement
+      </a>
+    </div>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Active Plans</p>
+      <p class="text-2xl font-bold text-gray-900 mt-1">{{ stats.active_count or 0 }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Monthly Recurring</p>
+      <p class="text-2xl font-bold text-green-700 mt-1">${{ "%.0f"|format(stats.mrr or 0) }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Annual Value</p>
+      <p class="text-2xl font-bold text-indigo-700 mt-1">${{ "%.0f"|format(stats.arr or 0) }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Renewing in 30d</p>
+      <p class="text-2xl font-bold {% if stats.renewing_soon > 0 %}text-amber-600{% else %}text-gray-900{% endif %} mt-1">
+        {{ stats.renewing_soon or 0 }}
+      </p>
+    </div>
+  </div>
+
+  <!-- Upcoming renewals alert -->
+  {% if renewing_soon %}
+  <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+    <div class="flex items-start gap-3">
+      <i class="fa-solid fa-bell text-amber-500 mt-0.5 flex-shrink-0"></i>
+      <div>
+        <h3 class="font-semibold text-amber-900 text-sm">{{ renewing_soon|length }} agreement{{ 's' if renewing_soon|length > 1 }} renewing in the next 30 days</h3>
+        <div class="flex flex-wrap gap-2 mt-2">
+          {% for a in renewing_soon[:5] %}
+          <div class="flex items-center gap-2 bg-white rounded-lg px-3 py-1.5 border border-amber-200 text-xs">
+            <span class="font-medium text-gray-900">{{ a.customer_name }}</span>
+            <span class="text-amber-600">{{ a.renewal_date.strftime('%b %d') if a.renewal_date else '—' }}</span>
+            <form action="{{ url_for('agreements_bp.send_renewal_notice', agreement_id=a.id) }}" method="POST" class="inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="text-indigo-600 hover:text-indigo-800 font-medium">Remind</button>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Status filter -->
+  <div class="flex items-center gap-2 mb-4">
+    {% for s in ['', 'active', 'pending_renewal', 'expired', 'cancelled'] %}
+    <a href="{{ url_for('agreements_bp.index', status=s) }}"
+       class="px-3 py-1.5 rounded-lg text-xs font-medium border
+              {% if status_filter == s %}bg-indigo-600 text-white border-indigo-600{% else %}bg-white text-gray-600 border-gray-200 hover:bg-gray-50{% endif %}">
+      {{ {'': 'All', 'active': 'Active', 'pending_renewal': 'Pending Renewal', 'expired': 'Expired', 'cancelled': 'Cancelled'}[s] }}
+    </a>
+    {% endfor %}
+  </div>
+
+  <!-- Agreements table -->
+  {% if agreements %}
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="bg-gray-50 border-b border-gray-200 text-left">
+          <th class="px-4 py-3 font-semibold text-gray-600">Customer</th>
+          <th class="px-4 py-3 font-semibold text-gray-600">Plan</th>
+          <th class="px-4 py-3 font-semibold text-gray-600">Type</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">MRR</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">ARR</th>
+          <th class="px-4 py-3 font-semibold text-gray-600">Renewal Date</th>
+          <th class="px-4 py-3 font-semibold text-gray-600">Status</th>
+          <th class="px-4 py-3 font-semibold text-gray-600"></th>
+        </tr></thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for a in agreements %}
+          {% set days_to_renewal = (a.renewal_date - today).days if a.renewal_date else 999 %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3">
+              <div class="font-medium text-gray-900">{{ a.customer_name }}</div>
+              <div class="text-xs text-gray-400">{{ a.customer_phone or a.customer_email or '—' }}</div>
+            </td>
+            <td class="px-4 py-3">
+              <div class="font-medium text-gray-800">{{ a.plan_name }}</div>
+              {% if a.service_type %}
+              <div class="text-xs text-gray-400 capitalize">{{ a.service_type }}</div>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 capitalize text-gray-600">{{ a.plan_type }}</td>
+            <td class="px-4 py-3 text-right font-semibold text-green-700">${{ "%.0f"|format(a.monthly_value or 0) }}</td>
+            <td class="px-4 py-3 text-right text-gray-700">${{ "%.0f"|format(a.annual_value or 0) }}</td>
+            <td class="px-4 py-3">
+              {% if a.renewal_date %}
+              <span class="{% if days_to_renewal <= 30 and a.status == 'active' %}text-amber-600 font-semibold{% else %}text-gray-700{% endif %}">
+                {{ a.renewal_date.strftime('%b %d, %Y') }}
+              </span>
+              {% if days_to_renewal <= 30 and a.status == 'active' %}
+              <span class="text-xs text-amber-500 ml-1">({{ days_to_renewal }}d)</span>
+              {% endif %}
+              {% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-0.5 rounded-full text-xs font-medium
+                {% if a.status == 'active' %}bg-green-100 text-green-700
+                {% elif a.status == 'pending_renewal' %}bg-amber-100 text-amber-700
+                {% elif a.status == 'expired' %}bg-red-100 text-red-700
+                {% else %}bg-gray-100 text-gray-500{% endif %}">
+                {{ a.status.replace('_', ' ').title() }}
+              </span>
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2">
+                <a href="{{ url_for('agreements_bp.edit_form', agreement_id=a.id) }}"
+                   class="text-indigo-600 hover:text-indigo-800 text-xs font-medium">Edit</a>
+                {% if a.customer_phone and a.status == 'active' and days_to_renewal <= 30 %}
+                <form action="{{ url_for('agreements_bp.send_renewal_notice', agreement_id=a.id) }}" method="POST" class="inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="text-amber-600 hover:text-amber-800 text-xs font-medium">Remind</button>
+                </form>
+                {% endif %}
+                <form action="{{ url_for('agreements_bp.delete', agreement_id=a.id) }}" method="POST"
+                      onsubmit="return confirm('Cancel this agreement?')" class="inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="text-red-400 hover:text-red-600 text-xs">Cancel</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr class="bg-gray-50 border-t-2 border-gray-200 font-bold text-sm">
+            <td colspan="3" class="px-4 py-3 text-gray-700">Total (active)</td>
+            <td class="px-4 py-3 text-right text-green-700">${{ "%.0f"|format(stats.mrr or 0) }}/mo</td>
+            <td class="px-4 py-3 text-right text-indigo-700">${{ "%.0f"|format(stats.arr or 0) }}/yr</td>
+            <td colspan="3"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+    <i class="fa-solid fa-file-contract text-4xl text-gray-300 mb-4"></i>
+    <h3 class="text-lg font-semibold text-gray-700 mb-2">No agreements yet</h3>
+    <p class="text-gray-500 text-sm mb-4">Track maintenance plans and annual service contracts to see your recurring revenue.</p>
+    <a href="{{ url_for('agreements_bp.new_form') }}"
+       class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
+      <i class="fa-solid fa-plus"></i> Add Your First Agreement
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- Why track agreements tip -->
+  <div class="bg-indigo-50 rounded-xl border border-indigo-200 p-5 mt-6">
+    <div class="flex gap-3">
+      <i class="fa-solid fa-lightbulb text-indigo-500 mt-0.5 flex-shrink-0"></i>
+      <div class="text-sm text-indigo-900">
+        <strong>Why track service agreements?</strong> Recurring revenue from maintenance plans reduces your dependence on ad spend.
+        A customer on an annual HVAC plan has a 3-4× higher LTV than a one-time job customer, and renewal campaigns
+        cost 5× less than new customer acquisition. Agreements renewing soon are your highest-priority marketing activity.
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

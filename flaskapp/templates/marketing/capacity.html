@@ -1,0 +1,145 @@
+{% extends "base_app.html" %}
+{% block title %}Capacity → Ad Spend Bridge — FieldSprout{% endblock %}
+{% block content %}
+<div class="px-4 py-6 max-w-7xl mx-auto">
+
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Capacity → Ad Spend Bridge</h1>
+    <p class="text-gray-500 text-sm mt-0.5">Match your ad spend to your actual availability — stop buying leads you can't book.</p>
+  </div>
+
+  <!-- Main suggestion card -->
+  {% if suggestion %}
+  <div class="rounded-xl border p-6 mb-6
+    {% if suggestion.type == 'reduce' %}bg-red-50 border-red-200
+    {% elif suggestion.type == 'increase' %}bg-green-50 border-green-200
+    {% else %}bg-gray-50 border-gray-200{% endif %}">
+    <div class="flex items-start gap-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0
+        {% if suggestion.type == 'reduce' %}bg-red-100 text-red-600
+        {% elif suggestion.type == 'increase' %}bg-green-100 text-green-600
+        {% else %}bg-gray-100 text-gray-600{% endif %}">
+        <i class="fa-solid {% if suggestion.type == 'reduce' %}fa-arrow-trend-down{% elif suggestion.type == 'increase' %}fa-arrow-trend-up{% else %}fa-equals{% endif %} text-xl"></i>
+      </div>
+      <div class="flex-1">
+        <div class="flex items-center gap-3 mb-2">
+          <h2 class="text-lg font-bold
+            {% if suggestion.type == 'reduce' %}text-red-900
+            {% elif suggestion.type == 'increase' %}text-green-900
+            {% else %}text-gray-900{% endif %}">
+            {% if suggestion.type == 'reduce' %}Reduce Ad Spend
+            {% elif suggestion.type == 'increase' %}Increase Ad Spend
+            {% else %}Budget Looks Right{% endif %}
+          </h2>
+          <span class="px-2.5 py-0.5 rounded-full text-sm font-bold
+            {% if suggestion.type == 'reduce' %}bg-red-100 text-red-700
+            {% elif suggestion.type == 'increase' %}bg-green-100 text-green-700
+            {% else %}bg-gray-100 text-gray-600{% endif %}">
+            {{ suggestion.capacity_pct|round(0)|int }}% booked
+          </span>
+        </div>
+        <p class="text-sm
+          {% if suggestion.type == 'reduce' %}text-red-800
+          {% elif suggestion.type == 'increase' %}text-green-800
+          {% else %}text-gray-700{% endif %}">
+          {{ suggestion.message }}
+        </p>
+        {% if suggestion.recommended_change != 0 %}
+        <div class="mt-4 flex items-center gap-3">
+          <span class="text-sm font-medium
+            {% if suggestion.type == 'reduce' %}text-red-700
+            {% else %}text-green-700{% endif %}">
+            Suggested adjustment:
+            <strong>{{ '+' if suggestion.recommended_change > 0 else '' }}{{ suggestion.recommended_change }}%</strong>
+            budget change
+          </span>
+          <a href="{{ url_for('marketing_bp.pacing') }}"
+             class="px-3 py-1.5 rounded-lg text-xs font-medium text-white
+             {% if suggestion.type == 'reduce' %}bg-red-600 hover:bg-red-700
+             {% else %}bg-green-600 hover:bg-green-700{% endif %}">
+            Adjust Budgets →
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Capacity trend -->
+  {% if capacity_rows %}
+  <div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+    <h2 class="font-semibold text-gray-900 mb-4">4-Week Capacity Trend</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="bg-gray-50 border-b border-gray-200 text-left">
+          <th class="px-4 py-3 font-semibold text-gray-600">Week</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">Available Slots</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">Booked</th>
+          <th class="px-4 py-3 font-semibold text-gray-600">Utilization</th>
+        </tr></thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for row in capacity_rows %}
+          {% set pct = row[2]|float %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 text-gray-700">This week</td>
+            <td class="px-4 py-3 text-right text-gray-700">{{ row[0] or '—' }}</td>
+            <td class="px-4 py-3 text-right font-semibold text-gray-900">{{ row[1] or '—' }}</td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2">
+                <div class="flex-1 bg-gray-100 rounded-full h-2 max-w-32">
+                  <div class="h-2 rounded-full {% if pct >= 85 %}bg-red-500{% elif pct >= 70 %}bg-amber-500{% else %}bg-green-500{% endif %}"
+                       style="width: {{ [pct, 100]|min }}%"></div>
+                </div>
+                <span class="text-xs font-semibold {% if pct >= 85 %}text-red-600{% elif pct >= 70 %}text-amber-600{% else %}text-green-600{% endif %}">
+                  {{ pct|round(0)|int }}%
+                </span>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="bg-white rounded-xl border border-gray-200 p-10 text-center mb-6">
+    <i class="fa-solid fa-calendar-days text-3xl text-gray-300 mb-3"></i>
+    <h3 class="font-semibold text-gray-700 mb-1">No capacity data</h3>
+    <p class="text-sm text-gray-500">Connect ServiceTitan to see live capacity data and get budget recommendations.</p>
+  </div>
+  {% endif %}
+
+  <!-- Alert thresholds -->
+  <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <h3 class="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+      <i class="fa-solid fa-sliders text-indigo-500"></i> Alert Thresholds
+    </h3>
+    <div class="grid sm:grid-cols-2 gap-4 text-sm text-gray-600">
+      <div class="flex items-start gap-3">
+        <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-600 flex-shrink-0 mt-0.5">
+          <i class="fa-solid fa-arrow-trend-down text-sm"></i>
+        </div>
+        <div>
+          <div class="font-medium text-gray-900">Reduce at {{ high_thresh }}%+ capacity</div>
+          <div class="text-xs text-gray-500">When you're fully booked, leads you generate can't be served quickly and will go to competitors.</div>
+        </div>
+      </div>
+      <div class="flex items-start gap-3">
+        <div class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center text-green-600 flex-shrink-0 mt-0.5">
+          <i class="fa-solid fa-arrow-trend-up text-sm"></i>
+        </div>
+        <div>
+          <div class="font-medium text-gray-900">Increase at {{ low_thresh }}% or less capacity</div>
+          <div class="text-xs text-gray-500">Open schedule = best time to buy leads. You can respond fast and convert at higher rates.</div>
+        </div>
+      </div>
+    </div>
+    <div class="mt-4">
+      <a href="{{ url_for('marketing_bp.notification_settings') }}"
+         class="text-sm text-indigo-600 hover:text-indigo-800">Adjust thresholds in Notification Settings →</a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

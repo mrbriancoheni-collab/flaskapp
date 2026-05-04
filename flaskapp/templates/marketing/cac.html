@@ -58,7 +58,8 @@
             <th class="px-4 py-3 font-semibold text-gray-600 text-right">Leads</th>
             <th class="px-4 py-3 font-semibold text-gray-600 text-right">CPL</th>
             <th class="px-4 py-3 font-semibold text-gray-600 text-right">Booked</th>
-            <th class="px-4 py-3 font-semibold text-gray-600 text-right">CAC</th>
+            <th class="px-4 py-3 font-semibold text-gray-600 text-right">Your CAC</th>
+            <th class="px-4 py-3 font-semibold text-gray-500 text-right text-xs">Industry Avg</th>
             <th class="px-4 py-3 font-semibold text-gray-600 text-right">Revenue</th>
             <th class="px-4 py-3 font-semibold text-gray-600 text-right">ROAS</th>
             <th class="px-4 py-3 font-semibold text-gray-600 text-right">Signal</th>
@@ -89,6 +90,19 @@
               {% elif row.cac %}text-red-600
               {% else %}text-gray-400{% endif %}">
               {% if row.cac %}${{ "%.0f"|format(row.cac) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right text-xs">
+              {% set bm = benchmarks.get(row.channel) %}
+              {% if bm and row.cac %}
+                {% set diff = row.cac - bm.cac %}
+                <span class="{% if diff < 0 %}text-green-600 font-semibold{% elif diff > 50 %}text-red-500{% else %}text-gray-400{% endif %}">
+                  ${{ bm.cac }}
+                </span>
+                {% if diff < -10 %}<span class="text-green-600 font-bold ml-1">↓{{ (diff|abs)|round(0)|int }}</span>
+                {% elif diff > 10 %}<span class="text-red-500 font-bold ml-1">↑{{ diff|round(0)|int }}</span>{% endif %}
+              {% elif bm %}
+                <span class="text-gray-300">${{ bm.cac }}</span>
+              {% else %}—{% endif %}
             </td>
             <td class="px-4 py-3 text-right text-gray-700">{% if row.revenue %}${{ "%.0f"|format(row.revenue) }}{% else %}—{% endif %}</td>
             <td class="px-4 py-3 text-right {% if row.roas and row.roas >= 3 %}text-green-600 font-semibold{% elif row.roas and row.roas >= 1 %}text-yellow-600{% elif row.roas %}text-red-500{% else %}text-gray-400{% endif %}">

@@ -336,6 +336,150 @@
   </div>
   {% endif %}
 
+  {# ── Device & Daypart Segmentation ─────────────────────────────────── #}
+  {% if device_data or daypart_data %}
+  <div class="bg-white rounded-xl border overflow-hidden">
+    <div class="px-5 py-4 border-b flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
+        <i class="fa-solid fa-chart-bar text-indigo-500"></i> Segmentation — Device &amp; Daypart
+      </h2>
+      <div class="flex items-center gap-2 text-xs">
+        <button onclick="showSeg('device')" id="seg-tab-device"
+                class="px-3 py-1 rounded border bg-indigo-600 text-white font-medium">Device</button>
+        <button onclick="showSeg('hour')" id="seg-tab-hour"
+                class="px-3 py-1 rounded border text-gray-600 hover:bg-gray-50">By Hour</button>
+        <button onclick="showSeg('dow')" id="seg-tab-dow"
+                class="px-3 py-1 rounded border text-gray-600 hover:bg-gray-50">By Day</button>
+      </div>
+    </div>
+
+    {# Device tab #}
+    <div id="seg-device" class="p-5">
+      {% if device_data %}
+      <div class="overflow-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-xs text-gray-500 uppercase border-b">
+            <tr>
+              <th class="text-left pb-2 pr-4">Device</th>
+              <th class="text-right pb-2 pr-4">Spend</th>
+              <th class="text-right pb-2 pr-4">Clicks</th>
+              <th class="text-right pb-2 pr-4">CTR</th>
+              <th class="text-right pb-2 pr-4">Conversions</th>
+              <th class="text-right pb-2">CPA</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            {% set total_spend = device_data | sum(attribute='cost') %}
+            {% for d in device_data %}
+            {% set pct = (d.cost / total_spend * 100)|round(1) if total_spend else 0 %}
+            <tr class="hover:bg-gray-50">
+              <td class="py-2 pr-4 font-medium text-gray-800">
+                {% if 'MOBILE' in d.device %}<i class="fa-solid fa-mobile-screen-button text-blue-400 mr-1"></i>
+                {% elif 'TABLET' in d.device %}<i class="fa-solid fa-tablet-screen-button text-violet-400 mr-1"></i>
+                {% else %}<i class="fa-solid fa-desktop text-gray-400 mr-1"></i>{% endif %}
+                {{ d.device.replace('_', ' ').title() }}
+              </td>
+              <td class="py-2 pr-4 text-right">
+                <span class="font-semibold">${{ d.cost }}</span>
+                <div class="w-full bg-gray-100 rounded-full h-1 mt-1">
+                  <div class="bg-indigo-400 h-1 rounded-full" style="width:{{ pct }}%"></div>
+                </div>
+                <span class="text-xs text-gray-400">{{ pct }}%</span>
+              </td>
+              <td class="py-2 pr-4 text-right">{{ d.clicks | int }}</td>
+              <td class="py-2 pr-4 text-right {% if d.ctr < 2 %}text-red-500{% elif d.ctr >= 4 %}text-green-600{% endif %}">{{ d.ctr }}%</td>
+              <td class="py-2 pr-4 text-right">{{ d.conversions | round(1) }}</td>
+              <td class="py-2 text-right {% if d.cpa and d.cpa > 100 %}text-red-500{% elif d.cpa and d.cpa < 50 %}text-green-600{% endif %}">
+                {% if d.cpa %}${{ d.cpa }}{% else %}<span class="text-gray-300">—</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-400 text-center py-6">Connect Google Ads to see device breakdowns.</p>
+      {% endif %}
+    </div>
+
+    {# Hour-of-day tab #}
+    <div id="seg-hour" class="p-5 hidden">
+      {% if daypart_data and daypart_data.hours %}
+      <div class="mb-1 text-xs text-gray-400">Click spend by hour (30d). Taller = more spend.</div>
+      <div class="flex items-end gap-0.5 h-24 border-b pb-1">
+        {% set max_cost = daypart_data.hours | map(attribute='cost') | max %}
+        {% for h in daypart_data.hours %}
+        {% set ht = ((h.cost / max_cost * 100)|round(0)|int) if max_cost else 0 %}
+        <div class="flex-1 flex flex-col items-center group relative" title="Hour {{ h.hour }}:00 — ${{ h.cost }} · {{ h.clicks }} clicks">
+          <div class="w-full rounded-t bg-indigo-400 hover:bg-indigo-600 transition cursor-default"
+               style="height:{{ ht }}%"></div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="flex items-start gap-0.5 mt-0.5">
+        {% for h in daypart_data.hours %}
+        <div class="flex-1 text-center text-[9px] text-gray-400">{{ h.hour }}</div>
+        {% endfor %}
+      </div>
+      <div class="mt-4 overflow-auto">
+        <table class="min-w-full text-xs">
+          <thead class="text-gray-400 border-b">
+            <tr><th class="text-left pb-1 pr-3">Hour</th><th class="text-right pb-1 pr-3">Spend</th><th class="text-right pb-1 pr-3">Clicks</th><th class="text-right pb-1">Conv.</th></tr>
+          </thead>
+          <tbody class="divide-y">
+            {% for h in daypart_data.hours | sort(attribute='cost', reverse=True) | list %}{% if h.cost > 0 %}
+            <tr class="hover:bg-gray-50"><td class="py-1 pr-3 font-medium">{{ '%02d:00'|format(h.hour) }}</td><td class="py-1 pr-3 text-right">${{ h.cost }}</td><td class="py-1 pr-3 text-right">{{ h.clicks }}</td><td class="py-1 text-right">{{ h.conversions|round(1) }}</td></tr>
+            {% endif %}{% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-400 text-center py-6">Connect Google Ads to see hourly breakdowns.</p>
+      {% endif %}
+    </div>
+
+    {# Day-of-week tab #}
+    <div id="seg-dow" class="p-5 hidden">
+      {% if daypart_data and daypart_data.days %}
+      <div class="overflow-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-xs text-gray-500 uppercase border-b">
+            <tr><th class="text-left pb-2 pr-4">Day</th><th class="text-right pb-2 pr-4">Spend</th><th class="text-right pb-2 pr-4">Clicks</th><th class="text-right pb-2 pr-4">CTR</th><th class="text-right pb-2">Conv.</th></tr>
+          </thead>
+          <tbody class="divide-y">
+            {% for d in daypart_data.days %}
+            <tr class="hover:bg-gray-50">
+              <td class="py-2 pr-4 font-medium text-gray-800">{{ d.dow.title() }}</td>
+              <td class="py-2 pr-4 text-right">${{ d.cost }}</td>
+              <td class="py-2 pr-4 text-right">{{ d.clicks | int }}</td>
+              <td class="py-2 pr-4 text-right {% if d.ctr < 2 %}text-red-500{% elif d.ctr >= 4 %}text-green-600{% endif %}">{{ d.ctr }}%</td>
+              <td class="py-2 text-right">{{ d.conversions|round(1) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-400 text-center py-6">Connect Google Ads to see day-of-week breakdowns.</p>
+      {% endif %}
+    </div>
+  </div>
+  <script>
+  function showSeg(tab) {
+    ['device','hour','dow'].forEach(t => {
+      document.getElementById('seg-' + t).classList.toggle('hidden', t !== tab);
+      const btn = document.getElementById('seg-tab-' + t);
+      if (btn) { btn.className = t === tab ? 'px-3 py-1 rounded border bg-indigo-600 text-white font-medium' : 'px-3 py-1 rounded border text-gray-600 hover:bg-gray-50'; }
+    });
+  }
+  </script>
+  {% elif connected %}
+  <div class="bg-white rounded-xl border p-6 text-center text-sm text-gray-400">
+    <i class="fa-solid fa-chart-bar text-gray-200 text-2xl mb-2 block"></i>
+    Device &amp; daypart segmentation will appear here after your next data sync.
+  </div>
+  {% endif %}
+
   {% endif %}{# /connected #}
 
 </div>

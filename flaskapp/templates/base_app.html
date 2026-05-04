@@ -418,6 +418,37 @@
         {% endif %}
       {% endif %}
 
+      {% if has_endpoint('marketing_bp.cac_dashboard') %}
+        <div class="pt-2 text-sm font-semibold text-gray-600 uppercase">Marketing Command</div>
+        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('marketing_bp.cac_dashboard') }}">
+          <i class="fa-solid fa-chart-bar"></i><span>CAC Dashboard</span>
+        </a>
+        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('marketing_bp.offline_tracker') }}">
+          <i class="fa-solid fa-rectangle-ad"></i><span>Offline Channels</span>
+        </a>
+        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('marketing_bp.attribution') }}">
+          <i class="fa-solid fa-diagram-project"></i><span>Attribution</span>
+        </a>
+        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('marketing_bp.aggregators') }}">
+          <i class="fa-solid fa-hammer"></i><span>Aggregators</span>
+        </a>
+        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('marketing_bp.optimizer') }}">
+          <i class="fa-solid fa-wand-magic-sparkles"></i><span>Channel Optimizer</span>
+        </a>
+        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('marketing_bp.pacing') }}">
+          <i class="fa-solid fa-gauge-high"></i><span>Budget Pacing</span>
+        </a>
+        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('marketing_bp.revenue_ltv') }}">
+          <i class="fa-solid fa-chart-line"></i><span>Revenue & LTV</span>
+        </a>
+        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('marketing_bp.reputation_impact') }}">
+          <i class="fa-solid fa-star"></i><span>Reputation Impact</span>
+        </a>
+        <a class="block px-3 py-3 nav-link min-h-12" href="{{ url_for('marketing_bp.seasonal') }}">
+          <i class="fa-solid fa-calendar-days"></i><span>Seasonal Planner</span>
+        </a>
+      {% endif %}
+
       {% if has_endpoint('ads_grader_bp.index') %}
         <div class="pt-3 mt-3 border-t text-sm font-semibold text-green-600 uppercase">Free Tools</div>
         <a class="block px-3 py-3 nav-link min-h-12 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 hover:from-green-100 hover:to-emerald-100" href="{{ url_for('ads_grader_bp.index') }}">

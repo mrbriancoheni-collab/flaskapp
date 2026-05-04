@@ -1005,6 +1005,14 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register reputation_bp")
 
+    # --- Marketing Command Center (cross-channel CAC, offline, attribution) --
+    try:
+        from app.marketing import marketing_bp
+        app.register_blueprint(marketing_bp)
+        app.logger.info("marketing_bp registered at /account/marketing")
+    except Exception:
+        app.logger.exception("Failed to register marketing_bp")
+
     # ---- Apply CSRF exemptions AFTER blueprints are registered -------------
     try:
         for ep in (

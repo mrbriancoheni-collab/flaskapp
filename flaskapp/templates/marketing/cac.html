@@ -1,0 +1,141 @@
+{% extends "base_app.html" %}
+{% block title %}Cross-Channel CAC Dashboard — FieldSprout{% endblock %}
+{% block content %}
+<div class="px-4 py-6 max-w-7xl mx-auto">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Cross-Channel CAC Dashboard</h1>
+      <p class="text-gray-500 text-sm mt-0.5">Cost per acquisition across every marketing channel you run.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <select onchange="window.location.search='?days='+this.value"
+              class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+        {% for d in [7,14,30,60,90] %}
+          <option value="{{ d }}" {% if days==d %}selected{% endif %}>Last {{ d }} days</option>
+        {% endfor %}
+      </select>
+      <a href="{{ url_for('marketing_bp.optimizer') }}"
+         class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Optimizer
+      </a>
+    </div>
+  </div>
+
+  <!-- Blended KPI strip -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Total Spend</p>
+      <p class="text-2xl font-bold text-gray-900 mt-1">${{ "%.0f"|format(total_spend) }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Total Leads</p>
+      <p class="text-2xl font-bold text-gray-900 mt-1">{{ total_leads }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Blended CPL</p>
+      <p class="text-2xl font-bold text-gray-900 mt-1">{% if blended_cpl %}${{ "%.0f"|format(blended_cpl) }}{% else %}—{% endif %}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
+      <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Blended CAC</p>
+      <p class="text-2xl font-bold {% if blended_cac and blended_cac < 200 %}text-green-600{% elif blended_cac %}text-orange-600{% else %}text-gray-900{% endif %} mt-1">
+        {% if blended_cac %}${{ "%.0f"|format(blended_cac) }}{% else %}—{% endif %}
+      </p>
+      <p class="text-xs text-gray-400 mt-0.5">spend ÷ booked jobs</p>
+    </div>
+  </div>
+
+  {% if rows %}
+  <!-- Channel table -->
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-50 text-left border-b border-gray-200">
+            <th class="px-4 py-3 font-semibold text-gray-600">Channel</th>
+            <th class="px-4 py-3 font-semibold text-gray-600 text-right">Spend</th>
+            <th class="px-4 py-3 font-semibold text-gray-600 text-right">Leads</th>
+            <th class="px-4 py-3 font-semibold text-gray-600 text-right">CPL</th>
+            <th class="px-4 py-3 font-semibold text-gray-600 text-right">Booked</th>
+            <th class="px-4 py-3 font-semibold text-gray-600 text-right">CAC</th>
+            <th class="px-4 py-3 font-semibold text-gray-600 text-right">Revenue</th>
+            <th class="px-4 py-3 font-semibold text-gray-600 text-right">ROAS</th>
+            <th class="px-4 py-3 font-semibold text-gray-600 text-right">Signal</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for row in rows %}
+          {% set best_cac = rows[0].cac %}
+          {% set is_best = row.cac and best_cac and row.cac == best_cac %}
+          {% set is_worst = row.cac and rows|selectattr('cac')|list|length > 1 and row.cac == (rows|selectattr('cac')|list|last).cac %}
+          <tr class="hover:bg-gray-50 transition-colors {% if is_best %}bg-green-50{% endif %}">
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-{{ row.color }}-100 flex items-center justify-center text-{{ row.color }}-600 text-xs">
+                  <i class="fa-brands {{ row.icon }} fa-solid {{ row.icon }}"></i>
+                </div>
+                <span class="font-medium text-gray-900">{{ row.label }}</span>
+                {% if is_best %}<span class="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded font-semibold">Best</span>{% endif %}
+              </div>
+            </td>
+            <td class="px-4 py-3 text-right text-gray-700">${{ "%.0f"|format(row.spend) }}</td>
+            <td class="px-4 py-3 text-right text-gray-700">{{ row.total_leads }}</td>
+            <td class="px-4 py-3 text-right text-gray-700">{% if row.cpl %}${{ "%.0f"|format(row.cpl) }}{% else %}—{% endif %}</td>
+            <td class="px-4 py-3 text-right text-gray-700">{{ row.booked }}</td>
+            <td class="px-4 py-3 text-right font-semibold
+              {% if row.cac and row.cac < 150 %}text-green-600
+              {% elif row.cac and row.cac < 300 %}text-yellow-600
+              {% elif row.cac %}text-red-600
+              {% else %}text-gray-400{% endif %}">
+              {% if row.cac %}${{ "%.0f"|format(row.cac) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right text-gray-700">{% if row.revenue %}${{ "%.0f"|format(row.revenue) }}{% else %}—{% endif %}</td>
+            <td class="px-4 py-3 text-right {% if row.roas and row.roas >= 3 %}text-green-600 font-semibold{% elif row.roas and row.roas >= 1 %}text-yellow-600{% elif row.roas %}text-red-500{% else %}text-gray-400{% endif %}">
+              {% if row.roas %}{{ "%.1f"|format(row.roas) }}x{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              {% if row.cac %}
+                {% if row.cac < 150 %}<span class="text-green-600 text-xs font-semibold">↑ Scale</span>
+                {% elif row.cac < 300 %}<span class="text-yellow-600 text-xs font-semibold">→ Hold</span>
+                {% else %}<span class="text-red-500 text-xs font-semibold">↓ Cut</span>{% endif %}
+              {% elif row.spend > 0 %}<span class="text-gray-400 text-xs">No bookings</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+    <i class="fa-solid fa-chart-bar text-4xl text-gray-300 mb-4"></i>
+    <h3 class="text-lg font-semibold text-gray-700 mb-2">No channel data yet</h3>
+    <p class="text-gray-500 text-sm max-w-md mx-auto">Connect your ad accounts and log offline spend to see cross-channel CAC comparisons.</p>
+    <div class="flex gap-3 justify-center mt-6">
+      <a href="{{ url_for('marketing_bp.offline_tracker') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">Log Offline Spend</a>
+      <a href="{{ url_for('marketing_bp.aggregators') }}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">Add Lead Aggregator</a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Quick nav to other marketing tools -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+    {% for label, route, icon, desc in [
+      ('Offline Channels', 'marketing_bp.offline_tracker', 'fa-rectangle-ad', 'Log billboard, mail, print & radio spend'),
+      ('Attribution', 'marketing_bp.attribution', 'fa-diagram-project', 'Link leads to jobs and revenue'),
+      ('Budget Pacing', 'marketing_bp.pacing', 'fa-gauge-high', 'Track this month\'s spend vs targets'),
+      ('Seasonal Planner', 'marketing_bp.seasonal', 'fa-calendar-days', '12-month budget planning by channel'),
+    ] %}
+    <a href="{{ url_for(route) }}" class="bg-white rounded-xl border border-gray-200 p-4 hover:border-indigo-300 hover:shadow-sm transition-all group">
+      <i class="fa-solid {{ icon }} text-indigo-500 mb-2 group-hover:text-indigo-700"></i>
+      <div class="font-semibold text-gray-900 text-sm">{{ label }}</div>
+      <div class="text-xs text-gray-500 mt-0.5">{{ desc }}</div>
+    </a>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

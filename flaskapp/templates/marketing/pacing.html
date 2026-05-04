@@ -1,0 +1,162 @@
+{% extends "base_app.html" %}
+{% block title %}Budget Pacing — FieldSprout{% endblock %}
+{% block content %}
+<div class="px-4 py-6 max-w-7xl mx-auto">
+
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Budget Pacing — {{ month_label }}</h1>
+      <p class="text-gray-500 text-sm mt-0.5">Day {{ day_of_month }} of {{ days_in_month }} · {{ pct_through_month }}% through the month</p>
+    </div>
+    <button onclick="document.getElementById('budgetModal').classList.remove('hidden')"
+            class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
+      <i class="fa-solid fa-sliders"></i> Set Budgets
+    </button>
+  </div>
+
+  <!-- Total pacing bar -->
+  <div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <h2 class="font-semibold text-gray-900">Total Marketing Spend</h2>
+        <p class="text-sm text-gray-500">All channels combined</p>
+      </div>
+      <div class="text-right">
+        <div class="text-2xl font-bold text-gray-900">${{ "%.0f"|format(total_spent) }}</div>
+        {% if total_budget %}<div class="text-sm text-gray-500">of ${{ "%.0f"|format(total_budget) }} budget</div>{% endif %}
+      </div>
+    </div>
+    {% if total_budget %}
+    {% set overall_pct = (total_spent / total_budget * 100)|round(1) %}
+    <div class="w-full bg-gray-100 rounded-full h-4 relative overflow-hidden">
+      <!-- Expected pace marker -->
+      <div class="absolute top-0 bottom-0 w-0.5 bg-gray-400 z-10" style="left:{{ pct_through_month }}%"
+           title="Expected: {{ pct_through_month }}% spent by today"></div>
+      <div class="h-4 rounded-full transition-all
+        {% if overall_pct > pct_through_month + 15 %}bg-red-500{% elif overall_pct < pct_through_month - 15 %}bg-yellow-400{% else %}bg-green-500{% endif %}"
+           style="width: {{ [overall_pct, 100]|min }}%"></div>
+    </div>
+    <div class="flex justify-between text-xs text-gray-500 mt-1.5">
+      <span>{{ overall_pct }}% spent</span>
+      <span class="text-gray-400">Target: {{ pct_through_month }}% by today</span>
+      {% set projected = (total_spent / day_of_month * days_in_month)|round(0) if day_of_month else 0 %}
+      <span>Projected: ${{ "%.0f"|format(projected) }}</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Per-channel pacing -->
+  {% if pacing_rows %}
+  <div class="space-y-3 mb-6">
+    {% for row in pacing_rows %}
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-{{ row.color }}-100 flex items-center justify-center text-{{ row.color }}-600 text-xs">
+            <i class="fa-solid {{ row.icon }}"></i>
+          </div>
+          <span class="font-medium text-gray-900">{{ row.label }}</span>
+          {% if row.pace_pct %}
+          {% if row.pace_pct > 115 %}<span class="px-1.5 py-0.5 bg-red-100 text-red-700 text-xs rounded font-semibold">Overpacing</span>
+          {% elif row.pace_pct < 75 %}<span class="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded font-semibold">Underpacing</span>
+          {% else %}<span class="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded font-semibold">On Track</span>
+          {% endif %}
+          {% endif %}
+        </div>
+        <div class="text-right">
+          <span class="font-bold text-gray-900">${{ "%.0f"|format(row.spent) }}</span>
+          {% if row.budget %}<span class="text-gray-400 text-sm"> / ${{ "%.0f"|format(row.budget) }}</span>{% endif %}
+        </div>
+      </div>
+      {% if row.budget %}
+      <div class="w-full bg-gray-100 rounded-full h-3 relative overflow-hidden">
+        <div class="absolute top-0 bottom-0 w-0.5 bg-gray-400 z-10" style="left:{{ pct_through_month }}%"></div>
+        <div class="h-3 rounded-full
+          {% if row.spend_pct > 115 %}bg-red-500{% elif row.spend_pct < 75 %}bg-yellow-400{% else %}bg-indigo-500{% endif %}"
+             style="width: {{ [row.spend_pct or 0, 100]|min }}%"></div>
+      </div>
+      <div class="flex justify-between text-xs text-gray-400 mt-1">
+        <span>{{ row.spend_pct }}% spent</span>
+        {% if row.overspend and row.overspend > 0 %}
+        <span class="text-red-500 font-medium">Projected overspend: ${{ "%.0f"|format(row.overspend) }}</span>
+        {% elif row.projected %}
+        <span>Projected: ${{ "%.0f"|format(row.projected) }}</span>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="h-3 bg-gray-50 rounded-full border border-dashed border-gray-200 flex items-center justify-center">
+        <span class="text-xs text-gray-400">No budget set — <button onclick="document.getElementById('budgetModal').classList.remove('hidden')" class="underline text-indigo-500 hover:text-indigo-700">set one</button></span>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="bg-white rounded-xl border border-gray-200 p-10 text-center mb-6">
+    <i class="fa-solid fa-gauge-high text-4xl text-gray-300 mb-3"></i>
+    <h3 class="font-semibold text-gray-700 mb-1">No spend data this month</h3>
+    <p class="text-sm text-gray-500">Connect your ad accounts or log offline spend to see pacing.</p>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- Set Budgets Modal -->
+<div id="budgetModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between p-5 border-b sticky top-0 bg-white z-10">
+      <h2 class="font-bold text-gray-900">Set Monthly Budgets — {{ month_label }}</h2>
+      <button onclick="document.getElementById('budgetModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="p-5 space-y-3" id="budgetInputs">
+      {% for ch in all_channels %}
+      {% set meta = channel_meta.get(ch, channel_meta['other']) %}
+      {% set current = (pacing_rows | selectattr('channel', 'equalto', ch) | list | first) %}
+      <div class="flex items-center gap-3">
+        <div class="w-7 h-7 rounded bg-{{ meta.color }}-100 flex items-center justify-center text-{{ meta.color }}-600 text-xs flex-shrink-0">
+          <i class="fa-solid {{ meta.icon }}"></i>
+        </div>
+        <label class="text-sm text-gray-700 w-36 flex-shrink-0">{{ meta.label }}</label>
+        <div class="flex items-center gap-1 flex-1">
+          <span class="text-gray-400 text-sm">$</span>
+          <input type="number" min="0" step="100"
+                 id="budget_{{ ch }}" data-channel="{{ ch }}"
+                 value="{{ current.budget|round(0)|int if current and current.budget else '' }}"
+                 placeholder="0"
+                 class="budget-input flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="p-5 border-t flex gap-3 sticky bottom-0 bg-white">
+      <button onclick="saveBudgets()" class="flex-1 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700">
+        Save Budgets
+      </button>
+      <button onclick="document.getElementById('budgetModal').classList.add('hidden')"
+              class="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+<script nonce="{{ g.csp_nonce }}">
+function saveBudgets() {
+  const inputs = document.querySelectorAll('.budget-input');
+  const data = {};
+  inputs.forEach(inp => {
+    if (inp.value) data[inp.dataset.channel] = parseFloat(inp.value) || 0;
+  });
+  fetch('{{ url_for("marketing_bp.pacing_save") }}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content },
+    body: JSON.stringify(data)
+  }).then(r => r.json()).then(d => {
+    if (d.ok) { document.getElementById('budgetModal').classList.add('hidden'); location.reload(); }
+    else alert('Save failed: ' + d.error);
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends "base_app.html" %}
+{% block title %}Attribution Engine — FieldSprout{% endblock %}
+{% block content %}
+<div class="px-4 py-6 max-w-7xl mx-auto">
+
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Attribution Engine</h1>
+      <p class="text-gray-500 text-sm mt-0.5">Lead → Contact → Book → Complete → Revenue, broken down by channel.</p>
+    </div>
+    <select onchange="window.location.search='?days='+this.value"
+            class="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+      {% for d in [14,30,60,90] %}
+        <option value="{{ d }}" {% if days==d %}selected{% endif %}>Last {{ d }} days</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <!-- Channel funnels -->
+  {% if funnel %}
+  <div class="space-y-4 mb-8">
+    {% for row in funnel %}
+    {% set meta = channel_meta.get(row[0], channel_meta['other']) %}
+    {% set total = row[1] %}
+    {% set contacted = row[2] %}
+    {% set booked = row[3] %}
+    {% set completed = row[4] %}
+    {% set cost = row[5]|float %}
+    {% set cpl = cost / total if total else 0 %}
+    {% set cac = cost / booked if booked else 0 %}
+    {% set contact_rate = (contacted / total * 100)|round(1) if total else 0 %}
+    {% set book_rate = (booked / total * 100)|round(1) if total else 0 %}
+    {% set complete_rate = (completed / total * 100)|round(1) if total else 0 %}
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-{{ meta.color }}-100 flex items-center justify-center text-{{ meta.color }}-600 text-sm">
+            <i class="fa-solid {{ meta.icon }}"></i>
+          </div>
+          <span class="font-semibold text-gray-900">{{ meta.label }}</span>
+        </div>
+        <div class="flex gap-6 text-sm">
+          <div class="text-right"><div class="text-gray-500">Spend</div><div class="font-semibold">${{ "%.0f"|format(cost) }}</div></div>
+          <div class="text-right"><div class="text-gray-500">CPL</div><div class="font-semibold">{% if cpl %}${{ "%.0f"|format(cpl) }}{% else %}—{% endif %}</div></div>
+          <div class="text-right"><div class="text-gray-500">CAC</div>
+            <div class="font-semibold {% if cac and cac < 200 %}text-green-600{% elif cac %}text-orange-600{% endif %}">
+              {% if cac %}${{ "%.0f"|format(cac) }}{% else %}—{% endif %}
+            </div>
+          </div>
+          {% set rev = rev_by_source.get(row[0], 0) %}
+          <div class="text-right"><div class="text-gray-500">Revenue</div><div class="font-semibold text-green-700">{% if rev %}${{ "%.0f"|format(rev) }}{% else %}—{% endif %}</div></div>
+        </div>
+      </div>
+      <!-- Funnel bars -->
+      <div class="space-y-2">
+        {% for label, count, pct, color in [
+          ('Leads', total, 100, 'indigo'),
+          ('Contacted', contacted, contact_rate, 'blue'),
+          ('Booked', booked, book_rate, 'green'),
+          ('Completed', completed, complete_rate, 'emerald'),
+        ] %}
+        <div class="flex items-center gap-3 text-sm">
+          <div class="w-20 text-gray-500 text-right flex-shrink-0">{{ label }}</div>
+          <div class="flex-1 bg-gray-100 rounded-full h-5 relative overflow-hidden">
+            <div class="h-5 rounded-full bg-{{ color }}-500 flex items-center justify-end pr-2"
+                 style="width:{{ [pct, 5]|max }}%">
+              {% if pct > 15 %}<span class="text-white text-xs font-semibold">{{ count }}</span>{% endif %}
+            </div>
+          </div>
+          {% if pct <= 15 %}<span class="text-xs text-gray-600 w-8">{{ count }}</span>{% else %}<div class="w-8"></div>{% endif %}
+          <div class="w-12 text-xs text-gray-500 text-right">{{ pct }}%</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="bg-white rounded-xl border border-gray-200 p-12 text-center mb-8">
+    <i class="fa-solid fa-diagram-project text-4xl text-gray-300 mb-4"></i>
+    <h3 class="text-lg font-semibold text-gray-700 mb-2">No lead data in this period</h3>
+    <p class="text-gray-500 text-sm">Connect your lead sources to see the full lead → revenue funnel.</p>
+  </div>
+  {% endif %}
+
+  <!-- ServiceTitan revenue breakdown -->
+  {% if st_summary %}
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
+    <div class="px-5 py-4 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-900">Revenue by Job Type (ServiceTitan)</h2>
+      <p class="text-xs text-gray-500 mt-0.5">Last {{ days }} days of completed jobs.</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="bg-gray-50 border-b border-gray-200 text-left">
+          <th class="px-4 py-3 font-semibold text-gray-600">Job Type</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">Jobs</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">Revenue</th>
+          <th class="px-4 py-3 font-semibold text-gray-600 text-right">Avg Ticket</th>
+        </tr></thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for row in st_summary %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 text-gray-900 font-medium">{{ row[0] or 'Unclassified' }}</td>
+            <td class="px-4 py-3 text-right text-gray-700">{{ row[1] }}</td>
+            <td class="px-4 py-3 text-right font-semibold text-green-700">${{ "%.0f"|format(row[2]) }}</td>
+            <td class="px-4 py-3 text-right text-gray-600">${{ "%.0f"|format(row[3]) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Manual attribution link -->
+  <div class="bg-indigo-50 rounded-xl border border-indigo-200 p-5">
+    <div class="flex gap-3">
+      <i class="fa-solid fa-link text-indigo-500 mt-0.5 flex-shrink-0"></i>
+      <div>
+        <h3 class="font-semibold text-indigo-900 text-sm">Link a lead to a ServiceTitan job</h3>
+        <p class="text-indigo-700 text-xs mt-1">Use the API to link any lead to a completed job for accurate revenue attribution. POST to <code class="bg-indigo-100 px-1 rounded">/account/marketing/attribution/link</code> with <code>lead_id</code>, <code>lead_source</code>, <code>st_job_id</code>, and <code>revenue</code>.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

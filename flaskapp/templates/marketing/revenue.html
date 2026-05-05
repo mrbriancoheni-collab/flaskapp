@@ -17,11 +17,15 @@
   </div>
 
   {% if not has_st %}
-  <div class="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6 flex gap-3">
-    <i class="fa-solid fa-triangle-exclamation text-amber-500 flex-shrink-0 mt-0.5"></i>
-    <div>
-      <h3 class="font-semibold text-amber-900">ServiceTitan not connected</h3>
-      <p class="text-amber-700 text-sm mt-1">Connect ServiceTitan to see real job revenue data, average ticket sizes, and true customer LTV.</p>
+  <div class="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6 flex items-start gap-3">
+    <i class="fa-solid fa-wrench text-amber-500 flex-shrink-0 mt-0.5 text-lg"></i>
+    <div class="flex-1">
+      <h3 class="font-semibold text-amber-900">Connect ServiceTitan to unlock revenue data</h3>
+      <p class="text-amber-700 text-sm mt-1 mb-3">FieldSprout pulls job revenue, average ticket size, and repeat customer data directly from ServiceTitan — giving you true LTV and ROAS across every channel.</p>
+      <a href="{{ url_for('marketing_bp.aggregators') }}"
+         class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700">
+        <i class="fa-solid fa-plug"></i> Connect ServiceTitan
+      </a>
     </div>
   </div>
   {% endif %}

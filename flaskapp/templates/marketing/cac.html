@@ -23,6 +23,34 @@
     </div>
   </div>
 
+  <!-- Integration prompts -->
+  {% if integrations %}
+    {% if not integrations.google_ads and not integrations.has_any_ads %}
+    <div class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4">
+      <i class="fa-brands fa-google text-amber-500"></i>
+      <p class="flex-1 text-sm text-amber-900">Connect Google Ads to automatically import spend and calculate true CAC per channel.</p>
+      <a href="{{ url_for('marketing_bp.aggregators') }}"
+         class="flex-shrink-0 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-medium hover:bg-amber-600">Connect</a>
+    </div>
+    {% endif %}
+    {% if not integrations.servicetitan %}
+    <div class="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-4">
+      <i class="fa-solid fa-wrench text-blue-500"></i>
+      <p class="flex-1 text-sm text-blue-900">Connect ServiceTitan to track booked jobs and calculate cost-per-acquisition (CAC) — not just cost-per-lead.</p>
+      <a href="{{ url_for('marketing_bp.aggregators') }}"
+         class="flex-shrink-0 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-medium hover:bg-blue-600">Connect</a>
+    </div>
+    {% endif %}
+    {% if not integrations.industry %}
+    <div class="flex items-center gap-3 bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3 mb-4">
+      <i class="fa-solid fa-industry text-indigo-500"></i>
+      <p class="flex-1 text-sm text-indigo-900">What trade do you serve? Set your industry to compare your CAC against home services benchmarks.</p>
+      <a href="/account/settings/profile"
+         class="flex-shrink-0 px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-xs font-medium hover:bg-indigo-600">Set Industry</a>
+    </div>
+    {% endif %}
+  {% endif %}
+
   <!-- Blended KPI strip -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
     <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">

@@ -16,6 +16,7 @@ Routes (prefix: /account/marketing):
 from __future__ import annotations
 
 import logging
+import os
 from calendar import monthrange
 from datetime import date, datetime, timedelta
 from functools import wraps
@@ -32,6 +33,20 @@ from app import db
 log = logging.getLogger(__name__)
 
 marketing_bp = Blueprint("marketing_bp", __name__, url_prefix="/account/marketing")
+
+
+@marketing_bp.context_processor
+def inject_integrations():
+    """Inject integration status into every marketing template automatically."""
+    try:
+        from flask import session
+        aid = session.get("account_id") or session.get("aid")
+        if aid:
+            return {"integrations": _integration_status(int(aid))}
+    except Exception:
+        pass
+    return {"integrations": {}}
+
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
 
@@ -146,40 +161,155 @@ def _date_range(days: int = 30):
     return start, end
 
 
+# ── Integration status helper ──────────────────────────────────────────────────
+
+def _integration_status(aid: int) -> Dict[str, Any]:
+    """
+    Return a dict of which integrations are connected for this account.
+    Never raises — all checks are try/except.
+    Also returns business profile info to detect incomplete setup.
+    """
+    status: Dict[str, Any] = {
+        "google_ads": False,
+        "glsa": False,
+        "gmb": False,
+        "facebook": False,
+        "yelp": False,
+        "servicetitan": False,
+        "twilio": bool(os.getenv("TWILIO_ACCOUNT_SID")),
+        # Business profile completeness
+        "has_profile": False,
+        "industry": None,
+        "services": None,
+        "has_phone": False,
+        "has_website": False,
+        # Derived convenience flags
+        "has_any_ads": False,
+        "has_any_leads": False,
+    }
+
+    # Google Ads / LSA / GMB (all via google_oauth_tokens)
+    try:
+        rows = db.session.execute(text("""
+            SELECT product_type FROM google_oauth_tokens
+            WHERE account_id=:a AND is_active=1
+        """), {"a": aid}).fetchall()
+        for r in rows:
+            pt = (r[0] or "").lower()
+            if "ads" in pt:
+                status["google_ads"] = True
+            if "lsa" in pt or "lsa" in pt:
+                status["glsa"] = True
+            if "gmb" in pt or "business" in pt:
+                status["gmb"] = True
+    except Exception:
+        pass
+
+    # Facebook Ads
+    try:
+        row = db.session.execute(text("""
+            SELECT id FROM fb_accounts WHERE account_id=:a AND is_active=1 LIMIT 1
+        """), {"a": aid}).fetchone()
+        status["facebook"] = bool(row)
+    except Exception:
+        pass
+
+    # Yelp
+    try:
+        row = db.session.execute(text("""
+            SELECT id FROM yelp_accounts WHERE account_id=:a AND access_token IS NOT NULL LIMIT 1
+        """), {"a": aid}).fetchone()
+        status["yelp"] = bool(row)
+    except Exception:
+        pass
+
+    # ServiceTitan
+    try:
+        row = db.session.execute(text("""
+            SELECT id FROM servicetitan_connections WHERE account_id=:a AND is_active=1 LIMIT 1
+        """), {"a": aid}).fetchone()
+        status["servicetitan"] = bool(row)
+    except Exception:
+        # Also try checking if any jobs exist (sync may have run without connection record)
+        try:
+            row = db.session.execute(text(
+                "SELECT id FROM servicetitan_jobs WHERE account_id=:a LIMIT 1"
+            ), {"a": aid}).fetchone()
+            status["servicetitan"] = bool(row)
+        except Exception:
+            pass
+
+    # Business profile completeness
+    try:
+        bp = db.session.execute(text("""
+            SELECT industry, services, top_services, phone, website
+            FROM business_profiles WHERE account_id=:a LIMIT 1
+        """), {"a": aid}).fetchone()
+        if bp:
+            status["has_profile"] = True
+            status["industry"] = bp[0]
+            status["services"] = bp[1] or bp[2]  # services or top_services
+            status["has_phone"] = bool(bp[3])
+            status["has_website"] = bool(bp[4])
+    except Exception:
+        pass
+
+    # Derived flags
+    status["has_any_ads"] = any([
+        status["google_ads"], status["glsa"], status["facebook"], status["yelp"]
+    ])
+    # Check if any leads exist
+    try:
+        row = db.session.execute(text(
+            "SELECT id FROM lead_ingest WHERE account_id=:a LIMIT 1"
+        ), {"a": aid}).fetchone()
+        status["has_any_leads"] = bool(row)
+    except Exception:
+        pass
+
+    return status
+
+
 def _spend_by_channel(aid: int, start: date, end: date) -> Dict[str, float]:
     """Pull digital spend from ad_spend + offline from offline_channel_spend."""
     result: Dict[str, float] = {}
-    # Digital spend
-    rows = db.session.execute(text("""
-        SELECT source, COALESCE(SUM(amount),0) as total
-        FROM ad_spend
-        WHERE account_id=:a AND spend_date BETWEEN :s AND :e
-        GROUP BY source
-    """), {"a": aid, "s": start, "e": end}).fetchall()
-    for r in rows:
-        result[r[0]] = float(r[1])
+    try:
+        rows = db.session.execute(text("""
+            SELECT source, COALESCE(SUM(amount),0) as total
+            FROM ad_spend
+            WHERE account_id=:a AND spend_date BETWEEN :s AND :e
+            GROUP BY source
+        """), {"a": aid, "s": start, "e": end}).fetchall()
+        for r in rows:
+            result[r[0]] = float(r[1])
+    except Exception:
+        pass
 
-    # Offline spend
-    rows2 = db.session.execute(text("""
-        SELECT channel_type, COALESCE(SUM(amount),0) as total
-        FROM offline_channel_spend
-        WHERE account_id=:a AND spend_date BETWEEN :s AND :e
-        GROUP BY channel_type
-    """), {"a": aid, "s": start, "e": end}).fetchall()
-    for r in rows2:
-        ch = r[0]
-        result[ch] = result.get(ch, 0) + float(r[1])
+    try:
+        rows2 = db.session.execute(text("""
+            SELECT channel_type, COALESCE(SUM(amount),0) as total
+            FROM offline_channel_spend
+            WHERE account_id=:a AND spend_date BETWEEN :s AND :e
+            GROUP BY channel_type
+        """), {"a": aid, "s": start, "e": end}).fetchall()
+        for r in rows2:
+            ch = r[0]
+            result[ch] = result.get(ch, 0) + float(r[1])
+    except Exception:
+        pass
 
-    # Aggregator lead costs (treat as spend)
-    rows3 = db.session.execute(text("""
-        SELECT platform, COALESCE(SUM(lead_cost),0) as total
-        FROM aggregator_leads
-        WHERE account_id=:a AND occurred_at BETWEEN :s AND :e
-        GROUP BY platform
-    """), {"a": aid, "s": str(start) + " 00:00:00", "e": str(end) + " 23:59:59"}).fetchall()
-    for r in rows3:
-        ch = r[0]
-        result[ch] = result.get(ch, 0) + float(r[1])
+    try:
+        rows3 = db.session.execute(text("""
+            SELECT platform, COALESCE(SUM(lead_cost),0) as total
+            FROM aggregator_leads
+            WHERE account_id=:a AND occurred_at BETWEEN :s AND :e
+            GROUP BY platform
+        """), {"a": aid, "s": str(start) + " 00:00:00", "e": str(end) + " 23:59:59"}).fetchall()
+        for r in rows3:
+            ch = r[0]
+            result[ch] = result.get(ch, 0) + float(r[1])
+    except Exception:
+        pass
 
     return result
 
@@ -195,64 +325,75 @@ def _leads_by_channel(aid: int, start: date, end: date) -> Dict[str, Dict]:
         result[ch]["booked"] += booked
         result[ch]["completed"] += completed
 
-    rows = db.session.execute(text("""
-        SELECT source,
-               COUNT(*) as total,
-               SUM(CASE WHEN status IN ('booked','completed') THEN 1 ELSE 0 END) as booked,
-               SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) as completed
-        FROM lead_ingest
-        WHERE account_id=:a AND created_at BETWEEN :s AND :e
-        GROUP BY source
-    """), {"a": aid, "s": str(start) + " 00:00:00", "e": str(end) + " 23:59:59"}).fetchall()
-    for r in rows:
-        _add(r[0], int(r[1]), int(r[2]), int(r[3]))
+    try:
+        rows = db.session.execute(text("""
+            SELECT source,
+                   COUNT(*) as total,
+                   SUM(CASE WHEN status IN ('booked','completed') THEN 1 ELSE 0 END) as booked,
+                   SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) as completed
+            FROM lead_ingest
+            WHERE account_id=:a AND created_at BETWEEN :s AND :e
+            GROUP BY source
+        """), {"a": aid, "s": str(start) + " 00:00:00", "e": str(end) + " 23:59:59"}).fetchall()
+        for r in rows:
+            _add(r[0], int(r[1]), int(r[2]), int(r[3]))
+    except Exception:
+        pass
 
-    rows2 = db.session.execute(text("""
-        SELECT platform,
-               COUNT(*) as total,
-               SUM(CASE WHEN status IN ('booked','completed') THEN 1 ELSE 0 END) as booked,
-               SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) as completed
-        FROM aggregator_leads
-        WHERE account_id=:a AND occurred_at BETWEEN :s AND :e
-        GROUP BY platform
-    """), {"a": aid, "s": str(start) + " 00:00:00", "e": str(end) + " 23:59:59"}).fetchall()
-    for r in rows2:
-        _add(r[0], int(r[1]), int(r[2]), int(r[3]))
+    try:
+        rows2 = db.session.execute(text("""
+            SELECT platform,
+                   COUNT(*) as total,
+                   SUM(CASE WHEN status IN ('booked','completed') THEN 1 ELSE 0 END) as booked,
+                   SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) as completed
+            FROM aggregator_leads
+            WHERE account_id=:a AND occurred_at BETWEEN :s AND :e
+            GROUP BY platform
+        """), {"a": aid, "s": str(start) + " 00:00:00", "e": str(end) + " 23:59:59"}).fetchall()
+        for r in rows2:
+            _add(r[0], int(r[1]), int(r[2]), int(r[3]))
+    except Exception:
+        pass
 
-    # Calls (from call_events, not duplicated in lead_ingest)
-    rows3 = db.session.execute(text("""
-        SELECT COUNT(*) as total,
-               SUM(CASE WHEN is_qualified_lead=1 THEN 1 ELSE 0 END) as qualified
-        FROM call_events
-        WHERE account_id=:a AND call_started_at BETWEEN :s AND :e
-          AND call_sid NOT IN (
-            SELECT COALESCE(external_id,'__none__') FROM lead_ingest
-            WHERE account_id=:a AND source='phone'
-          )
-    """), {"a": aid, "s": str(start) + " 00:00:00", "e": str(end) + " 23:59:59"}).fetchall()
-    if rows3:
-        r = rows3[0]
-        total = int(r[0] or 0)
-        qualified = int(r[1] or 0)
-        if total:
-            _add("phone", total, qualified, 0)
+    try:
+        rows3 = db.session.execute(text("""
+            SELECT COUNT(*) as total,
+                   SUM(CASE WHEN is_qualified_lead=1 THEN 1 ELSE 0 END) as qualified
+            FROM call_events
+            WHERE account_id=:a AND call_started_at BETWEEN :s AND :e
+              AND call_sid NOT IN (
+                SELECT COALESCE(external_id,'__none__') FROM lead_ingest
+                WHERE account_id=:a AND source='phone'
+              )
+        """), {"a": aid, "s": str(start) + " 00:00:00", "e": str(end) + " 23:59:59"}).fetchall()
+        if rows3:
+            r = rows3[0]
+            total = int(r[0] or 0)
+            qualified = int(r[1] or 0)
+            if total:
+                _add("phone", total, qualified, 0)
+    except Exception:
+        pass
 
     return result
 
 
 def _revenue_by_channel(aid: int, start: date, end: date) -> Dict[str, float]:
     """Revenue attributed to each channel via lead_job_links → servicetitan_jobs."""
-    rows = db.session.execute(text("""
-        SELECT li.source, COALESCE(SUM(ljl.revenue_cents),0) as rev
-        FROM lead_job_links ljl
-        JOIN lead_ingest li ON ljl.lead_source='lead_ingest' AND ljl.lead_id=li.id
-        WHERE ljl.account_id=:a AND li.completed_at BETWEEN :s AND :e
-        GROUP BY li.source
-    """), {"a": aid, "s": str(start) + " 00:00:00", "e": str(end) + " 23:59:59"}).fetchall()
-    result = {}
-    for r in rows:
-        result[r[0]] = float(r[1]) / 100.0
-    return result
+    try:
+        rows = db.session.execute(text("""
+            SELECT li.source, COALESCE(SUM(ljl.revenue_cents),0) as rev
+            FROM lead_job_links ljl
+            JOIN lead_ingest li ON ljl.lead_source='lead_ingest' AND ljl.lead_id=li.id
+            WHERE ljl.account_id=:a AND li.completed_at BETWEEN :s AND :e
+            GROUP BY li.source
+        """), {"a": aid, "s": str(start) + " 00:00:00", "e": str(end) + " 23:59:59"}).fetchall()
+        result = {}
+        for r in rows:
+            result[r[0]] = float(r[1]) / 100.0
+        return result
+    except Exception:
+        return {}
 
 
 def _build_cac_table(aid: int, days: int = 30) -> List[Dict]:
@@ -607,32 +748,42 @@ def pacing():
 
     # Actual spend this month per channel
     actual_spend = {}
-    rows = db.session.execute(text("""
-        SELECT source, COALESCE(SUM(amount),0) as total
-        FROM ad_spend
-        WHERE account_id=:a AND spend_date >= :ms
-        GROUP BY source
-    """), {"a": aid, "ms": month_start}).fetchall()
-    for r in rows:
-        actual_spend[r[0]] = float(r[1])
+    try:
+        rows = db.session.execute(text("""
+            SELECT source, COALESCE(SUM(amount),0) as total
+            FROM ad_spend
+            WHERE account_id=:a AND spend_date >= :ms
+            GROUP BY source
+        """), {"a": aid, "ms": month_start}).fetchall()
+        for r in rows:
+            actual_spend[r[0]] = float(r[1])
+    except Exception:
+        pass
 
-    rows2 = db.session.execute(text("""
-        SELECT channel_type, COALESCE(SUM(amount),0) as total
-        FROM offline_channel_spend
-        WHERE account_id=:a AND spend_date >= :ms
-        GROUP BY channel_type
-    """), {"a": aid, "ms": month_start}).fetchall()
-    for r in rows2:
-        ch = r[0]
-        actual_spend[ch] = actual_spend.get(ch, 0) + float(r[1])
+    try:
+        rows2 = db.session.execute(text("""
+            SELECT channel_type, COALESCE(SUM(amount),0) as total
+            FROM offline_channel_spend
+            WHERE account_id=:a AND spend_date >= :ms
+            GROUP BY channel_type
+        """), {"a": aid, "ms": month_start}).fetchall()
+        for r in rows2:
+            ch = r[0]
+            actual_spend[ch] = actual_spend.get(ch, 0) + float(r[1])
+    except Exception:
+        pass
 
     # Budgets for this month
-    budgets = db.session.execute(text("""
-        SELECT channel, budget_cents
-        FROM channel_monthly_budgets
-        WHERE account_id=:a AND budget_month=:m
-    """), {"a": aid, "m": month_start}).fetchall()
-    budget_map = {r[0]: r[1] / 100.0 for r in budgets}
+    budget_map = {}
+    try:
+        budgets = db.session.execute(text("""
+            SELECT channel, budget_cents
+            FROM channel_monthly_budgets
+            WHERE account_id=:a AND budget_month=:m
+        """), {"a": aid, "m": month_start}).fetchall()
+        budget_map = {r[0]: r[1] / 100.0 for r in budgets}
+    except Exception:
+        pass
 
     # Build pacing rows
     pacing_rows = []
@@ -838,13 +989,16 @@ def seasonal():
     aid = _account_id()
     year = int(request.args.get("year", date.today().year))
 
-    plans = db.session.execute(text("""
-        SELECT channel, jan_cents, feb_cents, mar_cents, apr_cents, may_cents, jun_cents,
-               jul_cents, aug_cents, sep_cents, oct_cents, nov_cents, dec_cents
-        FROM seasonal_budget_plans
-        WHERE account_id=:a AND plan_year=:y
-    """), {"a": aid, "y": year}).fetchall()
-    plan_map = {r[0]: [r[i+1]/100.0 for i in range(12)] for r in plans}
+    try:
+        plans = db.session.execute(text("""
+            SELECT channel, jan_cents, feb_cents, mar_cents, apr_cents, may_cents, jun_cents,
+                   jul_cents, aug_cents, sep_cents, oct_cents, nov_cents, dec_cents
+            FROM seasonal_budget_plans
+            WHERE account_id=:a AND plan_year=:y
+        """), {"a": aid, "y": year}).fetchall()
+        plan_map = {r[0]: [r[i+1]/100.0 for i in range(12)] for r in plans}
+    except Exception:
+        plan_map = {}
 
     # Historical monthly actual spend for comparison
     hist = {}
@@ -1088,13 +1242,16 @@ def aggregator_quality():
         service_zips = []
 
     # Pull recent aggregator leads
-    leads = db.session.execute(text("""
-        SELECT id, platform, name, phone, email, service_type, city, zip,
-               lead_cost, status, occurred_at
-        FROM aggregator_leads
-        WHERE account_id=:a AND occurred_at BETWEEN :s AND :e
-        ORDER BY occurred_at DESC
-    """), {"a": aid, "s": str(start) + " 00:00:00", "e": str(end) + " 23:59:59"}).fetchall()
+    try:
+        leads = db.session.execute(text("""
+            SELECT id, platform, name, phone, email, service_type, city, zip,
+                   lead_cost, status, occurred_at
+            FROM aggregator_leads
+            WHERE account_id=:a AND occurred_at BETWEEN :s AND :e
+            ORDER BY occurred_at DESC
+        """), {"a": aid, "s": str(start) + " 00:00:00", "e": str(end) + " 23:59:59"}).fetchall()
+    except Exception:
+        leads = []
 
     scored_leads = []
     platform_quality: Dict[str, Dict] = {}
@@ -1229,11 +1386,14 @@ def promo_redeem():
         return jsonify({"error": "promo_code required"}), 400
 
     # Find matching offline spend entry
-    spend_row = db.session.execute(text("""
-        SELECT id FROM offline_channel_spend
-        WHERE account_id=:a AND UPPER(promo_code)=:code
-        ORDER BY spend_date DESC LIMIT 1
-    """), {"a": aid, "code": code}).fetchone()
+    try:
+        spend_row = db.session.execute(text("""
+            SELECT id FROM offline_channel_spend
+            WHERE account_id=:a AND UPPER(promo_code)=:code
+            ORDER BY spend_date DESC LIMIT 1
+        """), {"a": aid, "code": code}).fetchone()
+    except Exception:
+        spend_row = None
 
     try:
         db.session.execute(text("""

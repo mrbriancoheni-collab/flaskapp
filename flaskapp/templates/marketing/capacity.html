@@ -8,6 +8,25 @@
     <p class="text-gray-500 text-sm mt-0.5">Match your ad spend to your actual availability — stop buying leads you can't book.</p>
   </div>
 
+  <!-- ServiceTitan connection prompt -->
+  {% if integrations and not integrations.servicetitan %}
+  <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+    <div class="flex items-start gap-4">
+      <div class="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+        <i class="fa-solid fa-wrench text-green-600 text-xl"></i>
+      </div>
+      <div class="flex-1">
+        <h3 class="font-semibold text-gray-900 mb-1">Connect ServiceTitan to enable Capacity Bridge</h3>
+        <p class="text-sm text-gray-500 mb-3">This page uses your actual job volume and technician availability from ServiceTitan to recommend ad spend changes. Without it, we can only show estimates.</p>
+        <a href="{{ url_for('marketing_bp.aggregators') }}"
+           class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
+          <i class="fa-solid fa-plug"></i> Connect ServiceTitan
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Main suggestion card -->
   {% if suggestion %}
   <div class="rounded-xl border p-6 mb-6

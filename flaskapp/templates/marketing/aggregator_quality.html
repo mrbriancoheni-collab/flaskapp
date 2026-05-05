@@ -16,6 +16,25 @@
     </select>
   </div>
 
+  <!-- Integration prompt -->
+  {% if integrations and not integrations.has_any_leads %}
+  <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+    <div class="flex items-start gap-4">
+      <div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
+        <i class="fa-solid fa-filter text-orange-600 text-xl"></i>
+      </div>
+      <div class="flex-1">
+        <h3 class="font-semibold text-gray-900 mb-1">No aggregator leads to score yet</h3>
+        <p class="text-sm text-gray-500 mb-3">Connect lead aggregators like Thumbtack, Angi, or HomeAdvisor to start scoring lead quality, identify bad leads, and expose wasted spend.</p>
+        <a href="{{ url_for('marketing_bp.aggregators') }}"
+           class="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600">
+          <i class="fa-solid fa-plug"></i> Connect Aggregators
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Platform quality cards -->
   {% if platform_quality %}
   <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">

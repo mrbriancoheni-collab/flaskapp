@@ -1,0 +1,151 @@
+{% extends "base_app.html" %}
+{% set active_nav = 'attribution' %}
+{% block title %}Attribution — FieldSprout{% endblock %}
+
+{% block content %}
+{% include "marketing/_nav.html" %}
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 space-y-6">
+
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">Attribution Engine</h1>
+    <p class="text-sm text-gray-500 mt-0.5">Lead → Job → Revenue · last 90 days</p>
+  </div>
+
+  {# Attribution summary by channel #}
+  {% if attribution and attribution.get('channels') %}
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h2 class="font-semibold text-gray-900">Revenue Attribution by Channel</h2>
+      <span class="text-xs text-gray-400">{{ attribution.get('total_attributed', 0) }} / {{ attribution.get('total_leads', 0) }} leads attributed</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-100">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Channel</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Leads</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Jobs</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Revenue</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Avg Ticket</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Rev Share</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% set total_rev = attribution.get('total_revenue_cents', 1) %}
+          {% for ch in attribution.get('channels', []) %}
+          {% set linfo = channel_type_labels.get(ch.get('channel_type', ''), ('Other', 'fa-solid fa-circle', 'gray')) %}
+          {% set rev_share = (ch.get('revenue_cents', 0) / total_rev * 100) if total_rev > 0 else 0 %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-5 py-3">
+              <div class="flex items-center gap-2">
+                <i class="{{ linfo[1] }} text-{{ linfo[2] }}-500 w-4"></i>
+                <span class="text-sm font-medium text-gray-900">{{ ch.get('channel_name', '—') }}</span>
+              </div>
+            </td>
+            <td class="px-4 py-3 text-right text-sm text-gray-700">{{ ch.get('leads', 0) }}</td>
+            <td class="px-4 py-3 text-right text-sm text-gray-700">{{ ch.get('booked_jobs', 0) }}</td>
+            <td class="px-4 py-3 text-right text-sm font-semibold text-green-700">
+              ${{ "{:,.0f}".format((ch.get('revenue_cents', 0)) / 100) }}
+            </td>
+            <td class="px-4 py-3 text-right text-sm text-gray-700">
+              {% if ch.get('avg_ticket_cents') %}${{ "{:,.0f}".format(ch.avg_ticket_cents / 100) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              <div class="flex items-center justify-end gap-2">
+                <div class="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-indigo-500 rounded-full" style="width: {{ [rev_share, 100]|min }}%"></div>
+                </div>
+                <span class="text-xs text-gray-500 w-10 text-right">{{ "{:.0f}".format(rev_share) }}%</span>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        {% if attribution.get('total_revenue_cents') %}
+        <tfoot class="bg-gray-50 border-t border-gray-200">
+          <tr>
+            <td colspan="3" class="px-5 py-3 text-sm font-semibold text-gray-700">Total Attributed</td>
+            <td class="px-4 py-3 text-right text-sm font-bold text-green-700">
+              ${{ "{:,.0f}".format(attribution.total_revenue_cents / 100) }}
+            </td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="bg-white rounded-xl border border-gray-200 p-6 rounded-xl border-amber-200 bg-amber-50">
+    <div class="flex items-start gap-3">
+      <i class="fa-solid fa-circle-info text-amber-500 text-xl mt-0.5"></i>
+      <div>
+        <p class="font-semibold text-amber-900">Attribution requires connected data</p>
+        <p class="text-sm text-amber-700 mt-1">
+          Attribution links leads from aggregators and call tracking to completed ServiceTitan jobs.
+          Add channels, connect platforms, and log spend to see the full revenue attribution chain.
+        </p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Attribution method explainer #}
+  <div class="bg-white rounded-xl border border-gray-200 p-5">
+    <h2 class="font-semibold text-gray-900 mb-3">How Attribution Works</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 text-center">
+      {% for step, icon, color, label, desc in [
+        ('1', 'fa-user-plus', 'blue', 'Lead Arrives', 'Via call tracking, aggregator webhook, or manual entry'),
+        ('2', 'fa-link', 'indigo', 'Channel Matched', 'Tracking phone, promo code, or platform tag maps to a channel'),
+        ('3', 'fa-handshake', 'green', 'Job Booked', 'ServiceTitan job linked to the lead record'),
+        ('4', 'fa-dollar-sign', 'emerald', 'Revenue Attributed', 'Completed job revenue credited to the originating channel'),
+      ] %}
+      <div class="flex flex-col items-center gap-2">
+        <div class="w-10 h-10 rounded-full bg-{{ color }}-100 flex items-center justify-center">
+          <i class="fa-solid {{ icon }} text-{{ color }}-600"></i>
+        </div>
+        <p class="text-xs font-semibold text-gray-700">{{ label }}</p>
+        <p class="text-xs text-gray-400">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Recent attribution records #}
+  {% if recent_attributions %}
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-900">Recent Attribution Records</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-100">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Lead Type</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Channel</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Revenue</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Model</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for attr in recent_attributions %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-5 py-3 text-xs text-gray-500">{{ attr.created_at.strftime('%b %d') if attr.created_at else '—' }}</td>
+            <td class="px-4 py-3 text-sm text-gray-700 capitalize">{{ attr.lead_type or '—' }}</td>
+            <td class="px-4 py-3 text-sm text-gray-900">{{ attr.channel.name if attr.channel else '—' }}</td>
+            <td class="px-4 py-3 text-right text-sm {% if attr.revenue_cents %}text-green-700 font-semibold{% else %}text-gray-400{% endif %}">
+              {% if attr.revenue_cents %}${{ "{:,.0f}".format(attr.revenue_cents / 100) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-xs text-gray-500">{{ attr.attribution_model or 'last_touch' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

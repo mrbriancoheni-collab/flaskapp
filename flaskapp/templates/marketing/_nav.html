@@ -1,0 +1,52 @@
+{# Marketing Command Center navigation — included by all marketing templates #}
+<nav class="bg-white border-b border-gray-200 mb-6">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center gap-1 overflow-x-auto py-2 text-sm font-medium">
+      <a href="/account/marketing/"
+         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap
+                {% if active_nav == 'home' %}bg-indigo-100 text-indigo-700{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+        <i class="fa-solid fa-chart-pie text-xs"></i> Command Center
+      </a>
+      <a href="/account/marketing/channels"
+         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap
+                {% if active_nav == 'channels' %}bg-indigo-100 text-indigo-700{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+        <i class="fa-solid fa-layer-group text-xs"></i> Channels
+      </a>
+      <a href="/account/marketing/budget"
+         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap
+                {% if active_nav == 'budget' %}bg-indigo-100 text-indigo-700{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+        <i class="fa-solid fa-wallet text-xs"></i> Budget
+      </a>
+      <a href="/account/marketing/growth"
+         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap
+                {% if active_nav == 'growth' %}bg-indigo-100 text-indigo-700{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+        <i class="fa-solid fa-arrow-trend-up text-xs"></i> Growth
+      </a>
+      <a href="/account/marketing/leads"
+         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap
+                {% if active_nav == 'leads' %}bg-indigo-100 text-indigo-700{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+        <i class="fa-solid fa-user-plus text-xs"></i> Leads
+      </a>
+      <a href="/account/marketing/revenue"
+         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap
+                {% if active_nav == 'revenue' %}bg-indigo-100 text-indigo-700{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+        <i class="fa-solid fa-dollar-sign text-xs"></i> Revenue & LTV
+      </a>
+      <a href="/account/marketing/reputation"
+         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap
+                {% if active_nav == 'reputation' %}bg-indigo-100 text-indigo-700{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+        <i class="fa-solid fa-star text-xs"></i> Reputation
+      </a>
+      <a href="/account/marketing/seasonal"
+         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap
+                {% if active_nav == 'seasonal' %}bg-indigo-100 text-indigo-700{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+        <i class="fa-solid fa-calendar-days text-xs"></i> Seasonal
+      </a>
+      <a href="/account/marketing/attribution"
+         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap
+                {% if active_nav == 'attribution' %}bg-indigo-100 text-indigo-700{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+        <i class="fa-solid fa-diagram-project text-xs"></i> Attribution
+      </a>
+    </div>
+  </div>
+</nav>

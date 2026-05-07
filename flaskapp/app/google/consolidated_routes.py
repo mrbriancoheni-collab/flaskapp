@@ -205,6 +205,69 @@ def _load_pending_decisions(account_id: int):
 
 # ── Budget & Forecast ──────────────────────────────────────────────────────────
 
+@consolidated_bp.route("/api/budget-groups", methods=["POST"])
+@login_required
+def api_create_budget_group():
+    """Create a new budget group (used by the inline modal on the budget-plan page)."""
+    account_id = current_account_id()
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    monthly_budget = float(data.get("monthly_budget_target") or 0)
+    description = (data.get("description") or "").strip()
+
+    if not name:
+        return jsonify({"error": "Name is required"}), 400
+    if monthly_budget <= 0:
+        return jsonify({"error": "Monthly budget must be greater than 0"}), 400
+
+    customer_id = (data.get("customer_id") or "").strip()
+    if not customer_id:
+        try:
+            from app.google.utils_ads import resolve_ads_context
+            ctx = resolve_ads_context(account_id) or {}
+            customer_id = ctx.get("customer_id") or ""
+        except Exception:
+            pass
+    if not customer_id:
+        try:
+            row = db.session.execute(text(
+                "SELECT google_customer_id FROM ads_campaigns "
+                "WHERE account_id=:aid AND google_customer_id IS NOT NULL LIMIT 1"
+            ), {"aid": account_id}).mappings().first()
+            if row:
+                customer_id = row["google_customer_id"] or ""
+        except Exception:
+            pass
+
+    try:
+        db.session.execute(text("""
+            INSERT INTO budget_groups
+                (account_id, customer_id, name, description,
+                 monthly_budget_target, min_daily_budget, max_daily_budget,
+                 enabled, adjustment_frequency,
+                 performance_weight, seasonality_weight, capacity_weight,
+                 industry, send_notifications, color)
+            VALUES
+                (:aid, :cid, :name, :desc,
+                 :budget, 10, 1000,
+                 1, 'daily',
+                 0.70, 0.20, 0.10,
+                 'hvac_heating', 1, '#3B82F6')
+        """), {
+            "aid": account_id,
+            "cid": customer_id,
+            "name": name,
+            "desc": description,
+            "budget": monthly_budget,
+        })
+        db.session.commit()
+        return jsonify({"success": True})
+    except Exception as exc:
+        log.exception("api_create_budget_group failed")
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 500
+
+
 @consolidated_bp.route("/budget-plan", endpoint="budget_planning")
 @login_required
 def budget_planning():
@@ -218,12 +281,30 @@ def budget_planning():
         lambda: _load_budget_groups(account_id), ([], [], [])
     )
 
+    # Auto-create a default group when none exist so the page is immediately useful
+    if not budget_groups:
+        _safe(lambda: _create_default_budget_group(account_id), None)
+        budget_groups, unassigned_campaigns, all_campaigns = _safe(
+            lambda: _load_budget_groups(account_id), ([], [], [])
+        )
+
     # ── auto-budget settings ──
     auto_budget_settings = _safe(lambda: _load_auto_budget_settings(account_id), {})
     auto_budget_history  = _safe(lambda: _load_auto_budget_history(account_id), [])
 
     # ── forecasting campaigns ──
     forecast_campaigns = _safe(lambda: _load_forecast_campaigns(account_id), [])
+
+    # ── ads customer_id for the create-group modal ──
+    ads_customer_id = ""
+    try:
+        from app.google.utils_ads import resolve_ads_context
+        ctx = resolve_ads_context(account_id) or {}
+        ads_customer_id = ctx.get("customer_id") or ""
+    except Exception:
+        pass
+    if not ads_customer_id and budget_groups:
+        ads_customer_id = budget_groups[0].get("customer_id") or ""
 
     return render_template(
         "google/budget_planning.html",
@@ -234,12 +315,51 @@ def budget_planning():
         unassigned_campaigns=unassigned_campaigns,
         all_campaigns=all_campaigns,
         current_month=date.today(),
+        ads_customer_id=ads_customer_id,
         # Auto-budget
         auto_budget_settings=auto_budget_settings,
         auto_budget_history=auto_budget_history,
         # Forecasting
         forecast_campaigns=forecast_campaigns,
     )
+
+
+def _create_default_budget_group(account_id: int) -> None:
+    """Insert a starter 'Main Budget' group when the account has none."""
+    # Get customer_id from ads context, fall back to campaigns table
+    customer_id = ""
+    try:
+        from app.google.utils_ads import resolve_ads_context
+        ctx = resolve_ads_context(account_id) or {}
+        customer_id = ctx.get("customer_id") or ""
+    except Exception:
+        pass
+    if not customer_id:
+        try:
+            row = db.session.execute(text(
+                "SELECT google_customer_id FROM ads_campaigns "
+                "WHERE account_id=:aid AND google_customer_id IS NOT NULL LIMIT 1"
+            ), {"aid": account_id}).mappings().first()
+            if row:
+                customer_id = row["google_customer_id"] or ""
+        except Exception:
+            pass
+
+    db.session.execute(text("""
+        INSERT INTO budget_groups
+            (account_id, customer_id, name, description,
+             monthly_budget_target, min_daily_budget, max_daily_budget,
+             enabled, adjustment_frequency,
+             performance_weight, seasonality_weight, capacity_weight,
+             industry, send_notifications, color)
+        VALUES
+            (:aid, :cid, 'Main Budget', 'Default budget group',
+             0, 10, 1000,
+             1, 'daily',
+             0.70, 0.20, 0.10,
+             'hvac_heating', 1, '#3B82F6')
+    """), {"aid": account_id, "cid": customer_id})
+    db.session.commit()
 
 
 def _load_budget_groups(account_id: int):

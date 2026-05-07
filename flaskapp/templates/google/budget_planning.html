@@ -457,8 +457,16 @@ async function submitNewGroup() {
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Monthly Budget ($) <span class="text-red-500">*</span></label>
-        <input id="ngBudget" type="number" min="1" step="50" placeholder="e.g. 1500"
+        <input id="ngBudget" type="number" min="1" step="50"
+               value="{{ detected_budget | int if detected_budget else '' }}"
+               placeholder="e.g. 1500"
                class="block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
+        {% if detected_budget %}
+        <p class="text-xs text-gray-400 mt-0.5">
+          Pre-filled from your {{ 'auto-budget cap' if auto_budget_settings.get('total_monthly_budget_cents') else 'Google Ads campaigns' }}.
+          Adjust as needed.
+        </p>
+        {% endif %}
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>

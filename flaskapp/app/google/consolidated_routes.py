@@ -295,7 +295,7 @@ def budget_planning():
     # ── forecasting campaigns ──
     forecast_campaigns = _safe(lambda: _load_forecast_campaigns(account_id), [])
 
-    # ── ads customer_id for the create-group modal ──
+    # ── ads customer_id + detected budget for the create-group modal ──
     ads_customer_id = ""
     try:
         from app.google.utils_ads import resolve_ads_context
@@ -305,6 +305,8 @@ def budget_planning():
         pass
     if not ads_customer_id and budget_groups:
         ads_customer_id = budget_groups[0].get("customer_id") or ""
+
+    detected_budget = _safe(lambda: _detect_monthly_budget(account_id), 0.0)
 
     return render_template(
         "google/budget_planning.html",
@@ -316,6 +318,7 @@ def budget_planning():
         all_campaigns=all_campaigns,
         current_month=date.today(),
         ads_customer_id=ads_customer_id,
+        detected_budget=detected_budget,
         # Auto-budget
         auto_budget_settings=auto_budget_settings,
         auto_budget_history=auto_budget_history,
@@ -324,9 +327,55 @@ def budget_planning():
     )
 
 
+def _detect_monthly_budget(account_id: int) -> float:
+    """
+    Return the best estimate of the account's total monthly Google Ads budget.
+
+    Priority:
+      1. auto_budget_settings.total_monthly_budget_cents  (user-set explicit cap)
+      2. SUM(ads_campaigns.daily_budget_cents) * 30       (synced from Google Ads)
+      3. account_settings.monthly_budget                  (autonomous mode setting)
+    Returns 0.0 if nothing is found so the caller can decide the fallback.
+    """
+    # 1 – explicit cap set in auto-budget settings
+    try:
+        row = db.session.execute(text(
+            "SELECT total_monthly_budget_cents FROM auto_budget_settings "
+            "WHERE account_id=:aid LIMIT 1"
+        ), {"aid": account_id}).mappings().first()
+        if row and row["total_monthly_budget_cents"]:
+            return float(row["total_monthly_budget_cents"]) / 100.0
+    except Exception:
+        pass
+
+    # 2 – sum of campaign daily budgets × 30
+    try:
+        row = db.session.execute(text(
+            "SELECT SUM(daily_budget_cents) AS total "
+            "FROM ads_campaigns WHERE account_id=:aid AND status != 'removed'"
+        ), {"aid": account_id}).mappings().first()
+        if row and row["total"]:
+            return float(row["total"]) * 30 / 100.0
+    except Exception:
+        pass
+
+    # 3 – autonomous mode monthly_budget setting
+    try:
+        row = db.session.execute(text(
+            "SELECT setting_value FROM account_settings "
+            "WHERE account_id=:aid AND setting_key='monthly_budget' LIMIT 1"
+        ), {"aid": account_id}).mappings().first()
+        if row and row["setting_value"]:
+            return float(row["setting_value"])
+    except Exception:
+        pass
+
+    return 0.0
+
+
 def _create_default_budget_group(account_id: int) -> None:
-    """Insert a starter 'Main Budget' group when the account has none."""
-    # Get customer_id from ads context, fall back to campaigns table
+    """Insert a starter 'Main Budget' group seeded with the account's real budget."""
+    # Resolve customer_id
     customer_id = ""
     try:
         from app.google.utils_ads import resolve_ads_context
@@ -345,6 +394,12 @@ def _create_default_budget_group(account_id: int) -> None:
         except Exception:
             pass
 
+    monthly_budget = _detect_monthly_budget(account_id)
+    # Derive sensible daily bounds from the monthly total
+    daily_avg = monthly_budget / 30.0 if monthly_budget else 0.0
+    min_daily = max(10.0, round(daily_avg * 0.5, 2)) if daily_avg else 10.0
+    max_daily = max(min_daily * 2, round(daily_avg * 1.5, 2)) if daily_avg else 1000.0
+
     db.session.execute(text("""
         INSERT INTO budget_groups
             (account_id, customer_id, name, description,
@@ -354,11 +409,14 @@ def _create_default_budget_group(account_id: int) -> None:
              industry, send_notifications, color)
         VALUES
             (:aid, :cid, 'Main Budget', 'Default budget group',
-             0, 10, 1000,
+             :budget, :min_d, :max_d,
              1, 'daily',
              0.70, 0.20, 0.10,
              'hvac_heating', 1, '#3B82F6')
-    """), {"aid": account_id, "cid": customer_id})
+    """), {
+        "aid": account_id, "cid": customer_id,
+        "budget": monthly_budget, "min_d": min_daily, "max_d": max_daily,
+    })
     db.session.commit()
 
 

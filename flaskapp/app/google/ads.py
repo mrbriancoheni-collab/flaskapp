@@ -78,17 +78,31 @@ def optimize():
             today = date.today()
             thirty_ago = today - timedelta(days=30)
 
-            # KPIs from GadsStatsDaily (last 30d)
+            # KPIs: try campaign-level rows with account_id first, then fall back
+            # to account-level aggregate rows (written by performance_memory), then
+            # to campaign rows with no account_id (nullable column).
             kpi_rows = db.session.execute(text("""
                 SELECT SUM(cost_micros)/1000000.0 AS spend,
                        SUM(clicks) AS clicks,
                        SUM(conversions) AS conversions,
                        SUM(impressions) AS impressions
                 FROM gads_stats_daily
-                WHERE account_id = :aid
+                WHERE (account_id = :aid OR account_id IS NULL)
                   AND entity_type = 'campaign'
                   AND date >= :d
             """), {"aid": aid, "d": thirty_ago}).mappings().one_or_none()
+
+            # If campaign rows empty, try account-level aggregate row
+            if not kpi_rows or not any([kpi_rows.get("spend"), kpi_rows.get("clicks"), kpi_rows.get("impressions")]):
+                kpi_rows = db.session.execute(text("""
+                    SELECT SUM(cost_micros)/1000000.0 AS spend,
+                           SUM(clicks) AS clicks,
+                           SUM(conversions) AS conversions,
+                           SUM(impressions) AS impressions
+                    FROM gads_stats_daily
+                    WHERE entity_type = 'account'
+                      AND date >= :d
+                """), {"d": thirty_ago}).mappings().one_or_none()
 
             # Quick health score from DB
             kw_count = db.session.execute(
@@ -128,10 +142,18 @@ def optimize():
             clicks = int(kpi_rows["clicks"] or 0) if kpi_rows else 0
             conversions = float(kpi_rows["conversions"] or 0) if kpi_rows else 0
             impressions = int(kpi_rows["impressions"] or 0) if kpi_rows else 0
+            has_stats = spend > 0 or clicks > 0 or impressions > 0
+
             ctr = (clicks / impressions * 100) if impressions else 0
-            ctr_score = 90 if ctr >= 6 else (80 if ctr >= 5 else (70 if ctr >= 4 else (55 if ctr >= 3 else (40 if ctr >= 2 else 25)))) if ctr > 0 else 50
-            overall = int(waste_score * 0.35 + struct_score * 0.30 + ctr_score * 0.35)
-            grade = "A+" if overall >= 90 else ("A" if overall >= 85 else ("A-" if overall >= 80 else ("B+" if overall >= 75 else ("B" if overall >= 70 else ("B-" if overall >= 65 else ("C+" if overall >= 60 else ("C" if overall >= 55 else ("C-" if overall >= 50 else ("D" if overall >= 40 else "F")))))))))
+            # When we have NO stats data the health score defaults are meaningful:
+            # structure score still reflects actual DB structure, ctr defaults to 50
+            ctr_score = (90 if ctr >= 6 else (80 if ctr >= 5 else (70 if ctr >= 4 else (55 if ctr >= 3 else (40 if ctr >= 2 else 25))))) if ctr > 0 else (50 if has_stats else 0)
+            # If no stats at all, show 0/N/A so user knows sync is needed
+            if not has_stats and not camp_count:
+                overall, grade = 0, "N/A"
+            else:
+                overall = int(waste_score * 0.35 + struct_score * 0.30 + ctr_score * 0.35)
+                grade = "A+" if overall >= 90 else ("A" if overall >= 85 else ("A-" if overall >= 80 else ("B+" if overall >= 75 else ("B" if overall >= 70 else ("B-" if overall >= 65 else ("C+" if overall >= 60 else ("C" if overall >= 55 else ("C-" if overall >= 50 else ("D" if overall >= 40 else "F")))))))))
 
             # Top pending actions
             top_actions = OptimizerRecommendation.query.filter_by(
@@ -164,6 +186,7 @@ def optimize():
             cockpit = {
                 "health": {"overall": overall, "grade": grade, "waste": waste_score, "structure": struct_score, "ctr": ctr_score},
                 "kpis": {"spend": round(spend, 2), "clicks": clicks, "conversions": round(conversions, 1), "impressions": impressions, "ctr": round(ctr, 2), "cpa": round(spend / conversions, 2) if conversions else 0},
+                "needs_sync": not has_stats,
                 "top_actions": top_actions,
                 "active_rules": active_rules,
                 "actions_today": actions_today,
@@ -343,10 +366,24 @@ def optimize():
         except Exception:
             current_app.logger.exception("Error loading ads tab")
 
+    # Pass cockpit KPIs to top bar so it shows real numbers instead of hardcoded fallback
+    kpis = cockpit.get("kpis", {}) if cockpit else {}
+    gads_stats = None
+    if kpis and (kpis.get("spend") or kpis.get("clicks") or kpis.get("impressions")):
+        gads_stats = {
+            "period": "Last 30 days",
+            "spend": kpis.get("spend", 0),
+            "impr": kpis.get("impressions", 0),
+            "clicks": kpis.get("clicks", 0),
+            "conv": kpis.get("conversions", 0),
+            "cpa": kpis.get("cpa", 0),
+        }
+
     return render_template(
         "google/ads/optimize.html",
         tab=tab,
         connected=connected,
+        gads_stats=gads_stats,
         keywords_data=keywords_data,
         negatives_data=negatives_data,
         campaigns_list=campaigns_list,
@@ -362,15 +399,23 @@ def optimize():
 # JSON: Overview KPIs
 # ---------------------------
 @gads_bp.get("/overview")
+@login_required
 def overview():
     """
     Account-level KPI snapshot from gads_stats_daily.
     Query params: ?days=30 (default 30)
+    Tries account-level rows first, then falls back to summing campaign rows.
     """
+    aid = current_account_id()
     days = int(request.args.get("days", 30))
-    row = db.session.execute(
-        text(
-            """
+
+    def _query(etype, use_aid):
+        filters = "AND entity_type = :et AND date >= (CURRENT_DATE - INTERVAL :days DAY)"
+        params: dict = {"et": etype, "days": days}
+        if use_aid:
+            filters += " AND (account_id = :aid OR account_id IS NULL)"
+            params["aid"] = aid
+        return db.session.execute(text(f"""
             SELECT
               COALESCE(SUM(impressions),0) AS impressions,
               COALESCE(SUM(clicks),0) AS clicks,
@@ -380,13 +425,16 @@ def overview():
                    THEN COALESCE(SUM(cost_micros),0)/1000000.0/COALESCE(SUM(clicks),0)
                    ELSE 0 END AS avg_cpc
             FROM gads_stats_daily
-            WHERE date >= (CURRENT_DATE - INTERVAL :days DAY)
-              AND entity_type = 'account'
-            """
-        ),
-        {"days": days},
-    ).mappings().first() or {}
-    return jsonify(row)
+            WHERE 1=1 {filters}
+        """), params).mappings().first() or {}
+
+    row = _query("account", use_aid=True)
+    if not row or not (row.get("impressions") or row.get("clicks") or row.get("cost_micros")):
+        row = _query("campaign", use_aid=True)
+    if not row or not (row.get("impressions") or row.get("clicks") or row.get("cost_micros")):
+        row = _query("account", use_aid=False)
+
+    return jsonify(dict(row))
 
 
 # ---------------------------

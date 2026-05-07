@@ -90,19 +90,46 @@ def ai_control():
         from app.models_ai_actions import AIAction
         from sqlalchemy import func as _func
         from datetime import datetime as _dt, timedelta as _td
-        cl_total_actions = AIAction.query.filter_by(account_id=account_id, status='executed').count()
-        cl_total_saved = db.session.query(_func.sum(AIAction.estimated_monthly_savings)).filter_by(
-            account_id=account_id, status='executed'
-        ).scalar() or 0
-        cl_total_blocks = AIAction.query.filter_by(
-            account_id=account_id, status='executed', action_type='negative_keyword_added'
-        ).count()
+
+        # Count only DISTINCT titles to avoid inflating numbers from pre-dedup duplicates
+        cl_total_actions = db.session.execute(text(
+            "SELECT COUNT(DISTINCT title) FROM ai_actions "
+            "WHERE account_id=:aid AND status='executed'"
+        ), {"aid": account_id}).scalar() or 0
+
+        # Sum savings from only the first occurrence of each unique action title
+        cl_total_saved = db.session.execute(text(
+            "SELECT COALESCE(SUM(s),0) FROM ("
+            "  SELECT MIN(estimated_monthly_savings) AS s FROM ai_actions "
+            "  WHERE account_id=:aid AND status='executed' AND estimated_monthly_savings IS NOT NULL "
+            "  GROUP BY title"
+            ") AS deduped"
+        ), {"aid": account_id}).scalar() or 0
+
+        cl_total_blocks = db.session.execute(text(
+            "SELECT COUNT(DISTINCT title) FROM ai_actions "
+            "WHERE account_id=:aid AND status='executed' AND action_type='negative_keyword_added'"
+        ), {"aid": account_id}).scalar() or 0
+
         cl_total_optimizations = cl_total_actions - cl_total_blocks
+
+        # Show only the most recent occurrence of each unique action in the feed
         cl_recent_actions = AIAction.query.filter(
             AIAction.account_id == account_id,
             AIAction.status == 'executed',
             AIAction.created_at >= _dt.utcnow() - _td(days=30)
-        ).order_by(AIAction.created_at.desc()).limit(50).all()
+        ).order_by(AIAction.created_at.desc()).limit(200).all()
+
+        # Deduplicate the feed by title, keeping only the latest
+        seen_titles = set()
+        deduped = []
+        for a in cl_recent_actions:
+            if a.title not in seen_titles:
+                seen_titles.add(a.title)
+                deduped.append(a)
+            if len(deduped) >= 50:
+                break
+        cl_recent_actions = deduped
     except Exception:
         pass
 

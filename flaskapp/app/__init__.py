@@ -885,6 +885,26 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register ml_admin_bp")
 
+    # --- Marketing Command Center ---
+    try:
+        from app.marketing import marketing_bp
+        app.register_blueprint(marketing_bp)  # url_prefix=/account/marketing
+        app.logger.info("marketing_bp registered at /account/marketing")
+    except Exception:
+        app.logger.exception("Failed to register marketing_bp")
+
+    # --- Marketing Webhooks (Twilio, Angi, Thumbtack, Nextdoor, generic) ---
+    try:
+        from app.webhooks.marketing_webhooks import marketing_webhooks_bp
+        app.register_blueprint(marketing_webhooks_bp)  # url_prefix=/api/webhooks
+        try:
+            csrf.exempt(marketing_webhooks_bp)
+        except Exception as _e:
+            app.logger.warning(f"Could not exempt marketing_webhooks_bp from CSRF: {_e}")
+        app.logger.info("marketing_webhooks_bp registered at /api/webhooks")
+    except Exception:
+        app.logger.exception("Failed to register marketing_webhooks_bp")
+
     # --- Email Webhooks (AI auto-responses for inbound emails) -------------
     try:
         from app.email_webhooks import email_webhook_bp

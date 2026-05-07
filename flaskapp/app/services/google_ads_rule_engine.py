@@ -77,6 +77,15 @@ def run_rules(account_id: int) -> Dict[str, Any]:
         {"aid": account_id, "d": today},
     ).scalar() or 0
 
+    # Preload titles of actions created in the last 7 days — prevents daily duplicates
+    week_ago = (datetime.utcnow() - timedelta(days=7)).isoformat()
+    recent_titles = set(
+        row[0] for row in db.session.execute(
+            text("SELECT title FROM ai_actions WHERE account_id=:aid AND created_at>=:since"),
+            {"aid": account_id, "since": week_ago},
+        ).all()
+    )
+
     for rule in rules:
         summary["evaluated"] += 1
         try:
@@ -87,11 +96,16 @@ def run_rules(account_id: int) -> Dict[str, Any]:
             continue
 
         actions_this_rule = 0
+
         for candidate in candidates:
             if actions_today >= rule.max_actions_per_day:
                 break
             if actions_this_rule >= rule.max_actions_per_campaign:
                 break
+
+            # Skip if we already have an identical recommendation from the last 7 days
+            if candidate.get("title") in recent_titles:
+                continue
 
             action = AIAction(
                 account_id=account_id,

@@ -1,0 +1,122 @@
+{% extends "base_app.html" %}
+{% set active_nav = 'growth' %}
+{% block title %}Growth Optimizer — FieldSprout{% endblock %}
+
+{% block content %}
+{% include "marketing/_nav.html" %}
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 space-y-6">
+
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900">Growth Optimizer</h1>
+    <p class="text-sm text-gray-500 mt-0.5">Expand lowest-CAC channels first · 90-day aggregate</p>
+  </div>
+
+  {# Recommendations #}
+  {% if growth_recs %}
+  <div class="space-y-3">
+    {% for rec in growth_recs %}
+    {% if rec.action == 'increase_budget' %}
+      {% set bg = 'bg-green-50' %} {% set border = 'border-green-200' %}
+      {% set icon = 'fa-arrow-trend-up' %} {% set icon_color = 'text-green-600' %}
+      {% set badge = 'bg-green-100 text-green-700' %} {% set badge_text = 'Scale Up' %}
+    {% elif rec.action == 'reduce_budget' %}
+      {% set bg = 'bg-red-50' %} {% set border = 'border-red-200' %}
+      {% set icon = 'fa-arrow-trend-down' %} {% set icon_color = 'text-red-600' %}
+      {% set badge = 'bg-red-100 text-red-700' %} {% set badge_text = 'Review' %}
+    {% else %}
+      {% set bg = 'bg-amber-50' %} {% set border = 'border-amber-200' %}
+      {% set icon = 'fa-circle-info' %} {% set icon_color = 'text-amber-600' %}
+      {% set badge = 'bg-amber-100 text-amber-700' %} {% set badge_text = 'Optimize' %}
+    {% endif %}
+    <div class="rounded-xl border {{ border }} {{ bg }} p-5 flex items-start gap-4">
+      <div class="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center flex-shrink-0 shadow-sm">
+        <i class="fa-solid {{ icon }} {{ icon_color }}"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 mb-1">
+          <p class="font-semibold text-gray-900">{{ rec.channel_name }}</p>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ badge }}">{{ badge_text }}</span>
+        </div>
+        <p class="text-sm text-gray-700">{{ rec.reason }}</p>
+        <div class="flex items-center gap-4 mt-2 text-xs text-gray-500">
+          {% if rec.cac is not none %}<span>CAC: <strong class="text-gray-800">${{ "{:,.0f}".format(rec.cac / 100) }}</strong></span>{% endif %}
+          {% if rec.roi is not none %}<span>ROI: <strong class="text-gray-800">{{ "{:.1f}".format(rec.roi) }}x</strong></span>{% endif %}
+          {% if rec.current_budget_cents %}<span>Budget: <strong class="text-gray-800">${{ "{:,.0f}".format(rec.current_budget_cents / 100) }}/mo</strong></span>{% endif %}
+          {% if rec.suggested_budget_cents %}<span>→ Suggested: <strong class="text-gray-800">${{ "{:,.0f}".format(rec.suggested_budget_cents / 100) }}/mo</strong></span>{% endif %}
+        </div>
+      </div>
+      <a href="/account/marketing/channels" class="flex-shrink-0 px-3 py-1.5 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-700 font-medium transition">Adjust →</a>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# Channel comparison table #}
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h2 class="font-semibold text-gray-900">All Channels — 90-Day Performance</h2>
+      <span class="text-xs text-gray-400">Sorted by CAC (lowest first)</span>
+    </div>
+    {% if channel_stats %}
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-100">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Channel</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Spend</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Leads</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Booked</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Close%</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">CPL</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">CAC</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">ROI</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for ch in channel_stats %}
+          {% set linfo = channel_type_labels.get(ch.channel_type, ('Other', 'fa-solid fa-circle', 'gray')) %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-5 py-3">
+              <div class="flex items-center gap-2">
+                <i class="{{ linfo[1] }} text-{{ linfo[2] }}-500 w-4"></i>
+                <span class="text-sm font-medium text-gray-900">{{ ch.name }}</span>
+              </div>
+            </td>
+            <td class="px-4 py-3 text-right text-sm text-gray-700">${{ "{:,.0f}".format((ch.spend_cents or 0) / 100) }}</td>
+            <td class="px-4 py-3 text-right text-sm text-gray-700">{{ ch.leads or 0 }}</td>
+            <td class="px-4 py-3 text-right text-sm text-gray-700">{{ ch.booked or 0 }}</td>
+            <td class="px-4 py-3 text-right text-sm {% if ch.close_rate and ch.close_rate >= 0.3 %}text-green-600 font-semibold{% elif ch.close_rate and ch.close_rate < 0.15 %}text-red-500{% else %}text-gray-700{% endif %}">
+              {% if ch.close_rate is not none %}{{ "{:.0f}".format(ch.close_rate * 100) }}%{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right text-sm text-gray-700">
+              {% if ch.cpl %}${{ "{:.0f}".format(ch.cpl / 100) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              {% if ch.cac %}
+              <span class="text-sm font-bold {% if ch.cac < 15000 %}text-green-600{% elif ch.cac > 50000 %}text-red-600{% else %}text-amber-600{% endif %}">
+                ${{ "{:,.0f}".format(ch.cac / 100) }}
+              </span>
+              {% else %}<span class="text-gray-400 text-sm">—</span>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              {% if ch.roi is not none %}
+              <span class="text-sm font-bold {% if ch.roi >= 3 %}text-green-600{% elif ch.roi < 1 %}text-red-600{% else %}text-amber-600{% endif %}">
+                {{ "{:.1f}".format(ch.roi) }}x
+              </span>
+              {% else %}<span class="text-gray-400 text-sm">—</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="py-12 text-center">
+      <p class="text-gray-400 text-sm">No channel data yet. Add channels and log spend to see comparisons.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

@@ -36,25 +36,27 @@
   <div id="tab-groups" class="{{ '' if tab == 'groups' else 'hidden' }}">
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-lg font-semibold text-gray-900">Budget Groups</h2>
-      <a href="{{ url_for('budget_bp.budget_groups') }}" class="text-sm text-indigo-600 hover:underline">
-        Full manager <i class="fas fa-external-link-alt text-xs ml-1"></i>
-      </a>
+      <button onclick="document.getElementById('newGroupModal').classList.remove('hidden')"
+              class="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
+        <i class="fas fa-plus"></i> New Group
+      </button>
     </div>
 
     {% if budget_groups %}
     <div class="space-y-4">
       {% for group in budget_groups %}
-      {% set budget_dollars = (group.monthly_budget_cents or group.estimated_monthly_cents or 0) / 100 %}
-      {% set spend_dollars = (group.current_spend_cents or 0) / 100 %}
+      {% set budget_dollars = (group.monthly_budget_target or (group.estimated_monthly_cents or 0) / 100) %}
+      {% set spend_dollars = (group.current_spend_dollars or 0) | float %}
       {% set pct = ((spend_dollars / budget_dollars * 100) | int) if budget_dollars > 0 else 0 %}
+      {% set is_active = group.enabled %}
       <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
         <div class="flex items-start justify-between flex-wrap gap-2 mb-3">
           <div>
             <h3 class="font-semibold text-gray-900">{{ group.name }}</h3>
             {% if group.description %}<p class="text-xs text-gray-500">{{ group.description }}</p>{% endif %}
           </div>
-          <span class="text-xs px-2 py-0.5 rounded bg-{{ 'green' if group.status == 'active' else 'gray' }}-100 text-{{ 'green' if group.status == 'active' else 'gray' }}-700">
-            {{ group.status | capitalize }}
+          <span class="text-xs px-2 py-0.5 rounded bg-{{ 'green' if is_active else 'gray' }}-100 text-{{ 'green' if is_active else 'gray' }}-700">
+            {{ 'Active' if is_active else 'Paused' }}
           </span>
         </div>
         <div class="grid grid-cols-3 gap-4 mb-3 text-sm">
@@ -97,9 +99,10 @@
       <i class="fas fa-layer-group text-gray-300 text-4xl mb-4"></i>
       <h3 class="text-lg font-semibold text-gray-700 mb-2">No Budget Groups</h3>
       <p class="text-gray-500 text-sm mb-4">Create budget groups to track spend across campaign sets.</p>
-      <a href="{{ url_for('budget_bp.budget_groups') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
+      <button onclick="document.getElementById('newGroupModal').classList.remove('hidden')"
+              class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
         <i class="fas fa-plus"></i> Create Budget Group
-      </a>
+      </button>
     </div>
     {% endif %}
   </div>
@@ -388,5 +391,104 @@ async function loadForecast() {
     }
   } catch(e) {}
 }
+
+// ── Create Budget Group modal ──────────────────────────────────────
+async function submitNewGroup() {
+  const name = document.getElementById('ngName').value.trim();
+  const budget = parseFloat(document.getElementById('ngBudget').value) || 0;
+  const desc = document.getElementById('ngDesc').value.trim();
+  const btn = document.getElementById('ngSubmitBtn');
+  const err = document.getElementById('ngError');
+
+  err.classList.add('hidden');
+  if (!name) { err.textContent = 'Name is required.'; err.classList.remove('hidden'); return; }
+  if (budget <= 0) { err.textContent = 'Monthly budget must be greater than 0.'; err.classList.remove('hidden'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Creating…';
+
+  try {
+    const res = await fetch('/account/google/ads/api/budget-groups', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || csrf,
+      },
+      body: JSON.stringify({
+        name,
+        monthly_budget_target: budget,
+        description: desc,
+        customer_id: document.getElementById('ngCustomerId').value || '',
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      window.location.reload();
+    } else {
+      err.textContent = data.error || 'Failed to create group.';
+      err.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Create';
+    }
+  } catch(e) {
+    err.textContent = 'Network error — please try again.';
+    err.classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = 'Create';
+  }
+}
 </script>
+
+{# ── New Budget Group Modal ── #}
+<div id="newGroupModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="text-lg font-semibold text-gray-900">New Budget Group</h3>
+      <button onclick="document.getElementById('newGroupModal').classList.add('hidden')"
+              class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+    </div>
+
+    <input type="hidden" id="ngCustomerId" value="{{ ads_customer_id }}">
+
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Group Name <span class="text-red-500">*</span></label>
+        <input id="ngName" type="text" placeholder="e.g. HVAC — General"
+               class="block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Monthly Budget ($) <span class="text-red-500">*</span></label>
+        <input id="ngBudget" type="number" min="1" step="50"
+               value="{{ detected_budget | int if detected_budget else '' }}"
+               placeholder="e.g. 1500"
+               class="block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
+        {% if detected_budget %}
+        <p class="text-xs text-gray-400 mt-0.5">
+          Pre-filled from your {{ 'auto-budget cap' if auto_budget_settings.get('total_monthly_budget_cents') else 'Google Ads campaigns' }}.
+          Adjust as needed.
+        </p>
+        {% endif %}
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <textarea id="ngDesc" rows="2" placeholder="Optional description"
+                  class="block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+      </div>
+    </div>
+
+    <p id="ngError" class="hidden mt-3 text-sm text-red-600"></p>
+
+    <div class="flex gap-3 mt-6">
+      <button onclick="document.getElementById('newGroupModal').classList.add('hidden')"
+              class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
+        Cancel
+      </button>
+      <button id="ngSubmitBtn" onclick="submitNewGroup()"
+              class="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
+        Create
+      </button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

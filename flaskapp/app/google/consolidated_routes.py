@@ -426,14 +426,23 @@ def _load_budget_groups(account_id: int):
     month_start = today.replace(day=1)
 
     groups = db.session.execute(text("""
-        SELECT bg.*, COUNT(ac.id) AS campaign_count,
-               COALESCE(SUM(ac.daily_budget_cents * 30), 0) AS estimated_monthly_cents
+        SELECT bg.*,
+               COUNT(DISTINCT ac.id) AS campaign_count,
+               COALESCE(SUM(ac.daily_budget_cents * 30), 0) AS estimated_monthly_cents,
+               COALESCE((
+                 SELECT SUM(gs.cost_micros) / 1000000.0
+                 FROM gads_stats_daily gs
+                 JOIN ads_campaigns ac2 ON ac2.google_campaign_id = gs.campaign_id
+                 WHERE ac2.budget_group_id = bg.id
+                   AND gs.entity_type = 'campaign'
+                   AND gs.date >= :month_start
+               ), 0) AS current_spend_dollars
         FROM budget_groups bg
         LEFT JOIN ads_campaigns ac ON ac.budget_group_id = bg.id AND ac.account_id = :aid
         WHERE bg.account_id = :aid
         GROUP BY bg.id
         ORDER BY bg.name
-    """), {"aid": account_id}).mappings().all()
+    """), {"aid": account_id, "month_start": month_start}).mappings().all()
 
     campaigns = db.session.execute(text("""
         SELECT ac.*, bg.name AS group_name

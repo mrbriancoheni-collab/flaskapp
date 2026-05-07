@@ -45,17 +45,18 @@
     {% if budget_groups %}
     <div class="space-y-4">
       {% for group in budget_groups %}
-      {% set budget_dollars = (group.monthly_budget_cents or group.estimated_monthly_cents or 0) / 100 %}
-      {% set spend_dollars = (group.current_spend_cents or 0) / 100 %}
+      {% set budget_dollars = (group.monthly_budget_target or (group.estimated_monthly_cents or 0) / 100) %}
+      {% set spend_dollars = (group.current_spend_dollars or 0) | float %}
       {% set pct = ((spend_dollars / budget_dollars * 100) | int) if budget_dollars > 0 else 0 %}
+      {% set is_active = group.enabled %}
       <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
         <div class="flex items-start justify-between flex-wrap gap-2 mb-3">
           <div>
             <h3 class="font-semibold text-gray-900">{{ group.name }}</h3>
             {% if group.description %}<p class="text-xs text-gray-500">{{ group.description }}</p>{% endif %}
           </div>
-          <span class="text-xs px-2 py-0.5 rounded bg-{{ 'green' if group.status == 'active' else 'gray' }}-100 text-{{ 'green' if group.status == 'active' else 'gray' }}-700">
-            {{ group.status | capitalize }}
+          <span class="text-xs px-2 py-0.5 rounded bg-{{ 'green' if is_active else 'gray' }}-100 text-{{ 'green' if is_active else 'gray' }}-700">
+            {{ 'Active' if is_active else 'Paused' }}
           </span>
         </div>
         <div class="grid grid-cols-3 gap-4 mb-3 text-sm">

@@ -440,7 +440,7 @@ def _load_budget_groups(account_id: int):
                COALESCE((
                  SELECT SUM(gs.cost_micros) / 1000000.0
                  FROM gads_stats_daily gs
-                 JOIN ads_campaigns ac2 ON ac2.google_campaign_id = gs.campaign_id
+                 JOIN ads_campaigns ac2 ON ac2.id = gs.entity_id
                  WHERE ac2.budget_group_id = bg.id
                    AND gs.entity_type = 'campaign'
                    AND gs.date >= :month_start

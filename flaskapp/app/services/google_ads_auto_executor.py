@@ -1083,16 +1083,18 @@ Be conservative: when in doubt, mark as RELEVANT (false). Only mark terms IRRELE
                     f"Action {action.id} has no search_term in after_value — cannot undo."
                 )
             ga_service = client.get_service("GoogleAdsService")
-            query = f"""
-                SELECT campaign_criterion.resource_name
-                FROM campaign_criterion
-                WHERE campaign_criterion.campaign = '{
-                    client.get_service("CampaignService").campaign_path(customer_id, action.campaign_id)
-                }'
-                  AND campaign_criterion.negative = TRUE
-                  AND campaign_criterion.keyword.text = '{search_term.replace("'", "\\'")}'
-                LIMIT 1
-            """
+            campaign_path = client.get_service("CampaignService").campaign_path(
+                customer_id, action.campaign_id
+            )
+            escaped_term = search_term.replace("'", "\\'")
+            query = (
+                f"SELECT campaign_criterion.resource_name"
+                f" FROM campaign_criterion"
+                f" WHERE campaign_criterion.campaign = '{campaign_path}'"
+                f"   AND campaign_criterion.negative = TRUE"
+                f"   AND campaign_criterion.keyword.text = '{escaped_term}'"
+                f" LIMIT 1"
+            )
             stream = ga_service.search_stream(customer_id=customer_id, query=query)
             for batch in stream:
                 for row in batch.results:

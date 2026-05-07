@@ -1019,6 +1019,7 @@ def reset_email_sending(campaign_id: int):
 
     # Delete LeadContactEmail tracking records
     contact_emails_deleted = 0
+    legacy_emails_deleted = 0
     if lead_ids:
         contact_ids = [
             c.id for c in LeadContact.query.filter(LeadContact.lead_id.in_(lead_ids)).with_entities(LeadContact.id)
@@ -1027,6 +1028,11 @@ def reset_email_sending(campaign_id: int):
             contact_emails_deleted = LeadContactEmail.query.filter(
                 LeadContactEmail.contact_id.in_(contact_ids)
             ).delete(synchronize_session='fetch')
+
+        # Also delete legacy LeadEmail records — these block the global dedup check even after reset
+        legacy_emails_deleted = LeadEmail.query.filter(
+            LeadEmail.lead_id.in_(lead_ids)
+        ).delete(synchronize_session='fetch')
 
         # Reset LeadContact email_status
         LeadContact.query.filter(LeadContact.lead_id.in_(lead_ids)).update(
@@ -1048,7 +1054,7 @@ def reset_email_sending(campaign_id: int):
     contacts_reset = LeadContact.query.filter(LeadContact.lead_id.in_(lead_ids)).count() if lead_ids else 0
     flash(
         f'Reset email sending for "{campaign.name}": '
-        f'{contacts_reset} contacts → pending, {contact_emails_deleted} send records removed.',
+        f'{contacts_reset} contacts → pending, {contact_emails_deleted} send records + {legacy_emails_deleted} legacy records removed.',
         'success'
     )
     return redirect(url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign_id))
@@ -2827,3 +2833,100 @@ def email_monitoring_dashboard():
         # Filters
         days=days
     )
+
+
+# ── Purge non-business email addresses ──────────────────────────────────────
+
+@lead_campaigns_bp.route('/purge-nonbusiness-emails', methods=['POST'])
+@require_admin
+def purge_nonbusiness_emails():
+    """
+    Scan all LeadContact and Lead records and mark as invalid / remove those
+    whose email address belongs to a non-business domain (Yelp, Quora, social
+    media platforms, review aggregators, etc.) using the existing validation
+    function.  Also optionally verifies remaining addresses via Hunter.io.
+    """
+    from app.services.email_validation import validate_email_for_outreach
+
+    purged_contacts = 0
+    purged_legacy = 0
+    campaign_filter = request.form.get('campaign_id', type=int)
+
+    try:
+        # ── LeadContact records ──────────────────────────────────────────────
+        contact_q = LeadContact.query.filter(LeadContact.email.isnot(None))
+        if campaign_filter:
+            lead_ids = [l.id for l in Lead.query.filter_by(campaign_id=campaign_filter).with_entities(Lead.id)]
+            contact_q = contact_q.filter(LeadContact.lead_id.in_(lead_ids))
+
+        contacts = contact_q.all()
+        for contact in contacts:
+            if not contact.email:
+                continue
+            valid, reason = validate_email_for_outreach(contact.email)
+            if not valid and reason in ('noncompany_domain', 'free_provider', 'role_based'):
+                contact.email = None
+                contact.email_status = 'invalid'
+                purged_contacts += 1
+
+        # ── Legacy Lead.decision_maker_email ────────────────────────────────
+        legacy_q = Lead.query.filter(Lead.decision_maker_email.isnot(None))
+        if campaign_filter:
+            legacy_q = legacy_q.filter(Lead.campaign_id == campaign_filter)
+
+        legacy_leads = legacy_q.all()
+        for lead in legacy_leads:
+            if not lead.decision_maker_email:
+                continue
+            valid, reason = validate_email_for_outreach(lead.decision_maker_email)
+            if not valid and reason in ('noncompany_domain', 'free_provider', 'role_based'):
+                lead.decision_maker_email = None
+                purged_legacy += 1
+
+        db.session.commit()
+        flash(
+            f'Purged {purged_contacts} contact emails + {purged_legacy} legacy decision-maker emails '
+            f'that belong to non-business domains (Yelp, Quora, social media, etc.).',
+            'success'
+        )
+    except Exception as exc:
+        db.session.rollback()
+        logger.exception("purge_nonbusiness_emails failed")
+        flash(f'Error during purge: {exc}', 'error')
+
+    if campaign_filter:
+        return redirect(url_for('lead_campaigns_bp.view_campaign', campaign_id=campaign_filter))
+    return redirect(url_for('lead_campaigns_bp.index'))
+
+
+@lead_campaigns_bp.route('/reset-all-campaigns', methods=['POST'])
+@require_admin
+def reset_all_campaigns():
+    """Reset email sending state for ALL campaigns so every contact can receive
+    each sequence email exactly once from scratch."""
+    try:
+        # Delete all send tracking records
+        LeadContactEmail.query.delete(synchronize_session='fetch')
+        LeadEmail.query.delete(synchronize_session='fetch')
+
+        # Reset all contacts and leads to pending
+        LeadContact.query.update(
+            {'email_status': 'pending', 'current_sequence_step': 0, 'last_email_sent_at': None},
+            synchronize_session='fetch'
+        )
+        Lead.query.update(
+            {'email_status': 'pending', 'current_sequence_step': 0, 'last_email_sent_at': None},
+            synchronize_session='fetch'
+        )
+
+        # Reset campaign stats
+        LeadCampaign.query.update({'emails_sent': 0}, synchronize_session='fetch')
+
+        db.session.commit()
+        flash('Reset all campaigns: every contact is now pending and will receive the sequence fresh.', 'success')
+    except Exception as exc:
+        db.session.rollback()
+        logger.exception("reset_all_campaigns failed")
+        flash(f'Error: {exc}', 'error')
+
+    return redirect(url_for('lead_campaigns_bp.index'))

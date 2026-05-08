@@ -4,8 +4,41 @@
 {% block content %}
 <div class="space-y-6">
   <div class="flex items-center justify-between">
-    <h1 class="text-2xl font-semibold">Insights</h1>
+    <div>
+      <h1 class="text-2xl font-semibold">Insights</h1>
+      {% if site and site.base_url %}
+        <p class="text-sm text-gray-500 mt-0.5">Connected site: <span class="font-mono text-xs text-indigo-700">{{ site.base_url }}</span></p>
+      {% else %}
+        <p class="text-sm text-red-500 mt-0.5">No WordPress site connected. <a href="{{ url_for('wp_bp.settings') }}" class="underline">Connect one →</a></p>
+      {% endif %}
+    </div>
     <a href="{{ url_for('wp_bp.publisher') }}" class="text-indigo-600 hover:underline">Open Publisher</a>
+  </div>
+
+  {# ── Live posts from connected WP site ── #}
+  <div class="rounded-xl border bg-white p-5">
+    <div class="flex items-center gap-2 mb-3">
+      <i class="fa-brands fa-wordpress text-[#21759b] text-xl"></i>
+      <h2 class="font-semibold">Live Posts on Your Site</h2>
+      {% if live_posts %}
+        <span class="ml-auto text-xs text-gray-400">Latest {{ live_posts|length }} published</span>
+      {% endif %}
+    </div>
+    {% if live_posts %}
+      <ul class="divide-y">
+        {% for p in live_posts %}
+        <li class="py-2 flex items-center justify-between gap-4">
+          <a href="{{ p.link }}" target="_blank" rel="noopener"
+             class="text-sm text-indigo-700 hover:underline truncate flex-1">{{ p.title }}</a>
+          <span class="text-xs text-gray-400 shrink-0">{{ p.date }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    {% elif site and site.base_url %}
+      <p class="text-sm text-gray-500">Could not load posts — check your WordPress connection in <a href="{{ url_for('wp_bp.settings') }}" class="text-indigo-600 hover:underline">Settings</a>.</p>
+    {% else %}
+      <p class="text-sm text-gray-500">Connect a WordPress site to see your live posts here.</p>
+    {% endif %}
   </div>
 
   <!-- Optional GA/GSC tiles -->
@@ -68,7 +101,7 @@
 
   <!-- Recent analyses/publish drafts -->
   <div class="space-y-4">
-    <h2 class="text-lg font-semibold">Recent Content Analyses & Drafts</h2>
+    <h2 class="text-lg font-semibold">Content Queue <span class="text-sm font-normal text-gray-400">(jobs created in this app)</span></h2>
 
     {% for j in jobs %}
       {% if j.kind == "publish" and j.payload %}

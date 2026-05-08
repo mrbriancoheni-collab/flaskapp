@@ -519,6 +519,190 @@ def dashboard():
         user=g.user,
     )
 
+@account_bp.route("/dashboard/kpis.json", methods=["GET"], endpoint="dashboard_kpis")
+@login_required
+def dashboard_kpis():
+    """Return this-month Google Ads KPIs from local stats table."""
+    from datetime import date
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "no account"}), 403
+
+    month_start = date.today().replace(day=1).isoformat()
+    try:
+        row = db.session.execute(text("""
+            SELECT
+                COALESCE(SUM(gs.cost_micros), 0)    AS cost_micros,
+                COALESCE(SUM(gs.clicks), 0)          AS clicks,
+                COALESCE(SUM(gs.conversions), 0)     AS conversions,
+                COALESCE(SUM(gs.impressions), 0)     AS impressions
+            FROM gads_stats_daily gs
+            JOIN ads_campaigns ac ON ac.id = gs.entity_id
+            WHERE ac.account_id = :aid
+              AND gs.entity_type = 'campaign'
+              AND gs.date >= :month_start
+        """), {"aid": aid, "month_start": month_start}).mappings().first()
+
+        spend = float(row["cost_micros"] or 0) / 1_000_000 if row else 0.0
+        clicks = int(row["clicks"] or 0) if row else 0
+        conversions = float(row["conversions"] or 0) if row else 0.0
+        impressions = int(row["impressions"] or 0) if row else 0
+
+        # Best-performing campaign this month
+        best = db.session.execute(text("""
+            SELECT ac.name, SUM(gs.cost_micros) / 1000000.0 AS spend,
+                   SUM(gs.conversions) AS conversions
+            FROM gads_stats_daily gs
+            JOIN ads_campaigns ac ON ac.id = gs.entity_id
+            WHERE ac.account_id = :aid
+              AND gs.entity_type = 'campaign'
+              AND gs.date >= :month_start
+            GROUP BY ac.id, ac.name
+            ORDER BY SUM(gs.conversions) DESC, SUM(gs.cost_micros) DESC
+            LIMIT 1
+        """), {"aid": aid, "month_start": month_start}).mappings().first()
+
+        return jsonify({
+            "spend_dollars": round(spend, 2),
+            "clicks": clicks,
+            "conversions": round(conversions, 1),
+            "impressions": impressions,
+            "ctr": round(clicks / impressions * 100, 2) if impressions else 0,
+            "cpc": round(spend / clicks, 2) if clicks else 0,
+            "best_campaign": dict(best) if best else None,
+            "month_start": month_start,
+        })
+    except Exception as exc:
+        current_app.logger.exception("dashboard_kpis error: %s", exc)
+        return jsonify({"error": str(exc)}), 500
+
+
+@account_bp.route("/dashboard/quick-wins.json", methods=["GET"], endpoint="dashboard_quick_wins")
+@login_required
+def dashboard_quick_wins():
+    """Return top 3 quick-win recommendations from local DB data (no live API calls)."""
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "no account"}), 403
+
+    from datetime import date
+    month_start = date.today().replace(day=1).isoformat()
+    wins = []
+
+    try:
+        # 1. Wasted spend: campaigns with spend but zero conversions this month
+        wasted = db.session.execute(text("""
+            SELECT ac.name, ac.id AS campaign_id,
+                   SUM(gs.cost_micros) / 1000000.0 AS spend,
+                   SUM(gs.conversions) AS conversions
+            FROM gads_stats_daily gs
+            JOIN ads_campaigns ac ON ac.id = gs.entity_id
+            WHERE ac.account_id = :aid
+              AND gs.entity_type = 'campaign'
+              AND gs.date >= :month_start
+              AND ac.status = 'enabled'
+            GROUP BY ac.id, ac.name
+            HAVING SUM(gs.conversions) = 0 AND SUM(gs.cost_micros) > 50000000
+            ORDER BY SUM(gs.cost_micros) DESC
+            LIMIT 3
+        """), {"aid": aid, "month_start": month_start}).mappings().all()
+
+        if wasted:
+            total_waste = sum(float(r["spend"] or 0) for r in wasted)
+            worst = wasted[0]
+            wins.append({
+                "win_type": "pause_low_performers",
+                "title": f"Pause '{worst['name']}' — 0 conversions this month",
+                "description": f"Spending ${total_waste:.0f} this month across {len(wasted)} campaign(s) with zero conversions.",
+                "impact_monthly_value": round(total_waste, 0),
+                "impact_leads": 0,
+                "difficulty": "easy",
+                "time_estimate": "1 min",
+                "action_url": "/account/google/",
+                "action_text": "Review Campaigns",
+                "priority_score": total_waste * 2,
+            })
+
+        # 2. Budget-limited campaigns (high CTR but low impression share proxy: high spend relative to budget)
+        budget_opps = db.session.execute(text("""
+            SELECT ac.name, ac.id AS campaign_id,
+                   ac.daily_budget_cents / 100.0 AS daily_budget,
+                   SUM(gs.cost_micros) / 1000000.0 / COUNT(DISTINCT gs.date) AS avg_daily_spend,
+                   SUM(gs.conversions) AS conversions
+            FROM gads_stats_daily gs
+            JOIN ads_campaigns ac ON ac.id = gs.entity_id
+            WHERE ac.account_id = :aid
+              AND gs.entity_type = 'campaign'
+              AND gs.date >= :month_start
+              AND ac.status = 'enabled'
+              AND ac.daily_budget_cents > 0
+            GROUP BY ac.id, ac.name, ac.daily_budget_cents
+            HAVING SUM(gs.conversions) >= 2
+               AND SUM(gs.cost_micros) / 1000000.0 / COUNT(DISTINCT gs.date) >= ac.daily_budget_cents * 0.9 / 100.0
+            ORDER BY SUM(gs.conversions) DESC
+            LIMIT 1
+        """), {"aid": aid, "month_start": month_start}).mappings().first()
+
+        if budget_opps:
+            est_leads = max(1, int(float(budget_opps["conversions"] or 0) * 0.15))
+            wins.append({
+                "win_type": "budget_reallocation",
+                "title": f"Increase Budget for '{budget_opps['name']}'",
+                "description": f"This campaign is hitting its daily budget cap. A 20% increase could add ~{est_leads} more leads/month.",
+                "impact_monthly_value": 0,
+                "impact_leads": est_leads,
+                "difficulty": "medium",
+                "time_estimate": "5 mins",
+                "action_url": "/account/google/budget-planning",
+                "action_text": "Adjust Budget",
+                "priority_score": est_leads * 750,
+            })
+
+        # 3. Quality/CTR: campaigns with high impressions but very low CTR (< 1%)
+        low_ctr = db.session.execute(text("""
+            SELECT ac.name, ac.id AS campaign_id,
+                   SUM(gs.impressions) AS impressions,
+                   SUM(gs.clicks) AS clicks,
+                   SUM(gs.cost_micros) / 1000000.0 AS spend
+            FROM gads_stats_daily gs
+            JOIN ads_campaigns ac ON ac.id = gs.entity_id
+            WHERE ac.account_id = :aid
+              AND gs.entity_type = 'campaign'
+              AND gs.date >= :month_start
+              AND ac.status = 'enabled'
+            GROUP BY ac.id, ac.name
+            HAVING SUM(gs.impressions) > 500
+               AND (SUM(gs.clicks) * 100.0 / SUM(gs.impressions)) < 1.0
+               AND SUM(gs.cost_micros) > 0
+            ORDER BY SUM(gs.impressions) DESC
+            LIMIT 1
+        """), {"aid": aid, "month_start": month_start}).mappings().first()
+
+        if low_ctr:
+            ctr = round(float(low_ctr["clicks"] or 0) / float(low_ctr["impressions"]) * 100, 2) if low_ctr["impressions"] else 0
+            est_savings = round(float(low_ctr["spend"] or 0) * 0.15, 0)
+            wins.append({
+                "win_type": "quality_score_improvement",
+                "title": f"Improve Ad Copy for '{low_ctr['name']}'",
+                "description": f"CTR is {ctr}% on {int(low_ctr['impressions'] or 0):,} impressions. Better headlines could cut wasted impressions and save ~${est_savings:.0f}/mo.",
+                "impact_monthly_value": est_savings,
+                "impact_leads": 0,
+                "difficulty": "medium",
+                "time_estimate": "15 mins",
+                "action_url": "/account/google/",
+                "action_text": "View Campaigns",
+                "priority_score": est_savings * 1.5,
+            })
+
+        # Sort by priority score and return top 3
+        wins.sort(key=lambda w: w["priority_score"], reverse=True)
+        return jsonify({"wins": wins[:3], "count": len(wins[:3])})
+
+    except Exception as exc:
+        current_app.logger.exception("dashboard_quick_wins error: %s", exc)
+        return jsonify({"wins": [], "count": 0, "error": str(exc)})
+
+
 @account_bp.route("/connect/<provider>", methods=["GET"], endpoint="connect")
 @login_required
 def connect(provider: str):

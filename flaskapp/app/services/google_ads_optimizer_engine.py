@@ -75,7 +75,7 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
             JOIN ad_groups ag ON ag.id = k.ad_group_id
             JOIN ads_campaigns ac ON ac.id = ag.campaign_id
             WHERE gs.entity_type = 'keyword'
-              AND gs.account_id = :aid
+              AND ac.account_id = :aid
               AND gs.date >= (CURRENT_DATE - INTERVAL 30 DAY)
               AND k.status = 'enabled'
             GROUP BY gs.entity_id, k.text, k.match_type, ag.id, ac.id, ac.name
@@ -127,7 +127,7 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
             FROM gads_stats_daily gs
             JOIN ads_campaigns ac ON ac.id = gs.entity_id
             WHERE gs.entity_type = 'campaign'
-              AND gs.account_id = :aid
+              AND ac.account_id = :aid
               AND gs.date >= (CURRENT_DATE - INTERVAL 14 DAY)
               AND gs.lost_is_budget IS NOT NULL
             GROUP BY gs.entity_id, ac.name, ac.daily_budget_cents
@@ -185,7 +185,7 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
             JOIN ad_groups ag ON ag.id = k.ad_group_id
             JOIN ads_campaigns ac ON ac.id = ag.campaign_id
             WHERE gs.entity_type = 'keyword'
-              AND gs.account_id = :aid
+              AND ac.account_id = :aid
               AND gs.quality_score IS NOT NULL
               AND gs.quality_score <= :qs_thresh
               AND gs.date >= (CURRENT_DATE - INTERVAL 14 DAY)
@@ -259,7 +259,7 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
             FROM gads_stats_daily gs
             JOIN ads_campaigns ac ON ac.id = gs.entity_id
             WHERE gs.entity_type = 'campaign'
-              AND gs.account_id = :aid
+              AND ac.account_id = :aid
               AND gs.date >= (CURRENT_DATE - INTERVAL 14 DAY)
               AND gs.lost_is_rank IS NOT NULL
             GROUP BY gs.entity_id, ac.name

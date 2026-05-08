@@ -194,6 +194,8 @@ def sync_account(account_id: int, days: int = 30) -> Dict[str, Any]:
     from app.google.utils_ads import resolve_ads_context, google_ads_search
     from app.google.token_utils import ensure_access_token
     from app.google.gaql_queries import CAMPAIGN_STATS, ADGROUP_STATS, KEYWORD_STATS
+    from app.models_ads import AdsCampaign
+    AdsCampaign.ensure_columns()
 
     summary: Dict[str, Any] = {
         "account_id": account_id,
@@ -237,13 +239,11 @@ def sync_account(account_id: int, days: int = 30) -> Dict[str, Any]:
         # We'll get one row per (campaign, date) if segmented — but GAQL without
         # segments.date returns a single aggregate row per campaign.
         # Add date segmentation to get daily rows:
-        dated_query = query.rstrip() + "\n  AND segments.date BETWEEN '{}' AND '{}'".format(
-            start_date, end_date
-        ) + "\nAND segments.date BETWEEN '{}' AND '{}'".format(start_date, end_date)
-        # Actually the WHERE clause already has the date range — just add segments.date SELECT:
+        # Add segments.date to SELECT so we get one row per (campaign, date).
+        # Insert before FROM with a comma on the preceding line.
         dated_query = CAMPAIGN_STATS.format(start=start_date, end=end_date).replace(
-            "FROM campaign",
-            "  segments.date,\nFROM campaign"
+            "\nFROM campaign",
+            ",\n  segments.date\nFROM campaign"
         )
         rows = _search(dated_query)
 
@@ -289,8 +289,8 @@ def sync_account(account_id: int, days: int = 30) -> Dict[str, Any]:
     # ── Ad group stats ───────────────────────────────────────────────────────
     try:
         dated_query = ADGROUP_STATS.format(start=start_date, end=end_date).replace(
-            "FROM ad_group",
-            "  segments.date,\nFROM ad_group"
+            "\nFROM ad_group",
+            ",\n  segments.date\nFROM ad_group"
         )
         rows = _search(dated_query)
 
@@ -338,8 +338,8 @@ def sync_account(account_id: int, days: int = 30) -> Dict[str, Any]:
     # ── Keyword stats (+ Quality Score) ─────────────────────────────────────
     try:
         dated_query = KEYWORD_STATS.format(start=start_date, end=end_date).replace(
-            "FROM keyword_view",
-            "  segments.date,\nFROM keyword_view"
+            "\nFROM keyword_view",
+            ",\n  segments.date\nFROM keyword_view"
         )
         rows = _search(dated_query)
 

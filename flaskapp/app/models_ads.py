@@ -41,6 +41,9 @@ class AdsCampaign(db.Model):
     google_customer_id = db.Column(db.String(32), nullable=True, index=True)
     google_campaign_id = db.Column(db.String(64), nullable=True, index=True)
 
+    # Budget group assignment (FK to budget_groups.id, nullable)
+    budget_group_id = db.Column(db.Integer, nullable=True, index=True)
+
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
 
@@ -53,6 +56,29 @@ class AdsCampaign(db.Model):
 
     def __repr__(self):
         return f"<AdsCampaign {self.id} {self.name!r}>"
+
+    @classmethod
+    def ensure_columns(cls) -> None:
+        """Add any model columns that are missing from the live table (safe no-op if up to date)."""
+        from flask import current_app
+        from sqlalchemy import text, inspect
+        needed = {
+            "bid_strategy":      "VARCHAR(32) NULL DEFAULT 'manual_cpc'",
+            "target_cpa_micros": "BIGINT NULL",
+            "target_roas":       "FLOAT NULL",
+            "budget_group_id":   "INT NULL",
+        }
+        try:
+            existing = {c["name"] for c in inspect(db.engine).get_columns("ads_campaigns")}
+            missing = [c for c in needed if c not in existing]
+            if not missing:
+                return
+            clauses = ", ".join(f"ADD COLUMN {c} {needed[c]}" for c in missing)
+            with db.engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE ads_campaigns {clauses}"))
+            current_app.logger.info("ads_campaigns: added missing columns: %s", missing)
+        except Exception as exc:
+            current_app.logger.warning("ads_campaigns ensure_columns failed: %s", exc)
 
 
 class AdsAdGroup(db.Model):
@@ -118,6 +144,28 @@ class AdsAd(db.Model):
 
     def __repr__(self):
         return f"<AdsAd {self.id} {self.headline1!r}>"
+
+    @classmethod
+    def ensure_columns(cls) -> None:
+        """Add A/B testing columns to the ads table if missing."""
+        from flask import current_app
+        from sqlalchemy import text, inspect
+        needed = {
+            "variant_group": "VARCHAR(64) NULL",
+            "is_control":    "TINYINT(1) NOT NULL DEFAULT 0",
+            "test_name":     "VARCHAR(128) NULL",
+        }
+        try:
+            existing = {c["name"] for c in inspect(db.engine).get_columns("ads")}
+            missing = [c for c in needed if c not in existing]
+            if not missing:
+                return
+            clauses = ", ".join(f"ADD COLUMN {c} {needed[c]}" for c in missing)
+            with db.engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE ads {clauses}"))
+            current_app.logger.info("ads: added missing columns: %s", missing)
+        except Exception as exc:
+            current_app.logger.warning("ads ensure_columns failed: %s", exc)
 
 
 class AdsKeyword(db.Model):

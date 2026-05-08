@@ -7,7 +7,7 @@ from typing import Optional, Dict, Any, List
 
 from flask import (
     Blueprint, render_template, request, redirect as _redirect, url_for,
-    flash, current_app, jsonify, g, session
+    flash, current_app, jsonify, g, session, abort
 )
 from sqlalchemy import text, inspect
 from sqlalchemy.exc import OperationalError
@@ -243,7 +243,8 @@ def _process_queue(max_jobs: int = 5) -> dict:
 
     due_jobs = (
         WPJob.query
-        .filter(WPJob.status == "queued")
+        .filter(WPJob.site_id == site.id,
+                WPJob.status == "queued")
         .filter((WPJob.run_at == None) | (WPJob.run_at <= now))  # noqa: E711
         .order_by(WPJob.created_at.asc())
         .limit(max_jobs)
@@ -720,10 +721,21 @@ def test():
             results["posts_endpoint"] = err_str[:200]
 
         # Summarize results
-        if results["posts_endpoint"] == "ok":
-            flash(f"Success! WordPress API is working. Auth: {results['auth']}", "success")
+        auth_ok = str(results.get("auth", "")).startswith("ok")
+        posts_ok = results["posts_endpoint"] == "ok"
+
+        if posts_ok and auth_ok:
+            flash(f"WordPress connected and authenticated. {results['auth']}", "success")
+        elif posts_ok and not auth_ok:
+            flash(
+                "WordPress REST API is reachable but authentication failed. "
+                "Your Application Password credentials are not working (401 rest_not_logged_in). "
+                "Fix: 1) In WP Admin → Users → Profile, delete and regenerate the Application Password. "
+                "2) If behind Cloudflare, add a WAF rule to pass the Authorization header for /wp-json/*. "
+                f"Auth error: {results['auth']}",
+                "error"
+            )
         elif "403" in str(results.get("posts_endpoint", "")):
-            # Posts endpoint blocked - this is the real problem
             flash(
                 "403 Forbidden on posts API. Your WordPress site is blocking REST API requests. "
                 "Check: 1) Security plugins (Wordfence, Sucuri) - whitelist your server IP, "
@@ -815,7 +827,9 @@ def diagnose():
 @login_required
 def publisher():
     site = _current_site()
-    jobs_ = WPJob.query.order_by(WPJob.created_at.desc()).limit(50).all()
+    jobs_ = (WPJob.query
+             .filter_by(site_id=site.id)
+             .order_by(WPJob.created_at.desc()).limit(50).all()) if site else []
     return render_template("wp/publisher.html", site=site, jobs=jobs_)
 
 # GET legacy “compose” just points at /new
@@ -1078,8 +1092,11 @@ def approve():
 @login_required
 def approvals():
     """In-app approval queue for AI-generated and human-drafted posts awaiting review."""
+    site = _current_site()
+    if not site:
+        return render_template("wp/approvals.html", pending=[])
     pending_jobs = (WPJob.query
-                    .filter(WPJob.status == "queued")
+                    .filter_by(site_id=site.id, status="queued")
                     .order_by(WPJob.created_at.desc())
                     .limit(200).all())
     # Filter in Python — JSON field querying is dialect-dependent
@@ -1090,7 +1107,10 @@ def approvals():
 @wp_bp.route("/approvals/<int:job_id>/approve", methods=["POST"], endpoint="approval_approve")
 @login_required
 def approval_approve(job_id: int):
+    site = _current_site()
     job = WPJob.query.get_or_404(job_id)
+    if not site or job.site_id != site.id:
+        abort(403)
     p = dict(job.payload or {})
     p["needs_approval"] = False
     p["status"] = "future" if p.get("status") == "future" else "publish"
@@ -1103,7 +1123,10 @@ def approval_approve(job_id: int):
 @wp_bp.route("/approvals/<int:job_id>/reject", methods=["POST"], endpoint="approval_reject")
 @login_required
 def approval_reject(job_id: int):
+    site = _current_site()
     job = WPJob.query.get_or_404(job_id)
+    if not site or job.site_id != site.id:
+        abort(403)
     job.status = "error"
     job.last_error = "Rejected in approval inbox"
     db.session.commit()
@@ -1118,30 +1141,35 @@ def approval_reject(job_id: int):
 def schedule():
     """Timeline view of scheduled and recently published posts."""
     now = datetime.utcnow()
+    site = _current_site()
+    site_id = site.id if site else None
 
     scheduled = (WPJob.query
-                 .filter(WPJob.status == "queued",
+                 .filter(WPJob.site_id == site_id,
+                         WPJob.status == "queued",
                          WPJob.run_at != None)  # noqa: E711
                  .order_by(WPJob.run_at.asc())
-                 .all())
+                 .all()) if site_id else []
 
     # Queued without run_at (publish ASAP)
     asap = (WPJob.query
-            .filter(WPJob.status == "queued",
+            .filter(WPJob.site_id == site_id,
+                    WPJob.status == "queued",
                     WPJob.run_at == None)  # noqa: E711
             .filter(WPJob.kind.in_(["publish", "ai_generate"]))
             .order_by(WPJob.created_at.asc())
-            .limit(20).all())
+            .limit(20).all()) if site_id else []
 
     # Pending approval — these are scheduled but blocked
     pending_approval = [j for j in asap if (j.payload or {}).get("needs_approval")]
     asap_ready = [j for j in asap if not (j.payload or {}).get("needs_approval")]
 
     recently_published = (WPJob.query
-                          .filter(WPJob.status == "done",
+                          .filter(WPJob.site_id == site_id,
+                                  WPJob.status == "done",
                                   WPJob.kind.in_(["publish", "ai_generate"]))
                           .order_by(WPJob.updated_at.desc())
-                          .limit(10).all())
+                          .limit(10).all()) if site_id else []
 
     return render_template(
         "wp/schedule.html",
@@ -1158,9 +1186,11 @@ def schedule():
 @wp_bp.route("/insights", methods=["GET"], endpoint="insights")
 @login_required
 def insights():
+    site = _current_site()
     jobs = (WPJob.query
+            .filter_by(site_id=site.id)
             .order_by(WPJob.created_at.desc())
-            .limit(50).all())
+            .limit(50).all()) if site else []
 
     ga = None
     gsc = None
@@ -1789,9 +1819,16 @@ def edit_post_submit(post_id: int):
 @login_required
 def edits():
     """Dashboard of all pending / completed edit and refresh jobs."""
+    site = _current_site()
     status_filter = request.args.get("status", "").strip()
     EDIT_KINDS = ["edit", "refresh", "seo_fix"]
-    q = WPJob.query.filter(WPJob.kind.in_(EDIT_KINDS))
+
+    if not site:
+        return render_template("wp/edits.html",
+                               jobs=[], counts={s: 0 for s in ("queued", "running", "done", "error")},
+                               status_filter=status_filter)
+
+    q = WPJob.query.filter(WPJob.site_id == site.id, WPJob.kind.in_(EDIT_KINDS))
     if status_filter:
         q = q.filter_by(status=status_filter)
     jobs = q.order_by(WPJob.created_at.desc()).limit(200).all()
@@ -1799,6 +1836,7 @@ def edits():
     counts: Dict[str, int] = {}
     for s in ("queued", "running", "done", "error"):
         counts[s] = WPJob.query.filter(
+            WPJob.site_id == site.id,
             WPJob.kind.in_(EDIT_KINDS),
             WPJob.status == s,
         ).count()
@@ -1818,7 +1856,7 @@ def freshness():
     if site:
         try:
             from app.wp.wp_client import WPClient
-            c = WPClient(site)
+            c = WPClient(site.base_url, site.username, site.app_password)
             raw = c.list_posts(per_page=50, status="publish")
 
             # Build a map of declining pages from GSC if available
@@ -1898,7 +1936,7 @@ def broken_links():
         try:
             from app.wp.wp_client import WPClient
             from app.wp.broken_links import scan_broken_links
-            c = WPClient(site)
+            c = WPClient(site.base_url, site.username, site.app_password)
             raw = c.list_posts(per_page=30, status="publish")
             report = scan_broken_links(raw, site.base_url)
             if report and site:
@@ -1943,7 +1981,7 @@ def bulk_meta():
         try:
             from app.wp.wp_client import WPClient
             import re as _re
-            c = WPClient(site)
+            c = WPClient(site.base_url, site.username, site.app_password)
 
             if request.method == "POST":
                 action = request.form.get("action", "save")
@@ -2055,7 +2093,7 @@ def image_seo():
         try:
             from app.wp.wp_client import WPClient
             import re as _re
-            c = WPClient(site)
+            c = WPClient(site.base_url, site.username, site.app_password)
 
             if request.method == "POST":
                 action = request.form.get("action", "")
@@ -2209,7 +2247,7 @@ def content_quality():
             from app.wp.wp_client import WPClient
             import re as _re
             from collections import defaultdict
-            c = WPClient(site)
+            c = WPClient(site.base_url, site.username, site.app_password)
             raw = c.list_posts(per_page=100, status="publish")
 
             titles = []
@@ -2405,7 +2443,7 @@ def geo_pages():
     if site:
         try:
             from app.wp.wp_client import WPClient
-            c = WPClient(site)
+            c = WPClient(site.base_url, site.username, site.app_password)
             info = c._req("GET", "/wp/v2/settings").json()
             prefill_name = info.get("title", "")
         except Exception:
@@ -2432,7 +2470,7 @@ def redirects():
         try:
             from app.wp.wp_client import WPClient
             from app.wp.redirect_checker import check_redirects
-            c = WPClient(site)
+            c = WPClient(site.base_url, site.username, site.app_password)
             posts = c.list_posts(per_page=60, status="publish")
             # Also check pages
             try:
@@ -2501,7 +2539,7 @@ def seo_foundation():
         # 2. Robots.txt
         try:
             from app.wp.wp_client import WPClient
-            c = WPClient(site)
+            c = WPClient(site.base_url, site.username, site.app_password)
             r = _req.get(f"{base}/robots.txt", timeout=8,
                          headers={"User-Agent": "FieldSprout/1.0"})
             robots = r.text if r.status_code == 200 else ""
@@ -2690,7 +2728,7 @@ def index_coverage():
         try:
             from app.wp.wp_client import WPClient
             from app.wp.index_coverage import check_index_coverage
-            c = WPClient(site)
+            c = WPClient(site.base_url, site.username, site.app_password)
             posts = c.list_posts(per_page=100, status="publish")
             pages = []
             try:
@@ -2751,7 +2789,7 @@ def orphan_pages():
         try:
             from app.wp.wp_client import WPClient
             from app.wp.orphan_pages import detect_orphans
-            c = WPClient(site)
+            c = WPClient(site.base_url, site.username, site.app_password)
             posts = c.list_posts(per_page=100, status="publish")
             pages = []
             try:

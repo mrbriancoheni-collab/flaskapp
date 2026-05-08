@@ -90,6 +90,7 @@
             <p class="text-xs font-mono text-gray-500 truncate">{{ img.filename }}</p>
             <input type="hidden" name="src_{{ post.id }}_{{ img.idx }}" value="{{ img.src }}">
             <input type="hidden" name="src_val_{{ img.key }}" value="{{ img.src }}">
+            <input type="hidden" name="post_title_{{ img.key }}" value="{{ post.title | e }}">
             <input type="text"
                    name="alt_{{ post.id }}_{{ img.idx }}"
                    value="{{ img.suggested or img.alt or '' }}"

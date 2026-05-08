@@ -458,7 +458,11 @@
     if (syncStatus) syncStatus.textContent = 'Pulling data from Google Ads…';
 
     try {
-      const r = await fetch('/account/google/ads/sync', { method: 'POST' });
+      const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+      const r = await fetch('/account/google/ads/sync', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
+      });
       const d = await r.json();
       const s = d.sync || {};
       if (syncStatus) {

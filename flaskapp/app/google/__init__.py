@@ -11186,8 +11186,10 @@ def connect_ads():
 @google_bp.route("/connect/gmb", methods=["GET"], endpoint="connect_gmb")
 @login_required
 def connect_gmb():
-    session["google_oauth_product"] = "gmb"
-    return redirect(url_for("google_bp.start", product="gmb"))
+    # GMB uses its own OAuth client (GOOGLE_GMB_CLIENT_ID) and its own callback
+    # at /account/gmb/callback — delegate to gmb_bp.start instead of google_bp.start
+    # to avoid redirect_uri_mismatch (google_bp uses /account/google/callback)
+    return redirect(url_for("gmb_bp.start"))
 
 @google_bp.route("/connect/lsa", methods=["GET"], endpoint="connect_lsa")
 @login_required

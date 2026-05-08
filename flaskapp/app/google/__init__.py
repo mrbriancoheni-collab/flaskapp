@@ -1723,21 +1723,22 @@ def index():
     # ── Mini-KPIs per product from local DB ───────────────────────────────
     kpis = {}
 
-    # Ads: 30d spend + conversions from GadsStatsDaily
+    # Ads: 30d spend + conversions from GadsStatsDaily (join via ads_campaigns for account scoping)
     if connected.get("ads"):
         try:
             r = db.session.execute(text("""
                 SELECT
-                    SUM(cost_micros) / 1000000.0 AS spend,
-                    SUM(conversions)              AS conversions,
-                    SUM(clicks)                   AS clicks,
-                    MAX(date)                     AS last_date
-                FROM gads_stats_daily
-                WHERE account_id = :aid
-                  AND entity_type = 'campaign'
-                  AND date >= (CURRENT_DATE - INTERVAL 30 DAY)
+                    SUM(gs.cost_micros) / 1000000.0 AS spend,
+                    SUM(gs.conversions)              AS conversions,
+                    SUM(gs.clicks)                   AS clicks,
+                    MAX(gs.date)                     AS last_date
+                FROM gads_stats_daily gs
+                JOIN ads_campaigns ac ON ac.id = gs.entity_id
+                WHERE ac.account_id = :aid
+                  AND gs.entity_type = 'campaign'
+                  AND gs.date >= (CURRENT_DATE - INTERVAL 30 DAY)
             """), {"aid": aid}).mappings().first()
-            if r and r["spend"]:
+            if r and r["last_date"]:
                 kpis["ads"] = {
                     "spend": round(float(r["spend"] or 0), 2),
                     "conversions": round(float(r["conversions"] or 0), 1),
@@ -1789,11 +1790,13 @@ def index():
     except Exception:
         pass
 
-    # Last sync timestamp (most recent GadsStatsDaily date)
+    # Last sync timestamp (most recent GadsStatsDaily date, joined via ads_campaigns)
     last_ads_sync = None
     try:
         r = db.session.execute(text(
-            "SELECT MAX(date) AS d FROM gads_stats_daily WHERE account_id=:aid"
+            "SELECT MAX(gs.date) AS d FROM gads_stats_daily gs "
+            "JOIN ads_campaigns ac ON ac.id = gs.entity_id "
+            "WHERE ac.account_id = :aid"
         ), {"aid": aid}).mappings().first()
         last_ads_sync = str(r["d"]) if r and r["d"] else None
     except Exception:

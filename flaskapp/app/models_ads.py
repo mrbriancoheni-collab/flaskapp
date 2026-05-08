@@ -54,6 +54,28 @@ class AdsCampaign(db.Model):
     def __repr__(self):
         return f"<AdsCampaign {self.id} {self.name!r}>"
 
+    @classmethod
+    def ensure_columns(cls) -> None:
+        """Add any model columns that are missing from the live table (safe no-op if up to date)."""
+        from flask import current_app
+        from sqlalchemy import text, inspect
+        needed = {
+            "bid_strategy":      "VARCHAR(32) NULL DEFAULT 'manual_cpc'",
+            "target_cpa_micros": "BIGINT NULL",
+            "target_roas":       "FLOAT NULL",
+        }
+        try:
+            existing = {c["name"] for c in inspect(db.engine).get_columns("ads_campaigns")}
+            missing = [c for c in needed if c not in existing]
+            if not missing:
+                return
+            clauses = ", ".join(f"ADD COLUMN {c} {needed[c]}" for c in missing)
+            with db.engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE ads_campaigns {clauses}"))
+            current_app.logger.info("ads_campaigns: added missing columns: %s", missing)
+        except Exception as exc:
+            current_app.logger.warning("ads_campaigns ensure_columns failed: %s", exc)
+
 
 class AdsAdGroup(db.Model):
     __tablename__ = "ad_groups"

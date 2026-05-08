@@ -22,9 +22,22 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Page URL <span class="text-red-500">*</span></label>
-          <input name="url" type="url" required placeholder="https://example.com/your-page"
+          {% if wp_posts %}
+          <select id="post-picker"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent mb-2 bg-white">
+            <option value="">— Select a page from your site —</option>
+            {% for p in wp_posts %}
+            <option value="{{ p.link }}" {% if result and result.url == p.link %}selected{% endif %}>{{ p.title | truncate(60) }}</option>
+            {% endfor %}
+          </select>
+          {% endif %}
+          <input id="url-input" name="url" type="url" required
+                 placeholder="https://example.com/your-page"
                  value="{{ result.url if result else '' }}"
                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+          {% if wp_posts %}
+          <p class="text-xs text-gray-400 mt-1">Pick from the dropdown or type any URL above.</p>
+          {% endif %}
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Target Keyword <span class="text-gray-400 font-normal">(optional)</span></label>
@@ -276,4 +289,13 @@
   {% endif %}{# /if result #}
 
 </div>
+{% if wp_posts %}
+<script>
+document.getElementById('post-picker').addEventListener('change', function() {
+  if (this.value) {
+    document.getElementById('url-input').value = this.value;
+  }
+});
+</script>
+{% endif %}
 {% endblock %}

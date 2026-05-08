@@ -1377,7 +1377,22 @@ def tech_seo():
 @wp_bp.route("/seo-audit", methods=["GET", "POST"], endpoint="seo_audit")
 @login_required
 def seo_audit():
+    site = _current_site()
     result = None
+
+    # Fetch published posts for the dropdown (best-effort)
+    wp_posts = []
+    if site:
+        try:
+            c = WPClient(site.base_url, site.username, site.app_password)
+            raw = c.list_posts(per_page=100, status="publish")
+            wp_posts = [
+                {"id": p.get("id"), "title": (p.get("title") or {}).get("rendered") or f"Post {p.get('id')}", "link": p.get("link", "")}
+                for p in (raw or []) if p.get("link")
+            ]
+        except Exception:
+            current_app.logger.debug("seo_audit: could not fetch WP posts for dropdown")
+
     if request.method == "POST":
         url = (request.form.get("url") or "").strip()
         keyword = (request.form.get("keyword") or "").strip()
@@ -1393,7 +1408,7 @@ def seo_audit():
         except Exception:
             current_app.logger.exception("SEO audit failed")
             flash("Audit failed — please try again.", "error")
-    return render_template("wp/seo_audit.html", result=result, site=_current_site())
+    return render_template("wp/seo_audit.html", result=result, site=site, wp_posts=wp_posts)
 
 
 @wp_bp.route("/seo-audit/ai-review", methods=["GET", "POST"], endpoint="seo_audit_review")

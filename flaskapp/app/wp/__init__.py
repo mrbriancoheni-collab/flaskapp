@@ -1,6 +1,7 @@
 # app/wp/__init__.py
 from __future__ import annotations
 
+import logging
 import os
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
@@ -17,6 +18,8 @@ from app.wp.wp_client import WPClient
 
 from app import db
 from app.auth.utils import login_required, is_paid_account
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint("my_ai_bp", __name__, url_prefix="/account/my-ai")
 wp_bp = Blueprint("wp_bp", __name__)

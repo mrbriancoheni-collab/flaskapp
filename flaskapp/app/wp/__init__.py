@@ -243,7 +243,8 @@ def _process_queue(max_jobs: int = 5) -> dict:
 
     due_jobs = (
         WPJob.query
-        .filter(WPJob.status == "queued")
+        .filter(WPJob.site_id == site.id,
+                WPJob.status == "queued")
         .filter((WPJob.run_at == None) | (WPJob.run_at <= now))  # noqa: E711
         .order_by(WPJob.created_at.asc())
         .limit(max_jobs)

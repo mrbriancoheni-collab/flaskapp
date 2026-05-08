@@ -1796,7 +1796,7 @@ def index():
         r = db.session.execute(text(
             "SELECT MAX(gs.date) AS d FROM gads_stats_daily gs "
             "JOIN ads_campaigns ac ON ac.id = gs.entity_id "
-            "WHERE ac.account_id = :aid"
+            "WHERE ac.account_id = :aid AND gs.entity_type = 'campaign'"
         ), {"aid": aid}).mappings().first()
         last_ads_sync = str(r["d"]) if r and r["d"] else None
     except Exception:

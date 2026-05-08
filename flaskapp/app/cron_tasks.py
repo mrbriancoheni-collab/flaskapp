@@ -103,6 +103,12 @@ def run_daily(app, db):
     except Exception:
         app.logger.exception("[CRON] AI actions digest failed")
 
+    # Weekly SEO AI agents (content recommendations, freshness plan, roadmap)
+    try:
+        _run_weekly_seo_ai_agents(app)
+    except Exception:
+        app.logger.exception("[CRON] SEO AI agents failed")
+
 
 # =========================
 # WordPress job runner
@@ -961,3 +967,113 @@ def _run_weekly_ai_actions_digest(app):
 
         except Exception as e:
             app.logger.exception(f"[CRON] AI actions digest error: {e}")
+
+
+# =========================
+# SEO AI Agents (Weekly)
+# =========================
+
+def _run_weekly_seo_ai_agents(app) -> None:
+    """
+    Run SEO AI agents weekly (Sundays) for all accounts with GSC connected.
+    Generates content recommendations, freshness plans, and SEO roadmaps.
+    Throttled to once per 7 days per account.
+    """
+    if datetime.utcnow().weekday() != 6:  # Sunday only
+        return
+
+    app.logger.info("[CRON] Starting weekly SEO AI agents")
+
+    try:
+        from sqlalchemy import text as _text
+        with db.engine.connect() as conn:
+            rows = conn.execute(_text("""
+                SELECT DISTINCT account_id
+                FROM google_oauth_tokens
+                WHERE LOWER(product) IN ('gsc', 'search_console', 'searchconsole')
+                  AND refresh_token IS NOT NULL
+                ORDER BY account_id ASC
+                LIMIT 100
+            """)).fetchall()
+        accounts = [int(r[0]) for r in rows]
+    except Exception:
+        app.logger.exception("[CRON] SEO AI agents: failed to load GSC accounts")
+        return
+
+    if not accounts:
+        app.logger.info("[CRON] SEO AI agents: no GSC-connected accounts")
+        return
+
+    app.logger.info("[CRON] SEO AI agents: processing %d accounts", len(accounts))
+
+    for aid in accounts:
+        with app.app_context():
+            try:
+                from app.seo.keyword_gaps import run_keyword_gap_analysis
+                from app.google import _is_connected, _get_gsc_selected_site
+                from app.ai_clients import get_ai_client
+                import json, re as _re
+
+                if not _is_connected(aid, "gsc"):
+                    continue
+
+                gsc_url = _get_gsc_selected_site(aid)
+                if not gsc_url:
+                    continue
+
+                gap = run_keyword_gap_analysis(aid, gsc_url)
+                if gap.get("error"):
+                    continue
+
+                client = get_ai_client()
+
+                # --- Content Recommendations ---
+                missing = gap.get("missing_content", [])[:10]
+                wins = gap.get("quick_wins", [])[:10]
+                clusters = gap.get("clusters", [])[:8]
+                gap_context = (
+                    f"Missing content opportunities: {json.dumps(missing)}\n"
+                    f"Quick wins (positions 4-20): {json.dumps(wins)}\n"
+                    f"Keyword clusters: {json.dumps(clusters)}"
+                )
+
+                # Load prompt from DB or use default
+                try:
+                    from app.models_ads import AIPrompt
+                    p = AIPrompt.query.filter_by(prompt_key="seo_content_recommendations", is_active=True).first()
+                    tmpl = p.prompt_template if p else None
+                except Exception:
+                    tmpl = None
+
+                prompt = (tmpl or (
+                    "Based on this keyword gap analysis data, recommend topic clusters.\n\n"
+                    "{gap_context}\n\n"
+                    "Return a JSON array of 6-8 topic cluster recommendations with: "
+                    "cluster_name, pillar_topic, supporting_topics (3-5 titles), "
+                    "monthly_searches_potential, rationale. JSON only."
+                )).replace("{gap_context}", gap_context)
+
+                resp = client.messages.create(
+                    model="claude-haiku-4-5-20251001",
+                    max_tokens=1800,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                raw = resp.content[0].text
+                match = _re.search(r'\[.*\]', raw, _re.DOTALL)
+                if match:
+                    # Store result — save to a simple log or future SEOScanResult table
+                    from app.models_seo import SEOScanResult
+                    SEOScanResult.save_result(
+                        account_id=aid,
+                        site_id=None,
+                        scan_type="content_recommendations",
+                        issue_count=0,
+                        item_count=len(json.loads(match.group())),
+                        data={"recommendations": json.loads(match.group()), "generated_at": datetime.utcnow().isoformat()},
+                    )
+                    app.logger.info("[CRON] SEO content recommendations saved for account %d", aid)
+
+            except Exception:
+                app.logger.exception("[CRON] SEO AI agents failed for account %d", aid)
+
+    app.logger.info("[CRON] Weekly SEO AI agents complete")

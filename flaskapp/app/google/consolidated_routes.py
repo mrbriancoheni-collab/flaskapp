@@ -272,6 +272,8 @@ def api_create_budget_group():
 @login_required
 def budget_planning():
     """Budget Groups + Auto-Budget Settings + Forecasting in one tabbed page."""
+    from app.models_ads import AdsCampaign
+    AdsCampaign.ensure_columns()
     account_id = current_account_id()
     tab = request.args.get("tab", "groups")
     is_connected = _is_ads_connected(account_id)

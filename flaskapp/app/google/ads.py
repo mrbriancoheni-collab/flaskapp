@@ -55,6 +55,9 @@ def optimize():
     Renders the Google Ads Optimize UI (tabs driven by ?tab=).
     Template: templates/google/ads/optimize.html
     """
+    from app.models_ads import AdsCampaign, AdsAd
+    AdsCampaign.ensure_columns()
+    AdsAd.ensure_columns()
     # Check if user has paid plan
     if not is_paid_account():
         flash("Google Ads Optimizer is available on paid plans. Upgrade to access optimization tools.", "warning")
@@ -1513,6 +1516,8 @@ def campaign_bid_strategy(cid: int):
 @login_required
 def ab_tests():
     """List A/B ad tests for this account."""
+    from app.models_ads import AdsAd
+    AdsAd.ensure_columns()
     aid = current_account_id()
     if not aid:
         return redirect(url_for("gads_bp.optimize"))

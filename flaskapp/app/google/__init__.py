@@ -1671,6 +1671,14 @@ def ads_ai_summary_json():
 @login_required
 def index():
     """Google integrations overview dashboard."""
+    try:
+        return _index_impl()
+    except Exception as _exc:
+        current_app.logger.exception("google_bp.index crashed: %s", _exc)
+        return f"<pre>500 — google index crashed:\n{type(_exc).__name__}: {_exc}</pre>", 500
+
+
+def _index_impl():
     from datetime import datetime, timedelta
 
     aid = current_account_id()

@@ -160,20 +160,22 @@ def _openai_key() -> Optional[str]:
 
 def _ai_generate_post(brief: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Produce {title, html, excerpt} from a brief. Uses analyzer (if URL given),
-    otherwise tries OpenAI, and finally falls back to a heuristic stub.
+    Produce {title, html, excerpt} from a brief.
+    Priority: 1) URL analyzer  2) Claude  3) OpenAI  4) heuristic stub
     """
+    import json as _json
     prompt = (brief.get("prompt") or "").strip()
     source_url = (brief.get("source_url") or "").strip() or None
-    tone = brief.get("tone") or ""
-    word_count = (brief.get("word_count") or "").strip()
+    tone = brief.get("tone") or "helpful and practical"
+    word_count = (brief.get("word_count") or "900").strip()
     outline = brief.get("outline") or ""
     primary_kw = brief.get("primary_keyword") or ""
     extra_kws = brief.get("extra_keywords") or []
     topics = brief.get("topics") or []
-    pov_ids = brief.get("pov_ids") or []
+    cluster_name = brief.get("cluster_name") or ""
+    supporting_context = brief.get("supporting_context") or ""
 
-    # 1) Analyzer if source URL provided
+    # 1) Analyzer — scrape and rewrite from a source URL
     if source_url and analyze_url:
         try:
             rep = analyze_url(source_url)
@@ -185,50 +187,90 @@ def _ai_generate_post(brief: Dict[str, Any]) -> Dict[str, Any]:
         except Exception:
             current_app.logger.exception("Analyzer failed for %s", source_url)
 
-    # 2) OpenAI
+    # Build the shared content brief string used by Claude and OpenAI
+    kw_line = f"Primary keyword: {primary_kw}" if primary_kw else ""
+    extra_line = f"Secondary keywords: {', '.join(extra_kws)}" if extra_kws else ""
+    cluster_line = f"Topic cluster: {cluster_name}" if cluster_name else ""
+    context_line = f"Additional context: {supporting_context}" if supporting_context else ""
+    outline_line = f"Suggested outline:\n{outline}" if outline else ""
+    brief_block = "\n".join(filter(None, [kw_line, extra_line, cluster_line, context_line, outline_line, prompt]))
+
+    # 2) Claude (primary AI writer)
+    try:
+        from app.ai_clients import get_ai_client
+        client = get_ai_client()
+        claude_prompt = f"""You are a senior SEO content writer. Write a complete, publish-ready blog post.
+
+Content brief:
+{brief_block}
+
+Requirements:
+- Tone: {tone}
+- Target length: {word_count} words
+- Use H2 and H3 headings for structure
+- Include short paragraphs and bullet lists where appropriate
+- Naturally incorporate the primary keyword in the title, first paragraph, and 2-3 subheadings
+- End with a clear call-to-action paragraph
+
+Return ONLY valid JSON with these exact keys:
+{{"title": "...", "html": "...", "excerpt": "..."}}
+
+The html value must be full HTML article content (no <html>/<body> wrapper).
+The excerpt must be 145-155 characters optimised as a meta description."""
+
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=4000,
+            messages=[{"role": "user", "content": claude_prompt}],
+        )
+        raw = response.content[0].text.strip()
+        # Strip markdown code fences if present
+        import re as _re
+        raw = _re.sub(r'^```(?:json)?\s*', '', raw, flags=_re.MULTILINE)
+        raw = _re.sub(r'\s*```$', '', raw, flags=_re.MULTILINE)
+        obj = _json.loads(raw)
+        if obj.get("title") and obj.get("html"):
+            return {
+                "title": obj["title"].strip(),
+                "html": obj["html"],
+                "excerpt": (obj.get("excerpt") or "")[:160],
+            }
+    except Exception:
+        current_app.logger.exception("Claude post generation failed")
+
+    # 3) OpenAI fallback
     key = _openai_key()
     if key:
         try:
-            import json, requests
-            sys = (
+            import requests
+            sys_msg = (
                 "You are a senior content writer for a local services blog. "
                 "Write helpful, original, practical content with clear structure (H2/H3), "
                 "and a short meta-style excerpt. Return STRICT JSON: {title, html, excerpt}."
             )
-            user = {
-                "brief": {
-                    "prompt": prompt,
-                    "tone": tone,
-                    "word_count": word_count,
-                    "outline": outline,
-                    "primary_keyword": primary_kw,
-                    "extra_keywords": extra_kws,
-                    "topics": topics,
-                    "pov_ids": pov_ids,
-                    "source_url": source_url,
-                },
+            user_msg = _json.dumps({
+                "brief": brief_block,
                 "rules": [
-                    "Prefer 800–1200 words unless word_count given.",
+                    f"Target {word_count} words.",
                     "Use short paragraphs and scannable subheads.",
                     "Add simple bullet lists where useful.",
                     "No commentary; JSON only.",
                 ],
-            }
+            })
             r = requests.post(
                 "https://api.openai.com/v1/chat/completions",
                 headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
                 json={
                     "model": (current_app.config or {}).get("OPENAI_MODEL", "gpt-4o-mini"),
                     "temperature": 0.5,
-                    "messages": [{"role": "system", "content": sys},
-                                 {"role": "user", "content": json.dumps(user)}],
+                    "messages": [{"role": "system", "content": sys_msg},
+                                 {"role": "user", "content": user_msg}],
                     "response_format": {"type": "json_object"},
                 },
                 timeout=60,
             )
             if r.status_code < 400:
-                data = r.json()["choices"][0]["message"]["content"]
-                obj = json.loads(data)
+                obj = _json.loads(r.json()["choices"][0]["message"]["content"])
                 return {
                     "title": (obj.get("title") or "New Post").strip(),
                     "html": obj.get("html") or "",
@@ -239,13 +281,11 @@ def _ai_generate_post(brief: Dict[str, Any]) -> Dict[str, Any]:
         except Exception:
             current_app.logger.exception("OpenAI generation failed")
 
-    # 3) Heuristic fallback
+    # 4) Heuristic fallback
     title = topics[0] if topics else (primary_kw or "New Post")
-    if prompt:
-        title = title or "New Post"
     html = f"""<h2>{title}</h2>
 <p>Looking for clear, practical guidance? This post covers {primary_kw or 'a key topic'} with simple steps you can use today.</p>
-<h3>What you’ll learn</h3>
+<h3>What you'll learn</h3>
 <ul>
 <li>How to spot common issues</li>
 <li>Quick fixes you can try</li>
@@ -870,7 +910,7 @@ def publisher():
              .order_by(WPJob.created_at.desc()).limit(50).all()) if site else []
     return render_template("wp/publisher.html", site=site, jobs=jobs_)
 
-# GET legacy “compose” just points at /new
+# GET legacy "compose" just points at /new
 @wp_bp.route("/compose", methods=["GET"], endpoint="compose")
 @login_required
 def compose_get_legacy():

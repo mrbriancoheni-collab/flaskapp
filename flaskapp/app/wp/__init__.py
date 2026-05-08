@@ -101,15 +101,34 @@ def _wp_has_account_id() -> bool:
 
 def _site_query_for_account(aid: Optional[int]):
     q = WPSite.query
-    if _wp_has_account_id() and aid:
+    if aid:
         q = q.filter_by(account_id=aid)
     return q
 
 def _current_site() -> Optional[WPSite]:
-    """First try DB (preferred). If missing, fall back to env vars so the UI still works."""
+    """Return the WPSite for the current account. Ensures account_id column exists first."""
+    # Ensure the account_id column is present (safe no-op if already there)
     try:
-        aid = _account_id()
-        site = _site_query_for_account(aid).first()
+        WPSite.ensure_columns()
+    except Exception:
+        pass
+
+    aid = _account_id()
+    site = None
+    try:
+        if aid:
+            site = WPSite.query.filter_by(account_id=aid).first()
+            if not site:
+                # First access after migration: claim any unowned site for this account
+                unowned = WPSite.query.filter(
+                    (WPSite.account_id == None) | (WPSite.account_id == 0)  # noqa: E711
+                ).first()
+                if unowned:
+                    unowned.account_id = aid
+                    db.session.commit()
+                    site = unowned
+        else:
+            site = WPSite.query.first()
     except OperationalError:
         current_app.logger.warning("WPSite query failed (schema mismatch). Falling back to env settings only.")
         site = None
@@ -233,8 +252,9 @@ def _ai_generate_post(brief: Dict[str, Any]) -> Dict[str, Any]:
     excerpt = "Clear, practical tips you can use today—plus when to call a pro."
     return {"title": title, "html": html, "excerpt": excerpt}
 
-def _process_queue(max_jobs: int = 5) -> dict:
-    site = _current_site()
+def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None) -> dict:
+    if site is None:
+        site = _current_site()
     if not site:
         return {"ok": False, "processed": 0, "error": "No WordPress settings"}
 
@@ -663,6 +683,8 @@ def settings():
                 site.username = user
                 if pw != "********":
                     site.app_password = pw
+                if aid and not site.account_id:
+                    site.account_id = aid
 
             db.session.commit()
             flash("Saved WordPress settings.", "success")
@@ -1234,7 +1256,15 @@ def cron_runner():
     ran_at = datetime.utcnow().isoformat() + "Z"
     current_app.logger.info("wp cron-runner: start at %s (max=%s)", ran_at, max_jobs)
 
-    result = _process_queue(max_jobs=max_jobs)
+    all_sites = WPSite.query.all()
+    total_processed = 0
+    queue_errors = []
+    for _site in all_sites:
+        r = _process_queue(max_jobs=max_jobs, site=_site)
+        total_processed += r.get("processed", 0)
+        if r.get("error"):
+            queue_errors.append(r["error"])
+    result = {"ok": True, "processed": total_processed, "errors": queue_errors}
 
     # Hook SEO monitor — runs at most once per 23 h per site (throttled inside)
     seo_monitor_results = []

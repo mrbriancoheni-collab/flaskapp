@@ -6,7 +6,7 @@ from sqlalchemy.sql import func
 class WPSite(db.Model):
     __tablename__ = "wp_sites"
     id = db.Column(db.Integer, primary_key=True)
-    account_id = db.Column(db.Integer, nullable=True)
+    account_id = db.Column(db.Integer, nullable=True, index=True)
     base_url = db.Column(db.String(255), nullable=False)
     username = db.Column(db.String(190), nullable=False)
     app_password = db.Column(db.String(255), nullable=False)
@@ -18,6 +18,26 @@ class WPSite(db.Model):
     autopilot_require_approval = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime)
     updated_at = db.Column(db.DateTime)
+
+    @classmethod
+    def ensure_columns(cls):
+        """Add account_id column to wp_sites if it doesn't exist yet."""
+        from sqlalchemy import text, inspect as sa_inspect
+        from app import db as _db
+        try:
+            insp = sa_inspect(_db.engine)
+            existing = [c["name"] for c in insp.get_columns("wp_sites")]
+            if "account_id" not in existing:
+                _db.session.execute(text(
+                    "ALTER TABLE wp_sites ADD COLUMN account_id INT NULL"
+                ))
+                _db.session.commit()
+        except Exception:
+            try:
+                _db.session.rollback()
+            except Exception:
+                pass
+
 
 class WPJob(db.Model):
     __tablename__ = "wp_jobs"

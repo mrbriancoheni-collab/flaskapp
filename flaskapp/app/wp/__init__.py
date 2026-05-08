@@ -1209,10 +1209,34 @@ def schedule():
 @login_required
 def insights():
     site = _current_site()
+    from datetime import timedelta
+    cutoff = datetime.utcnow() - timedelta(days=90)
     jobs = (WPJob.query
-            .filter_by(site_id=site.id)
+            .filter(
+                WPJob.site_id == site.id,
+                (WPJob.status != "error") | (WPJob.created_at >= cutoff),
+            )
             .order_by(WPJob.created_at.desc())
             .limit(50).all()) if site else []
+
+    # Fetch live published posts from the connected WP site
+    live_posts = []
+    if site and site.id:
+        try:
+            c = WPClient(site.base_url, site.username, site.app_password)
+            raw = c.list_posts(per_page=10, status="publish")
+            live_posts = [
+                {
+                    "id": p.get("id"),
+                    "title": (p.get("title") or {}).get("rendered") or f"Post {p.get('id')}",
+                    "link": p.get("link", ""),
+                    "date": p.get("date", "")[:10],
+                    "modified": p.get("modified", "")[:10],
+                }
+                for p in (raw or []) if p.get("link")
+            ]
+        except Exception:
+            pass
 
     ga = None
     gsc = None
@@ -1235,7 +1259,8 @@ def insights():
         pass
 
     return render_template("wp/insights.html", jobs=jobs, ga=ga, gsc=gsc,
-                           seo_alerts=seo_alerts, seo_unread=seo_unread)
+                           seo_alerts=seo_alerts, seo_unread=seo_unread,
+                           site=site, live_posts=live_posts)
 
 # ---------- cron (no login) ----------
 

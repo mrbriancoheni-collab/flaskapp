@@ -1435,18 +1435,22 @@ def seo_audit():
     site = _current_site()
     result = None
 
-    # Fetch published posts for the dropdown (best-effort)
+    # Fetch published posts AND pages for the dropdown (best-effort)
     wp_posts = []
     if site:
         try:
             c = WPClient(site.base_url, site.username, site.app_password)
-            raw = c.list_posts(per_page=100, status="publish")
-            wp_posts = [
-                {"id": p.get("id"), "title": (p.get("title") or {}).get("rendered") or f"Post {p.get('id')}", "link": p.get("link", "")}
-                for p in (raw or []) if p.get("link")
-            ]
+
+            def _to_item(p, kind):
+                title = (p.get("title") or {}).get("rendered") or f"{kind.title()} {p.get('id')}"
+                return {"id": p.get("id"), "title": title, "link": p.get("link", ""), "kind": kind}
+
+            posts = [_to_item(p, "post") for p in (c.list_posts(per_page=100, status="publish") or []) if p.get("link")]
+            pages = [_to_item(p, "page") for p in (c.list_pages(per_page=100) or []) if p.get("link")]
+            # Group: pages first (usually higher SEO value), then posts
+            wp_posts = pages + posts
         except Exception:
-            current_app.logger.debug("seo_audit: could not fetch WP posts for dropdown")
+            current_app.logger.debug("seo_audit: could not fetch WP posts/pages for dropdown")
 
     if request.method == "POST":
         url = (request.form.get("url") or "").strip()

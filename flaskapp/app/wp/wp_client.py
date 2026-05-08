@@ -297,6 +297,12 @@ class WPClient:
         r = self._req("GET", "/wp/v2/posts", params=params)
         return r.json() if isinstance(r.json(), list) else []
 
+    def list_pages(self, per_page: int = 20, status: str = "publish") -> list:
+        params: dict = {"per_page": min(per_page, 100), "status": status,
+                        "orderby": "title", "order": "asc"}
+        r = self._req("GET", "/wp/v2/pages", params=params)
+        return r.json() if isinstance(r.json(), list) else []
+
     def find_post_by_url(self, url: str) -> Optional[dict]:
         """
         Resolve a public URL to a WP post dict by matching the slug.

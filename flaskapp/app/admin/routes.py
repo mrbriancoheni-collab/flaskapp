@@ -1705,8 +1705,9 @@ def ai_prompt_edit(prompt_id: int):
 def ai_prompts_initialize():
     """Initialize missing AI prompts with defaults."""
     try:
-        from app.services.ai_prompts_init import initialize_ai_prompts
+        from app.services.ai_prompts_init import initialize_ai_prompts, initialize_seo_ai_prompts
         count = initialize_ai_prompts()
+        count += initialize_seo_ai_prompts()
         _audit("ai_prompts_initialize", note=f"Initialized {count} prompts")
         flash(f"Initialized {count} missing prompts", "success")
     except Exception as e:

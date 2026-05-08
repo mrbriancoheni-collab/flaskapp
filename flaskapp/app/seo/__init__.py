@@ -1119,3 +1119,216 @@ def llm_citations():
         prefill_brand=prefill_brand,
         error=error,
     )
+
+
+@seo_bp.route("/content-recommendations", methods=["GET", "POST"], endpoint="content_recommendations")
+@login_required
+def content_recommendations():
+    """AI-generated topic cluster content recommendations from keyword gap data."""
+    aid = current_account_id()
+    recommendations = None
+    gap_result = None
+    gsc_connected = False
+    site_url = None
+    error = None
+
+    try:
+        from app.google import _is_connected, _get_gsc_selected_site
+        import os
+        gsc_connected = _is_connected(aid, "gsc")
+        site_url = _get_gsc_selected_site(aid) or os.getenv("GSC_SITE")
+    except Exception as exc:
+        logger.exception("GSC status check failed")
+        error = str(exc)
+
+    if gsc_connected and site_url:
+        try:
+            from app.seo.keyword_gaps import run_keyword_gap_analysis
+            gap_result = run_keyword_gap_analysis(aid, site_url)
+            if gap_result.get("error"):
+                error = gap_result["error"]
+                gap_result = None
+        except Exception as exc:
+            logger.exception("Keyword gap analysis failed for content recommendations")
+            error = f"Could not load gap data: {exc}"
+
+    if request.method == "POST" and gap_result:
+        try:
+            missing   = (gap_result.get("missing_content")  or [])[:10]
+            quick     = (gap_result.get("quick_wins")        or [])[:8]
+            clusters  = (gap_result.get("clusters")          or [])[:6]
+            declining = (gap_result.get("declining_pages")   or [])[:5]
+
+            context_parts = [f"Site: {site_url}"]
+            if clusters:
+                context_parts.append("Existing keyword clusters: " + ", ".join(
+                    f"{c['root']} ({c['n_queries']} queries, {c['total_impressions']} impr)"
+                    for c in clusters
+                ))
+            if missing:
+                context_parts.append("Untapped keyword opportunities: " + ", ".join(
+                    f"{m['query']} ({m['impressions']} impr)"
+                    for m in missing[:6]
+                ))
+            if quick:
+                context_parts.append("Quick-win queries to build around: " + ", ".join(
+                    f"{q['query']} (pos {round(q['position'], 1)})"
+                    for q in quick[:5]
+                ))
+            if declining:
+                context_parts.append("Declining content that needs supporting topics: " + ", ".join(
+                    d["page"].split("/")[-1] or d["page"] for d in declining[:4]
+                ))
+
+            prompt = f"""You are a content strategist for a local service business (HVAC, plumbing, electrical, roofing, landscaping).
+
+{chr(10).join(context_parts)}
+
+Based on this keyword data, generate 6-8 topic cluster recommendations to build content authority.
+Return a JSON array. Each item must have exactly these keys:
+- cluster_name: short name for the topic cluster (3-5 words)
+- pillar_topic: the main pillar page title/topic
+- supporting_topics: array of 3-5 supporting article titles
+- monthly_searches_potential: rough estimate string like "500-1,000/mo" or "2,000+/mo"
+- rationale: one sentence explaining why this cluster will drive organic traffic
+
+Make clusters specific to local service businesses. Cover both informational and commercial intent."""
+
+            from app.ai_clients import get_ai_client
+            import json as _json, re as _re
+            client = get_ai_client()
+            response = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=1800,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw = response.content[0].text
+            match = _re.search(r'\[.*\]', raw, _re.DOTALL)
+            if match:
+                recommendations = _json.loads(match.group())
+                flash("Content recommendations generated.", "success")
+            else:
+                error = "Could not parse AI response."
+        except Exception as exc:
+            logger.exception("Content recommendations AI failed")
+            flash(f"Could not generate recommendations: {exc}", "error")
+
+    return render_template(
+        "seo/content_recommendations.html",
+        recommendations=recommendations,
+        gap_result=gap_result,
+        gsc_connected=gsc_connected,
+        site_url=site_url,
+        error=error,
+    )
+
+
+@seo_bp.route("/roadmap", methods=["GET", "POST"], endpoint="roadmap")
+@login_required
+def roadmap():
+    """AI-generated 90-day SEO strategic roadmap from gap analysis data."""
+    aid = current_account_id()
+    phases = None
+    priorities = None
+    gap_result = None
+    gsc_connected = False
+    site_url = None
+    error = None
+
+    try:
+        from app.google import _is_connected, _get_gsc_selected_site
+        import os
+        gsc_connected = _is_connected(aid, "gsc")
+        site_url = _get_gsc_selected_site(aid) or os.getenv("GSC_SITE")
+    except Exception as exc:
+        logger.exception("GSC status check failed")
+        error = str(exc)
+
+    if gsc_connected and site_url:
+        try:
+            from app.seo.keyword_gaps import run_keyword_gap_analysis
+            gap_result = run_keyword_gap_analysis(aid, site_url)
+            if gap_result.get("error"):
+                error = gap_result["error"]
+                gap_result = None
+        except Exception as exc:
+            logger.exception("Keyword gap analysis failed for roadmap")
+            error = f"Could not load gap data: {exc}"
+
+    if request.method == "POST":
+        try:
+            summary = (gap_result or {}).get("summary", {})
+            context_parts = [f"Site: {site_url or 'unknown'}"]
+            context_parts.append(
+                f"SEO summary: {summary.get('quick_wins_count', 0)} quick wins, "
+                f"{summary.get('missing_count', 0)} missing content pages, "
+                f"{summary.get('content_gaps_count', 0)} content gaps, "
+                f"{summary.get('declining_count', 0)} declining pages, "
+                f"{summary.get('cannibalization_count', 0)} cannibalization issues, "
+                f"{summary.get('clusters_count', 0)} keyword clusters"
+            )
+            if gap_result:
+                quick = (gap_result.get("quick_wins") or [])[:5]
+                missing = (gap_result.get("missing_content") or [])[:5]
+                if quick:
+                    context_parts.append("Top quick wins: " + ", ".join(
+                        f"{q['query']} (pos {round(q['position'], 1)}, {q['impressions']} impr)"
+                        for q in quick
+                    ))
+                if missing:
+                    context_parts.append("Top missing content: " + ", ".join(
+                        f"{m['query']} ({m['impressions']} impr)"
+                        for m in missing
+                    ))
+
+            prompt = f"""You are a senior SEO strategist for a local service business (HVAC, plumbing, electrical, roofing, landscaping).
+
+{chr(10).join(context_parts)}
+
+Create a 90-day SEO roadmap. Return a JSON object with exactly two keys:
+
+"phases": array of 3 objects (one per 30-day phase), each with:
+- phase: integer 1, 2, or 3
+- focus: short focus area name (3-6 words)
+- goals: array of exactly 3 measurable goals
+- actions: array of 5-7 specific, concrete actions to take
+- kpi: the single most important KPI to track for this phase
+
+"priorities": array of exactly 5 objects, each with:
+- area: the SEO area (e.g. "Technical SEO", "Content", "Link Building")
+- why: one sentence explaining why this matters for this site
+- impact: "high" or "medium"
+- effort: "low", "medium", or "high"
+
+Make all actions specific and actionable for a local service business."""
+
+            from app.ai_clients import get_ai_client
+            import json as _json, re as _re
+            client = get_ai_client()
+            response = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=2000,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw = response.content[0].text
+            match = _re.search(r'\{.*\}', raw, _re.DOTALL)
+            if match:
+                data = _json.loads(match.group())
+                phases = data.get("phases", [])
+                priorities = data.get("priorities", [])
+                flash("90-day SEO roadmap generated.", "success")
+            else:
+                error = "Could not parse AI response."
+        except Exception as exc:
+            logger.exception("Roadmap AI generation failed")
+            flash(f"Could not generate roadmap: {exc}", "error")
+
+    return render_template(
+        "seo/roadmap.html",
+        phases=phases,
+        priorities=priorities,
+        gap_result=gap_result,
+        gsc_connected=gsc_connected,
+        site_url=site_url,
+        error=error,
+    )

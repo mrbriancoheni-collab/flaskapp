@@ -1,0 +1,169 @@
+{% extends "base_app.html" %}
+{% block title %}Content Recommendations · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  {# ── Header ────────────────────────────────────────────────────────────── #}
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">AI Content Recommendations</h1>
+      <p class="text-gray-500 text-sm mt-1">
+        Topic cluster recommendations built from your keyword gap data
+      </p>
+    </div>
+    {% if recommendations %}
+    <form method="POST" action="{{ url_for('seo_bp.content_recommendations') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit"
+              class="inline-flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 text-sm text-gray-600">
+        <i class="fa-solid fa-rotate"></i> Regenerate
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  {# ── Error / not connected ─────────────────────────────────────────────── #}
+  {% if error %}
+  <div class="bg-yellow-50 border border-yellow-300 rounded-xl p-5 flex items-start gap-4">
+    <i class="fa-solid fa-triangle-exclamation text-yellow-500 text-xl mt-0.5 flex-shrink-0"></i>
+    <div>
+      <p class="font-semibold text-yellow-900">{{ error }}</p>
+      {% if not gsc_connected %}
+      <a href="{{ url_for('google_bp.index') }}"
+         class="inline-block mt-3 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
+        Connect Google Search Console
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Not connected state ───────────────────────────────────────────────── #}
+  {% if not gsc_connected or not site_url %}
+  <div class="bg-white border rounded-xl p-8 text-center space-y-3">
+    <i class="fa-brands fa-google text-4xl text-gray-300"></i>
+    <div class="text-lg font-semibold text-gray-700">Connect Google Search Console</div>
+    <p class="text-sm text-gray-500 max-w-md mx-auto">
+      Content recommendations are powered by your GSC keyword data. Connect your site to
+      unlock AI-generated topic cluster strategies.
+    </p>
+    <a href="{{ url_for('google_bp.index') }}"
+       class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700
+              text-white rounded-lg font-medium text-sm transition-colors mt-2">
+      <i class="fa-brands fa-google"></i> Connect Google
+    </a>
+  </div>
+
+  {% elif not recommendations %}
+  {# ── Generate prompt ───────────────────────────────────────────────────── #}
+  <div class="bg-white border rounded-xl p-8 text-center space-y-4">
+    <i class="fa-solid fa-lightbulb text-indigo-400 text-5xl"></i>
+    <div>
+      <p class="text-lg font-semibold text-gray-800">Generate Topic Cluster Recommendations</p>
+      <p class="text-sm text-gray-500 mt-1 max-w-lg mx-auto">
+        Claude will analyse your keyword gaps, quick wins, and content clusters to suggest
+        6–8 high-impact topic strategies tailored to your site.
+      </p>
+    </div>
+    {% if gap_result %}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-xl mx-auto">
+      {% set s = gap_result.summary %}
+      <div class="bg-gray-50 rounded-xl border p-3 text-center">
+        <p class="text-xl font-bold text-yellow-600">{{ s.quick_wins_count }}</p>
+        <p class="text-xs text-gray-500 mt-0.5">Quick Wins</p>
+      </div>
+      <div class="bg-gray-50 rounded-xl border p-3 text-center">
+        <p class="text-xl font-bold text-green-600">{{ s.missing_count }}</p>
+        <p class="text-xs text-gray-500 mt-0.5">Missing Pages</p>
+      </div>
+      <div class="bg-gray-50 rounded-xl border p-3 text-center">
+        <p class="text-xl font-bold text-blue-600">{{ s.content_gaps_count }}</p>
+        <p class="text-xs text-gray-500 mt-0.5">Content Gaps</p>
+      </div>
+      <div class="bg-gray-50 rounded-xl border p-3 text-center">
+        <p class="text-xl font-bold text-purple-600">{{ s.clusters_count }}</p>
+        <p class="text-xs text-gray-500 mt-0.5">Clusters</p>
+      </div>
+    </div>
+    {% endif %}
+    <form method="POST" action="{{ url_for('seo_bp.content_recommendations') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit"
+              class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700
+                     text-white rounded-lg font-medium text-sm transition-colors">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Recommendations
+      </button>
+    </form>
+  </div>
+
+  {% else %}
+  {# ── Recommendations grid ──────────────────────────────────────────────── #}
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+    {% for rec in recommendations %}
+    <div class="bg-white rounded-xl border shadow-sm p-5 flex flex-col gap-3">
+
+      {# Cluster header #}
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="font-bold text-gray-900 text-base">{{ rec.cluster_name }}</p>
+          <p class="text-xs text-gray-400 mt-0.5">
+            <i class="fa-solid fa-chart-bar mr-1"></i>
+            {{ rec.monthly_searches_potential }} estimated monthly searches
+          </p>
+        </div>
+        <span class="flex-shrink-0 text-xs bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full font-semibold">
+          Cluster {{ loop.index }}
+        </span>
+      </div>
+
+      {# Pillar topic #}
+      <div class="bg-indigo-50 rounded-lg px-4 py-3">
+        <p class="text-xs font-semibold text-indigo-500 uppercase tracking-wide mb-0.5">Pillar Topic</p>
+        <p class="text-sm font-semibold text-indigo-900">{{ rec.pillar_topic }}</p>
+      </div>
+
+      {# Supporting topics #}
+      <div>
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Supporting Articles</p>
+        <ul class="space-y-1.5">
+          {% for topic in rec.supporting_topics %}
+          <li class="flex items-start gap-2 text-sm text-gray-700">
+            <i class="fa-solid fa-file-lines text-gray-300 mt-0.5 flex-shrink-0"></i>
+            {{ topic }}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      {# Rationale #}
+      <div class="border-t pt-3 mt-auto">
+        <p class="text-xs text-gray-500">
+          <i class="fa-solid fa-circle-info text-blue-400 mr-1"></i>{{ rec.rationale }}
+        </p>
+      </div>
+
+      {# Action buttons #}
+      <div class="flex gap-2 flex-wrap">
+        <a href="{{ url_for('wp_bp.new_post') }}?keyword={{ rec.pillar_topic | urlencode }}&title={{ rec.pillar_topic | urlencode }}"
+           class="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
+          <i class="fa-solid fa-pen mr-1"></i>Write Pillar Post
+        </a>
+        <a href="{{ url_for('wp_bp.content_brief') }}?keyword={{ rec.pillar_topic | urlencode }}"
+           class="text-xs px-3 py-1.5 border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 font-medium">
+          <i class="fa-solid fa-file-pen mr-1"></i>Brief
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <p class="text-xs text-gray-400 text-center">
+    Recommendations generated from your Google Search Console data.
+    Regenerate anytime as your rankings evolve.
+  </p>
+
+  {% endif %}
+
+</div>
+{% endblock %}

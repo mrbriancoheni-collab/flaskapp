@@ -1435,18 +1435,22 @@ def seo_audit():
     site = _current_site()
     result = None
 
-    # Fetch published posts for the dropdown (best-effort)
+    # Fetch published posts AND pages for the dropdown (best-effort)
     wp_posts = []
     if site:
         try:
             c = WPClient(site.base_url, site.username, site.app_password)
-            raw = c.list_posts(per_page=100, status="publish")
-            wp_posts = [
-                {"id": p.get("id"), "title": (p.get("title") or {}).get("rendered") or f"Post {p.get('id')}", "link": p.get("link", "")}
-                for p in (raw or []) if p.get("link")
-            ]
+
+            def _to_item(p, kind):
+                title = (p.get("title") or {}).get("rendered") or f"{kind.title()} {p.get('id')}"
+                return {"id": p.get("id"), "title": title, "link": p.get("link", ""), "kind": kind}
+
+            posts = [_to_item(p, "post") for p in (c.list_posts(per_page=100, status="publish") or []) if p.get("link")]
+            pages = [_to_item(p, "page") for p in (c.list_pages(per_page=100) or []) if p.get("link")]
+            # Group: pages first (usually higher SEO value), then posts
+            wp_posts = pages + posts
         except Exception:
-            current_app.logger.debug("seo_audit: could not fetch WP posts for dropdown")
+            current_app.logger.debug("seo_audit: could not fetch WP posts/pages for dropdown")
 
     if request.method == "POST":
         url = (request.form.get("url") or "").strip()
@@ -1992,6 +1996,70 @@ def freshness():
     )
 
 
+@wp_bp.route("/freshness/ai-plan", methods=["POST"], endpoint="freshness_ai_plan")
+@login_required
+def freshness_ai_plan():
+    """Generate an AI-powered content refresh plan for stale posts."""
+    import json as _json
+    import re as _re
+    try:
+        data = request.get_json(force=True) or {}
+        posts = data.get("posts", [])
+
+        # Sort by staleness descending and take top 10
+        top_posts = sorted(posts, key=lambda p: p.get("staleness", 0), reverse=True)[:10]
+
+        post_lines = "\n".join(
+            f"{i+1}. \"{p.get('title','')}\" — URL: {p.get('url','')} | "
+            f"Days old: {p.get('days_old',0)} | Staleness score: {p.get('staleness',0)} | "
+            f"Traffic change: {p.get('traffic_change') if p.get('traffic_change') is not None else 'N/A'}%"
+            for i, p in enumerate(top_posts)
+        )
+
+        prompt = f"""You are a content strategist helping prioritise a content refresh plan for a WordPress site.
+
+Here are the top stale posts ranked by staleness score (higher = more urgent):
+
+{post_lines}
+
+Return a JSON array of recommendation objects — one per post above — with EXACTLY this structure:
+[
+  {{
+    "title": "post title",
+    "url": "post url",
+    "priority": <integer 1-10, 10 = most urgent>,
+    "action": "<one of: refresh | rewrite | consolidate | redirect>",
+    "reason": "<1-2 sentence explanation of why this action is recommended>",
+    "specific_changes": ["bullet 1", "bullet 2", "bullet 3"]
+  }},
+  ...
+]
+
+Rules:
+- priority should reflect how urgently the post needs attention (consider staleness + traffic decay together)
+- action meanings: refresh=update stats/links/copy; rewrite=full new content; consolidate=merge with another post; redirect=remove and redirect traffic
+- specific_changes must contain 2-3 concrete, actionable bullet points
+- Return ONLY the JSON array, no prose before or after."""
+
+        from app.ai_clients import get_ai_client
+        client = get_ai_client()
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1500,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = response.content[0].text
+        match = _re.search(r'\[.*\]', raw, _re.DOTALL)
+        if not match:
+            return jsonify({"error": "Could not parse AI response. Please try again."})
+        recommendations = _json.loads(match.group())
+        return jsonify({"recommendations": recommendations})
+
+    except Exception as exc:
+        logger.exception("AI freshness plan failed")
+        return jsonify({"error": f"AI plan generation failed: {exc}"})
+
+
 @wp_bp.route("/broken-links", methods=["GET", "POST"], endpoint="broken_links")
 @login_required
 def broken_links():
@@ -2220,12 +2288,14 @@ def image_seo():
                         for img_key in selected[:20]:
                             src = request.form.get(f"src_val_{img_key}", img_key)
                             filename = src.split("/")[-1].split("?")[0]
-                            # Infer context from filename
+                            post_title = request.form.get(f"post_title_{img_key}", "")
+                            context = f'in a blog post titled "{post_title}"' if post_title else "on a website"
                             prompt = (
-                                f"Write a concise, descriptive alt text (under 125 chars) "
-                                f"for a website image with filename: {filename}. "
-                                f"Context: local service business (HVAC, plumbing, electrical, roofing). "
-                                f"Return only the alt text, no quotes or punctuation at end."
+                                f"Write a concise, descriptive SEO alt text (max 120 characters) "
+                                f"for an image {context}. "
+                                f"Image filename: {filename}. "
+                                f"Alt text should describe what's in the image and be relevant to the page topic. "
+                                f"Return only the alt text with no quotes, punctuation at end, or explanation."
                             )
                             try:
                                 resp = ai_client.messages.create(

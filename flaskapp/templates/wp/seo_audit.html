@@ -25,10 +25,23 @@
           {% if wp_posts %}
           <select id="post-picker"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent mb-2 bg-white">
-            <option value="">— Select a page from your site —</option>
-            {% for p in wp_posts %}
-            <option value="{{ p.link }}" {% if result and result.url == p.link %}selected{% endif %}>{{ p.title | truncate(60) }}</option>
-            {% endfor %}
+            <option value="">— Select a page or post —</option>
+            {% set pages = wp_posts | selectattr('kind', 'eq', 'page') | list %}
+            {% set posts = wp_posts | selectattr('kind', 'eq', 'post') | list %}
+            {% if pages %}
+            <optgroup label="Pages ({{ pages | length }})">
+              {% for p in pages %}
+              <option value="{{ p.link }}" {% if result and result.url == p.link %}selected{% endif %}>{{ p.title | truncate(60) }}</option>
+              {% endfor %}
+            </optgroup>
+            {% endif %}
+            {% if posts %}
+            <optgroup label="Posts ({{ posts | length }})">
+              {% for p in posts %}
+              <option value="{{ p.link }}" {% if result and result.url == p.link %}selected{% endif %}>{{ p.title | truncate(60) }}</option>
+              {% endfor %}
+            </optgroup>
+            {% endif %}
           </select>
           {% endif %}
           <input id="url-input" name="url" type="url" required

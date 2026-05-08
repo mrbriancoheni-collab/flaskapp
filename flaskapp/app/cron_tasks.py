@@ -109,6 +109,18 @@ def run_daily(app, db):
     except Exception:
         app.logger.exception("[CRON] SEO AI agents failed")
 
+    # Weekly freshness scan (runs Sunday, saves to SEOScanResult)
+    try:
+        _run_weekly_freshness_scan(app)
+    except Exception:
+        app.logger.exception("[CRON] Weekly freshness scan failed")
+
+    # Weekly image SEO scan (runs Sunday, saves to SEOScanResult)
+    try:
+        _run_weekly_image_seo_scan(app)
+    except Exception:
+        app.logger.exception("[CRON] Weekly image SEO scan failed")
+
 
 # =========================
 # WordPress job runner
@@ -1077,3 +1089,122 @@ def _run_weekly_seo_ai_agents(app) -> None:
                 app.logger.exception("[CRON] SEO AI agents failed for account %d", aid)
 
     app.logger.info("[CRON] Weekly SEO AI agents complete")
+
+
+def _run_weekly_freshness_scan(app):
+    """Weekly freshness scan — runs Sunday only. Saves staleness data to SEOScanResult."""
+    if datetime.utcnow().weekday() != 6:  # Sunday only
+        return
+
+    with app.app_context():
+        try:
+            from app.models_wp import WPSite
+            from app.models_seo import SEOScanResult
+            from datetime import timedelta
+            import re as _re
+
+            sites = WPSite.query.filter(WPSite.account_id.isnot(None)).all()
+            for site in sites:
+                try:
+                    from app.wp.wp_client import WPClient
+                    c = WPClient(site.base_url, site.username, site.app_password)
+                    posts = c.list_posts(per_page=100, status="publish")
+                    if not posts:
+                        continue
+
+                    now = datetime.utcnow()
+                    stale_posts = []
+                    for p in posts:
+                        modified_str = p.get("modified") or p.get("date") or ""
+                        try:
+                            modified = datetime.strptime(modified_str[:19], "%Y-%m-%dT%H:%M:%S")
+                        except Exception:
+                            continue
+                        days_old = (now - modified).days
+                        # Age component: 0-50
+                        age_score = min(50, int(days_old / 365 * 50))
+                        staleness = age_score
+                        title = _re.sub(r"<[^>]+>", "", (p.get("title") or {}).get("rendered", "") or "")
+                        if staleness >= 40:
+                            stale_posts.append({
+                                "url": p.get("link", ""),
+                                "title": title,
+                                "days_old": days_old,
+                                "staleness": staleness,
+                            })
+
+                    stale_posts.sort(key=lambda x: x["staleness"], reverse=True)
+                    SEOScanResult.save_result(
+                        account_id=site.account_id,
+                        site_id=site.id,
+                        scan_type="freshness",
+                        issue_count=len(stale_posts),
+                        item_count=len(posts),
+                        data={
+                            "stale_count": len(stale_posts),
+                            "total": len(posts),
+                            "top_stale": stale_posts[:10],
+                        },
+                    )
+                    app.logger.info(f"[CRON] freshness scan for site {site.id}: {len(stale_posts)} stale posts")
+                except Exception:
+                    app.logger.exception(f"[CRON] freshness scan failed for site {site.id}")
+        except Exception:
+            app.logger.exception("[CRON] _run_weekly_freshness_scan outer failure")
+
+
+def _run_weekly_image_seo_scan(app):
+    """Weekly image SEO scan — runs Sunday only. Saves alt text gaps to SEOScanResult."""
+    if datetime.utcnow().weekday() != 6:  # Sunday only
+        return
+
+    with app.app_context():
+        try:
+            from app.models_wp import WPSite
+            from app.models_seo import SEOScanResult
+            import re as _re
+
+            sites = WPSite.query.filter(WPSite.account_id.isnot(None)).all()
+            for site in sites:
+                try:
+                    from app.wp.wp_client import WPClient
+                    c = WPClient(site.base_url, site.username, site.app_password)
+                    posts = c.list_posts(per_page=100, status="publish")
+                    if not posts:
+                        continue
+
+                    missing_alt = []
+                    total_images = 0
+                    for p in posts:
+                        content = (p.get("content") or {}).get("rendered", "") or ""
+                        imgs = _re.findall(r'<img[^>]+>', content, _re.IGNORECASE)
+                        total_images += len(imgs)
+                        for img in imgs:
+                            alt_m = _re.search(r'alt=["\']([^"\']*)["\']', img, _re.IGNORECASE)
+                            alt = alt_m.group(1).strip() if alt_m else ""
+                            if not alt:
+                                title = _re.sub(r"<[^>]+>", "", (p.get("title") or {}).get("rendered", "") or "")
+                                src_m = _re.search(r'src=["\']([^"\']+)["\']', img, _re.IGNORECASE)
+                                missing_alt.append({
+                                    "post_url": p.get("link", ""),
+                                    "post_title": title,
+                                    "img_src": src_m.group(1) if src_m else "",
+                                })
+
+                    SEOScanResult.save_result(
+                        account_id=site.account_id,
+                        site_id=site.id,
+                        scan_type="image_seo",
+                        issue_count=len(missing_alt),
+                        item_count=total_images,
+                        data={
+                            "missing_alt_count": len(missing_alt),
+                            "total_images": total_images,
+                            "missing_alt_samples": missing_alt[:20],
+                        },
+                    )
+                    app.logger.info(f"[CRON] image_seo scan for site {site.id}: {len(missing_alt)}/{total_images} missing alt")
+                except Exception:
+                    app.logger.exception(f"[CRON] image_seo scan failed for site {site.id}")
+        except Exception:
+            app.logger.exception("[CRON] _run_weekly_image_seo_scan outer failure")

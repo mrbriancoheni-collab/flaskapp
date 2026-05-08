@@ -301,6 +301,19 @@ def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None) -> dict:
                 msg = f"Published post {res.get('id')} → {link}" if link else f"Published post {res.get('id')}"
                 db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info", message=msg))
 
+                # Auto-inject Article schema on publish (best-effort, never blocks the job)
+                wp_post_id = res.get("id")
+                if wp_post_id and p.get("status", "draft") == "publish":
+                    try:
+                        from app.wp.schema_gen import generate_from_wp_post, inject_schema_into_post
+                        schema_result = generate_from_wp_post(c, wp_post_id, include_article=True, include_faq=True)
+                        if schema_result and schema_result.get("schemas"):
+                            inject_schema_into_post(c, wp_post_id, schema_result["schemas"], replace_existing=True)
+                            db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info",
+                                                 message=f"Auto-injected schema into post {wp_post_id}"))
+                    except Exception:
+                        pass  # schema injection is non-critical
+
             elif job.kind == "refresh":
                 p = job.payload or {}
                 post_id = int(p.get("post_id", 0))
@@ -2969,6 +2982,35 @@ def orphan_pages():
         site=site,
         result=result,
         error=error,
+    )
+
+
+@wp_bp.route("/seo-health", methods=["GET"], endpoint="seo_health")
+@login_required
+def seo_health():
+    """Consolidated SEO Health dashboard — last scan results for all diagnostic tools."""
+    site = _current_site()
+    aid = _account_id()
+
+    # Load last scan result for each tool that persists results to SEOScanResult
+    scans = {}
+    if aid:
+        try:
+            from app.models_seo import SEOScanResult
+            for scan_type in ["seo_foundation", "content_quality", "broken_links",
+                               "redirects", "index_coverage", "orphan_pages",
+                               "tech_seo", "aeo_audit", "image_seo", "freshness"]:
+                row = SEOScanResult.latest(aid, scan_type, site_id=site.id if site else None)
+                if row:
+                    scans[scan_type] = row
+        except Exception:
+            pass
+
+    return render_template(
+        "wp/seo_health.html",
+        site=site,
+        scans=scans,
+        now=datetime.utcnow(),
     )
 
 

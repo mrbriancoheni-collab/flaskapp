@@ -694,6 +694,9 @@
         {% if has_endpoint('wp_bp.new_post') %}
           <a class="secondary-link {% if epn=='wp_bp.new_post' %}active{% endif %}" href="{{ url_for('wp_bp.new_post') }}"><i class="fa-solid fa-pen-to-square"></i><span>New Post</span></a>
         {% endif %}
+        {% if has_endpoint('wp_bp.content_queue_review') %}
+          <a class="secondary-link {% if epn=='wp_bp.content_queue_review' %}active{% endif %}" href="{{ url_for('wp_bp.content_queue_review') }}"><i class="fa-solid fa-layer-group"></i><span>Content Queue</span></a>
+        {% endif %}
         {% if has_endpoint('wp_bp.seo_health') %}
           <a class="secondary-link {% if epn=='wp_bp.seo_health' %}active{% endif %}" href="{{ url_for('wp_bp.seo_health') }}"><i class="fa-solid fa-heart-pulse"></i><span>SEO Health</span></a>
         {% endif %}

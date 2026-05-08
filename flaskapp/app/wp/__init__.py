@@ -230,11 +230,31 @@ The excerpt must be 145-155 characters optimised as a meta description."""
         raw = _re.sub(r'\s*```$', '', raw, flags=_re.MULTILINE)
         obj = _json.loads(raw)
         if obj.get("title") and obj.get("html"):
-            return {
+            result = {
                 "title": obj["title"].strip(),
                 "html": obj["html"],
                 "excerpt": (obj.get("excerpt") or "")[:160],
             }
+            # Try to find a featured image via Unsplash (best-effort)
+            unsplash_key = os.getenv("UNSPLASH_ACCESS_KEY")
+            if unsplash_key and (primary_kw or obj["title"]):
+                try:
+                    import requests as _req
+                    query = primary_kw or obj["title"]
+                    r = _req.get(
+                        "https://api.unsplash.com/search/photos",
+                        params={"query": query, "per_page": 1, "orientation": "landscape"},
+                        headers={"Authorization": f"Client-ID {unsplash_key}"},
+                        timeout=5,
+                    )
+                    if r.status_code == 200:
+                        items = r.json().get("results") or []
+                        if items:
+                            result["featured_image_url"] = items[0]["urls"]["regular"]
+                            result["featured_image_alt"] = items[0].get("alt_description") or query
+                except Exception:
+                    pass
+            return result
     except Exception:
         current_app.logger.exception("Claude post generation failed")
 
@@ -340,6 +360,27 @@ def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None) -> dict:
                 link = res.get("link")
                 msg = f"Published post {res.get('id')} → {link}" if link else f"Published post {res.get('id')}"
                 db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info", message=msg))
+
+                # Auto-generate social copy after a live publish (best-effort)
+                if res.get("id") and link and p.get("status", "draft") == "publish":
+                    try:
+                        from app.ai_clients import get_ai_client
+                        _sc = get_ai_client()
+                        _title = p.get("title") or ""
+                        _social_resp = _sc.messages.create(
+                            model="claude-haiku-4-5-20251001",
+                            max_tokens=300,
+                            messages=[{"role": "user", "content":
+                                f"Write a short social media post (2-3 sentences, no hashtags) "
+                                f"promoting this blog post: '{_title}'. URL: {link}. "
+                                f"Make it engaging and conversational. Plain text only."}],
+                        )
+                        _social_copy = _sc and _social_resp.content[0].text.strip()
+                        if _social_copy:
+                            db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info",
+                                                 message=f"[SOCIAL] {_social_copy}"))
+                    except Exception:
+                        pass
 
                 # Auto-inject Article schema on publish (best-effort, never blocks the job)
                 wp_post_id = res.get("id")
@@ -1212,6 +1253,120 @@ def approval_reject(job_id: int):
     return see_other("wp_bp.approvals")
 
 
+@wp_bp.route("/approvals/bulk", methods=["POST"], endpoint="approval_bulk")
+@login_required
+def approval_bulk():
+    site = _current_site()
+    if not site:
+        abort(403)
+    action = request.form.get("bulk_action")  # "approve" or "reject"
+    job_ids = request.form.getlist("job_ids")
+    if not job_ids or action not in ("approve", "reject"):
+        flash("No jobs selected.", "warning")
+        return see_other("wp_bp.approvals")
+
+    count = 0
+    for jid in job_ids:
+        try:
+            job = WPJob.query.get(int(jid))
+            if not job or job.site_id != site.id:
+                continue
+            if action == "approve":
+                p = dict(job.payload or {})
+                p["needs_approval"] = False
+                p["status"] = "future" if p.get("status") == "future" else "publish"
+                job.payload = p
+            else:
+                job.status = "error"
+                job.last_error = "Bulk rejected"
+            count += 1
+        except Exception:
+            pass
+    db.session.commit()
+    flash(f"{'Approved' if action == 'approve' else 'Rejected'} {count} post(s).", "success")
+    return see_other("wp_bp.approvals")
+
+
+@wp_bp.route("/content-queue", methods=["GET", "POST"], endpoint="content_queue_review")
+@login_required
+def content_queue_review():
+    """Review pending topic cluster recommendations and selectively queue posts."""
+    site = _current_site()
+    aid = _account_id()
+    recommendations = []
+    last_updated = None
+    queued_keywords = set()
+
+    if aid:
+        try:
+            from app.models_seo import SEOScanResult
+            rec_row = SEOScanResult.latest(aid, "content_recommendations")
+            if rec_row and rec_row.data:
+                recommendations = rec_row.data.get("recommendations") or []
+                last_updated = rec_row.created_at
+        except Exception:
+            pass
+
+    if site:
+        existing = WPJob.query.filter(
+            WPJob.site_id == site.id,
+            WPJob.status.in_(["queued", "running", "done"]),
+            WPJob.kind == "ai_generate",
+        ).all()
+        queued_keywords = {(j.payload or {}).get("primary_keyword", "").lower().strip() for j in existing}
+
+    if request.method == "POST" and site:
+        selected = request.form.getlist("topics")
+        cluster_map = {}
+        for rec in recommendations:
+            cluster_map[rec.get("cluster_name", "")] = rec
+        queued = 0
+        for topic_str in selected:
+            # topic_str = "cluster_name|||topic_title|||is_pillar"
+            parts = topic_str.split("|||")
+            if len(parts) < 2:
+                continue
+            cluster_name, kw = parts[0], parts[1]
+            is_pillar = parts[2] == "1" if len(parts) > 2 else False
+            if kw.lower() in queued_keywords:
+                continue
+            rec = cluster_map.get(cluster_name, {})
+            all_topics = []
+            if rec.get("pillar_topic"):
+                all_topics.append(rec["pillar_topic"])
+            all_topics += [t if isinstance(t, str) else t.get("title", "") for t in (rec.get("supporting_topics") or [])]
+            payload = {
+                "primary_keyword": kw,
+                "cluster_name": cluster_name,
+                "is_pillar": is_pillar,
+                "supporting_context": (
+                    f"Part of the '{cluster_name}' topic cluster. "
+                    f"Related topics: {', '.join(t for t in all_topics if t != kw)}"
+                ),
+                "word_count": "1200" if is_pillar else "800",
+                "status": "draft" if getattr(site, "autopilot_require_approval", True) else "publish",
+                "needs_approval": bool(getattr(site, "autopilot_require_approval", True)),
+                "require_approval": bool(getattr(site, "autopilot_require_approval", True)),
+                "source": "manual_queue",
+            }
+            job = WPJob(site_id=site.id, kind="ai_generate", payload=payload)
+            db.session.add(job)
+            queued_keywords.add(kw.lower())
+            queued += 1
+        db.session.commit()
+        if queued:
+            flash(f"Queued {queued} post(s) for generation.", "success")
+        return see_other("wp_bp.content_queue_review")
+
+    return render_template(
+        "wp/content_queue_review.html",
+        site=site,
+        recommendations=recommendations,
+        last_updated=last_updated,
+        queued_keywords=queued_keywords,
+    )
+
+
 # ---------- schedule view ----------
 
 @wp_bp.route("/schedule", methods=["GET"], endpoint="schedule")
@@ -1305,6 +1460,7 @@ def insights():
 
     seo_alerts = []
     seo_unread = 0
+    aid = None
     try:
         from app.seo.monitor import get_unread_alerts
         aid = _account_id()
@@ -1314,9 +1470,60 @@ def insights():
     except Exception:
         pass
 
+    autopilot_stats = {}
+    if site:
+        from datetime import timedelta
+        week_ago = datetime.utcnow() - timedelta(days=7)
+        queued_count = WPJob.query.filter(
+            WPJob.site_id == site.id, WPJob.status == "queued",
+            WPJob.kind.in_(["publish", "ai_generate"])
+        ).count()
+        done_this_week = WPJob.query.filter(
+            WPJob.site_id == site.id, WPJob.status == "done",
+            WPJob.kind.in_(["publish", "ai_generate"]),
+            WPJob.updated_at >= week_ago
+        ).count()
+        pending_jobs = WPJob.query.filter(
+            WPJob.site_id == site.id, WPJob.status == "queued"
+        ).all()
+        pending_approval_count = sum(1 for j in pending_jobs if (j.payload or {}).get("needs_approval"))
+        autopilot_stats = {
+            "enabled": bool(getattr(site, "autopilot_enabled", False)),
+            "daily_new": getattr(site, "autopilot_daily_new", 1),
+            "require_approval": bool(getattr(site, "autopilot_require_approval", True)),
+            "queued_count": queued_count,
+            "done_this_week": done_this_week,
+            "pending_approval_count": pending_approval_count,
+        }
+
+    post_gsc = {}
+    if live_posts and aid:
+        try:
+            from app.seo.keyword_gaps import _gsc_fetch, _rows_to_dicts, _date_range
+            from app.google import _is_connected, _get_gsc_selected_site
+            if _is_connected(aid, "gsc"):
+                gsc_site_url = _get_gsc_selected_site(aid)
+                if gsc_site_url:
+                    start, end = _date_range(28)
+                    rows = _gsc_fetch(aid, gsc_site_url, start, end, dimensions=["page"], row_limit=500)
+                    for row in (rows or []):
+                        url = (row.get("keys") or [""])[0]
+                        for lp in live_posts:
+                            if lp["link"] and (lp["link"].rstrip("/") == url.rstrip("/") or url in lp["link"]):
+                                post_gsc[lp["link"]] = {
+                                    "clicks": row.get("clicks", 0),
+                                    "impressions": row.get("impressions", 0),
+                                    "position": round(row.get("position", 0), 1),
+                                    "ctr": round(row.get("ctr", 0) * 100, 1),
+                                }
+        except Exception:
+            pass
+
     return render_template("wp/insights.html", jobs=jobs, ga=ga, gsc=gsc,
                            seo_alerts=seo_alerts, seo_unread=seo_unread,
-                           site=site, live_posts=live_posts)
+                           site=site, live_posts=live_posts,
+                           autopilot_stats=autopilot_stats, post_gsc=post_gsc,
+                           aid=aid)
 
 # ---------- cron (no login) ----------
 
@@ -1786,6 +1993,37 @@ Generate a comprehensive content brief as a JSON object with exactly these keys:
                 brief = _json.loads(match.group())
                 brief["keyword"] = keyword
                 brief["gsc_data"] = gsc_data
+
+                # Enrich with AI-generated competitor content guidance
+                try:
+                    from app.ai_clients import get_ai_client
+                    _client = get_ai_client()
+                    _enrich_prompt = (
+                        f"You are an SEO content strategist. For the keyword '{keyword}', "
+                        f"describe what content the top-ranking pages typically include "
+                        f"(headings, subtopics, word count, content format, key entities to mention). "
+                        f"Return a JSON object with: "
+                        f"typical_word_count (int), "
+                        f"recommended_headings (list of 5-8 H2 titles), "
+                        f"key_entities (list of 5-10 important terms to mention), "
+                        f"content_format (e.g. 'how-to guide', 'listicle', 'comparison'), "
+                        f"unique_angle (1-sentence suggestion for differentiation). "
+                        f"JSON only."
+                    )
+                    _resp = _client.messages.create(
+                        model="claude-haiku-4-5-20251001",
+                        max_tokens=600,
+                        messages=[{"role": "user", "content": _enrich_prompt}],
+                    )
+                    import re as _re2, json as _json2
+                    _raw = _resp.content[0].text.strip()
+                    _raw = _re2.sub(r'^```(?:json)?\s*', '', _raw, flags=_re2.MULTILINE)
+                    _raw = _re2.sub(r'\s*```$', '', _raw, flags=_re2.MULTILINE)
+                    _enrichment = _json2.loads(_raw)
+                    if brief and isinstance(brief, dict):
+                        brief["serp_enrichment"] = _enrichment
+                except Exception:
+                    pass
             else:
                 error = "Could not parse AI response. Please try again."
 
@@ -1929,14 +2167,21 @@ def edit_post_submit(post_id: int):
     if needs_approval:
         status = "draft"
 
+    try:
+        existing_post = WPClient(site.base_url, site.username, site.app_password).get_post(post_id)
+    except Exception:
+        existing_post = {}
+
     payload = {
-        "post_id":      post_id,
-        "title":        title,
-        "html":         html_body,
-        "excerpt":      excerpt,
-        "yoast_desc":   yoast_desc,
-        "status":       status,
+        "post_id":        post_id,
+        "title":          title,
+        "html":           html_body,
+        "excerpt":        excerpt,
+        "yoast_desc":     yoast_desc,
+        "status":         status,
         "needs_approval": needs_approval,
+        "before_title":   (existing_post.get("title") or {}).get("rendered", ""),
+        "before_excerpt": (existing_post.get("excerpt") or {}).get("rendered", ""),
     }
     job = WPJob(site_id=site.id, kind="edit", payload=payload)
     db.session.add(job)

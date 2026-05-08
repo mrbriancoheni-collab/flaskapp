@@ -362,8 +362,8 @@
           {% else %}
             <span class="w-2 h-2 rounded-full bg-gray-300"></span>
             <span class="text-xs text-gray-400">Not connected</span>
-            {% if has_endpoint('google_bp.start') %}
-            <a href="{{ url_for('google_bp.start', product='gmb') }}"
+            {% if has_endpoint('gmb_bp.start') %}
+            <a href="{{ url_for('gmb_bp.start') }}"
                class="ml-2 px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
               Connect
             </a>
@@ -463,14 +463,24 @@
         method: 'POST',
         headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
       });
-      const d = await r.json();
+      let d;
+      try { d = await r.json(); } catch (_) { d = {}; }
+      if (!r.ok) {
+        throw new Error(d.error || d.message || `HTTP ${r.status}`);
+      }
       const s = d.sync || {};
+      const errs = (d.errors || []).concat(s.errors || []);
       if (syncStatus) {
-        syncStatus.className = 'rounded-xl px-4 py-3 text-sm border bg-green-50 border-green-200 text-green-800';
-        syncStatus.textContent =
-          `Sync complete — ${s.campaigns_synced || 0} campaign rows, ` +
-          `${s.keywords_synced || 0} keyword rows, ${s.search_terms_synced || 0} search terms, ` +
-          `${d.optimizer?.created || 0} recommendations. Refreshing…`;
+        if (errs.length) {
+          syncStatus.className = 'rounded-xl px-4 py-3 text-sm border bg-amber-50 border-amber-200 text-amber-800';
+          syncStatus.textContent = 'Sync completed with errors: ' + errs.join(' | ');
+        } else {
+          syncStatus.className = 'rounded-xl px-4 py-3 text-sm border bg-green-50 border-green-200 text-green-800';
+          syncStatus.textContent =
+            `Sync complete — ${s.campaigns_synced || 0} campaign rows, ` +
+            `${s.keywords_synced || 0} keyword rows, ${s.search_terms_synced || 0} search terms, ` +
+            `${d.optimizer?.created || 0} recommendations. Refreshing…`;
+        }
       }
       setTimeout(() => {
         window.location.href = '{{ url_for("google_bp.index", refresh=1) }}';

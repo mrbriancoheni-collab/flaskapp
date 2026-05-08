@@ -720,10 +720,21 @@ def test():
             results["posts_endpoint"] = err_str[:200]
 
         # Summarize results
-        if results["posts_endpoint"] == "ok":
-            flash(f"Success! WordPress API is working. Auth: {results['auth']}", "success")
+        auth_ok = str(results.get("auth", "")).startswith("ok")
+        posts_ok = results["posts_endpoint"] == "ok"
+
+        if posts_ok and auth_ok:
+            flash(f"WordPress connected and authenticated. {results['auth']}", "success")
+        elif posts_ok and not auth_ok:
+            flash(
+                "WordPress REST API is reachable but authentication failed. "
+                "Your Application Password credentials are not working (401 rest_not_logged_in). "
+                "Fix: 1) In WP Admin → Users → Profile, delete and regenerate the Application Password. "
+                "2) If behind Cloudflare, add a WAF rule to pass the Authorization header for /wp-json/*. "
+                f"Auth error: {results['auth']}",
+                "error"
+            )
         elif "403" in str(results.get("posts_endpoint", "")):
-            # Posts endpoint blocked - this is the real problem
             flash(
                 "403 Forbidden on posts API. Your WordPress site is blocking REST API requests. "
                 "Check: 1) Security plugins (Wordfence, Sucuri) - whitelist your server IP, "

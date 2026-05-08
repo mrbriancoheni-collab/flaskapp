@@ -387,8 +387,8 @@
             url_for('google_bp.connect_ads') if has_endpoint('google_bp.connect_ads') else '#'),
         (connected.get('gsc'), 'Connect Search Console', 'Connect →',
             url_for('google_bp.connect_search_console') if has_endpoint('google_bp.connect_search_console') else '#'),
-        (bool(last_ads_sync), 'Sync your first data', 'Sync now →', '#'),
-        (bool(last_ads_sync), 'Review optimizer recommendations', 'Open optimizer →',
+        (last_ads_sync, 'Sync your first data', 'Sync now →', '#'),
+        (last_ads_sync, 'Review optimizer recommendations', 'Open optimizer →',
             url_for('gads_bp.optimize', tab='optimizer') if has_endpoint('gads_bp.optimize') else '#'),
       ] %}
       {% for done, label, cta, href in checklist %}

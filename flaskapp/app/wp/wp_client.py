@@ -218,6 +218,27 @@ class WPClient:
             self._req("POST", f"/wp/v2/media/{media['id']}", json_body={"alt_text": alt_text})
         return int(media["id"])
 
+    def upload_image_from_url(self, image_url: str, filename: str = "featured.jpg",
+                              alt_text: str = "") -> int:
+        """Download an image from a URL and upload it to the WP media library."""
+        import requests as _req
+        import io
+        r = _req.get(image_url, timeout=15, stream=True)
+        r.raise_for_status()
+        content_type = r.headers.get("Content-Type", "image/jpeg").split(";")[0].strip()
+        ext_map = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif"}
+        ext = ext_map.get(content_type, "jpg")
+        if not filename.endswith(f".{ext}"):
+            filename = filename.rsplit(".", 1)[0] + f".{ext}"
+
+        data = r.content
+        files = {"file": (filename, io.BytesIO(data), content_type)}
+        resp = self._req("POST", "/wp/v2/media", files=files)
+        media = resp.json()
+        if alt_text:
+            self._req("POST", f"/wp/v2/media/{media['id']}", json_body={"alt_text": alt_text})
+        return int(media["id"])
+
     # ---------- posts ----------
 
     def create_or_update_post(

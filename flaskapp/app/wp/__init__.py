@@ -422,6 +422,20 @@ def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None) -> dict:
                 needs_approval = bool(brief.get("require_approval")) or bool(getattr(site, "autopilot_require_approval", False))
                 status = "draft" if needs_approval else "publish"
 
+                # Upload featured image to WP media library before creating the post
+                featured_media_id = None
+                feat_url = draft.get("featured_image_url")
+                feat_alt = draft.get("featured_image_alt") or (draft.get("title") or "")
+                if feat_url:
+                    try:
+                        import re as _re
+                        slug = _re.sub(r"[^a-z0-9]+", "-", (brief.get("primary_keyword") or "featured").lower()).strip("-")
+                        featured_media_id = c.upload_image_from_url(feat_url, filename=f"{slug}.jpg", alt_text=feat_alt)
+                        db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info",
+                                             message=f"Uploaded featured image (media #{featured_media_id})"))
+                    except Exception:
+                        current_app.logger.exception("Featured image upload failed for ai_generate job %d", job.id)
+
                 res = c.create_or_update_post(
                     title=draft.get("title") or "New Post",
                     html=draft.get("html") or "",
@@ -430,6 +444,7 @@ def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None) -> dict:
                     publish_dt=None,
                     yoast_title=draft.get("title"),
                     yoast_desc=draft.get("excerpt"),
+                    featured_media=featured_media_id,
                 )
                 link = res.get("link")
                 msg = f"AI draft created {res.get('id')} → {link}" if link else f"AI draft created {res.get('id')}"
@@ -949,7 +964,20 @@ def publisher():
     jobs_ = (WPJob.query
              .filter_by(site_id=site.id)
              .order_by(WPJob.created_at.desc()).limit(50).all()) if site else []
-    return render_template("wp/publisher.html", site=site, jobs=jobs_)
+
+    # Build a map of job_id → social copy from WPLog [SOCIAL] entries
+    social_copy = {}
+    if site and jobs_:
+        job_ids = [j.id for j in jobs_]
+        logs = WPLog.query.filter(
+            WPLog.site_id == site.id,
+            WPLog.job_id.in_(job_ids),
+            WPLog.message.like("[SOCIAL]%"),
+        ).all()
+        for log in logs:
+            social_copy[log.job_id] = log.message[len("[SOCIAL]"):].strip()
+
+    return render_template("wp/publisher.html", site=site, jobs=jobs_, social_copy=social_copy)
 
 # GET legacy "compose" just points at /new
 @wp_bp.route("/compose", methods=["GET"], endpoint="compose")

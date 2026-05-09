@@ -326,29 +326,70 @@ class WPClient:
 
     def find_post_by_url(self, url: str) -> Optional[dict]:
         """
-        Resolve a public URL to a WP post dict by matching the slug.
-        Returns the post dict or None if not found.
+        Resolve a public URL to a WP post/page dict.
+        Handles: homepage, top-level slugs, nested slugs (parent/child).
         """
         from urllib.parse import urlparse
-        path = urlparse(url).path.rstrip("/")
-        slug = path.split("/")[-1] if path else ""
+        parsed = urlparse(url)
+        path = parsed.path.rstrip("/")
+
+        # ── Homepage ──────────────────────────────────────────────────────────
+        if not path or path == "":
+            # Check WP reading settings for a static front page
+            try:
+                settings = self._req("GET", "/wp/v2/settings").json()
+                page_on_front = settings.get("page_on_front")  # page ID or 0
+                if page_on_front:
+                    r = self._req("GET", f"/wp/v2/pages/{page_on_front}", params={"status": "any"})
+                    page = r.json()
+                    if page.get("id"):
+                        return page
+            except Exception:
+                pass
+            # Fall back: return first published page marked as front page
+            try:
+                r = self._req("GET", "/wp/v2/pages",
+                              params={"status": "any", "per_page": 100})
+                pages = r.json() if isinstance(r.json(), list) else []
+                for p in pages:
+                    if (p.get("link") or "").rstrip("/") == url.rstrip("/"):
+                        return p
+            except Exception:
+                pass
+            return None
+
+        slug = path.split("/")[-1]
         if not slug:
             return None
+
+        # ── Try posts by slug ─────────────────────────────────────────────────
         try:
-            r = self._req("GET", "/wp/v2/posts", params={"slug": slug, "status": "any", "per_page": 1})
+            r = self._req("GET", "/wp/v2/posts",
+                          params={"slug": slug, "status": "any", "per_page": 1})
             posts = r.json()
             if isinstance(posts, list) and posts:
+                # Verify URL match (slug alone can collide across post types)
+                for p in posts:
+                    if (p.get("link") or "").rstrip("/") == url.rstrip("/"):
+                        return p
                 return posts[0]
         except Exception:
             pass
-        # Also try pages (slug may be a page not a post)
+
+        # ── Try pages by slug ─────────────────────────────────────────────────
         try:
-            r = self._req("GET", "/wp/v2/pages", params={"slug": slug, "status": "any", "per_page": 1})
+            r = self._req("GET", "/wp/v2/pages",
+                          params={"slug": slug, "status": "any", "per_page": 5})
             pages = r.json()
             if isinstance(pages, list) and pages:
+                # For nested pages prefer exact URL match
+                for p in pages:
+                    if (p.get("link") or "").rstrip("/") == url.rstrip("/"):
+                        return p
                 return pages[0]
         except Exception:
             pass
+
         return None
 
     # ---------- diagnostics bundle ----------

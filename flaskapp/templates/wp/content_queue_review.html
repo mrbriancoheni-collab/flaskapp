@@ -1,0 +1,142 @@
+{% extends "base_app.html" %}
+{% block title %}Content Queue Review · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Content Queue Review</h1>
+      <p class="text-sm text-gray-500 mt-0.5">
+        Topic clusters discovered from your keyword gaps.
+        {% if last_updated %}Last updated {{ last_updated.strftime('%b %d') }}.{% endif %}
+        Select topics to generate posts for.
+      </p>
+    </div>
+    <a href="{{ url_for('wp_bp.approvals') }}"
+       class="px-4 py-2 rounded-lg border text-sm hover:bg-gray-50 flex items-center gap-2">
+      <i class="fa-solid fa-inbox"></i> Approvals
+    </a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="px-4 py-3 rounded-lg text-sm
+      {% if cat == 'success' %}bg-green-50 text-green-800 border border-green-200
+      {% else %}bg-red-50 text-red-800 border border-red-200{% endif %}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if not site %}
+  <div class="bg-white rounded-xl border p-12 text-center">
+    <i class="fa-brands fa-wordpress text-gray-300 text-5xl mb-4"></i>
+    <p class="text-gray-600 mb-4">Connect a WordPress site first.</p>
+    <a href="{{ url_for('wp_bp.settings') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm">Connect WordPress</a>
+  </div>
+  {% elif not recommendations %}
+  <div class="bg-white rounded-xl border p-12 text-center text-gray-400">
+    <i class="fa-solid fa-magnifying-glass-chart text-5xl mb-4"></i>
+    <p class="font-medium">No recommendations yet.</p>
+    <p class="text-sm mt-1">Connect Google Search Console and wait for the weekly AI analysis to run (Sundays).</p>
+    <a href="{{ url_for('google_bp.index') }}" class="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm">Connect Google</a>
+  </div>
+  {% else %}
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <!-- Select all + Queue button -->
+    <div class="flex items-center gap-3 mb-4">
+      <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+        <input type="checkbox" id="select-all" class="rounded" onchange="toggleAll(this)"> Select all unwritten
+      </label>
+      <button type="submit"
+              class="ml-auto px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition">
+        <i class="fa-solid fa-bolt mr-1"></i> Queue Selected Posts
+      </button>
+    </div>
+
+    <div class="space-y-5">
+      {% for cluster in recommendations %}
+      <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+        <!-- Cluster header -->
+        <div class="px-5 py-4 bg-indigo-50 border-b border-indigo-100">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-layer-group text-indigo-500"></i>
+            <h2 class="font-semibold text-gray-900">{{ cluster.cluster_name }}</h2>
+            {% if cluster.monthly_searches_potential %}
+            <span class="ml-auto text-xs text-gray-500">~{{ cluster.monthly_searches_potential }} searches/mo potential</span>
+            {% endif %}
+          </div>
+          {% if cluster.rationale %}
+          <p class="text-xs text-gray-600 mt-1">{{ cluster.rationale }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Topics -->
+        <div class="divide-y divide-gray-100">
+          {# Pillar topic #}
+          {% if cluster.pillar_topic %}
+          {% set pillar_kw = cluster.pillar_topic %}
+          {% set already_queued = pillar_kw.lower() in queued_keywords %}
+          <label class="flex items-center gap-4 px-5 py-3 {% if already_queued %}opacity-50{% else %}hover:bg-gray-50 cursor-pointer{% endif %}">
+            <input type="checkbox" name="topics"
+                   value="{{ cluster.cluster_name }}|||{{ pillar_kw }}|||1"
+                   class="topic-checkbox rounded"
+                   {% if already_queued %}disabled{% endif %}
+                   {% if not already_queued %}checked{% endif %}>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="text-xs px-1.5 py-0.5 rounded bg-indigo-600 text-white font-medium">Pillar</span>
+                <span class="font-medium text-gray-900 text-sm">{{ pillar_kw }}</span>
+                {% if already_queued %}
+                <span class="text-xs text-green-600"><i class="fa-solid fa-circle-check"></i> Already queued</span>
+                {% endif %}
+              </div>
+              <div class="text-xs text-gray-500 mt-0.5">1,200 words · cornerstone content for this cluster</div>
+            </div>
+          </label>
+          {% endif %}
+
+          {# Supporting topics #}
+          {% for topic in (cluster.supporting_topics or []) %}
+          {% set t_title = topic if topic is string else topic.get('title', '') %}
+          {% set already_queued = t_title.lower() in queued_keywords %}
+          <label class="flex items-center gap-4 px-5 py-3 pl-10 {% if already_queued %}opacity-50{% else %}hover:bg-gray-50 cursor-pointer{% endif %}">
+            <input type="checkbox" name="topics"
+                   value="{{ cluster.cluster_name }}|||{{ t_title }}|||0"
+                   class="topic-checkbox rounded"
+                   {% if already_queued %}disabled{% endif %}
+                   {% if not already_queued %}checked{% endif %}>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="text-xs px-1.5 py-0.5 rounded bg-gray-200 text-gray-700">Supporting</span>
+                <span class="text-gray-800 text-sm">{{ t_title }}</span>
+                {% if already_queued %}
+                <span class="text-xs text-green-600"><i class="fa-solid fa-circle-check"></i> Already queued</span>
+                {% endif %}
+              </div>
+              <div class="text-xs text-gray-500 mt-0.5">800 words</div>
+            </div>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="mt-6 flex justify-end">
+      <button type="submit"
+              class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition">
+        <i class="fa-solid fa-bolt mr-1"></i> Queue Selected Posts
+      </button>
+    </div>
+  </form>
+
+  <script>
+    function toggleAll(cb) {
+      document.querySelectorAll('.topic-checkbox:not([disabled])').forEach(c => c.checked = cb.checked);
+    }
+  </script>
+  {% endif %}
+</div>
+{% endblock %}

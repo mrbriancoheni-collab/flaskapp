@@ -1,6 +1,7 @@
 # app/wp/__init__.py
 from __future__ import annotations
 
+import logging
 import os
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
@@ -17,6 +18,8 @@ from app.wp.wp_client import WPClient
 
 from app import db
 from app.auth.utils import login_required, is_paid_account
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint("my_ai_bp", __name__, url_prefix="/account/my-ai")
 wp_bp = Blueprint("wp_bp", __name__)
@@ -157,20 +160,22 @@ def _openai_key() -> Optional[str]:
 
 def _ai_generate_post(brief: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Produce {title, html, excerpt} from a brief. Uses analyzer (if URL given),
-    otherwise tries OpenAI, and finally falls back to a heuristic stub.
+    Produce {title, html, excerpt} from a brief.
+    Priority: 1) URL analyzer  2) Claude  3) OpenAI  4) heuristic stub
     """
+    import json as _json
     prompt = (brief.get("prompt") or "").strip()
     source_url = (brief.get("source_url") or "").strip() or None
-    tone = brief.get("tone") or ""
-    word_count = (brief.get("word_count") or "").strip()
+    tone = brief.get("tone") or "helpful and practical"
+    word_count = (brief.get("word_count") or "900").strip()
     outline = brief.get("outline") or ""
     primary_kw = brief.get("primary_keyword") or ""
     extra_kws = brief.get("extra_keywords") or []
     topics = brief.get("topics") or []
-    pov_ids = brief.get("pov_ids") or []
+    cluster_name = brief.get("cluster_name") or ""
+    supporting_context = brief.get("supporting_context") or ""
 
-    # 1) Analyzer if source URL provided
+    # 1) Analyzer — scrape and rewrite from a source URL
     if source_url and analyze_url:
         try:
             rep = analyze_url(source_url)
@@ -182,50 +187,110 @@ def _ai_generate_post(brief: Dict[str, Any]) -> Dict[str, Any]:
         except Exception:
             current_app.logger.exception("Analyzer failed for %s", source_url)
 
-    # 2) OpenAI
+    # Build the shared content brief string used by Claude and OpenAI
+    kw_line = f"Primary keyword: {primary_kw}" if primary_kw else ""
+    extra_line = f"Secondary keywords: {', '.join(extra_kws)}" if extra_kws else ""
+    cluster_line = f"Topic cluster: {cluster_name}" if cluster_name else ""
+    context_line = f"Additional context: {supporting_context}" if supporting_context else ""
+    outline_line = f"Suggested outline:\n{outline}" if outline else ""
+    brief_block = "\n".join(filter(None, [kw_line, extra_line, cluster_line, context_line, outline_line, prompt]))
+
+    # 2) Claude (primary AI writer)
+    try:
+        from app.ai_clients import get_ai_client
+        client = get_ai_client()
+        claude_prompt = f"""You are a senior SEO content writer. Write a complete, publish-ready blog post.
+
+Content brief:
+{brief_block}
+
+Requirements:
+- Tone: {tone}
+- Target length: {word_count} words
+- Use H2 and H3 headings for structure
+- Include short paragraphs and bullet lists where appropriate
+- Naturally incorporate the primary keyword in the title, first paragraph, and 2-3 subheadings
+- End with a clear call-to-action paragraph
+
+Return ONLY valid JSON with these exact keys:
+{{"title": "...", "html": "...", "excerpt": "..."}}
+
+The html value must be full HTML article content (no <html>/<body> wrapper).
+The excerpt must be 145-155 characters optimised as a meta description."""
+
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=4000,
+            messages=[{"role": "user", "content": claude_prompt}],
+        )
+        raw = response.content[0].text.strip()
+        # Strip markdown code fences if present
+        import re as _re
+        raw = _re.sub(r'^```(?:json)?\s*', '', raw, flags=_re.MULTILINE)
+        raw = _re.sub(r'\s*```$', '', raw, flags=_re.MULTILINE)
+        obj = _json.loads(raw)
+        if obj.get("title") and obj.get("html"):
+            result = {
+                "title": obj["title"].strip(),
+                "html": obj["html"],
+                "excerpt": (obj.get("excerpt") or "")[:160],
+            }
+            # Try to find a featured image via Unsplash (best-effort)
+            unsplash_key = os.getenv("UNSPLASH_ACCESS_KEY")
+            if unsplash_key and (primary_kw or obj["title"]):
+                try:
+                    import requests as _req
+                    query = primary_kw or obj["title"]
+                    r = _req.get(
+                        "https://api.unsplash.com/search/photos",
+                        params={"query": query, "per_page": 1, "orientation": "landscape"},
+                        headers={"Authorization": f"Client-ID {unsplash_key}"},
+                        timeout=5,
+                    )
+                    if r.status_code == 200:
+                        items = r.json().get("results") or []
+                        if items:
+                            result["featured_image_url"] = items[0]["urls"]["regular"]
+                            result["featured_image_alt"] = items[0].get("alt_description") or query
+                except Exception:
+                    pass
+            return result
+    except Exception:
+        current_app.logger.exception("Claude post generation failed")
+
+    # 3) OpenAI fallback
     key = _openai_key()
     if key:
         try:
-            import json, requests
-            sys = (
+            import requests
+            sys_msg = (
                 "You are a senior content writer for a local services blog. "
                 "Write helpful, original, practical content with clear structure (H2/H3), "
                 "and a short meta-style excerpt. Return STRICT JSON: {title, html, excerpt}."
             )
-            user = {
-                "brief": {
-                    "prompt": prompt,
-                    "tone": tone,
-                    "word_count": word_count,
-                    "outline": outline,
-                    "primary_keyword": primary_kw,
-                    "extra_keywords": extra_kws,
-                    "topics": topics,
-                    "pov_ids": pov_ids,
-                    "source_url": source_url,
-                },
+            user_msg = _json.dumps({
+                "brief": brief_block,
                 "rules": [
-                    "Prefer 800–1200 words unless word_count given.",
+                    f"Target {word_count} words.",
                     "Use short paragraphs and scannable subheads.",
                     "Add simple bullet lists where useful.",
                     "No commentary; JSON only.",
                 ],
-            }
+            })
             r = requests.post(
                 "https://api.openai.com/v1/chat/completions",
                 headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
                 json={
                     "model": (current_app.config or {}).get("OPENAI_MODEL", "gpt-4o-mini"),
                     "temperature": 0.5,
-                    "messages": [{"role": "system", "content": sys},
-                                 {"role": "user", "content": json.dumps(user)}],
+                    "messages": [{"role": "system", "content": sys_msg},
+                                 {"role": "user", "content": user_msg}],
                     "response_format": {"type": "json_object"},
                 },
                 timeout=60,
             )
             if r.status_code < 400:
-                data = r.json()["choices"][0]["message"]["content"]
-                obj = json.loads(data)
+                obj = _json.loads(r.json()["choices"][0]["message"]["content"])
                 return {
                     "title": (obj.get("title") or "New Post").strip(),
                     "html": obj.get("html") or "",
@@ -236,13 +301,11 @@ def _ai_generate_post(brief: Dict[str, Any]) -> Dict[str, Any]:
         except Exception:
             current_app.logger.exception("OpenAI generation failed")
 
-    # 3) Heuristic fallback
+    # 4) Heuristic fallback
     title = topics[0] if topics else (primary_kw or "New Post")
-    if prompt:
-        title = title or "New Post"
     html = f"""<h2>{title}</h2>
 <p>Looking for clear, practical guidance? This post covers {primary_kw or 'a key topic'} with simple steps you can use today.</p>
-<h3>What you’ll learn</h3>
+<h3>What you'll learn</h3>
 <ul>
 <li>How to spot common issues</li>
 <li>Quick fixes you can try</li>
@@ -298,6 +361,40 @@ def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None) -> dict:
                 msg = f"Published post {res.get('id')} → {link}" if link else f"Published post {res.get('id')}"
                 db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info", message=msg))
 
+                # Auto-generate social copy after a live publish (best-effort)
+                if res.get("id") and link and p.get("status", "draft") == "publish":
+                    try:
+                        from app.ai_clients import get_ai_client
+                        _sc = get_ai_client()
+                        _title = p.get("title") or ""
+                        _social_resp = _sc.messages.create(
+                            model="claude-haiku-4-5-20251001",
+                            max_tokens=300,
+                            messages=[{"role": "user", "content":
+                                f"Write a short social media post (2-3 sentences, no hashtags) "
+                                f"promoting this blog post: '{_title}'. URL: {link}. "
+                                f"Make it engaging and conversational. Plain text only."}],
+                        )
+                        _social_copy = _sc and _social_resp.content[0].text.strip()
+                        if _social_copy:
+                            db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info",
+                                                 message=f"[SOCIAL] {_social_copy}"))
+                    except Exception:
+                        pass
+
+                # Auto-inject Article schema on publish (best-effort, never blocks the job)
+                wp_post_id = res.get("id")
+                if wp_post_id and p.get("status", "draft") == "publish":
+                    try:
+                        from app.wp.schema_gen import generate_from_wp_post, inject_schema_into_post
+                        schema_result = generate_from_wp_post(c, wp_post_id, include_article=True, include_faq=True)
+                        if schema_result and schema_result.get("schemas"):
+                            inject_schema_into_post(c, wp_post_id, schema_result["schemas"], replace_existing=True)
+                            db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info",
+                                                 message=f"Auto-injected schema into post {wp_post_id}"))
+                    except Exception:
+                        pass  # schema injection is non-critical
+
             elif job.kind == "refresh":
                 p = job.payload or {}
                 post_id = int(p.get("post_id", 0))
@@ -325,6 +422,20 @@ def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None) -> dict:
                 needs_approval = bool(brief.get("require_approval")) or bool(getattr(site, "autopilot_require_approval", False))
                 status = "draft" if needs_approval else "publish"
 
+                # Upload featured image to WP media library before creating the post
+                featured_media_id = None
+                feat_url = draft.get("featured_image_url")
+                feat_alt = draft.get("featured_image_alt") or (draft.get("title") or "")
+                if feat_url:
+                    try:
+                        import re as _re
+                        slug = _re.sub(r"[^a-z0-9]+", "-", (brief.get("primary_keyword") or "featured").lower()).strip("-")
+                        featured_media_id = c.upload_image_from_url(feat_url, filename=f"{slug}.jpg", alt_text=feat_alt)
+                        db.session.add(WPLog(site_id=site.id, job_id=job.id, level="info",
+                                             message=f"Uploaded featured image (media #{featured_media_id})"))
+                    except Exception:
+                        current_app.logger.exception("Featured image upload failed for ai_generate job %d", job.id)
+
                 res = c.create_or_update_post(
                     title=draft.get("title") or "New Post",
                     html=draft.get("html") or "",
@@ -333,6 +444,7 @@ def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None) -> dict:
                     publish_dt=None,
                     yoast_title=draft.get("title"),
                     yoast_desc=draft.get("excerpt"),
+                    featured_media=featured_media_id,
                 )
                 link = res.get("link")
                 msg = f"AI draft created {res.get('id')} → {link}" if link else f"AI draft created {res.get('id')}"
@@ -852,9 +964,22 @@ def publisher():
     jobs_ = (WPJob.query
              .filter_by(site_id=site.id)
              .order_by(WPJob.created_at.desc()).limit(50).all()) if site else []
-    return render_template("wp/publisher.html", site=site, jobs=jobs_)
 
-# GET legacy “compose” just points at /new
+    # Build a map of job_id → social copy from WPLog [SOCIAL] entries
+    social_copy = {}
+    if site and jobs_:
+        job_ids = [j.id for j in jobs_]
+        logs = WPLog.query.filter(
+            WPLog.site_id == site.id,
+            WPLog.job_id.in_(job_ids),
+            WPLog.message.like("[SOCIAL]%"),
+        ).all()
+        for log in logs:
+            social_copy[log.job_id] = log.message[len("[SOCIAL]"):].strip()
+
+    return render_template("wp/publisher.html", site=site, jobs=jobs_, social_copy=social_copy)
+
+# GET legacy "compose" just points at /new
 @wp_bp.route("/compose", methods=["GET"], endpoint="compose")
 @login_required
 def compose_get_legacy():
@@ -1156,6 +1281,120 @@ def approval_reject(job_id: int):
     return see_other("wp_bp.approvals")
 
 
+@wp_bp.route("/approvals/bulk", methods=["POST"], endpoint="approval_bulk")
+@login_required
+def approval_bulk():
+    site = _current_site()
+    if not site:
+        abort(403)
+    action = request.form.get("bulk_action")  # "approve" or "reject"
+    job_ids = request.form.getlist("job_ids")
+    if not job_ids or action not in ("approve", "reject"):
+        flash("No jobs selected.", "warning")
+        return see_other("wp_bp.approvals")
+
+    count = 0
+    for jid in job_ids:
+        try:
+            job = WPJob.query.get(int(jid))
+            if not job or job.site_id != site.id:
+                continue
+            if action == "approve":
+                p = dict(job.payload or {})
+                p["needs_approval"] = False
+                p["status"] = "future" if p.get("status") == "future" else "publish"
+                job.payload = p
+            else:
+                job.status = "error"
+                job.last_error = "Bulk rejected"
+            count += 1
+        except Exception:
+            pass
+    db.session.commit()
+    flash(f"{'Approved' if action == 'approve' else 'Rejected'} {count} post(s).", "success")
+    return see_other("wp_bp.approvals")
+
+
+@wp_bp.route("/content-queue", methods=["GET", "POST"], endpoint="content_queue_review")
+@login_required
+def content_queue_review():
+    """Review pending topic cluster recommendations and selectively queue posts."""
+    site = _current_site()
+    aid = _account_id()
+    recommendations = []
+    last_updated = None
+    queued_keywords = set()
+
+    if aid:
+        try:
+            from app.models_seo import SEOScanResult
+            rec_row = SEOScanResult.latest(aid, "content_recommendations")
+            if rec_row and rec_row.data:
+                recommendations = rec_row.data.get("recommendations") or []
+                last_updated = rec_row.created_at
+        except Exception:
+            pass
+
+    if site:
+        existing = WPJob.query.filter(
+            WPJob.site_id == site.id,
+            WPJob.status.in_(["queued", "running", "done"]),
+            WPJob.kind == "ai_generate",
+        ).all()
+        queued_keywords = {(j.payload or {}).get("primary_keyword", "").lower().strip() for j in existing}
+
+    if request.method == "POST" and site:
+        selected = request.form.getlist("topics")
+        cluster_map = {}
+        for rec in recommendations:
+            cluster_map[rec.get("cluster_name", "")] = rec
+        queued = 0
+        for topic_str in selected:
+            # topic_str = "cluster_name|||topic_title|||is_pillar"
+            parts = topic_str.split("|||")
+            if len(parts) < 2:
+                continue
+            cluster_name, kw = parts[0], parts[1]
+            is_pillar = parts[2] == "1" if len(parts) > 2 else False
+            if kw.lower() in queued_keywords:
+                continue
+            rec = cluster_map.get(cluster_name, {})
+            all_topics = []
+            if rec.get("pillar_topic"):
+                all_topics.append(rec["pillar_topic"])
+            all_topics += [t if isinstance(t, str) else t.get("title", "") for t in (rec.get("supporting_topics") or [])]
+            payload = {
+                "primary_keyword": kw,
+                "cluster_name": cluster_name,
+                "is_pillar": is_pillar,
+                "supporting_context": (
+                    f"Part of the '{cluster_name}' topic cluster. "
+                    f"Related topics: {', '.join(t for t in all_topics if t != kw)}"
+                ),
+                "word_count": "1200" if is_pillar else "800",
+                "status": "draft" if getattr(site, "autopilot_require_approval", True) else "publish",
+                "needs_approval": bool(getattr(site, "autopilot_require_approval", True)),
+                "require_approval": bool(getattr(site, "autopilot_require_approval", True)),
+                "source": "manual_queue",
+            }
+            job = WPJob(site_id=site.id, kind="ai_generate", payload=payload)
+            db.session.add(job)
+            queued_keywords.add(kw.lower())
+            queued += 1
+        db.session.commit()
+        if queued:
+            flash(f"Queued {queued} post(s) for generation.", "success")
+        return see_other("wp_bp.content_queue_review")
+
+    return render_template(
+        "wp/content_queue_review.html",
+        site=site,
+        recommendations=recommendations,
+        last_updated=last_updated,
+        queued_keywords=queued_keywords,
+    )
+
+
 # ---------- schedule view ----------
 
 @wp_bp.route("/schedule", methods=["GET"], endpoint="schedule")
@@ -1249,6 +1488,7 @@ def insights():
 
     seo_alerts = []
     seo_unread = 0
+    aid = None
     try:
         from app.seo.monitor import get_unread_alerts
         aid = _account_id()
@@ -1258,9 +1498,60 @@ def insights():
     except Exception:
         pass
 
+    autopilot_stats = {}
+    if site:
+        from datetime import timedelta
+        week_ago = datetime.utcnow() - timedelta(days=7)
+        queued_count = WPJob.query.filter(
+            WPJob.site_id == site.id, WPJob.status == "queued",
+            WPJob.kind.in_(["publish", "ai_generate"])
+        ).count()
+        done_this_week = WPJob.query.filter(
+            WPJob.site_id == site.id, WPJob.status == "done",
+            WPJob.kind.in_(["publish", "ai_generate"]),
+            WPJob.updated_at >= week_ago
+        ).count()
+        pending_jobs = WPJob.query.filter(
+            WPJob.site_id == site.id, WPJob.status == "queued"
+        ).all()
+        pending_approval_count = sum(1 for j in pending_jobs if (j.payload or {}).get("needs_approval"))
+        autopilot_stats = {
+            "enabled": bool(getattr(site, "autopilot_enabled", False)),
+            "daily_new": getattr(site, "autopilot_daily_new", 1),
+            "require_approval": bool(getattr(site, "autopilot_require_approval", True)),
+            "queued_count": queued_count,
+            "done_this_week": done_this_week,
+            "pending_approval_count": pending_approval_count,
+        }
+
+    post_gsc = {}
+    if live_posts and aid:
+        try:
+            from app.seo.keyword_gaps import _gsc_fetch, _rows_to_dicts, _date_range
+            from app.google import _is_connected, _get_gsc_selected_site
+            if _is_connected(aid, "gsc"):
+                gsc_site_url = _get_gsc_selected_site(aid)
+                if gsc_site_url:
+                    start, end = _date_range(28)
+                    rows = _gsc_fetch(aid, gsc_site_url, start, end, dimensions=["page"], row_limit=500)
+                    for row in (rows or []):
+                        url = (row.get("keys") or [""])[0]
+                        for lp in live_posts:
+                            if lp["link"] and (lp["link"].rstrip("/") == url.rstrip("/") or url in lp["link"]):
+                                post_gsc[lp["link"]] = {
+                                    "clicks": row.get("clicks", 0),
+                                    "impressions": row.get("impressions", 0),
+                                    "position": round(row.get("position", 0), 1),
+                                    "ctr": round(row.get("ctr", 0) * 100, 1),
+                                }
+        except Exception:
+            pass
+
     return render_template("wp/insights.html", jobs=jobs, ga=ga, gsc=gsc,
                            seo_alerts=seo_alerts, seo_unread=seo_unread,
-                           site=site, live_posts=live_posts)
+                           site=site, live_posts=live_posts,
+                           autopilot_stats=autopilot_stats, post_gsc=post_gsc,
+                           aid=aid)
 
 # ---------- cron (no login) ----------
 
@@ -1730,6 +2021,37 @@ Generate a comprehensive content brief as a JSON object with exactly these keys:
                 brief = _json.loads(match.group())
                 brief["keyword"] = keyword
                 brief["gsc_data"] = gsc_data
+
+                # Enrich with AI-generated competitor content guidance
+                try:
+                    from app.ai_clients import get_ai_client
+                    _client = get_ai_client()
+                    _enrich_prompt = (
+                        f"You are an SEO content strategist. For the keyword '{keyword}', "
+                        f"describe what content the top-ranking pages typically include "
+                        f"(headings, subtopics, word count, content format, key entities to mention). "
+                        f"Return a JSON object with: "
+                        f"typical_word_count (int), "
+                        f"recommended_headings (list of 5-8 H2 titles), "
+                        f"key_entities (list of 5-10 important terms to mention), "
+                        f"content_format (e.g. 'how-to guide', 'listicle', 'comparison'), "
+                        f"unique_angle (1-sentence suggestion for differentiation). "
+                        f"JSON only."
+                    )
+                    _resp = _client.messages.create(
+                        model="claude-haiku-4-5-20251001",
+                        max_tokens=600,
+                        messages=[{"role": "user", "content": _enrich_prompt}],
+                    )
+                    import re as _re2, json as _json2
+                    _raw = _resp.content[0].text.strip()
+                    _raw = _re2.sub(r'^```(?:json)?\s*', '', _raw, flags=_re2.MULTILINE)
+                    _raw = _re2.sub(r'\s*```$', '', _raw, flags=_re2.MULTILINE)
+                    _enrichment = _json2.loads(_raw)
+                    if brief and isinstance(brief, dict):
+                        brief["serp_enrichment"] = _enrichment
+                except Exception:
+                    pass
             else:
                 error = "Could not parse AI response. Please try again."
 
@@ -1873,14 +2195,21 @@ def edit_post_submit(post_id: int):
     if needs_approval:
         status = "draft"
 
+    try:
+        existing_post = WPClient(site.base_url, site.username, site.app_password).get_post(post_id)
+    except Exception:
+        existing_post = {}
+
     payload = {
-        "post_id":      post_id,
-        "title":        title,
-        "html":         html_body,
-        "excerpt":      excerpt,
-        "yoast_desc":   yoast_desc,
-        "status":       status,
+        "post_id":        post_id,
+        "title":          title,
+        "html":           html_body,
+        "excerpt":        excerpt,
+        "yoast_desc":     yoast_desc,
+        "status":         status,
         "needs_approval": needs_approval,
+        "before_title":   (existing_post.get("title") or {}).get("rendered", ""),
+        "before_excerpt": (existing_post.get("excerpt") or {}).get("rendered", ""),
     }
     job = WPJob(site_id=site.id, kind="edit", payload=payload)
     db.session.add(job)
@@ -2966,6 +3295,35 @@ def orphan_pages():
         site=site,
         result=result,
         error=error,
+    )
+
+
+@wp_bp.route("/seo-health", methods=["GET"], endpoint="seo_health")
+@login_required
+def seo_health():
+    """Consolidated SEO Health dashboard — last scan results for all diagnostic tools."""
+    site = _current_site()
+    aid = _account_id()
+
+    # Load last scan result for each tool that persists results to SEOScanResult
+    scans = {}
+    if aid:
+        try:
+            from app.models_seo import SEOScanResult
+            for scan_type in ["seo_foundation", "content_quality", "broken_links",
+                               "redirects", "index_coverage", "orphan_pages",
+                               "tech_seo", "aeo_audit", "image_seo", "freshness"]:
+                row = SEOScanResult.latest(aid, scan_type, site_id=site.id if site else None)
+                if row:
+                    scans[scan_type] = row
+        except Exception:
+            pass
+
+    return render_template(
+        "wp/seo_health.html",
+        site=site,
+        scans=scans,
+        now=datetime.utcnow(),
     )
 
 

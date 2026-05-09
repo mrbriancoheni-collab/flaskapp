@@ -3,76 +3,164 @@
 
 {% block content %}
 <div class="space-y-6">
+
+  <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-2xl font-semibold">Insights</h1>
       {% if site and site.base_url %}
-        <p class="text-sm text-gray-500 mt-0.5">Connected site: <span class="font-mono text-xs text-indigo-700">{{ site.base_url }}</span></p>
+        <p class="text-sm text-gray-500 mt-0.5">Connected: <span class="font-mono text-xs text-indigo-700">{{ site.base_url }}</span></p>
       {% else %}
         <p class="text-sm text-red-500 mt-0.5">No WordPress site connected. <a href="{{ url_for('wp_bp.settings') }}" class="underline">Connect one →</a></p>
       {% endif %}
     </div>
-    <a href="{{ url_for('wp_bp.publisher') }}" class="text-indigo-600 hover:underline">Open Publisher</a>
+    <a href="{{ url_for('wp_bp.publisher') }}" class="text-indigo-600 hover:underline text-sm">Open Publisher →</a>
   </div>
 
-  {# ── Live posts from connected WP site ── #}
-  <div class="rounded-xl border bg-white p-5">
-    <div class="flex items-center gap-2 mb-3">
-      <i class="fa-brands fa-wordpress text-[#21759b] text-xl"></i>
-      <h2 class="font-semibold">Live Posts on Your Site</h2>
-      {% if live_posts %}
-        <span class="ml-auto text-xs text-gray-400">Latest {{ live_posts|length }} published</span>
-      {% endif %}
+  <!-- Autopilot Status Panel -->
+  {% if autopilot_stats %}
+  <div class="rounded-xl border {% if autopilot_stats.enabled %}border-indigo-200 bg-indigo-50{% else %}bg-white{% endif %} p-5">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-robot {% if autopilot_stats.enabled %}text-indigo-500{% else %}text-gray-400{% endif %}"></i>
+        <h2 class="font-semibold text-gray-900">Autopilot</h2>
+        <span class="text-xs px-2 py-0.5 rounded-full font-medium
+          {% if autopilot_stats.enabled %}bg-indigo-600 text-white{% else %}bg-gray-200 text-gray-600{% endif %}">
+          {{ 'Active' if autopilot_stats.enabled else 'Off' }}
+        </span>
+      </div>
+      <a href="{{ url_for('wp_bp.settings') }}" class="text-xs text-gray-400 hover:text-indigo-600">Configure →</a>
     </div>
-    {% if live_posts %}
-      <ul class="divide-y">
-        {% for p in live_posts %}
-        <li class="py-2 flex items-center justify-between gap-4">
-          <a href="{{ p.link }}" target="_blank" rel="noopener"
-             class="text-sm text-indigo-700 hover:underline truncate flex-1">{{ p.title }}</a>
-          <span class="text-xs text-gray-400 shrink-0">{{ p.date }}</span>
-        </li>
-        {% endfor %}
-      </ul>
-    {% elif site and site.base_url %}
-      <p class="text-sm text-gray-500">Could not load posts — check your WordPress connection in <a href="{{ url_for('wp_bp.settings') }}" class="text-indigo-600 hover:underline">Settings</a>.</p>
-    {% else %}
-      <p class="text-sm text-gray-500">Connect a WordPress site to see your live posts here.</p>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="text-center">
+        <div class="text-2xl font-bold {% if autopilot_stats.done_this_week %}text-green-600{% else %}text-gray-400{% endif %}">{{ autopilot_stats.done_this_week }}</div>
+        <div class="text-xs text-gray-500 mt-0.5">Published this week</div>
+      </div>
+      <div class="text-center">
+        <div class="text-2xl font-bold {% if autopilot_stats.queued_count %}text-indigo-600{% else %}text-gray-400{% endif %}">{{ autopilot_stats.queued_count }}</div>
+        <div class="text-xs text-gray-500 mt-0.5">In queue</div>
+      </div>
+      <div class="text-center">
+        <div class="text-2xl font-bold {% if autopilot_stats.pending_approval_count %}text-amber-600{% else %}text-gray-400{% endif %}">{{ autopilot_stats.pending_approval_count }}</div>
+        <div class="text-xs text-gray-500 mt-0.5">Awaiting approval</div>
+      </div>
+      <div class="text-center">
+        <div class="text-2xl font-bold text-gray-700">{{ autopilot_stats.daily_new }}</div>
+        <div class="text-xs text-gray-500 mt-0.5">Posts/day limit</div>
+      </div>
+    </div>
+    {% if autopilot_stats.pending_approval_count %}
+    <div class="mt-4 pt-4 border-t {% if autopilot_stats.enabled %}border-indigo-200{% else %}border-gray-200{% endif %}">
+      <a href="{{ url_for('wp_bp.approvals') }}"
+         class="inline-flex items-center gap-2 text-sm text-amber-600 hover:text-amber-700 font-medium">
+        <i class="fa-solid fa-clock"></i>
+        {{ autopilot_stats.pending_approval_count }} post{{ 's' if autopilot_stats.pending_approval_count != 1 else '' }} waiting for your approval
+        <i class="fa-solid fa-arrow-right text-xs"></i>
+      </a>
+    </div>
     {% endif %}
   </div>
+  {% endif %}
 
-  <!-- Optional GA/GSC tiles -->
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <!-- GA + GSC tiles -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <div class="rounded-xl border bg-white p-5">
-      <div class="flex items-center gap-2 mb-2">
-        <i class="fa-brands fa-google text-xl"></i>
+      <div class="flex items-center gap-2 mb-3">
+        <i class="fa-brands fa-google text-lg text-blue-500"></i>
         <h2 class="font-semibold">Google Analytics</h2>
       </div>
       {% if ga %}
-        <div class="text-sm text-gray-700">Sessions (7d): <strong>{{ ga.sessions_7d }}</strong></div>
-        <div class="text-sm text-gray-700">Users (7d): <strong>{{ ga.users_7d }}</strong></div>
-        <div class="text-xs text-gray-500 mt-2">As of {{ ga.as_of }}</div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><div class="text-xl font-bold text-gray-900">{{ ga.sessions_7d }}</div><div class="text-xs text-gray-500">Sessions (7d)</div></div>
+          <div><div class="text-xl font-bold text-gray-900">{{ ga.users_7d }}</div><div class="text-xs text-gray-500">Users (7d)</div></div>
+        </div>
+        <div class="text-xs text-gray-400 mt-2">As of {{ ga.as_of }}</div>
       {% else %}
-        <p class="text-sm text-gray-600">Not connected. <a href="{{ url_for('google_bp.index') }}" class="text-indigo-600 hover:underline">Connect Google</a></p>
+        <p class="text-sm text-gray-500">Not connected. <a href="{{ url_for('google_bp.index') }}" class="text-indigo-600 hover:underline">Connect Google →</a></p>
       {% endif %}
     </div>
-
     <div class="rounded-xl border bg-white p-5">
-      <div class="flex items-center gap-2 mb-2">
-        <i class="fa-brands fa-google text-xl"></i>
+      <div class="flex items-center gap-2 mb-3">
+        <i class="fa-brands fa-google text-lg text-green-600"></i>
         <h2 class="font-semibold">Search Console</h2>
       </div>
       {% if gsc %}
-        <div class="text-sm text-gray-700">Clicks (28d): <strong>{{ gsc.clicks_28d }}</strong></div>
-        <div class="text-sm text-gray-700">Impressions (28d): <strong>{{ gsc.impressions_28d }}</strong></div>
-        <div class="text-xs text-gray-500 mt-2">As of {{ gsc.as_of }}</div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><div class="text-xl font-bold text-gray-900">{{ gsc.clicks_28d }}</div><div class="text-xs text-gray-500">Clicks (28d)</div></div>
+          <div><div class="text-xl font-bold text-gray-900">{{ gsc.impressions_28d }}</div><div class="text-xs text-gray-500">Impressions (28d)</div></div>
+        </div>
+        <div class="text-xs text-gray-400 mt-2">As of {{ gsc.as_of }}</div>
       {% else %}
-        <p class="text-sm text-gray-600">Not connected. <a href="{{ url_for('google_bp.index') }}" class="text-indigo-600 hover:underline">Connect Google</a></p>
+        <p class="text-sm text-gray-500">Not connected. <a href="{{ url_for('google_bp.index') }}" class="text-indigo-600 hover:underline">Connect Google →</a></p>
       {% endif %}
     </div>
   </div>
 
-  <!-- SEO Monitoring Alerts widget -->
+  <!-- Live Posts + Per-post GSC Performance -->
+  <div class="rounded-xl border bg-white overflow-hidden">
+    <div class="px-5 py-4 border-b bg-gray-50 flex items-center gap-2">
+      <i class="fa-brands fa-wordpress text-[#21759b]"></i>
+      <h2 class="font-semibold">Live Posts — Search Performance</h2>
+      {% if live_posts %}
+        <span class="ml-auto text-xs text-gray-400">Latest {{ live_posts|length }} published</span>
+      {% endif %}
+      {% if not post_gsc %}
+        <span class="text-xs text-gray-400 ml-auto">Connect GSC for per-post click data</span>
+      {% endif %}
+    </div>
+    {% if live_posts %}
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 border-b">
+          <tr>
+            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600">Post</th>
+            <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600">Clicks</th>
+            <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600">Impressions</th>
+            <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600">Avg Position</th>
+            <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600">CTR</th>
+            <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600">Published</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for p in live_posts %}
+          {% set pg = post_gsc.get(p.link, {}) %}
+          <tr class="hover:bg-indigo-50 transition">
+            <td class="px-4 py-2.5">
+              <a href="{{ p.link }}" target="_blank" rel="noopener"
+                 class="font-medium text-gray-900 hover:text-indigo-600 line-clamp-1">{{ p.title }}</a>
+            </td>
+            <td class="px-4 py-2.5 text-right font-medium {% if pg.get('clicks', 0) > 0 %}text-green-600{% else %}text-gray-300{% endif %}">
+              {{ pg.get('clicks', '—') }}
+            </td>
+            <td class="px-4 py-2.5 text-right {% if pg.get('impressions', 0) > 0 %}text-gray-700{% else %}text-gray-300{% endif %}">
+              {{ pg.get('impressions', '—') }}
+            </td>
+            <td class="px-4 py-2.5 text-right">
+              {% if pg.get('position') %}
+                <span class="font-medium {% if pg.position <= 3 %}text-green-600{% elif pg.position <= 10 %}text-amber-600{% else %}text-red-500{% endif %}">
+                  #{{ pg.position }}
+                </span>
+              {% else %}
+                <span class="text-gray-300">—</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-2.5 text-right text-gray-500 text-xs">
+              {{ (pg.get('ctr') | string + '%') if pg.get('ctr') else '—' }}
+            </td>
+            <td class="px-4 py-2.5 text-right text-xs text-gray-400">{{ p.date }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% elif site and site.base_url %}
+      <p class="px-5 py-4 text-sm text-gray-500">Could not load posts — check your WordPress connection in <a href="{{ url_for('wp_bp.settings') }}" class="text-indigo-600 hover:underline">Settings</a>.</p>
+    {% else %}
+      <p class="px-5 py-4 text-sm text-gray-500">Connect a WordPress site to see your live posts here.</p>
+    {% endif %}
+  </div>
+
+  <!-- SEO Alerts -->
   {% if seo_alerts %}
   <div class="rounded-xl border bg-white p-5">
     <div class="flex items-center justify-between mb-3">
@@ -88,7 +176,7 @@
     <ul class="space-y-2">
       {% for alert in seo_alerts %}
       <li class="flex items-start gap-3 text-sm">
-        <span class="mt-0.5 shrink-0 w-2 h-2 rounded-full
+        <span class="mt-1 shrink-0 w-2 h-2 rounded-full
           {% if alert.severity == 'critical' %}bg-red-500
           {% elif alert.severity == 'warning' %}bg-amber-400
           {% else %}bg-blue-400{% endif %}"></span>
@@ -99,68 +187,5 @@
   </div>
   {% endif %}
 
-  <!-- Recent analyses/publish drafts -->
-  <div class="space-y-4">
-    <h2 class="text-lg font-semibold">Content Queue <span class="text-sm font-normal text-gray-400">(jobs created in this app)</span></h2>
-
-    {% for j in jobs %}
-      {% if j.kind == "publish" and j.payload %}
-        <div class="rounded-xl border bg-white p-5">
-          <div class="flex items-center justify-between">
-            <div class="font-medium">
-              {{ j.payload.title or "Draft" }}
-              <span class="ml-2 text-xs px-2 py-0.5 rounded bg-gray-100">{{ j.status }}</span>
-            </div>
-            <div class="text-sm text-gray-500">Job #{{ j.id }} · {{ j.created_at }}</div>
-          </div>
-
-          {% if j.payload.findings or j.payload.recommendations %}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-              <div>
-                <div class="font-semibold mb-1">Findings</div>
-                <ul class="list-disc ml-5 text-sm">
-                  {% for f in j.payload.findings %}<li>{{ f }}</li>{% endfor %}
-                  {% if not j.payload.findings %}<li>None recorded.</li>{% endif %}
-                </ul>
-              </div>
-              <div>
-                <div class="font-semibold mb-1">Recommendations</div>
-                <ul class="list-disc ml-5 text-sm">
-                  {% for r in j.payload.recommendations %}<li>{{ r }}</li>{% endfor %}
-                  {% if not j.payload.recommendations %}<li>None recorded.</li>{% endif %}
-                </ul>
-              </div>
-            </div>
-          {% endif %}
-
-          {% if j.payload.html %}
-            <details class="mt-3">
-              <summary class="cursor-pointer text-indigo-700 hover:underline">Draft Preview</summary>
-              <div class="prose max-w-none p-3 border rounded mt-2 bg-gray-50">
-                {{ j.payload.html | safe }}
-              </div>
-            </details>
-          {% endif %}
-
-          <div class="mt-4 flex items-center gap-2">
-            {% if j.payload.needs_approval %}
-              <form method="post" action="{{ url_for('wp_bp.queue_post') }}" data-no-auto-csrf>
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="title" value="{{ j.payload.title or '' }}">
-                <input type="hidden" name="html" value="{{ j.payload.html or '' }}">
-                <input type="hidden" name="excerpt" value="{{ j.payload.excerpt or '' }}">
-                <button class="px-4 py-2 rounded text-white bg-green-600 hover:bg-green-700">
-                  Approve &amp; Publish
-                </button>
-              </form>
-            {% endif %}
-            <a href="{{ url_for('wp_bp.jobs') }}" class="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded">View in Jobs</a>
-          </div>
-        </div>
-      {% endif %}
-    {% else %}
-      <div class="text-gray-500">No analysis or publish jobs yet.</div>
-    {% endfor %}
-  </div>
 </div>
 {% endblock %}

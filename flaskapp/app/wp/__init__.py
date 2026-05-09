@@ -555,6 +555,22 @@ def _build_seo_fix_payload(site, url: str, keyword: str = "",
 
         c = WPClient(site.base_url, site.username, site.app_password)
         post = c.find_post_by_url(url)
+
+        # For the homepage, try the WP settings front-page ID directly
+        if not post:
+            try:
+                base = site.base_url.rstrip("/")
+                url_stripped = url.rstrip("/")
+                if url_stripped in (base, base + "/"):
+                    settings = c._req("GET", "/wp/v2/settings").json()
+                    page_id = settings.get("page_on_front")
+                    if page_id:
+                        resp = c._req("GET", f"/wp/v2/pages/{page_id}").json()
+                        if resp.get("id"):
+                            post = resp
+            except Exception:
+                pass
+
         if not post:
             return None
         post_id = int(post["id"])
@@ -587,7 +603,9 @@ def _build_seo_fix_payload(site, url: str, keyword: str = "",
                 yoast_desc = (schema_result or {}).get("description", "")[:155] if schema_result else ""
                 break
 
-        if not schema_html and not yoast_desc:
+        # For manual source always queue so the user gets feedback;
+        # for autopilot skip if there's genuinely nothing to apply.
+        if source != "manual" and not schema_html and not yoast_desc:
             return None
 
         return {

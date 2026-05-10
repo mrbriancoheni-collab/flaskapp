@@ -577,6 +577,7 @@ def _build_seo_fix_payload(site, url: str, keyword: str = "",
 
         # Generate schema
         schema_html = ""
+        schema_result = None
         try:
             from app.wp.schema_gen import generate_from_url
             schema_result = generate_from_url(

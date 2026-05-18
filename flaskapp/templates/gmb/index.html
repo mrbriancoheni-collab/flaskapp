@@ -382,6 +382,16 @@
 {# Include the modal (expects: suggestions, profile, connected) #}
 {% include 'gmb/_suggestions_modal.html' %}
 
+<script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+</script>
 {# Scripts: open modal, run optimizer via JSON, show spinner, handle Turbo/HTMX #}
 <script nonce="{{ g.csp_nonce }}">
 (function () {
@@ -428,7 +438,7 @@
           openSuggestionsModal();
         } catch (e) {
           console.error(e);
-          alert('Could not run AI Optimizer. Please try again.');
+          showToast('Could not run AI optimizer. Please try again.', 'error');
         } finally {
           hideOverlay();
         }
@@ -470,10 +480,10 @@ document.getElementById('gmb-ai-btn')?.addEventListener('click', async () => {
       // reload to show the suggestions panel (stored in session)
       location.href = "{{ url_for('gmb_bp.index') }}?show=suggestions";
     } else {
-      alert("AI Optimizer failed: " + (data.error || "unknown error"));
+      showToast("AI optimizer failed: " + (data.error || "unknown error"), 'error');
     }
   } catch (e) {
-    alert("Network error running AI Optimizer");
+    showToast("Network error — please try again.", 'error');
   }
 });
 </script>
@@ -488,10 +498,10 @@ async function runGmbOptimizer() {
       // show your modal / hydrate the suggestions panel
       window.location = "/account/gmb?show=suggestions";
     } else {
-      alert("AI Optimizer failed: " + (data.error || "Unknown error"));
+      showToast("AI optimizer failed: " + (data.error || "Unknown error"), 'error');
     }
   } catch (e) {
-    alert("Network error running optimizer.");
+    showToast("Network error — please try again.", 'error');
   } finally {
     btn?.removeAttribute('disabled');
   }

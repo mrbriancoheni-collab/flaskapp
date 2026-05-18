@@ -1,18 +1,18 @@
 {% extends "base_app.html" %}
-{% block title %}A/B Ad Tests · Google Ads{% endblock %}
+{% block title %}Side-by-side Ad Tests · Google Ads{% endblock %}
 
 {% block content %}
 <div class="max-w-6xl mx-auto space-y-6">
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">A/B Ad Tests</h1>
-      <p class="text-gray-500 text-sm mt-1">Compare ad variants and pick winners — last 30 days data</p>
+      <h1 class="text-2xl font-bold text-gray-900">Test which ad gets more clicks</h1>
+      <p class="text-gray-500 text-sm mt-1">Run two or more ads side-by-side and see which one wins — last 30 days data</p>
     </div>
     <div class="flex items-center gap-3">
       <button id="create-btn"
               class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 flex items-center gap-2">
-        <i class="fa-solid fa-plus"></i>New Test
+        <i class="fa-solid fa-plus"></i>New Side-by-side Test
       </button>
       <a href="{{ url_for('gads_bp.optimize', tab='ads') }}" class="text-sm text-gray-500 hover:text-indigo-600">
         ← Back to Ads
@@ -23,7 +23,7 @@
   {% if not tests %}
   <div class="bg-white rounded-xl shadow-sm border p-12 text-center">
     <i class="fa-solid fa-flask text-gray-300 text-5xl mb-4"></i>
-    <p class="text-gray-600 mb-2">No A/B tests running.</p>
+    <p class="text-gray-600 mb-2">No side-by-side tests running.</p>
     <p class="text-sm text-gray-400">Create a test to compare ad headlines and descriptions side by side.</p>
   </div>
   {% else %}
@@ -55,7 +55,7 @@
           <div class="font-semibold text-gray-900">{{ test.total_clicks | int if test.total_clicks else 0 }}</div>
         </div>
         <div class="py-3">
-          <div class="text-xs text-gray-500">Conversions</div>
+          <div class="text-xs text-gray-500">Leads</div>
           <div class="font-semibold text-green-600">{{ test.total_conv | int if test.total_conv else 0 }}</div>
         </div>
         <div class="py-3">
@@ -107,7 +107,7 @@
 <div id="create-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden z-50 flex items-center justify-center p-4">
   <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-screen overflow-y-auto">
     <div class="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white">
-      <h2 class="font-semibold text-gray-900">Create A/B Test</h2>
+      <h2 class="font-semibold text-gray-900">Create Side-by-side Test</h2>
       <button id="close-modal" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
     </div>
     <div class="px-6 py-4 space-y-4">
@@ -176,6 +176,14 @@
 <div id="action-status" class="fixed bottom-4 right-4 hidden z-50 max-w-sm rounded-xl px-4 py-3 text-sm shadow-lg"></div>
 
 <script>
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 (function () {
   // Modal
   const modal = document.getElementById('create-modal');
@@ -209,7 +217,7 @@
     const finalUrl = document.getElementById('test-url').value.trim();
 
     if (!testName || !agId || !finalUrl) {
-      alert('Test name, ad group ID and URL are required.');
+      showToast('Test name, ad group ID and URL are required.', 'error');
       return;
     }
 
@@ -224,7 +232,7 @@
     }));
 
     if (variants.some(v => !v.headline1)) {
-      alert('All variants need at least Headline 1.');
+      showToast('All variants need at least Headline 1.', 'error');
       return;
     }
 
@@ -237,7 +245,7 @@
     if (data.ok) {
       window.location.reload();
     } else {
-      alert('Error: ' + data.error);
+      showToast('Error: ' + data.error, 'error');
     }
   });
 
@@ -246,7 +254,13 @@
     btn.addEventListener('click', async function () {
       const group = this.dataset.group;
       const winnerId = parseInt(this.dataset.winner);
-      if (!confirm('Pause all other variants and declare this ad the winner?')) return;
+      const modal = document.getElementById('confirm-winner-modal');
+      const ok = await new Promise(resolve => {
+        modal.classList.remove('hidden');
+        modal.querySelector('[data-action="ok"]').onclick = () => { modal.classList.add('hidden'); resolve(true); };
+        modal.querySelector('[data-action="cancel"]').onclick = () => { modal.classList.add('hidden'); resolve(false); };
+      });
+      if (!ok) return;
 
       const r = await fetch(`/account/google/ads/ab-tests/${group}/pick-winner`, {
         method: 'POST',
@@ -263,7 +277,7 @@
           setTimeout(() => window.location.reload(), 2000);
         }
       } else {
-        alert('Error: ' + data.error);
+        showToast('Error: ' + data.error, 'error');
       }
     });
   });

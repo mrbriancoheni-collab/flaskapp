@@ -1,7 +1,7 @@
 {# templates/linkedin/ads.html #}
 {% extends "base_app.html" %}
 {% set SECTION = 'linkedin' %}
-{% block title %}LinkedIn Ads Optimizer{% endblock %}
+{% block title %}Get more leads from LinkedIn ads{% endblock %}
 
 {% block content %}
 {% set _connected = (connected if connected is defined else false) %}
@@ -11,13 +11,13 @@
 <div class="max-w-7xl mx-auto space-y-6">
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-semibold">LinkedIn Ads Optimizer</h1>
+      <h1 class="text-2xl font-semibold">Get more leads from LinkedIn ads</h1>
       <p class="text-gray-500">
         {% if _connected %}
           Managing <span class="font-medium">{{ _data.account_name or 'LinkedIn Ads Account' }}</span>.
         {% else %}
           <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 text-[11px] mr-2">Demo Mode</span>
-          Connect your LinkedIn account to manage live campaigns.
+          Connect your LinkedIn account to run real ad campaigns and track results.
         {% endif %}
       </p>
     </div>
@@ -82,19 +82,19 @@
   {% if _data.campaigns %}
   <div class="rounded-lg border bg-white overflow-hidden">
     <div class="p-4 border-b bg-gray-50">
-      <h2 class="font-semibold">Active Campaigns</h2>
-      <p class="text-xs text-gray-500 mt-1">{{ _data.campaigns|length }} campaign(s)</p>
+      <h2 class="font-semibold">Active ad campaigns</h2>
+      <p class="text-xs text-gray-500 mt-1">{{ _data.campaigns|length }} ad campaign(s) currently running</p>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="bg-gray-50 border-b">
           <tr>
-            <th class="px-4 py-3 text-left font-medium text-gray-700">Campaign Name</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-700">Ad campaign name</th>
             <th class="px-4 py-3 text-left font-medium text-gray-700">Type</th>
             <th class="px-4 py-3 text-left font-medium text-gray-700">Status</th>
-            <th class="px-4 py-3 text-left font-medium text-gray-700">Daily Budget</th>
-            <th class="px-4 py-3 text-left font-medium text-gray-700">Objective</th>
-            <th class="px-4 py-3 text-left font-medium text-gray-700">Targeting</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-700">Daily budget</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-700">What you want to get</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-700">Who you want to reach</th>
           </tr>
         </thead>
         <tbody>
@@ -132,8 +132,8 @@
   {% if _data.creatives %}
   <div class="rounded-lg border bg-white overflow-hidden">
     <div class="p-4 border-b bg-gray-50">
-      <h2 class="font-semibold">Ad Creatives Performance</h2>
-      <p class="text-xs text-gray-500 mt-1">{{ _data.creatives|length }} active creative(s)</p>
+      <h2 class="font-semibold">How your ads are doing</h2>
+      <p class="text-xs text-gray-500 mt-1">{{ _data.creatives|length }} active ad(s)</p>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
@@ -141,10 +141,10 @@
           <tr>
             <th class="px-4 py-3 text-left font-medium text-gray-700">Headline</th>
             <th class="px-4 py-3 text-left font-medium text-gray-700">Format</th>
-            <th class="px-4 py-3 text-left font-medium text-gray-700">Intro Text</th>
-            <th class="px-4 py-3 text-right font-medium text-gray-700">Impressions</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-700">Intro text</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-700">People who saw your ad</th>
             <th class="px-4 py-3 text-right font-medium text-gray-700">Clicks</th>
-            <th class="px-4 py-3 text-right font-medium text-gray-700">CTR</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-700">% who clicked</th>
             <th class="px-4 py-3 text-right font-medium text-gray-700">Leads</th>
           </tr>
         </thead>
@@ -180,8 +180,8 @@
   {% if _data.lead_forms %}
   <div class="rounded-lg border bg-white overflow-hidden">
     <div class="p-4 border-b bg-gray-50">
-      <h2 class="font-semibold">Lead Gen Forms</h2>
-      <p class="text-xs text-gray-500 mt-1">{{ _data.lead_forms|length }} form(s)</p>
+      <h2 class="font-semibold">Lead capture forms</h2>
+      <p class="text-xs text-gray-500 mt-1">{{ _data.lead_forms|length }} form(s) collecting contact info from interested customers</p>
     </div>
     <div class="p-4 space-y-3">
       {% for form in _data.lead_forms %}
@@ -197,7 +197,7 @@
             Fields: {{ form.fields|join(', ') }}
           </div>
           <div class="text-xs">
-            <span class="text-gray-500">Completion Rate:</span>
+            <span class="text-gray-500">% who finished the form:</span>
             <span class="font-medium {% if form.completion_rate|replace('%','')|float >= 60 %}text-green-600{% else %}text-amber-600{% endif %}">
               {{ form.completion_rate }}
             </span>

@@ -1,13 +1,13 @@
 {% extends "base_app.html" %}
-{% block title %}Content Freshness · {{ app_name }}{% endblock %}
+{% block title %}Update Old Pages · {{ app_name }}{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto space-y-6">
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Content Freshness Dashboard</h1>
-      <p class="text-gray-500 text-sm mt-1">Posts ranked by staleness — age + traffic decay signal</p>
+      <h1 class="text-2xl font-bold text-gray-900">Update Old Pages</h1>
+      <p class="text-gray-500 text-sm mt-1">See which pages are getting old or losing visitors, so you can refresh them and keep showing up in Google search.</p>
     </div>
     {% if posts %}
     <div class="flex items-center gap-3">
@@ -16,7 +16,7 @@
               onclick="fetchAIPlan()"
               class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow-sm transition">
         <i class="fa-solid fa-wand-magic-sparkles"></i>
-        AI Refresh Plan
+        AI Update Plan
       </button>
     </div>
     {% endif %}
@@ -53,7 +53,7 @@
     <div class="flex items-center justify-between">
       <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
         <i class="fa-solid fa-wand-magic-sparkles text-indigo-500"></i>
-        AI Content Refresh Plan
+        AI Plan: Which Pages to Update First
       </h2>
       <button onclick="document.getElementById('ai-plan-panel').classList.add('hidden')"
               class="text-xs text-gray-400 hover:text-gray-600">Dismiss</button>
@@ -80,8 +80,8 @@
           <th class="px-4 py-3 text-left font-semibold text-gray-700">Post</th>
           <th class="px-4 py-3 text-right font-semibold text-gray-700">Last Modified</th>
           <th class="px-4 py-3 text-right font-semibold text-gray-700">Age (days)</th>
-          <th class="px-4 py-3 text-right font-semibold text-gray-700">Traffic Δ</th>
-          <th class="px-4 py-3 text-center font-semibold text-gray-700">Staleness</th>
+          <th class="px-4 py-3 text-right font-semibold text-gray-700">Visitor change</th>
+          <th class="px-4 py-3 text-center font-semibold text-gray-700">Out of date</th>
           <th class="px-4 py-3"></th>
         </tr>
       </thead>
@@ -134,8 +134,8 @@
   </div>
 
   <p class="text-xs text-gray-400 text-center">
-    Staleness score = age component (up to 50) + traffic decay component (up to 50).
-    Traffic decay requires Google Search Console to be connected.
+    "Out of date" score combines how old the page is plus how much its visitor traffic has dropped.
+    Visitor drop needs Google Search Console connected.
   </p>
 
   {% elif site %}

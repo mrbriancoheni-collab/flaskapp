@@ -13,8 +13,8 @@
   <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 flex items-start gap-3">
     <i class="fa-solid fa-triangle-exclamation text-amber-600 text-xl mt-0.5"></i>
     <div>
-      <p class="font-semibold text-amber-900">Google Ads token expired</p>
-      <p class="text-sm text-amber-700 mt-1">Reconnect to restore live data and let AI agents continue running.</p>
+      <p class="font-semibold text-amber-900">Google Ads connection expired</p>
+      <p class="text-sm text-amber-700 mt-1">Reconnect to keep your data flowing and let the AI keep working.</p>
       <a href="{{ url_for('google_bp.index') }}" class="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-lg transition">
         <i class="fa-solid fa-plug"></i> Reconnect Google Ads
       </a>
@@ -22,23 +22,23 @@
   </div>
   {% endif %}
 
-  {# ── page header ── #}
+  {# ── Page header ── #}
   <div class="flex items-start justify-between flex-wrap gap-4">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Performance</h1>
-      <p class="text-sm text-gray-500 mt-0.5">Last 30 days · Google Ads</p>
+      <h1 class="text-2xl font-bold text-gray-900">Your Google Ads</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Last 30 days · Updated continuously</p>
     </div>
     <div class="flex items-center gap-2">
       {% if pending_decisions_count and pending_decisions_count > 0 %}
       <a href="{{ url_for('consolidated_bp.ai_control') }}?tab=approval"
          class="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-lg transition">
         <i class="fas fa-clock"></i>
-        {{ pending_decisions_count }} pending approval
+        {{ pending_decisions_count }} suggestion{{ 's' if pending_decisions_count != 1 else '' }} to review
       </a>
       {% endif %}
       <a href="{{ url_for('consolidated_bp.ai_control') }}"
          class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
-        <i class="fas fa-robot"></i> AI Control
+        <i class="fas fa-robot"></i> AI Settings
       </a>
     </div>
   </div>
@@ -48,63 +48,130 @@
   <div class="bg-white border border-gray-200 rounded-xl p-10 text-center">
     <i class="fas fa-bullhorn text-gray-300 text-5xl mb-4"></i>
     <h2 class="text-xl font-semibold text-gray-800 mb-2">Connect Google Ads</h2>
-    <p class="text-gray-500 mb-6 max-w-md mx-auto">Link your Google Ads account to see live performance data and enable AI optimisation.</p>
+    <p class="text-gray-500 mb-6 max-w-md mx-auto">Link your Google Ads account to see live performance data and let the AI start finding savings.</p>
     <a href="{{ url_for('google_bp.index') }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition">
       <i class="fas fa-plug"></i> Connect Account
     </a>
   </div>
   {% else %}
 
+  {# ──────────────────────────────────────────────────────────────────────── #}
+  {# ── THE BOTTOM LINE — plain-English summary, the most important block ── #}
+  {# ──────────────────────────────────────────────────────────────────────── #}
+  {% set ap = account_performance or {} %}
+  {% set has_data = ap.get('has_data', false) %}
+  {% set total_spend = ap.get('cost', 0) %}
+  {% set conv_count = ap.get('conversions', 0) %}
+  {% set cpl = ap.get('cost_per_conversion', 0) %}
+  {% set ctr_val = ap.get('ctr', 0) %}
+
+  {# Compute simple health classification — industry benchmarks for home services #}
+  {% set hs_cpl_good = 50 %}
+  {% set hs_cpl_great = 30 %}
+  {% set hs_ctr_good = 3 %}
+  {% set hs_ctr_great = 5 %}
+
+  {% if has_data and conv_count > 0 %}
+    {% if cpl <= hs_cpl_great %}
+      {% set health = 'great' %}
+    {% elif cpl <= hs_cpl_good %}
+      {% set health = 'good' %}
+    {% elif cpl <= hs_cpl_good * 1.5 %}
+      {% set health = 'ok' %}
+    {% else %}
+      {% set health = 'attention' %}
+    {% endif %}
+  {% else %}
+    {% set health = 'no_data' %}
+  {% endif %}
+
+  {% set health_meta = {
+    'great':     {'color': 'green',  'icon': 'fa-circle-check',           'title': 'Your ads are performing great',  'bg': 'from-green-50 to-emerald-50',  'border': 'border-green-200'},
+    'good':      {'color': 'green',  'icon': 'fa-thumbs-up',              'title': "You're doing well",              'bg': 'from-green-50 to-emerald-50',  'border': 'border-green-200'},
+    'ok':        {'color': 'amber',  'icon': 'fa-circle-info',            'title': 'There is room to improve',       'bg': 'from-amber-50 to-yellow-50',   'border': 'border-amber-200'},
+    'attention': {'color': 'red',    'icon': 'fa-triangle-exclamation',   'title': 'Your ads need attention',        'bg': 'from-red-50 to-orange-50',     'border': 'border-red-200'},
+    'no_data':   {'color': 'gray',   'icon': 'fa-hourglass-half',         'title': 'Waiting for data',               'bg': 'from-gray-50 to-slate-50',     'border': 'border-gray-200'},
+  } %}
+  {% set hm = health_meta[health] %}
+
+  <div class="rounded-2xl border-2 {{ hm.border }} bg-gradient-to-br {{ hm.bg }} p-6 shadow-sm">
+    <div class="flex items-start gap-4">
+      <div class="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0">
+        <i class="fa-solid {{ hm.icon }} text-{{ hm.color }}-600 text-xl"></i>
+      </div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-1">
+          <h2 class="text-lg font-bold text-gray-900">{{ hm.title }}</h2>
+          <span class="text-xs font-semibold text-{{ hm.color }}-700 bg-white border border-{{ hm.color }}-200 px-2 py-0.5 rounded-full uppercase tracking-wide">The Bottom Line</span>
+        </div>
+        <p class="text-gray-700 leading-relaxed">
+          {% if health == 'no_data' %}
+            Your account is connected. Once your campaigns have run for a few days we'll be able to summarise what's working and what isn't right here.
+          {% elif health == 'great' %}
+            You spent <strong>${{ '%.0f'|format(total_spend) }}</strong> in the last 30 days and got <strong>{{ '%.0f'|format(conv_count) }} {{ 'call or form fill' if conv_count|int == 1 else 'calls and form fills' }}</strong>. That works out to <strong>${{ '%.0f'|format(cpl) }} per new lead</strong> — well below the ${{ hs_cpl_good }} that's typical for home services. Keep doing what you're doing.
+          {% elif health == 'good' %}
+            You spent <strong>${{ '%.0f'|format(total_spend) }}</strong> in the last 30 days and got <strong>{{ '%.0f'|format(conv_count) }} {{ 'call or form fill' if conv_count|int == 1 else 'calls and form fills' }}</strong>. That works out to <strong>${{ '%.0f'|format(cpl) }} per new lead</strong> — solid for home services. Small tweaks below could push this even lower.
+          {% elif health == 'ok' %}
+            You spent <strong>${{ '%.0f'|format(total_spend) }}</strong> in the last 30 days and got <strong>{{ '%.0f'|format(conv_count) }} {{ 'call or form fill' if conv_count|int == 1 else 'calls and form fills' }}</strong>. That works out to <strong>${{ '%.0f'|format(cpl) }} per new lead</strong>. A typical home service business pays ${{ hs_cpl_good }} or less, so there's real money on the table. See the suggestions below.
+          {% elif health == 'attention' %}
+            You spent <strong>${{ '%.0f'|format(total_spend) }}</strong> in the last 30 days {% if conv_count > 0 %}and got <strong>{{ '%.0f'|format(conv_count) }} {{ 'call or form fill' if conv_count|int == 1 else 'calls and form fills' }}</strong> — paying <strong>${{ '%.0f'|format(cpl) }} per new lead</strong>. Most home service businesses pay under ${{ hs_cpl_good }}, so you're overspending.{% else %}but haven't recorded any calls or form fills yet. This usually means conversion tracking isn't set up, or your campaigns are showing to the wrong audience.{% endif %} The suggestions below will fix this fast.
+          {% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+
   {# ── conversion tracking gate ── #}
   {% if not has_conversion_tracking %}
   <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 flex items-start gap-3">
     <i class="fa-solid fa-triangle-exclamation text-amber-500 text-xl mt-0.5 flex-shrink-0"></i>
     <div class="flex-1">
-      <p class="font-semibold text-amber-900">Conversion tracking not detected</p>
-      <p class="text-sm text-amber-700 mt-1">Without conversion data the AI agents can't reduce your CPL or optimise bids. Set up tracking so every call or form fill is counted.</p>
+      <p class="font-semibold text-amber-900">Conversion tracking isn't set up yet</p>
+      <p class="text-sm text-amber-700 mt-1">Without it, Google Ads doesn't know which clicks turn into phone calls or jobs — and our AI can't reduce your cost per lead. This is the single most important fix on the page.</p>
       <div class="flex flex-wrap gap-2 mt-3">
         <a href="https://support.google.com/google-ads/answer/6095821" target="_blank" rel="noopener"
            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-lg transition">
-          <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i> Set up call tracking
+          <i class="fa-solid fa-phone text-xs"></i> Track phone calls
         </a>
         <a href="https://support.google.com/google-ads/answer/1722022" target="_blank" rel="noopener"
            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-amber-300 hover:bg-amber-50 text-amber-800 text-sm font-medium rounded-lg transition">
-          <i class="fa-solid fa-code text-xs"></i> Website conversion tag
+          <i class="fa-solid fa-globe text-xs"></i> Track form fills
         </a>
       </div>
     </div>
   </div>
   {% endif %}
 
-  {# ── what to do next ── #}
+  {# ── What to do next ── #}
   {% set next_items = [] %}
   {% if pending_decisions_count > 0 %}
-    {% set _ = next_items.append({'icon': 'fa-clock', 'color': 'amber', 'text': pending_decisions_count ~ ' agent decision' ~ ('s' if pending_decisions_count != 1 else '') ~ ' awaiting your approval', 'href': url_for('consolidated_bp.ai_control') ~ '?tab=approval', 'cta': 'Review now'}) %}
+    {% set _ = next_items.append({'icon': 'fa-clock', 'color': 'amber', 'text': 'The AI has ' ~ pending_decisions_count ~ ' suggestion' ~ ('s' if pending_decisions_count != 1 else '') ~ ' waiting for your approval', 'detail': 'These could save money or get you more leads — take a minute to approve or reject.', 'href': url_for('consolidated_bp.ai_control') ~ '?tab=approval', 'cta': 'Review'}) %}
   {% endif %}
   {% if unreviewed_search_terms_count > 0 %}
-    {% set _ = next_items.append({'icon': 'fa-ban', 'color': 'red', 'text': unreviewed_search_terms_count ~ ' wasted search term' ~ ('s' if unreviewed_search_terms_count != 1 else '') ~ ' spending budget with zero conversions', 'href': url_for('google_bp.search_terms'), 'cta': 'Block terms'}) %}
-  {% endif %}
-  {% if not has_conversion_tracking %}
-    {% set _ = next_items.append({'icon': 'fa-chart-line', 'color': 'orange', 'text': 'Conversion tracking is off — the AI cannot optimise bids or CPL', 'href': 'https://support.google.com/google-ads/answer/6095821', 'cta': 'Fix now'}) %}
+    {% set _ = next_items.append({'icon': 'fa-ban', 'color': 'red', 'text': unreviewed_search_terms_count ~ ' wasted search' ~ ('es' if unreviewed_search_terms_count != 1 else '') ~ ' eating your budget with zero results', 'detail': 'These are searches people typed that triggered your ad but never turned into a call or form fill. Block them.', 'href': url_for('google_bp.search_terms'), 'cta': 'Block them'}) %}
   {% endif %}
   {% if next_items %}
   <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
     <div class="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
       <i class="fas fa-list-check text-indigo-500"></i>
-      <h2 class="font-semibold text-gray-900">What to do next</h2>
+      <h2 class="font-semibold text-gray-900">Do this next</h2>
     </div>
     <ul class="divide-y divide-gray-50">
       {% for item in next_items %}
-      <li class="px-5 py-3 flex items-center gap-4">
-        <span class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm
+      <li class="px-5 py-4 flex items-start gap-4">
+        <span class="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-sm
           {{ 'bg-amber-100 text-amber-600' if item.color == 'amber' else
              'bg-red-100 text-red-600' if item.color == 'red' else
              'bg-orange-100 text-orange-600' }}">
           <i class="fas {{ item.icon }}"></i>
         </span>
-        <p class="flex-1 text-sm text-gray-700">{{ item.text }}</p>
-        <a href="{{ item.href }}" class="flex-shrink-0 text-sm font-medium text-indigo-600 hover:text-indigo-800 whitespace-nowrap">
-          {{ item.cta }} <i class="fas fa-arrow-right text-xs ml-1"></i>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold text-gray-900">{{ item.text }}</p>
+          <p class="text-xs text-gray-500 mt-0.5">{{ item.detail }}</p>
+        </div>
+        <a href="{{ item.href }}"
+           class="flex-shrink-0 inline-flex items-center gap-1 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg transition mt-0.5">
+          {{ item.cta }} <i class="fas fa-arrow-right text-xs"></i>
         </a>
       </li>
       {% endfor %}
@@ -112,66 +179,167 @@
   </div>
   {% endif %}
 
-  {# ── KPI cards ── #}
-  {% set ap = account_performance or {} %}
-  {% set has_data = ap.get('has_data', false) %}
-  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+  {# ──────────────────────────────────────────────────────────────────────── #}
+  {# ── KPI cards — plain English, with benchmarks ── #}
+  {# ──────────────────────────────────────────────────────────────────────── #}
+  <div>
+    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">The Numbers (last 30 days)</h2>
 
-    {% macro kpi_card(label, value, change, icon, color_class) %}
-    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">{{ label }}</span>
-        <i class="fas {{ icon }} {{ color_class }} text-sm"></i>
-      </div>
-      <p class="text-2xl font-bold text-gray-900">{{ value }}</p>
-      {% if change is not none %}
-      <p class="text-xs mt-1 {{ 'text-green-600' if change > 0 else ('text-red-500' if change < 0 else 'text-gray-400') }}">
-        <i class="fas {{ 'fa-arrow-up' if change > 0 else ('fa-arrow-down' if change < 0 else 'fa-minus') }}"></i>
-        {{ '%+.1f'|format(change) }}% vs prior 30d
-      </p>
+    {% macro kpi_card(label, sublabel, value, change, change_good_when, icon, color_class, interpretation, tooltip) %}
+      {# change_good_when: 'up' (more is better), 'down' (less is better), 'neither' (just informational) #}
+      {% set has_change = change is not none %}
+      {% if has_change %}
+        {% if change_good_when == 'up' %}
+          {% set is_good = change > 0 %}
+          {% set is_neutral = change == 0 %}
+        {% elif change_good_when == 'down' %}
+          {% set is_good = change < 0 %}
+          {% set is_neutral = change == 0 %}
+        {% else %}
+          {% set is_good = none %}
+          {% set is_neutral = true %}
+        {% endif %}
       {% endif %}
-    </div>
+      <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm relative group">
+        <div class="flex items-start justify-between mb-2 gap-2">
+          <div class="min-w-0">
+            <div class="text-xs font-semibold text-gray-700 flex items-center gap-1">
+              {{ label }}
+              {% if tooltip %}
+              <span class="relative group/tip">
+                <i class="fa-solid fa-circle-question text-gray-300 hover:text-gray-500 text-[10px] cursor-help"></i>
+                <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover/tip:block z-20 w-48 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg leading-relaxed">{{ tooltip }}</span>
+              </span>
+              {% endif %}
+            </div>
+            {% if sublabel %}<div class="text-[10px] text-gray-400 mt-0.5">{{ sublabel }}</div>{% endif %}
+          </div>
+          <i class="fas {{ icon }} {{ color_class }} text-sm shrink-0 mt-0.5"></i>
+        </div>
+        <p class="text-2xl font-bold text-gray-900">{{ value }}</p>
+        {% if has_change %}
+        <p class="text-xs mt-1 {{ 'text-green-600' if is_good == true else 'text-red-500' if is_good == false else 'text-gray-400' }}">
+          <i class="fas {{ 'fa-arrow-up' if change > 0 else 'fa-arrow-down' if change < 0 else 'fa-minus' }}"></i>
+          {{ '%+.1f'|format(change) }}% vs last 30d
+        </p>
+        {% endif %}
+        {% if interpretation %}
+        <p class="text-xs text-gray-500 mt-1.5 leading-snug border-t border-gray-50 pt-2">{{ interpretation | safe }}</p>
+        {% endif %}
+      </div>
     {% endmacro %}
 
-    {{ kpi_card('Spend',
-        '$' ~ ('%.0f'|format(ap.get('cost',0))),
-        ap.get('cost_change') if ap.get('has_comparison') else none,
-        'fa-dollar-sign', 'text-indigo-500') }}
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
 
-    {{ kpi_card('Conversions',
-        '%.1f'|format(ap.get('conversions',0)),
-        ap.get('conversions_change') if ap.get('has_comparison') else none,
-        'fa-phone-volume', 'text-green-500') }}
+      {# ── Money Spent ── #}
+      {{ kpi_card(
+          'Money spent',
+          'Total ad cost',
+          '$' ~ ('%.0f'|format(total_spend)),
+          ap.get('cost_change') if ap.get('has_comparison') else none,
+          'neither',
+          'fa-dollar-sign', 'text-indigo-500',
+          none,
+          'How much you paid Google to run your ads.') }}
 
-    {{ kpi_card('CPL',
-        '$' ~ ('%.2f'|format(ap.get('cost_per_conversion',0))),
-        (ap.get('cpa_change', 0) * -1) if ap.get('has_comparison') else none,
-        'fa-tag', 'text-blue-500') }}
+      {# ── Leads (Conversions) ── #}
+      {% set conv_interp = '' %}
+      {% if has_data and conv_count > 0 %}
+        {% set conv_interp = 'New phone calls and form fills from your ads.' %}
+      {% elif has_data %}
+        {% set conv_interp = '<span class="text-amber-600 font-medium">No leads tracked yet.</span> Set up conversion tracking if you have it disabled.' %}
+      {% endif %}
+      {{ kpi_card(
+          'New leads',
+          'Calls + form fills',
+          '%.0f'|format(conv_count),
+          ap.get('conversions_change') if ap.get('has_comparison') else none,
+          'up',
+          'fa-phone-volume', 'text-green-500',
+          conv_interp,
+          'Each new lead is a phone call or form submission tracked by Google Ads.') }}
 
-    {{ kpi_card('Clicks',
-        ap.get('clicks',0)|int,
-        ap.get('clicks_change') if ap.get('has_comparison') else none,
-        'fa-cursor', 'text-cyan-500') }}
+      {# ── Cost per Lead ── #}
+      {% set cpl_interp = '' %}
+      {% if has_data and conv_count > 0 %}
+        {% if cpl <= hs_cpl_great %}
+          {% set cpl_interp = '<span class="text-green-600 font-medium">Excellent</span> · home services average is $40–60' %}
+        {% elif cpl <= hs_cpl_good %}
+          {% set cpl_interp = '<span class="text-green-600 font-medium">On target</span> · home services average is $40–60' %}
+        {% elif cpl <= hs_cpl_good * 1.5 %}
+          {% set cpl_interp = '<span class="text-amber-600 font-medium">A bit high</span> · home services average is $40–60' %}
+        {% else %}
+          {% set cpl_interp = '<span class="text-red-600 font-medium">Too high</span> · home services average is $40–60' %}
+        {% endif %}
+      {% endif %}
+      {{ kpi_card(
+          'Cost per lead',
+          'Spend ÷ new leads',
+          '$' ~ ('%.0f'|format(cpl)) if cpl > 0 else '—',
+          (ap.get('cpa_change', 0) * -1) if ap.get('has_comparison') else none,
+          'up',
+          'fa-tag', 'text-blue-500',
+          cpl_interp,
+          'How much you paid (on average) for each new phone call or form fill.') }}
 
-    {{ kpi_card('CTR',
-        ('%.2f'|format(ap.get('ctr',0))) ~ '%',
-        ap.get('ctr_change') if ap.get('has_comparison') else none,
-        'fa-percent', 'text-purple-500') }}
+      {# ── Total Clicks ── #}
+      {{ kpi_card(
+          'Total clicks',
+          'People who clicked your ad',
+          ap.get('clicks',0)|int|string,
+          ap.get('clicks_change') if ap.get('has_comparison') else none,
+          'up',
+          'fa-arrow-pointer', 'text-cyan-500',
+          'Not every click becomes a lead — that\'s normal.',
+          'The total number of times someone clicked one of your ads.') }}
 
-    {{ kpi_card('Avg CPC',
-        '$' ~ ('%.2f'|format(ap.get('avg_cpc',0))),
-        (ap.get('cpc_change', 0) * -1) if ap.get('has_comparison') else none,
-        'fa-coins', 'text-orange-500') }}
+      {# ── Click Rate (CTR) ── #}
+      {% set ctr_interp = '' %}
+      {% if has_data and ctr_val > 0 %}
+        {% if ctr_val >= hs_ctr_great %}
+          {% set ctr_interp = '<span class="text-green-600 font-medium">Excellent</span> · 3–5% is typical' %}
+        {% elif ctr_val >= hs_ctr_good %}
+          {% set ctr_interp = '<span class="text-green-600 font-medium">Good</span> · 3–5% is typical' %}
+        {% else %}
+          {% set ctr_interp = '<span class="text-amber-600 font-medium">Below average</span> · 3–5% is typical — your headlines may need work' %}
+        {% endif %}
+      {% endif %}
+      {{ kpi_card(
+          'Click rate',
+          '% of viewers who clicked',
+          ('%.1f'|format(ctr_val)) ~ '%',
+          ap.get('ctr_change') if ap.get('has_comparison') else none,
+          'up',
+          'fa-percent', 'text-purple-500',
+          ctr_interp,
+          'Of all the people who saw your ad, what % clicked it. Higher = your headlines and offers are working.') }}
 
+      {# ── Cost per Click ── #}
+      {{ kpi_card(
+          'Cost per click',
+          'Avg charge per click',
+          '$' ~ ('%.2f'|format(ap.get('avg_cpc',0))),
+          (ap.get('cpc_change', 0) * -1) if ap.get('has_comparison') else none,
+          'up',
+          'fa-coins', 'text-orange-500',
+          'Lower CPC means your budget goes further.',
+          'How much Google charges you (on average) each time someone clicks your ad. Driven by competition and ad quality.') }}
+
+    </div>
   </div>
 
-  {# ── trend chart + AI summary ── #}
+  {# ──────────────────────────────────────────────────────────────────────── #}
+  {# ── Trend chart + What the AI did ── #}
+  {# ──────────────────────────────────────────────────────────────────────── #}
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-    {# spend & conversions chart #}
+    {# Spend & leads chart #}
     <div class="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="font-semibold text-gray-900">30-Day Trend</h2>
+        <div>
+          <h2 class="font-semibold text-gray-900">Spend &amp; leads over time</h2>
+          <p class="text-xs text-gray-500 mt-0.5">Look for days when spend went up but leads didn't — those are inefficient days.</p>
+        </div>
         <div class="flex items-center gap-3 text-xs text-gray-500">
           <label class="flex items-center gap-1 cursor-pointer">
             <input type="checkbox" id="toggle-spend" checked class="w-3 h-3 accent-indigo-500">
@@ -179,7 +347,7 @@
           </label>
           <label class="flex items-center gap-1 cursor-pointer">
             <input type="checkbox" id="toggle-conv" checked class="w-3 h-3 accent-green-500">
-            <span class="inline-block w-3 h-0.5 bg-green-500 rounded"></span>Conv.
+            <span class="inline-block w-3 h-0.5 bg-green-500 rounded"></span>Leads
           </label>
           <label class="flex items-center gap-1 cursor-pointer">
             <input type="checkbox" id="toggle-clicks" class="w-3 h-3 accent-cyan-500">
@@ -198,110 +366,140 @@
           <i class="fas fa-exclamation-circle text-amber-400 text-3xl mb-2"></i><br>
           <span class="text-amber-600 text-xs">{{ daily_performance_error }}</span>
           {% else %}
-          <i class="fas fa-chart-area text-3xl mb-2"></i><br>No daily data yet — sync your account to populate
+          <i class="fas fa-chart-area text-3xl mb-2"></i><br>No daily data yet — check back in a day or two.
           {% endif %}
         </div>
       </div>
       {% endif %}
     </div>
 
-    {# AI activity summary #}
+    {# AI activity — plain-English labels #}
     <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-      <h2 class="font-semibold text-gray-900 mb-4">AI Activity (All Time)</h2>
-      <div class="space-y-3">
+      <h2 class="font-semibold text-gray-900 mb-1">What the AI did for you</h2>
+      <p class="text-xs text-gray-500 mb-4">The AI watches your account 24/7 and makes changes that save money or get you more leads.</p>
+      <div class="space-y-1">
         <div class="flex items-center justify-between py-2 border-b border-gray-100">
-          <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-bolt text-indigo-400 w-4"></i>Actions taken</span>
+          <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-bolt text-indigo-400 w-4"></i>Optimisations made</span>
           <span class="text-sm font-semibold text-gray-900">{{ ai_actions_taken }}</span>
         </div>
         <div class="flex items-center justify-between py-2 border-b border-gray-100">
-          <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-piggy-bank text-green-400 w-4"></i>Est. savings</span>
-          <span class="text-sm font-semibold text-green-700">${{ '%.0f'|format(wasted_spend_prevented) }}/mo</span>
+          <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-piggy-bank text-green-400 w-4"></i>Money saved every month</span>
+          <span class="text-sm font-semibold text-green-700">${{ '%.0f'|format(wasted_spend_prevented) }}</span>
         </div>
         {% if pending_savings > 0 %}
-        <div class="flex items-center justify-between py-2 border-b border-gray-100">
-          <span class="text-sm text-gray-500 flex items-center gap-2"><i class="fas fa-clock text-yellow-400 w-4"></i>Potential savings</span>
-          <span class="text-sm font-semibold text-yellow-600">${{ '%.0f'|format(pending_savings) }}/mo</span>
+        <div class="flex items-center justify-between py-2 border-b border-gray-100 bg-amber-50 -mx-2 px-2 rounded">
+          <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-hand-holding-dollar text-amber-500 w-4"></i>More you could save</span>
+          <span class="text-sm font-semibold text-amber-700">${{ '%.0f'|format(pending_savings) }}/mo</span>
         </div>
         {% endif %}
         <div class="flex items-center justify-between py-2 border-b border-gray-100">
-          <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-ban text-red-400 w-4"></i>Searches blocked</span>
+          <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-ban text-red-400 w-4"></i>Wasted searches blocked</span>
           <span class="text-sm font-semibold text-gray-900">{{ blocked_searches_count }}</span>
         </div>
         <div class="flex items-center justify-between py-2">
-          <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-clock text-amber-400 w-4"></i>Pending review</span>
+          <span class="text-sm text-gray-600 flex items-center gap-2"><i class="fas fa-clock text-amber-400 w-4"></i>Waiting for your OK</span>
           <span class="text-sm font-semibold {{ 'text-amber-600' if pending_decisions_count else 'text-gray-500' }}">{{ pending_decisions_count }}</span>
         </div>
       </div>
       <a href="{{ url_for('consolidated_bp.ai_control') }}"
          class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-medium rounded-lg transition">
-        View AI Control <i class="fas fa-arrow-right text-xs"></i>
+        Open AI Settings <i class="fas fa-arrow-right text-xs"></i>
       </a>
     </div>
 
   </div>
 
-  {# ── campaigns table ── #}
+  {# ──────────────────────────────────────────────────────────────────────── #}
+  {# ── Campaigns table with a Health column ── #}
+  {# ──────────────────────────────────────────────────────────────────────── #}
   {% if campaigns_data %}
   <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
     <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-      <h2 class="font-semibold text-gray-900">Campaigns</h2>
+      <div>
+        <h2 class="font-semibold text-gray-900">Your Campaigns</h2>
+        <p class="text-xs text-gray-500 mt-0.5">Look for any campaign marked "Wasting money" — that's where to focus first.</p>
+      </div>
       <a href="{{ url_for('gads_bp.optimize') }}" class="text-sm text-indigo-600 hover:underline flex items-center gap-1">
-        Edit structure <i class="fas fa-arrow-right text-xs"></i>
+        Edit campaigns <i class="fas fa-arrow-right text-xs"></i>
       </a>
     </div>
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-100 text-sm">
         <thead class="bg-gray-50">
           <tr>
-            <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Campaign</th>
-            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Spend</th>
-            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Conv.</th>
-            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">CPL</th>
-            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">CTR</th>
-            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Impr. Share</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Campaign</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Health</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">Spent</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">Leads</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide" title="Spend ÷ Leads">Cost / lead</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide" title="% of viewers who clicked">Click rate</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">
           {% for c in campaigns_data %}
-          {% set cpl = (c.cost_30d / c.conversions) if c.conversions > 0 else 0 %}
-          {% set ctr = (c.ctr if c.ctr is defined else 0) %}
+          {% set cpl_c = (c.cost_30d / c.conversions) if c.conversions > 0 else 0 %}
+          {% set ctr_c = (c.ctr if c.ctr is defined else 0) %}
+          {% set ctr_pct = (ctr_c * 100 if ctr_c < 1 else ctr_c) %}
+          {% set is_enabled = 'enabled' in (c.status|default('')|lower) %}
+
+          {# Health classification per campaign #}
+          {% if not is_enabled %}
+            {% set ch = {'label':'Paused', 'color':'gray',   'icon':'fa-pause-circle',     'note':'Not running right now'} %}
+          {% elif c.conversions == 0 and c.cost_30d > 50 %}
+            {% set ch = {'label':'Wasting money','color':'red','icon':'fa-triangle-exclamation','note':'Spent money but got zero leads'} %}
+          {% elif c.conversions == 0 %}
+            {% set ch = {'label':'No leads yet','color':'amber','icon':'fa-hourglass-half','note':'Hasn\'t generated leads this period'} %}
+          {% elif cpl_c > target_cpl * 1.5 %}
+            {% set ch = {'label':'Too expensive','color':'red','icon':'fa-arrow-up','note':'Cost per lead is well above target'} %}
+          {% elif cpl_c > target_cpl * 1.2 %}
+            {% set ch = {'label':'Above target','color':'amber','icon':'fa-circle-info','note':'Cost per lead is a bit high'} %}
+          {% elif cpl_c > 0 and cpl_c <= target_cpl %}
+            {% set ch = {'label':'Doing great','color':'green','icon':'fa-circle-check','note':'On or under your target cost per lead'} %}
+          {% else %}
+            {% set ch = {'label':'OK','color':'gray','icon':'fa-circle','note':'Performing as expected'} %}
+          {% endif %}
+
           <tr class="hover:bg-gray-50 transition">
             <td class="px-5 py-3 font-medium text-gray-900 max-w-xs truncate">{{ c.name }}</td>
-            <td class="px-4 py-3 text-right text-gray-700">${{ '%.0f'|format(c.cost_30d or 0) }}</td>
-            <td class="px-4 py-3 text-right text-gray-700">{{ c.conversions or 0 }}</td>
-            <td class="px-4 py-3 text-right {{ 'text-red-600' if cpl > target_cpl * 1.2 else 'text-green-600' if cpl > 0 and cpl < target_cpl else 'text-gray-500' }}">
-              {{ '$%.2f'|format(cpl) if cpl > 0 else '—' }}
-            </td>
-            <td class="px-4 py-3 text-right text-gray-700">
-              {{ '%.2f'|format(ctr * 100 if ctr < 1 else ctr) }}%
-            </td>
-            <td class="px-4 py-3 text-right text-gray-700">
-              {% if c.impression_share is defined and c.impression_share %}
-                {{ '%.0f'|format(c.impression_share) }}%
-              {% else %}—{% endif %}
-            </td>
             <td class="px-4 py-3">
-              {% set status_lower = (c.type or '') | lower %}
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ 'bg-green-100 text-green-700' if 'enabled' in (c.status|default('')|lower) else 'bg-gray-100 text-gray-600' }}">
-                {{ c.status | default('—') }}
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold
+                           bg-{{ ch.color }}-100 text-{{ ch.color }}-800" title="{{ ch.note }}">
+                <i class="fa-solid {{ ch.icon }} text-[10px]"></i>{{ ch.label }}
               </span>
+            </td>
+            <td class="px-4 py-3 text-right text-gray-700">${{ '%.0f'|format(c.cost_30d or 0) }}</td>
+            <td class="px-4 py-3 text-right text-gray-700 font-medium">{{ c.conversions|int or 0 }}</td>
+            <td class="px-4 py-3 text-right {{ 'text-red-600 font-medium' if cpl_c > target_cpl * 1.2 else 'text-green-600 font-medium' if cpl_c > 0 and cpl_c <= target_cpl else 'text-gray-500' }}">
+              {{ '$%.0f'|format(cpl_c) if cpl_c > 0 else '—' }}
+            </td>
+            <td class="px-4 py-3 text-right {{ 'text-green-600' if ctr_pct >= hs_ctr_good else 'text-gray-500' }}">
+              {{ '%.1f'|format(ctr_pct) }}%
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+    <div class="px-5 py-3 border-t border-gray-100 bg-gray-50 text-xs text-gray-500 flex items-center gap-4 flex-wrap">
+      <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-500"></span>Doing great = at or below your ${{ target_cpl|int }} target cost per lead</span>
+      <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span>Above target = 20% over your target — worth a look</span>
+      <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-500"></span>Wasting money / Too expensive = action needed</span>
+    </div>
   </div>
   {% endif %}
 
-  {# ── recent AI action timeline ── #}
+  {# ──────────────────────────────────────────────────────────────────────── #}
+  {# ── Recent AI Actions — plain language ── #}
+  {# ──────────────────────────────────────────────────────────────────────── #}
   {% if recent_changes %}
   <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
     <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-      <h2 class="font-semibold text-gray-900">Recent AI Actions</h2>
+      <div>
+        <h2 class="font-semibold text-gray-900">Recent changes the AI made</h2>
+        <p class="text-xs text-gray-500 mt-0.5">Things our AI agents did to your account in the last few days.</p>
+      </div>
       <a href="{{ url_for('google_bp.ai_change_log') }}" class="text-sm text-indigo-600 hover:underline flex items-center gap-1">
-        Full log <i class="fas fa-arrow-right text-xs"></i>
+        Full history <i class="fas fa-arrow-right text-xs"></i>
       </a>
     </div>
     <ul class="divide-y divide-gray-50">
@@ -322,11 +520,20 @@
           {% if a.description %}
           <p class="text-xs text-gray-500 mt-0.5 truncate">{{ a.description }}</p>
           {% endif %}
-          <div class="flex items-center gap-3 mt-1">
+          <div class="flex items-center gap-3 mt-1 flex-wrap">
             {% if a.saved %}<span class="text-xs text-green-600 font-medium">+${{ '%.0f'|format(a.saved) }}/mo saved</span>{% endif %}
-            {% if a.confidence %}<span class="text-xs text-gray-400">{{ '%.0f'|format(a.confidence * 100) }}% confidence</span>{% endif %}
+            {% if a.confidence %}
+              {% set cf = (a.confidence * 100)|int %}
+              {% if cf >= 85 %}
+                <span class="text-xs text-gray-500" title="The AI is very confident this was the right call">Strong recommendation</span>
+              {% elif cf >= 70 %}
+                <span class="text-xs text-gray-500" title="The AI is confident this was the right call">Confident</span>
+              {% else %}
+                <span class="text-xs text-gray-500" title="The AI is reasonably confident — review if you want to be sure">Reasonable</span>
+              {% endif %}
+            {% endif %}
             <span class="text-xs px-1.5 py-0.5 rounded {{ 'bg-green-50 text-green-700' if a.status == 'executed' else 'bg-amber-50 text-amber-700' }}">
-              {{ a.status | capitalize }}
+              {{ 'Done' if a.status == 'executed' else a.status|capitalize }}
             </span>
           </div>
         </div>
@@ -336,20 +543,23 @@
   </div>
   {% endif %}
 
-  {# ── Device & Daypart Segmentation ─────────────────────────────────── #}
+  {# ──────────────────────────────────────────────────────────────────────── #}
+  {# ── Where your money is going (device & time) ── #}
+  {# ──────────────────────────────────────────────────────────────────────── #}
   {% if device_data or daypart_data %}
   <div class="bg-white rounded-xl border overflow-hidden">
-    <div class="px-5 py-4 border-b flex items-center justify-between">
-      <h2 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
-        <i class="fa-solid fa-chart-bar text-indigo-500"></i> Segmentation — Device &amp; Daypart
+    <div class="px-5 py-4 border-b">
+      <h2 class="font-semibold text-gray-900 flex items-center gap-2">
+        <i class="fa-solid fa-chart-bar text-indigo-500"></i> Where your money is going
       </h2>
-      <div class="flex items-center gap-2 text-xs">
+      <p class="text-xs text-gray-500 mt-0.5">See which devices and what times of day are getting you the best leads.</p>
+      <div class="flex items-center gap-2 text-xs mt-3">
         <button onclick="showSeg('device')" id="seg-tab-device"
-                class="px-3 py-1 rounded border bg-indigo-600 text-white font-medium">Device</button>
+                class="px-3 py-1.5 rounded-lg border bg-indigo-600 text-white font-medium">Mobile vs Desktop</button>
         <button onclick="showSeg('hour')" id="seg-tab-hour"
-                class="px-3 py-1 rounded border text-gray-600 hover:bg-gray-50">By Hour</button>
+                class="px-3 py-1.5 rounded-lg border text-gray-600 hover:bg-gray-50">Best hours</button>
         <button onclick="showSeg('dow')" id="seg-tab-dow"
-                class="px-3 py-1 rounded border text-gray-600 hover:bg-gray-50">By Day</button>
+                class="px-3 py-1.5 rounded-lg border text-gray-600 hover:bg-gray-50">Best days</button>
       </div>
     </div>
 
@@ -361,17 +571,17 @@
           <thead class="text-xs text-gray-500 uppercase border-b">
             <tr>
               <th class="text-left pb-2 pr-4">Device</th>
-              <th class="text-right pb-2 pr-4">Spend</th>
+              <th class="text-right pb-2 pr-4">Spent</th>
               <th class="text-right pb-2 pr-4">Clicks</th>
-              <th class="text-right pb-2 pr-4">CTR</th>
-              <th class="text-right pb-2 pr-4">Conversions</th>
-              <th class="text-right pb-2">CPA</th>
+              <th class="text-right pb-2 pr-4">Click rate</th>
+              <th class="text-right pb-2 pr-4">Leads</th>
+              <th class="text-right pb-2">Cost / lead</th>
             </tr>
           </thead>
           <tbody class="divide-y">
-            {% set total_spend = device_data | sum(attribute='cost') %}
+            {% set total_spend_d = device_data | sum(attribute='cost') %}
             {% for d in device_data %}
-            {% set pct = (d.cost / total_spend * 100)|round(1) if total_spend else 0 %}
+            {% set pct = (d.cost / total_spend_d * 100)|round(1) if total_spend_d else 0 %}
             <tr class="hover:bg-gray-50">
               <td class="py-2 pr-4 font-medium text-gray-800">
                 {% if 'MOBILE' in d.device %}<i class="fa-solid fa-mobile-screen-button text-blue-400 mr-1"></i>
@@ -398,21 +608,20 @@
         </table>
       </div>
       {% else %}
-      <p class="text-sm text-gray-400 text-center py-6">Connect Google Ads to see device breakdowns.</p>
+      <p class="text-sm text-gray-400 text-center py-6">Device data will appear after your next sync.</p>
       {% endif %}
     </div>
 
     {# Hour-of-day tab #}
     <div id="seg-hour" class="p-5 hidden">
       {% if daypart_data and daypart_data.hours %}
-      <div class="mb-1 text-xs text-gray-400">Click spend by hour (30d). Taller = more spend.</div>
+      <p class="mb-2 text-xs text-gray-500">Each bar = how much you spend during that hour (30 days). Look for tall bars with low results — those hours might need to be paused.</p>
       <div class="flex items-end gap-0.5 h-24 border-b pb-1">
         {% set max_cost = daypart_data.hours | map(attribute='cost') | max %}
         {% for h in daypart_data.hours %}
         {% set ht = ((h.cost / max_cost * 100)|round(0)|int) if max_cost else 0 %}
-        <div class="flex-1 flex flex-col items-center group relative" title="Hour {{ h.hour }}:00 — ${{ h.cost }} · {{ h.clicks }} clicks">
-          <div class="w-full rounded-t bg-indigo-400 hover:bg-indigo-600 transition cursor-default"
-               style="height:{{ ht }}%"></div>
+        <div class="flex-1 flex flex-col items-center group relative" title="{{ '%02d:00'|format(h.hour) }} — ${{ h.cost }} · {{ h.clicks }} clicks · {{ h.conversions|round(1) }} leads">
+          <div class="w-full rounded-t bg-indigo-400 hover:bg-indigo-600 transition cursor-default" style="height:{{ ht }}%"></div>
         </div>
         {% endfor %}
       </div>
@@ -424,7 +633,7 @@
       <div class="mt-4 overflow-auto">
         <table class="min-w-full text-xs">
           <thead class="text-gray-400 border-b">
-            <tr><th class="text-left pb-1 pr-3">Hour</th><th class="text-right pb-1 pr-3">Spend</th><th class="text-right pb-1 pr-3">Clicks</th><th class="text-right pb-1">Conv.</th></tr>
+            <tr><th class="text-left pb-1 pr-3">Hour</th><th class="text-right pb-1 pr-3">Spent</th><th class="text-right pb-1 pr-3">Clicks</th><th class="text-right pb-1">Leads</th></tr>
           </thead>
           <tbody class="divide-y">
             {% for h in daypart_data.hours | sort(attribute='cost', reverse=True) | list %}{% if h.cost > 0 %}
@@ -434,17 +643,18 @@
         </table>
       </div>
       {% else %}
-      <p class="text-sm text-gray-400 text-center py-6">Connect Google Ads to see hourly breakdowns.</p>
+      <p class="text-sm text-gray-400 text-center py-6">Hour-by-hour data will appear after your next sync.</p>
       {% endif %}
     </div>
 
     {# Day-of-week tab #}
     <div id="seg-dow" class="p-5 hidden">
       {% if daypart_data and daypart_data.days %}
+      <p class="mb-3 text-xs text-gray-500">Which days are getting you the best leads? Look for days where the click rate is low and lead count is zero — those days are wasted budget.</p>
       <div class="overflow-auto">
         <table class="min-w-full text-sm">
           <thead class="text-xs text-gray-500 uppercase border-b">
-            <tr><th class="text-left pb-2 pr-4">Day</th><th class="text-right pb-2 pr-4">Spend</th><th class="text-right pb-2 pr-4">Clicks</th><th class="text-right pb-2 pr-4">CTR</th><th class="text-right pb-2">Conv.</th></tr>
+            <tr><th class="text-left pb-2 pr-4">Day</th><th class="text-right pb-2 pr-4">Spent</th><th class="text-right pb-2 pr-4">Clicks</th><th class="text-right pb-2 pr-4">Click rate</th><th class="text-right pb-2">Leads</th></tr>
           </thead>
           <tbody class="divide-y">
             {% for d in daypart_data.days %}
@@ -460,24 +670,19 @@
         </table>
       </div>
       {% else %}
-      <p class="text-sm text-gray-400 text-center py-6">Connect Google Ads to see day-of-week breakdowns.</p>
+      <p class="text-sm text-gray-400 text-center py-6">Day-of-week data will appear after your next sync.</p>
       {% endif %}
     </div>
   </div>
-  <script>
+  <script nonce="{{ g.csp_nonce }}">
   function showSeg(tab) {
     ['device','hour','dow'].forEach(t => {
       document.getElementById('seg-' + t).classList.toggle('hidden', t !== tab);
       const btn = document.getElementById('seg-tab-' + t);
-      if (btn) { btn.className = t === tab ? 'px-3 py-1 rounded border bg-indigo-600 text-white font-medium' : 'px-3 py-1 rounded border text-gray-600 hover:bg-gray-50'; }
+      if (btn) { btn.className = t === tab ? 'px-3 py-1.5 rounded-lg border bg-indigo-600 text-white font-medium' : 'px-3 py-1.5 rounded-lg border text-gray-600 hover:bg-gray-50'; }
     });
   }
   </script>
-  {% elif connected %}
-  <div class="bg-white rounded-xl border p-6 text-center text-sm text-gray-400">
-    <i class="fa-solid fa-chart-bar text-gray-200 text-2xl mb-2 block"></i>
-    Device &amp; daypart segmentation will appear here after your next data sync.
-  </div>
   {% endif %}
 
   {% endif %}{# /connected #}
@@ -507,43 +712,9 @@
     data: {
       labels,
       datasets: [
-        {
-          label: 'Spend ($)',
-          data: spend,
-          borderColor: '#6366f1',
-          backgroundColor: 'rgba(99,102,241,0.08)',
-          borderWidth: 2,
-          pointRadius: 2,
-          pointHoverRadius: 5,
-          tension: 0.3,
-          fill: true,
-          yAxisID: 'ySpend',
-          hidden: false,
-        },
-        {
-          label: 'Conversions',
-          data: conv,
-          borderColor: '#22c55e',
-          backgroundColor: 'rgba(34,197,94,0)',
-          borderWidth: 2,
-          pointRadius: 2,
-          pointHoverRadius: 5,
-          tension: 0.3,
-          yAxisID: 'yConv',
-          hidden: false,
-        },
-        {
-          label: 'Clicks',
-          data: clicks,
-          borderColor: '#22d3ee',
-          backgroundColor: 'rgba(34,211,238,0)',
-          borderWidth: 2,
-          pointRadius: 2,
-          pointHoverRadius: 5,
-          tension: 0.3,
-          yAxisID: 'yClicks',
-          hidden: true,
-        },
+        { label: 'Spend ($)',  data: spend,  borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.08)', borderWidth: 2, pointRadius: 2, pointHoverRadius: 5, tension: 0.3, fill: true, yAxisID: 'ySpend', hidden: false },
+        { label: 'Leads',      data: conv,   borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0)',    borderWidth: 2, pointRadius: 2, pointHoverRadius: 5, tension: 0.3, yAxisID: 'yConv', hidden: false },
+        { label: 'Clicks',     data: clicks, borderColor: '#22d3ee', backgroundColor: 'rgba(34,211,238,0)',   borderWidth: 2, pointRadius: 2, pointHoverRadius: 5, tension: 0.3, yAxisID: 'yClicks', hidden: true },
       ]
     },
     options: {
@@ -557,45 +728,22 @@
           callbacks: {
             label: function(ctx) {
               const v = ctx.parsed.y;
-              if (ctx.dataset.label === 'Spend ($)') return ' Spend: $' + v.toFixed(2);
-              if (ctx.dataset.label === 'Conversions') return ' Conv.: ' + v.toFixed(1);
+              if (ctx.dataset.label === 'Spend ($)') return ' Spent: $' + v.toFixed(2);
+              if (ctx.dataset.label === 'Leads')    return ' Leads: ' + v.toFixed(1);
               return ' Clicks: ' + v.toLocaleString();
             }
           }
         }
       },
       scales: {
-        x: {
-          grid: { display: false },
-          ticks: {
-            maxTicksLimit: 10,
-            font: { size: 10 },
-            maxRotation: 0,
-          }
-        },
-        ySpend: {
-          position: 'left',
-          grid: { color: 'rgba(0,0,0,0.04)' },
-          ticks: { font: { size: 10 }, callback: v => '$' + v.toFixed(0) },
-          display: true,
-        },
-        yConv: {
-          position: 'right',
-          grid: { display: false },
-          ticks: { font: { size: 10 } },
-          display: true,
-        },
-        yClicks: {
-          position: 'right',
-          grid: { display: false },
-          ticks: { font: { size: 10 } },
-          display: false,
-        },
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 10 }, maxRotation: 0 } },
+        ySpend:  { position: 'left',  grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, callback: v => '$' + v.toFixed(0) }, display: true },
+        yConv:   { position: 'right', grid: { display: false }, ticks: { font: { size: 10 } }, display: true },
+        yClicks: { position: 'right', grid: { display: false }, ticks: { font: { size: 10 } }, display: false },
       }
     }
   });
 
-  // Toggle dataset visibility with checkboxes
   function wireToggle(checkboxId, datasetIndex, axisId) {
     const cb = document.getElementById(checkboxId);
     if (!cb) return;

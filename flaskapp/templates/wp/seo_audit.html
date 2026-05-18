@@ -7,10 +7,9 @@
   {# ── Page header ──────────────────────────────────────────────────────── #}
   <div class="flex items-start justify-between">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">SEO &amp; AEO Page Audit</h1>
+      <h1 class="text-2xl font-bold text-gray-900">Check a page for SEO problems</h1>
       <p class="text-sm text-gray-500 mt-1">
-        On-page SEO analysis + Answer Engine Optimisation score for Google AI Overviews,
-        ChatGPT &amp; Perplexity.
+        We'll look at a page on your website and tell you why Google (and AI tools like ChatGPT) might not be showing it to customers — and what to fix.
       </p>
     </div>
   </div>
@@ -53,7 +52,7 @@
           {% endif %}
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Target Keyword <span class="text-gray-400 font-normal">(optional)</span></label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">What do you want this page to rank for? <span class="text-gray-400 font-normal">(optional)</span></label>
           <input name="keyword" type="text" placeholder="e.g. emergency plumber london"
                  value="{{ result.target_keyword if result else '' }}"
                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
@@ -63,7 +62,7 @@
         <button type="submit"
                 class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm transition-colors">
           <i class="fa-solid fa-magnifying-glass-chart"></i>
-          Run Audit
+          Check this page
         </button>
         {% if result %}
         <span class="text-sm text-gray-500">Audited: <span class="font-mono text-xs">{{ result.url }}</span></span>
@@ -95,8 +94,8 @@
         </span>
       </div>
       <div>
-        <div class="text-lg font-bold text-gray-900">SEO Score</div>
-        <div class="text-sm text-gray-500 mt-0.5">On-page optimisation</div>
+        <div class="text-lg font-bold text-gray-900">Google score</div>
+        <div class="text-sm text-gray-500 mt-0.5">How well this page is set up for Google search</div>
         {% if result.seo_score >= 75 %}
           <span class="mt-2 inline-block px-2 py-0.5 rounded-full bg-green-100 text-green-800 text-xs font-semibold">Strong</span>
         {% elif result.seo_score >= 50 %}
@@ -125,14 +124,14 @@
         </span>
       </div>
       <div>
-        <div class="text-lg font-bold text-gray-900">AEO Score</div>
-        <div class="text-sm text-gray-500 mt-0.5">Answer engine readiness</div>
+        <div class="text-lg font-bold text-gray-900">AI score</div>
+        <div class="text-sm text-gray-500 mt-0.5">Whether ChatGPT and Google AI Overviews can use this page to answer questions</div>
         {% if result.aeo_score >= 75 %}
-          <span class="mt-2 inline-block px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs font-semibold">AI-Ready</span>
+          <span class="mt-2 inline-block px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs font-semibold">AI-ready</span>
         {% elif result.aeo_score >= 50 %}
-          <span class="mt-2 inline-block px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-semibold">Partial Coverage</span>
+          <span class="mt-2 inline-block px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-semibold">Some gaps</span>
         {% else %}
-          <span class="mt-2 inline-block px-2 py-0.5 rounded-full bg-red-100 text-red-800 text-xs font-semibold">Not AI-Optimised</span>
+          <span class="mt-2 inline-block px-2 py-0.5 rounded-full bg-red-100 text-red-800 text-xs font-semibold">AI won't quote this page</span>
         {% endif %}
       </div>
     </div>
@@ -143,7 +142,7 @@
   <div class="bg-amber-50 border border-amber-200 rounded-xl p-5">
     <h2 class="text-base font-bold text-amber-900 flex items-center gap-2 mb-3">
       <i class="fa-solid fa-triangle-exclamation text-amber-500"></i>
-      Priority Fixes
+      Fix these first — biggest impact
     </h2>
     <ol class="space-y-3">
       {% for fix in result.priority_fixes %}

@@ -7,8 +7,8 @@
 <div class="max-w-6xl mx-auto space-y-6">
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-semibold">Google Business</h1>
-      <p class="text-gray-500">Connect to manage reviews and Business Profile details.</p>
+      <h1 class="text-2xl font-semibold">Your Google Business Profile</h1>
+      <p class="text-gray-500">Manage reviews, business info, and what shows up when people Google your company.</p>
     </div>
     <a href="{{ url_for('account_bp.dashboard') }}" class="rounded-md border px-3 py-2 text-gray-700 hover:bg-gray-50">Back to Dashboard</a>
   </div>
@@ -50,13 +50,13 @@
     {# Primary actions #}
     <div class="mt-4 flex flex-wrap gap-2">
       <a href="{{ url_for('gmb_bp.reviews') }}" class="rounded-md border px-3 py-2 hover:bg-gray-50">
-        <i class="fa-regular fa-star mr-2"></i>Reviews
+        <i class="fa-regular fa-star mr-2"></i>See your reviews
       </a>
       <a href="{{ url_for('gmb_bp.ai_responses') }}" class="rounded-md border px-3 py-2 hover:bg-gray-50">
-        <i class="fa-solid fa-robot mr-2"></i>AI Review Responses
+        <i class="fa-solid fa-robot mr-2"></i>Auto-reply to reviews
       </a>
       <a href="{{ url_for('gmb_bp.requests_email') }}" class="rounded-md border px-3 py-2 hover:bg-gray-50">
-        <i class="fa-regular fa-envelope mr-2"></i>Review Requests (Email)
+        <i class="fa-regular fa-envelope mr-2"></i>Ask customers for reviews
       </a>
     </div>
   </div>

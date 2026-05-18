@@ -11,10 +11,10 @@
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-semibold">Local Services Ads</h1>
+      <h1 class="text-2xl font-semibold">Local Services Ads (Google Guaranteed)</h1>
       <p class="text-gray-500">
         {% if _connected %}
-          Managing your Google Guaranteed leads.
+          Your "Google Guaranteed" leads — the green-badge listings at the top of Google search.
           {% if m.is_demo %}
             <span class="inline-flex items-center rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200 px-2 py-0.5 text-[11px] ml-2">Sync Required</span>
           {% else %}
@@ -89,7 +89,7 @@
     <div class="flex flex-col md:flex-row items-center justify-between gap-6">
       <!-- Grade -->
       <div class="text-center md:w-1/4">
-        <div class="text-sm text-emerald-100 uppercase font-semibold mb-2">LSA Performance</div>
+        <div class="text-sm text-emerald-100 uppercase font-semibold mb-2">Overall Grade</div>
         {% set grade_colors = {'A': 'text-green-300', 'B': 'text-green-400', 'C': 'text-yellow-400', 'D': 'text-orange-400', 'F': 'text-red-400'} %}
         <div class="text-5xl font-black {{ grade_colors.get(m.performance.grade, 'text-yellow-400') }} mb-1">{{ m.performance.grade }}</div>
         <div class="text-sm text-emerald-200">{{ m.performance.score }}/100 score</div>
@@ -114,10 +114,10 @@
         <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
           <div class="flex items-center gap-2 mb-2">
             <span class="text-xl"><i class="fa-solid fa-dollar-sign text-emerald-300"></i></span>
-            <span class="text-sm font-semibold text-white">Cost per Lead</span>
+            <span class="text-sm font-semibold text-white">$ per lead</span>
           </div>
           <div class="text-2xl font-bold text-white">${{ '%.2f'|format(m.spend.cost_per_lead) }}</div>
-          <div class="text-xs text-emerald-200">${{ '%.2f'|format(m.spend.cost_per_booked) }} per booked job</div>
+          <div class="text-xs text-emerald-200">${{ '%.2f'|format(m.spend.cost_per_booked) }} per booked job · home services avg $40–60</div>
           {% if m.trends.cpl_change %}
             <div class="text-xs mt-1 {{ 'text-green-300' if m.trends.cpl_change < 0 else 'text-red-300' }}">
               {{ '+' if m.trends.cpl_change > 0 else '' }}{{ m.trends.cpl_change }}% vs prior period
@@ -128,10 +128,10 @@
         <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
           <div class="flex items-center gap-2 mb-2">
             <span class="text-xl"><i class="fa-solid fa-calendar-check text-emerald-300"></i></span>
-            <span class="text-sm font-semibold text-white">Booking Rate</span>
+            <span class="text-sm font-semibold text-white">% of leads booked</span>
           </div>
           <div class="text-2xl font-bold text-white">{{ m.leads.booking_rate }}%</div>
-          <div class="text-xs text-emerald-200">{{ m.leads.booked }} of {{ m.leads.total }} leads booked</div>
+          <div class="text-xs text-emerald-200">{{ m.leads.booked }} of {{ m.leads.total }} turned into jobs</div>
           {% if m.trends.booking_rate_change %}
             <div class="text-xs mt-1 {{ 'text-green-300' if m.trends.booking_rate_change > 0 else 'text-red-300' }}">
               {{ '+' if m.trends.booking_rate_change > 0 else '' }}{{ m.trends.booking_rate_change }}% vs prior period

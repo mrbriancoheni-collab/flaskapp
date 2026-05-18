@@ -82,41 +82,67 @@
   {% endif %}
 
   {# ── opportunities header ── #}
-  <div class="bg-white border border-gray-200 rounded-xl p-5 flex items-center justify-between gap-4 shadow-sm">
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
-        <i class="fa-solid fa-robot text-indigo-600"></i>
+  <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+    <div class="flex items-start justify-between gap-4 flex-wrap">
+      <div class="flex items-start gap-3">
+        <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <i class="fa-solid fa-robot text-indigo-600"></i>
+        </div>
+        <div>
+          <h2 class="font-semibold text-gray-900">
+            {% if is_demo %}Things the AI found (demo){% else %}Things the AI found in your account{% endif %}
+          </h2>
+          <p class="text-sm text-gray-500 mt-0.5">
+            {% if is_demo %}
+              Sample data from a fictional HVAC company — connect your account to see real opportunities.
+            {% else %}
+              The AI scanned your account and found <strong class="text-gray-700">{{ analysis.opportunities|length }} {{ 'opportunity' if analysis.opportunities|length == 1 else 'opportunities' }}</strong> to improve performance.
+            {% endif %}
+          </p>
+        </div>
       </div>
-      <div>
-        <h2 class="font-semibold text-gray-900">
-          {% if is_demo %}AI-Powered Optimization Analysis (Demo){% else %}AI Optimization Opportunities{% endif %}
-        </h2>
-        <p class="text-sm text-gray-500">
-          {% if is_demo %}
-            Sample data from a fictional HVAC company — connect your account to see real optimizations.
-          {% else %}
-            {{ analysis.opportunities|length }} opportunities identified · low-risk changes auto-execute, high-risk require approval
-          {% endif %}
-        </p>
+      <div class="flex-shrink-0 flex items-center gap-2 flex-wrap">
+        {% if not is_demo %}
+        <button onclick="runAIAgents()" id="runAgentsBtn"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
+          <i class="fa-solid fa-robot"></i> Scan again
+        </button>
+        <a href="{{ url_for('agents_bp.approval_queue') }}"
+           class="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition">
+          <i class="fa-solid fa-clipboard-check"></i> Suggestions to review
+        </a>
+        {% else %}
+        <a href="{{ url_for('auth_bp.signup') }}"
+           class="inline-flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
+          <i class="fa-solid fa-rocket"></i> Get Started
+        </a>
+        {% endif %}
       </div>
     </div>
-    <div class="flex-shrink-0 flex items-center gap-2">
-      {% if not is_demo %}
-      <button onclick="runAIAgents()" id="runAgentsBtn"
-              class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
-        <i class="fa-solid fa-robot"></i> Run AI Agents
-      </button>
-      <a href="{{ url_for('agents_bp.approval_queue') }}"
-         class="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition">
-        <i class="fa-solid fa-clipboard-check"></i> Approval Queue
-      </a>
-      {% else %}
-      <a href="{{ url_for('auth_bp.signup') }}"
-         class="inline-flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
-        <i class="fa-solid fa-rocket"></i> Get Started
-      </a>
-      {% endif %}
+
+    {# Plain-English explainer of how the AI decides what to do — replaces the "low-risk auto-execute, high-risk require approval" jargon line #}
+    {% if not is_demo %}
+    <div class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+      <div class="flex items-start gap-3">
+        <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-bolt text-green-600 text-xs"></i>
+        </div>
+        <div>
+          <p class="font-semibold text-gray-800">Safe changes happen automatically</p>
+          <p class="text-xs text-gray-500 mt-0.5">Things like blocking obviously-wasteful search terms — the AI applies them without bothering you. Every change is logged and reversible.</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3">
+        <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-hand text-amber-600 text-xs"></i>
+        </div>
+        <div>
+          <p class="font-semibold text-gray-800">Bigger changes wait for you</p>
+          <p class="text-xs text-gray-500 mt-0.5">Things like increasing a budget or pausing a campaign — the AI suggests them and waits for your approval. You stay in control.</p>
+        </div>
+      </div>
     </div>
+    {% endif %}
   </div>
 
   <!-- Agent Status Banner -->

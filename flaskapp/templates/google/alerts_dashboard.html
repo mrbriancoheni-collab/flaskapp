@@ -12,10 +12,10 @@
       <div>
         <h1 class="text-3xl font-bold text-gray-900">
           <i class="fas fa-bell text-indigo-600 mr-2"></i>
-          Google Ads Alerts & Recommendations
+          Things Google wants you to fix
         </h1>
         <p class="mt-2 text-sm text-gray-600">
-          View recommendations and alerts from Google Ads directly on our platform.
+          Google flags these issues in your account. We show them here with plain-English explanations and one-click fixes.
           {% if fetched_at %}
             <span class="text-gray-400">Last updated: {{ fetched_at }}</span>
           {% endif %}
@@ -227,6 +227,14 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 async function applyRecommendation(resourceName) {
   if (!confirm('Are you sure you want to apply this recommendation?')) {
     return;
@@ -244,13 +252,13 @@ async function applyRecommendation(resourceName) {
     const result = await response.json();
 
     if (result.success) {
-      alert('Recommendation applied successfully!');
+      showToast('Recommendation applied!', 'success');
       location.reload();
     } else {
-      alert('Error applying recommendation: ' + (result.error || 'Unknown error'));
+      showToast('Error: ' + (result.error || 'Unknown error'), 'error');
     }
   } catch (error) {
-    alert('Error applying recommendation: ' + error.message);
+    showToast('Error: ' + error.message, 'error');
   }
 }
 
@@ -271,13 +279,13 @@ async function dismissRecommendation(resourceName) {
     const result = await response.json();
 
     if (result.success) {
-      alert('Recommendation dismissed successfully!');
+      showToast('Dismissed.', 'success');
       location.reload();
     } else {
-      alert('Error dismissing recommendation: ' + (result.error || 'Unknown error'));
+      showToast('Error: ' + (result.error || 'Unknown error'), 'error');
     }
   } catch (error) {
-    alert('Error dismissing recommendation: ' + error.message);
+    showToast('Error: ' + error.message, 'error');
   }
 }
 
@@ -301,12 +309,12 @@ async function refreshAlerts() {
     if (result.success !== false) {
       location.reload();
     } else {
-      alert('Error refreshing alerts: ' + (result.error || 'Unknown error'));
+      showToast('Error refreshing alerts: ' + (result.error || 'Unknown error'), 'error');
       btn.innerHTML = originalHTML;
       btn.disabled = false;
     }
   } catch (error) {
-    alert('Error refreshing alerts: ' + error.message);
+    showToast('Error refreshing alerts: ' + error.message, 'error');
     btn.innerHTML = originalHTML;
     btn.disabled = false;
   }

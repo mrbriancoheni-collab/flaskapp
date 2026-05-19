@@ -8,13 +8,13 @@
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-semibold">Google Search Console</h1>
+      <h1 class="text-2xl font-semibold">Organic search performance</h1>
       <p class="text-gray-600">
         {% if connected_gsc %}
-          Connected to: {{ (gsc.site_url or gsc.property) if gsc else 'Site' }}
+          {{ (gsc.site_url or gsc.property) if gsc else 'Site' }} — clicks, impressions, and keyword rankings from Google
         {% else %}
           <span class="inline-flex items-center rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-[11px] mr-2">Not Connected</span>
-          Connect to pull live data.
+          Connect Google Search Console to see how your site ranks.
         {% endif %}
       </p>
     </div>
@@ -198,6 +198,14 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
   const GSC = {
     sitesUrl: "{{ url_for('google_bp.gsc_sites_json') }}",
     selectUrl: "{{ url_for('google_bp.gsc_select_site') }}",
@@ -304,8 +312,8 @@
           credentials:'same-origin'
         });
         const j = await res.json().catch(()=>({}));
-        alert(j.message || 'Optimization queued');
-      } catch(e){ console.error(e); alert('Could not start optimization'); }
+        showToast(j.message || 'Optimization queued!', 'success');
+      } catch(e){ console.error(e); showToast('Could not start optimization', 'error'); }
       finally { btn.disabled = false; btn.innerHTML = old; }
     });
   })();

@@ -369,6 +369,14 @@
 
 {% block extra_js %}
 <script nonce="{{ csp_nonce() }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 
 // ── KPI Strip ────────────────────────────────────────────────────────────────
 (function loadKpis() {
@@ -586,7 +594,7 @@
 // ── Stripe upgrade (needed if pricing modal rendered) ────────────────────────
 function upgradeToAnnual() {
   const priceId = '{{ config.STRIPE_YEARLY_PRICE_ID }}';
-  if (!priceId) { alert('Pricing configuration error. Please contact support at hi@fieldsprout.io'); return; }
+  if (!priceId) { showToast('Pricing configuration error. Please contact support at hi@fieldsprout.io', 'error'); return; }
   const button = event.target;
   const orig = button.innerHTML;
   button.innerHTML = '<svg class="animate-spin h-4 w-4 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
@@ -599,9 +607,9 @@ function upgradeToAnnual() {
   .then(r => r.json())
   .then(data => {
     if (data.checkout_url) { window.location.href = data.checkout_url; }
-    else { alert(data.error || 'Unexpected response. Please try again.'); button.disabled = false; button.innerHTML = orig; }
+    else { showToast(data.error || 'Unexpected response. Please try again.', 'error'); button.disabled = false; button.innerHTML = orig; }
   })
-  .catch(() => { alert('Failed to start checkout. Please contact support at hi@fieldsprout.io'); button.disabled = false; button.innerHTML = orig; });
+  .catch(() => { showToast('Failed to start checkout. Please contact support at hi@fieldsprout.io', 'error'); button.disabled = false; button.innerHTML = orig; });
 }
 
 function showPricingDetails() { window.location.href = '/#pricing'; }

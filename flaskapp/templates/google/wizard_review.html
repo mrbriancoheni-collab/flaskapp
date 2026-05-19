@@ -389,6 +389,14 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 document.getElementById('applyForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
@@ -397,7 +405,7 @@ document.getElementById('applyForm').addEventListener('submit', function(e) {
     const selectedIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
 
     if (selectedIds.length === 0) {
-        alert('Please select at least one recommendation to apply');
+        showToast('Please select at least one recommendation to apply', 'error');
         return;
     }
 
@@ -420,14 +428,14 @@ document.getElementById('applyForm').addEventListener('submit', function(e) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert(data.message);
+            showToast(data.message, 'success');
             window.location.href = data.redirect;
         } else {
-            alert('Error: ' + data.error);
+            showToast('Error: ' + data.error, 'error');
         }
     })
     .catch(error => {
-        alert('Error applying recommendations: ' + error);
+        showToast('Error applying recommendations: ' + error, 'error');
     });
 });
 </script>

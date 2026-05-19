@@ -198,17 +198,23 @@ def get_seasonal_recommendations():
     current_budget = data.get('current_monthly_budget', 5000)
 
     try:
-        recommendations = generate_seasonal_budget_recommendations(
+        result = generate_seasonal_budget_recommendations(
             account_id=account_id,
             campaign_id=campaign_id,
             service_type=service_type,
             current_monthly_budget=current_budget
         )
-
-        return jsonify({
-            "success": True,
-            "recommendations": recommendations
-        })
+        # Backwards-compat: function used to return List[Dict], now returns Dict
+        if isinstance(result, list):
+            payload = {"success": True, "recommendations": result}
+        else:
+            payload = {
+                "success": True,
+                "recommendations": result.get("recommendations", []),
+                "service_type": result.get("service_type"),
+                "service_type_label": result.get("service_type_label"),
+            }
+        return jsonify(payload)
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500

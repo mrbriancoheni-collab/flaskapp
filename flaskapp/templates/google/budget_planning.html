@@ -253,8 +253,11 @@
 
     {# 12-month seasonal plan #}
     <div id="forecastSeasonalPlan" class="hidden bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-      <div class="px-5 py-4 border-b border-gray-100">
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
         <h2 class="font-semibold text-gray-900">12-Month Budget Plan</h2>
+        <span id="seasonalModelBadge" class="hidden text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+          <i class="fas fa-flask mr-1"></i><span id="seasonalModelText"></span>
+        </span>
       </div>
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-100 text-sm">
@@ -266,6 +269,7 @@
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Change</th>
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Proj. Leads</th>
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Seasonality</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Why</th>
             </tr>
           </thead>
           <tbody id="seasonalPlanBody" class="divide-y divide-gray-50 bg-white"></tbody>
@@ -362,11 +366,16 @@ async function loadForecast() {
     });
     const data = await res.json();
     if (data.success && data.recommendations) {
+      if (data.service_type_label) {
+        document.getElementById('seasonalModelText').textContent = 'Model: ' + data.service_type_label;
+        document.getElementById('seasonalModelBadge').classList.remove('hidden');
+      }
       const tbody = document.getElementById('seasonalPlanBody');
       tbody.innerHTML = '';
       for (const rec of data.recommendations) {
         const chg = rec.budget_change_pct;
         const cls = chg >= 20 ? 'text-red-600' : chg >= 10 ? 'text-orange-600' : chg <= -10 ? 'text-green-600' : 'text-gray-900';
+        const note = (rec.note || '').replace(/</g, '&lt;');
         tbody.innerHTML += `
           <tr class="hover:bg-gray-50">
             <td class="px-5 py-3 font-medium text-gray-900">${rec.month} ${rec.year}</td>
@@ -375,6 +384,7 @@ async function loadForecast() {
             <td class="px-4 py-3 text-right font-semibold ${cls}">${chg > 0 ? '+' : ''}${(chg || 0).toFixed(1)}%</td>
             <td class="px-4 py-3 text-right text-gray-700">${rec.projected_leads || 0}</td>
             <td class="px-4 py-3 text-right text-gray-700">${(rec.seasonality_factor || 1).toFixed(2)}x</td>
+            <td class="px-5 py-3 text-gray-600 text-xs">${note}</td>
           </tr>
         `;
       }

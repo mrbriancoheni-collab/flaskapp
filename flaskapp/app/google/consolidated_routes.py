@@ -296,6 +296,15 @@ def api_create_budget_group():
 @consolidated_bp.route("/budget-plan", endpoint="budget_planning")
 @login_required
 def budget_planning():
+    try:
+        return _budget_planning_impl()
+    except Exception as _exc:
+        import traceback
+        log.exception("budget_planning crashed: %s", _exc)
+        return f"<pre>500 — budget_planning crashed:\n{type(_exc).__name__}: {_exc}\n\n{traceback.format_exc()}</pre>", 500
+
+
+def _budget_planning_impl():
     """Budget Groups + Auto-Budget Settings + Forecasting in one tabbed page."""
     from app.models_ads import AdsCampaign
     AdsCampaign.ensure_columns()

@@ -460,6 +460,15 @@ def debug_stats():
 
     out = {"account_id": aid, "errors": {}}
 
+    # Ensure schema is up to date before diagnostics
+    try:
+        from app.models_ads import AdsCampaign, GadsStatsDaily
+        AdsCampaign.ensure_columns()
+        GadsStatsDaily.ensure_columns()
+        out["ensure_columns_ran"] = True
+    except Exception as e:
+        out["errors"]["ensure_columns"] = f"{type(e).__name__}: {e}"
+
     def _safe(key, fn):
         try:
             out[key] = fn()
@@ -490,6 +499,24 @@ def debug_stats():
         text("SELECT COUNT(*) FROM ads_campaigns WHERE account_id = :aid"),
         {"aid": aid}
     ).scalar())
+
+    # 2b. Total campaigns in table (any account)
+    _safe("ads_campaigns_total", lambda: db.session.execute(
+        text("SELECT COUNT(*) FROM ads_campaigns")
+    ).scalar())
+
+    # 2c. Campaigns with NULL account_id (orphaned, needs backfill)
+    _safe("ads_campaigns_null_account_id", lambda: db.session.execute(
+        text("SELECT COUNT(*) FROM ads_campaigns WHERE account_id IS NULL")
+    ).scalar())
+
+    # 2d. Sample any campaign rows regardless of account_id
+    _safe("ads_campaigns_sample_any", lambda: [
+        {"id": r[0], "google_campaign_id": r[1], "name": r[2], "account_id": r[3]}
+        for r in db.session.execute(
+            text("SELECT id, google_campaign_id, name, account_id FROM ads_campaigns ORDER BY id DESC LIMIT 5")
+        ).fetchall()
+    ])
 
     # 3. Campaign rows with stats (the JOIN used by /overview)
     _safe("stats_30d_via_join", lambda: db.session.execute(

@@ -1263,6 +1263,48 @@ def sync():
 # ---------------------------
 # Search Terms tab
 # ---------------------------
+
+_BUYING_PATTERNS = {
+    "pool_cleaning": [
+        r"\bcost\b", r"\bprice[sd]?\b", r"\bhow much\b", r"\binstall",
+        r"\bfiberglass\b", r"\bviny[l]?\b", r"\bconcrete\b", r"\bbuild\b",
+        r"\b\d+[x×]\d+\b", r"\b\d+ foot\b", r"\b\d+ft\b",
+        r"\bkit\b", r"\bdiy\b", r"\bdesign[s]?\b", r"\bkits?\b",
+        r"\binground\b", r"\babove.?ground\b", r"\bestimate[s]?\b",
+        r"\bquote[s]?\b", r"\bcheap\b", r"\baffordable\b",
+    ],
+    "roofing": [
+        r"\bcost\b", r"\bprice[sd]?\b", r"\bhow much\b", r"\bestimate",
+        r"\bquote\b", r"\bmaterial[s]?\b", r"\bshingle[s]?\b", r"\btile[s]?\b",
+        r"\bdiy\b", r"\binstall\b", r"\bper square\b", r"\bsquare foot\b",
+    ],
+    "hvac_ac": [
+        r"\bcost\b", r"\bprice[sd]?\b", r"\bhow much\b", r"\bestimate",
+        r"\bunit[s]?\b", r"\binstall\b", r"\bbtu\b", r"\bseer\b",
+        r"\bbrand[s]?\b", r"\btrane\b", r"\bcarrier\b", r"\blennox\b",
+        r"\bdiy\b", r"\bquote\b",
+    ],
+    "plumbing": [
+        r"\bcost\b", r"\bprice[sd]?\b", r"\bhow much\b", r"\bestimate",
+        r"\bdiy\b", r"\binstall\b", r"\bparts?\b", r"\bfixture[s]?\b",
+    ],
+    "generic": [
+        r"\bcost\b", r"\bprice[sd]?\b", r"\bhow much\b", r"\bestimate",
+        r"\bdiy\b", r"\binstall\b", r"\bquote\b", r"\bcheap\b", r"\baffordable\b",
+    ],
+}
+
+
+def _classify_term(term: str, service_type: str) -> str:
+    """Return 'irrelevant', 'low_quality', or 'relevant'."""
+    import re
+    t = (term or "").lower()
+    patterns = _BUYING_PATTERNS.get(service_type, _BUYING_PATTERNS["generic"])
+    if any(re.search(p, t) for p in patterns):
+        return "irrelevant"
+    return "relevant"
+
+
 @gads_bp.get("/search-terms")
 @login_required
 def search_terms():
@@ -1294,6 +1336,25 @@ def search_terms():
         current_app.logger.exception("Error loading search terms")
         terms_data = []
 
+    service_type = "generic"
+    try:
+        from app.google.forecasting_routes import _infer_service_type
+        service_type = _infer_service_type(aid)
+    except Exception:
+        pass
+
+    for t in terms_data:
+        t["relevance"] = _classify_term(t["search_term"], service_type)
+        conv = t.get("conversions")
+        cost = t.get("cost_micros") or 0
+        t["cpl"] = round(cost / 1_000_000 / conv, 2) if conv and conv > 0 else None
+
+    wasted_spend_dollars = sum(
+        (t["cost_micros"] or 0) / 1_000_000
+        for t in terms_data if t["relevance"] == "irrelevant"
+    )
+    wasted_term_count = sum(1 for t in terms_data if t["relevance"] == "irrelevant")
+
     campaigns_list = [
         {"id": c.id, "name": c.name}
         for c in AdsCampaign.query.filter_by(account_id=aid).order_by(AdsCampaign.name).all()
@@ -1303,6 +1364,9 @@ def search_terms():
         "google/ads/search_terms.html",
         terms_data=terms_data,
         campaigns_list=campaigns_list,
+        wasted_spend_dollars=wasted_spend_dollars,
+        wasted_term_count=wasted_term_count,
+        service_type=service_type,
     )
 
 

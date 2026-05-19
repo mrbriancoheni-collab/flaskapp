@@ -327,6 +327,11 @@
             <i class="fa-solid fa-pen-to-square"></i><span>New Post</span>
           </a>
         {% endif %}
+        {% if has_endpoint('wp_bp.content_queue_review') %}
+          <a href="{{ url_for('wp_bp.content_queue_review') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
+            <i class="fa-solid fa-layer-group"></i><span>Content Queue</span>
+          </a>
+        {% endif %}
         {% if has_endpoint('wp_bp.seo_health') %}
           <a href="{{ url_for('wp_bp.seo_health') }}" class="block pl-6 pr-3 py-3 nav-link min-h-12">
             <i class="fa-solid fa-heart-pulse"></i><span>SEO Health</span>

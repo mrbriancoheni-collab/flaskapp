@@ -486,6 +486,7 @@ def run_agents_for_account(
             st_rows = _ads_query("""
                 SELECT
                     search_term_view.search_term,
+                    search_term_view.ad_group,
                     campaign.id,
                     campaign.name,
                     metrics.cost_micros, metrics.conversions,
@@ -505,10 +506,14 @@ def run_agents_for_account(
                 # Extract campaign ID from resource name (e.g., "customers/123/campaigns/456")
                 campaign_resource = camp.get("resourceName", "")
                 campaign_id = campaign_resource.split("/")[-1] if campaign_resource else ""
+                # Extract ad group ID from resource name (e.g., "customers/123/adGroups/789")
+                ad_group_resource = stv.get("adGroup", "")
+                ad_group_id = ad_group_resource.split("/")[-1] if ad_group_resource else ""
                 search_terms_list.append({
                     'text': stv.get("searchTerm", ""),
                     'query': stv.get("searchTerm", ""),  # alias for agent compatibility
                     'campaign_id': campaign_id,
+                    'ad_group_id': ad_group_id,
                     'campaign_name': camp.get("name", ""),
                     'spend': cost,
                     'cost': cost,  # alias for agent compatibility

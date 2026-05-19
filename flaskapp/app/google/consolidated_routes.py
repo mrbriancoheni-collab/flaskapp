@@ -185,6 +185,22 @@ def _load_agent_stats(account_id: int) -> list:
 
 
 def _load_pending_decisions(account_id: int):
+    # Demote generic playbook decisions (add Search/PMax campaign, balanced
+    # structure) that aren't account-specific wins. Idempotent — after the
+    # first run for an account, the WHERE clause matches nothing.
+    try:
+        db.session.execute(text("""
+            UPDATE agent_decisions
+            SET confidence = 0.40
+            WHERE account_id = :aid
+              AND status = 'pending'
+              AND decision_type IN ('create_search_campaign', 'create_pmax_campaign', 'create_balanced_campaigns')
+              AND confidence > 0.5
+        """), {"aid": account_id})
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
     rows = db.session.execute(text("""
         SELECT
             id, agent_id, agent_type, decision_type,
@@ -199,6 +215,7 @@ def _load_pending_decisions(account_id: int):
             CASE risk_level
                 WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4
             END,
+            confidence DESC,
             created_at DESC
     """), {"aid": account_id}).mappings().all()
     pending = [dict(r) for r in rows]
@@ -279,6 +296,15 @@ def api_create_budget_group():
 @consolidated_bp.route("/budget-plan", endpoint="budget_planning")
 @login_required
 def budget_planning():
+    try:
+        return _budget_planning_impl()
+    except Exception as _exc:
+        import traceback
+        log.exception("budget_planning crashed: %s", _exc)
+        return f"<pre>500 — budget_planning crashed:\n{type(_exc).__name__}: {_exc}\n\n{traceback.format_exc()}</pre>", 500
+
+
+def _budget_planning_impl():
     """Budget Groups + Auto-Budget Settings + Forecasting in one tabbed page."""
     from app.models_ads import AdsCampaign
     AdsCampaign.ensure_columns()

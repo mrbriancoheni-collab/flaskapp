@@ -713,8 +713,49 @@ def _execute_agent_decision(account_id: int, decision_row) -> dict:
             keyword_text = action_data.get('keyword_text')
             match_type = action_data.get('match_type', 'PHRASE')
 
-            if not ad_group_id or not keyword_text:
-                return {'success': False, 'error': 'Missing ad_group_id or keyword_text'}
+            if not keyword_text:
+                return {'success': False, 'error': 'Missing keyword_text'}
+
+            # Fallback: look up ad_group_id from local search_terms or ad_groups table
+            if not ad_group_id:
+                campaign_id = action_data.get('campaign_id') or decision_row.get('campaign_id')
+                try:
+                    row = db.session.execute(text("""
+                        SELECT st.ad_group_id
+                        FROM search_terms st
+                        JOIN ads_campaigns ac ON ac.id = st.campaign_id
+                        WHERE ac.account_id = :aid
+                          AND st.query = :kw
+                          AND st.ad_group_id IS NOT NULL
+                        LIMIT 1
+                    """), {"aid": account_id, "kw": keyword_text}).mappings().first()
+                    if row:
+                        ad_group_id = row["ad_group_id"]
+                except Exception:
+                    pass
+
+            # Final fallback: use the top ad group for the campaign
+            if not ad_group_id:
+                campaign_id = action_data.get('campaign_id') or decision_row.get('campaign_id')
+                if campaign_id:
+                    try:
+                        row = db.session.execute(text("""
+                            SELECT ag.id FROM ad_groups ag
+                            JOIN ads_campaigns ac ON ac.id = ag.campaign_id
+                            WHERE ac.account_id = :aid
+                              AND ag.campaign_id = :cid
+                            ORDER BY ag.id LIMIT 1
+                        """), {"aid": account_id, "cid": str(campaign_id)}).mappings().first()
+                        if row:
+                            ad_group_id = row["id"]
+                    except Exception:
+                        pass
+
+            if not ad_group_id:
+                return {'success': False, 'error': (
+                    f'Cannot add keyword "{keyword_text}": no ad group found. '
+                    'Please add it manually in Google Ads.'
+                )}
 
             return executor.add_keyword(str(ad_group_id), keyword_text, match_type)
 

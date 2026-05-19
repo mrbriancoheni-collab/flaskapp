@@ -1,5 +1,5 @@
 {% extends "base_app.html" %}
-{% block title %}AEO Optimizer · {{ app_name }}{% endblock %}
+{% block title %}How well AI tools understand your page · {{ app_name }}{% endblock %}
 
 {% macro status_icon(status) %}
   {% if status == 'pass' %}<i class="fa-solid fa-circle-check text-green-500"></i>
@@ -12,8 +12,8 @@
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">AI Overview (AEO) Optimizer</h1>
-      <p class="text-gray-500 text-sm mt-1">Score any page against 12 signals that influence Google AI Overview inclusion</p>
+      <h1 class="text-2xl font-bold text-gray-900">How well AI tools (ChatGPT, Google AI) understand your page</h1>
+      <p class="text-gray-500 text-sm mt-1">We check 12 things that decide whether AI tools quote your page when people ask questions.</p>
     </div>
     {% if result %}
     <div class="flex items-center gap-2">
@@ -30,8 +30,8 @@
         </span>
       </div>
       <div>
-        <p class="text-sm font-semibold text-gray-800">AEO Score</p>
-        <p class="text-xs text-gray-400">{{ 'AI Overview Ready' if result.score >= 75 else ('Needs Improvement' if result.score >= 45 else 'Not Optimised') }}</p>
+        <p class="text-sm font-semibold text-gray-800">AI readiness score</p>
+        <p class="text-xs text-gray-400">{{ 'Ready for AI tools' if result.score >= 75 else ('Needs work' if result.score >= 45 else 'Not ready yet') }}</p>
       </div>
     </div>
     {% endif %}
@@ -81,7 +81,7 @@
   <!-- Checklist -->
   <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
     <div class="px-5 py-3 border-b bg-gray-50">
-      <h2 class="font-semibold text-gray-800">AI Overview Signals
+      <h2 class="font-semibold text-gray-800">What AI tools look for on your page
         <span class="text-xs font-normal text-gray-400 ml-2">{{ result.word_count | int }} words · <a href="{{ result.url }}" target="_blank" rel="noopener" class="hover:text-indigo-500">{{ result.url | truncate(50) }}</a></span>
       </h2>
     </div>
@@ -109,15 +109,15 @@
 
   <!-- What is AEO box -->
   <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-5 text-sm text-indigo-800 space-y-2">
-    <p class="font-semibold"><i class="fa-solid fa-robot mr-2 text-indigo-500"></i>What is AEO?</p>
-    <p class="text-indigo-700">Answer Engine Optimization targets Google AI Overviews (formerly SGE), which now appear in ~15-20% of searches. Pages cited in AI Overviews receive visibility even without a top-10 ranking. High-impact signals are marked above.</p>
+    <p class="font-semibold"><i class="fa-solid fa-robot mr-2 text-indigo-500"></i>Why this matters</p>
+    <p class="text-indigo-700">When people search on Google, an AI-written answer now shows up at the top about 15-20% of the time. ChatGPT, Google AI, and other AI tools also answer questions by quoting websites. If your page is set up clearly, AI tools can quote your business — even if you don't show up at the top of Google.</p>
   </div>
 
   {% else %}
   <div class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">
     <i class="fa-solid fa-robot text-5xl mb-4"></i>
-    <p class="text-gray-600">Enter a page URL to score it for Google AI Overview inclusion.</p>
-    <p class="text-xs mt-1 text-gray-400">Checks 12 signals including concise answers, question headings, FAQ schema, author markup, and more.</p>
+    <p class="text-gray-600">Type in a page address to see how well AI tools (ChatGPT, Google AI) understand it.</p>
+    <p class="text-xs mt-1 text-gray-400">We check 12 things like short clear answers, question headings, FAQs, and author info.</p>
   </div>
   {% endif %}
 

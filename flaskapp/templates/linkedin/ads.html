@@ -211,19 +211,27 @@
   <!-- Quick Tips -->
   <div class="rounded-lg border bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
     <h3 class="font-semibold text-blue-900 mb-3">
-      <i class="fa-solid fa-lightbulb mr-2"></i>LinkedIn Ads Best Practices
+      <i class="fa-solid fa-lightbulb mr-2"></i>Tips for ads that bring in jobs
     </h3>
     <ul class="space-y-2 text-sm text-blue-800">
-      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Target decision-makers based on job title and seniority</li>
-      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Use LinkedIn Lead Gen Forms to reduce friction and increase conversions</li>
-      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Test both Sponsored Content and Sponsored InMail for different objectives</li>
-      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Include social proof (certifications, customer logos) in your creatives</li>
-      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>A/B test different value propositions and calls-to-action</li>
+      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Show your ads to property managers, facility managers, and business owners in your service area</li>
+      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Use lead capture forms so people can request a quote in one tap</li>
+      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Try different ad types to see what works best for your business</li>
+      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Add proof you can be trusted: license numbers, certifications, and customer logos</li>
+      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Test two versions of the same ad to see which gets more calls</li>
     </ul>
   </div>
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 // AI Optimization for LinkedIn Ads
 document.getElementById('runLinkedInAdsAI')?.addEventListener('click', async function() {
   const btn = this;
@@ -245,7 +253,7 @@ document.getElementById('runLinkedInAdsAI')?.addEventListener('click', async fun
     const data = await response.json();
 
     if (data.error) {
-      alert('Error: ' + data.error);
+      showToast('Error: ' + data.error, 'error');
       return;
     }
 
@@ -281,7 +289,7 @@ document.getElementById('runLinkedInAdsAI')?.addEventListener('click', async fun
 
   } catch (error) {
     console.error('Error:', error);
-    alert('Failed to generate AI recommendations');
+    showToast('Failed to generate AI recommendations', 'error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Run AI Review';

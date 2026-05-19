@@ -1,5 +1,5 @@
 {% extends "base_app.html" %}
-{% block title %}Content Recommendations · {{ app_name }}{% endblock %}
+{% block title %}Pages we suggest you write · {{ app_name }}{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto space-y-6">
@@ -7,9 +7,9 @@
   {# ── Header ────────────────────────────────────────────────────────────── #}
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">AI Content Recommendations</h1>
+      <h1 class="text-2xl font-bold text-gray-900">Pages we suggest you write</h1>
       <p class="text-gray-500 text-sm mt-1">
-        Topic cluster recommendations built from your keyword gap data
+        Groups of related pages we suggest, based on topics you should write about but haven't.
       </p>
     </div>
     {% if recommendations %}
@@ -45,8 +45,7 @@
     <i class="fa-brands fa-google text-4xl text-gray-300"></i>
     <div class="text-lg font-semibold text-gray-700">Connect Google Search Console</div>
     <p class="text-sm text-gray-500 max-w-md mx-auto">
-      Content recommendations are powered by your GSC keyword data. Connect your site to
-      unlock AI-generated topic cluster strategies.
+      We build suggested pages from your Google search data. Connect your site so we can suggest groups of pages you should write.
     </p>
     <a href="{{ url_for('google_bp.index') }}"
        class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700
@@ -60,10 +59,9 @@
   <div class="bg-white border rounded-xl p-8 text-center space-y-4">
     <i class="fa-solid fa-lightbulb text-indigo-400 text-5xl"></i>
     <div>
-      <p class="text-lg font-semibold text-gray-800">Generate Topic Cluster Recommendations</p>
+      <p class="text-lg font-semibold text-gray-800">Suggest pages to write</p>
       <p class="text-sm text-gray-500 mt-1 max-w-lg mx-auto">
-        Claude will analyse your keyword gaps, quick wins, and content clusters to suggest
-        6–8 high-impact topic strategies tailored to your site.
+        Our AI will look at topics you should write about but haven't, easy wins, and groups of related pages to suggest 6-8 strong ideas tailored to your business.
       </p>
     </div>
     {% if gap_result %}
@@ -71,19 +69,19 @@
       {% set s = gap_result.summary %}
       <div class="bg-gray-50 rounded-xl border p-3 text-center">
         <p class="text-xl font-bold text-yellow-600">{{ s.quick_wins_count }}</p>
-        <p class="text-xs text-gray-500 mt-0.5">Quick Wins</p>
+        <p class="text-xs text-gray-500 mt-0.5">Easy wins</p>
       </div>
       <div class="bg-gray-50 rounded-xl border p-3 text-center">
         <p class="text-xl font-bold text-green-600">{{ s.missing_count }}</p>
-        <p class="text-xs text-gray-500 mt-0.5">Missing Pages</p>
+        <p class="text-xs text-gray-500 mt-0.5">Pages you don't have yet</p>
       </div>
       <div class="bg-gray-50 rounded-xl border p-3 text-center">
         <p class="text-xl font-bold text-blue-600">{{ s.content_gaps_count }}</p>
-        <p class="text-xs text-gray-500 mt-0.5">Content Gaps</p>
+        <p class="text-xs text-gray-500 mt-0.5">Topics you should write about but haven't</p>
       </div>
       <div class="bg-gray-50 rounded-xl border p-3 text-center">
         <p class="text-xl font-bold text-purple-600">{{ s.clusters_count }}</p>
-        <p class="text-xs text-gray-500 mt-0.5">Clusters</p>
+        <p class="text-xs text-gray-500 mt-0.5">Topic groups</p>
       </div>
     </div>
     {% endif %}
@@ -92,7 +90,7 @@
       <button type="submit"
               class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700
                      text-white rounded-lg font-medium text-sm transition-colors">
-        <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Recommendations
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Suggest pages to write
       </button>
     </form>
   </div>
@@ -109,23 +107,23 @@
           <p class="font-bold text-gray-900 text-base">{{ rec.cluster_name }}</p>
           <p class="text-xs text-gray-400 mt-0.5">
             <i class="fa-solid fa-chart-bar mr-1"></i>
-            {{ rec.monthly_searches_potential }} estimated monthly searches
+            About {{ rec.monthly_searches_potential }} people search for this each month
           </p>
         </div>
         <span class="flex-shrink-0 text-xs bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full font-semibold">
-          Cluster {{ loop.index }}
+          Group {{ loop.index }}
         </span>
       </div>
 
       {# Pillar topic #}
       <div class="bg-indigo-50 rounded-lg px-4 py-3">
-        <p class="text-xs font-semibold text-indigo-500 uppercase tracking-wide mb-0.5">Pillar Topic</p>
+        <p class="text-xs font-semibold text-indigo-500 uppercase tracking-wide mb-0.5">Main page</p>
         <p class="text-sm font-semibold text-indigo-900">{{ rec.pillar_topic }}</p>
       </div>
 
       {# Supporting topics #}
       <div>
-        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Supporting Articles</p>
+        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pages that go with it</p>
         <ul class="space-y-1.5">
           {% for topic in rec.supporting_topics %}
           <li class="flex items-start gap-2 text-sm text-gray-700">
@@ -147,7 +145,7 @@
       <div class="flex gap-2 flex-wrap">
         <a href="{{ url_for('wp_bp.new_post') }}?keyword={{ rec.pillar_topic | urlencode }}&title={{ rec.pillar_topic | urlencode }}"
            class="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
-          <i class="fa-solid fa-pen mr-1"></i>Write Pillar Post
+          <i class="fa-solid fa-pen mr-1"></i>Write main page
         </a>
         <a href="{{ url_for('wp_bp.content_brief') }}?keyword={{ rec.pillar_topic | urlencode }}"
            class="text-xs px-3 py-1.5 border border-indigo-300 text-indigo-600 rounded-lg hover:bg-indigo-50 font-medium">
@@ -159,8 +157,7 @@
   </div>
 
   <p class="text-xs text-gray-400 text-center">
-    Recommendations generated from your Google Search Console data.
-    Regenerate anytime as your rankings evolve.
+    Built from your real Google data. Rebuild anytime as your pages move up and down on Google.
   </p>
 
   {% endif %}

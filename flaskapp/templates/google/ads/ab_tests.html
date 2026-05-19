@@ -175,6 +175,18 @@
 
 <div id="action-status" class="fixed bottom-4 right-4 hidden z-50 max-w-sm rounded-xl px-4 py-3 text-sm shadow-lg"></div>
 
+<!-- Confirm winner modal -->
+<div id="confirm-winner-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+    <h3 class="font-semibold text-gray-900 mb-2">Pick this ad as the winner?</h3>
+    <p class="text-sm text-gray-600 mb-5">This will pause all the other ads in this test and keep this one running.</p>
+    <div class="flex justify-end gap-3">
+      <button type="button" data-action="cancel" class="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50">Cancel</button>
+      <button type="button" data-action="ok" class="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700">Pick winner</button>
+    </div>
+  </div>
+</div>
+
 <script>
 function showToast(msg, kind) {
   const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };

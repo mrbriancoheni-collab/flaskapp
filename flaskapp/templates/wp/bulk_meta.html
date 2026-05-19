@@ -1,13 +1,13 @@
 {% extends "base_app.html" %}
-{% block title %}Bulk Meta Editor · {{ app_name }}{% endblock %}
+{% block title %}Edit Page Titles & Summaries · {{ app_name }}{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto space-y-6">
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Bulk Meta Editor</h1>
-      <p class="text-gray-500 text-sm mt-1">Edit title tags and meta descriptions across all posts at once</p>
+      <h1 class="text-2xl font-bold text-gray-900">Edit Page Titles & Summaries in Bulk</h1>
+      <p class="text-gray-500 text-sm mt-1">Update the page titles and the short summaries Google shows in search results — across all your pages at once.</p>
     </div>
   </div>
 
@@ -78,7 +78,7 @@
         <div class="space-y-2">
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-xs font-medium text-gray-500">Title Tag</label>
+              <label class="text-xs font-medium text-gray-500">Page Title (shown in Google search)</label>
               <span class="text-xs text-gray-400 char-count" data-target="title-{{ p.id }}">
                 {{ p.title | length }}/60
               </span>
@@ -92,7 +92,7 @@
           </div>
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-xs font-medium text-gray-500">Meta Description</label>
+              <label class="text-xs font-medium text-gray-500">Summary (shown under your title in Google)</label>
               <span class="text-xs text-gray-400 char-count" data-target="meta-{{ p.id }}">
                 {{ p.meta | length }}/155
               </span>
@@ -111,7 +111,7 @@
     <!-- Save footer -->
     <div class="bg-white rounded-xl shadow-sm border p-4 flex justify-between items-center">
       <p class="text-xs text-gray-400">
-        Changes update the WordPress post title and excerpt (used as meta description by most themes and Yoast SEO).
+        Changes update each WordPress page's title and short summary (what most themes and Yoast SEO show to Google).
       </p>
       <button type="submit"
               class="px-5 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 font-medium">

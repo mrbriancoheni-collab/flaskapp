@@ -45,7 +45,7 @@
     {% if budget_groups %}
     <div class="space-y-4">
       {% for group in budget_groups %}
-      {% set budget_dollars = (group.monthly_budget_target or (group.estimated_monthly_cents or 0) / 100) %}
+      {% set budget_dollars = ((group.monthly_budget_target or (group.estimated_monthly_cents or 0) / 100) | float) %}
       {% set spend_dollars = (group.current_spend_dollars or 0) | float %}
       {% set pct = ((spend_dollars / budget_dollars * 100) | int) if budget_dollars > 0 else 0 %}
       {% set is_active = group.enabled %}

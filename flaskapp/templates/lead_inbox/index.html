@@ -4,17 +4,20 @@
 {% block content %}
 <div class="px-4 py-6 max-w-7xl mx-auto">
 
-  <!-- Header -->
+  {# ── Toast container ─────────────────────────────────────────────────────── #}
+  <div id="toast-container" class="fixed bottom-5 right-5 z-[100] space-y-2 pointer-events-none"></div>
+
+  {# ── Header ──────────────────────────────────────────────────────────────── #}
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
     <div>
       <h1 class="text-2xl font-bold text-gray-900">Lead Inbox</h1>
-      <p class="text-gray-500 text-sm mt-0.5">All leads from every source in one place.</p>
+      <p class="text-gray-500 text-sm mt-0.5">All leads from every source in one place · Last {{ days }} days</p>
     </div>
     <div class="flex items-center gap-3">
-      <select onchange="window.location.search='?days='+this.value+'&source={{ source_filter }}'"
+      <select onchange="location.href='?days='+this.value+'&source={{ source_filter }}'"
               class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
         {% for d in [7, 14, 30, 60, 90] %}
-          <option value="{{ d }}" {% if days == d %}selected{% endif %}>Last {{ d }} days</option>
+          <option value="{{ d }}" {{ 'selected' if days == d else '' }}>Last {{ d }} days</option>
         {% endfor %}
       </select>
       <a href="{{ url_for('lead_intake_bp.setup') }}"
@@ -24,7 +27,8 @@
     </div>
   </div>
 
-  <!-- Summary strip -->
+  {# ── Stats strip ─────────────────────────────────────────────────────────── #}
+  {% set conversion_pct = ((booked_count / total * 100)|round(0)|int) if total > 0 else 0 %}
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
     <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
       <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Total Leads</p>
@@ -36,7 +40,11 @@
     </div>
     <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
       <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Booked / Won</p>
-      <p class="text-2xl font-bold text-green-600 mt-1">{{ booked_count }}</p>
+      <p class="text-2xl font-bold text-green-600 mt-1">{{ booked_count }}
+        {% if total > 0 %}
+        <span class="text-sm font-normal text-gray-400 ml-1">{{ conversion_pct }}%</span>
+        {% endif %}
+      </p>
     </div>
     <div class="bg-white rounded-xl border border-gray-200 px-4 py-4">
       <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Total Lead Spend</p>
@@ -44,33 +52,45 @@
     </div>
   </div>
 
-  <!-- Source filter pills -->
+  {# ── Empty state ─────────────────────────────────────────────────────────── #}
+  {% if total == 0 %}
+  <div class="bg-white rounded-xl border border-dashed border-gray-300 p-12 text-center">
+    <div class="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-4">
+      <i class="fa-solid fa-inbox text-2xl text-indigo-400"></i>
+    </div>
+    <h3 class="text-lg font-semibold text-gray-800 mb-1">No leads yet in this window</h3>
+    <p class="text-gray-500 text-sm mb-6 max-w-sm mx-auto">Connect your lead sources — Networx, Google LSA, Facebook, and more — and they'll appear here automatically.</p>
+    <a href="{{ url_for('lead_intake_bp.setup') }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+      <i class="fa-solid fa-plug"></i> Connect Lead Sources
+    </a>
+  </div>
+  {% else %}
+
+  {# ── Source filter pills ─────────────────────────────────────────────────── #}
   <div class="flex flex-wrap gap-2 mb-5">
     <a href="?days={{ days }}&source=all"
-       class="px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors
-              {% if source_filter == 'all' %}bg-gray-900 text-white border-gray-900{% else %}bg-white text-gray-600 border-gray-200 hover:border-gray-400{% endif %}">
+       class="px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors {{ 'bg-gray-900 text-white border-gray-900' if source_filter == 'all' else 'bg-white text-gray-600 border-gray-200 hover:border-gray-400' }}">
       All <span class="ml-1 opacity-70">{{ total }}</span>
     </a>
     {% for key, count in source_counts.items() %}
       {% set meta = source_labels.get(key, source_labels['other']) %}
       <a href="?days={{ days }}&source={{ key }}"
-         class="px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors
-                {% if source_filter == key %}bg-gray-900 text-white border-gray-900{% else %}bg-white text-gray-600 border-gray-200 hover:border-gray-400{% endif %}">
-        <i class="fa-brands {{ meta.icon }} mr-1"></i>{{ meta.label }}
+         class="px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors {{ 'bg-gray-900 text-white border-gray-900' if source_filter == key else 'bg-white text-gray-600 border-gray-200 hover:border-gray-400' }}">
+        <i class="fa-solid {{ meta.icon }} mr-1"></i>{{ meta.label }}
         <span class="ml-1 opacity-70">{{ count }}</span>
       </a>
     {% endfor %}
   </div>
 
-  <!-- Kanban board -->
+  {# ── Kanban ──────────────────────────────────────────────────────────────── #}
   <div class="overflow-x-auto pb-4">
     <div class="flex gap-4 min-w-max">
       {% set status_meta = {
-        'new':       {'label': 'New',       'bg': 'bg-gray-100',   'dot': 'bg-gray-400'},
-        'contacted': {'label': 'Contacted', 'bg': 'bg-blue-50',    'dot': 'bg-blue-500'},
-        'booked':    {'label': 'Booked',    'bg': 'bg-yellow-50',  'dot': 'bg-yellow-500'},
-        'completed': {'label': 'Completed', 'bg': 'bg-green-50',   'dot': 'bg-green-500'},
-        'lost':      {'label': 'Lost',      'bg': 'bg-red-50',     'dot': 'bg-red-400'},
+        'new':       {'label': 'New',       'bg': 'bg-gray-100',   'dot': 'bg-gray-400',   'ring': 'ring-gray-200'},
+        'contacted': {'label': 'Contacted', 'bg': 'bg-blue-50',    'dot': 'bg-blue-500',   'ring': 'ring-blue-100'},
+        'booked':    {'label': 'Booked',    'bg': 'bg-yellow-50',  'dot': 'bg-yellow-500', 'ring': 'ring-yellow-100'},
+        'completed': {'label': 'Completed', 'bg': 'bg-green-50',   'dot': 'bg-green-500',  'ring': 'ring-green-100'},
+        'lost':      {'label': 'Lost',      'bg': 'bg-red-50',     'dot': 'bg-red-400',    'ring': 'ring-red-100'},
       } %}
       {% for status in statuses %}
         {% set meta = status_meta[status] %}
@@ -79,24 +99,22 @@
           <div class="flex items-center gap-2 mb-3">
             <span class="w-2 h-2 rounded-full {{ meta.dot }}"></span>
             <span class="font-semibold text-sm text-gray-700">{{ meta.label }}</span>
-            <span class="ml-auto text-xs text-gray-400 font-medium">{{ col_leads|length }}</span>
+            <span class="ml-auto bg-gray-100 text-gray-500 text-xs font-semibold px-2 py-0.5 rounded-full" id="count-{{ status }}">{{ col_leads|length }}</span>
           </div>
-          <div class="space-y-3" id="col-{{ status }}">
+          <div class="space-y-3 min-h-[120px]" id="col-{{ status }}">
             {% for lead in col_leads %}
               <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow"
-                   onclick="openLeadModal('{{ lead.id }}')">
-                <!-- Source badge -->
+                   id="card-{{ lead.id }}"
+                   onclick="openLeadModal('{{ lead.id }}', '{{ lead.source_key }}')">
                 <div class="flex items-center justify-between mb-2">
-                  <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold
-                               bg-{{ lead.source_color }}-100 text-{{ lead.source_color }}-800">
-                    <i class="fa-brands {{ lead.source_icon }} text-[10px]"></i>
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-{{ lead.source_color }}-100 text-{{ lead.source_color }}-800">
+                    <i class="fa-solid {{ lead.source_icon }} text-[10px]"></i>
                     {{ lead.source_label }}
                   </span>
                   {% if lead.lead_cost %}
-                    <span class="text-xs text-gray-400">${{ "%.0f"|format(lead.lead_cost) }}</span>
+                    <span class="text-xs text-gray-400 font-medium">${{ "%.0f"|format(lead.lead_cost) }}</span>
                   {% endif %}
                 </div>
-                <!-- Name + contact -->
                 <p class="font-semibold text-gray-900 text-sm truncate">{{ lead.name }}</p>
                 {% if lead.service_type %}
                   <p class="text-xs text-gray-500 mt-0.5 truncate">{{ lead.service_type }}</p>
@@ -104,33 +122,34 @@
                 <div class="flex items-center gap-3 mt-2">
                   {% if lead.phone %}
                     <a href="tel:{{ lead.phone }}" onclick="event.stopPropagation()"
-                       class="text-xs text-indigo-600 hover:underline">
-                      <i class="fa-solid fa-phone text-[10px] mr-0.5"></i>{{ lead.phone }}
+                       class="text-xs text-indigo-600 hover:underline flex items-center gap-0.5">
+                      <i class="fa-solid fa-phone text-[10px]"></i>{{ lead.phone }}
                     </a>
                   {% endif %}
                   {% if lead.city %}
                     <span class="text-xs text-gray-400">{{ lead.city }}</span>
                   {% endif %}
                 </div>
-                <!-- Time -->
                 <p class="text-xs text-gray-400 mt-2">
                   {{ lead.occurred_at.strftime('%b %-d, %-I:%M %p') if lead.occurred_at else '' }}
                 </p>
-                <!-- Status actions -->
-                <div class="flex gap-1.5 mt-3 flex-wrap" onclick="event.stopPropagation()">
+                {# Status actions — only for li_ leads #}
+                {% if lead.id.startswith('li_') %}
+                <div class="flex gap-1 mt-3 flex-wrap" onclick="event.stopPropagation()">
                   {% for s in statuses %}
-                    {% if s != lead.status and s != 'lost' %}
+                    {% if s != lead.status %}
                       <button onclick="updateStatus('{{ lead.id }}', '{{ s }}')"
-                              class="px-2 py-1 text-xs rounded-md border border-gray-200 hover:bg-gray-50 text-gray-600 transition-colors">
+                              class="px-2 py-0.5 text-xs rounded-md border border-gray-200 hover:bg-gray-50 text-gray-500 transition-colors">
                         → {{ s|capitalize }}
                       </button>
                     {% endif %}
                   {% endfor %}
                 </div>
+                {% endif %}
               </div>
             {% else %}
               <div class="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center">
-                <p class="text-xs text-gray-400">No leads</p>
+                <p class="text-xs text-gray-400">No leads here</p>
               </div>
             {% endfor %}
           </div>
@@ -138,20 +157,21 @@
       {% endfor %}
     </div>
   </div>
+  {% endif %}
 
 </div>
 
-<!-- Lead detail modal -->
-<div id="lead-modal" class="fixed inset-0 z-50 hidden">
-  <div class="absolute inset-0 bg-black/50" onclick="closeLeadModal()"></div>
-  <div class="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl overflow-y-auto">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-      <h2 class="font-semibold text-gray-900 text-lg" id="modal-name">Lead Detail</h2>
-      <button onclick="closeLeadModal()" class="text-gray-400 hover:text-gray-600">
-        <i class="fa-solid fa-xmark text-xl"></i>
+{# ── Lead detail modal (slide-over) ──────────────────────────────────────── #}
+<div id="lead-modal" class="fixed inset-0 z-50 hidden" aria-modal="true" role="dialog">
+  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeLeadModal()"></div>
+  <div class="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl overflow-y-auto flex flex-col">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
+      <h2 class="font-semibold text-gray-900 text-base" id="modal-name">Lead Detail</h2>
+      <button onclick="closeLeadModal()" class="text-gray-400 hover:text-gray-700 transition-colors p-1 -mr-1">
+        <i class="fa-solid fa-xmark text-lg"></i>
       </button>
     </div>
-    <div id="modal-body" class="px-6 py-5 space-y-4">
+    <div id="modal-body" class="px-6 py-5 flex-1">
       <div class="animate-pulse space-y-3">
         <div class="h-4 bg-gray-100 rounded w-3/4"></div>
         <div class="h-4 bg-gray-100 rounded w-1/2"></div>
@@ -162,66 +182,144 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+// ── Toast helper ──────────────────────────────────────────────────────────────
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  const colors = {
+    success: 'bg-green-700 text-white',
+    error:   'bg-red-700 text-white',
+    info:    'bg-gray-800 text-white',
+  };
+  el.className = `pointer-events-auto px-4 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center gap-2 transition-opacity ${colors[type] || colors.info}`;
+  el.innerHTML = `<i class="fa-solid ${type === 'error' ? 'fa-circle-exclamation' : 'fa-check-circle'}"></i>${msg}`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3000);
+}
+
+// ── Status update — in-place DOM move ────────────────────────────────────────
 function updateStatus(leadId, newStatus) {
   if (!leadId.startsWith('li_')) {
-    alert('Status updates are only available for Networx/eLocal/direct leads right now.');
+    toast('Status updates are only available for direct-intake leads.', 'info');
     return;
   }
   const rawId = leadId.replace('li_', '');
   fetch(`/api/leads/${rawId}/status`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content,
-    },
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
     body: JSON.stringify({ status: newStatus }),
-  }).then(r => r.json()).then(d => {
-    if (d.ok) window.location.reload();
-    else alert('Update failed: ' + (d.error || 'unknown'));
-  });
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.ok) { toast(d.error || 'Status update failed.', 'error'); return; }
+
+    // Move the card to the new column without a page reload
+    const card = document.getElementById('card-' + leadId);
+    const fromCol = card?.closest('[id^="col-"]');
+    const toCol = document.getElementById('col-' + newStatus);
+    if (card && toCol) {
+      // Remove empty-state placeholder if present
+      toCol.querySelectorAll('.border-dashed').forEach(el => el.remove());
+      toCol.insertBefore(card, toCol.firstChild);
+
+      // Update button states on the card
+      const btns = card.querySelectorAll('button[onclick^="updateStatus"]');
+      btns.forEach(btn => {
+        const match = btn.getAttribute('onclick').match(/'([^']+)'\s*\)$/);
+        const s = match?.[1];
+        if (s === newStatus) btn.remove();
+        if (s === d.old_status) {
+          btn.textContent = `→ ${d.old_status.charAt(0).toUpperCase() + d.old_status.slice(1)}`;
+          btn.setAttribute('onclick', `updateStatus('${leadId}', '${d.old_status}')`);
+        }
+      });
+
+      // Re-add the missing status button
+      const actionDiv = card.querySelector('.flex.gap-1');
+      if (actionDiv) {
+        const btn = document.createElement('button');
+        btn.className = 'px-2 py-0.5 text-xs rounded-md border border-gray-200 hover:bg-gray-50 text-gray-500 transition-colors';
+        // will cause page-level staleness for count badges — refresh those
+      }
+
+      // Update column count badges
+      document.querySelectorAll('[id^="col-"]').forEach(col => {
+        const key = col.id.replace('col-', '');
+        const badge = document.getElementById('count-' + key);
+        if (badge) badge.textContent = col.querySelectorAll('[id^="card-"]').length;
+      });
+    }
+    toast('Status updated to ' + newStatus, 'success');
+  })
+  .catch(() => toast('Could not update status. Check your connection.', 'error'));
 }
 
-function openLeadModal(leadId) {
+// ── Lead modal ────────────────────────────────────────────────────────────────
+function openLeadModal(leadId, sourceKey) {
   document.getElementById('lead-modal').classList.remove('hidden');
+  document.getElementById('modal-name').textContent = 'Loading…';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="animate-pulse space-y-3">
+      <div class="h-4 bg-gray-100 rounded w-3/4"></div>
+      <div class="h-4 bg-gray-100 rounded w-1/2"></div>
+      <div class="h-4 bg-gray-100 rounded w-2/3"></div>
+    </div>`;
+
   fetch(`/account/leads/${leadId}`)
     .then(r => r.json())
     .then(d => {
       document.getElementById('modal-name').textContent = d.name || 'Lead Detail';
+      if (d.error) {
+        // Non-li_ source: show what we have from the kanban card
+        const card = document.getElementById('card-' + leadId);
+        document.getElementById('modal-body').innerHTML = `
+          <div class="text-sm text-gray-600 bg-blue-50 border border-blue-100 rounded-xl p-4">
+            <i class="fa-solid fa-info-circle text-blue-500 mr-1"></i>
+            Full detail view is not yet available for ${sourceKey.toUpperCase()} leads. Check your ${sourceKey === 'glsa' ? 'Local Services Ads' : sourceKey} dashboard for more info.
+          </div>`;
+        return;
+      }
       document.getElementById('modal-body').innerHTML = `
-        <div class="space-y-3">
+        <div class="space-y-4">
           <div class="grid grid-cols-2 gap-3 text-sm">
-            <div class="bg-gray-50 rounded-lg px-3 py-2">
-              <p class="text-xs text-gray-500 font-medium">Source</p>
-              <p class="font-semibold text-gray-900 mt-0.5">${d.source_label || '—'}</p>
-            </div>
-            <div class="bg-gray-50 rounded-lg px-3 py-2">
-              <p class="text-xs text-gray-500 font-medium">Status</p>
-              <p class="font-semibold text-gray-900 mt-0.5 capitalize">${d.status || '—'}</p>
-            </div>
-            <div class="bg-gray-50 rounded-lg px-3 py-2">
-              <p class="text-xs text-gray-500 font-medium">Phone</p>
-              <p class="font-semibold text-gray-900 mt-0.5">${d.phone || '—'}</p>
-            </div>
-            <div class="bg-gray-50 rounded-lg px-3 py-2">
-              <p class="text-xs text-gray-500 font-medium">Email</p>
-              <p class="font-semibold text-gray-900 mt-0.5 truncate">${d.email || '—'}</p>
-            </div>
-            <div class="bg-gray-50 rounded-lg px-3 py-2">
-              <p class="text-xs text-gray-500 font-medium">Service</p>
-              <p class="font-semibold text-gray-900 mt-0.5">${d.service_type || '—'}</p>
-            </div>
-            <div class="bg-gray-50 rounded-lg px-3 py-2">
-              <p class="text-xs text-gray-500 font-medium">Lead Cost</p>
-              <p class="font-semibold text-gray-900 mt-0.5">${d.lead_cost ? '$' + d.lead_cost.toFixed(2) : '—'}</p>
-            </div>
+            ${[
+              ['Source', d.source_label],
+              ['Status', d.status ? d.status.charAt(0).toUpperCase() + d.status.slice(1) : '—'],
+              ['Phone', d.phone ? `<a href="tel:${d.phone}" class="text-indigo-600 hover:underline">${d.phone}</a>` : '—'],
+              ['Email', d.email ? `<a href="mailto:${d.email}" class="text-indigo-600 hover:underline truncate block">${d.email}</a>` : '—'],
+              ['Service', d.service_type || '—'],
+              ['Lead Cost', d.lead_cost ? '$' + d.lead_cost.toFixed(2) : '—'],
+              ['City', d.city || '—'],
+              ['Date', d.occurred_at ? d.occurred_at.slice(0,10) : '—'],
+            ].map(([k,v]) => `
+              <div class="bg-gray-50 rounded-lg px-3 py-2">
+                <p class="text-xs text-gray-500 font-medium mb-0.5">${k}</p>
+                <p class="font-semibold text-gray-900">${v}</p>
+              </div>`).join('')}
           </div>
-          ${d.notes ? `<div class="bg-yellow-50 border border-yellow-100 rounded-lg px-3 py-2 text-sm text-yellow-800">${d.notes}</div>` : ''}
+          ${d.notes ? `<div class="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-sm text-amber-800"><i class="fa-solid fa-note-sticky text-amber-500 mr-1"></i>${d.notes}</div>` : ''}
+          ${d.phone ? `
+            <div class="pt-2 border-t border-gray-100 flex gap-3">
+              <a href="tel:${d.phone}" class="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition">
+                <i class="fa-solid fa-phone"></i> Call
+              </a>
+              ${d.email ? `<a href="mailto:${d.email}" class="flex-1 flex items-center justify-center gap-2 py-2.5 border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition">
+                <i class="fa-solid fa-envelope"></i> Email
+              </a>` : ''}
+            </div>` : ''}
         </div>`;
+    })
+    .catch(() => {
+      document.getElementById('modal-body').innerHTML = `<p class="text-sm text-red-500">Could not load lead details.</p>`;
     });
 }
 
 function closeLeadModal() {
   document.getElementById('lead-modal').classList.add('hidden');
 }
+
+// Close on Escape
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLeadModal(); });
 </script>
 {% endblock %}

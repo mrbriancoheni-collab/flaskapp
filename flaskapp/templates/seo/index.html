@@ -1,5 +1,5 @@
 {% extends "base_app.html" %}
-{% block title %}SEO Overview · {{ app_name }}{% endblock %}
+{% block title %}How your site is doing on Google · {{ app_name }}{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
@@ -7,7 +7,8 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">SEO Overview</h1>
+      <h1 class="text-2xl font-bold text-gray-900">How your site is doing on Google</h1>
+      <p class="text-sm text-gray-500 mt-1">A simple look at where your pages show up on Google, how fast your site loads, and what to fix next.</p>
       {% if site_url %}
         <p class="text-sm text-gray-500 mt-0.5">{{ site_url }}</p>
       {% endif %}
@@ -32,7 +33,7 @@
     <i class="fa-brands fa-google text-5xl text-gray-200 mb-4"></i>
     <h2 class="text-lg font-semibold text-gray-700 mb-2">Connect Google Search Console</h2>
     <p class="text-sm text-gray-500 max-w-md mx-auto mb-6">
-      Link your GSC account to see rankings, clicks, impressions, and keyword gaps — all powered by your real search data.
+      Link your Google Search Console account to see where your pages show up on Google, how many people clicked, and which topics you should write about but haven't.
     </p>
     <a href="{{ url_for('google_bp.index') }}"
        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition font-medium">
@@ -48,7 +49,7 @@
       (summary.get('clicks', 0) | int,      'Clicks',       'fa-arrow-pointer',   'text-indigo-600'),
       (summary.get('impressions', 0) | int,  'Impressions',  'fa-eye',             'text-purple-600'),
       ((summary.get('avg_ctr', 0) * 100) | round(1),  'Avg CTR %',   'fa-percent',         'text-green-600'),
-      (summary.get('avg_position', 0) | round(1),     'Avg Position','fa-ranking-star',    'text-amber-600'),
+      (summary.get('avg_position', 0) | round(1),     'Average spot on Google','fa-ranking-star',    'text-amber-600'),
     ] %}
     {% for value, label, icon, color in kpis %}
     <div class="rounded-xl border bg-white p-5 flex flex-col items-center gap-1">
@@ -67,7 +68,7 @@
     <!-- Top queries -->
     <div class="rounded-xl border bg-white p-5">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="font-semibold text-gray-800">Top Queries (28d)</h2>
+        <h2 class="font-semibold text-gray-800">What people searched to find you (last 28 days)</h2>
         <a href="{{ url_for('seo_bp.rankings') }}" class="text-xs text-indigo-600 hover:underline">View all →</a>
       </div>
       {% if top_queries %}
@@ -106,7 +107,7 @@
       <div class="rounded-xl border bg-white p-5">
         <div class="flex items-center justify-between mb-3">
           <h2 class="font-semibold text-gray-800">Site Health</h2>
-          <a href="{{ url_for('seo_bp.monitor') }}" class="text-xs text-indigo-600 hover:underline">Monitor →</a>
+          <a href="{{ url_for('seo_bp.monitor') }}" class="text-xs text-indigo-600 hover:underline">Track how your site is doing →</a>
         </div>
         <div class="flex items-center gap-5">
           {% set score = latest_snapshot.health_score %}
@@ -173,16 +174,16 @@
 
   <!-- Tool cards (always visible) -->
   <div>
-    <h2 class="font-semibold text-gray-700 mb-3">SEO Tools</h2>
+    <h2 class="font-semibold text-gray-700 mb-3">Tools to help you get found on Google</h2>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {% set tools = [
-        ('seo_bp.rankings',   'fa-chart-line',             'indigo', 'Rankings',         'Live keyword positions from Google Search Console.'),
-        ('seo_bp.gaps',       'fa-layer-group',            'purple', 'Keyword Gaps',     'Find quick wins, content gaps, and cannibalization issues.'),
-        ('seo_bp.monitor',    'fa-bell',                   'amber',  'Monitor & Alerts', 'Automated health checks and change alerts.'),
-        ('wp_bp.seo_audit',   'fa-magnifying-glass-chart', 'blue',   'SEO & AEO Audit',  'On-page SEO plus Answer Engine Optimization scoring.'),
-        ('wp_bp.tech_seo',    'fa-spider',                 'gray',   'Technical SEO',    'Crawlability, Core Web Vitals, security, and PageSpeed.'),
-        ('wp_bp.schema_gen',  'fa-code',                   'green',  'Schema Generator', 'Generate and inject JSON-LD structured data.'),
-        ('seo_bp.optimize',   'fa-wand-magic-sparkles',    'rose',   'AI Recommendations','AI-powered suggestions from your GSC data.'),
+        ('seo_bp.rankings',   'fa-chart-line',             'indigo', 'Where you show up on Google',         'See which spot your pages take when people search.'),
+        ('seo_bp.gaps',       'fa-layer-group',            'purple', 'Topics you should write about',     'Quick wins, topics you should write about but haven\'t, and pages competing with each other.'),
+        ('seo_bp.monitor',    'fa-bell',                   'amber',  'Track how your site is doing', 'Automatic checks and alerts when something changes.'),
+        ('wp_bp.seo_audit',   'fa-magnifying-glass-chart', 'blue',   'Page check + AI tool readiness',  'Score each page on how Google reads it and how well AI tools (ChatGPT, Google AI) understand it.'),
+        ('wp_bp.tech_seo',    'fa-spider',                 'gray',   'Behind-the-scenes site check',    'Can Google read your site, how fast it loads, and is it secure.'),
+        ('wp_bp.schema_gen',  'fa-code',                   'green',  'Add hidden tags for Google', 'Build the special tags Google uses to better understand your pages.'),
+        ('seo_bp.optimize',   'fa-wand-magic-sparkles',    'rose',   'AI suggestions','Suggestions based on your real Google data.'),
       ] %}
       {% for endpoint, icon, color, title, desc in tools %}
       {% if has_endpoint(endpoint) %}

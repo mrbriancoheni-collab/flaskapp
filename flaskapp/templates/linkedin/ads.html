@@ -1,7 +1,7 @@
 {# templates/linkedin/ads.html #}
 {% extends "base_app.html" %}
 {% set SECTION = 'linkedin' %}
-{% block title %}LinkedIn Ads Optimizer{% endblock %}
+{% block title %}Get more leads from LinkedIn ads{% endblock %}
 
 {% block content %}
 {% set _connected = (connected if connected is defined else false) %}
@@ -11,13 +11,13 @@
 <div class="max-w-7xl mx-auto space-y-6">
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-semibold">LinkedIn Ads Optimizer</h1>
+      <h1 class="text-2xl font-semibold">Get more leads from LinkedIn ads</h1>
       <p class="text-gray-500">
         {% if _connected %}
           Managing <span class="font-medium">{{ _data.account_name or 'LinkedIn Ads Account' }}</span>.
         {% else %}
           <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 text-[11px] mr-2">Demo Mode</span>
-          Connect your LinkedIn account to manage live campaigns.
+          Connect your LinkedIn account to run real ad campaigns and track results.
         {% endif %}
       </p>
     </div>
@@ -82,19 +82,19 @@
   {% if _data.campaigns %}
   <div class="rounded-lg border bg-white overflow-hidden">
     <div class="p-4 border-b bg-gray-50">
-      <h2 class="font-semibold">Active Campaigns</h2>
-      <p class="text-xs text-gray-500 mt-1">{{ _data.campaigns|length }} campaign(s)</p>
+      <h2 class="font-semibold">Active ad campaigns</h2>
+      <p class="text-xs text-gray-500 mt-1">{{ _data.campaigns|length }} ad campaign(s) currently running</p>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="bg-gray-50 border-b">
           <tr>
-            <th class="px-4 py-3 text-left font-medium text-gray-700">Campaign Name</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-700">Ad campaign name</th>
             <th class="px-4 py-3 text-left font-medium text-gray-700">Type</th>
             <th class="px-4 py-3 text-left font-medium text-gray-700">Status</th>
-            <th class="px-4 py-3 text-left font-medium text-gray-700">Daily Budget</th>
-            <th class="px-4 py-3 text-left font-medium text-gray-700">Objective</th>
-            <th class="px-4 py-3 text-left font-medium text-gray-700">Targeting</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-700">Daily budget</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-700">What you want to get</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-700">Who you want to reach</th>
           </tr>
         </thead>
         <tbody>
@@ -132,8 +132,8 @@
   {% if _data.creatives %}
   <div class="rounded-lg border bg-white overflow-hidden">
     <div class="p-4 border-b bg-gray-50">
-      <h2 class="font-semibold">Ad Creatives Performance</h2>
-      <p class="text-xs text-gray-500 mt-1">{{ _data.creatives|length }} active creative(s)</p>
+      <h2 class="font-semibold">How your ads are doing</h2>
+      <p class="text-xs text-gray-500 mt-1">{{ _data.creatives|length }} active ad(s)</p>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
@@ -141,10 +141,10 @@
           <tr>
             <th class="px-4 py-3 text-left font-medium text-gray-700">Headline</th>
             <th class="px-4 py-3 text-left font-medium text-gray-700">Format</th>
-            <th class="px-4 py-3 text-left font-medium text-gray-700">Intro Text</th>
-            <th class="px-4 py-3 text-right font-medium text-gray-700">Impressions</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-700">Intro text</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-700">People who saw your ad</th>
             <th class="px-4 py-3 text-right font-medium text-gray-700">Clicks</th>
-            <th class="px-4 py-3 text-right font-medium text-gray-700">CTR</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-700">% who clicked</th>
             <th class="px-4 py-3 text-right font-medium text-gray-700">Leads</th>
           </tr>
         </thead>
@@ -180,8 +180,8 @@
   {% if _data.lead_forms %}
   <div class="rounded-lg border bg-white overflow-hidden">
     <div class="p-4 border-b bg-gray-50">
-      <h2 class="font-semibold">Lead Gen Forms</h2>
-      <p class="text-xs text-gray-500 mt-1">{{ _data.lead_forms|length }} form(s)</p>
+      <h2 class="font-semibold">Lead capture forms</h2>
+      <p class="text-xs text-gray-500 mt-1">{{ _data.lead_forms|length }} form(s) collecting contact info from interested customers</p>
     </div>
     <div class="p-4 space-y-3">
       {% for form in _data.lead_forms %}
@@ -197,7 +197,7 @@
             Fields: {{ form.fields|join(', ') }}
           </div>
           <div class="text-xs">
-            <span class="text-gray-500">Completion Rate:</span>
+            <span class="text-gray-500">% who finished the form:</span>
             <span class="font-medium {% if form.completion_rate|replace('%','')|float >= 60 %}text-green-600{% else %}text-amber-600{% endif %}">
               {{ form.completion_rate }}
             </span>
@@ -211,19 +211,27 @@
   <!-- Quick Tips -->
   <div class="rounded-lg border bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
     <h3 class="font-semibold text-blue-900 mb-3">
-      <i class="fa-solid fa-lightbulb mr-2"></i>LinkedIn Ads Best Practices
+      <i class="fa-solid fa-lightbulb mr-2"></i>Tips for ads that bring in jobs
     </h3>
     <ul class="space-y-2 text-sm text-blue-800">
-      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Target decision-makers based on job title and seniority</li>
-      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Use LinkedIn Lead Gen Forms to reduce friction and increase conversions</li>
-      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Test both Sponsored Content and Sponsored InMail for different objectives</li>
-      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Include social proof (certifications, customer logos) in your creatives</li>
-      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>A/B test different value propositions and calls-to-action</li>
+      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Show your ads to property managers, facility managers, and business owners in your service area</li>
+      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Use lead capture forms so people can request a quote in one tap</li>
+      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Try different ad types to see what works best for your business</li>
+      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Add proof you can be trusted: license numbers, certifications, and customer logos</li>
+      <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Test two versions of the same ad to see which gets more calls</li>
     </ul>
   </div>
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 // AI Optimization for LinkedIn Ads
 document.getElementById('runLinkedInAdsAI')?.addEventListener('click', async function() {
   const btn = this;
@@ -245,7 +253,7 @@ document.getElementById('runLinkedInAdsAI')?.addEventListener('click', async fun
     const data = await response.json();
 
     if (data.error) {
-      alert('Error: ' + data.error);
+      showToast('Error: ' + data.error, 'error');
       return;
     }
 
@@ -281,7 +289,7 @@ document.getElementById('runLinkedInAdsAI')?.addEventListener('click', async fun
 
   } catch (error) {
     console.error('Error:', error);
-    alert('Failed to generate AI recommendations');
+    showToast('Failed to generate AI recommendations', 'error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Run AI Review';

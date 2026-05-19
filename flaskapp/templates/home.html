@@ -219,17 +219,17 @@
     <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-400">
       {% if has_endpoint('signup') %}
         <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
-          <span class="relative z-10">Try FieldSprout →</span>
+          <span class="relative z-10">Start free trial →</span>
           <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
         </a>
       {% elif has_endpoint('register') %}
         <a href="{{ url_for(ep('register')) }}?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
-          <span class="relative z-10">Try FieldSprout →</span>
+          <span class="relative z-10">Start free trial →</span>
           <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
         </a>
       {% else %}
         <a href="/signup?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
-          <span class="relative z-10">Try FieldSprout →</span>
+          <span class="relative z-10">Start free trial →</span>
           <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
         </a>
       {% endif %}
@@ -240,6 +240,13 @@
         See How It Works
       </a>
     </div>
+
+    <!-- Trust microcopy under hero CTAs -->
+    <p class="mt-4 text-sm text-gray-500 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 animate-fade-in-up animation-delay-400">
+      <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-check text-green-500"></i>14-day free trial</span>
+      <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-check text-green-500"></i>No credit card required</span>
+      <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-check text-green-500"></i>Connect Google account in 30s</span>
+    </p>
 
     <!-- Video Showcase -->
     <div class="mt-12 max-w-4xl mx-auto animate-fade-in-up animation-delay-600">

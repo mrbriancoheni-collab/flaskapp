@@ -8,7 +8,7 @@
       <div>
         <h1 class="text-2xl font-bold flex items-center gap-2">
           <i class="fa-brands fa-wordpress"></i>
-          Content Publisher
+          Pages & Posts
         </h1>
         {% if site %}
           <div class="flex items-center gap-2 mt-2 text-indigo-100">
@@ -74,24 +74,24 @@
           <div class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-3 group-hover:scale-110 transition">
             <i class="fa-solid fa-wand-magic-sparkles text-xl"></i>
           </div>
-          <div class="font-semibold text-gray-900">AI Draft</div>
-          <div class="text-sm text-gray-500 mt-1">Generate content with AI assistance</div>
+          <div class="font-semibold text-gray-900">Write with AI</div>
+          <div class="text-sm text-gray-500 mt-1">Let AI draft a new page or post for you</div>
         </a>
 
         <a href="{{ url_for('wp_bp.compose') }}?mode=manual" class="group bg-white border rounded-xl p-5 hover:shadow-lg hover:border-indigo-300 transition">
           <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3 group-hover:scale-110 transition">
             <i class="fa-solid fa-pen-to-square text-xl"></i>
           </div>
-          <div class="font-semibold text-gray-900">Write Post</div>
-          <div class="text-sm text-gray-500 mt-1">Create content manually</div>
+          <div class="font-semibold text-gray-900">Write It Yourself</div>
+          <div class="text-sm text-gray-500 mt-1">Write your own page or post from scratch</div>
         </a>
 
         <a href="{{ url_for('wp_bp.analyze') }}" class="group bg-white border rounded-xl p-5 hover:shadow-lg hover:border-indigo-300 transition">
           <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center mb-3 group-hover:scale-110 transition">
             <i class="fa-solid fa-magnifying-glass-chart text-xl"></i>
           </div>
-          <div class="font-semibold text-gray-900">Analyze URL</div>
-          <div class="text-sm text-gray-500 mt-1">Improve existing content</div>
+          <div class="font-semibold text-gray-900">Improve a Page</div>
+          <div class="text-sm text-gray-500 mt-1">Paste a page link to get improvement ideas</div>
         </a>
       </div>
 
@@ -99,7 +99,7 @@
       <div class="bg-white rounded-xl border shadow-sm">
         <div class="px-5 py-4 border-b flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <h2 class="font-semibold text-gray-900">Content Queue</h2>
+            <h2 class="font-semibold text-gray-900">What's Being Worked On</h2>
             <span class="px-2 py-0.5 rounded-full bg-gray-100 text-xs font-medium">{{ jobs|length }} items</span>
           </div>
           <form method="post" action="{{ url_for('wp_bp.run_now') }}" class="inline">
@@ -229,8 +229,8 @@
             <div class="w-16 h-16 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center mx-auto mb-4">
               <i class="fa-solid fa-inbox text-2xl"></i>
             </div>
-            <div class="text-gray-500">No content in queue</div>
-            <div class="text-sm text-gray-400 mt-1">Create your first post to get started</div>
+            <div class="text-gray-500">Nothing being worked on right now</div>
+            <div class="text-sm text-gray-400 mt-1">Create your first page or post to get started</div>
           </div>
           {% endfor %}
         </div>
@@ -285,7 +285,7 @@
           </a>
           <a href="{{ url_for('wp_bp.edit_lookup') }}" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition text-sm text-gray-700">
             <i class="fa-solid fa-pen text-gray-400 w-5"></i>
-            Edit Existing Post
+            Edit an Existing Page
           </a>
           {% if site %}
           <a href="{{ site.base_url }}/wp-admin/edit.php" target="_blank" class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition text-sm text-gray-700">
@@ -304,7 +304,7 @@
           <h3 class="font-semibold text-gray-900">Pro Tip</h3>
         </div>
         <p class="text-sm text-gray-600">
-          Use the AI Draft feature with specific keywords and topics to generate SEO-optimized content that ranks well in search results.
+          When you use "Write with AI", give it a specific service and the city you serve — that's what makes pages show up in Google for the right local searches.
         </p>
       </div>
     </div>

@@ -11,8 +11,8 @@
   {# ── page header ── #}
   <div class="flex items-start justify-between flex-wrap gap-4 mb-6">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">AI Control</h1>
-      <p class="text-sm text-gray-500 mt-0.5">Autonomous mode · Agent performance · Approval queue</p>
+      <h1 class="text-2xl font-bold text-gray-900">AI settings &amp; activity</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Control what the AI does automatically, see what it's done, and approve changes</p>
     </div>
     {% if total_pending > 0 %}
     <span id="pending-alert" class="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-100 text-amber-800 text-sm font-semibold rounded-full">
@@ -417,6 +417,14 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 function getCsrfToken() {
   return document.querySelector('meta[name="csrf-token"]')?.content || '';
 }
@@ -479,7 +487,7 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
     msg.classList.remove('hidden');
     setTimeout(() => msg.classList.add('hidden'), 3000);
   } catch(e) {
-    alert('Save failed: ' + e.message);
+    showToast('Save failed: ' + e.message, 'error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-save"></i> Save Settings';

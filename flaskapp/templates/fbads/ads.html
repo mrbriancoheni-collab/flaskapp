@@ -287,13 +287,22 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
 const adsData = {{ ads|tojson }};
 
 function editAd(adId, adName) {
     // Find the ad data
     const ad = adsData.find(a => a.id === adId);
     if (!ad) {
-        alert('Ad not found');
+        showToast('Ad not found', 'error');
         return;
     }
 
@@ -463,13 +472,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Validate file type
             if (!file.type.match('image.*')) {
-                alert('Please select an image file');
+                showToast('Invalid file type. Please select an image file.', 'error');
                 return;
             }
 
             // Validate file size (10MB)
             if (file.size > 10 * 1024 * 1024) {
-                alert('Image must be less than 10MB');
+                showToast('Invalid file size. Image must be less than 10MB.', 'error');
                 return;
             }
 

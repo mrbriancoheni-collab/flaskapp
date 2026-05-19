@@ -522,31 +522,54 @@ def dashboard():
 @account_bp.route("/dashboard/kpis.json", methods=["GET"], endpoint="dashboard_kpis")
 @login_required
 def dashboard_kpis():
-    """Return this-month Google Ads KPIs from local stats table."""
-    from datetime import date
+    """Return this-month Google Ads KPIs with prior-month trends."""
+    from datetime import date, timedelta
     aid = current_account_id()
     if not aid:
         return jsonify({"error": "no account"}), 403
 
-    month_start = date.today().replace(day=1).isoformat()
+    today = date.today()
+    month_start = today.replace(day=1)
+    # Previous full calendar month
+    prev_month_end = month_start - timedelta(days=1)
+    prev_month_start = prev_month_end.replace(day=1)
+
+    def _pct_change(current, prior):
+        if not prior:
+            return None
+        return round((current - prior) / prior * 100, 1)
+
+    kpi_sql = """
+        SELECT
+            COALESCE(SUM(gs.cost_micros), 0)    AS cost_micros,
+            COALESCE(SUM(gs.clicks), 0)          AS clicks,
+            COALESCE(SUM(gs.conversions), 0)     AS conversions,
+            COALESCE(SUM(gs.impressions), 0)     AS impressions
+        FROM gads_stats_daily gs
+        JOIN ads_campaigns ac ON ac.id = gs.entity_id
+        WHERE ac.account_id = :aid
+          AND gs.entity_type = 'campaign'
+          AND gs.date >= :start AND gs.date <= :end
+    """
     try:
-        row = db.session.execute(text("""
-            SELECT
-                COALESCE(SUM(gs.cost_micros), 0)    AS cost_micros,
-                COALESCE(SUM(gs.clicks), 0)          AS clicks,
-                COALESCE(SUM(gs.conversions), 0)     AS conversions,
-                COALESCE(SUM(gs.impressions), 0)     AS impressions
-            FROM gads_stats_daily gs
-            JOIN ads_campaigns ac ON ac.id = gs.entity_id
-            WHERE ac.account_id = :aid
-              AND gs.entity_type = 'campaign'
-              AND gs.date >= :month_start
-        """), {"aid": aid, "month_start": month_start}).mappings().first()
+        row = db.session.execute(text(kpi_sql), {
+            "aid": aid, "start": month_start.isoformat(), "end": today.isoformat()
+        }).mappings().first()
+        prev = db.session.execute(text(kpi_sql), {
+            "aid": aid, "start": prev_month_start.isoformat(), "end": prev_month_end.isoformat()
+        }).mappings().first()
 
         spend = float(row["cost_micros"] or 0) / 1_000_000 if row else 0.0
         clicks = int(row["clicks"] or 0) if row else 0
         conversions = float(row["conversions"] or 0) if row else 0.0
         impressions = int(row["impressions"] or 0) if row else 0
+        ctr = round(clicks / impressions * 100, 2) if impressions else 0
+
+        prev_spend = float(prev["cost_micros"] or 0) / 1_000_000 if prev else 0.0
+        prev_clicks = int(prev["clicks"] or 0) if prev else 0
+        prev_conversions = float(prev["conversions"] or 0) if prev else 0.0
+        prev_impressions = int(prev["impressions"] or 0) if prev else 0
+        prev_ctr = round(prev_clicks / prev_impressions * 100, 2) if prev_impressions else 0
 
         # Best-performing campaign this month
         best = db.session.execute(text("""
@@ -560,17 +583,23 @@ def dashboard_kpis():
             GROUP BY ac.id, ac.name
             ORDER BY SUM(gs.conversions) DESC, SUM(gs.cost_micros) DESC
             LIMIT 1
-        """), {"aid": aid, "month_start": month_start}).mappings().first()
+        """), {"aid": aid, "month_start": month_start.isoformat()}).mappings().first()
 
         return jsonify({
             "spend_dollars": round(spend, 2),
             "clicks": clicks,
             "conversions": round(conversions, 1),
             "impressions": impressions,
-            "ctr": round(clicks / impressions * 100, 2) if impressions else 0,
+            "ctr": ctr,
             "cpc": round(spend / clicks, 2) if clicks else 0,
             "best_campaign": dict(best) if best else None,
-            "month_start": month_start,
+            "month_start": month_start.isoformat(),
+            "trends": {
+                "spend": _pct_change(spend, prev_spend),
+                "clicks": _pct_change(clicks, prev_clicks),
+                "conversions": _pct_change(conversions, prev_conversions),
+                "ctr": _pct_change(ctr, prev_ctr),
+            },
         })
     except Exception as exc:
         current_app.logger.exception("dashboard_kpis error: %s", exc)

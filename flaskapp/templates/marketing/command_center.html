@@ -11,41 +11,67 @@
   <div class="flex items-center justify-between flex-wrap gap-4">
     <div>
       <h1 class="text-2xl font-bold text-gray-900">Marketing Command Center</h1>
-      <p class="text-sm text-gray-500 mt-0.5">All channels · 90-day view</p>
+      <p class="text-sm text-gray-500 mt-0.5">Every dollar you spend on marketing, all in one place · Last 90 days</p>
     </div>
     <a href="/account/marketing/channels"
        class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
-      <i class="fa-solid fa-plus"></i> Add Channel
+      <i class="fa-solid fa-plus"></i> Add a channel
     </a>
   </div>
 
+  {# ── Bottom Line summary ── #}
+  {% set _ts = namespace(v=0) %}
+  {% set _tl = namespace(v=0) %}
+  {% set _tb = namespace(v=0) %}
+  {% set _tr = namespace(v=0) %}
+  {% for ch in channel_stats %}
+    {% set _ts.v = _ts.v + (ch.spend_cents or 0) %}
+    {% set _tl.v = _tl.v + (ch.leads or 0) %}
+    {% set _tb.v = _tb.v + (ch.booked or 0) %}
+    {% set _tr.v = _tr.v + (ch.revenue_cents or 0) %}
+  {% endfor %}
+  {% set _roi = (_tr.v / _ts.v) if _ts.v > 0 else None %}
+  {% if channel_stats %}
+  <div class="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-xl p-5">
+    <div class="flex items-start gap-3">
+      <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0">
+        <i class="fa-solid fa-lightbulb"></i>
+      </div>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-indigo-900 uppercase tracking-wide">The bottom line</p>
+        <p class="text-gray-800 mt-1">
+          You spent <strong>${{ "{:,.0f}".format(_ts.v / 100) }}</strong> across all marketing,
+          got <strong>{{ _tl.v }} leads</strong>, and booked <strong>{{ _tb.v }} jobs</strong>.
+          {% if _roi is not none %}
+            That's <strong>${{ "{:.2f}".format(_roi) }} earned for every $1 spent</strong>{% if _roi >= 3 %} — strong return{% elif _roi >= 1.5 %} — healthy return{% elif _roi >= 1 %} — breaking even{% else %} — losing money, needs attention{% endif %}.
+          {% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   {# ── Top KPI Bar ── #}
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-    {% set total_spend = namespace(v=0) %}
-    {% set total_leads = namespace(v=0) %}
-    {% set total_booked = namespace(v=0) %}
-    {% set total_rev = namespace(v=0) %}
-    {% for ch in channel_stats %}
-      {% set total_spend.v = total_spend.v + (ch.spend_cents or 0) %}
-      {% set total_leads.v = total_leads.v + (ch.leads or 0) %}
-      {% set total_booked.v = total_booked.v + (ch.booked or 0) %}
-      {% set total_rev.v = total_rev.v + (ch.revenue_cents or 0) %}
-    {% endfor %}
     <div class="bg-white rounded-xl border border-gray-200 p-4">
-      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Total Spend</p>
-      <p class="text-2xl font-bold text-gray-900 mt-1">${{ "%.0f"|format(total_spend.v / 100) }}</p>
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Money spent</p>
+      <p class="text-2xl font-bold text-gray-900 mt-1">${{ "%.0f"|format(_ts.v / 100) }}</p>
+      <p class="text-xs text-gray-400 mt-0.5">All channels, 90 days</p>
     </div>
     <div class="bg-white rounded-xl border border-gray-200 p-4">
-      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Total Leads</p>
-      <p class="text-2xl font-bold text-gray-900 mt-1">{{ total_leads.v }}</p>
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">New leads</p>
+      <p class="text-2xl font-bold text-gray-900 mt-1">{{ _tl.v }}</p>
+      <p class="text-xs text-gray-400 mt-0.5">People who reached out</p>
     </div>
     <div class="bg-white rounded-xl border border-gray-200 p-4">
-      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Jobs Booked</p>
-      <p class="text-2xl font-bold text-gray-900 mt-1">{{ total_booked.v }}</p>
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Jobs booked</p>
+      <p class="text-2xl font-bold text-gray-900 mt-1">{{ _tb.v }}</p>
+      <p class="text-xs text-gray-400 mt-0.5">Leads that turned into work</p>
     </div>
     <div class="bg-white rounded-xl border border-gray-200 p-4">
       <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Revenue (30d)</p>
       <p class="text-2xl font-bold text-green-700 mt-1">${{ "{:,.0f}".format(revenue_30d) }}</p>
+      <p class="text-xs text-gray-400 mt-0.5">From these jobs</p>
     </div>
   </div>
 
@@ -57,14 +83,14 @@
   <div class="bg-white rounded-xl border border-gray-200 p-5">
     <div class="flex items-center justify-between mb-3">
       <div>
-        <p class="font-semibold text-gray-900">Monthly Budget Pacing</p>
-        <p class="text-sm text-gray-500">Day {{ bp.days_elapsed }} of {{ bp.days_in_month }}</p>
+        <p class="font-semibold text-gray-900">This month's spending</p>
+        <p class="text-sm text-gray-500">Day {{ bp.days_elapsed }} of {{ bp.days_in_month }} · {% if bp.status == 'overspending' %}<span class="text-red-600 font-medium">Spending too fast</span>{% elif bp.status == 'underspending' %}<span class="text-amber-600 font-medium">Spending slower than planned</span>{% else %}<span class="text-green-600 font-medium">Right on track</span>{% endif %}</p>
       </div>
       <div class="text-right">
         <p class="text-lg font-bold {% if bp.status == 'overspending' %}text-red-600{% elif bp.status == 'underspending' %}text-amber-600{% else %}text-green-600{% endif %}">
-          {{ pct_used }}% spent
+          {{ pct_used }}% of budget used
         </p>
-        <p class="text-xs text-gray-500">{{ pct_elapsed }}% of month elapsed</p>
+        <p class="text-xs text-gray-500">{{ pct_elapsed }}% of the month is gone</p>
       </div>
     </div>
     <div class="relative h-3 bg-gray-100 rounded-full overflow-hidden">
@@ -83,8 +109,8 @@
   {# ── CAC Leaderboard ── #}
   <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
     <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-      <h2 class="font-semibold text-gray-900">Channel Performance — Sorted by CAC</h2>
-      <span class="text-xs text-gray-500">Lower CAC = better efficiency</span>
+      <h2 class="font-semibold text-gray-900">Which channels are working?</h2>
+      <span class="text-xs text-gray-500">Sorted by cost per booked job · lower is better</span>
     </div>
     {% if channel_stats %}
     <div class="overflow-x-auto">
@@ -92,14 +118,14 @@
         <thead class="bg-gray-50">
           <tr>
             <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Channel</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Spend</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Leads</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">CPL</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Booked</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Close%</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">CAC</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Revenue</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">ROI</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide" title="How much you spent">Spent</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide" title="People who reached out">Leads</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide" title="What each lead cost you">$ per lead</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide" title="Leads that turned into jobs">Jobs</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide" title="% of leads that booked">% booked</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide" title="What each booked job cost you in ad spend">$ per job</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide" title="Revenue from these jobs">Revenue</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide" title="Dollars earned for every $1 spent">Return</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">
@@ -138,7 +164,7 @@
             <td class="px-4 py-3 text-right text-sm text-gray-700">${{ "{:,.0f}".format((ch.revenue_cents or 0) / 100) }}</td>
             <td class="px-4 py-3 text-right">
               {% if ch.roi is not none %}
-              <span class="text-sm font-semibold {% if ch.roi >= 3 %}text-green-600{% elif ch.roi < 1 %}text-red-600{% else %}text-amber-600{% endif %}">
+              <span class="text-sm font-semibold {% if ch.roi >= 3 %}text-green-600{% elif ch.roi < 1 %}text-red-600{% else %}text-amber-600{% endif %}" title="${{ '{:.2f}'.format(ch.roi) }} earned per $1 spent">
                 {{ "{:.1f}".format(ch.roi) }}x
               </span>
               {% else %}<span class="text-gray-400 text-sm">—</span>{% endif %}
@@ -163,7 +189,7 @@
   {# ── Growth Recommendations ── #}
   {% if growth_recs %}
   <div class="bg-white rounded-xl border border-gray-200 p-5">
-    <h2 class="font-semibold text-gray-900 mb-4"><i class="fa-solid fa-arrow-trend-up text-indigo-500 mr-2"></i>Growth Recommendations</h2>
+    <h2 class="font-semibold text-gray-900 mb-4"><i class="fa-solid fa-arrow-trend-up text-indigo-500 mr-2"></i>What we recommend you do next</h2>
     <div class="space-y-3">
       {% for rec in growth_recs %}
       <div class="flex items-start gap-3 p-3 rounded-lg
@@ -179,7 +205,7 @@
           <p class="text-sm text-gray-600 mt-0.5">{{ rec.reason }}</p>
         </div>
         {% if rec.cac %}
-        <span class="text-xs font-medium text-gray-500 whitespace-nowrap">CAC ${{ "{:,.0f}".format(rec.cac / 100) }}</span>
+        <span class="text-xs font-medium text-gray-500 whitespace-nowrap">${{ "{:,.0f}".format(rec.cac / 100) }} per booked job</span>
         {% endif %}
         <a href="/account/marketing/channels" class="text-xs text-indigo-600 hover:underline whitespace-nowrap">Adjust →</a>
       </div>
@@ -191,14 +217,14 @@
   {# ── Tools Grid ── #}
   <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
     {% set tools = [
-      ('/account/marketing/budget',     'fa-solid fa-wallet',           'indigo',  'Budget Pacing'),
-      ('/account/marketing/growth',     'fa-solid fa-arrow-trend-up',   'green',   'Growth Optimizer'),
-      ('/account/marketing/leads',      'fa-solid fa-user-plus',        'blue',    'Aggregator Leads'),
-      ('/account/marketing/revenue',    'fa-solid fa-dollar-sign',      'emerald', 'Revenue & LTV'),
-      ('/account/marketing/reputation', 'fa-solid fa-star',             'yellow',  'Reputation Impact'),
-      ('/account/marketing/seasonal',   'fa-solid fa-calendar-days',    'orange',  'Seasonal Planner'),
-      ('/account/marketing/attribution','fa-solid fa-diagram-project',  'purple',  'Attribution'),
-      ('/account/marketing/channels',   'fa-solid fa-layer-group',      'gray',    'Manage Channels'),
+      ('/account/marketing/budget',     'fa-solid fa-wallet',           'indigo',  'Track spending'),
+      ('/account/marketing/growth',     'fa-solid fa-arrow-trend-up',   'green',   'Where to invest more'),
+      ('/account/marketing/leads',      'fa-solid fa-user-plus',        'blue',    'Lead-buying sites'),
+      ('/account/marketing/revenue',    'fa-solid fa-dollar-sign',      'emerald', 'Revenue & customer value'),
+      ('/account/marketing/reputation', 'fa-solid fa-star',             'yellow',  'Reviews & reputation'),
+      ('/account/marketing/seasonal',   'fa-solid fa-calendar-days',    'orange',  'Plan for busy seasons'),
+      ('/account/marketing/attribution','fa-solid fa-diagram-project',  'purple',  'Which channel got credit'),
+      ('/account/marketing/channels',   'fa-solid fa-layer-group',      'gray',    'Manage your channels'),
     ] %}
     {% for url, icon, color, label in tools %}
     <a href="{{ url }}" class="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-3 hover:border-{{ color }}-300 hover:shadow-sm transition group">

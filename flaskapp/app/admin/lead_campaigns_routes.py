@@ -2176,6 +2176,88 @@ def bulk_send_emails_all():
     return send_daily()
 
 
+# ==================== Bounce Sync ====================
+
+@lead_campaigns_bp.route('/sync-bounces', methods=['POST'])
+@login_required
+def sync_bounces():
+    """Pull hard bounces and spam complaints from Brevo and auto-suppress them.
+
+    Adds each bounced/complained-about address to the EmailUnsubscribe table so
+    future sends are blocked, and marks the corresponding LeadContactEmail records
+    as 'bounced'. Call this periodically (or via a scheduled task) to keep the
+    suppression list current without needing inbound webhooks.
+    """
+    try:
+        from app.services.brevo_outreach import BrevoOutreachService
+        brevo = BrevoOutreachService()
+
+        # Fetch hard bounces and spam complaints for the last 30 days
+        hard_bounced = set(brevo.get_all_events_by_type('hardBounces', days=30))
+        spam_reported = set(brevo.get_all_events_by_type('spam', days=30))
+        all_suppressed = hard_bounced | spam_reported
+
+        new_suppressions = 0
+        updated_records = 0
+
+        for email in all_suppressed:
+            email = email.lower().strip()
+            if not email:
+                continue
+
+            # Add to global unsubscribe list if not already there
+            if not EmailUnsubscribe.query.filter_by(email=email).first():
+                db.session.add(EmailUnsubscribe(
+                    email=email,
+                    reason='hard_bounce' if email in hard_bounced else 'spam_complaint'
+                ))
+                new_suppressions += 1
+
+            # Mark all LeadContactEmail records for this address as bounced
+            records = LeadContactEmail.query.filter(
+                db.func.lower(LeadContactEmail.to_email) == email,
+                LeadContactEmail.status.notin_(['bounced', 'failed'])
+            ).all()
+            for rec in records:
+                rec.status = 'bounced'
+                updated_records += 1
+
+            # Mark legacy LeadEmail records too
+            from app.models_leads import LeadEmail as _LeadEmail
+            legacy = _LeadEmail.query.filter(
+                db.func.lower(_LeadEmail.to_email) == email,
+                _LeadEmail.status != 'bounced'
+            ).all()
+            for rec in legacy:
+                rec.status = 'bounced'
+                updated_records += 1
+
+        db.session.commit()
+
+        # Invalidate the dedup service cache so it picks up new suppressions immediately
+        try:
+            from app.services.email_dedup_service import get_dedup_service
+            get_dedup_service().clear_cache()
+        except Exception:
+            pass
+
+        logger.info(
+            f"Bounce sync: {len(hard_bounced)} hard bounces, {len(spam_reported)} spam reports. "
+            f"New suppressions: {new_suppressions}. Records updated: {updated_records}."
+        )
+        return jsonify({
+            'success': True,
+            'hard_bounces_found': len(hard_bounced),
+            'spam_reports_found': len(spam_reported),
+            'new_suppressions': new_suppressions,
+            'records_updated': updated_records
+        })
+
+    except Exception as e:
+        logger.error(f"Bounce sync failed: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # ==================== Unsubscribe ====================
 
 @lead_campaigns_bp.route('/unsubscribe', methods=['GET', 'POST'])

@@ -95,6 +95,14 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
     const CUSTOMER_ID = 'demo-customer';  // TODO: Get from user context
 
     console.log('Competitive Dashboard: Script loaded');
@@ -151,7 +159,7 @@
     async function saveCompetitor() {
         const domain = document.getElementById('inputDomain').value.trim();
         if (!domain) {
-            alert('Please enter a competitor domain');
+            showToast('Please enter a competitor domain', 'error');
             return;
         }
 
@@ -174,13 +182,13 @@
             if (result.success) {
                 closeAddCompetitorModal();
                 loadCompetitors();  // Reload competitors list
-                alert('Competitor added successfully!');
+                showToast('Competitor added!', 'success');
             } else {
-                alert('Error: ' + (result.error || 'Failed to add competitor'));
+                showToast('Error: ' + (result.error || 'Failed to add competitor'), 'error');
             }
         } catch (error) {
             console.error('Error adding competitor:', error);
-            alert('Error adding competitor: ' + error.message);
+            showToast('Error: ' + error.message, 'error');
         }
     }
 
@@ -284,7 +292,7 @@
         if (data.success) {
             loadAlerts();  // Reload alerts
         } else {
-            alert('Error: ' + data.error);
+            showToast('Error: ' + data.error, 'error');
         }
     }
 </script>

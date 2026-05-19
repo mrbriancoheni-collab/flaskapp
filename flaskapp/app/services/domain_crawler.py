@@ -181,28 +181,58 @@ class DomainCrawler:
         return None
 
     def _extract_email(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract email address from page."""
-        # Try mailto: links first (most reliable)
-        mailto_links = soup.find_all('a', href=re.compile(r'mailto:'))
-        if mailto_links:
-            href = mailto_links[0].get('href', '')
-            email = href.replace('mailto:', '').split('?')[0].strip()
-            if self._is_valid_email(email):
-                return email.lower()
+        """Extract the best email address from a page.
 
-        # Search page text for email patterns
+        Collects ALL candidate emails (mailto links first, then page text),
+        then ranks them: personal/specific addresses beat generic role addresses.
+        Returns the highest-ranked email that passes full outreach validation,
+        or None if only generic/blocked addresses are found.
+        """
+        from app.services.email_validation import validate_email_for_outreach
+
+        candidates: list = []
+
+        # 1. Mailto links are most reliable (explicitly placed by the business)
+        for a_tag in soup.find_all('a', href=re.compile(r'mailto:')):
+            href = a_tag.get('href', '')
+            email = href.replace('mailto:', '').split('?')[0].strip().lower()
+            if self._is_valid_email(email):
+                candidates.append(email)
+
+        # 2. Email addresses in page text
         text = soup.get_text()
         email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-        matches = re.findall(email_pattern, text)
-
-        for email in matches:
+        for email in re.findall(email_pattern, text):
             email = email.lower()
-            # Skip common placeholder/example emails
-            if any(skip in email for skip in ['example.com', 'domain.com', 'yourdomain', 'yourcompany', '@gmail.com', '@yahoo.com', '@hotmail.com']):
+            if any(skip in email for skip in [
+                'example.com', 'domain.com', 'yourdomain', 'yourcompany',
+                '@gmail.com', '@yahoo.com', '@hotmail.com'
+            ]):
                 continue
             if self._is_valid_email(email):
+                candidates.append(email)
+
+        if not candidates:
+            return None
+
+        # Deduplicate while preserving order
+        seen: set = set()
+        unique: list = []
+        for e in candidates:
+            if e not in seen:
+                seen.add(e)
+                unique.append(e)
+
+        # Return the first email that passes full outreach validation
+        # (filters out generic roles like info@, contact@, admin@, etc.)
+        for email in unique:
+            valid, _ = validate_email_for_outreach(email)
+            if valid:
                 return email
 
+        # All found emails are generic/role-based — return None so the
+        # enrichment service falls back to SerpAPI format search rather
+        # than wasting a send attempt on info@ / contact@.
         return None
 
     def _extract_business_name(self, soup: BeautifulSoup) -> Optional[str]:

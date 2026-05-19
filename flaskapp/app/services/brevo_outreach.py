@@ -508,6 +508,26 @@ class BrevoOutreachService:
                 'error': 'BREVO_API_KEY not configured'
             }
 
+        # Filter out recipients that fail dedup / validation before batching.
+        # send_batch_emails() bypasses the per-send dedup check, so we must
+        # screen here to prevent duplicates and invalid sends.
+        from app.services.email_dedup_service import can_send_email as _can_send
+        filtered: list = []
+        for r in recipients:
+            email = r.get('email', '')
+            step = r.get('sequence_step', 1)
+            ok, reason = _can_send(email, step)
+            if not ok:
+                logger.info(f"Batch: skipping {email} — {reason}")
+            else:
+                filtered.append(r)
+        if len(filtered) < len(recipients):
+            logger.info(
+                f"Batch dedup removed {len(recipients) - len(filtered)} of "
+                f"{len(recipients)} recipients before sending"
+            )
+        recipients = filtered
+
         total_sent = 0
         total_failed = 0
         errors = []

@@ -3,29 +3,16 @@
 {% block meta_description %}FieldSprout starts at $200/month (billed annually). AI-powered Google Ads, review management, and lead generation for HVAC, plumbing, roofing, and electrical companies. No contracts. Cancel anytime.{% endblock %}
 
 {% block head_extra %}
-<!-- BreadcrumbList Schema -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
   "itemListElement": [
-    {
-      "@type": "ListItem",
-      "position": 1,
-      "name": "Home",
-      "item": "https://fieldsprout.io"
-    },
-    {
-      "@type": "ListItem",
-      "position": 2,
-      "name": "Pricing",
-      "item": "https://fieldsprout.io/pricing"
-    }
+    {"@type":"ListItem","position":1,"name":"Home","item":"https://fieldsprout.io"},
+    {"@type":"ListItem","position":2,"name":"Pricing","item":"https://fieldsprout.io/pricing"}
   ]
 }
 </script>
-
-<!-- Offer Schema for Pricing -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -38,40 +25,22 @@
       "name": "Monthly Plan",
       "price": "250",
       "priceCurrency": "USD",
-      "priceSpecification": {
-        "@type": "UnitPriceSpecification",
-        "price": "250",
-        "priceCurrency": "USD",
-        "unitText": "MONTH"
-      },
+      "priceSpecification": {"@type":"UnitPriceSpecification","price":"250","priceCurrency":"USD","unitText":"MONTH"},
       "availability": "https://schema.org/InStock",
-      "eligibleRegion": {
-        "@type": "Place",
-        "name": "United States"
-      }
+      "eligibleRegion": {"@type":"Place","name":"United States"}
     },
     {
       "@type": "Offer",
       "name": "Annual Plan",
       "price": "2400",
       "priceCurrency": "USD",
-      "priceSpecification": {
-        "@type": "UnitPriceSpecification",
-        "price": "2400",
-        "priceCurrency": "USD",
-        "unitText": "YEAR"
-      },
+      "priceSpecification": {"@type":"UnitPriceSpecification","price":"2400","priceCurrency":"USD","unitText":"YEAR"},
       "availability": "https://schema.org/InStock",
-      "eligibleRegion": {
-        "@type": "Place",
-        "name": "United States"
-      }
+      "eligibleRegion": {"@type":"Place","name":"United States"}
     }
   ]
 }
 </script>
-
-<!-- FAQ Schema for pricing page — helps AI search engines answer pricing questions -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -80,50 +49,32 @@
     {
       "@type": "Question",
       "name": "How much does FieldSprout cost?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "FieldSprout costs $200 per month billed annually ($2,400/year) or $250 per month on a flexible monthly plan. The Managed plan, where FieldSprout's team runs your marketing, costs $997 per month. All plans cover one business location."
-      }
+      "acceptedAnswer": {"@type":"Answer","text":"FieldSprout costs $200 per month billed annually ($2,400/year) or $250 per month on a flexible monthly plan. The Managed plan, where FieldSprout's team runs your marketing, costs $997 per month. All plans cover one business location."}
     },
     {
       "@type": "Question",
       "name": "Is there a free trial for FieldSprout?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Yes, FieldSprout offers a 14-day free trial with full access to all features. No credit card is required to start."
-      }
+      "acceptedAnswer": {"@type":"Answer","text":"Yes, FieldSprout offers a 14-day free trial with full access to all features. No credit card is required to start."}
     },
     {
       "@type": "Question",
       "name": "Does FieldSprout have a money-back guarantee?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Yes, FieldSprout offers a 30-day money-back guarantee. If you're not satisfied within the first 30 days, you'll receive a full refund — no questions asked."
-      }
+      "acceptedAnswer": {"@type":"Answer","text":"Yes, FieldSprout offers a 30-day money-back guarantee. If you're not satisfied within the first 30 days, you'll receive a full refund — no questions asked."}
     },
     {
       "@type": "Question",
       "name": "What does FieldSprout's subscription include?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Every FieldSprout subscription includes AI-powered Google Ads optimization, Google Local Service Ads management, Facebook Ads management, Google Business Profile optimization, review generation and management, lead intake, call tracking integration, and a full marketing health score dashboard. Each subscription covers one business location."
-      }
+      "acceptedAnswer": {"@type":"Answer","text":"Every FieldSprout subscription includes AI-powered Google Ads optimization, Google Local Service Ads management, Facebook Ads management, Google Business Profile optimization, review generation and management, lead intake, call tracking integration, and a full marketing health score dashboard. Each subscription covers one business location."}
     },
     {
       "@type": "Question",
       "name": "Can I cancel FieldSprout anytime?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Yes. There are no long-term contracts. You can cancel your FieldSprout subscription at any time and will retain access through the end of your current billing period."
-      }
+      "acceptedAnswer": {"@type":"Answer","text":"Yes. There are no long-term contracts. You can cancel your FieldSprout subscription at any time and will retain access through the end of your current billing period."}
     },
     {
       "@type": "Question",
       "name": "What is the difference between the Monthly and Annual FieldSprout plans?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "The Monthly plan costs $250 per month with no commitment. The Annual plan costs $200 per month ($2,400 billed once per year), saving you 20%. Both plans include all the same AI marketing features. The Annual plan also includes budget forecasting, journey visualization, shareable reports, and priority support."
-      }
+      "acceptedAnswer": {"@type":"Answer","text":"The Monthly plan costs $250 per month with no commitment. The Annual plan costs $200 per month ($2,400 billed once per year), saving you 20% — $600/year. Both plans include all the same AI marketing features. The Annual plan also includes budget forecasting, journey visualization, shareable reports, and priority support."}
     }
   ]
 }
@@ -131,7 +82,8 @@
 {% endblock %}
 
 {% block content %}
-<!-- Hero Section -->
+
+{# ── Hero ──────────────────────────────────────────────────────────────────── #}
 <section class="relative overflow-hidden hero-pattern">
   <div class="container-lg py-20 lg:py-28">
     <div class="text-center max-w-3xl mx-auto" data-aos="fade-up">
@@ -143,287 +95,339 @@
         More leads. Less waste. <span class="gradient-text">From $200/mo.</span>
       </h1>
       <p class="mt-6 text-xl text-gray-600 leading-relaxed">
-        One flat fee covers AI-powered Google Ads, reviews, and lead management for your entire business location. No hidden fees, no long-term contracts, 30-day money-back guarantee.
+        One flat fee covers AI-powered Google Ads, reviews, and lead management for your entire business location. No hidden fees, no long-term contracts.
       </p>
-    </div>
 
-    <!-- Pricing Info Banner -->
-    <div class="max-w-2xl mx-auto mt-10" data-aos="fade-up" data-aos-delay="100">
-      <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-5 border border-blue-100">
-        <div class="flex items-start gap-4">
-          <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
-            <i class="fa-solid fa-building"></i>
-          </div>
-          <div>
-            <h3 class="font-semibold text-gray-900">Per Business Location Pricing</h3>
-            <p class="text-sm text-gray-600 mt-1">
-              Each subscription covers <strong>one business location</strong> with <strong>one ad account per platform</strong>
-              (Google Ads, Facebook Ads, etc.). Need multiple locations? Subscribe once for each.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Pricing Cards -->
-<section class="section -mt-8">
-  <div class="container-lg">
-    <div class="grid md:grid-cols-3 gap-6 lg:gap-8">
-
-      <!-- Monthly Plan -->
-      <div class="card p-8" data-aos="fade-up" data-aos-delay="0">
-        <div class="flex items-center justify-between mb-6">
-          <h3 class="text-xl font-bold text-gray-900">Monthly</h3>
-          <span class="px-3 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-full">
-            Flexible
-          </span>
-        </div>
-
-        <div class="mb-6">
-          <div class="flex items-baseline gap-1">
-            <span class="text-5xl font-extrabold text-gray-900">$250</span>
-            <span class="text-gray-500">/month</span>
-          </div>
-          <p class="text-sm text-gray-500 mt-1">Per business location</p>
-        </div>
-
-        <ul class="space-y-4 mb-8">
-          <li class="flex items-start gap-3">
-            <div class="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <i class="fa-solid fa-check text-green-600 text-xs"></i>
-            </div>
-            <span class="text-gray-700">All marketing tools</span>
-          </li>
-          <li class="flex items-start gap-3">
-            <div class="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <i class="fa-solid fa-check text-green-600 text-xs"></i>
-            </div>
-            <span class="text-gray-700">AI-powered recommendations</span>
-          </li>
-          <li class="flex items-start gap-3">
-            <div class="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <i class="fa-solid fa-check text-green-600 text-xs"></i>
-            </div>
-            <span class="text-gray-700">Daily task queue</span>
-          </li>
-          <li class="flex items-start gap-3">
-            <div class="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <i class="fa-solid fa-check text-green-600 text-xs"></i>
-            </div>
-            <span class="text-gray-700">Health score dashboard</span>
-          </li>
-          <li class="flex items-start gap-3">
-            <div class="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <i class="fa-solid fa-check text-green-600 text-xs"></i>
-            </div>
-            <span class="text-gray-700">Email support</span>
-          </li>
-        </ul>
-
-        {% if is_logged_in() %}
-          <form method="post" action="{{ url_for(ep('billing_checkout_plan'), plan='monthly') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="btn btn-secondary w-full">Subscribe &mdash; $250/mo</button>
-          </form>
-        {% else %}
-          <a href="{{ url_for(ep('register'), next=request.full_path) }}" class="btn btn-secondary w-full">
-            Get Started
-          </a>
-        {% endif %}
-      </div>
-
-      <!-- Yearly Plan - Featured -->
-      <div class="relative" data-aos="fade-up" data-aos-delay="100">
-        <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
-          <span class="px-4 py-1.5 text-sm font-bold text-white bg-gradient-to-r from-primary-600 to-primary-700 rounded-full shadow-lg">
-            MOST POPULAR
-          </span>
-        </div>
-        <div class="card p-8 border-2 border-primary-500 shadow-glow">
-          <div class="flex items-center justify-between mb-6">
-            <h3 class="text-xl font-bold text-gray-900">Yearly</h3>
-            <span class="px-3 py-1 text-xs font-bold text-green-700 bg-green-100 rounded-full">
-              Save 20%
-            </span>
-          </div>
-
-          <div class="mb-6">
-            <div class="flex items-baseline gap-1">
-              <span class="text-5xl font-extrabold text-gray-900">$2,400</span>
-              <span class="text-gray-500">/year</span>
-            </div>
-            <p class="text-sm text-gray-500 mt-1">$200/mo billed annually</p>
-          </div>
-
-          <ul class="space-y-4 mb-8">
-            <li class="flex items-start gap-3">
-              <div class="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <i class="fa-solid fa-check text-green-600 text-xs"></i>
-              </div>
-              <span class="text-gray-700">Everything in Monthly</span>
-            </li>
-            <li class="flex items-start gap-3">
-              <div class="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <i class="fa-solid fa-check text-green-600 text-xs"></i>
-              </div>
-              <span class="text-gray-700">Budget forecasting</span>
-            </li>
-            <li class="flex items-start gap-3">
-              <div class="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <i class="fa-solid fa-check text-green-600 text-xs"></i>
-              </div>
-              <span class="text-gray-700">Journey visualization</span>
-            </li>
-            <li class="flex items-start gap-3">
-              <div class="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <i class="fa-solid fa-check text-green-600 text-xs"></i>
-              </div>
-              <span class="text-gray-700">Shareable reports</span>
-            </li>
-            <li class="flex items-start gap-3">
-              <div class="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <i class="fa-solid fa-check text-green-600 text-xs"></i>
-              </div>
-              <span class="text-gray-700">Priority support</span>
-            </li>
-          </ul>
-
-          {% if is_logged_in() %}
-            <form method="post" action="{{ url_for(ep('billing_checkout_plan'), plan='yearly') }}">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button class="btn btn-primary w-full">Subscribe &mdash; $2,400/yr</button>
-            </form>
-          {% else %}
-            <a href="{{ url_for(ep('register'), next=request.full_path) }}" class="btn btn-primary w-full">
-              Get Started
-            </a>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Managed Plan -->
-      <div class="card p-8 bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200" data-aos="fade-up" data-aos-delay="200">
-        <div class="flex items-center justify-between mb-6">
-          <h3 class="text-xl font-bold text-purple-900">Managed</h3>
-          <span class="px-3 py-1 text-xs font-bold text-purple-700 bg-purple-100 rounded-full">
-            Done for you
-          </span>
-        </div>
-
-        <div class="mb-6">
-          <div class="flex items-baseline gap-1">
-            <span class="text-5xl font-extrabold text-purple-900">$997</span>
-            <span class="text-purple-600">/month</span>
-          </div>
-          <p class="text-sm text-purple-600 mt-1">We run your marketing</p>
-        </div>
-
-        <ul class="space-y-4 mb-8">
-          <li class="flex items-start gap-3">
-            <div class="w-5 h-5 rounded-full bg-purple-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <i class="fa-solid fa-star text-purple-700 text-xs"></i>
-            </div>
-            <span class="text-purple-900">Everything in Yearly</span>
-          </li>
-          <li class="flex items-start gap-3">
-            <div class="w-5 h-5 rounded-full bg-purple-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <i class="fa-solid fa-star text-purple-700 text-xs"></i>
-            </div>
-            <span class="text-purple-900">Dedicated account manager</span>
-          </li>
-          <li class="flex items-start gap-3">
-            <div class="w-5 h-5 rounded-full bg-purple-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <i class="fa-solid fa-star text-purple-700 text-xs"></i>
-            </div>
-            <span class="text-purple-900">Campaign setup & optimization</span>
-          </li>
-          <li class="flex items-start gap-3">
-            <div class="w-5 h-5 rounded-full bg-purple-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <i class="fa-solid fa-star text-purple-700 text-xs"></i>
-            </div>
-            <span class="text-purple-900">Weekly performance calls</span>
-          </li>
-          <li class="flex items-start gap-3">
-            <div class="w-5 h-5 rounded-full bg-purple-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <i class="fa-solid fa-star text-purple-700 text-xs"></i>
-            </div>
-            <span class="text-purple-900">Review response management</span>
-          </li>
-        </ul>
-
-        {% if is_logged_in() %}
-          <form method="post" action="{{ url_for(ep('billing_checkout_plan'), plan='managed') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="btn w-full bg-purple-600 text-white hover:bg-purple-700 shadow-lg">Get Managed &mdash; $997/mo</button>
-          </form>
-        {% else %}
-          <a href="{{ url_for(ep('register'), next=request.full_path) }}" class="btn w-full bg-purple-600 text-white hover:bg-purple-700 shadow-lg">
-            Get Started
-          </a>
-        {% endif %}
-      </div>
-
-    </div>
-
-    <!-- Trust strip — below pricing cards -->
-    <div class="mt-10 flex flex-wrap items-center justify-center gap-6 text-sm text-gray-600" data-aos="fade-up">
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 flex-shrink-0">
-          <i class="fa-solid fa-shield-halved text-sm"></i>
-        </div>
-        <span><strong class="text-gray-900">30-day money-back guarantee</strong></span>
-      </div>
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
-          <i class="fa-solid fa-lock text-sm"></i>
-        </div>
-        <span>No contracts · Cancel anytime</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 flex-shrink-0">
-          <i class="fa-solid fa-star text-sm"></i>
-        </div>
-        <span><strong class="text-gray-900">4.9/5</strong> from 500+ home service pros</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 flex-shrink-0">
-          <i class="fa-solid fa-clock text-sm"></i>
-        </div>
-        <span>14-day free trial · Full access</span>
+      {# Trust strip — in the hero where it can't be missed #}
+      <div class="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-gray-600" data-aos="fade-up" data-aos-delay="100">
+        <span class="inline-flex items-center gap-1.5">
+          <i class="fa-solid fa-circle-check text-green-500"></i>
+          <strong>14-day free trial</strong>
+        </span>
+        <span class="inline-flex items-center gap-1.5">
+          <i class="fa-solid fa-circle-check text-green-500"></i>
+          No credit card required
+        </span>
+        <span class="inline-flex items-center gap-1.5">
+          <i class="fa-solid fa-circle-check text-green-500"></i>
+          <strong>30-day money-back guarantee</strong>
+        </span>
+        <span class="inline-flex items-center gap-1.5">
+          <i class="fa-solid fa-circle-check text-green-500"></i>
+          Cancel anytime
+        </span>
       </div>
     </div>
 
-    <!-- Social proof quotes -->
-    <div class="mt-10 grid md:grid-cols-3 gap-6" data-aos="fade-up" data-aos-delay="100">
-      <div class="bg-gray-50 rounded-2xl p-6">
+    {# Social proof — before the price decision, not after #}
+    <div class="mt-12 grid md:grid-cols-3 gap-5 max-w-4xl mx-auto" data-aos="fade-up" data-aos-delay="150">
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
         <div class="flex items-center gap-1 mb-3 text-yellow-400">
           {% for _ in range(5) %}<i class="fa-solid fa-star text-xs"></i>{% endfor %}
         </div>
-        <p class="text-gray-700 text-sm leading-relaxed">"Cut our cost per HVAC lead from $140 to $78 in the first 30 days. Pays for itself 10x over."</p>
-        <div class="mt-3 text-xs text-gray-500 font-semibold">Marcus T. · HVAC Company, Texas</div>
+        <p class="text-gray-700 text-sm leading-relaxed">"Cut our cost per HVAC lead from <strong>$140 to $78</strong> in the first 30 days. Pays for itself 10x over."</p>
+        <div class="mt-3 text-xs text-gray-500 font-semibold">Marcus T. · HVAC Company, Texas · 30 days</div>
       </div>
-      <div class="bg-gray-50 rounded-2xl p-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
         <div class="flex items-center gap-1 mb-3 text-yellow-400">
           {% for _ in range(5) %}<i class="fa-solid fa-star text-xs"></i>{% endfor %}
         </div>
-        <p class="text-gray-700 text-sm leading-relaxed">"Finally replaced our $3,500/mo agency. FieldSprout gets us more leads and costs 90% less. Wish we switched years ago."</p>
+        <p class="text-gray-700 text-sm leading-relaxed">"Replaced our <strong>$3,500/mo agency</strong>. FieldSprout gets us more leads and costs 90% less."</p>
         <div class="mt-3 text-xs text-gray-500 font-semibold">Jennifer R. · Plumbing Company, Arizona</div>
       </div>
-      <div class="bg-gray-50 rounded-2xl p-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
         <div class="flex items-center gap-1 mb-3 text-yellow-400">
           {% for _ in range(5) %}<i class="fa-solid fa-star text-xs"></i>{% endfor %}
         </div>
-        <p class="text-gray-700 text-sm leading-relaxed">"Setup took 2 minutes. Saw the AI make 12 optimizations on day one. Our Quality Score went from 4 to 8 in two weeks."</p>
+        <p class="text-gray-700 text-sm leading-relaxed">"Quality Score went from <strong>4 to 8 in two weeks</strong>. AI made 12 optimizations on day one."</p>
         <div class="mt-3 text-xs text-gray-500 font-semibold">Derek M. · Electrical Contractor, Florida</div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Multi-Location Section -->
+{# ── Pricing Cards ─────────────────────────────────────────────────────────── #}
+<section class="section -mt-8">
+  <div class="container-lg">
+
+    {# Per-location callout — compact, before cards #}
+    <div class="max-w-xl mx-auto mb-8 text-center" data-aos="fade-up">
+      <p class="text-sm text-gray-500">
+        <i class="fa-solid fa-building text-primary-400 mr-1"></i>
+        Each plan covers <strong>one business location</strong> with one ad account per platform. <a href="#multi-location" class="text-primary-600 hover:underline">Multiple locations?</a>
+      </p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6 lg:gap-8">
+
+      {# ── Monthly ── #}
+      <div class="card p-8 flex flex-col" data-aos="fade-up" data-aos-delay="0">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-xl font-bold text-gray-900">Monthly</h3>
+          <span class="px-3 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-full">Flexible</span>
+        </div>
+
+        <div class="mb-2">
+          <div class="flex items-baseline gap-1">
+            <span class="text-5xl font-extrabold text-gray-900">$250</span>
+            <span class="text-gray-500">/month</span>
+          </div>
+          <p class="text-sm text-gray-500 mt-1">Per business location · No commitment</p>
+        </div>
+
+        {# Upsell nudge toward annual #}
+        <div class="mb-6 mt-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-center gap-1.5">
+          <i class="fa-solid fa-circle-info text-amber-500"></i>
+          Switch to annual and <strong class="ml-0.5">save $600/year</strong>
+        </div>
+
+        <ul class="space-y-3 mb-8 flex-1">
+          {% set monthly_features = [
+            ('AI-powered Google Ads optimization','Automated bid adjustments, negative keywords, quality score improvements'),
+            ('All marketing tools','Google Ads, Analytics, Search Console, GMB, Local Services Ads'),
+            ('AI recommendations','Daily action queue of prioritized improvements'),
+            ('Health score dashboard','Full account performance overview'),
+            ('Email support','Response within 1 business day'),
+          ] %}
+          {% for feat, tip in monthly_features %}
+          <li class="flex items-start gap-2.5 group relative">
+            <div class="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <i class="fa-solid fa-check text-green-600 text-xs"></i>
+            </div>
+            <span class="text-gray-700 text-sm">{{ feat }}
+              <i class="fa-solid fa-circle-info text-gray-300 hover:text-gray-400 text-xs ml-1 cursor-help" title="{{ tip }}"></i>
+            </span>
+          </li>
+          {% endfor %}
+        </ul>
+
+        {% if is_logged_in() %}
+          <form method="post" action="{{ url_for(ep('billing_checkout_plan'), plan='monthly') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-secondary w-full">Subscribe — $250/mo</button>
+          </form>
+        {% else %}
+          <a href="{{ url_for(ep('register'), next=request.full_path) }}" class="btn btn-secondary w-full">
+            Start free trial
+          </a>
+          <p class="text-center text-xs text-gray-400 mt-2">14 days free · No credit card</p>
+        {% endif %}
+      </div>
+
+      {# ── Yearly (featured) ── #}
+      <div class="relative flex flex-col" data-aos="fade-up" data-aos-delay="100">
+        <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
+          <span class="px-4 py-1.5 text-sm font-bold text-white bg-gradient-to-r from-primary-600 to-primary-700 rounded-full shadow-lg">
+            MOST POPULAR
+          </span>
+        </div>
+        <div class="card p-8 border-2 border-primary-500 shadow-glow flex flex-col flex-1">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-bold text-gray-900">Yearly</h3>
+            <span class="px-3 py-1 text-xs font-bold text-green-700 bg-green-100 rounded-full">Save $600/year</span>
+          </div>
+
+          <div class="mb-6">
+            <div class="flex items-baseline gap-1">
+              <span class="text-5xl font-extrabold text-gray-900">$200</span>
+              <span class="text-gray-500">/month</span>
+            </div>
+            <p class="text-sm text-gray-500 mt-1">Billed $2,400/year · 20% off monthly</p>
+          </div>
+
+          <ul class="space-y-3 mb-8 flex-1">
+            {% set yearly_features = [
+              ('Everything in Monthly','All features from the Monthly plan'),
+              ('Budget forecasting','30/60/90-day spend projections with scenario planning'),
+              ('Journey visualization','See the full path from ad click to booked job'),
+              ('Shareable reports','White-label PDF reports you can share with team or clients'),
+              ('Priority support','Front-of-queue support with faster response times'),
+            ] %}
+            {% for feat, tip in yearly_features %}
+            <li class="flex items-start gap-2.5">
+              <div class="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <i class="fa-solid fa-check text-green-600 text-xs"></i>
+              </div>
+              <span class="text-gray-700 text-sm">{{ feat }}
+                <i class="fa-solid fa-circle-info text-gray-300 hover:text-gray-400 text-xs ml-1 cursor-help" title="{{ tip }}"></i>
+              </span>
+            </li>
+            {% endfor %}
+          </ul>
+
+          {% if is_logged_in() %}
+            <form method="post" action="{{ url_for(ep('billing_checkout_plan'), plan='yearly') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-primary w-full">Subscribe — $2,400/yr</button>
+            </form>
+          {% else %}
+            <a href="{{ url_for(ep('register'), next=request.full_path) }}" class="btn btn-primary w-full">
+              Start free trial
+            </a>
+            <p class="text-center text-xs text-gray-400 mt-2">14 days free · No credit card</p>
+          {% endif %}
+        </div>
+      </div>
+
+      {# ── Managed ── #}
+      <div class="card p-8 bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200 flex flex-col" data-aos="fade-up" data-aos-delay="200">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-xl font-bold text-purple-900">Managed</h3>
+          <span class="px-3 py-1 text-xs font-bold text-purple-700 bg-purple-100 rounded-full">Done for you</span>
+        </div>
+
+        <div class="mb-2">
+          <div class="flex items-baseline gap-1">
+            <span class="text-5xl font-extrabold text-purple-900">$997</span>
+            <span class="text-purple-600">/month</span>
+          </div>
+          <p class="text-sm text-purple-600 mt-1">We run your marketing for you</p>
+        </div>
+
+        {# Agency cost anchor #}
+        <div class="mb-6 mt-3 px-3 py-2 bg-purple-100 border border-purple-200 rounded-lg text-xs text-purple-800 flex items-center gap-1.5">
+          <i class="fa-solid fa-arrow-trend-down text-purple-500"></i>
+          Agencies charge <strong class="mx-0.5">$2,500–$5,000/mo</strong> for the same work
+        </div>
+
+        <ul class="space-y-3 mb-8 flex-1">
+          {% set managed_features = [
+            ('Everything in Yearly','All self-serve features included'),
+            ('Dedicated account manager','A real human who knows your business and manages your account'),
+            ('Campaign setup & optimization','We build, launch, and tune your campaigns from day one'),
+            ('Weekly performance calls','30-min check-ins to review results and adjust strategy'),
+            ('Review response management','We respond to your Google & Facebook reviews on your behalf'),
+          ] %}
+          {% for feat, tip in managed_features %}
+          <li class="flex items-start gap-2.5">
+            <div class="w-5 h-5 rounded-full bg-purple-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <i class="fa-solid fa-star text-purple-700 text-xs"></i>
+            </div>
+            <span class="text-purple-900 text-sm">{{ feat }}
+              <i class="fa-solid fa-circle-info text-purple-300 hover:text-purple-400 text-xs ml-1 cursor-help" title="{{ tip }}"></i>
+            </span>
+          </li>
+          {% endfor %}
+        </ul>
+
+        {% if is_logged_in() %}
+          <form method="post" action="{{ url_for(ep('billing_checkout_plan'), plan='managed') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn w-full bg-purple-600 text-white hover:bg-purple-700 shadow-lg">Get Managed — $997/mo</button>
+          </form>
+        {% else %}
+          <a href="{{ url_for(ep('register'), next=request.full_path) }}" class="btn w-full bg-purple-600 text-white hover:bg-purple-700 shadow-lg">
+            Start free trial
+          </a>
+          <p class="text-center text-xs text-purple-400 mt-2">14 days free · No credit card</p>
+        {% endif %}
+      </div>
+
+    </div>
+
+    {# ── Guarantee strip — right under cards ── #}
+    <div class="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-4" data-aos="fade-up">
+      <div class="flex items-center gap-3 bg-green-50 border border-green-100 rounded-xl px-4 py-3">
+        <div class="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center text-green-600 shrink-0">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div>
+          <div class="text-sm font-semibold text-gray-900">30-day money-back</div>
+          <div class="text-xs text-gray-500">No questions asked</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+        <div class="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+          <i class="fa-solid fa-lock"></i>
+        </div>
+        <div>
+          <div class="text-sm font-semibold text-gray-900">No contracts</div>
+          <div class="text-xs text-gray-500">Cancel anytime</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+        <div class="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+          <i class="fa-solid fa-star"></i>
+        </div>
+        <div>
+          <div class="text-sm font-semibold text-gray-900">4.9 / 5 rating</div>
+          <div class="text-xs text-gray-500">500+ home service pros</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 bg-primary-50 border border-primary-100 rounded-xl px-4 py-3">
+        <div class="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 shrink-0">
+          <i class="fa-solid fa-clock"></i>
+        </div>
+        <div>
+          <div class="text-sm font-semibold text-gray-900">14-day free trial</div>
+          <div class="text-xs text-gray-500">Full access, no card</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+{# ── Feature comparison table ─────────────────────────────────────────────── #}
 <section class="section bg-gray-50">
+  <div class="container-lg">
+    <div class="text-center mb-10" data-aos="fade-up">
+      <h2 class="text-2xl font-bold text-gray-900">What's included</h2>
+      <p class="text-gray-500 mt-2 text-sm">Every feature, every plan</p>
+    </div>
+    <div class="overflow-x-auto" data-aos="fade-up" data-aos-delay="100">
+      <table class="w-full text-sm border-collapse">
+        <thead>
+          <tr class="border-b border-gray-200">
+            <th class="text-left py-3 pr-6 text-gray-500 font-medium w-1/2">Feature</th>
+            <th class="text-center py-3 px-4 font-semibold text-gray-700">Monthly</th>
+            <th class="text-center py-3 px-4 font-semibold text-primary-700 bg-primary-50 rounded-t-lg">Yearly</th>
+            <th class="text-center py-3 px-4 font-semibold text-purple-700">Managed</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% set comparison = [
+            ('AI Google Ads optimization',       True, True, True),
+            ('Negative keyword AI agent',        True, True, True),
+            ('Autonomous bid adjustments',       True, True, True),
+            ('Google Local Services Ads',        True, True, True),
+            ('Google Business Profile tools',    True, True, True),
+            ('Facebook Ads management',          True, True, True),
+            ('Search Console integration',       True, True, True),
+            ('Health score dashboard',           True, True, True),
+            ('Daily AI task queue',              True, True, True),
+            ('Quick Wins recommendations',       True, True, True),
+            ('Budget forecasting (30/60/90d)',   False, True, True),
+            ('Journey visualization',            False, True, True),
+            ('Shareable PDF reports',            False, True, True),
+            ('Priority support',                 False, True, True),
+            ('Dedicated account manager',        False, False, True),
+            ('Done-for-you campaign setup',      False, False, True),
+            ('Weekly strategy calls',            False, False, True),
+            ('Review response management',       False, False, True),
+          ] %}
+          {% for feature, mo, yr, mgd in comparison %}
+          <tr class="hover:bg-white transition">
+            <td class="py-3 pr-6 text-gray-700 font-medium">{{ feature }}</td>
+            <td class="text-center py-3 px-4">
+              {% if mo %}<i class="fa-solid fa-check text-green-500"></i>{% else %}<span class="text-gray-300">—</span>{% endif %}
+            </td>
+            <td class="text-center py-3 px-4 bg-primary-50/40">
+              {% if yr %}<i class="fa-solid fa-check text-green-500"></i>{% else %}<span class="text-gray-300">—</span>{% endif %}
+            </td>
+            <td class="text-center py-3 px-4">
+              {% if mgd %}<i class="fa-solid fa-check text-green-500"></i>{% else %}<span class="text-gray-300">—</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+{# ── Multi-Location ────────────────────────────────────────────────────────── #}
+<section class="section" id="multi-location">
   <div class="container-lg">
     <div class="max-w-4xl mx-auto">
       <div class="card p-8 lg:p-12" data-aos="fade-up">
@@ -436,50 +440,35 @@
             <p class="text-gray-600">Volume pricing available for growing businesses</p>
           </div>
         </div>
-
         <div class="grid md:grid-cols-2 gap-8">
           <div>
             <h3 class="font-semibold text-gray-900 mb-4">What's included per location:</h3>
             <ul class="space-y-3">
+              {% for item in ['1 Google Ads account', '1 Facebook Ads account', '1 Google Business Profile', '1 set of Local Services Ads', 'All marketing tools & AI features'] %}
               <li class="flex items-center gap-3">
                 <i class="fa-solid fa-check text-green-600"></i>
-                <span class="text-gray-700">1 Google Ads account</span>
+                <span class="text-gray-700">{{ item }}</span>
               </li>
-              <li class="flex items-center gap-3">
-                <i class="fa-solid fa-check text-green-600"></i>
-                <span class="text-gray-700">1 Facebook Ads account</span>
-              </li>
-              <li class="flex items-center gap-3">
-                <i class="fa-solid fa-check text-green-600"></i>
-                <span class="text-gray-700">1 Google Business Profile</span>
-              </li>
-              <li class="flex items-center gap-3">
-                <i class="fa-solid fa-check text-green-600"></i>
-                <span class="text-gray-700">1 set of Local Services Ads</span>
-              </li>
-              <li class="flex items-center gap-3">
-                <i class="fa-solid fa-check text-green-600"></i>
-                <span class="text-gray-700">All marketing tools & AI features</span>
-              </li>
+              {% endfor %}
             </ul>
           </div>
           <div>
-            <h3 class="font-semibold text-gray-900 mb-4">Need more locations?</h3>
-            <p class="text-gray-600 mb-4">
-              Each business location requires a separate subscription. For example:
-            </p>
+            <h3 class="font-semibold text-gray-900 mb-4">Volume pricing:</h3>
             <div class="space-y-3">
               <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <span class="font-medium text-gray-900">2 locations</span>
-                <span class="text-primary-700 font-semibold">$500/mo</span>
+                <span class="text-primary-700 font-semibold">$400/mo <span class="text-xs text-gray-400 font-normal">(annual)</span></span>
               </div>
               <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <span class="font-medium text-gray-900">5 locations</span>
-                <span class="text-primary-700 font-semibold">$1,250/mo</span>
+                <span class="text-primary-700 font-semibold">$950/mo <span class="text-xs text-gray-400 font-normal">(annual)</span></span>
               </div>
               <div class="flex items-center justify-between p-3 bg-primary-50 rounded-lg border border-primary-200">
-                <span class="font-medium text-gray-900">10+ locations</span>
-                <a href="https://fieldsprout.io/contact" class="text-primary-700 font-semibold hover:underline">Contact us</a>
+                <div>
+                  <span class="font-medium text-gray-900">10+ locations</span>
+                  <p class="text-xs text-gray-500 mt-0.5">Custom enterprise pricing</p>
+                </div>
+                <a href="https://fieldsprout.io/contact" class="btn btn-primary btn-sm">Contact us</a>
               </div>
             </div>
           </div>
@@ -489,65 +478,60 @@
   </div>
 </section>
 
-<!-- FAQ Section -->
-<section class="section">
+{# ── FAQ ───────────────────────────────────────────────────────────────────── #}
+<section class="section bg-gray-50">
   <div class="container-md">
-    <div class="text-center mb-12" data-aos="fade-up">
+    <div class="text-center mb-10" data-aos="fade-up">
       <h2 class="text-3xl font-bold text-gray-900">Frequently asked questions</h2>
+      <p class="text-gray-500 mt-2">Still unsure? These are the questions we hear most.</p>
     </div>
 
-    <div class="space-y-4" data-aos="fade-up" data-aos-delay="100">
+    <div class="space-y-3" data-aos="fade-up" data-aos-delay="100">
+      {% set faqs = [
+        (
+          'Is there really a 14-day free trial? No credit card?',
+          'Yes — full access, no credit card, no catch. Connect your Google Ads account and the AI starts working immediately. After 14 days you choose a plan or your account pauses (your data stays safe).'
+        ),
+        (
+          'What happens if I\'m not happy in the first 30 days?',
+          'We offer a full refund within 30 days of your first paid charge, no questions asked. Just email hi@fieldsprout.io and we\'ll process it same day.'
+        ),
+        (
+          'Can I switch plans later?',
+          'Yes. Upgrade or downgrade anytime. If you upgrade mid-cycle you\'re prorated; if you downgrade it takes effect at the next billing date.'
+        ),
+        (
+          'Is the $200/mo price locked in or will it increase?',
+          'Your rate is locked for as long as you stay subscribed. We grandfather existing customers when we raise prices for new signups.'
+        ),
+        (
+          'What payment methods do you accept?',
+          'All major credit and debit cards (Visa, Mastercard, Amex, Discover) via Stripe. Annual plans also accept ACH bank transfer. We don\'t store card numbers — Stripe handles all payment security.'
+        ),
+        (
+          'Does FieldSprout touch my ad campaigns or just observe?',
+          'Both modes are available. By default the platform suggests changes and you approve them. With Autonomous Mode enabled (configurable per action type) the AI executes approved action categories automatically — you can see a full audit log of every change.'
+        ),
+        (
+          'Can I cancel anytime?',
+          'Absolutely. No contracts, no cancellation fee. Cancel from your billing settings and you keep access through the end of your paid period.'
+        ),
+      ] %}
+      {% for q, a in faqs %}
       <details class="group card p-6">
-        <summary class="flex items-center justify-between cursor-pointer">
-          <span class="font-semibold text-gray-900">Can I switch plans later?</span>
-          <svg class="w-5 h-5 text-gray-400 transition group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <summary class="flex items-center justify-between cursor-pointer list-none">
+          <span class="font-semibold text-gray-900 pr-4">{{ q }}</span>
+          <svg class="w-5 h-5 text-gray-400 shrink-0 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
         </summary>
-        <p class="mt-4 text-gray-600">
-          Yes, you can upgrade or downgrade your plan at any time. Changes take effect at the start of your next billing cycle.
-        </p>
+        <p class="mt-4 text-gray-600 text-sm leading-relaxed">{{ a }}</p>
       </details>
-
-      <details class="group card p-6">
-        <summary class="flex items-center justify-between cursor-pointer">
-          <span class="font-semibold text-gray-900">Is there a trial period?</span>
-          <svg class="w-5 h-5 text-gray-400 transition group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-          </svg>
-        </summary>
-        <p class="mt-4 text-gray-600">
-          Yes! Start with our 14-day trial. You'll have full access to all features.
-        </p>
-      </details>
-
-      <details class="group card p-6">
-        <summary class="flex items-center justify-between cursor-pointer">
-          <span class="font-semibold text-gray-900">What payment methods do you accept?</span>
-          <svg class="w-5 h-5 text-gray-400 transition group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-          </svg>
-        </summary>
-        <p class="mt-4 text-gray-600">
-          We accept all major credit cards (Visa, Mastercard, American Express) and ACH bank transfers for annual plans.
-        </p>
-      </details>
-
-      <details class="group card p-6">
-        <summary class="flex items-center justify-between cursor-pointer">
-          <span class="font-semibold text-gray-900">Can I cancel anytime?</span>
-          <svg class="w-5 h-5 text-gray-400 transition group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-          </svg>
-        </summary>
-        <p class="mt-4 text-gray-600">
-          Absolutely. There are no long-term contracts. Cancel anytime and you'll have access until the end of your billing period.
-        </p>
-      </details>
+      {% endfor %}
     </div>
 
     {% if is_logged_in() and has_endpoint('billing_portal') %}
-    <div class="text-center mt-12" data-aos="fade-up">
+    <div class="text-center mt-10" data-aos="fade-up">
       <a href="{{ url_for(ep('billing_portal')) }}" class="btn btn-outline">
         <i class="fa-solid fa-gear"></i>
         Manage Billing
@@ -557,37 +541,33 @@
   </div>
 </section>
 
-<!-- CTA Section -->
+{# ── Final CTA ─────────────────────────────────────────────────────────────── #}
 <section class="section bg-gradient-to-br from-primary-600 to-primary-800 text-white">
   <div class="container-md text-center" data-aos="fade-up">
-    <h2 class="text-3xl md:text-4xl font-bold mb-4">Ready to start growing?</h2>
+    <h2 class="text-3xl md:text-4xl font-bold mb-4">Stop paying agencies $3,500/mo for the same results</h2>
     <p class="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
-      Join hundreds of local service pros who are already saving time and money with FieldSprout.
+      Start your 14-day free trial. No credit card. Connect your Google account in 30 seconds and the AI starts finding savings immediately.
     </p>
     <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
       {% if has_endpoint('auth_bp.register') %}
-        <a href="{{ url_for('auth_bp.register') }}" class="btn bg-white text-primary-700 hover:bg-gray-100 btn-lg">
-          Start Trial
+        <a href="{{ url_for('auth_bp.register') }}" class="btn bg-white text-primary-700 hover:bg-gray-50 btn-lg shadow-lg">
+          Start free trial
           <i class="fa-solid fa-arrow-right"></i>
         </a>
       {% elif has_endpoint('signup') %}
-        <a href="{{ url_for(ep('signup')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100 btn-lg">
-          Start Trial
-          <i class="fa-solid fa-arrow-right"></i>
-        </a>
-      {% elif has_endpoint('register') %}
-        <a href="{{ url_for(ep('register')) }}" class="btn bg-white text-primary-700 hover:bg-gray-100 btn-lg">
-          Start Trial
+        <a href="{{ url_for(ep('signup')) }}" class="btn bg-white text-primary-700 hover:bg-gray-50 btn-lg shadow-lg">
+          Start free trial
           <i class="fa-solid fa-arrow-right"></i>
         </a>
       {% else %}
-        <a href="/signup" class="btn bg-white text-primary-700 hover:bg-gray-100 btn-lg">
-          Start Trial
+        <a href="/signup" class="btn bg-white text-primary-700 hover:bg-gray-50 btn-lg shadow-lg">
+          Start free trial
           <i class="fa-solid fa-arrow-right"></i>
         </a>
       {% endif %}
-      <a href="https://fieldsprout.io/contact" class="btn btn-ghost btn-lg">Talk to Sales</a>
+      <a href="https://fieldsprout.io/contact" class="btn btn-ghost btn-lg text-white/80 hover:text-white">Talk to Sales</a>
     </div>
+    <p class="mt-6 text-white/60 text-sm">14-day free trial · No credit card required · Cancel anytime</p>
   </div>
 </section>
 {% endblock %}

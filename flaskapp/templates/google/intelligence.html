@@ -10,8 +10,8 @@
 
   <div class="flex items-start justify-between flex-wrap gap-4 mb-6">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Intelligence</h1>
-      <p class="text-sm text-gray-500 mt-0.5">Competitive landscape · Auction insights · Google Ads alerts</p>
+      <h1 class="text-2xl font-bold text-gray-900">Who you're competing with</h1>
+      <p class="text-sm text-gray-500 mt-0.5">See which other businesses are bidding on your keywords and what Google suggests for your account.</p>
     </div>
   </div>
 
@@ -19,8 +19,8 @@
   <div class="border-b border-gray-200 mb-6">
     <nav class="-mb-px flex gap-6">
       {% for t, label, icon in [
-        ('competitive', 'Competitive', 'fa-chess'),
-        ('alerts',      'Alerts & Recommendations', 'fa-bell'),
+        ('competitive', 'Your Competitors', 'fa-chess'),
+        ('alerts',      'Google\'s Suggestions', 'fa-bell'),
       ] %}
       <a href="?tab={{ t }}"
          class="flex items-center gap-2 py-3 border-b-2 text-sm font-medium transition
@@ -52,39 +52,69 @@
 
     {# Market overview cards — populated by JS #}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-      <div class="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-5 text-white">
-        <p class="text-xs text-blue-100 mb-1">Your Impression Share</p>
-        <p class="text-3xl font-bold" id="yourShare">—</p>
+      <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-1">
+          <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Your share of searches</p>
+          <span class="relative group">
+            <i class="fa-solid fa-circle-question text-gray-300 hover:text-gray-500 text-[11px] cursor-help"></i>
+            <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-20 w-56 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg normal-case font-normal leading-relaxed">Of all the searches you bid on, what % showed your ad. Higher = you're winning more auctions.</span>
+          </span>
+        </div>
+        <p class="text-3xl font-bold text-indigo-600" id="yourShare">—</p>
+        <p class="text-xs text-gray-500 mt-1">Higher is better</p>
       </div>
-      <div class="bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-5 text-white">
-        <p class="text-xs text-purple-100 mb-1">Active Competitors</p>
-        <p class="text-3xl font-bold" id="numCompetitors">—</p>
+      <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-1">
+          <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Competitors bidding</p>
+          <span class="relative group">
+            <i class="fa-solid fa-circle-question text-gray-300 hover:text-gray-500 text-[11px] cursor-help"></i>
+            <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-20 w-56 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg normal-case font-normal leading-relaxed">How many different businesses showed up alongside you in the same auctions.</span>
+          </span>
+        </div>
+        <p class="text-3xl font-bold text-gray-900" id="numCompetitors">—</p>
+        <p class="text-xs text-gray-500 mt-1">Active in your auctions</p>
       </div>
-      <div class="bg-gradient-to-br from-green-500 to-teal-600 rounded-xl p-5 text-white">
-        <p class="text-xs text-green-100 mb-1">Market Concentration</p>
-        <p class="text-3xl font-bold" id="marketConcentration">—</p>
+      <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-1">
+          <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">How competitive</p>
+          <span class="relative group">
+            <i class="fa-solid fa-circle-question text-gray-300 hover:text-gray-500 text-[11px] cursor-help"></i>
+            <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-20 w-56 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg normal-case font-normal leading-relaxed">"Low" = many small competitors, easier to win. "High" = a few big competitors dominate, harder to win.</span>
+          </span>
+        </div>
+        <p class="text-3xl font-bold text-gray-900" id="marketConcentration">—</p>
+        <p class="text-xs text-gray-500 mt-1">The market crowding</p>
       </div>
-      <div class="bg-gradient-to-br from-orange-500 to-red-600 rounded-xl p-5 text-white">
-        <p class="text-xs text-orange-100 mb-1">Critical Threats</p>
-        <p class="text-3xl font-bold" id="numThreats">—</p>
+      <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-1">
+          <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Outranking you often</p>
+          <span class="relative group">
+            <i class="fa-solid fa-circle-question text-gray-300 hover:text-gray-500 text-[11px] cursor-help"></i>
+            <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-20 w-56 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg normal-case font-normal leading-relaxed">Competitors whose ad appeared above yours more than 30% of the time. They're winning the visibility war.</span>
+          </span>
+        </div>
+        <p class="text-3xl font-bold text-red-600" id="numThreats">—</p>
+        <p class="text-xs text-gray-500 mt-1">Need to outbid or out-quality</p>
       </div>
     </div>
 
     {# Campaign selector + Fetch #}
     <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm mb-6">
+      <h3 class="font-semibold text-gray-900 mb-1">Get fresh data</h3>
+      <p class="text-xs text-gray-500 mb-4">Pick one campaign and a time period, then click "Get latest" to pull the most recent competitor data from Google.</p>
       <div class="grid grid-cols-3 gap-4 items-end">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Campaign</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Campaign to check</label>
           <select id="compCampaign" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm"
                   {{ 'disabled' if not campaigns }}>
-            <option value="">{{ 'No campaigns synced yet' if not campaigns else 'Select campaign…' }}</option>
+            <option value="">{{ 'No campaigns yet — sync first' if not campaigns else 'Pick a campaign…' }}</option>
             {% for c in campaigns %}
             <option value="{{ c.id }}" data-google-id="{{ c.google_campaign_id }}">{{ c.name }}</option>
             {% endfor %}
           </select>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Time Period</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Time period</label>
           <select id="compPeriod" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm">
             <option value="7">Last 7 days</option>
             <option value="30" selected>Last 30 days</option>
@@ -93,8 +123,8 @@
         </div>
         <div>
           <button id="btnFetchInsights"
-                  class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition">
-            <i class="fas fa-sync-alt"></i> Fetch Auction Insights
+                  class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
+            <i class="fas fa-sync-alt"></i> Get latest from Google
           </button>
         </div>
       </div>
@@ -127,22 +157,24 @@
     {# Top competitors table — populated by JS #}
     <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
       <div class="px-5 py-4 border-b border-gray-100">
-        <h2 class="font-semibold text-gray-900">Top Competitors</h2>
+        <h2 class="font-semibold text-gray-900">Businesses you're competing with</h2>
+        <p class="text-xs text-gray-500 mt-1">Look for the red rows — those competitors are winning more auctions than they should.</p>
       </div>
       <div id="competitorsContainer" class="p-5">
-        <p class="text-sm text-gray-400">Select a campaign and fetch insights to see competitor data.</p>
+        <p class="text-sm text-gray-400">Pick a campaign above and click "Get latest from Google" to see who you're up against.</p>
       </div>
     </div>
 
     {# Competitor tracking #}
     <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-      <h2 class="font-semibold text-gray-900 mb-3">Track a Competitor</h2>
-      <div class="flex items-center gap-3">
+      <h2 class="font-semibold text-gray-900 mb-1">Keep an eye on a specific competitor</h2>
+      <p class="text-xs text-gray-500 mb-3">Know who your toughest rival is? Enter their website and we'll show you how often they outrank you.</p>
+      <div class="flex items-center gap-3 flex-wrap">
         <input type="text" id="competitorDomain" placeholder="competitor.com"
                class="block w-64 rounded-lg border-gray-300 shadow-sm sm:text-sm">
         <button id="btnTrackCompetitor"
                 class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition">
-          <i class="fas fa-binoculars"></i> Track
+          <i class="fas fa-binoculars"></i> Check them out
         </button>
       </div>
       <div id="trackingResults" class="mt-3 hidden"></div>
@@ -169,23 +201,44 @@
     {# Recommendations #}
     {% if recommendations %}
     <div>
-      <h2 class="text-base font-semibold text-gray-900 mb-3">Recommendations ({{ recommendations|length }})</h2>
+      <div class="mb-4">
+        <h2 class="text-base font-semibold text-gray-900">Google's suggestions for you ({{ recommendations|length }})</h2>
+        <p class="text-sm text-gray-500 mt-0.5">These are things Google itself thinks would improve your account. Read each one — your AI may already be working on the same issues.</p>
+      </div>
       <div class="space-y-3">
+        {% set rec_type_labels = {
+          'KEYWORD':                  {'label': 'Add keywords',          'icon': 'fa-key',          'color': 'blue'},
+          'TEXT_AD':                  {'label': 'Try a new ad',          'icon': 'fa-pen',          'color': 'purple'},
+          'RESPONSIVE_SEARCH_AD':     {'label': 'Add responsive ad',     'icon': 'fa-wand-magic-sparkles', 'color': 'purple'},
+          'TARGET_CPA_OPT_IN':        {'label': 'Switch bidding strategy','icon': 'fa-bullseye',     'color': 'indigo'},
+          'MAXIMIZE_CONVERSIONS':     {'label': 'Switch bidding strategy','icon': 'fa-bullseye',     'color': 'indigo'},
+          'CAMPAIGN_BUDGET':          {'label': 'Adjust budget',         'icon': 'fa-dollar-sign',  'color': 'green'},
+          'MOVE_UNUSED_BUDGET':       {'label': 'Move unused budget',    'icon': 'fa-shuffle',      'color': 'green'},
+          'CALL_EXTENSION':           {'label': 'Add phone number',      'icon': 'fa-phone',        'color': 'amber'},
+          'CALLOUT_EXTENSION':        {'label': 'Add ad extension',      'icon': 'fa-plus',         'color': 'amber'},
+          'SITELINK_EXTENSION':       {'label': 'Add sitelinks',         'icon': 'fa-link',         'color': 'amber'},
+        } %}
         {% for rec in recommendations %}
-        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-          <div class="flex items-start justify-between gap-4 flex-wrap">
-            <div class="flex-1">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded font-medium">{{ rec.type or rec.get('recommendation_type','') }}</span>
+          {% set rtype = rec.type or rec.get('recommendation_type','') %}
+          {% set meta = rec_type_labels.get(rtype, {'label': rtype|replace('_',' ')|title, 'icon': 'fa-lightbulb', 'color': 'gray'}) %}
+        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition">
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 rounded-xl bg-{{ meta.color }}-100 flex items-center justify-center shrink-0">
+              <i class="fa-solid {{ meta.icon }} text-{{ meta.color }}-600"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1 flex-wrap">
+                <span class="text-xs px-2 py-0.5 bg-{{ meta.color }}-100 text-{{ meta.color }}-700 rounded font-medium">{{ meta.label }}</span>
               </div>
               <h3 class="text-sm font-semibold text-gray-900">{{ rec.title or rec.get('resource_name','') }}</h3>
               {% if rec.description %}<p class="text-sm text-gray-600 mt-1">{{ rec.description }}</p>{% endif %}
             </div>
-            <div class="flex items-center gap-2 flex-shrink-0">
-              {% if rec.link %}
-              <a href="{{ rec.link }}" target="_blank" class="text-xs px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition">View in Google Ads</a>
-              {% endif %}
-            </div>
+            {% if rec.link %}
+            <a href="{{ rec.link }}" target="_blank" rel="noopener"
+               class="shrink-0 inline-flex items-center gap-1.5 text-xs px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-medium transition">
+              Open in Google Ads <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+            </a>
+            {% endif %}
           </div>
         </div>
         {% endfor %}
@@ -193,9 +246,9 @@
     </div>
     {% elif tab == 'alerts' %}
     <div class="bg-white border border-gray-200 rounded-xl p-10 text-center">
-      <i class="fas fa-check-circle text-green-400 text-4xl mb-4"></i>
-      <h3 class="text-lg font-semibold text-gray-700 mb-2">No Active Alerts</h3>
-      <p class="text-gray-500 text-sm">Your account looks healthy. Recommendations will appear here when Google Ads has suggestions.</p>
+      <i class="fas fa-circle-check text-green-400 text-4xl mb-4"></i>
+      <h3 class="text-lg font-semibold text-gray-700 mb-2">You're all caught up</h3>
+      <p class="text-gray-500 text-sm">Google has no new suggestions and there are no alerts to action right now.</p>
       <a href="{{ url_for('alerts_bp.alerts_dashboard') }}" class="mt-4 inline-flex items-center gap-2 text-sm text-indigo-600 hover:underline">
         Refresh from Google <i class="fas fa-sync-alt text-xs"></i>
       </a>
@@ -241,14 +294,30 @@ document.getElementById('compPeriod')?.addEventListener('change', function() {
 document.getElementById('btnFetchInsights')?.addEventListener('click', fetchInsights);
 document.getElementById('btnTrackCompetitor')?.addEventListener('click', () => {
   const domain = document.getElementById('competitorDomain').value.trim();
-  if (!domain || !selCampaign) { alert('Select a campaign and enter a domain.'); return; }
+  if (!domain || !selCampaign) { toast('Pick a campaign and enter a competitor website first.', 'error'); return; }
   trackCompetitor(domain);
 });
 
+// Inline toast (no alerts)
+function toast(msg, type) {
+  let c = document.getElementById('intel-toast-container');
+  if (!c) {
+    c = document.createElement('div');
+    c.id = 'intel-toast-container';
+    c.className = 'fixed bottom-5 right-5 z-[100] space-y-2 pointer-events-none';
+    document.body.appendChild(c);
+  }
+  const el = document.createElement('div');
+  el.className = `pointer-events-auto px-4 py-3 rounded-xl shadow-lg text-sm font-medium ${type === 'error' ? 'bg-red-700' : 'bg-gray-800'} text-white`;
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3500);
+}
+
 async function fetchInsights() {
-  if (!selCampaign) { alert('Please select a campaign.'); return; }
+  if (!selCampaign) { toast('Pick a campaign first.', 'error'); return; }
   const btn = document.getElementById('btnFetchInsights');
-  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Fetching…';
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Loading…';
   try {
     const res = await fetch('/account/google/ads/competitive/api/fetch-insights', {
       method: 'POST',
@@ -256,10 +325,10 @@ async function fetchInsights() {
       body: JSON.stringify({campaign_id: selCampaign, lookback_days: selPeriod}),
     });
     const d = await res.json();
-    if (d.success) { loadTopCompetitors(); loadMarketShare(); }
-    else alert('Error: ' + (d.error || 'failed'));
-  } catch(e) { alert('Error: ' + e.message); }
-  finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Fetch Auction Insights'; }
+    if (d.success) { loadTopCompetitors(); loadMarketShare(); toast('Updated with the latest data.', 'success'); }
+    else toast('Could not get fresh data: ' + (d.error || 'unknown error'), 'error');
+  } catch(e) { toast('Could not get fresh data. Check your connection.', 'error'); }
+  finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Get latest from Google'; }
 }
 
 async function loadTopCompetitors() {
@@ -273,26 +342,39 @@ async function loadTopCompetitors() {
     if (d.success && d.competitors?.length > 0) {
       let html = `<div class="overflow-x-auto"><table class="min-w-full text-sm divide-y divide-gray-100">
         <thead class="bg-gray-50"><tr>
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Competitor</th>
-          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Impr. Share</th>
-          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Above Rate</th>
-          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Overlap</th>
-          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Campaigns</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Competitor</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Threat level</th>
+          <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide" title="How often their ad appeared when yours did">Their visibility</th>
+          <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide" title="% of the time their ad appeared above yours">Beats you</th>
+          <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide" title="% of searches you both bid on">Overlap</th>
+          <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">Campaigns</th>
         </tr></thead><tbody class="divide-y divide-gray-50">`;
       for (const c of d.competitors) {
-        const cls = c.avg_impression_share > 0.3 ? 'text-red-600 font-semibold' : c.avg_impression_share > 0.2 ? 'text-orange-600' : 'text-gray-900';
+        let threat, threatCls;
+        if (c.avg_position_above > 0.5)      { threat = '🔥 Major threat';  threatCls = 'bg-red-100 text-red-800'; }
+        else if (c.avg_position_above > 0.3) { threat = '⚠ Outranks you';  threatCls = 'bg-orange-100 text-orange-800'; }
+        else if (c.avg_impression_share > 0.3){ threat = 'Big presence';   threatCls = 'bg-amber-100 text-amber-800'; }
+        else                                 { threat = 'Minor';           threatCls = 'bg-gray-100 text-gray-700'; }
+        const visCls = c.avg_impression_share > 0.3 ? 'text-red-600 font-semibold' : c.avg_impression_share > 0.2 ? 'text-orange-600' : 'text-gray-700';
+        const beatsCls = c.avg_position_above > 0.3 ? 'text-red-600 font-semibold' : c.avg_position_above > 0.15 ? 'text-amber-600' : 'text-gray-600';
         html += `<tr class="hover:bg-gray-50">
           <td class="px-4 py-3 font-medium text-gray-900">${c.competitor_domain}</td>
-          <td class="px-4 py-3 text-right ${cls}">${(c.avg_impression_share*100).toFixed(1)}%</td>
-          <td class="px-4 py-3 text-right">${(c.avg_position_above*100).toFixed(1)}%</td>
-          <td class="px-4 py-3 text-right">${(c.avg_overlap*100).toFixed(1)}%</td>
-          <td class="px-4 py-3 text-right">${c.campaigns_competing}</td>
+          <td class="px-4 py-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${threatCls}">${threat}</span></td>
+          <td class="px-4 py-3 text-right ${visCls}">${(c.avg_impression_share*100).toFixed(1)}%</td>
+          <td class="px-4 py-3 text-right ${beatsCls}">${(c.avg_position_above*100).toFixed(1)}%</td>
+          <td class="px-4 py-3 text-right text-gray-600">${(c.avg_overlap*100).toFixed(1)}%</td>
+          <td class="px-4 py-3 text-right text-gray-600">${c.campaigns_competing}</td>
         </tr>`;
       }
-      html += '</tbody></table></div>';
+      html += `</tbody></table></div>
+        <div class="mt-3 text-xs text-gray-500 flex items-center gap-4 flex-wrap px-1">
+          <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-500"></span>Major threat = outranks you more than half the time</span>
+          <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-orange-500"></span>Outranks you = appears above your ad more often than not</span>
+          <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span>Big presence = high share of the same searches</span>
+        </div>`;
       document.getElementById('competitorsContainer').innerHTML = html;
     } else {
-      document.getElementById('competitorsContainer').innerHTML = '<p class="text-sm text-gray-400">No competitor data available yet. Fetch auction insights first.</p>';
+      document.getElementById('competitorsContainer').innerHTML = '<p class="text-sm text-gray-400">No competitor data yet. Click "Get latest from Google" above to pull fresh data.</p>';
     }
   } catch(e) { console.error(e); }
 }
@@ -304,7 +386,14 @@ async function loadMarketShare() {
     const d = await res.json();
     if (d.success) {
       document.getElementById('yourShare').textContent = d.your_impression_share.toFixed(1) + '%';
-      document.getElementById('marketConcentration').textContent = d.market_concentration || '—';
+      // Translate market concentration to plain English
+      const mc = (d.market_concentration || '').toString().toLowerCase();
+      let mcLabel = mc;
+      if (mc.includes('low'))       mcLabel = 'Low';
+      else if (mc.includes('mod'))  mcLabel = 'Moderate';
+      else if (mc.includes('high')) mcLabel = 'High';
+      else if (!mc)                 mcLabel = '—';
+      document.getElementById('marketConcentration').textContent = mcLabel;
     }
   } catch(e) {}
 }
@@ -312,7 +401,7 @@ async function loadMarketShare() {
 async function trackCompetitor(domain) {
   const el = document.getElementById('trackingResults');
   el.classList.remove('hidden');
-  el.innerHTML = '<p class="text-sm text-gray-500 animate-pulse">Loading…</p>';
+  el.innerHTML = '<p class="text-sm text-gray-500 animate-pulse">Looking up data on ' + domain + '…</p>';
   try {
     const res = await fetch('/account/google/ads/competitive/api/track-competitor', {
       method: 'POST',
@@ -321,16 +410,35 @@ async function trackCompetitor(domain) {
     });
     const d = await res.json();
     if (d.success) {
-      el.innerHTML = `<div class="bg-gray-50 rounded-lg p-4 text-sm">
-        <p class="font-semibold mb-2">Tracking: ${domain}</p>
+      const trendPct = (d.trend * 100).toFixed(1);
+      const trendLabel = d.trend > 0.05  ? `<span class="text-red-600 font-semibold">Gaining ground (+${trendPct}%)</span>`
+                       : d.trend < -0.05 ? `<span class="text-green-600 font-semibold">Losing ground (${trendPct}%)</span>`
+                       : `<span class="text-gray-600">Steady</span>`;
+      const aboveLabel = d.position_above_rate > 0.5 ? `<span class="text-red-600 font-semibold">Outranks you most of the time</span>`
+                      : d.position_above_rate > 0.3 ? `<span class="text-orange-600">Outranks you often</span>`
+                      : `<span class="text-gray-700">Rarely outranks you</span>`;
+      el.innerHTML = `<div class="bg-gray-50 border border-gray-200 rounded-xl p-5 text-sm">
+        <p class="font-semibold text-gray-900 mb-3">Snapshot: ${domain}</p>
         <div class="grid grid-cols-3 gap-4">
-          <div><p class="text-xs text-gray-500">Avg Share</p><p class="font-semibold">${(d.avg_impression_share*100).toFixed(1)}%</p></div>
-          <div><p class="text-xs text-gray-500">Trend</p><p class="font-semibold ${d.trend>0?'text-red-600':'text-green-600'}">${d.trend>0?'+':''}${(d.trend*100).toFixed(1)}%</p></div>
-          <div><p class="text-xs text-gray-500">Above Rate</p><p class="font-semibold">${(d.position_above_rate*100).toFixed(1)}%</p></div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">Their share of your searches</p>
+            <p class="text-lg font-semibold text-gray-900">${(d.avg_impression_share*100).toFixed(1)}%</p>
+            <p class="text-xs text-gray-400 mt-1">Of your auctions, they showed up here</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">Recent trend</p>
+            <p class="text-lg">${trendLabel}</p>
+            <p class="text-xs text-gray-400 mt-1">Change vs previous period</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 mb-0.5">When you both appear</p>
+            <p class="text-lg">${aboveLabel}</p>
+            <p class="text-xs text-gray-400 mt-1">${(d.position_above_rate*100).toFixed(1)}% of the time their ad is above yours</p>
+          </div>
         </div>
       </div>`;
-    } else { el.innerHTML = `<p class="text-sm text-red-500">${d.error || 'Not found'}</p>`; }
-  } catch(e) { el.innerHTML = `<p class="text-sm text-red-500">${e.message}</p>`; }
+    } else { el.innerHTML = `<p class="text-sm text-red-500">${d.error || "We couldn't find data for that domain."}</p>`; }
+  } catch(e) { el.innerHTML = `<p class="text-sm text-red-500">Something went wrong. Try again.</p>`; }
 }
 
 async function acknowledgeAlert(id) {

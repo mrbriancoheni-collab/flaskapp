@@ -1,13 +1,13 @@
 {% extends "base_app.html" %}
-{% block title %}Internal Links · {{ app_name }}{% endblock %}
+{% block title %}Connect Related Pages · {{ app_name }}{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto space-y-6">
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Internal Linking Engine</h1>
-      <p class="text-gray-500 text-sm mt-1">Find and insert contextually relevant internal links into your posts</p>
+      <h1 class="text-2xl font-bold text-gray-900">Connect Related Pages on Your Site</h1>
+      <p class="text-gray-500 text-sm mt-1">Add links from one page to other related pages on your site. This helps customers find what they need and helps Google understand your site.</p>
     </div>
   </div>
 
@@ -25,12 +25,12 @@
   <!-- Post selector -->
   <div class="bg-white rounded-xl shadow-sm border p-6">
     <h2 class="text-base font-semibold text-gray-800 mb-4">
-      <i class="fa-solid fa-file-lines text-indigo-500 mr-2"></i>Select Source Post
+      <i class="fa-solid fa-file-lines text-indigo-500 mr-2"></i>Pick a Page to Add Links To
     </h2>
     <form method="GET" action="{{ url_for('wp_bp.internal_links') }}" class="flex flex-wrap gap-3 items-end">
       <input type="hidden" name="action" value="suggest">
       <div class="flex-1 min-w-48">
-        <label class="block text-xs text-gray-500 mb-1">Post</label>
+        <label class="block text-xs text-gray-500 mb-1">Page</label>
         {% if posts %}
         <select name="post_id" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 focus:outline-none">
           {% for p in posts %}
@@ -40,12 +40,12 @@
           {% endfor %}
         </select>
         {% else %}
-        <p class="text-sm text-gray-400 italic">No published posts found — connect a WordPress site first.</p>
+        <p class="text-sm text-gray-400 italic">No published pages found — connect a WordPress site first.</p>
         {% endif %}
       </div>
       {% if posts %}
       <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
-        <i class="fa-solid fa-magnifying-glass mr-1"></i>Find Links
+        <i class="fa-solid fa-magnifying-glass mr-1"></i>Find Related Pages
       </button>
       {% endif %}
     </form>
@@ -55,7 +55,7 @@
   <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
     <div class="px-6 py-4 border-b flex items-center justify-between">
       <h2 class="text-base font-semibold text-gray-800">
-        Link Opportunities
+        Suggested Pages to Link To
         <span class="ml-2 text-xs bg-indigo-100 text-indigo-700 rounded-full px-2 py-0.5">{{ suggestions | length }}</span>
       </h2>
       {% if selected_post %}
@@ -73,9 +73,9 @@
             <th class="px-4 py-3 w-8">
               <input type="checkbox" id="check-all" class="rounded">
             </th>
-            <th class="px-4 py-3 text-left font-semibold text-gray-700">Target Post</th>
-            <th class="px-4 py-3 text-left font-semibold text-gray-700">Anchor Text</th>
-            <th class="px-4 py-3 text-right font-semibold text-gray-700">Score</th>
+            <th class="px-4 py-3 text-left font-semibold text-gray-700">Page to Link To</th>
+            <th class="px-4 py-3 text-left font-semibold text-gray-700">Link Text</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-700">Match</th>
             <th class="px-4 py-3 text-center font-semibold text-gray-700">Status</th>
           </tr>
         </thead>

@@ -10,8 +10,8 @@
 
   <div class="flex items-start justify-between flex-wrap gap-4 mb-6">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Budget & Forecast</h1>
-      <p class="text-sm text-gray-500 mt-0.5">Budget groups · Auto-adjustment · 12-month forecast</p>
+      <h1 class="text-2xl font-bold text-gray-900">Budget planning</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Group your campaigns · set spend limits · see next month's forecast</p>
     </div>
   </div>
 
@@ -293,6 +293,14 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 function getCsrfToken() {
   return document.querySelector('meta[name="csrf-token"]')?.content || '';
 }
@@ -309,13 +317,13 @@ async function saveAutoBudgetSettings() {
       }),
     });
     const data = await res.json();
-    alert(data.success ? 'Auto-budget settings saved.' : 'Error: ' + (data.error || 'unknown'));
-  } catch(e) { alert('Error: ' + e.message); }
+    showToast(data.success ? 'Auto-budget settings saved.' : 'Error: ' + (data.error || 'unknown'), data.success ? 'success' : 'error');
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
 }
 
 async function loadForecast() {
   const campaignId = document.getElementById('forecastCampaign').value;
-  if (!campaignId) { alert('Please select a campaign.'); return; }
+  if (!campaignId) { showToast('Please select a campaign.', 'error'); return; }
 
   const serviceType = document.getElementById('forecastServiceType').value;
   const zip = document.getElementById('forecastZip').value;

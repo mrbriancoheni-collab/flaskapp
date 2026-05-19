@@ -13,7 +13,7 @@
             </h1>
             <p class="text-gray-600 mt-2">Track email performance, engagement rates, and campaign success</p>
         </div>
-        <div class="flex gap-3">
+        <div class="flex gap-3 items-center">
             <select id="daysFilter" class="border border-gray-300 rounded-lg px-4 py-2 bg-white" onchange="updateDateRange()">
                 <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
                 <option value="14" {% if days == 14 %}selected{% endif %}>Last 14 days</option>
@@ -21,6 +21,11 @@
                 <option value="60" {% if days == 60 %}selected{% endif %}>Last 60 days</option>
                 <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
             </select>
+            <button id="syncBouncesBtn" onclick="syncBounces()"
+                    class="bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 font-semibold flex items-center gap-2">
+                <i class="fa-solid fa-ban"></i>
+                Sync Bounces
+            </button>
             <a href="{{ url_for('lead_campaigns_bp.index') }}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 font-semibold">
                 <i class="fa-solid fa-arrow-left mr-2"></i>
                 Back to Campaigns
@@ -316,6 +321,34 @@
     function updateDateRange() {
         const days = document.getElementById('daysFilter').value;
         window.location.href = '{{ url_for("lead_campaigns_bp.email_monitoring_dashboard") }}?days=' + days;
+    }
+
+    async function syncBounces() {
+        const btn = document.getElementById('syncBouncesBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Syncing…';
+        try {
+            const resp = await fetch('{{ url_for("lead_campaigns_bp.sync_bounces") }}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || '' }
+            });
+            const data = await resp.json();
+            if (data.success) {
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Done';
+                btn.className = btn.className.replace('bg-red-100 text-red-700 hover:bg-red-200', 'bg-green-100 text-green-700');
+                const msg = `Synced: ${data.new_suppressions} new suppressed addresses, ${data.hard_bounces_found} hard bounces, ${data.spam_reports_found} spam reports.`;
+                alert(msg);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                alert('Sync failed: ' + (data.error || 'Unknown error'));
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-ban"></i> Sync Bounces';
+            }
+        } catch (e) {
+            alert('Error: ' + e.message);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-ban"></i> Sync Bounces';
+        }
     }
 
     // Daily Volume Chart

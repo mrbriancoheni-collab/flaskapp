@@ -10,7 +10,7 @@
             <div>
                 <h1 class="text-3xl font-bold text-gray-900 mb-2">
                     <i class="fa-solid fa-magnifying-glass-chart text-indigo-600 mr-2"></i>
-                    Analyze Account Structure
+                    Analyze your account
                 </h1>
                 <p class="text-gray-600">{{ account.account_name }}</p>
             </div>
@@ -171,6 +171,14 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 document.getElementById('analyzeForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
@@ -194,12 +202,12 @@ document.getElementById('analyzeForm').addEventListener('submit', function(e) {
             // Redirect to review page
             window.location.href = data.redirect;
         } else {
-            alert('Error: ' + data.error);
+            showToast('Error: ' + data.error, 'error');
             document.getElementById('loadingModal').classList.add('hidden');
         }
     })
     .catch(error => {
-        alert('Error analyzing account: ' + error);
+        showToast('Error analyzing account: ' + error, 'error');
         document.getElementById('loadingModal').classList.add('hidden');
     });
 });

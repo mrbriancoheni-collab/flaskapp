@@ -418,7 +418,23 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAiSettings();
 });
 
-async function loadAiSettings() { /* placeholder */ }
+async function loadAiSettings() {
+    try {
+        const res = await fetch("{{ url_for('agents_bp.get_ai_settings') }}", {
+            headers: { 'Accept': 'application/json' }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.success) {
+            const bd = document.getElementById('biz-description');
+            const nk = document.getElementById('nk-examples');
+            if (bd && data.business_description) bd.value = data.business_description;
+            if (nk && data.negative_keyword_examples) nk.value = data.negative_keyword_examples;
+        }
+    } catch (e) {
+        console.error('Failed to load AI settings:', e);
+    }
+}
 
 async function saveAiSettings() {
     const btn = event.target;

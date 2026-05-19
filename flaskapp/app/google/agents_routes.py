@@ -1709,6 +1709,34 @@ def save_intent_groups():
     return jsonify({"success": True, "message": "Intent group settings saved."})
 
 
+@agents_bp.route("/api/ai-settings", methods=["GET"])
+@login_required
+def get_ai_settings():
+    """Return the saved business description and negative keyword examples."""
+    from sqlalchemy import text as sqla_text
+
+    account_id = current_account_id()
+    if not account_id:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    try:
+        with db.engine.connect() as conn:
+            row = conn.execute(sqla_text("""
+                SELECT business_description, negative_keyword_examples
+                FROM accounts
+                WHERE id = :aid
+            """), {"aid": account_id}).first()
+    except Exception as e:
+        current_app.logger.error(f"Failed to load AI settings for account {account_id}: {e}")
+        return jsonify({"error": "Failed to load settings"}), 500
+
+    return jsonify({
+        "success": True,
+        "business_description": (row[0] if row else "") or "",
+        "negative_keyword_examples": (row[1] if row else "") or "",
+    })
+
+
 @agents_bp.route("/api/ai-settings", methods=["POST"])
 @login_required
 def save_ai_settings():
@@ -1723,6 +1751,14 @@ def save_ai_settings():
     business_description = (data.get("business_description") or "").strip()
     business_services = (data.get("business_services") or "").strip()
     negative_keyword_examples = (data.get("negative_keyword_examples") or "").strip()
+
+    # Refuse to overwrite existing data with an all-empty submission.
+    # This protects against the form being submitted before the GET load
+    # completes, or against accidental clicks on an empty form.
+    if not business_description and not negative_keyword_examples:
+        return jsonify({
+            "error": "Please enter a business description or negative keyword examples before saving."
+        }), 400
 
     try:
         with db.engine.begin() as conn:

@@ -55,9 +55,10 @@ def optimize():
     Renders the Google Ads Optimize UI (tabs driven by ?tab=).
     Template: templates/google/ads/optimize.html
     """
-    from app.models_ads import AdsCampaign, AdsAd
+    from app.models_ads import AdsCampaign, AdsAd, GadsStatsDaily
     AdsCampaign.ensure_columns()
     AdsAd.ensure_columns()
+    GadsStatsDaily.ensure_columns()
     # Check if user has paid plan
     if not is_paid_account():
         flash("Google Ads Optimizer is available on paid plans. Upgrade to access optimization tools.", "warning")
@@ -415,6 +416,10 @@ def overview():
     Tries account-level rows first, then falls back to summing campaign rows.
     """
     from datetime import date as _date, timedelta as _td
+    from app.models_ads import AdsCampaign, GadsStatsDaily
+    AdsCampaign.ensure_columns()
+    GadsStatsDaily.ensure_columns()
+
     aid = current_account_id()
     days = max(1, min(int(request.args.get("days", 30)), 365))
     cutoff = _date.today() - _td(days=days)
@@ -453,82 +458,118 @@ def debug_stats():
     cutoff_30 = _date.today() - _td(days=30)
     cutoff_90 = _date.today() - _td(days=90)
 
-    out = {"account_id": aid}
+    out = {"account_id": aid, "errors": {}}
+
+    def _safe(key, fn):
+        try:
+            out[key] = fn()
+        except Exception as e:
+            db.session.rollback()
+            out["errors"][key] = f"{type(e).__name__}: {e}"
 
     # 1. Total rows in gads_stats_daily for this account (direct account_id col)
-    out["gads_stats_total_by_account_id"] = db.session.execute(
+    _safe("gads_stats_total_by_account_id", lambda: db.session.execute(
         text("SELECT COUNT(*) FROM gads_stats_daily WHERE account_id = :aid"),
         {"aid": aid}
-    ).scalar()
+    ).scalar())
+
+    # 1b. Total rows in gads_stats_daily without account filter (entire table)
+    _safe("gads_stats_total_alltable", lambda: db.session.execute(
+        text("SELECT COUNT(*) FROM gads_stats_daily")
+    ).scalar())
+
+    # 1c. Distinct account_ids in gads_stats_daily
+    _safe("gads_stats_distinct_account_ids", lambda: [
+        r[0] for r in db.session.execute(
+            text("SELECT DISTINCT account_id FROM gads_stats_daily LIMIT 20")
+        ).fetchall()
+    ])
 
     # 2. Campaigns for this account
-    out["ads_campaigns_count"] = db.session.execute(
+    _safe("ads_campaigns_count", lambda: db.session.execute(
         text("SELECT COUNT(*) FROM ads_campaigns WHERE account_id = :aid"),
         {"aid": aid}
-    ).scalar()
+    ).scalar())
 
     # 3. Campaign rows with stats (the JOIN used by /overview)
-    out["stats_30d_via_join"] = db.session.execute(
+    _safe("stats_30d_via_join", lambda: db.session.execute(
         text("""
             SELECT COUNT(*) FROM gads_stats_daily gs
             JOIN ads_campaigns ac ON ac.id = gs.entity_id AND ac.account_id = :aid
             WHERE gs.entity_type = 'campaign' AND gs.date >= :cutoff
         """),
         {"aid": aid, "cutoff": cutoff_30}
-    ).scalar()
+    ).scalar())
 
     # 4. Stats without the date filter (all-time)
-    out["stats_alltime_via_join"] = db.session.execute(
+    _safe("stats_alltime_via_join", lambda: db.session.execute(
         text("""
             SELECT COUNT(*) FROM gads_stats_daily gs
             JOIN ads_campaigns ac ON ac.id = gs.entity_id AND ac.account_id = :aid
             WHERE gs.entity_type = 'campaign'
         """),
         {"aid": aid}
-    ).scalar()
+    ).scalar())
 
-    # 5. Min/max date range of stats for this account
-    date_range = db.session.execute(
-        text("""
-            SELECT MIN(gs.date), MAX(gs.date)
-            FROM gads_stats_daily gs
-            JOIN ads_campaigns ac ON ac.id = gs.entity_id AND ac.account_id = :aid
-            WHERE gs.entity_type = 'campaign'
-        """),
-        {"aid": aid}
-    ).first()
-    out["stats_min_date"] = str(date_range[0]) if date_range and date_range[0] else None
-    out["stats_max_date"] = str(date_range[1]) if date_range and date_range[1] else None
+    # 5. Min/max date range of stats for this account (via JOIN)
+    def _date_range():
+        r = db.session.execute(
+            text("""
+                SELECT MIN(gs.date), MAX(gs.date)
+                FROM gads_stats_daily gs
+                JOIN ads_campaigns ac ON ac.id = gs.entity_id AND ac.account_id = :aid
+                WHERE gs.entity_type = 'campaign'
+            """),
+            {"aid": aid}
+        ).first()
+        return {"min": str(r[0]) if r and r[0] else None, "max": str(r[1]) if r and r[1] else None}
+    _safe("stats_date_range_via_join", _date_range)
+
+    # 5b. Min/max date range via account_id column directly
+    def _date_range_direct():
+        r = db.session.execute(
+            text("SELECT MIN(date), MAX(date), COUNT(*) FROM gads_stats_daily WHERE account_id = :aid"),
+            {"aid": aid}
+        ).first()
+        return {"min": str(r[0]) if r and r[0] else None,
+                "max": str(r[1]) if r and r[1] else None,
+                "count": r[2] if r else 0}
+    _safe("stats_date_range_direct", _date_range_direct)
 
     # 6. Sample campaign IDs (local) and their google_campaign_id
-    camps = db.session.execute(
-        text("SELECT id, google_campaign_id, name, account_id FROM ads_campaigns WHERE account_id = :aid LIMIT 5"),
-        {"aid": aid}
-    ).fetchall()
-    out["campaigns_sample"] = [
+    _safe("campaigns_sample", lambda: [
         {"id": r[0], "google_campaign_id": r[1], "name": r[2], "account_id": r[3]}
-        for r in camps
-    ]
+        for r in db.session.execute(
+            text("SELECT id, google_campaign_id, name, account_id FROM ads_campaigns WHERE account_id = :aid LIMIT 5"),
+            {"aid": aid}
+        ).fetchall()
+    ])
 
-    # 7. Sample gads_stats_daily rows (any entity_type) for this account
-    stats_sample = db.session.execute(
-        text("SELECT entity_type, entity_id, google_entity_id, date, impressions, clicks FROM gads_stats_daily WHERE account_id = :aid ORDER BY date DESC LIMIT 5"),
-        {"aid": aid}
-    ).fetchall()
-    out["stats_sample"] = [
+    # 7. Sample gads_stats_daily rows for this account (by account_id)
+    _safe("stats_sample_by_account_id", lambda: [
         {"entity_type": r[0], "entity_id": r[1], "google_entity_id": r[2],
-         "date": str(r[3]), "impressions": r[4], "clicks": r[5]}
-        for r in stats_sample
-    ]
+         "date": str(r[3]), "impressions": r[4], "clicks": r[5], "account_id": r[6]}
+        for r in db.session.execute(
+            text("SELECT entity_type, entity_id, google_entity_id, date, impressions, clicks, account_id FROM gads_stats_daily WHERE account_id = :aid ORDER BY date DESC LIMIT 5"),
+            {"aid": aid}
+        ).fetchall()
+    ])
 
-    # 8. Check if entity_id matches any local campaign for this account
-    if stats_sample:
-        entity_ids = [r[1] for r in stats_sample]
-        matched = db.session.execute(
-            text("SELECT COUNT(*) FROM ads_campaigns WHERE id IN :ids AND account_id = :aid"),
-            {"ids": tuple(entity_ids) if len(entity_ids) > 1 else (entity_ids[0], entity_ids[0]), "aid": aid}
-        ).scalar()
-        out["stats_entity_ids_match_campaigns"] = matched
+    # 7b. Sample any rows from the table at all
+    _safe("stats_sample_any", lambda: [
+        {"entity_type": r[0], "entity_id": r[1], "google_entity_id": r[2],
+         "date": str(r[3]), "impressions": r[4], "clicks": r[5], "account_id": r[6]}
+        for r in db.session.execute(
+            text("SELECT entity_type, entity_id, google_entity_id, date, impressions, clicks, account_id FROM gads_stats_daily ORDER BY date DESC LIMIT 5")
+        ).fetchall()
+    ])
+
+    # 8. List columns in gads_stats_daily (so we can confirm schema)
+    _safe("gads_stats_columns", lambda: [
+        r[0] for r in db.session.execute(
+            text("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'gads_stats_daily'")
+        ).fetchall()
+    ])
 
     return jsonify(out)
 

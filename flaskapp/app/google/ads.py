@@ -442,6 +442,98 @@ def overview():
 
 
 # ---------------------------
+# JSON: Debug diagnostics
+# ---------------------------
+@gads_bp.get("/debug/stats")
+@login_required
+def debug_stats():
+    """Temporary diagnostic: raw row counts to diagnose zero-KPI issue."""
+    from datetime import date as _date, timedelta as _td
+    aid = current_account_id()
+    cutoff_30 = _date.today() - _td(days=30)
+    cutoff_90 = _date.today() - _td(days=90)
+
+    out = {"account_id": aid}
+
+    # 1. Total rows in gads_stats_daily for this account (direct account_id col)
+    out["gads_stats_total_by_account_id"] = db.session.execute(
+        text("SELECT COUNT(*) FROM gads_stats_daily WHERE account_id = :aid"),
+        {"aid": aid}
+    ).scalar()
+
+    # 2. Campaigns for this account
+    out["ads_campaigns_count"] = db.session.execute(
+        text("SELECT COUNT(*) FROM ads_campaigns WHERE account_id = :aid"),
+        {"aid": aid}
+    ).scalar()
+
+    # 3. Campaign rows with stats (the JOIN used by /overview)
+    out["stats_30d_via_join"] = db.session.execute(
+        text("""
+            SELECT COUNT(*) FROM gads_stats_daily gs
+            JOIN ads_campaigns ac ON ac.id = gs.entity_id AND ac.account_id = :aid
+            WHERE gs.entity_type = 'campaign' AND gs.date >= :cutoff
+        """),
+        {"aid": aid, "cutoff": cutoff_30}
+    ).scalar()
+
+    # 4. Stats without the date filter (all-time)
+    out["stats_alltime_via_join"] = db.session.execute(
+        text("""
+            SELECT COUNT(*) FROM gads_stats_daily gs
+            JOIN ads_campaigns ac ON ac.id = gs.entity_id AND ac.account_id = :aid
+            WHERE gs.entity_type = 'campaign'
+        """),
+        {"aid": aid}
+    ).scalar()
+
+    # 5. Min/max date range of stats for this account
+    date_range = db.session.execute(
+        text("""
+            SELECT MIN(gs.date), MAX(gs.date)
+            FROM gads_stats_daily gs
+            JOIN ads_campaigns ac ON ac.id = gs.entity_id AND ac.account_id = :aid
+            WHERE gs.entity_type = 'campaign'
+        """),
+        {"aid": aid}
+    ).first()
+    out["stats_min_date"] = str(date_range[0]) if date_range and date_range[0] else None
+    out["stats_max_date"] = str(date_range[1]) if date_range and date_range[1] else None
+
+    # 6. Sample campaign IDs (local) and their google_campaign_id
+    camps = db.session.execute(
+        text("SELECT id, google_campaign_id, name, account_id FROM ads_campaigns WHERE account_id = :aid LIMIT 5"),
+        {"aid": aid}
+    ).fetchall()
+    out["campaigns_sample"] = [
+        {"id": r[0], "google_campaign_id": r[1], "name": r[2], "account_id": r[3]}
+        for r in camps
+    ]
+
+    # 7. Sample gads_stats_daily rows (any entity_type) for this account
+    stats_sample = db.session.execute(
+        text("SELECT entity_type, entity_id, google_entity_id, date, impressions, clicks FROM gads_stats_daily WHERE account_id = :aid ORDER BY date DESC LIMIT 5"),
+        {"aid": aid}
+    ).fetchall()
+    out["stats_sample"] = [
+        {"entity_type": r[0], "entity_id": r[1], "google_entity_id": r[2],
+         "date": str(r[3]), "impressions": r[4], "clicks": r[5]}
+        for r in stats_sample
+    ]
+
+    # 8. Check if entity_id matches any local campaign for this account
+    if stats_sample:
+        entity_ids = [r[1] for r in stats_sample]
+        matched = db.session.execute(
+            text("SELECT COUNT(*) FROM ads_campaigns WHERE id IN :ids AND account_id = :aid"),
+            {"ids": tuple(entity_ids) if len(entity_ids) > 1 else (entity_ids[0], entity_ids[0]), "aid": aid}
+        ).scalar()
+        out["stats_entity_ids_match_campaigns"] = matched
+
+    return jsonify(out)
+
+
+# ---------------------------
 # JSON: Optimizer
 # ---------------------------
 @gads_bp.get("/optimizer/data")

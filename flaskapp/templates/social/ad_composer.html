@@ -621,6 +621,14 @@
 
 <script src="{{ url_for('static', filename='js/ad-composer-v2.js') }}"></script>
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 let currentCreativeId = null;
 let adComposer = null;
 
@@ -685,7 +693,7 @@ async function generateAd() {
   if (mode === 'website') {
     const websiteUrl = document.getElementById('website-url').value.trim();
     if (!websiteUrl) {
-      alert('Please enter a website URL');
+      showToast('Please enter a website URL', 'error');
       return;
     }
     requestData.website_url = websiteUrl;
@@ -693,7 +701,7 @@ async function generateAd() {
     const businessName = document.getElementById('business-name').value.trim();
     const services = document.getElementById('services').value.trim();
     if (!businessName) {
-      alert('Please enter a business name');
+      showToast('Please enter a business name', 'error');
       return;
     }
     requestData.business_name = businessName;
@@ -723,13 +731,13 @@ async function generateAd() {
       displayCreative(data.creative || data, data.image_variations);
       currentCreativeId = data.creative_id || null;
     } else {
-      alert(`Error: ${data.error}`);
+      showToast('Error: ' + data.error, 'error');
       document.getElementById('loading-state').classList.add('hidden');
       document.getElementById('initial-state').classList.remove('hidden');
     }
   } catch (error) {
     console.error('Error:', error);
-    alert('An error occurred while generating the ad');
+    showToast('An error occurred while generating the ad', 'error');
     document.getElementById('loading-state').classList.add('hidden');
     document.getElementById('initial-state').classList.remove('hidden');
   }
@@ -808,14 +816,14 @@ async function saveCreative() {
     const data = await response.json();
 
     if (data.success) {
-      alert('Creative saved successfully!');
+      showToast('Creative saved successfully!', 'success');
       currentCreativeId = data.creative_id;
     } else {
-      alert(`Error: ${data.error}`);
+      showToast('Error: ' + data.error, 'error');
     }
   } catch (error) {
     console.error('Error:', error);
-    alert('An error occurred while saving');
+    showToast('An error occurred while saving', 'error');
   }
 }
 
@@ -835,7 +843,7 @@ async function loadCreative(creativeId) {
 
 async function regenerateImage() {
   // Implementation for regenerating just the image
-  alert('Regenerate image feature coming soon!');
+  showToast('Regenerate image feature coming soon!', 'info');
 }
 </script>
 

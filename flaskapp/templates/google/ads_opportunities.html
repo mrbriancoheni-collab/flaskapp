@@ -1126,6 +1126,14 @@
 
 <!-- JavaScript -->
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 // Toggle accordion
 function toggleAccordion(contentId, chevronId) {
   const content = document.getElementById(contentId);
@@ -1361,7 +1369,7 @@ function approveOptimizations() {
   const checkboxes = document.querySelectorAll('#opportunitiesList .optimization-checkbox:checked');
 
   if (checkboxes.length === 0) {
-    alert('Please select at least one optimization to approve.');
+    showToast('Please select at least one optimization to approve.', 'error');
     return;
   }
 
@@ -1707,13 +1715,13 @@ async function markManualTaskComplete(taskId, taskTitle, buttonElement) {
       }, 300);
     } else {
       // Error - restore button
-      alert('Failed to mark task as complete: ' + (result.error || 'Unknown error'));
+      showToast('Failed to mark task as complete: ' + (result.error || 'Unknown error'), 'error');
       buttonElement.disabled = false;
       buttonElement.innerHTML = originalHTML;
     }
   } catch (error) {
     console.error('Error marking task complete:', error);
-    alert('Failed to mark task as complete. Please try again.');
+    showToast('Failed to mark task as complete. Please try again.', 'error');
     buttonElement.disabled = false;
     buttonElement.innerHTML = originalHTML;
   }
@@ -1986,14 +1994,14 @@ async function activateCampaign(campaignId) {
     const result = await response.json();
 
     if (result.success) {
-      alert('✅ Campaign activated successfully!\n\nYour campaign is now running. You can view its performance in your Google Ads dashboard.');
+      showToast('Campaign activated! It is now running.', 'success');
       loadPausedCampaigns(); // Refresh the list
     } else {
-      alert('❌ Failed to activate campaign:\n\n' + (result.error || 'Unknown error'));
+      showToast('Failed to activate campaign: ' + (result.error || 'Unknown error'), 'error');
     }
   } catch (error) {
     console.error('Error activating campaign:', error);
-    alert('❌ Error activating campaign:\n\n' + (error.message || 'Please try again'));
+    showToast('Error activating campaign: ' + (error.message || 'Please try again'), 'error');
   }
 }
 
@@ -2212,11 +2220,11 @@ async function undoAction(actionId) {
       setTimeout(() => notification.remove(), 3000);
       setTimeout(() => location.reload(), 2000);
     } else {
-      alert('Error: ' + (data.error || 'Failed to undo action'));
+      showToast('Error: ' + (data.error || 'Failed to undo action'), 'error');
     }
   } catch (error) {
     console.error('Error undoing action:', error);
-    alert('Error undoing action: ' + error.message);
+    showToast('Error undoing action: ' + error.message, 'error');
   }
 }
 </script>

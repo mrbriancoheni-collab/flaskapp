@@ -81,31 +81,22 @@ def optimize():
             today = date.today()
             thirty_ago = today - timedelta(days=30)
 
-            # KPIs: try campaign-level rows with account_id first, then fall back
-            # to account-level aggregate rows (written by performance_memory), then
-            # to campaign rows with no account_id (nullable column).
+            # KPIs: campaign-level stats scoped to THIS account via the
+            # ads_campaigns join. We previously matched on `account_id =:aid OR
+            # account_id IS NULL` which double-counted legacy rows, and fell
+            # back to an unscoped `entity_type='account'` aggregate that summed
+            # every account's data. Both inflated spend by 5x or more.
             kpi_rows = db.session.execute(text("""
-                SELECT SUM(cost_micros)/1000000.0 AS spend,
-                       SUM(clicks) AS clicks,
-                       SUM(conversions) AS conversions,
-                       SUM(impressions) AS impressions
-                FROM gads_stats_daily
-                WHERE (account_id = :aid OR account_id IS NULL)
-                  AND entity_type = 'campaign'
-                  AND date >= :d
+                SELECT SUM(gs.cost_micros)/1000000.0 AS spend,
+                       SUM(gs.clicks)               AS clicks,
+                       SUM(gs.conversions)          AS conversions,
+                       SUM(gs.impressions)          AS impressions
+                FROM gads_stats_daily gs
+                JOIN ads_campaigns ac ON ac.id = gs.entity_id
+                WHERE ac.account_id = :aid
+                  AND gs.entity_type = 'campaign'
+                  AND gs.date >= :d
             """), {"aid": aid, "d": thirty_ago}).mappings().one_or_none()
-
-            # If campaign rows empty, try account-level aggregate row
-            if not kpi_rows or not any([kpi_rows.get("spend"), kpi_rows.get("clicks"), kpi_rows.get("impressions")]):
-                kpi_rows = db.session.execute(text("""
-                    SELECT SUM(cost_micros)/1000000.0 AS spend,
-                           SUM(clicks) AS clicks,
-                           SUM(conversions) AS conversions,
-                           SUM(impressions) AS impressions
-                    FROM gads_stats_daily
-                    WHERE entity_type = 'account'
-                      AND date >= :d
-                """), {"d": thirty_ago}).mappings().one_or_none()
 
             # Quick health score from DB
             kw_count = db.session.execute(
@@ -412,30 +403,25 @@ def overview():
     aid = current_account_id()
     days = int(request.args.get("days", 30))
 
-    def _query(etype, use_aid):
-        filters = "AND entity_type = :et AND date >= (CURRENT_DATE - INTERVAL :days DAY)"
-        params: dict = {"et": etype, "days": days}
-        if use_aid:
-            filters += " AND (account_id = :aid OR account_id IS NULL)"
-            params["aid"] = aid
-        return db.session.execute(text(f"""
-            SELECT
-              COALESCE(SUM(impressions),0) AS impressions,
-              COALESCE(SUM(clicks),0) AS clicks,
-              COALESCE(SUM(cost_micros),0) AS cost_micros,
-              COALESCE(SUM(conversions),0) AS conversions,
-              CASE WHEN COALESCE(SUM(clicks),0) > 0
-                   THEN COALESCE(SUM(cost_micros),0)/1000000.0/COALESCE(SUM(clicks),0)
-                   ELSE 0 END AS avg_cpc
-            FROM gads_stats_daily
-            WHERE 1=1 {filters}
-        """), params).mappings().first() or {}
-
-    row = _query("account", use_aid=True)
-    if not row or not (row.get("impressions") or row.get("clicks") or row.get("cost_micros")):
-        row = _query("campaign", use_aid=True)
-    if not row or not (row.get("impressions") or row.get("clicks") or row.get("cost_micros")):
-        row = _query("account", use_aid=False)
+    # Scope strictly to this account via the ads_campaigns join. Previous
+    # version used `account_id = :aid OR account_id IS NULL` and a final
+    # unscoped fallback which inflated spend by including legacy rows and
+    # other accounts' data.
+    row = db.session.execute(text("""
+        SELECT
+          COALESCE(SUM(gs.impressions), 0)   AS impressions,
+          COALESCE(SUM(gs.clicks), 0)        AS clicks,
+          COALESCE(SUM(gs.cost_micros), 0)   AS cost_micros,
+          COALESCE(SUM(gs.conversions), 0)   AS conversions,
+          CASE WHEN COALESCE(SUM(gs.clicks), 0) > 0
+               THEN COALESCE(SUM(gs.cost_micros), 0)/1000000.0/COALESCE(SUM(gs.clicks), 0)
+               ELSE 0 END                    AS avg_cpc
+        FROM gads_stats_daily gs
+        JOIN ads_campaigns ac ON ac.id = gs.entity_id
+        WHERE ac.account_id = :aid
+          AND gs.entity_type = 'campaign'
+          AND gs.date >= (CURRENT_DATE - INTERVAL :days DAY)
+    """), {"aid": aid, "days": days}).mappings().first() or {}
 
     return jsonify(dict(row))
 

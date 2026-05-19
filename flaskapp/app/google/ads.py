@@ -82,43 +82,48 @@ def optimize():
             thirty_ago = today - timedelta(days=30)
 
             # KPIs: campaign-level stats scoped to THIS account via the
-            # ads_campaigns join. We previously matched on `account_id =:aid OR
-            # account_id IS NULL` which double-counted legacy rows, and fell
-            # back to an unscoped `entity_type='account'` aggregate that summed
-            # every account's data. Both inflated spend by 5x or more.
-            kpi_rows = db.session.execute(text("""
-                SELECT SUM(gs.cost_micros)/1000000.0 AS spend,
-                       SUM(gs.clicks)               AS clicks,
-                       SUM(gs.conversions)          AS conversions,
-                       SUM(gs.impressions)          AS impressions
-                FROM gads_stats_daily gs
-                JOIN ads_campaigns ac ON ac.id = gs.entity_id
-                WHERE ac.account_id = :aid
-                  AND gs.entity_type = 'campaign'
-                  AND gs.date >= :d
-            """), {"aid": aid, "d": thirty_ago}).mappings().one_or_none()
+            # ads_campaigns join. Isolated try/except so if this single query
+            # fails the rest of the cockpit (health score, badges) still loads.
+            try:
+                kpi_rows = db.session.execute(text("""
+                    SELECT SUM(gs.cost_micros)/1000000.0 AS spend,
+                           SUM(gs.clicks)               AS clicks,
+                           SUM(gs.conversions)          AS conversions,
+                           SUM(gs.impressions)          AS impressions
+                    FROM gads_stats_daily gs
+                    JOIN ads_campaigns ac ON ac.id = gs.entity_id AND ac.account_id = :aid
+                    WHERE gs.entity_type = 'campaign'
+                      AND gs.date >= :d
+                """), {"aid": aid, "d": thirty_ago}).mappings().one_or_none()
+            except Exception:
+                current_app.logger.exception("cockpit KPI query failed")
+                db.session.rollback()
+                kpi_rows = None
 
-            # Quick health score from DB
-            kw_count = db.session.execute(
-                text("SELECT COUNT(*) FROM keywords k JOIN ad_groups ag ON ag.id=k.ad_group_id JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid AND k.status!='removed'"),
-                {"aid": aid}
-            ).scalar() or 0
-            neg_count = db.session.execute(
-                text("SELECT COUNT(*) FROM negative_keywords nk LEFT JOIN ads_campaigns ac ON ac.id=nk.campaign_id WHERE (ac.account_id=:aid OR nk.campaign_id IS NULL) AND nk.id IS NOT NULL"),
-                {"aid": aid}
-            ).scalar() or 0
-            ad_count = db.session.execute(
-                text("SELECT COUNT(*) FROM ads a JOIN ad_groups ag ON ag.id=a.ad_group_id JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid AND a.status!='removed'"),
-                {"aid": aid}
-            ).scalar() or 0
-            camp_count = db.session.execute(
-                text("SELECT COUNT(*) FROM ads_campaigns WHERE account_id=:aid AND status!='removed'"),
-                {"aid": aid}
-            ).scalar() or 0
-            ag_count = db.session.execute(
-                text("SELECT COUNT(*) FROM ad_groups ag JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid"),
-                {"aid": aid}
-            ).scalar() or 0
+            # Quick health score from DB — each count wrapped individually so a
+            # missing table or column doesn't zero out the whole cockpit.
+            def _safe_scalar(sql, params):
+                try:
+                    return db.session.execute(text(sql), params).scalar() or 0
+                except Exception:
+                    db.session.rollback()
+                    return 0
+
+            kw_count = _safe_scalar(
+                "SELECT COUNT(*) FROM keywords k JOIN ad_groups ag ON ag.id=k.ad_group_id JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid AND k.status!='removed'",
+                {"aid": aid})
+            neg_count = _safe_scalar(
+                "SELECT COUNT(*) FROM negative_keywords nk LEFT JOIN ads_campaigns ac ON ac.id=nk.campaign_id WHERE (ac.account_id=:aid OR nk.campaign_id IS NULL) AND nk.id IS NOT NULL",
+                {"aid": aid})
+            ad_count = _safe_scalar(
+                "SELECT COUNT(*) FROM ads a JOIN ad_groups ag ON ag.id=a.ad_group_id JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid AND a.status!='removed'",
+                {"aid": aid})
+            camp_count = _safe_scalar(
+                "SELECT COUNT(*) FROM ads_campaigns WHERE account_id=:aid AND status!='removed'",
+                {"aid": aid})
+            ag_count = _safe_scalar(
+                "SELECT COUNT(*) FROM ad_groups ag JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid",
+                {"aid": aid})
 
             neg_ratio = neg_count / max(kw_count, 1)
             waste_score = min(100, int((neg_ratio / 2.5) * 100))
@@ -149,33 +154,42 @@ def optimize():
                 overall = int(waste_score * 0.35 + struct_score * 0.30 + ctr_score * 0.35)
                 grade = "A+" if overall >= 90 else ("A" if overall >= 85 else ("A-" if overall >= 80 else ("B+" if overall >= 75 else ("B" if overall >= 70 else ("B-" if overall >= 65 else ("C+" if overall >= 60 else ("C" if overall >= 55 else ("C-" if overall >= 50 else ("D" if overall >= 40 else "F")))))))))
 
-            # Top pending actions
-            top_actions = OptimizerRecommendation.query.filter_by(
+            # Top pending actions / counts — each isolated so a missing table
+            # or column never blanks out the whole cockpit.
+            def _safe_list(fn, default=None):
+                try:
+                    return fn()
+                except Exception:
+                    db.session.rollback()
+                    return default if default is not None else []
+
+            top_actions = _safe_list(lambda: OptimizerRecommendation.query.filter_by(
                 account_id=aid, status="open"
-            ).order_by(OptimizerRecommendation.severity.asc()).limit(8).all()
+            ).order_by(OptimizerRecommendation.severity.asc()).limit(8).all())
 
-            # Active rules / actions today
-            active_rules = AIActionRule.query.filter_by(account_id=aid, enabled=True).count()
-            actions_today = AIAction.query.filter(
-                AIAction.account_id == aid,
-                AIAction.created_at >= today
-            ).count()
+            active_rules = _safe_list(
+                lambda: AIActionRule.query.filter_by(account_id=aid, enabled=True).count(),
+                default=0)
+            actions_today = _safe_list(lambda: AIAction.query.filter(
+                AIAction.account_id == aid, AIAction.created_at >= today
+            ).count(), default=0)
 
-            # Counts for sub-tool badges
-            pending_optimizer = OptimizerRecommendation.query.filter_by(account_id=aid, status="open").count()
-            pending_terms = db.session.execute(
-                text("SELECT COUNT(*) FROM search_terms st JOIN ads_campaigns ac ON ac.id=st.campaign_id WHERE ac.account_id=:aid AND st.added_as_keyword=0 AND st.added_as_negative=0"),
-                {"aid": aid}
-            ).scalar() or 0
-            ab_running = db.session.execute(
-                text("SELECT COUNT(DISTINCT variant_group) FROM ads a JOIN ad_groups ag ON ag.id=a.ad_group_id JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid AND a.variant_group IS NOT NULL"),
-                {"aid": aid}
-            ).scalar() or 0
+            pending_optimizer = _safe_list(lambda: OptimizerRecommendation.query.filter_by(
+                account_id=aid, status="open").count(), default=0)
+            pending_terms = _safe_scalar(
+                "SELECT COUNT(*) FROM search_terms st JOIN ads_campaigns ac ON ac.id=st.campaign_id "
+                "WHERE ac.account_id=:aid AND st.added_as_keyword=0 AND st.added_as_negative=0",
+                {"aid": aid})
+            ab_running = _safe_scalar(
+                "SELECT COUNT(DISTINCT variant_group) FROM ads a "
+                "JOIN ad_groups ag ON ag.id=a.ad_group_id "
+                "JOIN ads_campaigns ac ON ac.id=ag.campaign_id "
+                "WHERE ac.account_id=:aid AND a.variant_group IS NOT NULL",
+                {"aid": aid})
 
-            # Recent activity (last 10 actions)
-            recent_actions = AIAction.query.filter_by(account_id=aid).order_by(
+            recent_actions = _safe_list(lambda: AIAction.query.filter_by(account_id=aid).order_by(
                 AIAction.created_at.desc()
-            ).limit(10).all()
+            ).limit(10).all())
 
             cockpit = {
                 "health": {"overall": overall, "grade": grade, "waste": waste_score, "structure": struct_score, "ctr": ctr_score},
@@ -400,13 +414,15 @@ def overview():
     Query params: ?days=30 (default 30)
     Tries account-level rows first, then falls back to summing campaign rows.
     """
+    from datetime import date as _date, timedelta as _td
     aid = current_account_id()
-    days = int(request.args.get("days", 30))
+    days = max(1, min(int(request.args.get("days", 30)), 365))
+    cutoff = _date.today() - _td(days=days)
 
-    # Scope strictly to this account via the ads_campaigns join. Previous
-    # version used `account_id = :aid OR account_id IS NULL` and a final
-    # unscoped fallback which inflated spend by including legacy rows and
-    # other accounts' data.
+    # Scope strictly to this account via the ads_campaigns join. We compute the
+    # cutoff date in Python instead of `INTERVAL :days DAY` because MySQL can't
+    # parameterize the value inside an INTERVAL expression — the parameterized
+    # form silently returned no rows, which is why KPIs were all zero.
     row = db.session.execute(text("""
         SELECT
           COALESCE(SUM(gs.impressions), 0)   AS impressions,
@@ -417,11 +433,10 @@ def overview():
                THEN COALESCE(SUM(gs.cost_micros), 0)/1000000.0/COALESCE(SUM(gs.clicks), 0)
                ELSE 0 END                    AS avg_cpc
         FROM gads_stats_daily gs
-        JOIN ads_campaigns ac ON ac.id = gs.entity_id
-        WHERE ac.account_id = :aid
-          AND gs.entity_type = 'campaign'
-          AND gs.date >= (CURRENT_DATE - INTERVAL :days DAY)
-    """), {"aid": aid, "days": days}).mappings().first() or {}
+        JOIN ads_campaigns ac ON ac.id = gs.entity_id AND ac.account_id = :aid
+        WHERE gs.entity_type = 'campaign'
+          AND gs.date >= :cutoff
+    """), {"aid": aid, "cutoff": cutoff}).mappings().first() or {}
 
     return jsonify(dict(row))
 

@@ -203,30 +203,15 @@
     {% else %}
     {# Forecast controls #}
     <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm mb-6">
-      <div class="grid grid-cols-3 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Campaign</label>
-          <select id="forecastCampaign" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm">
-            <option value="">Select a campaign…</option>
-            {% for c in forecast_campaigns %}
-            <option value="{{ c.id }}">{{ c.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Service Type</label>
-          <select id="forecastServiceType" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm">
-            <option value="hvac_ac">HVAC – Air Conditioning</option>
-            <option value="hvac_heat">HVAC – Heating</option>
-            <option value="plumbing">Plumbing</option>
-            <option value="electrical">Electrical</option>
-            <option value="roofing">Roofing</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-          <input type="text" id="forecastZip" value="10001" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm">
-        </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Campaign</label>
+        <select id="forecastCampaign" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm">
+          <option value="">Select a campaign…</option>
+          {% for c in forecast_campaigns %}
+          <option value="{{ c.id }}">{{ c.name }}</option>
+          {% endfor %}
+        </select>
+        <p class="text-xs text-gray-500 mt-1">Service type and location are inferred from your account profile and campaign name.</p>
       </div>
       <button onclick="loadForecast()" class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
         <i class="fas fa-chart-line"></i> Generate Forecast
@@ -325,9 +310,6 @@ async function loadForecast() {
   const campaignId = document.getElementById('forecastCampaign').value;
   if (!campaignId) { showToast('Please select a campaign.', 'error'); return; }
 
-  const serviceType = document.getElementById('forecastServiceType').value;
-  const zip = document.getElementById('forecastZip').value;
-
   // Show sections
   document.getElementById('forecastKpis').classList.remove('hidden');
   document.getElementById('forecastDetails').classList.remove('hidden');
@@ -355,7 +337,7 @@ async function loadForecast() {
     const res = await fetch('/account/google/ads/forecasting/api/forecast/monthly', {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-CSRFToken':csrf},
-      body: JSON.stringify({campaign_id: campaignId, service_type: serviceType, month, year}),
+      body: JSON.stringify({campaign_id: campaignId, month, year}),
     });
     const data = await res.json();
     if (data.success && data.forecast) {
@@ -376,7 +358,7 @@ async function loadForecast() {
     const res = await fetch('/account/google/ads/forecasting/api/forecast/seasonal', {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-CSRFToken':csrf},
-      body: JSON.stringify({campaign_id: campaignId, service_type: serviceType, current_monthly_budget: 5000}),
+      body: JSON.stringify({campaign_id: campaignId, current_monthly_budget: 5000}),
     });
     const data = await res.json();
     if (data.success && data.recommendations) {

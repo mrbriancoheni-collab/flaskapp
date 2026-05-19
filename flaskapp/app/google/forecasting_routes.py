@@ -65,6 +65,46 @@ except ImportError:
         return []
 
 
+def _infer_service_type(account_id: int, campaign_id=None) -> str:
+    """Best-effort service type inference from campaign name + account business description."""
+    haystack_parts = []
+    if campaign_id:
+        try:
+            row = db.session.execute(
+                text("SELECT name FROM ads_campaigns WHERE id = :id AND account_id = :aid"),
+                {"id": campaign_id, "aid": account_id},
+            ).first()
+            if row and row[0]:
+                haystack_parts.append(row[0])
+        except Exception:
+            pass
+    try:
+        row = db.session.execute(
+            text("SELECT business_description, business_services FROM accounts WHERE id = :id"),
+            {"id": account_id},
+        ).first()
+        if row:
+            if row[0]: haystack_parts.append(row[0])
+            if len(row) > 1 and row[1]: haystack_parts.append(row[1])
+    except Exception:
+        pass
+    text_blob = " ".join(haystack_parts).lower()
+    # Order matters: more specific patterns first
+    if any(k in text_blob for k in ("pool", "swimming")):
+        return "pool_cleaning"
+    if "roof" in text_blob:
+        return "roofing"
+    if "plumb" in text_blob or "drain" in text_blob:
+        return "plumbing"
+    if "electric" in text_blob:
+        return "electrical"
+    if any(k in text_blob for k in ("heat", "furnace", "boiler")):
+        return "hvac_heat"
+    if any(k in text_blob for k in ("hvac", "air condition", "cooling", " ac ", "a/c")):
+        return "hvac_ac"
+    return "generic"
+
+
 forecasting_bp = Blueprint("forecasting_bp", __name__, url_prefix="/account/google/ads/forecasting")
 
 
@@ -125,7 +165,7 @@ def get_monthly_forecast():
     data = request.get_json()
 
     campaign_id = data.get('campaign_id')
-    service_type = data.get('service_type', 'hvac_ac')
+    service_type = data.get('service_type') or _infer_service_type(account_id, campaign_id)
     target_month = data.get('month', date.today().month)
     target_year = data.get('year', date.today().year)
 
@@ -154,7 +194,7 @@ def get_seasonal_recommendations():
     data = request.get_json()
 
     campaign_id = data.get('campaign_id')
-    service_type = data.get('service_type', 'hvac_ac')
+    service_type = data.get('service_type') or _infer_service_type(account_id, campaign_id)
     current_budget = data.get('current_monthly_budget', 5000)
 
     try:

@@ -386,7 +386,6 @@ function showToast(msg, kind) {
 
   const fmt$  = n => '$' + Number(n).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
   const fmtN  = n => Number(n).toLocaleString('en-US');
-  const fmtPct = p => p === null ? '' : (p >= 0 ? '+' : '') + p + '%';
 
   function trendBadge(pct) {
     if (pct === null || pct === undefined) return '';
@@ -409,19 +408,22 @@ function showToast(msg, kind) {
       </div>`;
   }
 
-  fetch('{{ url_for("account_bp.dashboard_kpis") }}')
-    .then(r => r.ok ? r.json() : null)
+  const ctrl = new AbortController();
+  const kpiTimeout = setTimeout(() => ctrl.abort(), 12000);
+
+  fetch('{{ url_for("account_bp.dashboard_kpis") }}', {signal: ctrl.signal})
+    .then(r => { clearTimeout(kpiTimeout); return r.ok ? r.json() : Promise.reject(r.status); })
     .then(d => {
       if (!d || d.error) {
         strip.innerHTML = `<div class="col-span-4 text-center py-6 text-sm text-gray-500">
-          Could not load stats. <a href="{{ url_for('google_bp.ads_ui') }}" class="text-indigo-600 hover:underline">Open Google Ads →</a>
+          Could not load stats — <a href="{{ url_for('google_bp.ads_ui') }}" class="text-indigo-600 hover:underline">Open Google Ads →</a>
         </div>`;
         return;
       }
-      const noData = d.spend_dollars === 0 && d.clicks === 0;
+      const noData = !d.spend_dollars && !d.clicks && !d.impressions;
       if (noData) {
         strip.innerHTML = `<div class="col-span-4 bg-white rounded-xl border border-gray-200 shadow-sm p-6 text-center">
-          <p class="text-gray-500 text-sm mb-2">No ad spend recorded yet this month.</p>
+          <p class="text-gray-500 text-sm mb-2">No spend data yet this month. Data syncs every few hours.</p>
           <a href="{{ url_for('google_bp.ads_ui') }}" class="text-sm text-indigo-600 font-medium hover:underline">View campaigns →</a>
         </div>`;
         return;
@@ -444,8 +446,10 @@ function showToast(msg, kind) {
       }
     })
     .catch(() => {
-      strip.innerHTML = `<div class="col-span-4 text-center py-4 text-sm text-gray-400">
-        <a href="{{ url_for('google_bp.ads_ui') }}" class="text-indigo-600 hover:underline">Open Google Ads →</a>
+      clearTimeout(kpiTimeout);
+      strip.innerHTML = `<div class="col-span-4 bg-white rounded-xl border border-gray-200 shadow-sm p-5 text-center">
+        <p class="text-sm text-gray-500 mb-2">Stats temporarily unavailable.</p>
+        <a href="{{ url_for('google_bp.ads_ui') }}" class="text-sm text-indigo-600 font-medium hover:underline">Open Google Ads →</a>
       </div>`;
     });
 })();
@@ -464,8 +468,11 @@ function showToast(msg, kind) {
   const DEFAULT_ICON = { bg: 'bg-green-100', text: 'text-green-600', symbol: '✓' };
   const DIFF_COLORS  = { easy: 'text-green-600 bg-green-50', medium: 'text-amber-600 bg-amber-50', hard: 'text-red-600 bg-red-50' };
 
-  fetch('{{ url_for("account_bp.dashboard_quick_wins") }}')
-    .then(r => r.ok ? r.json() : null)
+  const qwCtrl = new AbortController();
+  const qwTimeout = setTimeout(() => qwCtrl.abort(), 12000);
+
+  fetch('{{ url_for("account_bp.dashboard_quick_wins") }}', {signal: qwCtrl.signal})
+    .then(r => { clearTimeout(qwTimeout); return r.ok ? r.json() : Promise.reject(r.status); })
     .then(data => {
       if (!data || !data.wins || data.wins.length === 0) {
         container.innerHTML = `
@@ -508,6 +515,7 @@ function showToast(msg, kind) {
         </div>`;
     })
     .catch(() => {
+      clearTimeout(qwTimeout);
       container.innerHTML = `<div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center text-sm text-gray-400">
         <a href="{{ url_for('ads_grader_bp.quick_wins_dashboard') }}" class="text-indigo-600 hover:underline">View Quick Wins →</a>
       </div>`;
@@ -530,8 +538,11 @@ function showToast(msg, kind) {
   };
   const DEFAULT_ICON = { bg: 'bg-green-100', text: 'text-green-600', symbol: '✓' };
 
-  fetch('{{ url_for("autonomous_bp.summary_json") }}')
-    .then(r => r.ok ? r.json() : null)
+  const sumCtrl = new AbortController();
+  const sumTimeout = setTimeout(() => sumCtrl.abort(), 12000);
+
+  fetch('{{ url_for("autonomous_bp.summary_json") }}', {signal: sumCtrl.signal})
+    .then(r => { clearTimeout(sumTimeout); return r.ok ? r.json() : null; })
     .then(data => {
       if (!data || !body) return;
       body.innerHTML = `
@@ -556,11 +567,15 @@ function showToast(msg, kind) {
       }
     })
     .catch(() => {
+      clearTimeout(sumTimeout);
       if (body) body.innerHTML = '<p class="text-xs text-gray-400 text-center py-3">Unavailable</p>';
     });
 
-  fetch('{{ url_for("autonomous_bp.feed_json") }}?limit=5')
-    .then(r => r.ok ? r.json() : [])
+  const feedCtrl = new AbortController();
+  const feedTimeout = setTimeout(() => feedCtrl.abort(), 12000);
+
+  fetch('{{ url_for("autonomous_bp.feed_json") }}?limit=5', {signal: feedCtrl.signal})
+    .then(r => { clearTimeout(feedTimeout); return r.ok ? r.json() : []; })
     .then(items => {
       if (!feedList) return;
       if (!items || items.length === 0) {
@@ -587,6 +602,7 @@ function showToast(msg, kind) {
       }).join('');
     })
     .catch(() => {
+      clearTimeout(feedTimeout);
       if (feedList) feedList.innerHTML = '<li class="px-4 py-3 text-xs text-gray-400 text-center">Could not load.</li>';
     });
 })();

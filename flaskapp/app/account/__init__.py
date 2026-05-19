@@ -257,16 +257,10 @@ def _check_ai_requirements(aid: int, ads_connected: bool) -> list:
     if not ads_connected:
         return []
 
-    from app.models import Account
-    account = Account.query.get(aid)
-    if not account:
-        return []
-
-    warnings = []
-    has_biz = bool(account.get_business_description())
-    has_examples = bool(account.get_negative_keyword_examples())
+    has_biz, has_examples = _fetch_ai_context(aid)
     has_openai = bool(os.getenv('OPENAI_API_KEY'))
 
+    warnings = []
     if not has_biz and not has_examples:
         warnings.append({
             'key': 'no_business_context',
@@ -307,6 +301,46 @@ def _check_ai_requirements(aid: int, ads_connected: bool) -> list:
         })
 
     return warnings
+
+
+def _fetch_ai_context(aid: int):
+    """
+    Check both storage locations for AI context (accounts table columns
+    AND account_settings key-value rows). Returns (has_biz, has_examples).
+    """
+    has_biz = False
+    has_examples = False
+    try:
+        # Primary: accounts table columns (written by save_ai_settings)
+        row = db.session.execute(text(
+            "SELECT business_description, negative_keyword_examples "
+            "FROM accounts WHERE id = :id"
+        ), {"id": aid}).first()
+        if row:
+            has_biz = bool(row[0] and str(row[0]).strip())
+            has_examples = bool(row[1] and str(row[1]).strip())
+    except Exception:
+        pass  # columns may not exist yet
+
+    # Fallback: account_settings key-value table (older code path)
+    if not has_biz or not has_examples:
+        try:
+            rows = db.session.execute(text(
+                "SELECT setting_key, setting_value FROM account_settings "
+                "WHERE account_id = :aid "
+                "  AND setting_key IN ('business_description', 'negative_keyword_examples')"
+            ), {"aid": aid}).all()
+            for key, val in rows:
+                if val and str(val).strip():
+                    if key == 'business_description':
+                        has_biz = True
+                    elif key == 'negative_keyword_examples':
+                        has_examples = True
+        except Exception:
+            pass
+
+    return has_biz, has_examples
+
 
 
 def _connection_cards(aid: int) -> Dict[str, Dict[str, Any]]:
@@ -546,9 +580,8 @@ def dashboard_kpis():
             COALESCE(SUM(gs.conversions), 0)     AS conversions,
             COALESCE(SUM(gs.impressions), 0)     AS impressions
         FROM gads_stats_daily gs
-        JOIN ads_campaigns ac ON ac.id = gs.entity_id
-        WHERE ac.account_id = :aid
-          AND gs.entity_type = 'campaign'
+        JOIN ads_campaigns ac ON ac.id = gs.entity_id AND ac.account_id = :aid
+        WHERE gs.entity_type = 'campaign'
           AND gs.date >= :start AND gs.date <= :end
     """
     try:

@@ -1762,7 +1762,16 @@ def save_ai_settings():
 
     try:
         with db.engine.begin() as conn:
-            conn.execute(sqla_text("""
+            # Ensure columns exist (migrations may not have been run on this DB)
+            for col in ("business_description", "negative_keyword_examples"):
+                try:
+                    conn.execute(sqla_text(
+                        f"ALTER TABLE accounts ADD COLUMN {col} TEXT NULL"
+                    ))
+                except Exception:
+                    pass  # column already exists
+
+            result = conn.execute(sqla_text("""
                 UPDATE accounts
                 SET business_description = :bd,
                     negative_keyword_examples = :nk
@@ -1772,8 +1781,16 @@ def save_ai_settings():
                 "nk": negative_keyword_examples or None,
                 "aid": account_id,
             })
-    except Exception as e:
-        current_app.logger.error(f"Failed to save AI settings for account {account_id}: {e}")
-        return jsonify({"error": "Failed to save settings"}), 500
 
-    return jsonify({"success": True, "message": "AI settings saved."})
+            if result.rowcount == 0:
+                current_app.logger.warning(
+                    f"save_ai_settings: UPDATE matched 0 rows for account_id={account_id}"
+                )
+                return jsonify({
+                    "error": f"Could not find account #{account_id}. Please log out and back in."
+                }), 404
+    except Exception as e:
+        current_app.logger.exception(f"Failed to save AI settings for account {account_id}: {e}")
+        return jsonify({"error": f"Failed to save settings: {e}"}), 500
+
+    return jsonify({"success": True, "message": "AI settings saved successfully."})

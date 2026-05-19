@@ -1264,41 +1264,83 @@ def sync():
 # Search Terms tab
 # ---------------------------
 
-_BUYING_PATTERNS = {
+_SERVICE_SIGNALS = {
     "pool_cleaning": [
-        r"\bcost\b", r"\bprice[sd]?\b", r"\bhow much\b", r"\binstall",
-        r"\bfiberglass\b", r"\bviny[l]?\b", r"\bconcrete\b", r"\bbuild\b",
-        r"\b\d+[x×]\d+\b", r"\b\d+ foot\b", r"\b\d+ft\b",
-        r"\bkit\b", r"\bdiy\b", r"\bdesign[s]?\b", r"\bkits?\b",
-        r"\binground\b", r"\babove.?ground\b", r"\bestimate[s]?\b",
-        r"\bquote[s]?\b", r"\bcheap\b", r"\baffordable\b",
+        r"\bclean", r"\bmaintenan", r"\bmaintain", r"\bservice\b",
+        r"\bweekly\b", r"\bmonthly\b", r"\brecurring\b",
+        r"\balgae\b", r"\bchemical[s]?\b", r"\bbalance[d]?\b",
+        r"\bshock\b", r"\bvacuum\b", r"\bcare\b", r"\btreat",
     ],
     "roofing": [
-        r"\bcost\b", r"\bprice[sd]?\b", r"\bhow much\b", r"\bestimate",
-        r"\bquote\b", r"\bmaterial[s]?\b", r"\bshingle[s]?\b", r"\btile[s]?\b",
-        r"\bdiy\b", r"\binstall\b", r"\bper square\b", r"\bsquare foot\b",
+        r"\brepair\b", r"\breplace\b", r"\bleak[s]?\b", r"\bfix\b",
+        r"\binspect", r"\bservice\b", r"\bmaintenan",
     ],
     "hvac_ac": [
-        r"\bcost\b", r"\bprice[sd]?\b", r"\bhow much\b", r"\bestimate",
-        r"\bunit[s]?\b", r"\binstall\b", r"\bbtu\b", r"\bseer\b",
-        r"\bbrand[s]?\b", r"\btrane\b", r"\bcarrier\b", r"\blennox\b",
-        r"\bdiy\b", r"\bquote\b",
+        r"\brepair\b", r"\bservice\b", r"\bmaintenan", r"\btune.?up\b",
+        r"\brecharge\b", r"\brefrigrant\b", r"\bleak[s]?\b", r"\bfix\b",
     ],
     "plumbing": [
-        r"\bcost\b", r"\bprice[sd]?\b", r"\bhow much\b", r"\bestimate",
-        r"\bdiy\b", r"\binstall\b", r"\bparts?\b", r"\bfixture[s]?\b",
+        r"\brepair\b", r"\bfix\b", r"\bservice\b", r"\bleak[s]?\b",
+        r"\bclog\b", r"\bdrain\b", r"\bemergency\b",
+    ],
+    "generic": [],
+}
+
+_BUYING_PATTERNS = {
+    "pool_cleaning": [
+        # pool + price/cost anywhere in term (service signals checked first)
+        r"\bpool[s]?\b.{0,30}\b(cost[s]?|price[sd]?)\b",
+        r"\b(cost[s]?|price[sd]?)\b.{0,30}\bpool[s]?\b",
+        r"\bhow much\b",
+        r"\bfiberglass\b", r"\bviny[l]?\b", r"\bconcrete pool\b", r"\bbuild\b",
+        r"\b\d+[x×]\d+\b",                       # dimensions like 12x24
+        r"\b\d+\s*(?:foot|ft)\s+(?:wide|long)\b", # "10 foot wide"
+        r"\binstall(?:ation)?\b",
+        r"\bkit\b", r"\bdiy\b", r"\bdesign[s]?\b",
+        r"\binground pool\b", r"\babove.?ground pool\b",
+        r"\bestimate[s]?\b", r"\bquote[s]?\b",
+        r"\bcheap pool\b", r"\baffordable pool\b",
+    ],
+    "roofing": [
+        r"\broof\s+(cost[s]?|price[sd]?)\b",
+        r"\bhow much\b",
+        r"\bmaterial[s]?\b", r"\bshingle[s]?\b", r"\btile[s]?\b",
+        r"\bdiy\b", r"\binstall(?:ation)?\b",
+        r"\bper square\b", r"\bsquare foot\b",
+        r"\bestimate[s]?\b", r"\bquote[s]?\b",
+    ],
+    "hvac_ac": [
+        r"\bac\s+(cost[s]?|price[sd]?|unit)\b",
+        r"\bhvac\s+(cost[s]?|price[sd]?|unit)\b",
+        r"\bhow much\b",
+        r"\bbtu\b", r"\bseer\b",
+        r"\btrane\b", r"\bcarrier\b", r"\blennox\b",
+        r"\bdiy\b", r"\binstall(?:ation)?\b",
+        r"\bestimate[s]?\b", r"\bquote[s]?\b",
+    ],
+    "plumbing": [
+        r"\bplumb(?:ing)?\s+(cost[s]?|price[sd]?)\b",
+        r"\bhow much\b",
+        r"\bdiy\b", r"\binstall(?:ation)?\b",
+        r"\bparts?\b", r"\bfixture[s]?\b",
+        r"\bestimate[s]?\b", r"\bquote[s]?\b",
     ],
     "generic": [
-        r"\bcost\b", r"\bprice[sd]?\b", r"\bhow much\b", r"\bestimate",
-        r"\bdiy\b", r"\binstall\b", r"\bquote\b", r"\bcheap\b", r"\baffordable\b",
+        r"\bhow much\b", r"\bdiy\b", r"\binstall(?:ation)?\b",
+        r"\bestimate[s]?\b", r"\bquote[s]?\b",
+        r"\bcheap\b", r"\baffordable\b",
     ],
 }
 
 
 def _classify_term(term: str, service_type: str) -> str:
-    """Return 'irrelevant', 'low_quality', or 'relevant'."""
+    """Return 'irrelevant' or 'relevant' based on buying-intent vs service-intent signals."""
     import re
     t = (term or "").lower()
+    # Service signal overrides buying patterns — "pool cleaning cost" is relevant
+    signals = _SERVICE_SIGNALS.get(service_type, [])
+    if signals and any(re.search(p, t) for p in signals):
+        return "relevant"
     patterns = _BUYING_PATTERNS.get(service_type, _BUYING_PATTERNS["generic"])
     if any(re.search(p, t) for p in patterns):
         return "irrelevant"

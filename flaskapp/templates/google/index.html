@@ -53,60 +53,24 @@
     {% endif %}
   </div>
 
-  {# ── Quick action shortcuts (Ads connected) — ordered by priority ── #}
+  {# ── Quick action shortcuts (Ads connected) ── #}
   {% if connected.get('ads') %}
-  <div>
-    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">Quick actions <span class="text-xs text-gray-400 normal-case font-normal ml-1">— start at #1</span></h2>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-      {% set shortcuts = [
-        {
-          'icon': 'fa-wand-magic-sparkles',
-          'label': 'Review suggestions',
-          'sub': ('' ~ optimizer_count ~ ' waiting') if optimizer_count else 'All caught up',
-          'href': url_for('gads_bp.optimize', tab='optimizer'),
-          'color': 'indigo',
-          'highlight': optimizer_count and optimizer_count > 0,
-        },
-        {
-          'icon': 'fa-magnifying-glass',
-          'label': 'Block wasted searches',
-          'sub': 'Stop paying for irrelevant clicks',
-          'href': url_for('gads_bp.search_terms'),
-          'color': 'red',
-          'highlight': false,
-        },
-        {
-          'icon': 'fa-robot',
-          'label': 'Automation rules',
-          'sub': ('' ~ rules_count ~ ' active') if rules_count else 'Set it & forget it',
-          'href': url_for('gads_bp.rules_list'),
-          'color': 'purple',
-          'highlight': false,
-        },
-        {
-          'icon': 'fa-flask',
-          'label': 'A/B test new ads',
-          'sub': 'Find what works best',
-          'href': url_for('gads_bp.ab_tests'),
-          'color': 'green',
-          'highlight': false,
-        },
-      ] %}
-      {% for i, sc in shortcuts|list|enumerate if i is defined or true %}{% endfor %}
-      {% for sc in shortcuts %}
-      <a href="{{ sc.href }}"
-         class="relative flex items-start gap-3 bg-white border {{ 'border-indigo-300 ring-2 ring-indigo-100' if sc.highlight else '' }} rounded-xl p-4 hover:shadow-md transition group">
-        <span class="absolute top-2 right-2 w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-bold flex items-center justify-center">{{ loop.index }}</span>
-        <span class="w-9 h-9 rounded-lg bg-{{ sc.color }}-50 text-{{ sc.color }}-600 flex items-center justify-center flex-shrink-0 transition">
-          <i class="fa-solid {{ sc.icon }} text-sm"></i>
-        </span>
-        <div class="flex-1 min-w-0 pr-5">
-          <p class="text-sm font-semibold text-gray-900 truncate">{{ sc.label }}</p>
-          <p class="text-xs text-gray-500 mt-0.5">{{ sc.sub }}</p>
-        </div>
-      </a>
-      {% endfor %}
-    </div>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    {% set shortcuts = [
+      ('fa-wand-magic-sparkles', 'Review suggestions' ~ (' (' ~ optimizer_count ~ ')' if optimizer_count else ''), url_for('gads_bp.optimize', tab='optimizer'), 'indigo'),
+      ('fa-robot', ('Automation rules · ' ~ rules_count ~ ' active') if rules_count else 'Automation rules', url_for('gads_bp.rules_list'), 'purple'),
+      ('fa-magnifying-glass', 'Block wasted searches', url_for('gads_bp.search_terms'), 'red'),
+      ('fa-flask', 'A/B test new ads', url_for('gads_bp.ab_tests'), 'green'),
+    ] %}
+    {% for icon, label, href, color in shortcuts %}
+    <a href="{{ href }}"
+       class="flex items-center gap-3 bg-white border rounded-xl p-4 hover:shadow-sm transition group">
+      <span class="w-9 h-9 rounded-lg bg-{{ color }}-50 text-{{ color }}-600 flex items-center justify-center flex-shrink-0 transition">
+        <i class="fa-solid {{ icon }} text-sm"></i>
+      </span>
+      <span class="text-sm font-medium text-gray-700 truncate">{{ label }}</span>
+    </a>
+    {% endfor %}
   </div>
   {% endif %}
 
@@ -191,7 +155,7 @@
           <div class="text-xl font-bold text-gray-700">{{ ads_kpi.clicks | int }}</div>
         </div>
       </div>
-      <div class="px-5 py-3 bg-gray-50 border-t flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div class="px-5 py-3 bg-gray-50 border-t flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
         <span>
           {% if optimizer_count > 0 %}
           <a href="{{ url_for('gads_bp.optimize', tab='optimizer') }}" class="text-amber-700 font-semibold hover:underline">

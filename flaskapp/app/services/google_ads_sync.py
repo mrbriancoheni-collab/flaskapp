@@ -194,8 +194,9 @@ def sync_account(account_id: int, days: int = 30) -> Dict[str, Any]:
     from app.google.utils_ads import resolve_ads_context, google_ads_search
     from app.google.token_utils import ensure_access_token
     from app.google.gaql_queries import CAMPAIGN_STATS, ADGROUP_STATS, KEYWORD_STATS
-    from app.models_ads import AdsCampaign
+    from app.models_ads import AdsCampaign, GadsStatsDaily
     AdsCampaign.ensure_columns()
+    GadsStatsDaily.ensure_columns()
 
     summary: Dict[str, Any] = {
         "account_id": account_id,

@@ -55,9 +55,10 @@ def optimize():
     Renders the Google Ads Optimize UI (tabs driven by ?tab=).
     Template: templates/google/ads/optimize.html
     """
-    from app.models_ads import AdsCampaign, AdsAd
+    from app.models_ads import AdsCampaign, AdsAd, GadsStatsDaily
     AdsCampaign.ensure_columns()
     AdsAd.ensure_columns()
+    GadsStatsDaily.ensure_columns()
     # Check if user has paid plan
     if not is_paid_account():
         flash("Google Ads Optimizer is available on paid plans. Upgrade to access optimization tools.", "warning")
@@ -415,6 +416,10 @@ def overview():
     Tries account-level rows first, then falls back to summing campaign rows.
     """
     from datetime import date as _date, timedelta as _td
+    from app.models_ads import AdsCampaign, GadsStatsDaily
+    AdsCampaign.ensure_columns()
+    GadsStatsDaily.ensure_columns()
+
     aid = current_account_id()
     days = max(1, min(int(request.args.get("days", 30)), 365))
     cutoff = _date.today() - _td(days=days)

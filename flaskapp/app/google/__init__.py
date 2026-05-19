@@ -5222,6 +5222,22 @@ def search_terms():
     terms = []
     total_wasted = 0.0
     unreviewed_count = 0
+    irrelevant_count = 0
+
+    # Infer service type for relevance classification
+    service_type = "generic"
+    try:
+        from app.google.forecasting_routes import _infer_service_type
+        service_type = _infer_service_type(aid)
+    except Exception:
+        pass
+
+    try:
+        from app.google.ads import _classify_term
+    except Exception:
+        def _classify_term(term, st):
+            return "relevant"
+
     try:
         q = text("""
             SELECT st.id, st.search_term, st.clicks, st.impressions,
@@ -5244,7 +5260,11 @@ def search_terms():
             cost = r["cost_micros"] / 1_000_000
             conv = float(r["conversions"] or 0)
             cpl = cost / conv if conv > 0 else 0
-            is_wasted = cost > 5 and conv == 0 and not r["added_as_negative"]
+            relevance = _classify_term(r["search_term"], service_type)
+            is_irrelevant = relevance == "irrelevant" and not r["added_as_negative"]
+            is_wasted = is_irrelevant or (cost > 5 and conv == 0 and not r["added_as_negative"])
+            if is_irrelevant:
+                irrelevant_count += 1
             if is_wasted:
                 total_wasted += cost
             if not r["added_as_negative"] and not r["added_as_keyword"]:
@@ -5262,6 +5282,8 @@ def search_terms():
                 "added_as_negative": bool(r["added_as_negative"]),
                 "added_as_keyword": bool(r["added_as_keyword"]),
                 "is_wasted": is_wasted,
+                "relevance": relevance,
+                "is_irrelevant": is_irrelevant,
             })
     except Exception as e:
         current_app.logger.warning(f"search_terms query failed: {e}")
@@ -5274,6 +5296,8 @@ def search_terms():
         campaign_filter=campaign_filter,
         total_wasted=round(total_wasted, 2),
         unreviewed_count=unreviewed_count,
+        irrelevant_count=irrelevant_count,
+        service_type=service_type,
         total_terms=len(terms),
         blocked_count=sum(1 for t in terms if t["added_as_negative"]),
     )

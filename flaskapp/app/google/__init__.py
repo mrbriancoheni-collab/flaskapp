@@ -930,26 +930,27 @@ def _format_gsc_insights(text: str) -> str:
         color       = severity_color.get(sev, "gray")
         label       = severity_label.get(sev, "")
 
+        import html as _html
         steps_html = ""
         if steps:
-            lis = "".join(f"<li>{s}</li>" for s in steps)
+            lis = "".join(f"<li>{_html.escape(str(s))}</li>" for s in steps)
             steps_html = (
                 f'<ol class="list-decimal list-inside mt-2 space-y-1 text-gray-600 text-xs">'
                 f"{lis}</ol>"
             )
 
         impact_html = (
-            f'<span class="mt-1 inline-block text-xs text-green-700 font-medium">↑ {impact}</span>'
+            f'<span class="mt-1 inline-block text-xs text-green-700 font-medium">↑ {_html.escape(str(impact))}</span>'
             if impact else ""
         )
 
         parts.append(
             f'<div class="border-l-4 border-{color}-400 pl-3 py-1">'
             f'<div class="flex items-start justify-between gap-2">'
-            f'<span class="font-medium text-gray-800 text-sm">{title}</span>'
+            f'<span class="font-medium text-gray-800 text-sm">{_html.escape(str(title))}</span>'
             f'<span class="text-xs text-{color}-600 whitespace-nowrap shrink-0">{label}</span>'
             f"</div>"
-            f'<p class="text-sm text-gray-600 mt-1">{description}</p>'
+            f'<p class="text-sm text-gray-600 mt-1">{_html.escape(str(description))}</p>'
             f"{impact_html}{steps_html}"
             f"</div>"
         )
@@ -11548,7 +11549,16 @@ def oauth_callback():
         return redirect(url_for("google_bp.index"))
 
     aid = current_account_id()
-    _store_tokens(aid, product, token_json)
+
+    # Persist using the ORM model directly — _store_tokens() references columns
+    # (access_token, refresh_token, token_expiry) that don't exist in the table.
+    from app.models_google import GoogleOAuthToken
+    _tok = GoogleOAuthToken.query.filter_by(account_id=aid, product=product).first()
+    if _tok is None:
+        _tok = GoogleOAuthToken(account_id=aid, product=product)
+        db.session.add(_tok)
+    _tok.credentials_json = json.dumps(token_json)
+    db.session.commit()
 
     if product == "ga":
         try:

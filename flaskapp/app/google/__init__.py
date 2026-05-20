@@ -10582,17 +10582,24 @@ def connect_gsc():
 @google_bp.route("/gsc/callback")
 def gsc_callback():
     """
-    Handles Google's redirect back to us. Exchanges code for tokens, stores flags,
-    and sends the user to the GSC UI page.
+    Handles Google's redirect back to us. Exchanges code for tokens, stores them
+    in the DB, and sends the user to the GSC UI page.
     """
     try:
+        aid = current_account_id()
         redirect_uri = url_for("google_bp.gsc_callback", _external=True)
-        creds = _exchange_code_for_creds(redirect_uri)   # must exist
+        creds = _exchange_code_for_creds(redirect_uri)
 
-        # Optional: pick a property/site to save for display
+        # Convert google.oauth2.credentials.Credentials → plain dict for storage
+        token_json = json.loads(creds.to_json())
+
+        # Persist tokens to DB (same table used by _gsc_user_access_token)
+        _store_tokens(aid, "gsc", token_json)
+
+        # Pick the first accessible site and store it
         site_url = ""
         try:
-            svc = _build_gsc_service(creds)              # must exist
+            svc = _build_gsc_service(creds)
             sites = (svc.sites().list().execute() or {})
             for s in (sites.get("siteEntry") or []):
                 if s.get("permissionLevel") in (
@@ -10601,28 +10608,10 @@ def gsc_callback():
                     site_url = s.get("siteUrl") or ""
                     break
         except Exception:
-            # If listing sites fails, we still consider the account "connected"
             current_app.logger.info("GSC list sites failed; proceeding as connected", exc_info=True)
 
-        # --- Always mirror state into the session so the UI updates instantly ---
-        session["gsc_connected"] = True
         if site_url:
-            session["gsc_site_url"] = site_url
-            session["gsc_property_id"] = site_url  # if you store property_id == site_url
-
-        # --- Persist on the user, if authenticated (nice-to-have, not required for UI) ---
-        if getattr(current_user, "is_authenticated", False):
-            try:
-                setattr(current_user, "gsc_connected", True)
-                if site_url:
-                    setattr(current_user, "gsc_site_url", site_url)
-                    setattr(current_user, "gsc_property_id", site_url)
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-                current_app.logger.exception("Failed to persist GSC flags on user")
-        else:
-            flash("Connected to Google. Please sign in again to finalize linking.", "warning")
+            _set_gsc_selected_site(aid, site_url)
 
         flash("Google Search Console connected.", "success")
         return redirect(url_for("google_bp.gsc_ui"))
@@ -10635,63 +10624,66 @@ def gsc_callback():
 
 @google_bp.route("/gsc")
 def gsc_ui():
-    # Connection flag: session OR user model
-    connected = bool(session.get("gsc_connected"))
-    try:
-        connected = connected or bool(getattr(current_user, "gsc_connected", False))
-    except Exception:
-        pass
+    aid = current_account_id()
 
-    # Property/Site values (session first, then user model)
-    site_url = session.get("gsc_site_url") or getattr(current_user, "gsc_site_url", None)
-    property_id = session.get("gsc_property_id") or getattr(current_user, "gsc_property_id", None)
+    # Use the DB token table as the authoritative connection check
+    connected = _is_connected(aid, "gsc")
+
+    site_url = _get_gsc_selected_site(aid) if connected else None
 
     gsc = {}
+    insights = ""
 
     if connected:
-        # TODO: replace with your real fetchers
-        # summary_raw = fetch_gsc_summary(property_id, start, end)
-        # top_queries_raw = fetch_gsc_queries(property_id, start, end)
-        # top_pages_raw = fetch_gsc_pages(property_id, start, end)
+        from datetime import date, timedelta
+        end_dt = date.today() - timedelta(days=3)   # GSC has ~3 day lag
+        start_dt = end_dt - timedelta(days=27)
+        start_date = start_dt.isoformat()
+        end_date = end_dt.isoformat()
 
-        # For now: minimal structure so template renders the "real" block
-        # Structure compatible with new insights system
-        clicks = 0
-        impressions = 0
-        ctr_pct = 0.0
-        avg_position = 0.0
+        data = None
+        try:
+            if site_url:
+                data = _fetch_gsc_report(site_url, start_date, end_date)
+        except Exception:
+            current_app.logger.exception("gsc_ui: fetch failed")
+
+        if data:
+            clicks = data.get("clicks", 0)
+            impressions = data.get("impressions", 0)
+            ctr_pct = data.get("ctr_pct", 0.0)
+            avg_position = data.get("avg_position", 0.0)
+        else:
+            clicks = impressions = 0
+            ctr_pct = avg_position = 0.0
 
         gsc = {
-            "property": site_url or property_id or "Search Console property",
+            "property": site_url or "Search Console property",
             "site_url": site_url,
             "period": "Last 28 days",
             "clicks": clicks,
             "impressions": impressions,
             "ctr_pct": ctr_pct,
             "avg_position": avg_position,
-            "top_queries": [],
-            "top_pages": [],
-            # Add summary dict for new insights system compatibility
+            "top_queries": (data or {}).get("top_queries", []),
+            "top_pages": (data or {}).get("top_pages", []),
             "summary": {
                 "clicks": clicks,
                 "impressions": impressions,
                 "ctr_pct": ctr_pct,
                 "avg_position": avg_position,
-                "avg_ctr": ctr_pct / 100.0  # Convert percentage to decimal
-            }
+                "avg_ctr": ctr_pct / 100.0,
+            },
         }
 
-        # Only call AI when we actually have real numbers
-        has_real = (gsc.get("clicks", 0) or 0) > 0 or (gsc.get("impressions", 0) or 0) > 0
+        has_real = clicks > 0 or impressions > 0
         insights = get_gsc_insights(gsc) if has_real else ""
-    else:
-        insights = ""  # keep empty on demo
 
     return render_template(
         "google/gsc.html",
         gsc=gsc,
         connected_gsc=connected,
-        insights=insights,   # <— NEW
+        insights=insights,
         epn=request.endpoint
     )
 

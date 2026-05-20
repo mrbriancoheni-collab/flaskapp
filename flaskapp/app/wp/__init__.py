@@ -326,13 +326,10 @@ def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None, retry_error
 
     # Reset recent error jobs back to queued so they get a retry
     if retry_errors:
-        from datetime import timedelta
-        cutoff = now - timedelta(days=7)
         error_jobs = (
             WPJob.query
             .filter(WPJob.site_id == site.id,
-                    WPJob.status == "error",
-                    WPJob.created_at >= cutoff)
+                    WPJob.status == "error")
             .all()
         )
         for ej in error_jobs:
@@ -1124,7 +1121,7 @@ def run_now():
     except Exception:
         max_jobs = 5
 
-    result = _process_queue(max_jobs=max_jobs, retry_errors=True)
+    result = _process_queue(max_jobs=max(max_jobs, 20), retry_errors=True)
     if result.get("ok"):
         flash(f"Processed {result.get('processed', 0)} job(s).", "success")
     else:

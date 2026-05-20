@@ -455,9 +455,10 @@ def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None) -> dict:
                 post_id = int(p.get("post_id", 0))
                 if not post_id:
                     raise ValueError("seo_fix job missing post_id")
+                post_type = p.get("post_type", "post")
 
-                # Fetch current post to preserve content
-                existing = c.get_post(post_id)
+                # Fetch current post/page to preserve content
+                existing = c.get_post(post_id, post_type=post_type)
                 current_content = existing.get("content", {}).get("rendered", "")
 
                 # Inject/replace schema block at end of content
@@ -490,7 +491,7 @@ def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None) -> dict:
                 if schema_html:
                     fixes_applied.append("JSON-LD schema")
 
-                c.create_or_update_post(**kwargs)
+                c.create_or_update_post(post_type=post_type, **kwargs)
                 msg = (
                     f"SEO auto-fix applied to post {post_id} "
                     f"[{', '.join(fixes_applied) or 'no changes'}] "
@@ -574,6 +575,7 @@ def _build_seo_fix_payload(site, url: str, keyword: str = "",
         if not post:
             return None
         post_id = int(post["id"])
+        post_type = post.get("type", "post")  # "post" or "page"
 
         # Generate schema
         schema_html = ""
@@ -610,6 +612,7 @@ def _build_seo_fix_payload(site, url: str, keyword: str = "",
 
         return {
             "post_id":   post_id,
+            "post_type": post_type,
             "post_url":  url,
             "schema_html": schema_html,
             "yoast_desc":  yoast_desc,

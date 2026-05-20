@@ -245,6 +245,7 @@ class WPClient:
         self,
         *,
         post_id: Optional[int] = None,
+        post_type: str = "post",
         title: str,
         html: str,
         excerpt: Optional[str] = None,
@@ -299,15 +300,27 @@ class WPClient:
         if meta:
             payload["meta"] = meta
 
+        collection = "pages" if post_type == "page" else "posts"
         if post_id:
-            r = self._req("POST", f"/wp/v2/posts/{post_id}", json_body=payload)  # WP accepts POST for update
+            r = self._req("POST", f"/wp/v2/{collection}/{post_id}", json_body=payload)
         else:
-            r = self._req("POST", "/wp/v2/posts", json_body=payload)
+            r = self._req("POST", f"/wp/v2/{collection}", json_body=payload)
         return r.json()
 
-    def get_post(self, post_id: int) -> dict:
-        r = self._req("GET", f"/wp/v2/posts/{int(post_id)}")
-        return r.json()
+    def get_post(self, post_id: int, post_type: str = "post") -> dict:
+        """Fetch a post or page by ID. Falls back to /pages/ endpoint on 404."""
+        endpoint = "/wp/v2/pages" if post_type == "page" else "/wp/v2/posts"
+        try:
+            r = self._req("GET", f"{endpoint}/{int(post_id)}")
+            return r.json()
+        except Exception as e:
+            # If the primary endpoint 404s, try the other type
+            status = getattr(getattr(e, "response", None), "status_code", None)
+            if status == 404:
+                alt = "/wp/v2/posts" if endpoint == "/wp/v2/pages" else "/wp/v2/pages"
+                r = self._req("GET", f"{alt}/{int(post_id)}")
+                return r.json()
+            raise
 
     def list_posts(self, per_page: int = 20, search: str = "",
                    status: str = "any", page: int = 1) -> list:

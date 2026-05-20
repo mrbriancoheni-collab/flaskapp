@@ -129,7 +129,7 @@
       <div class="font-medium">AI Insights</div>
       <span class="ml-2 text-xs text-gray-400">(beta)</span>
     </div>
-    <div class="text-sm whitespace-pre-line">{{ insights }}</div>
+    <div class="text-sm">{{ insights | safe }}</div>
   </div>
   {% endif %}
 

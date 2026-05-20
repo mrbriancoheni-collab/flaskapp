@@ -536,7 +536,12 @@ def _get_gsc_user_tokens(aid: int) -> dict | None:
             ).mappings().first()
         if not row:
             return None
-        return json.loads(row["credentials_json"])
+        data = json.loads(row["credentials_json"])
+        # google-auth Credentials.to_json() uses "token" key; normalize here
+        # so all callers can rely on "access_token"
+        if "token" in data and "access_token" not in data:
+            data["access_token"] = data.pop("token")
+        return data
     except Exception:
         current_app.logger.exception("Failed reading GSC user tokens")
         return None
@@ -10590,13 +10595,23 @@ def gsc_callback():
         redirect_uri = url_for("google_bp.gsc_callback", _external=True)
         creds = _exchange_code_for_creds(redirect_uri)
 
-        # Convert google.oauth2.credentials.Credentials → plain dict for storage
+        # google-auth Credentials.to_json() uses key "token"; normalize to
+        # "access_token" so our readers (_gsc_user_access_token etc.) find it.
         token_json = json.loads(creds.to_json())
+        if "token" in token_json and "access_token" not in token_json:
+            token_json["access_token"] = token_json.pop("token")
 
-        # Persist tokens to DB (same table used by _gsc_user_access_token)
-        _store_tokens(aid, "gsc", token_json)
+        # Persist using the ORM model directly — avoids _store_tokens which
+        # references columns (access_token, refresh_token, token_expiry) that
+        # don't exist in the google_oauth_tokens table schema.
+        from app.models_google import GoogleOAuthToken
+        tok = GoogleOAuthToken.query.filter_by(account_id=aid, product="gsc").first()
+        if tok is None:
+            tok = GoogleOAuthToken(account_id=aid, product="gsc")
+            db.session.add(tok)
+        tok.credentials_json = json.dumps(token_json)
 
-        # Pick the first accessible site and store it
+        # Pick the first accessible site and store on the same row
         site_url = ""
         try:
             svc = _build_gsc_service(creds)
@@ -10611,13 +10626,16 @@ def gsc_callback():
             current_app.logger.info("GSC list sites failed; proceeding as connected", exc_info=True)
 
         if site_url:
-            _set_gsc_selected_site(aid, site_url)
+            tok.gsc_site = site_url
+
+        db.session.commit()
 
         flash("Google Search Console connected.", "success")
         return redirect(url_for("google_bp.gsc_ui"))
 
     except Exception as e:
         current_app.logger.exception("GSC OAuth callback failed: %s", e)
+        db.session.rollback()
         flash("Could not complete Search Console connection. Please try again.", "error")
         return redirect(url_for("google_bp.gsc_ui"))
 
@@ -10630,6 +10648,14 @@ def gsc_ui():
     connected = _is_connected(aid, "gsc")
 
     site_url = _get_gsc_selected_site(aid) if connected else None
+
+    # If connected but no site saved yet, try to auto-select one
+    if connected and not site_url:
+        try:
+            _ensure_default_gsc_site_selected(aid)
+            site_url = _get_gsc_selected_site(aid)
+        except Exception:
+            current_app.logger.info("gsc_ui: could not auto-select site", exc_info=True)
 
     gsc = {}
     insights = ""

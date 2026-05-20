@@ -102,6 +102,15 @@ def _upsert_stats(
     ).first()
 
     if row is None:
+        # Claim any orphaned row written before account_id column existed
+        row = GadsStatsDaily.query.filter(
+            GadsStatsDaily.account_id.is_(None),
+            GadsStatsDaily.entity_type == entity_type,
+            GadsStatsDaily.google_entity_id == google_entity_id,
+            GadsStatsDaily.date == date_obj,
+        ).first()
+
+    if row is None:
         row = GadsStatsDaily(
             account_id=account_id,
             entity_type=entity_type,
@@ -133,6 +142,15 @@ def _get_or_create_campaign(session, account_id: int, google_cid: int, name: str
     camp = AdsCampaign.query.filter_by(
         account_id=account_id, google_campaign_id=str(google_cid)
     ).first()
+    if camp is None:
+        # Claim any orphaned row written before account_id column existed
+        camp = AdsCampaign.query.filter(
+            AdsCampaign.account_id.is_(None),
+            AdsCampaign.google_campaign_id == str(google_cid),
+        ).first()
+        if camp is not None:
+            camp.account_id = account_id
+            session.flush()
     if camp is None:
         camp = AdsCampaign(
             account_id=account_id,

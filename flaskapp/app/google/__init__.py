@@ -3863,27 +3863,17 @@ def ai_change_log():
 @google_bp.route("/analytics/data", methods=["GET"], endpoint="ga_data")
 @login_required
 def ga_data():
-    # Detect if this is being accessed directly in a browser (not AJAX)
-    # If so, redirect to the main analytics page
-    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-    accepts_json = 'application/json' in request.headers.get('Accept', '')
-
-    if not is_ajax and not accepts_json:
-        # User is accessing this directly - redirect to main analytics page
-        timeframe = request.args.get("timeframe", "28d")
-        return redirect(url_for("google_bp.ga_ui", timeframe=timeframe))
-
     timeframe = request.args.get("timeframe", "28d")
-    start_date, end_date, label = _resolve_timeframe(timeframe)
-
-    aid = current_account_id()
-    env_pid_raw = os.getenv("GA_PROPERTY_ID")
-    prop_id, prop_name = _get_ga_selected_property(aid)
-    effective_prop = prop_id or (_norm_prop_id(env_pid_raw) if env_pid_raw else None)
-    connected_name = prop_name or (_ga_property_name_any(env_pid_raw, aid) if env_pid_raw else None) or os.getenv("GA_PROPERTY_LABEL")
-
+    label = timeframe
     ga = None
     try:
+        start_date, end_date, label = _resolve_timeframe(timeframe)
+        aid = current_account_id()
+        env_pid_raw = os.getenv("GA_PROPERTY_ID")
+        prop_id, prop_name = _get_ga_selected_property(aid)
+        effective_prop = prop_id or (_norm_prop_id(env_pid_raw) if env_pid_raw else None)
+        connected_name = prop_name or (_ga_property_name_any(env_pid_raw, aid) if env_pid_raw else None) or os.getenv("GA_PROPERTY_LABEL")
+
         if effective_prop:
             ga = _fetch_ga_report(effective_prop, start_date, end_date)
             if ga:

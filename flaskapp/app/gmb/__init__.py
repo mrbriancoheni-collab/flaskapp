@@ -20,6 +20,7 @@ from flask import (
     flash,
     jsonify,
 )
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from sqlalchemy import text
 
 from app import db
@@ -122,6 +123,21 @@ def _oauth_client() -> Tuple[Optional[str], Optional[str], str]:
     csec = current_app.config.get("GOOGLE_GMB_SECRET") or os.getenv("GOOGLE_GMB_SECRET")
     cb = _callback_uri()
     return cid, csec, cb
+
+
+def _make_gmb_state(aid: int) -> str:
+    """Sign the account id into the OAuth state param (no session needed)."""
+    s = URLSafeTimedSerializer(current_app.secret_key, salt="gmb-oauth-state")
+    return s.dumps(aid)
+
+
+def _verify_gmb_state(state: str, max_age: int = 900) -> int | None:
+    """Return the account_id encoded in state, or None if invalid/expired."""
+    s = URLSafeTimedSerializer(current_app.secret_key, salt="gmb-oauth-state")
+    try:
+        return s.loads(state, max_age=max_age)
+    except (BadSignature, SignatureExpired):
+        return None
 
 
 def _store_tokens(
@@ -760,9 +776,8 @@ def start():
         "access_type": "offline",
         "include_granted_scopes": "true",
         "prompt": "consent",
-        "state": secrets.token_urlsafe(24),
+        "state": _make_gmb_state(current_account_id()),
     }
-    session["gmb_oauth_state"] = params["state"]
 
     from urllib.parse import urlencode
     return redirect(f"{GOOGLE_AUTH_URL}?{urlencode(params)}")
@@ -779,10 +794,10 @@ def callback():
 
     code = request.args.get("code")
     state = request.args.get("state")
-    if not code or not state or state != session.get("gmb_oauth_state"):
+    aid = _verify_gmb_state(state) if state else None
+    if not code or not aid:
         flash("Invalid or missing OAuth state.", "error")
         return redirect(url_for("gmb_bp.index"))
-    session.pop("gmb_oauth_state", None)
 
     client_id, client_secret, redirect_uri = _oauth_client()
     if not client_id or not client_secret:
@@ -809,8 +824,13 @@ def callback():
         return redirect(url_for("gmb_bp.index"))
 
     try:
-        aid = current_account_id()
-        _store_tokens(aid, token_json, product="gbp")
+        from app.models_google import GoogleOAuthToken
+        tok = GoogleOAuthToken.query.filter_by(account_id=aid, product="gmb").first()
+        if tok is None:
+            tok = GoogleOAuthToken(account_id=aid, product="gmb")
+            db.session.add(tok)
+        tok.credentials_json = json.dumps(token_json)
+        db.session.commit()
         if not _get_session_profile():
             _set_session_profile(dict(_SAMPLE_PROFILE))
     except Exception:

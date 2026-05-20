@@ -861,7 +861,7 @@ def get_gsc_insights(gsc: dict) -> str:
             )
 
             text = response.choices[0].message.content.strip()
-            return text or ""
+            return _format_gsc_insights(text)
 
         else:
             # Fallback to old inline prompt
@@ -890,11 +890,71 @@ def get_gsc_insights(gsc: dict) -> str:
                                 parts.append(block.text)
                 text = "\n".join(parts).strip()
 
-            return text or ""
+            return _format_gsc_insights(text)
 
     except Exception as e:
         current_app.logger.exception("OpenAI insights failed: %s", e)
         return ""
+
+
+def _format_gsc_insights(text: str) -> str:
+    """Convert AI insight output (JSON array or plain text) to rendered HTML."""
+    if not text:
+        return ""
+
+    # Strip markdown code fences the model sometimes adds
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        inner = stripped.split("```", 2)
+        stripped = inner[1].lstrip("json").strip() if len(inner) >= 3 else stripped
+
+    try:
+        import json as _j
+        data = _j.loads(stripped)
+        if not isinstance(data, list):
+            raise ValueError
+    except Exception:
+        import html
+        return f'<p class="whitespace-pre-line text-gray-700">{html.escape(text)}</p>'
+
+    severity_color = {1: "red", 2: "yellow", 3: "blue"}
+    severity_label = {1: "High priority", 2: "Medium priority", 3: "Low priority"}
+
+    parts = []
+    for item in data:
+        title       = item.get("title", "")
+        description = item.get("description", "")
+        impact      = item.get("expected_impact", "")
+        sev         = int(item.get("severity") or 2)
+        steps       = (item.get("action") or {}).get("steps") or []
+        color       = severity_color.get(sev, "gray")
+        label       = severity_label.get(sev, "")
+
+        steps_html = ""
+        if steps:
+            lis = "".join(f"<li>{s}</li>" for s in steps)
+            steps_html = (
+                f'<ol class="list-decimal list-inside mt-2 space-y-1 text-gray-600 text-xs">'
+                f"{lis}</ol>"
+            )
+
+        impact_html = (
+            f'<span class="mt-1 inline-block text-xs text-green-700 font-medium">↑ {impact}</span>'
+            if impact else ""
+        )
+
+        parts.append(
+            f'<div class="border-l-4 border-{color}-400 pl-3 py-1">'
+            f'<div class="flex items-start justify-between gap-2">'
+            f'<span class="font-medium text-gray-800 text-sm">{title}</span>'
+            f'<span class="text-xs text-{color}-600 whitespace-nowrap shrink-0">{label}</span>'
+            f"</div>"
+            f'<p class="text-sm text-gray-600 mt-1">{description}</p>'
+            f"{impact_html}{steps_html}"
+            f"</div>"
+        )
+
+    return '<div class="space-y-4">' + "\n".join(parts) + "</div>"
 
 
 # ------------------------- Misc helpers -------------------------

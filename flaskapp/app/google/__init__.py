@@ -668,7 +668,10 @@ def _fetch_gsc_report(site_url: str, start_date: str, end_date: str) -> dict | N
         current_app.logger.warning("GSC: no user access token")
         return None
 
-    base = f"https://searchconsole.googleapis.com/webmasters/v3/sites/{site_url}/searchAnalytics/query"
+    # GSC API requires the site URL to be percent-encoded in the path
+    from urllib.parse import quote
+    encoded_site = quote(site_url, safe="")
+    base = f"https://searchconsole.googleapis.com/webmasters/v3/sites/{encoded_site}/searchAnalytics/query"
     hdrs = {"Authorization": f"Bearer {at}", "Content-Type": "application/json"}
 
     def _post(payload: dict) -> requests.Response:

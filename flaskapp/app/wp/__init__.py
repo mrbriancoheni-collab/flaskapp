@@ -315,7 +315,7 @@ The excerpt must be 145-155 characters optimised as a meta description."""
     excerpt = "Clear, practical tips you can use today—plus when to call a pro."
     return {"title": title, "html": html, "excerpt": excerpt}
 
-def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None) -> dict:
+def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None, retry_errors: bool = False) -> dict:
     if site is None:
         site = _current_site()
     if not site:
@@ -323,6 +323,23 @@ def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None) -> dict:
 
     processed = 0
     now = datetime.utcnow()
+
+    # Reset recent error jobs back to queued so they get a retry
+    if retry_errors:
+        from datetime import timedelta
+        cutoff = now - timedelta(days=7)
+        error_jobs = (
+            WPJob.query
+            .filter(WPJob.site_id == site.id,
+                    WPJob.status == "error",
+                    WPJob.created_at >= cutoff)
+            .all()
+        )
+        for ej in error_jobs:
+            ej.status = "queued"
+            ej.last_error = None
+        if error_jobs:
+            db.session.commit()
 
     due_jobs = (
         WPJob.query
@@ -1097,7 +1114,7 @@ def run_now():
     except Exception:
         max_jobs = 5
 
-    result = _process_queue(max_jobs=max_jobs)
+    result = _process_queue(max_jobs=max_jobs, retry_errors=True)
     if result.get("ok"):
         flash(f"Processed {result.get('processed', 0)} job(s).", "success")
     else:

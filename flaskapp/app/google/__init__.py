@@ -5835,57 +5835,189 @@ def _apply_mobile_bid_adjustment(aid: int, customer_id: str, opt_data: dict, acc
         return {"success": False, "error": str(e)}
 
 
+# ---------------------------------------------------------------------------
+# Shared headline/description prompt builder
+# ---------------------------------------------------------------------------
+#
+# We ask the LLM to produce headlines in six named categories so that every
+# ad is guaranteed to cover each angle.  The response is a dict keyed by
+# category; callers flatten it with _flatten_rsa_headlines().
+#
+# Category definitions:
+#   service       — what the service IS  ("Pool Cleaning Service")
+#   keyword       — mirrors the user's search  ("Pool Cleaning Near Me")
+#   result        — outcome the customer gets  ("Crystal Clear Water All Season")
+#   cta           — next-step action  ("Call Now – Free Quote")
+#   trust         — objection-handling credibility  ("Licensed & Insured")
+#   differentiator— specific reason to choose you  ("No Contracts Required")
+
+_HEADLINE_CATEGORIES = ["service", "keyword", "result", "cta", "trust", "differentiator"]
+
+# Default per-category counts that sum to 15 (full RSA)
+_HEADLINE_COUNTS_FULL = {
+    "service": 3, "keyword": 3, "result": 3,
+    "cta": 2, "trust": 2, "differentiator": 2,
+}
+
+
+def _rsa_headline_counts(total: int) -> dict[str, int]:
+    """Scale per-category counts to approximate `total` headlines."""
+    base = {k: max(1, round(v * total / 15)) for k, v in _HEADLINE_COUNTS_FULL.items()}
+    # Adjust to hit total exactly
+    diff = total - sum(base.values())
+    for cat in _HEADLINE_CATEGORIES:
+        if diff == 0:
+            break
+        base[cat] += 1 if diff > 0 else -1
+        diff += -1 if diff > 0 else 1
+    return base
+
+
+def _build_rsa_headline_prompt(
+    business_name: str,
+    *,
+    keywords: list[str] | None = None,
+    keyword_theme: str | None = None,
+    existing_headlines: list[str] | None = None,
+    counts: dict[str, int] | None = None,
+    extra_context: str | None = None,
+) -> str:
+    """
+    Build the LLM prompt for structured RSA headline generation.
+
+    Returns a prompt string.  The expected response is JSON with one key per
+    category, each holding a list of headline strings (≤ 30 chars each).
+    """
+    counts = counts or _HEADLINE_COUNTS_FULL
+    kw_text = ", ".join(keywords[:10]) if keywords else keyword_theme or ""
+
+    lines = [f"Business: {business_name}"]
+    if kw_text:
+        lines.append(f"Keywords / theme: {kw_text}")
+    if extra_context:
+        lines.append(extra_context)
+    if existing_headlines:
+        sample = ", ".join(existing_headlines[:8])
+        lines.append(f"Do NOT duplicate these existing headlines: {sample}")
+
+    context = "\n".join(lines)
+
+    category_specs = "\n".join(
+        f'  "{cat}": {n} headlines  —  '
+        + {
+            "service":       "name the service clearly (what you do)",
+            "keyword":       "mirror the user's search query naturally",
+            "result":        "the outcome / transformation the customer gets",
+            "cta":           "next-step action (call, book, get a quote)",
+            "trust":         "credibility signal (license, reviews, years of experience)",
+            "differentiator": "why choose you over the competition (unique policy, speed, etc.)",
+        }[cat]
+        for cat, n in counts.items()
+    )
+
+    total = sum(counts.values())
+    return f"""{context}
+
+Write {total} Google Ads RSA headlines (max 30 chars each) spread across
+these six categories:
+
+{category_specs}
+
+Rules:
+- Every headline ≤ 30 characters (hard limit — truncation kills meaning)
+- No headline repeated across categories
+- Capitalize like a title (not ALL CAPS)
+- No punctuation at the very end (Google strips it)
+- Prefer concrete specifics over vague filler ("500+ Reviews" not "Great Reviews")
+
+Return ONLY valid JSON — no prose, no markdown fences:
+{{
+  "service": [...],
+  "keyword": [...],
+  "result": [...],
+  "cta": [...],
+  "trust": [...],
+  "differentiator": [...]
+}}"""
+
+
+def _flatten_rsa_headlines(parsed: dict, limit: int = 15) -> list[str]:
+    """Flatten categorized headline dict to ordered list, preserving category interleave."""
+    result: list[str] = []
+    # Copy each bucket so we don't mutate the caller's dict
+    buckets = [list(parsed.get(cat, [])) for cat in _HEADLINE_CATEGORIES]
+    while len(result) < limit and any(buckets):
+        for bucket in buckets:
+            if bucket and len(result) < limit:
+                result.append(bucket.pop(0)[:30])
+    return result
+
+
+def _parse_rsa_response(response: str, limit: int = 15) -> list[str]:
+    """Parse a categorized headline JSON response into a flat list."""
+    import json as _json
+    raw = response
+    if "```json" in raw:
+        raw = raw.split("```json")[1].split("```")[0]
+    elif "```" in raw:
+        raw = raw.split("```")[1].split("```")[0]
+    raw = raw.strip()
+    data = _json.loads(raw)
+    if isinstance(data, dict) and any(k in data for k in _HEADLINE_CATEGORIES):
+        return _flatten_rsa_headlines(data, limit)
+    # Fallback: old flat format
+    if "headlines" in data:
+        return [h[:30] for h in data["headlines"][:limit]]
+    raise ValueError(f"Unexpected response shape: {list(data.keys())}")
+
+
+# ---------------------------------------------------------------------------
+
+
 def _generate_mobile_ad_copy(business_name: str, keywords: list, website_url: str = "") -> dict:
     """Generate mobile-optimized RSA ad copy using AI."""
     try:
         from app.ai_clients import chatgpt_response
         import json
 
-        # Get top keywords for context (limit to 10)
-        keyword_text = ", ".join([k.get("text", "") for k in keywords[:10] if k.get("text")])
+        kw_list = [k.get("text", "") for k in keywords[:10] if k.get("text")]
+        prompt = _build_rsa_headline_prompt(
+            business_name,
+            keywords=kw_list,
+            extra_context="Optimise for mobile: favour short punchy text and tap-to-call CTAs.",
+        )
 
-        prompt = f"""Generate mobile-optimized Google RSA ad copy for a business.
+        # Append description request to the same call
+        prompt += """
 
-Business: {business_name}
-Keywords: {keyword_text}
-Website: {website_url}
-
-Requirements:
-- Headlines: 10-15 short, punchy headlines (max 30 chars each)
-- Descriptions: 3-4 concise descriptions (max 90 chars each)
-- Focus on mobile users: urgency, tap-to-call CTAs, "Call Now", "Same Day", etc.
-- Include numbers, benefits, and action words
-- Make headlines scan-friendly for mobile
-
-Return ONLY valid JSON in this format:
-{{
-  "headlines": ["Call Now - Fast Service", "Same Day Repair Available", ...],
-  "descriptions": ["Get a free estimate today. Licensed professionals ready to help.", ...]
-}}"""
+Also return 4 descriptions (max 90 chars each) in a "descriptions" key.
+Each description should cover a different angle: benefits, speed, trust, and a CTA."""
 
         response = chatgpt_response(prompt)
 
-        # Try to parse JSON from response
         try:
-            # Extract JSON if it's wrapped in markdown code blocks
-            if "```json" in response:
-                response = response.split("```json")[1].split("```")[0].strip()
-            elif "```" in response:
-                response = response.split("```")[1].split("```")[0].strip()
+            raw = response
+            if "```json" in raw:
+                raw = raw.split("```json")[1].split("```")[0]
+            elif "```" in raw:
+                raw = raw.split("```")[1].split("```")[0]
+            data = json.loads(raw.strip())
 
-            ad_copy = json.loads(response)
+            headlines = _flatten_rsa_headlines(
+                {k: data[k] for k in _HEADLINE_CATEGORIES if k in data}, limit=15
+            )
+            # Fallback to flat format if categories missing
+            if not headlines and "headlines" in data:
+                headlines = [h[:30] for h in data["headlines"][:15]]
 
-            # Validate required fields
-            if "headlines" not in ad_copy or "descriptions" not in ad_copy:
-                raise ValueError("Missing required fields")
+            descriptions = [d[:90] for d in (data.get("descriptions") or [])[:4]]
 
-            # Trim headlines to 30 chars and descriptions to 90 chars
-            ad_copy["headlines"] = [h[:30] for h in ad_copy["headlines"][:15]]
-            ad_copy["descriptions"] = [d[:90] for d in ad_copy["descriptions"][:4]]
+            if not headlines or not descriptions:
+                raise ValueError("Missing headlines or descriptions in response")
 
-            return {"success": True, "ad_copy": ad_copy}
+            return {"success": True, "ad_copy": {"headlines": headlines, "descriptions": descriptions}}
 
-        except json.JSONDecodeError as e:
+        except (json.JSONDecodeError, ValueError) as e:
             current_app.logger.error(f"Failed to parse AI response as JSON: {e}")
             return {"success": False, "error": f"AI returned invalid JSON: {str(e)}"}
 
@@ -6058,50 +6190,22 @@ def _generate_rsa_headline_variations(business_name: str, existing_headlines: li
     """Generate additional RSA headline variations using AI."""
     try:
         from app.ai_clients import chatgpt_response
-        import json
 
-        existing_text = "\n".join([f"- {h}" for h in existing_headlines if h]) if existing_headlines else "None yet"
-
-        prompt = f"""Generate {needed} RSA headline variations for a Google Search campaign.
-
-Business: {business_name}
-
-Existing Headlines (for context - don't duplicate):
-{existing_text}
-
-Requirements:
-- Headlines: {needed} NEW headlines (max 30 chars each)
-- Make them complementary to existing headlines
-- Mix of benefit-focused, action-oriented, and trust-building
-- Include numbers, urgency, and local appeal where appropriate
-- Examples: "24/7 Emergency Service", "Licensed Professionals", "Same Day Appointments"
-
-Return ONLY valid JSON:
-{{"headlines": ["Fast Service - Call Now", "Licensed Professionals", ...]}}"""
+        counts = _rsa_headline_counts(needed)
+        prompt = _build_rsa_headline_prompt(
+            business_name,
+            existing_headlines=existing_headlines,
+            counts=counts,
+        )
 
         response = chatgpt_response(prompt)
 
-        # Parse JSON from response
         try:
-            # Extract JSON if it's wrapped in markdown code blocks
-            if "```json" in response:
-                response = response.split("```json")[1].split("```")[0].strip()
-            elif "```" in response:
-                response = response.split("```")[1].split("```")[0].strip()
-
-            result = json.loads(response)
-
-            # Validate and trim
-            if "headlines" not in result:
-                raise ValueError("Missing headlines field")
-
-            headlines = [h[:30] for h in result["headlines"][:needed]]
-
+            headlines = _parse_rsa_response(response, limit=needed)
             return {"success": True, "headlines": headlines}
-
-        except json.JSONDecodeError as e:
-            current_app.logger.error(f"Failed to parse AI response as JSON: {e}")
-            return {"success": False, "error": f"AI returned invalid JSON: {str(e)}"}
+        except (ValueError, Exception) as e:
+            current_app.logger.error(f"Failed to parse AI response: {e}")
+            return {"success": False, "error": str(e)}
 
     except Exception as e:
         current_app.logger.error(f"Error generating RSA headline variations: {e}")
@@ -6266,45 +6370,22 @@ def _generate_pmax_headlines(business_name: str, existing_headlines: list, neede
     """Generate Performance Max headlines using AI."""
     try:
         from app.ai_clients import chatgpt_response
-        import json
 
-        existing_text = "\n".join([f"- {h}" for h in existing_headlines if h]) if existing_headlines else "None yet"
-
-        prompt = f"""Generate {needed} Performance Max headline variations for a business.
-
-Business: {business_name}
-
-Existing Headlines:
-{existing_text}
-
-Requirements:
-- Headlines: {needed} NEW headlines (max 30 chars each, don't duplicate existing)
-- Make them punchy, benefit-focused, and action-oriented
-- Include variety: some with urgency, some with benefits, some with credibility
-- Avoid duplicating existing headlines
-
-Return ONLY valid JSON in this format:
-{{
-  "headlines": ["Fast Service - Call Now", "Licensed Professionals", ...]
-}}"""
+        counts = _rsa_headline_counts(needed)
+        prompt = _build_rsa_headline_prompt(
+            business_name,
+            existing_headlines=existing_headlines,
+            counts=counts,
+            extra_context="These are for a Performance Max campaign — keep copy broad and benefit-led.",
+        )
 
         response = chatgpt_response(prompt)
 
         try:
-            if "```json" in response:
-                response = response.split("```json")[1].split("```")[0].strip()
-            elif "```" in response:
-                response = response.split("```")[1].split("```")[0].strip()
-
-            result = json.loads(response)
-            if "headlines" not in result:
-                raise ValueError("Missing headlines field")
-
-            headlines = [h[:30] for h in result["headlines"][:needed]]
+            headlines = _parse_rsa_response(response, limit=needed)
             return {"success": True, "headlines": headlines}
-
-        except json.JSONDecodeError as e:
-            return {"success": False, "error": f"AI returned invalid JSON: {str(e)}"}
+        except (ValueError, Exception) as e:
+            return {"success": False, "error": str(e)}
 
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -7867,49 +7948,42 @@ def _generate_complete_rsa_ad(business_name: str, ad_group_name: str, keywords: 
 
         keywords_text = ", ".join(keywords[:10])  # Use first 10 keywords
 
-        prompt = f"""Generate a complete Responsive Search Ad for Google Ads.
+        prompt = _build_rsa_headline_prompt(
+            business_name,
+            keywords=keywords[:10],
+            extra_context=f"Ad group: {ad_group_name}",
+        )
+        prompt += """
 
-Business: {business_name}
-Ad Group: {ad_group_name}
-Keywords: {keywords_text}
-
-Requirements:
-- Headlines: 15 unique headlines (max 30 chars each)
-- Descriptions: 4 unique descriptions (max 90 chars each)
-- Make them relevant to the keywords
-- Include variety: urgency, benefits, credibility, action-oriented
-- Focus on what makes this business stand out
-
-Return ONLY valid JSON in this format:
-{{
-  "headlines": ["Fast Service - Call Now", "Licensed Professionals", ...],
-  "descriptions": ["Get professional service from licensed experts. Same-day appointments available.", ...]
-}}"""
+Also return 4 descriptions (max 90 chars each) in a "descriptions" key.
+Cover four angles: (1) benefits + social proof, (2) speed/availability,
+(3) trust/credentials, (4) CTA with offer or urgency."""
 
         response = chatgpt_response(prompt)
 
         try:
-            if "```json" in response:
-                response = response.split("```json")[1].split("```")[0].strip()
-            elif "```" in response:
-                response = response.split("```")[1].split("```")[0].strip()
+            import json as _json
+            raw = response
+            if "```json" in raw:
+                raw = raw.split("```json")[1].split("```")[0]
+            elif "```" in raw:
+                raw = raw.split("```")[1].split("```")[0]
+            result = _json.loads(raw.strip())
 
-            result = json.loads(response)
+            headlines = _flatten_rsa_headlines(
+                {k: result[k] for k in _HEADLINE_CATEGORIES if k in result}, limit=15
+            )
+            if not headlines and "headlines" in result:
+                headlines = [h[:30] for h in result["headlines"][:15]]
 
-            if "headlines" not in result or "descriptions" not in result:
+            descriptions = [d[:90] for d in (result.get("descriptions") or [])[:4]]
+
+            if not headlines or not descriptions:
                 raise ValueError("Missing headlines or descriptions field")
 
-            # Truncate to character limits
-            headlines = [h[:30] for h in result["headlines"][:15]]
-            descriptions = [d[:90] for d in result["descriptions"][:4]]
+            return {"success": True, "headlines": headlines, "descriptions": descriptions}
 
-            return {
-                "success": True,
-                "headlines": headlines,
-                "descriptions": descriptions
-            }
-
-        except json.JSONDecodeError as e:
+        except _json.JSONDecodeError as e:
             return {"success": False, "error": f"AI returned invalid JSON: {str(e)}"}
 
     except Exception as e:

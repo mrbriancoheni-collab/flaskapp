@@ -1264,27 +1264,78 @@ def sync():
 # Search Terms tab
 # ---------------------------
 
+# ---- Generic intent signals (apply to every vertical) ----
+#
+# Classification order:
+#   1. Generic service-intent  → relevant (hire-someone language)
+#   2. Per-vertical service signal → relevant (vertical-specific verbs)
+#   3. Generic product/DIY intent → irrelevant
+#   4. Per-vertical buying pattern → irrelevant (catches vertical-specific
+#      product nouns, brand names, dimensions, materials)
+#   5. Default → relevant
+
+_GENERIC_SERVICE_INTENT = [
+    # "near me" alone is service intent; "for sale near me" handled by product layer
+    r"\bnear me\b",
+    r"\bin my area\b", r"\bin my city\b", r"\bin my town\b",
+    r"\bcompan(?:y|ies)\b",
+    r"\bcontractor[s]?\b",
+    r"\bprofessional[s]?\b", r"\bpro[s]?\b(?!\w)",
+    r"\bhire\b", r"\bhiring\b",
+    r"\bemergency\b", r"\bsame.?day\b", r"\b24.?hour\b", r"\b24/7\b",
+    # "my <noun>" implies they own one — "clean my pool", "fix my roof"
+    r"\b(?:clean|fix|repair|service|treat|inspect|tune.?up)\s+(?:my|our)\b",
+    # frequency words imply recurring service
+    r"\bweekly\b", r"\bmonthly\b", r"\bbi.?weekly\b", r"\brecurring\b",
+    r"\bquote\s+for\b", r"\bestimate\s+for\b",
+    r"\bbook(?:ing)?\b", r"\bappointment[s]?\b", r"\bscheduling\b",
+]
+
+_GENERIC_PRODUCT_INTENT = [
+    r"\bfor sale\b",
+    r"\bon sale\b",
+    r"\bamazon\b", r"\bhome depot\b", r"\blowes?\b", r"\bcostco\b", r"\bwalmart\b",
+    r"\bebay\b", r"\bcraigslist\b", r"\bwayfair\b",
+    r"\bdiy\b", r"\bdo it yourself\b",
+    r"\bhow to\b",
+    r"\bbest\b.{0,20}\b(?:brand|product|model|\d{4})\b",
+    r"\b(?:vs|versus)\b",
+    r"\breview[s]?\b",
+    r"\b(?:model|sku|part)\s*#?\s*\w*\d", # part numbers / model #s
+    r"\bkit[s]?\b",
+    r"\bbuy\s+\w+",     # "buy chlorine", "buy pump", etc.
+    r"\bpurchase\b",
+    r"\border\s+online\b",
+    r"\bshipping\b", r"\bdelivery\b",
+    r"\bwholesale\b",
+    r"\bused\b\s+\w+\s+(?:for sale|near me)?",  # "used pump for sale"
+    r"\b\d+[x×]\d+\b",                       # dimensions like 12x24 (product spec)
+    r"\b\d+\s*(?:foot|ft)\s+(?:wide|long|tall|deep)\b",
+    r"\bbtu\b", r"\bseer\b",                 # spec numbers → shopping
+]
+
+# ---- Per-vertical layers (tiebreakers) ----
+
 _SERVICE_SIGNALS = {
     "pool_cleaning": [
         r"\bcleaning\b", r"\bcleans\b",
         r"\bmaintenan", r"\bmaintain",
         r"\bservic",
-        r"\bweekly\b", r"\bmonthly\b", r"\brecurring\b",
-        r"\brepair", r"\bfix",
-        r"\btreatment\b", r"\btreating\b",
+        r"\brepair", r"\btreatment\b", r"\btreating\b",
         r"\bcare\b",
     ],
     "roofing": [
-        r"\brepair\b", r"\breplace\b", r"\bleak[s]?\b", r"\bfix\b",
+        r"\brepair\b", r"\breplace\b", r"\bleak[s]?\b",
         r"\binspect", r"\bservic", r"\bmaintenan",
+        r"\bre.?roof", r"\breplacement\b",
     ],
     "hvac_ac": [
         r"\brepair\b", r"\bservic", r"\bmaintenan", r"\btune.?up\b",
-        r"\brecharge\b", r"\brefrigerant\b", r"\bleak[s]?\b", r"\bfix\b",
+        r"\brecharge\b", r"\brefrigerant\b", r"\bleak[s]?\b",
     ],
     "plumbing": [
-        r"\brepair\b", r"\bfix\b", r"\bservic", r"\bleak[s]?\b",
-        r"\bclog\b", r"\bdrain\b", r"\bemergency\b",
+        r"\brepair\b", r"\bservic", r"\bleak[s]?\b",
+        r"\bclog(?:ged)?\b", r"\bbackup\b", r"\bunclog\b",
     ],
     "generic": [],
 }
@@ -1297,65 +1348,80 @@ _POOL_PRODUCT_NOUNS = (
 
 _BUYING_PATTERNS = {
     "pool_cleaning": [
-        # pool/product + price/cost in either direction (service signals checked first)
+        # pool/product + price/cost in either direction
         r"\bpool[s]?\b.{0,30}\b(cost[s]?|price[sd]?)\b",
         r"\b(cost[s]?|price[sd]?)\b.{0,30}\bpool[s]?\b",
         rf"\b({_POOL_PRODUCT_NOUNS})\b.{{0,30}}\b(cost[s]?|price[sd]?)\b",
         rf"\b(cost[s]?|price[sd]?)\b.{{0,30}}\b({_POOL_PRODUCT_NOUNS})\b",
-        rf"\bbuy\b.{{0,30}}\b({_POOL_PRODUCT_NOUNS}|pool[s]?)\b",
-        r"\bhow much\b",
-        r"\bfiberglass\b", r"\bviny[l]?\b", r"\bconcrete pool\b", r"\bbuild\b",
-        r"\b\d+[x×]\d+\b",
-        r"\b\d+\s*(?:foot|ft)\s+(?:wide|long)\b",
-        r"\binstall(?:ation)?\b",
-        r"\bkit\b", r"\bdiy\b", r"\bdesign[s]?\b",
+        # vertical-specific product/build language
+        r"\bfiberglass\b", r"\bviny[l]?\b", r"\bconcrete pool\b",
+        r"\bbuild\b", r"\binstall(?:ation)?\b",
         r"\binground pool\b", r"\babove.?ground pool\b",
-        r"\bestimate[s]?\b", r"\bquote[s]?\b",
         r"\bcheap pool\b", r"\baffordable pool\b",
     ],
     "roofing": [
         r"\broof\s+(cost[s]?|price[sd]?)\b",
-        r"\bhow much\b",
         r"\bmaterial[s]?\b", r"\bshingle[s]?\b", r"\btile[s]?\b",
-        r"\bdiy\b", r"\binstall(?:ation)?\b",
+        r"\bmetal roof\b", r"\basphalt\b",
         r"\bper square\b", r"\bsquare foot\b",
-        r"\bestimate[s]?\b", r"\bquote[s]?\b",
+        r"\binstall(?:ation)?\b",
     ],
     "hvac_ac": [
-        r"\bac\s+(cost[s]?|price[sd]?|unit)\b",
-        r"\bhvac\s+(cost[s]?|price[sd]?|unit)\b",
-        r"\bhow much\b",
-        r"\bbtu\b", r"\bseer\b",
-        r"\btrane\b", r"\bcarrier\b", r"\blennox\b",
-        r"\bdiy\b", r"\binstall(?:ation)?\b",
-        r"\bestimate[s]?\b", r"\bquote[s]?\b",
+        r"\bac\s+(cost[s]?|price[sd]?|unit[s]?)\b",
+        r"\bhvac\s+(cost[s]?|price[sd]?|unit[s]?)\b",
+        r"\btrane\b", r"\bcarrier\b", r"\blennox\b", r"\bgoodman\b", r"\brheem\b",
+        r"\binstall(?:ation)?\b",
     ],
     "plumbing": [
         r"\bplumb(?:ing)?\s+(cost[s]?|price[sd]?)\b",
-        r"\bhow much\b",
-        r"\bdiy\b", r"\binstall(?:ation)?\b",
         r"\bparts?\b", r"\bfixture[s]?\b",
-        r"\bestimate[s]?\b", r"\bquote[s]?\b",
+        r"\bfaucet[s]?\b", r"\btoilet[s]?\b", r"\bsink[s]?\b",
+        r"\binstall(?:ation)?\b",
     ],
     "generic": [
-        r"\bhow much\b", r"\bdiy\b", r"\binstall(?:ation)?\b",
-        r"\bestimate[s]?\b", r"\bquote[s]?\b",
         r"\bcheap\b", r"\baffordable\b",
+        r"\bcost[s]?\b", r"\bprice[sd]?\b",
     ],
 }
 
 
 def _classify_term(term: str, service_type: str) -> str:
-    """Return 'irrelevant' or 'relevant' based on buying-intent vs service-intent signals."""
+    """
+    Decide if a search term is 'relevant' (someone wants to hire us) or
+    'irrelevant' (someone wants to buy a product / DIY).
+
+    Order:
+      1. Generic service-intent → relevant (hire-me language is unambiguous)
+      2. Generic product/DIY intent → irrelevant (diy / for sale / amazon
+         override vertical verbs — "diy roof repair" is product even though
+         "repair" is a roofing service verb)
+      3. Vertical service signal → relevant
+      4. Vertical buying pattern → irrelevant
+      5. Default → relevant
+    """
     import re
     t = (term or "").lower()
-    # Service signal overrides buying patterns — "pool cleaning cost" is relevant
+
+    # 1. Generic service-intent (hire-me language)
+    if any(re.search(p, t) for p in _GENERIC_SERVICE_INTENT):
+        # Exception: "for sale near me" is still product intent
+        if not re.search(r"\bfor sale\b", t):
+            return "relevant"
+
+    # 2. Generic product/DIY intent — unambiguous shopping language
+    if any(re.search(p, t) for p in _GENERIC_PRODUCT_INTENT):
+        return "irrelevant"
+
+    # 3. Vertical-specific service verbs
     signals = _SERVICE_SIGNALS.get(service_type, [])
     if signals and any(re.search(p, t) for p in signals):
         return "relevant"
+
+    # 4. Vertical-specific buying patterns (product nouns + price, brand names, etc.)
     patterns = _BUYING_PATTERNS.get(service_type, _BUYING_PATTERNS["generic"])
     if any(re.search(p, t) for p in patterns):
         return "irrelevant"
+
     return "relevant"
 
 

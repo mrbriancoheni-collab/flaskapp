@@ -140,7 +140,16 @@
                     {% else %}bg-red-100 text-red-700{% endif %}">{{ ad.status|title }}</span>
                 </div>
                 <div class="flex gap-1 flex-shrink-0">
-                  <button onclick="openEditAdModal({{ ad.id }}, {{ ag.id }})"
+                  <button onclick="openEditAdModal({{ ad.id }}, event)"
+                          data-headline1="{{ ad.headline1|e }}"
+                          data-headline2="{{ ad.headline2|default('')|e }}"
+                          data-headline3="{{ ad.headline3|default('')|e }}"
+                          data-description1="{{ ad.description1|default('')|e }}"
+                          data-description2="{{ ad.description2|default('')|e }}"
+                          data-final-url="{{ ad.final_url|e }}"
+                          data-path1="{{ ad.path1|default('')|e }}"
+                          data-path2="{{ ad.path2|default('')|e }}"
+                          data-status="{{ ad.status }}"
                           class="p-1 text-gray-400 hover:text-indigo-600 rounded text-xs">
                     <i class="fa-solid fa-pen"></i>
                   </button>
@@ -384,6 +393,79 @@
   </div>
 </div>
 
+<!-- Edit Ad Modal -->
+<div id="editAdModal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/40" onclick="document.getElementById('editAdModal').classList.add('hidden')"></div>
+  <div class="relative bg-white w-full max-w-lg mx-4 rounded-2xl shadow-xl border overflow-hidden">
+    <div class="px-5 py-4 border-b flex items-center justify-between">
+      <div class="font-semibold text-lg">Edit Ad</div>
+      <button class="p-2 hover:bg-gray-100 rounded-lg" onclick="document.getElementById('editAdModal').classList.add('hidden')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <form id="editAdForm" method="post" action="" class="p-5 space-y-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="grid grid-cols-3 gap-2">
+        <div class="col-span-3">
+          <label class="block text-xs font-medium mb-1 text-gray-600">Headline 1 <span class="text-red-500">*</span> <span class="text-gray-400">(max 30)</span></label>
+          <input id="editAdH1" type="text" name="headline1" maxlength="30" required
+                 class="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="col-span-3 sm:col-span-1">
+          <label class="block text-xs font-medium mb-1 text-gray-600">Headline 2 <span class="text-gray-400">(max 30)</span></label>
+          <input id="editAdH2" type="text" name="headline2" maxlength="30"
+                 class="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="col-span-3 sm:col-span-2">
+          <label class="block text-xs font-medium mb-1 text-gray-600">Headline 3 <span class="text-gray-400">(max 30)</span></label>
+          <input id="editAdH3" type="text" name="headline3" maxlength="30"
+                 class="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600">Description 1 <span class="text-gray-400">(max 90)</span></label>
+        <input id="editAdD1" type="text" name="description1" maxlength="90"
+               class="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600">Description 2 <span class="text-gray-400">(max 90)</span></label>
+        <input id="editAdD2" type="text" name="description2" maxlength="90"
+               class="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600">Final URL <span class="text-red-500">*</span></label>
+        <input id="editAdUrl" type="url" name="final_url" required
+               class="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-xs font-medium mb-1 text-gray-600">Path 1 <span class="text-gray-400">(max 15)</span></label>
+          <input id="editAdP1" type="text" name="path1" maxlength="15"
+                 class="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1 text-gray-600">Path 2 <span class="text-gray-400">(max 15)</span></label>
+          <input id="editAdP2" type="text" name="path2" maxlength="15"
+                 class="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-medium mb-1 text-gray-600">Status</label>
+        <select id="editAdStatus" name="status" class="w-full rounded-lg border px-3 py-2 text-sm">
+          <option value="enabled">Enabled</option>
+          <option value="paused">Paused</option>
+          <option value="removed">Removed</option>
+        </select>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" class="px-4 py-2 rounded-lg border hover:bg-gray-50"
+                onclick="document.getElementById('editAdModal').classList.add('hidden')">Cancel</button>
+        <button type="submit" class="px-5 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 font-medium">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- New Keyword Modal -->
 <div id="newKeywordModal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
   <div class="absolute inset-0 bg-black/40" onclick="document.getElementById('newKeywordModal').classList.add('hidden')"></div>
@@ -440,6 +522,21 @@ function openEditAdGroupModal(gid, name, status, maxCpcCents) {
   document.getElementById('editAdGroupStatus').value = status;
   document.getElementById('editAdGroupCpc').value = maxCpcCents > 0 ? (maxCpcCents / 100).toFixed(2) : '';
   document.getElementById('editAdGroupModal').classList.remove('hidden');
+}
+
+function openEditAdModal(adId, evt) {
+  const btn = evt.currentTarget;
+  document.getElementById('editAdForm').action = '/account/google/ads/ad/' + adId + '/edit';
+  document.getElementById('editAdH1').value = btn.dataset.headline1 || '';
+  document.getElementById('editAdH2').value = btn.dataset.headline2 || '';
+  document.getElementById('editAdH3').value = btn.dataset.headline3 || '';
+  document.getElementById('editAdD1').value = btn.dataset.description1 || '';
+  document.getElementById('editAdD2').value = btn.dataset.description2 || '';
+  document.getElementById('editAdUrl').value = btn.dataset.finalUrl || '';
+  document.getElementById('editAdP1').value = btn.dataset.path1 || '';
+  document.getElementById('editAdP2').value = btn.dataset.path2 || '';
+  document.getElementById('editAdStatus').value = btn.dataset.status || 'enabled';
+  document.getElementById('editAdModal').classList.remove('hidden');
 }
 
 function openNewAdModal(gid) {

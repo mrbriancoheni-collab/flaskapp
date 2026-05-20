@@ -217,14 +217,15 @@ def _now_utc() -> datetime:
 def _get_token_row(account_id: int, products: tuple[str, ...]) -> Optional[dict]:
     """
     Fetch the newest token row for any of the given product keys.
-    We treat 'ads' and 'glsa' as interchangeable for GLSA.
+    Returns a dict with id, product, access_token, refresh_token, token_expiry
+    sourced from credentials_json (the only persisted location).
     """
     with db.engine.connect() as conn:
         row = (
             conn.execute(
                 text(
                     """
-                    SELECT id, product, access_token, refresh_token, token_expiry, credentials_json
+                    SELECT id, product, credentials_json
                       FROM google_oauth_tokens
                      WHERE account_id = :aid
                        AND LOWER(product) IN :prods
@@ -237,22 +238,52 @@ def _get_token_row(account_id: int, products: tuple[str, ...]) -> Optional[dict]
             .mappings()
             .first()
         )
-        return dict(row) if row else None
+        if not row:
+            return None
+        result = {"id": row["id"], "product": row["product"]}
+        try:
+            creds = json.loads(row["credentials_json"] or "{}")
+        except Exception:
+            creds = {}
+        # google-auth creds.to_json() uses "token"; normalize to "access_token"
+        if "token" in creds and "access_token" not in creds:
+            creds["access_token"] = creds.pop("token")
+        result["access_token"] = creds.get("access_token")
+        result["refresh_token"] = creds.get("refresh_token")
+        # token_expiry may be stored as ISO string under various keys
+        exp = creds.get("token_expiry") or creds.get("expiry") or creds.get("expiry_date")
+        if exp:
+            try:
+                result["token_expiry"] = datetime.fromisoformat(str(exp).rstrip("Z"))
+            except Exception:
+                result["token_expiry"] = None
+        else:
+            result["token_expiry"] = None
+        result["_creds_json"] = creds  # carry full dict so save can merge
+        return result
+
 
 def _save_tokens_row(row_id: int, access_token: str, refresh_token: Optional[str], token_expiry: Optional[datetime]) -> None:
+    """Update credentials_json in-place with refreshed token values."""
     with db.engine.begin() as conn:
+        existing = conn.execute(
+            text("SELECT credentials_json FROM google_oauth_tokens WHERE id = :id"),
+            {"id": row_id},
+        ).scalar()
+        try:
+            creds = json.loads(existing or "{}")
+        except Exception:
+            creds = {}
+        creds["access_token"] = access_token
+        if refresh_token:
+            creds["refresh_token"] = refresh_token
+        if token_expiry:
+            creds["token_expiry"] = token_expiry.isoformat()
         conn.execute(
             text(
-                """
-                UPDATE google_oauth_tokens
-                   SET access_token = :at,
-                       refresh_token = COALESCE(:rt, refresh_token),
-                       token_expiry = :exp,
-                       updated_at = NOW()
-                 WHERE id = :id
-                """
+                "UPDATE google_oauth_tokens SET credentials_json = :cj, updated_at = NOW() WHERE id = :id"
             ),
-            {"id": row_id, "at": access_token, "rt": refresh_token, "exp": token_expiry},
+            {"id": row_id, "cj": json.dumps(creds)},
         )
 
 def ensure_access_token(account_id: int, products: tuple[str, ...]) -> Tuple[str, str]:

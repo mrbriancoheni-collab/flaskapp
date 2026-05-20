@@ -308,19 +308,30 @@ class WPClient:
         return r.json()
 
     def get_post(self, post_id: int, post_type: str = "post") -> dict:
-        """Fetch a post or page by ID. Falls back to /pages/ endpoint on 404."""
-        endpoint = "/wp/v2/pages" if post_type == "page" else "/wp/v2/posts"
+        """Fetch a post or page by ID. Falls back to the other type on 404."""
+        def _try(pt: str):
+            endpoint = "/wp/v2/pages" if pt == "page" else "/wp/v2/posts"
+            return self._req("GET", f"{endpoint}/{int(post_id)}")
+
+        def _is_404(exc: Exception) -> bool:
+            msg = str(exc)
+            cause = getattr(exc, "__cause__", None)
+            status = getattr(getattr(cause, "response", None), "status_code", None)
+            return status == 404 or "WP API error 404" in msg or "rest_post_invalid_id" in msg
+
         try:
-            r = self._req("GET", f"{endpoint}/{int(post_id)}")
-            return r.json()
+            return _try(post_type).json()
         except Exception as e:
-            # If the primary endpoint 404s, try the other type
-            status = getattr(getattr(e, "response", None), "status_code", None)
-            if status == 404:
-                alt = "/wp/v2/posts" if endpoint == "/wp/v2/pages" else "/wp/v2/pages"
-                r = self._req("GET", f"{alt}/{int(post_id)}")
-                return r.json()
-            raise
+            if not _is_404(e):
+                raise
+            # Try the other type before giving up
+            alt = "post" if post_type == "page" else "page"
+            try:
+                return _try(alt).json()
+            except Exception as e2:
+                if _is_404(e2):
+                    raise FileNotFoundError(f"Post/page {post_id} not found in WordPress") from e2
+                raise
 
     def list_posts(self, per_page: int = 20, search: str = "",
                    status: str = "any", page: int = 1) -> list:

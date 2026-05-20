@@ -475,7 +475,16 @@ def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None, retry_error
                 post_type = p.get("post_type", "post")
 
                 # Fetch current post/page to preserve content
-                existing = c.get_post(post_id, post_type=post_type)
+                try:
+                    existing = c.get_post(post_id, post_type=post_type)
+                except FileNotFoundError:
+                    # Post was deleted from WordPress — mark done and skip
+                    job.status = "done"
+                    db.session.add(WPLog(site_id=site.id, job_id=job.id, level="warning",
+                                        message=f"Skipped seo_fix: post {post_id} no longer exists in WordPress"))
+                    db.session.commit()
+                    processed += 1
+                    continue
                 current_content = existing.get("content", {}).get("rendered", "")
 
                 # Inject/replace schema block at end of content

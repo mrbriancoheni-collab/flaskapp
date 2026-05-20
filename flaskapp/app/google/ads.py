@@ -1266,35 +1266,47 @@ def sync():
 
 _SERVICE_SIGNALS = {
     "pool_cleaning": [
-        r"\bclean", r"\bmaintenan", r"\bmaintain", r"\bservice\b",
+        r"\bcleaning\b", r"\bcleans\b",
+        r"\bmaintenan", r"\bmaintain",
+        r"\bservic",
         r"\bweekly\b", r"\bmonthly\b", r"\brecurring\b",
-        r"\balgae\b", r"\bchemical[s]?\b", r"\bbalance[d]?\b",
-        r"\bshock\b", r"\bvacuum\b", r"\bcare\b", r"\btreat",
+        r"\brepair", r"\bfix",
+        r"\btreatment\b", r"\btreating\b",
+        r"\bcare\b",
     ],
     "roofing": [
         r"\brepair\b", r"\breplace\b", r"\bleak[s]?\b", r"\bfix\b",
-        r"\binspect", r"\bservice\b", r"\bmaintenan",
+        r"\binspect", r"\bservic", r"\bmaintenan",
     ],
     "hvac_ac": [
-        r"\brepair\b", r"\bservice\b", r"\bmaintenan", r"\btune.?up\b",
-        r"\brecharge\b", r"\brefrigrant\b", r"\bleak[s]?\b", r"\bfix\b",
+        r"\brepair\b", r"\bservic", r"\bmaintenan", r"\btune.?up\b",
+        r"\brecharge\b", r"\brefrigerant\b", r"\bleak[s]?\b", r"\bfix\b",
     ],
     "plumbing": [
-        r"\brepair\b", r"\bfix\b", r"\bservice\b", r"\bleak[s]?\b",
+        r"\brepair\b", r"\bfix\b", r"\bservic", r"\bleak[s]?\b",
         r"\bclog\b", r"\bdrain\b", r"\bemergency\b",
     ],
     "generic": [],
 }
 
+_POOL_PRODUCT_NOUNS = (
+    r"chlorine|chemicals?|algaecide|vacuum|cleaner[s]?|robot|"
+    r"pump[s]?|filter[s]?|brush(?:es)?|shock|cover[s]?|heater[s]?|"
+    r"liner[s]?|skimmer[s]?|salt|tablets?|ph\b|alkalinity"
+)
+
 _BUYING_PATTERNS = {
     "pool_cleaning": [
-        # pool + price/cost anywhere in term (service signals checked first)
+        # pool/product + price/cost in either direction (service signals checked first)
         r"\bpool[s]?\b.{0,30}\b(cost[s]?|price[sd]?)\b",
         r"\b(cost[s]?|price[sd]?)\b.{0,30}\bpool[s]?\b",
+        rf"\b({_POOL_PRODUCT_NOUNS})\b.{{0,30}}\b(cost[s]?|price[sd]?)\b",
+        rf"\b(cost[s]?|price[sd]?)\b.{{0,30}}\b({_POOL_PRODUCT_NOUNS})\b",
+        rf"\bbuy\b.{{0,30}}\b({_POOL_PRODUCT_NOUNS}|pool[s]?)\b",
         r"\bhow much\b",
         r"\bfiberglass\b", r"\bviny[l]?\b", r"\bconcrete pool\b", r"\bbuild\b",
-        r"\b\d+[x×]\d+\b",                       # dimensions like 12x24
-        r"\b\d+\s*(?:foot|ft)\s+(?:wide|long)\b", # "10 foot wide"
+        r"\b\d+[x×]\d+\b",
+        r"\b\d+\s*(?:foot|ft)\s+(?:wide|long)\b",
         r"\binstall(?:ation)?\b",
         r"\bkit\b", r"\bdiy\b", r"\bdesign[s]?\b",
         r"\binground pool\b", r"\babove.?ground pool\b",

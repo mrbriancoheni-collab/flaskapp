@@ -126,7 +126,10 @@ async function fetchGaData(firstLoad = false) {
     const tf = document.getElementById('timeframe')?.value || '28d';
     url.searchParams.set('timeframe', tf);
 
-    const res = await fetch(url.toString(), { credentials: 'same-origin' });
+    const res = await fetch(url.toString(), {
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' },
+    });
 
     // Clear timeout on response
     if (timeoutId) clearTimeout(timeoutId);
@@ -269,7 +272,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const url = new URL(insightsUrl, window.location.origin);
       url.searchParams.set('timeframe', tf);
 
-      const res = await fetch(url.toString(), { credentials: 'same-origin' });
+      const res = await fetch(url.toString(), {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' },
+      });
       const isJson = (res.headers.get('content-type') || '').toLowerCase().includes('application/json');
       const payload = isJson ? await res.json() : {};
       if (!res.ok) {

@@ -509,6 +509,64 @@ def _quick_pulse(aid: int) -> dict:
     return out
 
 
+_INTEGRATION_META = [
+    ("ads",      "Google Ads",         "fa-brands fa-google",          "blue",   "Campaigns, spend & AI optimization",    "google_bp.ads_performance", "google_bp.connect_ads"),
+    ("ga",       "Analytics",          "fa-solid fa-chart-line",        "orange", "Website traffic, sessions & goals",     "google_bp.ga_ui",           "google_bp.connect_ga"),
+    ("gsc",      "Search Console",     "fa-solid fa-magnifying-glass",  "green",  "Keywords, rankings & indexing",         "google_bp.gsc_ui",          "google_bp.connect_search_console"),
+    ("gmb",      "Business Profile",   "fa-solid fa-location-dot",      "red",    "Reviews, listing & local visibility",   "gmb_bp.index",              "google_bp.connect_gmb"),
+    ("glsa",     "Local Services Ads", "fa-solid fa-shield-halved",     "indigo", "Local leads, cost per lead & disputes", "glsa_bp.dashboard",         "google_bp.connect_lsa"),
+    ("facebook", "Facebook Ads",       "fa-brands fa-facebook-f",       "blue",   "Lead gen & campaign performance",       None,                        None),
+    ("wp",       "WordPress",          "fa-brands fa-wordpress",        "sky",    "Content publishing & SEO automation",   "wp_bp.insights",            "wp_bp.settings"),
+    ("yelp",     "Yelp",               "fa-brands fa-yelp",             "red",    "Reviews & business listing",            None,                        None),
+]
+
+
+def _build_integrations(cards: dict) -> list:
+    """Build a pre-resolved integrations list for the dashboard template."""
+    from flask import current_app
+    rows = []
+    for key, label, icon, color, detail, manage_ep, connect_ep in _INTEGRATION_META:
+        card = cards.get(key, {})
+        is_on = bool(card.get("connected"))
+        is_soon = bool(card.get("coming_soon"))
+
+        manage_url = "#"
+        connect_url = card.get("connect_url") or "#"
+
+        if is_on and manage_ep:
+            try:
+                manage_url = url_for(manage_ep)
+            except Exception:
+                manage_url = "#"
+        elif not is_on and connect_ep:
+            try:
+                connect_url = url_for(connect_ep)
+            except Exception:
+                pass
+
+        last_sync_str = ""
+        ls = card.get("last_sync")
+        if ls:
+            try:
+                last_sync_str = ls.strftime("%b %-d")
+            except Exception:
+                pass
+
+        rows.append({
+            "key":          key,
+            "label":        label,
+            "icon":         icon,
+            "color":        color,
+            "detail":       detail,
+            "is_on":        is_on,
+            "is_soon":      is_soon,
+            "manage_url":   manage_url,
+            "connect_url":  connect_url,
+            "last_sync":    last_sync_str,
+        })
+    return rows
+
+
 # --------------------------- routes ---------------------------
 
 @account_bp.route("/", methods=["GET"], endpoint="account_index")
@@ -540,16 +598,18 @@ def dashboard():
                 if datetime.utcnow() - cache_time < timedelta(minutes=5):
                     current_app.logger.debug(f"Using cached dashboard for account {aid}")
                     # ai_warnings always computed fresh — reflects current config state
-                    ads_connected = cached.get("cards", {}).get("ads", {}).get("connected", False)
+                    cached_cards = cached.get("cards") or {}
+                    ads_connected = cached_cards.get("ads", {}).get("connected", False)
                     ai_warnings = _check_ai_requirements(aid, ads_connected)
                     return render_template(
                         "account/dashboard.html",
-                        cards=cached["cards"],
-                        card_order=cached["card_order"],
-                        is_paid=cached["is_paid"],
-                        connected_count=cached["connected_count"],
-                        total_count=cached["total_count"],
-                        connected_percent=cached["connected_percent"],
+                        cards=cached_cards,
+                        integrations=_build_integrations(cached_cards),
+                        card_order=cached.get("card_order", []),
+                        is_paid=cached.get("is_paid", False),
+                        connected_count=cached.get("connected_count", 0),
+                        total_count=cached.get("total_count", 8),
+                        connected_percent=cached.get("connected_percent", 0),
                         ai_warnings=ai_warnings,
                         pulse=_quick_pulse(aid),
                         user=g.user,
@@ -585,6 +645,7 @@ def dashboard():
     return render_template(
         "account/dashboard.html",
         cards=cards,
+        integrations=_build_integrations(cards),
         card_order=card_order,
         is_paid=is_paid,
         connected_count=connected_count,

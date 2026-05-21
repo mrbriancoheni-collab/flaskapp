@@ -469,6 +469,46 @@ def _connection_cards(aid: int) -> Dict[str, Dict[str, Any]]:
 
     return cards
 
+# --------------------------- pulse snapshot ---------------------------
+
+def _quick_pulse(aid: int) -> dict:
+    """Three fast aggregation queries for the dashboard snapshot banner."""
+    from datetime import datetime
+    now = datetime.utcnow()
+    ms = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    out = {"revenue": 0.0, "jobs": 0, "leads": 0, "spend": 0.0, "is_sample": False}
+    try:
+        with db.engine.connect() as conn:
+            r = conn.execute(text(
+                "SELECT COUNT(*), COALESCE(SUM(total_amount),0) FROM servicetitan_jobs "
+                "WHERE account_id=:aid AND completed_date>=:ms "
+                "AND job_status IN ('Completed','completed')"
+            ), {"aid": aid, "ms": ms}).fetchone()
+            if r and r[0]:
+                out["jobs"] = int(r[0])
+                out["revenue"] = float(r[1])
+    except Exception:
+        pass
+    try:
+        with db.engine.connect() as conn:
+            out["leads"] = int(conn.execute(text(
+                "SELECT COUNT(*) FROM lead_ingest WHERE account_id=:aid AND occurred_at>=:ms"
+            ), {"aid": aid, "ms": ms}).scalar() or 0)
+    except Exception:
+        pass
+    try:
+        with db.engine.connect() as conn:
+            out["spend"] = float(conn.execute(text(
+                "SELECT COALESCE(SUM(amount),0) FROM ad_spend "
+                "WHERE account_id=:aid AND spend_date>=:ms"
+            ), {"aid": aid, "ms": ms.date()}).scalar() or 0)
+    except Exception:
+        pass
+    if out["revenue"] == 0 and out["jobs"] == 0 and out["leads"] == 0:
+        out.update({"revenue": 27300.0, "jobs": 44, "leads": 84, "spend": 2610.0, "is_sample": True})
+    return out
+
+
 # --------------------------- routes ---------------------------
 
 @account_bp.route("/", methods=["GET"], endpoint="account_index")
@@ -511,6 +551,7 @@ def dashboard():
                         total_count=cached["total_count"],
                         connected_percent=cached["connected_percent"],
                         ai_warnings=ai_warnings,
+                        pulse=_quick_pulse(aid),
                         user=g.user,
                     )
             except (ValueError, TypeError, KeyError):
@@ -550,6 +591,7 @@ def dashboard():
         total_count=total_count,
         connected_percent=pct,
         ai_warnings=ai_warnings,
+        pulse=_quick_pulse(aid),
         user=g.user,
     )
 

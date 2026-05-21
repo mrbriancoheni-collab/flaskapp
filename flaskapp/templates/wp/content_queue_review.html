@@ -37,8 +37,14 @@
   <div class="bg-white rounded-xl border p-12 text-center text-gray-400">
     <i class="fa-solid fa-magnifying-glass-chart text-5xl mb-4"></i>
     <p class="font-medium">No recommendations yet.</p>
-    <p class="text-sm mt-1">Connect Google Search Console and wait for the weekly AI analysis to run (Sundays).</p>
-    <a href="{{ url_for('google_bp.index') }}" class="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm">Connect Google</a>
+    {% if gsc_connected %}
+    <p class="text-sm mt-1">Google Search Console is connected. Recommendations are generated weekly (Sundays) once enough search data has been collected.</p>
+    {% else %}
+    <p class="text-sm mt-1">Connect Google Search Console so FieldSprout can analyze your top pages and suggest content clusters.</p>
+    <a href="{{ url_for('google_bp.connect_gsc') }}" class="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm">
+      <i class="fa-brands fa-google"></i> Connect Google Search Console
+    </a>
+    {% endif %}
   </div>
   {% else %}
   <form method="POST">

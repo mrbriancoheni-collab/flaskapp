@@ -134,7 +134,10 @@ def _fetch_gmb_reviews(account_id: int) -> List[Dict[str, Any]]:
 def _fetch_yelp_reviews(account_id: int) -> List[Dict[str, Any]]:
     """Fetch Yelp reviews."""
     try:
-        from app.services.yelp_insights import get_recent_reviews as yelp_reviews
+        try:
+            from app.services.yelp_insights import get_recent_reviews as yelp_reviews
+        except ImportError:
+            return []
         raw = yelp_reviews(account_id) or []
         out = []
         for r in raw:
@@ -196,7 +199,7 @@ def _compute_stats(reviews: List[Dict[str, Any]]) -> Dict[str, Any]:
 def _generate_response_draft(review_text: str, rating: int, business_name: str = "us") -> str:
     """Generate an AI review response draft via OpenAI/Claude."""
     try:
-        from app.ai_clients import get_completion
+        from app.ai_clients import claude_response
         tone = "warm and grateful" if rating >= 4 else "empathetic and solution-focused"
         prompt = (
             f"You are a professional responding to a {rating}-star review for a local home services business. "
@@ -205,7 +208,7 @@ def _generate_response_draft(review_text: str, rating: int, business_name: str =
             f"Sign off with 'The {business_name} Team'.\n\n"
             f"Review: {review_text}"
         )
-        return get_completion(prompt, max_tokens=200)
+        return claude_response(prompt)
     except Exception:
         # Fallback templates
         if rating >= 4:

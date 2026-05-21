@@ -4,64 +4,61 @@
 {% block title %}Dashboard · {{ app_name }}{% endblock %}
 
 {% block content %}
-{% set ads_connected = cards.get('ads', {}).get('connected', False) %}
+{% set ads_connected = (cards or {}).get('ads', {}).get('connected', False) %}
 
 <div class="max-w-5xl mx-auto space-y-6">
 
   {# ── Greeting + This Month Snapshot ──────────────────────────────────────── #}
-  <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
-    <div class="flex items-stretch">
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="flex items-stretch min-h-[110px]">
 
       {# Left: greeting + numbers #}
       <div class="flex-1 px-6 py-5">
-        <div class="flex items-start justify-between gap-4">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-0.5">
-              This Month
-            </p>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-0.5">This Month</p>
             <h1 class="text-xl font-bold text-gray-900">
-              {% if user and user.name %}Hey {{ user.name.split()[0] }} —{% else %}Your Business{% endif %}
+              {% if user and user.name %}Hey {{ user.name.split()[0] }} —{% else %}Your Business —{% endif %}
               here's where things stand.
             </h1>
           </div>
           {% if has_endpoint('reports_bp.overview') %}
           <a href="{{ url_for('reports_bp.overview') }}"
-             class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-50 text-indigo-700 text-sm font-semibold hover:bg-indigo-100 transition whitespace-nowrap">
+             class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-50 text-indigo-700 text-sm font-semibold hover:bg-indigo-100 transition whitespace-nowrap flex-shrink-0">
             <i class="fa-solid fa-heart-pulse text-xs"></i>
             Full Business Pulse
           </a>
           {% endif %}
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-5 mt-5">
+        {% if pulse %}
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5">
           <div>
-            <div class="text-2xl font-black text-gray-900">
-              ${{ '{:,.0f}'.format(pulse.revenue) }}
-            </div>
-            <div class="text-xs text-gray-400 mt-0.5">revenue earned</div>
-            {% if pulse.is_sample %}<div class="text-xs text-amber-500 mt-0.5">sample</div>{% endif %}
+            <div class="text-2xl font-black text-gray-900">${{ '{:,.0f}'.format(pulse.get('revenue', 0) | float) }}</div>
+            <div class="text-xs text-gray-400 mt-0.5">revenue earned{% if pulse.get('is_sample') %} <span class="text-amber-500">(sample)</span>{% endif %}</div>
           </div>
           <div>
-            <div class="text-2xl font-black text-gray-900">{{ pulse.jobs }}</div>
+            <div class="text-2xl font-black text-gray-900">{{ pulse.get('jobs', 0) }}</div>
             <div class="text-xs text-gray-400 mt-0.5">jobs completed</div>
           </div>
           <div>
-            <div class="text-2xl font-black text-gray-900">{{ pulse.leads }}</div>
+            <div class="text-2xl font-black text-gray-900">{{ pulse.get('leads', 0) }}</div>
             <div class="text-xs text-gray-400 mt-0.5">leads came in</div>
           </div>
           <div>
-            <div class="text-2xl font-black text-gray-900">${{ '{:,.0f}'.format(pulse.spend) }}</div>
+            <div class="text-2xl font-black text-gray-900">${{ '{:,.0f}'.format(pulse.get('spend', 0) | float) }}</div>
             <div class="text-xs text-gray-400 mt-0.5">marketing spend</div>
           </div>
         </div>
+        {% endif %}
       </div>
 
-      {# Right: connections health pill #}
-      <div class="flex-shrink-0 flex flex-col items-center justify-center px-6 border-l bg-gray-50 gap-1 min-w-[88px]">
+      {# Right: connection count #}
+      <div class="flex-shrink-0 flex flex-col items-center justify-center px-6 border-l border-gray-100 bg-gray-50 gap-1 w-24">
         <div class="text-3xl font-black {% if connected_count == total_count %}text-green-600{% elif connected_count > 0 %}text-blue-600{% else %}text-gray-400{% endif %}">
-          {{ connected_count }}<span class="text-lg font-normal text-gray-300">/{{ total_count }}</span>
+          {{ connected_count }}<span class="text-base font-normal text-gray-300">/{{ total_count }}</span>
         </div>
-        <div class="text-xs text-gray-400 text-center leading-tight">integrations<br>connected</div>
+        <div class="text-xs text-gray-400 text-center leading-tight">connected</div>
       </div>
     </div>
   </div>
@@ -85,9 +82,7 @@
         <span>
           <span class="font-medium text-gray-800">{{ w.title }}</span>
           <span class="text-gray-600"> — {{ w.detail }}</span>
-          {% if w.fix_url %}
-          <a href="{{ w.fix_url }}" class="ml-1 text-indigo-600 hover:underline font-medium">{{ w.fix_label }}</a>
-          {% endif %}
+          {% if w.fix_url %}<a href="{{ w.fix_url }}" class="ml-1 text-indigo-600 hover:underline font-medium">{{ w.fix_label }}</a>{% endif %}
         </span>
       </li>
       {% endfor %}
@@ -96,17 +91,7 @@
   {% endif %}
 
   {# ── YOUR CONNECTIONS ─────────────────────────────────────────────────────── #}
-  {% set connection_meta = {
-    'ads':      {'icon': 'fa-brands fa-google',         'color': 'blue',   'label': 'Google Ads',          'detail': 'Campaigns, spend & AI optimization',       'manage': 'google_bp.ads_performance', 'connect': 'google_bp.connect_ads'},
-    'ga':       {'icon': 'fa-solid fa-chart-line',      'color': 'orange', 'label': 'Google Analytics',    'detail': 'Website traffic, sessions & goals',        'manage': 'google_bp.ga_ui',           'connect': 'google_bp.connect_ga'},
-    'gsc':      {'icon': 'fa-solid fa-magnifying-glass','color': 'green',  'label': 'Search Console',      'detail': 'Keywords, rankings & indexing',            'manage': 'google_bp.gsc_ui',          'connect': 'google_bp.connect_search_console'},
-    'gmb':      {'icon': 'fa-solid fa-location-dot',   'color': 'red',    'label': 'Business Profile',    'detail': 'Reviews, listing & local visibility',      'manage': 'gmb_bp.index',              'connect': 'google_bp.connect_gmb'},
-    'glsa':     {'icon': 'fa-solid fa-shield-halved',  'color': 'indigo', 'label': 'Local Services Ads',  'detail': 'Local leads, cost per lead & disputes',    'manage': 'glsa_bp.dashboard',         'connect': 'google_bp.connect_lsa'},
-    'facebook': {'icon': 'fa-brands fa-facebook-f',    'color': 'blue',   'label': 'Facebook Ads',        'detail': 'Lead gen & campaign performance',          'manage': None,                        'connect': None},
-    'wp':       {'icon': 'fa-brands fa-wordpress',     'color': 'sky',    'label': 'WordPress',           'detail': 'Content publishing & SEO automation',      'manage': 'wp_bp.insights',            'connect': 'wp_bp.settings'},
-    'yelp':     {'icon': 'fa-brands fa-yelp',          'color': 'red',    'label': 'Yelp',                'detail': 'Reviews & business listing (coming soon)', 'manage': None,                        'connect': None},
-  } %}
-
+  {% if integrations %}
   <div>
     <div class="flex items-center justify-between mb-3">
       <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Your Connections</h2>
@@ -114,92 +99,58 @@
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-      {% for key in ['ads', 'ga', 'gsc', 'gmb', 'glsa', 'facebook', 'wp', 'yelp'] %}
-        {% set card = cards.get(key, {}) %}
-        {% set meta = connection_meta.get(key, {}) %}
-        {% set is_on = card.get('connected', False) %}
-        {% set is_soon = card.get('coming_soon', False) %}
+      {% for itg in integrations %}
+      <div class="bg-white rounded-xl border shadow-sm p-4 flex items-start gap-3
+           {{ 'opacity-50' if itg.is_soon else '' }}
+           {{ 'border-gray-200' if itg.is_on else 'border-dashed border-gray-200' }}
+           hover:shadow-md transition-shadow">
 
-        {# resolve manage / connect URLs safely #}
-        {% set manage_url = '#' %}
-        {% set connect_url = card.get('connect_url') or '#' %}
-        {% if is_on and meta.get('manage') %}
-          {% if has_endpoint(meta.manage) %}
-            {% set manage_url = url_for(meta.manage) %}
-          {% endif %}
-        {% elif not is_on and meta.get('connect') %}
-          {% if has_endpoint(meta.connect) %}
-            {% set connect_url = url_for(meta.connect) %}
-          {% endif %}
-        {% endif %}
+        <div class="flex-shrink-0 w-10 h-10 rounded-xl bg-{{ itg.color }}-100 flex items-center justify-center">
+          <i class="{{ itg.icon }} text-{{ itg.color }}-600 text-base"></i>
+        </div>
 
-        <div class="bg-white rounded-xl border shadow-sm p-4 flex items-start gap-3
-             {{ 'opacity-50' if is_soon else '' }}
-             {{ 'border-gray-200' if is_on else 'border-dashed border-gray-200' }}
-             hover:shadow-md transition-shadow">
-
-          {# Icon #}
-          <div class="flex-shrink-0 w-10 h-10 rounded-xl
-               bg-{{ meta.get('color','gray') }}-100
-               flex items-center justify-center">
-            <i class="{{ meta.get('icon','fa-solid fa-plug') }}
-               text-{{ meta.get('color','gray') }}-600 text-base"></i>
-          </div>
-
-          {# Body #}
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 mb-0.5">
-              <span class="text-sm font-semibold text-gray-900">{{ meta.get('label', card.get('name','')) }}</span>
-              {% if is_soon %}
-                <span class="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded font-medium">Soon</span>
-              {% elif is_on %}
-                {# ON indicator #}
-                <span class="inline-flex items-center gap-1 text-xs font-semibold text-green-700
-                     bg-green-100 px-2 py-0.5 rounded-full">
-                  <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>On
-                </span>
-              {% else %}
-                {# OFF indicator #}
-                <span class="inline-flex items-center gap-1 text-xs font-medium text-gray-400
-                     bg-gray-100 px-2 py-0.5 rounded-full">
-                  <span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>Off
-                </span>
-              {% endif %}
-            </div>
-            <p class="text-xs text-gray-500 leading-snug">{{ meta.get('detail','') }}</p>
-            {% if is_on and card.get('last_sync') %}
-              <p class="text-xs text-gray-300 mt-1">Synced {{ card.last_sync.strftime('%b %-d') }}</p>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-0.5 flex-wrap">
+            <span class="text-sm font-semibold text-gray-900">{{ itg.label }}</span>
+            {% if itg.is_soon %}
+              <span class="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded font-medium">Soon</span>
+            {% elif itg.is_on %}
+              <span class="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>On
+              </span>
+            {% else %}
+              <span class="inline-flex items-center gap-1 text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>Off
+              </span>
             {% endif %}
           </div>
-
-          {# CTA button #}
-          {% if not is_soon %}
-            {% if is_on %}
-              <a href="{{ manage_url }}"
-                 class="flex-shrink-0 self-center text-xs font-semibold text-indigo-600
-                        hover:text-indigo-800 whitespace-nowrap mt-0.5">
-                Manage →
-              </a>
-            {% elif connect_url != '#' %}
-              <a href="{{ connect_url }}"
-                 class="flex-shrink-0 self-center text-xs font-semibold text-white
-                        bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg
-                        transition whitespace-nowrap">
-                Connect
-              </a>
-            {% endif %}
+          <p class="text-xs text-gray-500 leading-snug">{{ itg.detail }}</p>
+          {% if itg.is_on and itg.last_sync %}
+            <p class="text-xs text-gray-300 mt-1">Synced {{ itg.last_sync }}</p>
           {% endif %}
         </div>
+
+        {% if not itg.is_soon %}
+          {% if itg.is_on %}
+            <a href="{{ itg.manage_url }}" class="flex-shrink-0 self-center text-xs font-semibold text-indigo-600 hover:text-indigo-800 whitespace-nowrap">Manage →</a>
+          {% elif itg.connect_url != '#' %}
+            <a href="{{ itg.connect_url }}" class="flex-shrink-0 self-center text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg transition whitespace-nowrap">Connect</a>
+          {% endif %}
+        {% endif %}
+      </div>
       {% endfor %}
     </div>
   </div>
+  {% endif %}
 
-  {# ── Google Ads KPIs (async, only if connected) ───────────────────────────── #}
+  {# ── Google Ads KPIs ──────────────────────────────────────────────────────── #}
   {% if ads_connected %}
   <div>
     <div class="flex items-center justify-between mb-3">
       <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Google Ads This Month</h2>
+      {% if has_endpoint('google_bp.ads_performance') %}
       <a href="{{ url_for('google_bp.ads_performance') }}" class="text-xs text-indigo-600 hover:text-indigo-700 font-medium">Full report →</a>
+      {% endif %}
     </div>
     <div id="kpiStrip" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
       {% for _ in range(4) %}
@@ -213,15 +164,15 @@
     <div id="kpiFooter" class="mt-2 hidden bg-white rounded-xl border shadow-sm px-5 py-3 flex items-center justify-between gap-4 text-sm"></div>
   </div>
 
-  {# ── Opportunities + Automation ───────────────────────────────────────────── #}
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
     <div class="lg:col-span-2">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
           <i class="fa-solid fa-bolt text-amber-500"></i> Top Opportunities
         </h2>
+        {% if has_endpoint('ads_grader_bp.quick_wins_dashboard') %}
         <a href="{{ url_for('ads_grader_bp.quick_wins_dashboard') }}" class="text-xs text-indigo-600 font-medium">View all →</a>
+        {% endif %}
       </div>
       <div id="quickWinsContainer" class="space-y-3">
         {% for _ in range(3) %}
@@ -243,7 +194,9 @@
           <span class="w-2 h-2 rounded-full bg-gray-300" id="autonomousDot"></span>
           Automation
         </h2>
+        {% if has_endpoint('autonomous_bp.control_panel') %}
         <a href="{{ url_for('autonomous_bp.control_panel') }}" class="text-xs text-indigo-600 font-medium">Configure →</a>
+        {% endif %}
       </div>
       <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
         <div id="autonomousStatusBody" class="p-4">
@@ -261,12 +214,14 @@
             </li>
           </ul>
         </div>
+        {% if has_endpoint('autonomous_bp.control_panel') %}
         <div class="px-4 py-3 border-t">
           <a href="{{ url_for('autonomous_bp.control_panel') }}"
              class="block text-center text-xs py-1.5 px-3 rounded-lg border border-indigo-200 text-indigo-600 hover:bg-indigo-50 font-medium transition">
             Open Control Panel
           </a>
         </div>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -288,7 +243,8 @@ function showToast(msg, kind) {
   setTimeout(() => t.remove(), 4000);
 }
 
-// ── KPI Strip ────────────────────────────────────────────────────────────────
+{% if ads_connected %}
+// ── KPI Strip ──────────────────────────────────────────────────────────────
 (function loadKpis() {
   const strip  = document.getElementById('kpiStrip');
   const footer = document.getElementById('kpiFooter');
@@ -320,7 +276,7 @@ function showToast(msg, kind) {
     .then(d => {
       if (!d || d.error || (!d.spend_dollars && !d.clicks && !d.impressions)) {
         strip.innerHTML = `<div class="col-span-4 bg-white rounded-xl border shadow-sm p-5 text-center text-sm text-gray-500">
-          No spend data yet this month. <a href="{{ url_for('google_bp.ads_performance') }}" class="text-indigo-600 hover:underline">View campaigns →</a>
+          No spend data yet this month. {% if has_endpoint('google_bp.ads_performance') %}<a href="{{ url_for('google_bp.ads_performance') }}" class="text-indigo-600 hover:underline">View campaigns →</a>{% endif %}
         </div>`;
         return;
       }
@@ -335,17 +291,17 @@ function showToast(msg, kind) {
         footer.innerHTML = `<div class="text-xs text-gray-400">Top campaign</div>
           <div class="font-semibold text-gray-800 truncate flex-1 mx-3">${d.best_campaign.name}</div>
           <div class="text-xs text-gray-400 shrink-0">${d.best_campaign.conversions} conversions</div>
-          <a href="{{ url_for('google_bp.ads_performance') }}" class="text-xs text-indigo-600 font-medium hover:underline shrink-0 ml-4">View →</a>`;
+          {% if has_endpoint('google_bp.ads_performance') %}<a href="{{ url_for('google_bp.ads_performance') }}" class="text-xs text-indigo-600 font-medium hover:underline shrink-0 ml-4">View →</a>{% endif %}`;
       }
     })
     .catch(() => {
       strip.innerHTML = `<div class="col-span-4 bg-white rounded-xl border shadow-sm p-5 text-center text-sm text-gray-400">
-        Stats unavailable. <a href="{{ url_for('google_bp.ads_performance') }}" class="text-indigo-600 hover:underline">Open Google Ads →</a>
+        Stats unavailable. {% if has_endpoint('google_bp.ads_performance') %}<a href="{{ url_for('google_bp.ads_performance') }}" class="text-indigo-600 hover:underline">Open Google Ads →</a>{% endif %}
       </div>`;
     });
 })();
 
-// ── Quick Wins ───────────────────────────────────────────────────────────────
+// ── Quick Wins ──────────────────────────────────────────────────────────────
 (function loadQuickWins() {
   const container = document.getElementById('quickWinsContainer');
   if (!container) return;
@@ -370,7 +326,7 @@ function showToast(msg, kind) {
           <div class="text-green-500 text-2xl mb-2">✓</div>
           <p class="text-sm font-semibold text-gray-800 mb-1">Campaigns look healthy</p>
           <p class="text-xs text-gray-500 mb-4">No critical issues detected.</p>
-          <a href="{{ url_for('ads_grader_bp.quick_wins_dashboard') }}" class="inline-block px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition text-sm">Run Full Grader →</a>
+          {% if has_endpoint('ads_grader_bp.quick_wins_dashboard') %}<a href="{{ url_for('ads_grader_bp.quick_wins_dashboard') }}" class="inline-block px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition text-sm">Run Full Grader →</a>{% endif %}
         </div>`;
         return;
       }
@@ -395,11 +351,11 @@ function showToast(msg, kind) {
             </div>
           </div>
         </div>`;
-      }).join('') + `<div class="text-right"><a href="{{ url_for('ads_grader_bp.quick_wins_dashboard') }}" class="text-xs text-indigo-600 font-medium">See full report →</a></div>`;
+      }).join('') + `{% if has_endpoint('ads_grader_bp.quick_wins_dashboard') %}<div class="text-right"><a href="{{ url_for('ads_grader_bp.quick_wins_dashboard') }}" class="text-xs text-indigo-600 font-medium">See full report →</a></div>{% endif %}`;
     })
     .catch(() => {
       container.innerHTML = `<div class="bg-white rounded-xl border shadow-sm p-4 text-center text-sm text-gray-400">
-        <a href="{{ url_for('ads_grader_bp.quick_wins_dashboard') }}" class="text-indigo-600 hover:underline">View Quick Wins →</a>
+        {% if has_endpoint('ads_grader_bp.quick_wins_dashboard') %}<a href="{{ url_for('ads_grader_bp.quick_wins_dashboard') }}" class="text-indigo-600 hover:underline">View Quick Wins →</a>{% endif %}
       </div>`;
     });
 })();
@@ -420,9 +376,9 @@ function showToast(msg, kind) {
   };
   const DEFAULT_ICON = { bg: 'bg-green-100', text: 'text-green-600', symbol: '✓' };
 
+  {% if has_endpoint('autonomous_bp.summary_json') %}
   const sumCtrl = new AbortController();
   setTimeout(() => sumCtrl.abort(), 12000);
-
   fetch('{{ url_for("autonomous_bp.summary_json") }}', {signal: sumCtrl.signal})
     .then(r => r.ok ? r.json() : null)
     .then(data => {
@@ -437,10 +393,11 @@ function showToast(msg, kind) {
         : 'w-2 h-2 rounded-full bg-gray-300';
     })
     .catch(() => { if (body) body.innerHTML = '<p class="text-xs text-gray-400 text-center py-3">Unavailable</p>'; });
+  {% endif %}
 
+  {% if has_endpoint('autonomous_bp.feed_json') %}
   const feedCtrl = new AbortController();
   setTimeout(() => feedCtrl.abort(), 12000);
-
   fetch('{{ url_for("autonomous_bp.feed_json") }}?limit=5', {signal: feedCtrl.signal})
     .then(r => r.ok ? r.json() : [])
     .then(items => {
@@ -467,7 +424,9 @@ function showToast(msg, kind) {
       }).join('');
     })
     .catch(() => { if (feedList) feedList.innerHTML = '<li class="px-4 py-3 text-xs text-gray-400 text-center">Could not load.</li>'; });
+  {% endif %}
 })();
+{% endif %}
 
 function upgradeToAnnual() {
   const priceId = '{{ config.STRIPE_YEARLY_PRICE_ID }}';
@@ -488,7 +447,6 @@ function upgradeToAnnual() {
   })
   .catch(() => { showToast('Failed to start checkout. Please contact support.', 'error'); button.disabled = false; button.innerHTML = orig; });
 }
-
 function showPricingDetails() { window.location.href = '/#pricing'; }
 </script>
 {% endblock %}

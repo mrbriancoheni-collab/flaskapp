@@ -1131,6 +1131,31 @@ def run_now():
         flash(result.get("error") or "Failed to process jobs.", "error")
     return see_other("wp_bp.publisher")
 
+
+@wp_bp.route("/publisher/clear-errors", methods=["POST"], endpoint="clear_errors")
+@login_required
+def clear_errors():
+    """Directly dismiss all error jobs for the current site — no retry."""
+    site = _current_site()
+    if not site:
+        flash("No WordPress site configured.", "error")
+        return see_other("wp_bp.publisher")
+    try:
+        with db.engine.begin() as conn:
+            r = conn.execute(
+                text(
+                    "UPDATE wp_jobs SET status='done', last_error=NULL, updated_at=NOW() "
+                    "WHERE site_id=:sid AND status='error'"
+                ),
+                {"sid": site.id},
+            )
+            count = r.rowcount
+        flash(f"Cleared {count} error job(s).", "success")
+    except Exception as e:
+        current_app.logger.exception("clear_errors failed")
+        flash(f"Could not clear errors: {e}", "error")
+    return see_other("wp_bp.publisher")
+
 @wp_bp.route("/analyze", methods=["GET", "POST"], endpoint="analyze")
 @login_required
 def analyze():

@@ -1803,13 +1803,10 @@ def tech_seo():
     return render_template("wp/tech_seo.html", site=site, result=result)
 
 
-@wp_bp.route("/seo-audit", methods=["GET", "POST"], endpoint="seo_audit")
+@wp_bp.route("/seo-audit", methods=["GET"], endpoint="seo_audit")
 @login_required
 def seo_audit():
     site = _current_site()
-    result = None
-
-    # Fetch published posts AND pages for the dropdown (best-effort)
     wp_posts = []
     if site:
         try:
@@ -1819,29 +1816,30 @@ def seo_audit():
                 title = (p.get("title") or {}).get("rendered") or f"{kind.title()} {p.get('id')}"
                 return {"id": p.get("id"), "title": title, "link": p.get("link", ""), "kind": kind}
 
-            posts = [_to_item(p, "post") for p in (c.list_posts(per_page=100, status="publish") or []) if p.get("link")]
             pages = [_to_item(p, "page") for p in (c.list_pages(per_page=100) or []) if p.get("link")]
-            # Group: pages first (usually higher SEO value), then posts
+            posts = [_to_item(p, "post") for p in (c.list_posts(per_page=100, status="publish") or []) if p.get("link")]
             wp_posts = pages + posts
         except Exception:
-            current_app.logger.debug("seo_audit: could not fetch WP posts/pages for dropdown")
+            current_app.logger.debug("seo_audit: could not fetch WP posts/pages")
+    return render_template("wp/seo_audit.html", site=site, wp_posts=wp_posts)
 
-    if request.method == "POST":
-        url = (request.form.get("url") or "").strip()
-        keyword = (request.form.get("keyword") or "").strip()
-        if not url:
-            flash("URL is required.", "error")
-            return see_other("wp_bp.seo_audit")
-        try:
-            from app.wp.seo_audit import audit_url
-            result = audit_url(url, keyword)
-            if result.get("error"):
-                flash(result["error"], "error")
-                result = None
-        except Exception:
-            current_app.logger.exception("SEO audit failed")
-            flash("Audit failed — please try again.", "error")
-    return render_template("wp/seo_audit.html", result=result, site=site, wp_posts=wp_posts)
+
+@wp_bp.route("/seo-audit/scan", methods=["GET"], endpoint="seo_audit_scan")
+@login_required
+def seo_audit_scan():
+    """AJAX endpoint — audit a single URL and return JSON."""
+    from flask import jsonify
+    url = (request.args.get("url") or "").strip()
+    keyword = (request.args.get("keyword") or "").strip()
+    if not url:
+        return jsonify({"error": "url required"}), 400
+    try:
+        from app.wp.seo_audit import audit_url
+        result = audit_url(url, keyword)
+        return jsonify(result)
+    except Exception:
+        current_app.logger.exception("SEO audit scan failed for %s", url)
+        return jsonify({"error": "Audit failed"}), 500
 
 
 @wp_bp.route("/seo-audit/ai-review", methods=["GET", "POST"], endpoint="seo_audit_review")

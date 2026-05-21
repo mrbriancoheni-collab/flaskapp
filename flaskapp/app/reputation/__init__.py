@@ -263,3 +263,421 @@ def draft_response():
     rating = int(data.get("rating", 5))
     draft = _generate_response_draft(review_text, rating)
     return jsonify({"draft": draft})
+
+
+@reputation_bp.route("/account/reputation/respond", methods=["POST"])
+@_login_required
+def respond_to_review():
+    """
+    Submit a response to a review via GMB or Yelp API.
+
+    Accepts JSON: {"review_id": "...", "source": "google"|"yelp", "response_text": "..."}
+    """
+    aid = _current_account_id()
+    data = request.get_json(silent=True) or {}
+    review_id = (data.get("review_id") or "").strip()
+    source = (data.get("source") or "").lower()
+    response_text = (data.get("response_text") or "").strip()
+
+    if not review_id or not source or not response_text:
+        return jsonify({"ok": False, "error": "review_id, source, and response_text are required"}), 400
+
+    if source == "google":
+        # GMB API posting is not yet available — inform the user clearly
+        return jsonify({
+            "ok": False,
+            "error": (
+                "GMB API posting is not yet available — copy and paste your response "
+                "into Google Business Profile directly at https://business.google.com"
+            ),
+        })
+    elif source == "yelp":
+        # Yelp Partner API does not permit third-party response posting.
+        # Store the draft locally so the user can copy-paste it.
+        try:
+            from app.models_tooling import ReviewRequest
+            local = ReviewRequest(
+                account_id=aid,
+                channel="email",      # not a real send — used as storage
+                recipient="yelp_local",
+                status="queued",
+                payload={
+                    "type": "yelp_response_draft",
+                    "review_id": review_id,
+                    "response_text": response_text,
+                },
+            )
+            db.session.add(local)
+            db.session.commit()
+        except Exception:
+            log.exception("Failed to store Yelp response draft for account %s", aid)
+
+        return jsonify({
+            "ok": False,
+            "error": (
+                "Yelp's API does not allow third-party review responses. "
+                "Your response draft has been saved — please log in to Yelp for Business "
+                "and post it directly."
+            ),
+        })
+    else:
+        return jsonify({"ok": False, "error": f"Unknown source: {source}"}), 400
+
+
+# ── Review Request helpers ─────────────────────────────────────────────────────
+
+def _get_business_name(account_id: int) -> str:
+    """Return the business name from business_profiles, falling back to a generic default."""
+    try:
+        from app.models import BusinessProfile
+        profile = BusinessProfile.query.filter_by(account_id=account_id).first()
+        if profile and profile.business_name:
+            return profile.business_name
+    except Exception:
+        pass
+    return "Your Service Team"
+
+
+def _send_review_request_email(req) -> bool:
+    """
+    Build and send a branded review-request email to the customer.
+
+    Marks req.status = 'sent' or 'failed' and sets req.sent_at on success.
+    Returns True on success, False on failure.
+    """
+    try:
+        from app.services.email_service import send_email
+
+        business_name = _get_business_name(req.account_id)
+        customer_name = req.customer_name or "Valued Customer"
+        job_type = req.job_type or "your recent service"
+        google_url = req.review_link_google or ""
+        yelp_url = req.review_link_yelp or ""
+
+        # Build review link buttons
+        btn_style = (
+            "display:inline-block;padding:12px 24px;border-radius:6px;"
+            "font-size:15px;font-weight:600;text-decoration:none;color:#ffffff;"
+        )
+        google_btn = (
+            f'<a href="{google_url}" style="{btn_style}background:#4285F4;" target="_blank">'
+            f'&#9733; Review us on Google</a>'
+            if google_url else ""
+        )
+        yelp_btn = (
+            f'<a href="{yelp_url}" style="{btn_style}background:#d32323;margin-left:12px;" target="_blank">'
+            f'&#9733; Review us on Yelp</a>'
+            if yelp_url else ""
+        )
+        review_buttons = google_btn + yelp_btn
+
+        html_body = f"""
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1f2937;">
+  <h2 style="color:#1f2937;margin-bottom:4px;">How did we do, {customer_name}?</h2>
+  <p style="color:#6b7280;margin-top:0;">Thank you for choosing <strong>{business_name}</strong>
+     for {job_type}.</p>
+  <p>We'd love to hear about your experience! Your feedback helps us continue providing
+     excellent service and helps other homeowners find us.</p>
+  <p>If you have a moment, please leave us a quick review:</p>
+  <div style="text-align:center;margin:32px 0;">
+    {review_buttons}
+  </div>
+  <p style="color:#9ca3af;font-size:13px;">
+    It only takes 60 seconds and makes a huge difference for our small business. Thank you!
+  </p>
+  <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
+  <p style="color:#9ca3af;font-size:12px;">
+    — The {business_name} Team
+  </p>
+</body>
+</html>
+"""
+        text_body = (
+            f"Hi {customer_name},\n\n"
+            f"Thank you for choosing {business_name} for {job_type}.\n\n"
+            f"We'd love to hear about your experience! Please leave us a quick review:\n"
+        )
+        if google_url:
+            text_body += f"  Google: {google_url}\n"
+        if yelp_url:
+            text_body += f"  Yelp: {yelp_url}\n"
+        text_body += f"\nThank you!\n— The {business_name} Team"
+
+        subject = f"How did we do, {customer_name}?"
+        ok = send_email(
+            to=req.recipient,
+            subject=subject,
+            html_body=html_body,
+            text_body=text_body,
+            from_name=business_name,
+        )
+
+        if ok:
+            req.status = "sent"
+            req.sent_at = datetime.utcnow()
+        else:
+            req.status = "failed"
+
+        db.session.commit()
+        return ok
+
+    except Exception:
+        log.exception("_send_review_request_email failed for ReviewRequest id=%s", getattr(req, "id", None))
+        try:
+            req.status = "failed"
+            db.session.commit()
+        except Exception:
+            pass
+        return False
+
+
+def _auto_queue_review_requests(aid: int) -> int:
+    """
+    Find all ServiceTitan jobs with status='Completed' in the last 24 hours for this
+    account, create a ReviewRequest for any that don't already have one, and send
+    the email immediately.
+
+    Returns the count of new requests sent.
+    """
+    sent_count = 0
+    try:
+        from app.models import ServiceTitanJob, ServiceTitanCustomer
+        from app.models_tooling import ReviewRequest, LeadIntakeConfig
+
+        cutoff = datetime.utcnow() - timedelta(hours=24)
+
+        recent_jobs = (
+            ServiceTitanJob.query
+            .filter(
+                ServiceTitanJob.account_id == aid,
+                ServiceTitanJob.job_status == "Completed",
+                ServiceTitanJob.completed_date >= cutoff,
+            )
+            .all()
+        )
+
+        if not recent_jobs:
+            return 0
+
+        # Load review links from account config
+        config = LeadIntakeConfig.query.filter_by(account_id=aid).first()
+        google_url = config.review_link_google if config else None
+        yelp_url = config.review_link_yelp if config else None
+
+        for job in recent_jobs:
+            try:
+                # Check if we already sent a review request for this job
+                existing = ReviewRequest.query.filter(
+                    ReviewRequest.account_id == aid,
+                    ReviewRequest.payload.op("->>")(db.literal_column("'st_job_id'")) == str(job.st_job_id),
+                ).first()
+                if existing:
+                    continue
+
+                # Look up the customer
+                customer = None
+                if job.st_customer_id:
+                    customer = ServiceTitanCustomer.query.filter_by(
+                        account_id=aid,
+                        st_customer_id=job.st_customer_id,
+                    ).first()
+
+                if not customer or not customer.email:
+                    log.debug(
+                        "_auto_queue_review_requests: skipping job %s (no customer email)",
+                        job.st_job_id,
+                    )
+                    continue
+
+                req = ReviewRequest(
+                    account_id=aid,
+                    channel="email",
+                    recipient=customer.email,
+                    customer_name=customer.name,
+                    job_type=job.job_type_name or "your recent service",
+                    status="queued",
+                    review_link_google=google_url,
+                    review_link_yelp=yelp_url,
+                    payload={"st_job_id": str(job.st_job_id)},
+                )
+                db.session.add(req)
+                db.session.flush()  # get req.id before sending
+
+                ok = _send_review_request_email(req)
+                if ok:
+                    sent_count += 1
+                    log.info(
+                        "_auto_queue_review_requests: sent review request to %s (job %s)",
+                        customer.email, job.st_job_id,
+                    )
+
+            except Exception:
+                log.exception(
+                    "_auto_queue_review_requests: failed for job %s (account %s)",
+                    getattr(job, "st_job_id", "?"), aid,
+                )
+
+        db.session.commit()
+
+    except Exception:
+        log.exception("_auto_queue_review_requests outer failure for account %s", aid)
+
+    return sent_count
+
+
+# ── Review Request routes ──────────────────────────────────────────────────────
+
+@reputation_bp.route("/account/reputation/requests")
+@_login_required
+def review_requests_list():
+    """List recent ReviewRequest records for the current account."""
+    from app.models_tooling import ReviewRequest
+    aid = _current_account_id()
+    requests_qs = (
+        ReviewRequest.query
+        .filter_by(account_id=aid)
+        .order_by(ReviewRequest.created_at.desc())
+        .limit(100)
+        .all()
+    )
+    return jsonify([
+        {
+            "id": r.id,
+            "customer_name": r.customer_name,
+            "recipient": r.recipient,
+            "job_type": r.job_type,
+            "status": r.status,
+            "channel": r.channel,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "sent_at": r.sent_at.isoformat() if r.sent_at else None,
+        }
+        for r in requests_qs
+    ])
+
+
+@reputation_bp.route("/account/reputation/requests/send", methods=["POST"])
+@_login_required
+def send_review_request():
+    """
+    Create and immediately send a single review request.
+
+    Accepts form fields: customer_name, email, job_type, google_url, yelp_url
+    Returns JSON {"ok": true, "id": <int>}
+    """
+    from app.models_tooling import ReviewRequest
+
+    aid = _current_account_id()
+    customer_name = (request.form.get("customer_name") or "").strip()
+    email = (request.form.get("email") or "").strip()
+    job_type = (request.form.get("job_type") or "").strip()
+    google_url = (request.form.get("google_url") or "").strip() or None
+    yelp_url = (request.form.get("yelp_url") or "").strip() or None
+
+    if not email:
+        return jsonify({"ok": False, "error": "email is required"}), 400
+
+    try:
+        req = ReviewRequest(
+            account_id=aid,
+            channel="email",
+            recipient=email,
+            customer_name=customer_name or None,
+            job_type=job_type or None,
+            status="queued",
+            review_link_google=google_url,
+            review_link_yelp=yelp_url,
+        )
+        db.session.add(req)
+        db.session.flush()
+
+        _send_review_request_email(req)
+
+        db.session.commit()
+        return jsonify({"ok": True, "id": req.id})
+    except Exception:
+        log.exception("send_review_request failed for account %s", aid)
+        return jsonify({"ok": False, "error": "Failed to send review request"}), 500
+
+
+@reputation_bp.route("/account/reputation/requests/bulk-send", methods=["POST"])
+@_login_required
+def bulk_send_review_requests():
+    """
+    Send review requests to all eligible ServiceTitan customers who completed jobs
+    in the last 30 days and haven't already received a review request.
+
+    Returns JSON {"ok": true, "sent": <int>}
+    """
+    aid = _current_account_id()
+    sent_count = 0
+
+    try:
+        from app.models import ServiceTitanJob, ServiceTitanCustomer
+        from app.models_tooling import ReviewRequest, LeadIntakeConfig
+
+        cutoff = datetime.utcnow() - timedelta(days=30)
+
+        recent_jobs = (
+            ServiceTitanJob.query
+            .filter(
+                ServiceTitanJob.account_id == aid,
+                ServiceTitanJob.job_status == "Completed",
+                ServiceTitanJob.completed_date >= cutoff,
+            )
+            .all()
+        )
+
+        config = LeadIntakeConfig.query.filter_by(account_id=aid).first()
+        google_url = config.review_link_google if config else None
+        yelp_url = config.review_link_yelp if config else None
+
+        for job in recent_jobs:
+            try:
+                existing = ReviewRequest.query.filter(
+                    ReviewRequest.account_id == aid,
+                    ReviewRequest.payload.op("->>")(db.literal_column("'st_job_id'")) == str(job.st_job_id),
+                ).first()
+                if existing:
+                    continue
+
+                customer = None
+                if job.st_customer_id:
+                    customer = ServiceTitanCustomer.query.filter_by(
+                        account_id=aid,
+                        st_customer_id=job.st_customer_id,
+                    ).first()
+
+                if not customer or not customer.email:
+                    continue
+
+                req = ReviewRequest(
+                    account_id=aid,
+                    channel="email",
+                    recipient=customer.email,
+                    customer_name=customer.name,
+                    job_type=job.job_type_name or "your recent service",
+                    status="queued",
+                    review_link_google=google_url,
+                    review_link_yelp=yelp_url,
+                    payload={"st_job_id": str(job.st_job_id)},
+                )
+                db.session.add(req)
+                db.session.flush()
+
+                ok = _send_review_request_email(req)
+                if ok:
+                    sent_count += 1
+
+            except Exception:
+                log.exception("bulk_send: failed for job %s", getattr(job, "st_job_id", "?"))
+
+        db.session.commit()
+
+    except Exception:
+        log.exception("bulk_send_review_requests failed for account %s", aid)
+        return jsonify({"ok": False, "error": "Bulk send failed"}), 500
+
+    return jsonify({"ok": True, "sent": sent_count})

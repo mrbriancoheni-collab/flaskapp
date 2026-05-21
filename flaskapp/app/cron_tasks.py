@@ -127,6 +127,18 @@ def run_daily(app, db):
     except Exception:
         app.logger.exception("[CRON] Daily content queue failed")
 
+    # Auto review requests: send to customers who completed jobs in the last 24 hours
+    try:
+        from app.reputation import _auto_queue_review_requests
+        from app.models import Account
+        accounts = Account.query.filter_by(status='active').all()
+        total_sent = 0
+        for acct in accounts:
+            total_sent += _auto_queue_review_requests(acct.id)
+        app.logger.info("[CRON] Auto review requests: sent %d request(s) across %d account(s)", total_sent, len(accounts))
+    except Exception:
+        app.logger.exception("[CRON] Auto review requests failed")
+
 
 # =========================
 # WordPress job runner

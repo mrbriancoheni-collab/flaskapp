@@ -858,6 +858,19 @@ def settings():
 
             db.session.commit()
             flash("Saved WordPress settings.", "success")
+
+            # Auto-test connection immediately after saving
+            try:
+                _pw = pw if pw and pw != "********" else site.app_password
+                c = WPClient(base, user, _pw)
+                res = c.auth_check()
+                if res.get("ok"):
+                    flash(f"Connection verified — WordPress is reachable.", "success")
+                else:
+                    flash(f"Saved, but connection test failed: {res.get('error', 'could not verify')}. Check your credentials.", "warning")
+            except Exception as _te:
+                flash(f"Saved, but connection test failed: {_te}", "warning")
+
         except OperationalError:
             current_app.logger.exception("Saving WPSite failed (schema mismatch).")
             flash("Database schema is out of date for WordPress settings. Please run the migration to add wp_sites.account_id (you can keep using env vars meanwhile).", "error")
@@ -1135,6 +1148,9 @@ def run_now():
         max_jobs = 5
 
     result = _process_queue(max_jobs=max(max_jobs, 20), retry_errors=True)
+    is_ajax = "application/json" in (request.accept_mimetypes.best or "")
+    if is_ajax:
+        return jsonify(result)
     if result.get("ok"):
         flash(f"Processed {result.get('processed', 0)} job(s).", "success")
     else:
@@ -1804,13 +1820,10 @@ def tech_seo():
     return render_template("wp/tech_seo.html", site=site, result=result)
 
 
-@wp_bp.route("/seo-audit", methods=["GET", "POST"], endpoint="seo_audit")
+@wp_bp.route("/seo-audit", methods=["GET"], endpoint="seo_audit")
 @login_required
 def seo_audit():
     site = _current_site()
-    result = None
-
-    # Fetch published posts AND pages for the dropdown (best-effort)
     wp_posts = []
     if site:
         try:
@@ -1820,29 +1833,30 @@ def seo_audit():
                 title = (p.get("title") or {}).get("rendered") or f"{kind.title()} {p.get('id')}"
                 return {"id": p.get("id"), "title": title, "link": p.get("link", ""), "kind": kind}
 
-            posts = [_to_item(p, "post") for p in (c.list_posts(per_page=100, status="publish") or []) if p.get("link")]
             pages = [_to_item(p, "page") for p in (c.list_pages(per_page=100) or []) if p.get("link")]
-            # Group: pages first (usually higher SEO value), then posts
+            posts = [_to_item(p, "post") for p in (c.list_posts(per_page=100, status="publish") or []) if p.get("link")]
             wp_posts = pages + posts
         except Exception:
-            current_app.logger.debug("seo_audit: could not fetch WP posts/pages for dropdown")
+            current_app.logger.debug("seo_audit: could not fetch WP posts/pages")
+    return render_template("wp/seo_audit.html", site=site, wp_posts=wp_posts)
 
-    if request.method == "POST":
-        url = (request.form.get("url") or "").strip()
-        keyword = (request.form.get("keyword") or "").strip()
-        if not url:
-            flash("URL is required.", "error")
-            return see_other("wp_bp.seo_audit")
-        try:
-            from app.wp.seo_audit import audit_url
-            result = audit_url(url, keyword)
-            if result.get("error"):
-                flash(result["error"], "error")
-                result = None
-        except Exception:
-            current_app.logger.exception("SEO audit failed")
-            flash("Audit failed — please try again.", "error")
-    return render_template("wp/seo_audit.html", result=result, site=site, wp_posts=wp_posts)
+
+@wp_bp.route("/seo-audit/scan", methods=["GET"], endpoint="seo_audit_scan")
+@login_required
+def seo_audit_scan():
+    """AJAX endpoint — audit a single URL and return JSON."""
+    from flask import jsonify
+    url = (request.args.get("url") or "").strip()
+    keyword = (request.args.get("keyword") or "").strip()
+    if not url:
+        return jsonify({"error": "url required"}), 400
+    try:
+        from app.wp.seo_audit import audit_url
+        result = audit_url(url, keyword)
+        return jsonify(result)
+    except Exception:
+        current_app.logger.exception("SEO audit scan failed for %s", url)
+        return jsonify({"error": "Audit failed"}), 500
 
 
 @wp_bp.route("/seo-audit/ai-review", methods=["GET", "POST"], endpoint="seo_audit_review")
@@ -2946,33 +2960,50 @@ def geo_pages():
     error = None
 
     if request.method == "POST" and site:
-        service       = (request.form.get("service") or "").strip()
-        cities_raw    = (request.form.get("cities") or "").strip()
         business_name = (request.form.get("business_name") or "").strip()
         phone         = (request.form.get("phone") or "").strip()
         extra_context = (request.form.get("extra_context") or "").strip()
+        pairs_raw     = request.form.getlist("pairs")  # "Service|||City, ST"
 
-        if not service or not cities_raw:
-            flash("Service and at least one city are required.", "error")
+        if not pairs_raw:
+            flash("Select at least one service × city combination.", "error")
         else:
-            # Parse "City, ST" lines
-            cities: List[Dict] = []
-            for line in cities_raw.splitlines():
-                line = line.strip().strip(",")
-                if not line:
+            services_set: dict[str, None] = {}
+            cities_by_service: dict[str, List[Dict]] = {}
+            for pair in pairs_raw:
+                if "|||" not in pair:
                     continue
-                parts = [p.strip() for p in line.split(",")]
-                cities.append({"city": parts[0], "state": parts[1] if len(parts) > 1 else ""})
+                svc, city_st = pair.split("|||", 1)
+                svc = svc.strip()
+                city_st = city_st.strip()
+                parts = [p.strip() for p in city_st.split(",")]
+                city = parts[0]
+                state = parts[1] if len(parts) > 1 else ""
+                if not svc or not city:
+                    continue
+                services_set[svc] = None
+                cities_by_service.setdefault(svc, []).append({"city": city, "state": state})
 
-            if not cities:
-                flash("No valid cities parsed. Use one city per line (e.g. Austin, TX).", "error")
+            if not services_set:
+                flash("No valid pairs found.", "error")
             else:
                 try:
-                    from app.wp.geo_pages import generate_geo_pages
+                    from app.wp.geo_pages import generate_geo_pages_multi
                     from app import db
-                    queued_results = generate_geo_pages(
-                        service=service,
-                        cities=cities,
+                    # Flatten: each service gets its own city list
+                    all_services = list(services_set.keys())
+                    # Build unified city list (deduplicated across services)
+                    all_cities: List[Dict] = []
+                    seen_cities: set = set()
+                    for svc_cities in cities_by_service.values():
+                        for c in svc_cities:
+                            key = (c["city"].lower(), c["state"].lower())
+                            if key not in seen_cities:
+                                seen_cities.add(key)
+                                all_cities.append(c)
+                    queued_results = generate_geo_pages_multi(
+                        services=all_services,
+                        cities=all_cities,
                         business_name=business_name,
                         phone=phone,
                         extra_context=extra_context,

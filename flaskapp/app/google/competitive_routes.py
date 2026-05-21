@@ -1,629 +1,213 @@
 # app/google/competitive_routes.py
 """
-Competitive Intelligence Routes - Dashboard and API endpoints for competitive analysis.
+Google Ads Competitive Intelligence Routes
+
+Thin shim that:
+  - Redirects the old /account/google/ads/competitive URL to the main
+    competitive dashboard at /account/competitive.
+  - Exposes a /auction-insights endpoint that returns raw auction insight
+    data as JSON (or redirects if a browser visits it).
+
+The variable exported as `competitive_bp` uses the internal Blueprint name
+`google_competitive_bp` to avoid a Flask name collision with the
+`competitive_bp` Blueprint registered from app.account.competitive_routes.
 """
-from flask import Blueprint, render_template, jsonify, request, session, current_app
-from sqlalchemy import text
-from sqlalchemy.exc import OperationalError, ProgrammingError
-from datetime import datetime, date, timedelta
+
+from __future__ import annotations
+
 import logging
+from datetime import date, timedelta
+
+from flask import Blueprint, jsonify, redirect, request
 
 from app import db
-from app.auth.utils import login_required, current_account_id
+from app.auth.utils import current_account_id, login_required
+from sqlalchemy import text
 
-# Import competitive intelligence service (optional - may not exist)
-try:
-    from app.services.competitive_intelligence_service import (
-        fetch_auction_insights,
-        analyze_competitive_landscape,
-        track_competitor_position_changes,
-        get_search_term_competitors,
-        estimate_competitor_budget
-    )
-    COMPETITIVE_SERVICE_AVAILABLE = True
-except ImportError:
-    COMPETITIVE_SERVICE_AVAILABLE = False
-    logging.warning("competitive_intelligence_service not available - using stubs")
+log = logging.getLogger(__name__)
 
-    # Service not implemented yet - provide stubs
-    def fetch_auction_insights(*args, **kwargs):
-        return {"success": False, "error": "Competitive intelligence service not configured. This feature will be available in a future update."}
-
-    def analyze_competitive_landscape(*args, **kwargs):
-        return {"success": False, "error": "Competitive intelligence service not configured. This feature will be available in a future update."}
-
-    def track_competitor_position_changes(*args, **kwargs):
-        return {"success": False, "error": "Competitive intelligence service not configured. This feature will be available in a future update."}
-
-    def get_search_term_competitors(*args, **kwargs):
-        return {"success": False, "error": "Competitive intelligence service not configured. This feature will be available in a future update."}
-
-    def estimate_competitor_budget(*args, **kwargs):
-        return 0
-
-competitive_bp = Blueprint("competitive_bp", __name__, url_prefix="/account/google/ads/competitive")
+# NOTE: Blueprint *variable* is `competitive_bp` (as imported by app/__init__.py),
+#       but the Flask-internal *name* is `google_competitive_bp` to avoid conflicts.
+competitive_bp = Blueprint(
+    "google_competitive_bp",
+    __name__,
+    url_prefix="/account/google/ads/competitive",
+)
 
 
-def _table_exists(table_name: str) -> bool:
-    """Check if a database table exists."""
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _resolve_customer_id(account_id: int) -> str | None:
+    """Return the Google Ads customer_id for an account, or None."""
     try:
-        with db.engine.connect() as conn:
-            result = conn.execute(
-                text("""
-                    SELECT COUNT(*) FROM information_schema.TABLES
-                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table_name
-                """),
-                {"table_name": table_name}
-            )
-            return result.scalar() > 0
-    except Exception as e:
-        logging.warning(f"Could not check if table {table_name} exists: {e}")
-        return False
+        from app.google.utils_ads import resolve_ads_context
 
-
-def _safe_db_query(query_func, default=None):
-    """
-    Execute a database query safely, catching table-not-found errors.
-
-    Args:
-        query_func: A callable that executes the database query
-        default: Default value to return on error
-
-    Returns:
-        Query result or default value
-    """
-    try:
-        return query_func()
-    except (OperationalError, ProgrammingError) as e:
-        error_msg = str(e).lower()
-        if "doesn't exist" in error_msg or "does not exist" in error_msg or "no such table" in error_msg:
-            logging.warning(f"Database table does not exist: {e}")
-        else:
-            logging.error(f"Database error: {e}")
-        return default
-    except Exception as e:
-        logging.error(f"Unexpected error in database query: {e}")
-        return default
-
-
-def _transform_campaign_data(campaign, customer_id: str = '') -> dict:
-    """
-    Safely transform campaign data with null checks.
-
-    Args:
-        campaign: Raw campaign data dict
-        customer_id: Optional customer ID to include
-
-    Returns:
-        Transformed campaign dict with safe defaults
-    """
-    try:
-        daily_budget = campaign.get('daily_budget')
-        if daily_budget is None:
-            daily_budget = 0
-
-        return {
-            'id': campaign.get('id'),
-            'name': campaign.get('name') or 'Unnamed Campaign',
-            'daily_budget_cents': int(float(daily_budget) * 100),
-            'google_campaign_id': campaign.get('google_campaign_id') or campaign.get('id'),
-            'google_customer_id': customer_id or campaign.get('google_customer_id', ''),
-            'status': campaign.get('status') or 'unknown'
-        }
-    except (TypeError, ValueError) as e:
-        logging.warning(f"Error transforming campaign data: {e}")
+        ctx = resolve_ads_context(account_id) or {}
+        return ctx.get("customer_id")
+    except Exception as exc:
+        log.debug("resolve_ads_context unavailable: %s", exc)
         return None
 
 
-@competitive_bp.route("/")
-@login_required
-def competitive_dashboard():
+def _fetch_auction_insights_gaql(
+    account_id: int, customer_id: str, days: int = 30
+) -> list[dict]:
     """
-    Competitive Intelligence Dashboard - View competitors, market position, and threats.
+    Run a GAQL query for auction insights and return rows as dicts.
+    Returns an empty list if Google Ads is not connected or the query fails.
     """
-    account_id = current_account_id()
-    campaigns = []
-    alerts = []
-    setup_required = False
-    error_message = None
-    customer_id = None
-
-    # Import the function that fetches and caches ads data
-    _get_ads_state = None
-    _is_connected = None
     try:
-        from app.google import _get_ads_state, _is_connected
-    except ImportError as e:
-        logging.error(f"Could not import _get_ads_state from app.google: {e}")
+        from app.google.utils_ads import google_ads_search
+    except ImportError:
+        return []
 
-    # Check if user is connected to Google Ads
-    is_connected = False
-    if _is_connected:
-        try:
-            is_connected = _is_connected(account_id, "ads")
-        except Exception as e:
-            logging.warning(f"Error checking connection: {e}")
+    end = date.today()
+    start = end - timedelta(days=days)
 
-    # Use _get_ads_state to fetch/cache the data (this populates the session)
-    if _get_ads_state and is_connected:
-        try:
-            ads_data = _get_ads_state(account_id)
-            if ads_data:
-                raw_campaigns = ads_data.get('campaigns', []) or []
-                customer_id = ads_data.get('account_name') or ads_data.get('customer_id', '')
+    query = f"""
+        SELECT
+          auction_insight_competitor.domain,
+          metrics.search_impression_share,
+          metrics.search_overlap_rate,
+          metrics.search_position_above_rate,
+          metrics.search_top_impression_share,
+          metrics.search_absolute_top_impression_share
+        FROM auction_insight_competitor
+        WHERE segments.date BETWEEN '{start}' AND '{end}'
+    """
 
-                for campaign in raw_campaigns:
-                    transformed = _transform_campaign_data(campaign, customer_id)
-                    if transformed:
-                        campaigns.append(transformed)
-
-                campaigns.sort(key=lambda c: (c.get('name') or '').lower())
-                logging.info(f"Competitive: Found {len(campaigns)} campaigns for account {account_id}")
-        except Exception as e:
-            logging.error(f"Error fetching ads state: {e}")
-            error_message = "Error loading campaign data."
-
-    # Fallback to session if _get_ads_state not available or returned empty
-    if not campaigns:
-        ads_state_key = f"ads_state_{account_id}"
-        try:
-            if ads_state_key in session and session[ads_state_key]:
-                ads_data = session[ads_state_key]
-                raw_campaigns = ads_data.get('campaigns', []) or []
-                customer_id = customer_id or ads_data.get('account_name') or ads_data.get('customer_id', '')
-
-                for campaign in raw_campaigns:
-                    transformed = _transform_campaign_data(campaign, customer_id)
-                    if transformed:
-                        campaigns.append(transformed)
-
-                campaigns.sort(key=lambda c: (c.get('name') or '').lower())
-                logging.info(f"Competitive: Session fallback - {len(campaigns)} campaigns")
-        except Exception as e:
-            logging.warning(f"Session access error: {e}")
-
-    # If no session campaigns, try database
-    if not campaigns:
-        def _fetch_db_campaigns():
-            campaigns_query = text("""
-                SELECT id, name, daily_budget_cents, google_campaign_id, google_customer_id
-                FROM ads_campaigns
-                WHERE account_id = :account_id
-                ORDER BY name
-            """)
-            with db.engine.connect() as conn:
-                result = conn.execute(campaigns_query, {"account_id": account_id})
-                return [dict(row._mapping) for row in result]
-
-        db_campaigns = _safe_db_query(_fetch_db_campaigns, default=[])
-        if db_campaigns:
-            campaigns = db_campaigns
-            logging.info(f"Competitive: DB fallback - {len(campaigns)} campaigns")
-        else:
-            # All sources failed - show setup message
-            setup_required = True
-
-    # Try to get recent competitive alerts (optional - may fail if tables don't exist)
-    if _table_exists('competitive_alerts') and _table_exists('ads_campaigns'):
-        def _fetch_alerts():
-            alerts_query = text("""
-                SELECT ca.*, ac.name as campaign_name
-                FROM competitive_alerts ca
-                JOIN ads_campaigns ac ON ac.id = ca.campaign_id
-                WHERE ca.account_id = :account_id
-                  AND ca.is_acknowledged = FALSE
-                ORDER BY ca.severity DESC, ca.alert_date DESC
-                LIMIT 20
-            """)
-            with db.engine.connect() as conn:
-                result = conn.execute(alerts_query, {"account_id": account_id})
-                return [dict(row._mapping) for row in result]
-
-        alerts = _safe_db_query(_fetch_alerts, default=[])
-    else:
-        logging.info("competitive_alerts or ads_campaigns table does not exist, skipping alerts")
-
-    # Add service availability info
-    service_available = COMPETITIVE_SERVICE_AVAILABLE
-
-    return render_template(
-        "google/competitive_dashboard.html",
-        campaigns=campaigns,
-        alerts=alerts,
-        setup_required=setup_required,
-        is_connected=is_connected,
-        service_available=service_available,
-        error_message=error_message
-    )
-
-
-@competitive_bp.route("/api/fetch-insights", methods=["POST"])
-@login_required
-def fetch_insights():
-    """Fetch fresh auction insights from Google Ads API."""
     try:
-        account_id = current_account_id()
-        data = request.get_json(silent=True) or {}
-
-        campaign_id = data.get('campaign_id')
-        lookback_days = int(data.get('lookback_days', 30))
-
-        if not campaign_id:
-            return jsonify({"success": False, "error": "campaign_id is required"}), 400
-
-        # Get credentials and campaign google_campaign_id from accounts/oauth tables
-        creds_query = text("""
-            SELECT a.google_ads_customer_id AS customer_id,
-                   got.credentials_json,
-                   ac.google_campaign_id
-            FROM google_oauth_tokens got
-            JOIN accounts a ON a.id = got.account_id
-            LEFT JOIN ads_campaigns ac ON ac.id = :campaign_id AND ac.account_id = :account_id
-            WHERE got.account_id = :account_id AND got.product = 'ads'
-            ORDER BY got.id DESC LIMIT 1
-        """)
-
-        with db.engine.connect() as conn:
-            row = conn.execute(creds_query, {
-                "campaign_id": campaign_id,
-                "account_id": account_id
-            }).first()
-
-        if not row:
-            return jsonify({"success": False, "error": "Google Ads not connected"}), 400
-
-        import json as _json
-        import os
-        creds = _json.loads(row.credentials_json) if isinstance(row.credentials_json, str) else (row.credentials_json or {})
-        refresh_token = creds.get('refresh_token')
-        customer_id = (row.customer_id or '').replace('-', '')
-        google_campaign_id = row.google_campaign_id or str(campaign_id)
-
-        if not refresh_token or not customer_id:
-            return jsonify({"success": False, "error": "Incomplete Google Ads credentials"}), 400
-
-        # Fetch insights
-        end_date = date.today()
-        start_date = end_date - timedelta(days=lookback_days)
-
-        result = fetch_auction_insights(
-            refresh_token=refresh_token,
+        rows = google_ads_search(
+            account_id=account_id,
             customer_id=customer_id,
-            campaign_id=google_campaign_id,
-            start_date=start_date,
-            end_date=end_date
+            query=query,
+        )
+        return rows or []
+    except Exception as exc:
+        log.info("Auction insights GAQL query failed: %s", exc)
+        return []
+
+
+def _format_auction_insights(raw_rows: list[dict]) -> list[dict]:
+    """Normalise GAQL result rows into a clean list of dicts."""
+    results = []
+    for row in raw_rows:
+        domain = (
+            row.get("auction_insight_competitor", {}).get("domain")
+            or row.get("domain", "unknown")
+        )
+        metrics = row.get("metrics", {})
+        impression_share = round(
+            float(metrics.get("search_impression_share", 0)) * 100, 1
+        )
+        overlap_rate = round(float(metrics.get("search_overlap_rate", 0)), 2)
+        position_above_rate = round(
+            float(metrics.get("search_position_above_rate", 0)), 2
+        )
+        top_impression_share = round(
+            float(metrics.get("search_top_impression_share", 0)) * 100, 1
+        )
+        abs_top = round(
+            float(metrics.get("search_absolute_top_impression_share", 0)) * 100, 1
         )
 
-        return jsonify(result)
+        threat_level = (
+            "high" if position_above_rate > 0.60
+            else "medium" if position_above_rate > 0.45
+            else "low"
+        )
 
-    except Exception as e:
-        current_app.logger.error(f"fetch_insights error: {e}", exc_info=True)
-        return jsonify({"success": False, "error": str(e)}), 500
+        results.append(
+            {
+                "domain": domain,
+                "competitor_domain": domain,
+                "impression_share": impression_share,
+                "overlap_rate": overlap_rate,
+                "position_above_rate": position_above_rate,
+                "top_impression_share": top_impression_share,
+                "absolute_top_impression_share": abs_top,
+                "threat_level": threat_level,
+            }
+        )
+
+    results.sort(key=lambda x: x["impression_share"], reverse=True)
+    return results
 
 
-@competitive_bp.route("/api/analyze/<int:campaign_id>", methods=["GET"])
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
+
+
+@competitive_bp.route("/", methods=["GET"])
+def index():
+    """Redirect legacy URL to the main competitive dashboard."""
+    return redirect("/account/competitive")
+
+
+@competitive_bp.route("/auction-insights", methods=["GET"])
 @login_required
-def analyze_landscape(campaign_id):
-    """Analyze competitive landscape for a campaign."""
+def auction_insights():
+    """
+    GET /account/google/ads/competitive/auction-insights
+
+    Returns Google Ads Auction Insights as JSON.
+    Query params:
+      - days  (int, default 30)  : lookback window
+
+    Falls back to an empty dataset with a descriptive message when
+    Google Ads is not connected.
+    """
     account_id = current_account_id()
-    lookback_days = request.args.get('lookback_days', 30, type=int)
+    days = request.args.get("days", 30, type=int)
 
-    try:
-        analysis = analyze_competitive_landscape(
-            account_id=account_id,
-            campaign_id=campaign_id,
-            lookback_days=lookback_days
+    customer_id = _resolve_customer_id(account_id)
+
+    if not customer_id:
+        return jsonify(
+            {
+                "ok": False,
+                "success": False,
+                "connected": False,
+                "message": (
+                    "Google Ads is not connected for this account. "
+                    "Connect via Settings → Integrations to see real auction insights."
+                ),
+                "competitors": [],
+            }
         )
 
-        return jsonify(analysis)
+    raw_rows = _fetch_auction_insights_gaql(account_id, customer_id, days=days)
 
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-
-@competitive_bp.route("/api/track-competitor", methods=["POST"])
-@login_required
-def track_competitor():
-    """Track a specific competitor's position changes over time."""
-    account_id = current_account_id()
-    data = request.get_json(silent=True) or {}
-
-    campaign_id = data.get('campaign_id')
-    competitor_domain = data.get('competitor_domain')
-    days = data.get('days', 30)
-
-    try:
-        result = track_competitor_position_changes(
-            account_id=account_id,
-            campaign_id=campaign_id,
-            competitor_domain=competitor_domain,
-            days=days
+    if not raw_rows:
+        return jsonify(
+            {
+                "ok": True,
+                "success": True,
+                "connected": True,
+                "customer_id": customer_id,
+                "days": days,
+                "message": (
+                    "No auction insight data returned for the selected period. "
+                    "Data typically appears after campaigns have been running for a few days."
+                ),
+                "competitors": [],
+            }
         )
 
-        return jsonify(result)
+    competitors = _format_auction_insights(raw_rows)
 
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-
-@competitive_bp.route("/api/search-terms", methods=["POST"])
-@login_required
-def analyze_search_terms():
-    """Analyze search terms for competitive intelligence."""
-    account_id = current_account_id()
-    data = request.get_json(silent=True) or {}
-
-    campaign_id = data.get('campaign_id')
-    lookback_days = data.get('lookback_days', 30)
-
-    # Get campaign details
-    campaign_query = text("""
-        SELECT google_campaign_id, google_customer_id, google_refresh_token
-        FROM ads_campaigns ac
-        JOIN google_ads_accounts gaa ON gaa.id = ac.google_ads_account_id
-        WHERE ac.id = :campaign_id AND ac.account_id = :account_id
-    """)
-
-    with db.engine.connect() as conn:
-        result = conn.execute(campaign_query, {
-            "campaign_id": campaign_id,
-            "account_id": account_id
-        })
-        campaign = result.first()
-
-        if not campaign:
-            return jsonify({"success": False, "error": "Campaign not found"}), 404
-
-        campaign = dict(campaign._mapping)
-
-    end_date = date.today()
-    start_date = end_date - timedelta(days=lookback_days)
-
-    try:
-        result = get_search_term_competitors(
-            refresh_token=campaign['google_refresh_token'],
-            customer_id=campaign['google_customer_id'],
-            campaign_id=campaign['google_campaign_id'],
-            start_date=start_date,
-            end_date=end_date
-        )
-
-        return jsonify(result)
-
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-
-@competitive_bp.route("/api/estimate-budget", methods=["POST"])
-@login_required
-def estimate_budget():
-    """Estimate a competitor's budget based on impression share."""
-    data = request.get_json(silent=True) or {}
-
-    competitor_share = data.get('competitor_impression_share', 0)
-    your_budget = data.get('your_daily_budget', 0)
-    your_share = data.get('your_impression_share', 0)
-
-    try:
-        estimated = estimate_competitor_budget(
-            competitor_impression_share=competitor_share,
-            your_daily_budget=your_budget,
-            your_impression_share=your_share
-        )
-
-        return jsonify({
+    return jsonify(
+        {
+            "ok": True,
             "success": True,
-            "estimated_daily_budget": estimated
-        })
-
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-
-@competitive_bp.route("/api/top-competitors", methods=["GET"])
-@login_required
-def get_top_competitors():
-    """Get top competitors across all campaigns."""
-    account_id = current_account_id()
-    days = request.args.get('days', 30, type=int)
-
-    end_date = date.today()
-    start_date = end_date - timedelta(days=days)
-
-    # Check if required tables exist
-    if not _table_exists('competitive_auction_insights') or not _table_exists('ads_campaigns'):
-        return jsonify({
-            "success": True,
-            "competitors": [],
-            "period": {
-                "start": start_date.isoformat(),
-                "end": end_date.isoformat()
-            },
-            "message": "Competitive data not yet available. Data will appear after the first auction insights sync."
-        })
-
-    def _fetch_competitors():
-        query = text("""
-            SELECT
-                cai.competitor_domain,
-                COUNT(DISTINCT cai.campaign_id) as campaigns_competing,
-                AVG(cai.impression_share) as avg_impression_share,
-                AVG(cai.position_above_rate) as avg_position_above,
-                AVG(cai.overlap_rate) as avg_overlap,
-                MAX(cai.data_date) as last_seen
-            FROM competitive_auction_insights cai
-            JOIN ads_campaigns ac ON ac.google_campaign_id = cai.campaign_id
-            WHERE ac.account_id = :account_id
-              AND cai.data_date BETWEEN :start_date AND :end_date
-            GROUP BY cai.competitor_domain
-            ORDER BY avg_impression_share DESC
-            LIMIT 20
-        """)
-
-        with db.engine.connect() as conn:
-            result = conn.execute(query, {
-                "account_id": account_id,
-                "start_date": start_date,
-                "end_date": end_date
-            })
-            return [dict(row._mapping) for row in result]
-
-    competitors = _safe_db_query(_fetch_competitors, default=[])
-
-    return jsonify({
-        "success": True,
-        "competitors": competitors,
-        "period": {
-            "start": start_date.isoformat(),
-            "end": end_date.isoformat()
+            "connected": True,
+            "customer_id": customer_id,
+            "days": days,
+            "num_competitors": len(competitors),
+            "competitors": competitors,
         }
-    })
-
-
-@competitive_bp.route("/api/alerts/<int:alert_id>/acknowledge", methods=["POST"])
-@login_required
-def acknowledge_alert(alert_id):
-    """Mark a competitive alert as acknowledged."""
-    account_id = current_account_id()
-
-    query = text("""
-        UPDATE competitive_alerts
-        SET is_acknowledged = TRUE, acknowledged_at = NOW()
-        WHERE id = :alert_id AND account_id = :account_id
-    """)
-
-    try:
-        with db.engine.begin() as conn:
-            conn.execute(query, {
-                "alert_id": alert_id,
-                "account_id": account_id
-            })
-
-        return jsonify({"success": True})
-
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-
-@competitive_bp.route("/api/market-share", methods=["GET"])
-@login_required
-def get_market_share():
-    """Calculate market share analysis."""
-    account_id = current_account_id()
-    campaign_id = request.args.get('campaign_id', type=int)
-    days = request.args.get('days', 30, type=int)
-
-    if not campaign_id:
-        return jsonify({
-            "success": False,
-            "error": "campaign_id is required"
-        }), 400
-
-    end_date = date.today()
-    start_date = end_date - timedelta(days=days)
-
-    # Default response for when data is not available
-    default_response = {
-        "success": True,
-        "your_impression_share": 0,
-        "competitors_total_share": 0,
-        "your_market_position_pct": 0,
-        "competitor_count": 0,
-        "market_concentration": "unknown",
-        "period": {
-            "start": start_date.isoformat(),
-            "end": end_date.isoformat()
-        },
-        "message": "Market share data not yet available."
-    }
-
-    # Check if required tables exist
-    has_performance_table = _table_exists('campaign_performance_history')
-    has_insights_table = _table_exists('competitive_auction_insights')
-    has_campaigns_table = _table_exists('ads_campaigns')
-
-    if not has_campaigns_table:
-        return jsonify(default_response)
-
-    your_share = 0
-    competitors_share = 0
-    competitor_count = 0
-
-    # Get your impression share (if table exists)
-    if has_performance_table:
-        def _get_your_share():
-            your_share_query = text("""
-                SELECT AVG(impression_share) as your_share
-                FROM campaign_performance_history
-                WHERE campaign_id = :campaign_id
-                  AND account_id = :account_id
-                  AND date BETWEEN :start_date AND :end_date
-            """)
-            with db.engine.connect() as conn:
-                result = conn.execute(your_share_query, {
-                    "campaign_id": campaign_id,
-                    "account_id": account_id,
-                    "start_date": start_date,
-                    "end_date": end_date
-                })
-                your_data = result.first()
-                return your_data[0] if your_data and your_data[0] else 0
-
-        your_share = _safe_db_query(_get_your_share, default=0) or 0
-
-    # Get competitors' total share (if tables exist)
-    if has_insights_table:
-        def _get_competitor_share():
-            competitors_query = text("""
-                SELECT
-                    SUM(cai.impression_share) as competitors_total_share,
-                    COUNT(DISTINCT cai.competitor_domain) as competitor_count
-                FROM competitive_auction_insights cai
-                JOIN ads_campaigns ac ON ac.google_campaign_id = cai.campaign_id
-                WHERE ac.id = :campaign_id
-                  AND ac.account_id = :account_id
-                  AND cai.data_date BETWEEN :start_date AND :end_date
-            """)
-            with db.engine.connect() as conn:
-                result = conn.execute(competitors_query, {
-                    "campaign_id": campaign_id,
-                    "account_id": account_id,
-                    "start_date": start_date,
-                    "end_date": end_date
-                })
-                comp_data = result.first()
-                return (
-                    comp_data[0] if comp_data and comp_data[0] else 0,
-                    comp_data[1] if comp_data and comp_data[1] else 0
-                )
-
-        result = _safe_db_query(_get_competitor_share, default=(0, 0))
-        if result:
-            competitors_share, competitor_count = result
-
-    # Calculate market position
-    total_known_share = your_share + competitors_share
-    your_market_position = (your_share / total_known_share * 100) if total_known_share > 0 else 0
-
-    # Market concentration (Herfindahl-Hirschman Index approximation)
-    if competitor_count == 0:
-        market_concentration = "unknown"
-    elif competitor_count > 10:
-        market_concentration = "fragmented"
-    elif competitor_count > 5:
-        market_concentration = "moderate"
-    else:
-        market_concentration = "concentrated"
-
-    return jsonify({
-        "success": True,
-        "your_impression_share": round(float(your_share) * 100, 2),
-        "competitors_total_share": round(float(competitors_share) * 100, 2),
-        "your_market_position_pct": round(your_market_position, 2),
-        "competitor_count": int(competitor_count),
-        "market_concentration": market_concentration,
-        "period": {
-            "start": start_date.isoformat(),
-            "end": end_date.isoformat()
-        }
-    })
+    )

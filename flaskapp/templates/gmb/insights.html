@@ -31,13 +31,17 @@
   {% else %}
     <div class="rounded-xl border bg-white p-5 space-y-5">
       <div class="text-sm text-gray-500">Latest Insight</div>
-      {% if latest %}
-        <div class="text-xs text-gray-500 mb-2">Generated at: {{ latest.generated_at }}</div>
-        <div class="prose max-w-none text-sm">{{ latest.html | safe }}</div>
-      {% elif session_html %}
-        <div class="prose max-w-none text-sm">{{ session_html | safe }}</div>
+      {% set insight_html = (latest.html if latest else None) or session_html %}
+      {% if insight_html %}
+        {% if latest %}
+        <div class="text-xs text-gray-500 mb-2">Updated {{ latest.generated_at.strftime('%b %d, %Y at %I:%M %p') if latest.generated_at else '' }}</div>
+        {% endif %}
+        <div class="prose max-w-none text-sm">{{ insight_html | safe }}</div>
       {% else %}
-        <div class="text-sm text-gray-600">No insights yet. Click <b>Refresh Insights</b> to generate your first set.</div>
+        <div class="flex items-center gap-3 text-sm text-gray-500 py-4">
+          <i class="fa-solid fa-spinner fa-spin text-indigo-400"></i>
+          Generating your insights…
+        </div>
       {% endif %}
     </div>
   {% endif %}

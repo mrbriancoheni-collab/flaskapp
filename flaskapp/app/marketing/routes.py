@@ -726,3 +726,135 @@ def attribution_view():
         recent_attributions=recent_attributions,
         channel_type_labels=CHANNEL_TYPE_LABELS,
     )
+
+
+# ── AI Pricing Intelligence ──────────────────────────────────────────────────
+
+@marketing_bp.get("/pricing-intelligence")
+@login_required
+def pricing_intelligence():
+    aid = current_account_id()
+    job_types = []
+    signals = []
+    has_data = False
+
+    try:
+        rows = db.session.execute(text("""
+            SELECT job_type_name,
+                   COUNT(*)                          AS job_count,
+                   COALESCE(AVG(total_amount), 0)   AS avg_ticket,
+                   COALESCE(SUM(total_amount), 0)   AS total_revenue,
+                   COALESCE(MIN(total_amount), 0)   AS min_ticket,
+                   COALESCE(MAX(total_amount), 0)   AS max_ticket
+            FROM servicetitan_jobs
+            WHERE account_id=:aid AND job_status='Completed'
+              AND total_amount > 0
+              AND completed_date >= :cutoff
+            GROUP BY job_type_name
+            ORDER BY total_revenue DESC
+            LIMIT 20
+        """), {"aid": aid, "cutoff": date.today() - timedelta(days=365)}).mappings().all()
+        job_types = [dict(r) for r in rows]
+        has_data = bool(job_types)
+    except Exception:
+        current_app.logger.exception("pricing_intelligence: job_types query failed")
+
+    if has_data:
+        overall_avg = (
+            sum(float(j["avg_ticket"]) * int(j["job_count"]) for j in job_types)
+            / max(sum(int(j["job_count"]) for j in job_types), 1)
+        )
+        for j in job_types:
+            avg = float(j["avg_ticket"])
+            cnt = int(j["job_count"])
+            spread = float(j["max_ticket"]) - float(j["min_ticket"])
+            j["avg_ticket"] = round(avg, 2)
+            j["total_revenue"] = round(float(j["total_revenue"]), 2)
+            j["min_ticket"] = round(float(j["min_ticket"]), 2)
+            j["max_ticket"] = round(float(j["max_ticket"]), 2)
+
+            # Generate pricing signals
+            if avg < overall_avg * 0.7 and cnt >= 5:
+                signals.append({
+                    "type": "underpriced",
+                    "job_type": j["job_type_name"],
+                    "message": (
+                        f"{j['job_type_name']} averages ${avg:,.0f}/job — "
+                        f"${overall_avg - avg:,.0f} below your overall average. "
+                        "High volume at low ticket often indicates pricing opportunity."
+                    ),
+                    "recommendation": f"Test raising price by 10–15% on next {min(cnt//3, 20)} jobs.",
+                    "severity": "high" if avg < overall_avg * 0.5 else "medium",
+                })
+            elif spread > avg * 1.5 and cnt >= 3:
+                signals.append({
+                    "type": "inconsistent",
+                    "job_type": j["job_type_name"],
+                    "message": (
+                        f"{j['job_type_name']} tickets range from ${float(j['min_ticket']):,.0f} "
+                        f"to ${float(j['max_ticket']):,.0f} — a {round(spread/avg*100)}% spread."
+                    ),
+                    "recommendation": "Standardize pricing tiers or document when premium pricing applies.",
+                    "severity": "low",
+                })
+
+    # Generate AI narrative if data exists
+    ai_summary = None
+    if has_data and job_types:
+        try:
+            from app.ai_clients import get_claude_client
+            client = get_claude_client()
+            if client:
+                top_types = job_types[:8]
+                lines = "\n".join(
+                    f"- {j['job_type_name']}: {j['job_count']} jobs, avg ${j['avg_ticket']:,.0f}, "
+                    f"total ${j['total_revenue']:,.0f}"
+                    for j in top_types
+                )
+                prompt = (
+                    f"You are a pricing strategist for home service businesses. "
+                    f"Analyze this company's job data from the last 12 months:\n\n{lines}\n\n"
+                    f"In 2–3 concise paragraphs:\n"
+                    f"1. Identify 1–2 specific pricing opportunities (where they're likely leaving money on the table)\n"
+                    f"2. Flag any service lines that may be priced too high (if conversion data suggests it)\n"
+                    f"3. Give one concrete action they can take this week\n\n"
+                    f"Be specific with numbers. No generic advice."
+                )
+                msg = client.messages.create(
+                    model="claude-haiku-4-5-20251001",
+                    max_tokens=400,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                ai_summary = msg.content[0].text if msg.content else None
+        except Exception:
+            current_app.logger.debug("AI pricing summary skipped")
+
+    return render_template(
+        "marketing/pricing_intelligence.html",
+        job_types=job_types,
+        signals=signals,
+        ai_summary=ai_summary,
+        has_data=has_data,
+    )
+
+
+@marketing_bp.get("/pricing-intelligence/api")
+@login_required
+def pricing_intelligence_api():
+    """AJAX endpoint returning the same pricing data as JSON."""
+    aid = current_account_id()
+    try:
+        rows = db.session.execute(text("""
+            SELECT job_type_name,
+                   COUNT(*)                          AS job_count,
+                   COALESCE(AVG(total_amount), 0)   AS avg_ticket,
+                   COALESCE(SUM(total_amount), 0)   AS total_revenue
+            FROM servicetitan_jobs
+            WHERE account_id=:aid AND job_status='Completed'
+              AND total_amount > 0
+              AND completed_date >= :cutoff
+            GROUP BY job_type_name ORDER BY total_revenue DESC LIMIT 20
+        """), {"aid": aid, "cutoff": date.today() - timedelta(days=365)}).mappings().all()
+        return jsonify({"ok": True, "job_types": [dict(r) for r in rows]})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500

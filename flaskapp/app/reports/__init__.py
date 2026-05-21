@@ -382,6 +382,437 @@ def cpl_dashboard():
     )
 
 
+# =========================
+# ===== PULSE OVERVIEW  ===
+# =========================
+
+def _normalize_source(src: str) -> str:
+    s = (src or "").lower().strip().replace(" ", "-").replace("_", "-")
+    if s in ("google-ads", "googleads", "adwords", "google-adwords"):
+        return "google-ads"
+    if s in ("glsa", "local-services", "local-services-ads", "lsa"):
+        return "glsa"
+    if s in ("organic", "seo", "website", "direct", "web"):
+        return "organic"
+    if s in ("networx", "network-x"):
+        return "networx"
+    if s in ("elocal", "e-local"):
+        return "elocal"
+    if s in ("yelp",):
+        return "yelp"
+    if s in ("facebook", "fb", "facebook-ads", "meta"):
+        return "facebook"
+    return s or "other"
+
+
+_SOURCE_META = {
+    "google-ads": {"label": "Google Ads",         "icon": "fa-brands fa-google",       "color": "blue",   "color_hex": "#4285F4"},
+    "glsa":       {"label": "Local Services Ads",  "icon": "fa-solid fa-shield-halved", "color": "green",  "color_hex": "#34A853"},
+    "organic":    {"label": "Website / Organic",   "icon": "fa-solid fa-globe",         "color": "teal",   "color_hex": "#0D9488"},
+    "networx":    {"label": "Networx",             "icon": "fa-solid fa-bolt",          "color": "orange", "color_hex": "#F97316"},
+    "elocal":     {"label": "eLocal",              "icon": "fa-solid fa-phone",         "color": "purple", "color_hex": "#8B5CF6"},
+    "yelp":       {"label": "Yelp",                "icon": "fa-brands fa-yelp",         "color": "red",    "color_hex": "#EF4444"},
+    "facebook":   {"label": "Facebook Ads",        "icon": "fa-brands fa-facebook-f",   "color": "indigo", "color_hex": "#4F46E5"},
+    "other":      {"label": "Other Sources",       "icon": "fa-solid fa-circle",        "color": "gray",   "color_hex": "#6B7280"},
+}
+
+
+def _compute_health_grade(revenue, prev_revenue, total_spend, total_leads, total_jobs, booking_rate):
+    score = 50  # start neutral
+
+    # Revenue trend (+/- up to 25 pts)
+    if prev_revenue and prev_revenue > 0:
+        trend = (revenue - prev_revenue) / prev_revenue
+        if trend >= 0.15:
+            score += 25
+        elif trend >= 0.05:
+            score += 15
+        elif trend >= 0:
+            score += 5
+        elif trend >= -0.10:
+            score -= 10
+        else:
+            score -= 25
+    elif revenue > 0:
+        score += 10
+
+    # CPL efficiency (+/- up to 15 pts)
+    if total_spend > 0 and total_leads > 0:
+        cpl = total_spend / total_leads
+        if cpl < 40:
+            score += 15
+        elif cpl < 80:
+            score += 8
+        elif cpl < 150:
+            score += 0
+        elif cpl < 300:
+            score -= 10
+        else:
+            score -= 15
+
+    # Booking rate (+/- up to 10 pts)
+    if booking_rate is not None:
+        if booking_rate >= 0.5:
+            score += 10
+        elif booking_rate >= 0.3:
+            score += 5
+        elif booking_rate < 0.15:
+            score -= 10
+
+    if score >= 85:
+        return "A"
+    if score >= 72:
+        return "B"
+    if score >= 58:
+        return "C"
+    if score >= 42:
+        return "D"
+    return "F"
+
+
+def _grade_copy(grade, revenue, prev_revenue, total_leads, total_spend):
+    trend_pct = None
+    if prev_revenue and prev_revenue > 0:
+        trend_pct = round((revenue - prev_revenue) / prev_revenue * 100)
+
+    if grade == "A":
+        msg = "Things are firing on all cylinders."
+        if trend_pct and trend_pct > 0:
+            msg = f"Revenue is up {trend_pct}% from last month and your marketing is working efficiently."
+        detail = "Keep doing what you're doing — and make sure you're capturing every lead."
+    elif grade == "B":
+        msg = "Solid month overall — a few tweaks could make it great."
+        if trend_pct and trend_pct > 0:
+            msg = f"You're up {trend_pct}% from last month with room to optimize spend."
+        detail = "Check the action items below to squeeze more out of what's working."
+    elif grade == "C":
+        msg = "Decent, but there's real money being left on the table."
+        detail = "Your lead sources are inconsistent — focus on the highest-ROI channel and double down."
+    elif grade == "D":
+        msg = "Marketing spend isn't converting to revenue the way it should."
+        detail = "Review your booking process — getting leads but not closing is usually a response-time or follow-up issue."
+    else:
+        msg = "Immediate attention needed — spend is outpacing results."
+        detail = "Pause low-performing channels and focus on your one best source until things stabilize."
+
+    return msg, detail
+
+
+def _generate_actions(aid, channels, total_leads, booking_rate, total_spend):
+    actions = []
+
+    # 1. Review requests
+    try:
+        with db.engine.connect() as conn:
+            from datetime import datetime, timedelta
+            week_ago = datetime.utcnow() - timedelta(days=7)
+            sent_row = conn.execute(text(
+                "SELECT COUNT(DISTINCT job_id) FROM review_requests "
+                "WHERE account_id=:aid AND sent_at >= :cutoff"
+            ), {"aid": aid, "cutoff": week_ago}).scalar() or 0
+            completed_row = conn.execute(text(
+                "SELECT COUNT(*) FROM servicetitan_jobs "
+                "WHERE account_id=:aid AND completed_date >= :cutoff "
+                "AND job_status IN ('Completed','completed')"
+            ), {"aid": aid, "cutoff": week_ago}).scalar() or 0
+            unasked = max(0, int(completed_row) - int(sent_row))
+            if unasked >= 3:
+                actions.append({
+                    "priority": 1,
+                    "icon": "fa-solid fa-star",
+                    "color": "amber",
+                    "headline": f"Ask {unasked} recent customers for a review",
+                    "body": f"You completed {completed_row} jobs this week but only sent {sent_row} review requests. A 5-star review is worth more than most ad clicks.",
+                    "cta": "Send Review Requests",
+                    "url": "/account/reputation/review-requests",
+                })
+    except Exception:
+        pass
+
+    # 2. Reactivation candidates
+    try:
+        with db.engine.connect() as conn:
+            from datetime import datetime, timedelta
+            yr_ago = datetime.utcnow() - timedelta(days=365)
+            reactivation_count = conn.execute(text(
+                "SELECT COUNT(DISTINCT customer_id) FROM servicetitan_jobs "
+                "WHERE account_id=:aid AND completed_date < :cutoff "
+                "AND customer_id NOT IN ("
+                "  SELECT DISTINCT customer_id FROM servicetitan_jobs "
+                "  WHERE account_id=:aid AND completed_date >= :cutoff"
+                ")"
+            ), {"aid": aid, "cutoff": yr_ago}).scalar() or 0
+            if reactivation_count >= 5:
+                actions.append({
+                    "priority": 2,
+                    "icon": "fa-solid fa-rotate-left",
+                    "color": "indigo",
+                    "headline": f"Re-engage {int(reactivation_count)} customers who haven't called in a year",
+                    "body": "Past customers are 5x more likely to book than a cold lead — and they cost nothing to reach. A simple 'we miss you' email typically books 1-3 jobs.",
+                    "cta": "Launch Reactivation Campaign",
+                    "url": "/account/journey/reactivation",
+                })
+    except Exception:
+        pass
+
+    # 3. Budget / channel opportunity
+    best_channel = None
+    best_roas = 0
+    for src, data in channels.items():
+        if data.get("spend", 0) > 0 and data.get("revenue", 0) > 0:
+            roas = data["revenue"] / data["spend"]
+            if roas > best_roas:
+                best_roas = roas
+                best_channel = src
+
+    if best_channel and best_roas >= 4:
+        meta = _SOURCE_META.get(best_channel, {"label": best_channel})
+        actions.append({
+            "priority": 3,
+            "icon": "fa-solid fa-arrow-trend-up",
+            "color": "green",
+            "headline": f"{meta['label']} is returning {best_roas:.1f}x — consider increasing the budget",
+            "body": f"For every $1 you spend on {meta['label']}, you're getting ${best_roas:.1f} back. That's well above the 3x threshold where it makes sense to spend more.",
+            "cta": "Review Budget",
+            "url": "/account/auto-budget",
+        })
+    elif booking_rate is not None and booking_rate < 0.25 and total_leads > 10:
+        pct = round(booking_rate * 100)
+        actions.append({
+            "priority": 3,
+            "icon": "fa-solid fa-triangle-exclamation",
+            "color": "orange",
+            "headline": f"Only {pct}% of leads are booking — follow-up speed is likely the issue",
+            "body": "Industry data shows that responding to a lead within 5 minutes makes you 21x more likely to win the job. Check your response process.",
+            "cta": "Review Lead Flow",
+            "url": "/account/reports/cpl",
+        })
+
+    # 4. Pricing intelligence (always a quick win)
+    if len(actions) < 3:
+        actions.append({
+            "priority": 4,
+            "icon": "fa-solid fa-tags",
+            "color": "purple",
+            "headline": "Check if your prices are leaving money on the table",
+            "body": "AI analysis of your job data can spot services where you're underpriced or where pricing is inconsistent across technicians.",
+            "cta": "Run Pricing Analysis",
+            "url": "/account/marketing/pricing-intelligence",
+        })
+
+    return actions[:3]
+
+
+@reports_bp.route("/overview", methods=["GET"], endpoint="overview")
+@login_required
+def overview():
+    from datetime import datetime, timedelta
+
+    aid = current_account_id()
+    now = datetime.utcnow()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    prev_start = (month_start - timedelta(days=1)).replace(day=1)
+    six_months_ago = month_start - timedelta(days=182)
+
+    is_sample = False
+    channels: Dict[str, Any] = {}
+
+    def _ch(src):
+        k = _normalize_source(src)
+        if k not in channels:
+            channels[k] = {"spend": 0.0, "leads": 0, "booked": 0, "revenue": 0.0, "jobs": 0}
+        return channels[k]
+
+    # ── Revenue + job count from CRM ─────────────────────────────────────────
+    total_jobs_this_month = 0
+    try:
+        with db.engine.connect() as conn:
+            rows = conn.execute(text(
+                "SELECT lead_source, COUNT(*) as cnt, SUM(total_amount) as rev "
+                "FROM servicetitan_jobs "
+                "WHERE account_id=:aid AND completed_date>=:ms "
+                "AND job_status IN ('Completed','completed') "
+                "GROUP BY lead_source"
+            ), {"aid": aid, "ms": month_start}).fetchall()
+            for src, cnt, rev in rows:
+                c = _ch(src or "other")
+                c["revenue"] += float(rev or 0)
+                c["jobs"] += int(cnt)
+                total_jobs_this_month += int(cnt)
+    except Exception as exc:
+        current_app.logger.warning("pulse: crm revenue query failed: %s", exc)
+
+    # ── Prev month revenue ────────────────────────────────────────────────────
+    prev_revenue = 0.0
+    try:
+        with db.engine.connect() as conn:
+            row = conn.execute(text(
+                "SELECT SUM(total_amount) FROM servicetitan_jobs "
+                "WHERE account_id=:aid AND completed_date>=:ps AND completed_date<:ms "
+                "AND job_status IN ('Completed','completed')"
+            ), {"aid": aid, "ps": prev_start, "ms": month_start}).scalar()
+            prev_revenue = float(row or 0)
+    except Exception:
+        pass
+
+    # ── Leads from lead_ingest ────────────────────────────────────────────────
+    try:
+        with db.engine.connect() as conn:
+            rows = conn.execute(text(
+                "SELECT source, COUNT(*) as cnt, "
+                "SUM(CASE WHEN status IN ('booked','completed') THEN 1 ELSE 0 END) as booked, "
+                "SUM(COALESCE(lead_cost,0)) as cost "
+                "FROM lead_ingest "
+                "WHERE account_id=:aid AND occurred_at>=:ms "
+                "GROUP BY source"
+            ), {"aid": aid, "ms": month_start}).fetchall()
+            for src, cnt, booked, cost in rows:
+                c = _ch(src or "other")
+                c["leads"] += int(cnt)
+                c["booked"] += int(booked)
+                c["spend"] += float(cost or 0)
+    except Exception as exc:
+        current_app.logger.warning("pulse: lead_ingest query failed: %s", exc)
+
+    # ── Ad spend ──────────────────────────────────────────────────────────────
+    try:
+        with db.engine.connect() as conn:
+            rows = conn.execute(text(
+                "SELECT source, SUM(amount) FROM ad_spend "
+                "WHERE account_id=:aid AND spend_date>=:ms GROUP BY source"
+            ), {"aid": aid, "ms": month_start.date()}).fetchall()
+            for src, amt in rows:
+                _ch(src or "other")["spend"] += float(amt or 0)
+    except Exception as exc:
+        current_app.logger.warning("pulse: ad_spend query failed: %s", exc)
+
+    # ── Google Ads from gads_stats_daily ─────────────────────────────────────
+    try:
+        with db.engine.connect() as conn:
+            row = conn.execute(text(
+                "SELECT SUM(cost_micros)/1e6, SUM(clicks), SUM(conversions) "
+                "FROM gads_stats_daily "
+                "WHERE account_id=:aid AND date>=:ms"
+            ), {"aid": aid, "ms": month_start.date()}).fetchone()
+            if row and row[0]:
+                c = _ch("google-ads")
+                c["spend"] = max(c["spend"], float(row[0]))
+                if not c["leads"] and row[2]:
+                    c["leads"] = int(row[2])
+    except Exception:
+        pass
+
+    # ── Fall back to demo data ────────────────────────────────────────────────
+    if not channels or all(
+        c["revenue"] == 0 and c["spend"] == 0 and c["leads"] == 0
+        for c in channels.values()
+    ):
+        is_sample = True
+        channels = {
+            "google-ads": {"spend": 1380, "leads": 42, "booked": 18, "revenue": 9800, "jobs": 18},
+            "glsa":       {"spend": 820,  "leads": 24, "booked": 11, "revenue": 7200, "jobs": 11},
+            "networx":    {"spend": 460,  "leads": 14, "booked": 5,  "revenue": 3400, "jobs": 5},
+            "organic":    {"spend": 0,    "leads": 18, "booked": 7,  "revenue": 4800, "jobs": 7},
+            "elocal":     {"spend": 310,  "leads": 9,  "booked": 3,  "revenue": 2100, "jobs": 3},
+        }
+        prev_revenue = 22800.0
+        total_jobs_this_month = 44
+
+    # ── 6-month revenue trend ─────────────────────────────────────────────────
+    monthly_trend = []
+    try:
+        with db.engine.connect() as conn:
+            rows = conn.execute(text(
+                "SELECT DATE_TRUNC('month', completed_date) as mo, SUM(total_amount) "
+                "FROM servicetitan_jobs "
+                "WHERE account_id=:aid AND completed_date>=:sma "
+                "AND job_status IN ('Completed','completed') "
+                "GROUP BY mo ORDER BY mo"
+            ), {"aid": aid, "sma": six_months_ago}).fetchall()
+            monthly_trend = [{"month": r[0].strftime("%b"), "revenue": float(r[1] or 0)} for r in rows]
+    except Exception:
+        pass
+
+    if not monthly_trend and is_sample:
+        monthly_trend = [
+            {"month": "Dec", "revenue": 18200},
+            {"month": "Jan", "revenue": 15400},
+            {"month": "Feb", "revenue": 17800},
+            {"month": "Mar", "revenue": 21300},
+            {"month": "Apr", "revenue": 22800},
+            {"month": "May", "revenue": 27300},
+        ]
+
+    # ── Totals ────────────────────────────────────────────────────────────────
+    total_revenue = sum(c["revenue"] for c in channels.values())
+    total_spend   = sum(c["spend"]   for c in channels.values())
+    total_leads   = sum(c["leads"]   for c in channels.values())
+    total_booked  = sum(c["booked"]  for c in channels.values())
+    booking_rate  = total_booked / total_leads if total_leads else None
+
+    # ── Health grade ─────────────────────────────────────────────────────────
+    grade = _compute_health_grade(total_revenue, prev_revenue, total_spend, total_leads, total_jobs_this_month, booking_rate)
+    grade_msg, grade_detail = _grade_copy(grade, total_revenue, prev_revenue, total_leads, total_spend)
+
+    # ── Channel display list ──────────────────────────────────────────────────
+    channel_list = []
+    for src, data in sorted(channels.items(), key=lambda x: -x[1]["revenue"]):
+        if data["revenue"] == 0 and data["spend"] == 0 and data["leads"] == 0:
+            continue
+        meta = _SOURCE_META.get(src, {"label": src.replace("-", " ").title(),
+                                      "icon": "fa-solid fa-circle",
+                                      "color": "gray", "color_hex": "#6B7280"})
+        rev  = data["revenue"]
+        sp   = data["spend"]
+        lds  = data["leads"]
+        bkd  = data["booked"]
+        channel_list.append({
+            "key":       src,
+            "label":     meta["label"],
+            "icon":      meta["icon"],
+            "color":     meta["color"],
+            "color_hex": meta["color_hex"],
+            "revenue":   rev,
+            "spend":     sp,
+            "leads":     lds,
+            "booked":    bkd,
+            "jobs":      data.get("jobs", bkd),
+            "cpl":       sp / lds if lds and sp else None,
+            "roas":      rev / sp  if sp else None,
+            "cpr":       sp / bkd  if bkd and sp else None,
+            "rev_share": round(rev / total_revenue * 100) if total_revenue else 0,
+        })
+
+    # ── Action items ─────────────────────────────────────────────────────────
+    actions = _generate_actions(aid, channels, total_leads, booking_rate, total_spend)
+
+    # ── MoM delta ────────────────────────────────────────────────────────────
+    mom_delta = None
+    if prev_revenue and prev_revenue > 0:
+        mom_delta = round((total_revenue - prev_revenue) / prev_revenue * 100)
+
+    return render_template(
+        "reports/overview.html",
+        grade=grade,
+        grade_msg=grade_msg,
+        grade_detail=grade_detail,
+        total_revenue=total_revenue,
+        prev_revenue=prev_revenue,
+        mom_delta=mom_delta,
+        total_spend=total_spend,
+        total_leads=total_leads,
+        total_jobs=total_jobs_this_month,
+        booking_rate=booking_rate,
+        channel_list=channel_list,
+        actions=actions,
+        monthly_trend=monthly_trend,
+        is_sample=is_sample,
+        month_label=now.strftime("%B %Y"),
+        epn=request.endpoint,
+        SECTION="reports",
+    )
+
+
 # ---- Per-channel report pages (kept from original) ----
 
 @reports_bp.route("/google-ads")

@@ -82,6 +82,98 @@
     </a>
   </div>
 
+  <!-- Review Requests Section -->
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-6">
+    <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+      <div>
+        <h2 class="text-base font-bold text-gray-900">Review Requests</h2>
+        <p class="text-xs text-gray-500 mt-0.5">Ask customers to leave a review after their job is complete.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="bulk-send-btn"
+                onclick="bulkSendRequests()"
+                class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors">
+          <i class="fa-solid fa-paper-plane"></i> Send to Recent Customers
+        </button>
+        <button onclick="document.getElementById('send-request-modal').classList.remove('hidden')"
+                class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+          <i class="fa-solid fa-plus"></i> Send Review Request
+        </button>
+      </div>
+    </div>
+
+    <!-- Recent review requests table -->
+    <div id="review-requests-table-wrap">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-xs text-gray-500 border-b border-gray-100">
+            <th class="text-left font-semibold pb-2">Customer</th>
+            <th class="text-left font-semibold pb-2">Job Type</th>
+            <th class="text-left font-semibold pb-2">Status</th>
+            <th class="text-left font-semibold pb-2">Sent</th>
+          </tr>
+        </thead>
+        <tbody id="review-requests-body">
+          <tr><td colspan="4" class="py-6 text-center text-gray-400 text-xs">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Send Review Request Modal -->
+  <div id="send-request-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-gray-900">Send Review Request</h3>
+        <button onclick="document.getElementById('send-request-modal').classList.add('hidden')"
+                class="text-gray-400 hover:text-gray-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <form id="send-request-form" onsubmit="submitReviewRequest(event)">
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Customer Name</label>
+            <input type="text" name="customer_name" placeholder="Jane Smith"
+                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
+            <input type="email" name="email" required placeholder="jane@example.com"
+                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Job / Service Type</label>
+            <input type="text" name="job_type" placeholder="HVAC tune-up"
+                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Google Review URL</label>
+            <input type="url" name="google_url" placeholder="https://g.page/r/..."
+                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Yelp Review URL</label>
+            <input type="url" name="yelp_url" placeholder="https://www.yelp.com/biz/..."
+                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+        </div>
+        <div id="send-request-error" class="hidden mt-3 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2"></div>
+        <div class="flex gap-2 mt-5">
+          <button type="button"
+                  onclick="document.getElementById('send-request-modal').classList.add('hidden')"
+                  class="flex-1 px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
+            Cancel
+          </button>
+          <button type="submit" id="send-request-submit"
+                  class="flex-1 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold">
+            Send Request
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Reviews list -->
   <div class="space-y-4">
     {% if not reviews %}
@@ -169,5 +261,117 @@ function generateDraft(idx, rating, text) {
   }).then(r => r.json()).then(d => { ta.value = d.draft || ''; });
 }
 function regenerateDraft(idx, rating, text) { generateDraft(idx, rating, text); }
+
+// ── Review Requests ─────────────────────────────────────────────────────────
+
+function csrfToken() {
+  const m = document.querySelector('meta[name="csrf-token"]');
+  return m ? m.content : '';
+}
+
+function loadReviewRequests() {
+  fetch('/account/reputation/requests')
+    .then(r => r.json())
+    .then(rows => {
+      const tbody = document.getElementById('review-requests-body');
+      if (!rows || rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-gray-400 text-xs">No review requests sent yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(r => {
+        const statusClass = r.status === 'sent'
+          ? 'bg-green-100 text-green-700'
+          : r.status === 'failed'
+            ? 'bg-red-100 text-red-700'
+            : 'bg-yellow-100 text-yellow-700';
+        const sentAt = r.sent_at
+          ? new Date(r.sent_at).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})
+          : (r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) : '—');
+        return `<tr class="border-t border-gray-50">
+          <td class="py-2 pr-3">
+            <p class="font-medium text-gray-900 text-sm">${escHtml(r.customer_name || '—')}</p>
+            <p class="text-xs text-gray-400">${escHtml(r.recipient || '')}</p>
+          </td>
+          <td class="py-2 pr-3 text-sm text-gray-600">${escHtml(r.job_type || '—')}</td>
+          <td class="py-2 pr-3">
+            <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${statusClass}">${escHtml(r.status)}</span>
+          </td>
+          <td class="py-2 text-xs text-gray-400">${sentAt}</td>
+        </tr>`;
+      }).join('');
+    })
+    .catch(() => {
+      document.getElementById('review-requests-body').innerHTML =
+        '<tr><td colspan="4" class="py-4 text-center text-gray-400 text-xs">Could not load review requests.</td></tr>';
+    });
+}
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function submitReviewRequest(event) {
+  event.preventDefault();
+  const form = document.getElementById('send-request-form');
+  const btn = document.getElementById('send-request-submit');
+  const errEl = document.getElementById('send-request-error');
+  errEl.classList.add('hidden');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  const data = new FormData(form);
+  fetch('/account/reputation/requests/send', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken() },
+    body: data,
+  })
+    .then(r => r.json())
+    .then(resp => {
+      if (resp.ok) {
+        document.getElementById('send-request-modal').classList.add('hidden');
+        form.reset();
+        loadReviewRequests();
+      } else {
+        errEl.textContent = resp.error || 'Failed to send review request.';
+        errEl.classList.remove('hidden');
+      }
+    })
+    .catch(() => {
+      errEl.textContent = 'Network error — please try again.';
+      errEl.classList.remove('hidden');
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = 'Send Request';
+    });
+}
+
+function bulkSendRequests() {
+  const btn = document.getElementById('bulk-send-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending…';
+
+  fetch('/account/reputation/requests/bulk-send', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken() },
+  })
+    .then(r => r.json())
+    .then(resp => {
+      if (resp.ok) {
+        alert(`Sent ${resp.sent} review request(s) to recent customers.`);
+        loadReviewRequests();
+      } else {
+        alert(resp.error || 'Bulk send failed.');
+      }
+    })
+    .catch(() => alert('Network error — please try again.'))
+    .finally(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send to Recent Customers';
+    });
+}
+
+// Load review requests table on page load
+document.addEventListener('DOMContentLoaded', loadReviewRequests);
 </script>
 {% endblock %}

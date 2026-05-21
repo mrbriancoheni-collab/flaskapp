@@ -276,6 +276,17 @@ def select_account():
     # Get currently selected account
     selected = _get_selected_glsa_account(aid)
 
+    # Skip selection page when exactly one account is available
+    if len(available_accounts) == 1 and not selected:
+        acc = available_accounts[0]
+        _save_selected_glsa_account(
+            aid,
+            acc["customer_id"],
+            acc["customer_name"],
+            acc.get("login_customer_id"),
+        )
+        return redirect(url_for("glsa_bp.dashboard"))
+
     return render_template(
         "glsa/select_account.html",
         connected=connected,

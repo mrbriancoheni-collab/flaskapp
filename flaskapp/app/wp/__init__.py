@@ -857,6 +857,19 @@ def settings():
 
             db.session.commit()
             flash("Saved WordPress settings.", "success")
+
+            # Auto-test connection immediately after saving
+            try:
+                _pw = pw if pw and pw != "********" else site.app_password
+                c = WPClient(base, user, _pw)
+                res = c.auth_check()
+                if res.get("ok"):
+                    flash(f"Connection verified — WordPress is reachable.", "success")
+                else:
+                    flash(f"Saved, but connection test failed: {res.get('error', 'could not verify')}. Check your credentials.", "warning")
+            except Exception as _te:
+                flash(f"Saved, but connection test failed: {_te}", "warning")
+
         except OperationalError:
             current_app.logger.exception("Saving WPSite failed (schema mismatch).")
             flash("Database schema is out of date for WordPress settings. Please run the migration to add wp_sites.account_id (you can keep using env vars meanwhile).", "error")
@@ -1134,6 +1147,9 @@ def run_now():
         max_jobs = 5
 
     result = _process_queue(max_jobs=max(max_jobs, 20), retry_errors=True)
+    is_ajax = "application/json" in (request.accept_mimetypes.best or "")
+    if is_ajax:
+        return jsonify(result)
     if result.get("ok"):
         flash(f"Processed {result.get('processed', 0)} job(s).", "success")
     else:

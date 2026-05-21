@@ -1070,11 +1070,31 @@ def reviews_ai_draft():
 @login_required
 def insights():
     """
-    Show last saved insights (if any) and allow regeneration.
+    Show last saved insights. Auto-generates on first visit or when stale (>6 h).
     """
     aid = current_account_id()
     connected = _is_connected(aid)
     latest = _load_latest_insights(aid)
+
+    if connected:
+        stale = not latest or (
+            datetime.utcnow() - latest["generated_at"]
+        ).total_seconds() > 21600  # 6 hours
+        if stale:
+            try:
+                at = _gbp_access_token_for(aid)
+                if at:
+                    loc = _gbp_list_first_location_name(at)
+                    if loc:
+                        metrics = _gbp_fetch_performance(at, loc, days=28)
+                        summary = _gbp_metrics_to_prompt(metrics)
+                        html = _openai_insights_from_metrics(summary)
+                        _save_insights(aid, html)
+                        session["gmb_insights_html"] = html
+                        latest = {"generated_at": datetime.utcnow(), "html": html}
+            except Exception:
+                current_app.logger.exception("Auto-insights generation failed")
+
     session_html = session.get("gmb_insights_html")
     return render_template(
         "gmb/insights.html",

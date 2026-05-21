@@ -336,6 +336,26 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+{% set queued_count = jobs|selectattr('status','eq','queued')|list|length %}
+{% if site and queued_count > 0 and not site.autopilot_require_approval %}
+// Auto-process queued jobs on page load (no approval gate, jobs waiting)
+(async function autoProcess() {
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
+  try {
+    const r = await fetch('{{ url_for("wp_bp.run_now") }}', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json', 'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'csrf_token=' + encodeURIComponent(csrf) + '&max=10',
+    });
+    const d = await r.json();
+    if (d.processed && d.processed > 0) {
+      setTimeout(() => location.reload(), 1500);
+    }
+  } catch(e) {}
+})();
+{% endif %}
+
 document.addEventListener('DOMContentLoaded', function() {
   const modal = document.getElementById('previewModal');
   const previewTitle = document.getElementById('previewTitle');

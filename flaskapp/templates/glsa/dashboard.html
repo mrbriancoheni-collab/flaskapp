@@ -564,6 +564,13 @@ function showToast(message, type) {
   }, 4000);
 }
 
+// Auto-sync on page load when connected but no real data yet
+document.addEventListener('DOMContentLoaded', function() {
+  {% if connected and m.is_demo %}
+  syncLSAData();
+  {% endif %}
+});
+
 // Run analysis after sync
 async function runAnalysis() {
   try {

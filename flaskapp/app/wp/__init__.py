@@ -1495,6 +1495,98 @@ def content_queue_review():
     )
 
 
+
+# ---------- on-demand content recommendations ----------
+
+@wp_bp.route("/generate-recommendations", methods=["POST"], endpoint="generate_recommendations")
+@login_required
+def generate_recommendations():
+    """Run the SEO keyword-gap → AI content recommendations pipeline immediately for this account."""
+    import json
+    import re as _re
+
+    aid = _account_id()
+    if not aid:
+        flash("No account found.", "error")
+        return see_other("wp_bp.content_queue_review")
+
+    try:
+        from app.seo.keyword_gaps import run_keyword_gap_analysis
+        from app.google import _is_connected, _get_gsc_selected_site
+        from app.ai_clients import get_ai_client
+        from app.models_seo import SEOScanResult
+
+        if not _is_connected(aid, "gsc"):
+            flash("Google Search Console is not connected — connect it first so we can analyze your keyword gaps.", "error")
+            return see_other("wp_bp.content_queue_review")
+
+        gsc_url = _get_gsc_selected_site(aid)
+        if not gsc_url:
+            flash("No GSC property selected. Go to Google → Search Console to pick one.", "warning")
+            return see_other("wp_bp.content_queue_review")
+
+        gap = run_keyword_gap_analysis(aid, gsc_url)
+        if gap.get("error"):
+            flash(f"Keyword gap analysis failed: {gap['error']}", "error")
+            return see_other("wp_bp.content_queue_review")
+
+        missing  = gap.get("missing_content", [])[:10]
+        wins     = gap.get("quick_wins", [])[:10]
+        clusters = gap.get("clusters", [])[:8]
+        gap_context = (
+            f"Missing content opportunities: {json.dumps(missing)}\n"
+            f"Quick wins (positions 4-20): {json.dumps(wins)}\n"
+            f"Keyword clusters: {json.dumps(clusters)}"
+        )
+
+        try:
+            from app.models_ads import AIPrompt
+            p = AIPrompt.query.filter_by(prompt_key="seo_content_recommendations", is_active=True).first()
+            tmpl = p.prompt_template if p else None
+        except Exception:
+            tmpl = None
+
+        prompt = (tmpl or (
+            "Based on this keyword gap analysis data, recommend topic clusters.\n\n"
+            "{gap_context}\n\n"
+            "Return a JSON array of 6-8 topic cluster recommendations with: "
+            "cluster_name, pillar_topic, supporting_topics (3-5 titles), "
+            "monthly_searches_potential, rationale. JSON only."
+        )).replace("{gap_context}", gap_context)
+
+        client = get_ai_client()
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1800,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = resp.content[0].text
+        match = _re.search(r'\[.*\]', raw, _re.DOTALL)
+        if not match:
+            flash("AI returned an unexpected format. Try again in a moment.", "error")
+            return see_other("wp_bp.content_queue_review")
+
+        recs = json.loads(match.group())
+        SEOScanResult.save_result(
+            account_id=aid,
+            site_id=None,
+            scan_type="content_recommendations",
+            issue_count=0,
+            item_count=len(recs),
+            data={
+                "recommendations": recs,
+                "generated_at": datetime.utcnow().isoformat(),
+            },
+        )
+        flash(f"Generated {len(recs)} topic cluster recommendations — select topics below to queue posts.", "success")
+
+    except Exception as exc:
+        current_app.logger.exception("generate_recommendations failed: %s", exc)
+        flash(f"Something went wrong: {exc}", "error")
+
+    return see_other("wp_bp.content_queue_review")
+
+
 # ---------- schedule view ----------
 
 @wp_bp.route("/schedule", methods=["GET"], endpoint="schedule")

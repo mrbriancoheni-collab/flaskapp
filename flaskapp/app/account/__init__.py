@@ -567,6 +567,80 @@ def _build_integrations(cards: dict) -> list:
     return rows
 
 
+# --------------------------- ads kpi snapshot ---------------------------
+
+def _fetch_ads_kpis(aid: int) -> dict:
+    """Server-side Google Ads KPI snapshot for the dashboard (MTD vs prior month)."""
+    from datetime import date, timedelta
+    out = {"has_data": False, "spend": 0.0, "clicks": 0, "conversions": 0.0,
+           "impressions": 0, "ctr": 0.0, "cpc": 0.0,
+           "trend_spend": None, "trend_clicks": None, "trend_conv": None,
+           "best_campaign": None}
+    try:
+        today = date.today()
+        ms = today.replace(day=1)
+        prev_end = ms - timedelta(days=1)
+        prev_start = prev_end.replace(day=1)
+
+        kpi_sql = """
+            SELECT COALESCE(SUM(gs.cost_micros),0) AS cm,
+                   COALESCE(SUM(gs.clicks),0)       AS cl,
+                   COALESCE(SUM(gs.conversions),0)  AS cv,
+                   COALESCE(SUM(gs.impressions),0)  AS im
+              FROM gads_stats_daily gs
+              JOIN ads_campaigns ac ON ac.id=gs.entity_id AND ac.account_id=:aid
+             WHERE gs.entity_type='campaign' AND gs.date>=:s AND gs.date<=:e
+        """
+        with db.engine.connect() as conn:
+            r = conn.execute(text(kpi_sql), {"aid": aid, "s": ms.isoformat(), "e": today.isoformat()}).mappings().first()
+            p = conn.execute(text(kpi_sql), {"aid": aid, "s": prev_start.isoformat(), "e": prev_end.isoformat()}).mappings().first()
+
+            if not r:
+                return out
+            spend   = float(r["cm"] or 0) / 1_000_000
+            clicks  = int(r["cl"] or 0)
+            conv    = float(r["cv"] or 0)
+            impr    = int(r["im"] or 0)
+
+            if spend == 0 and clicks == 0 and conv == 0:
+                return out
+
+            def _pct(cur, prev):
+                prev = float(prev or 0)
+                if not prev:
+                    return None
+                return round((float(cur) - prev) / prev * 100, 1)
+
+            ps = float(p["cm"] or 0) / 1_000_000 if p else 0
+            pc = int(p["cl"] or 0) if p else 0
+            pv = float(p["cv"] or 0) if p else 0
+
+            best = conn.execute(text("""
+                SELECT ac.name, SUM(gs.conversions) AS cv
+                  FROM gads_stats_daily gs
+                  JOIN ads_campaigns ac ON ac.id=gs.entity_id
+                 WHERE ac.account_id=:aid AND gs.entity_type='campaign' AND gs.date>=:s
+                 GROUP BY ac.id, ac.name ORDER BY cv DESC LIMIT 1
+            """), {"aid": aid, "s": ms.isoformat()}).mappings().first()
+
+            out.update({
+                "has_data":      True,
+                "spend":         round(spend, 2),
+                "clicks":        clicks,
+                "conversions":   round(conv, 1),
+                "impressions":   impr,
+                "ctr":           round(clicks / impr * 100, 2) if impr else 0,
+                "cpc":           round(spend / clicks, 2) if clicks else 0,
+                "trend_spend":   _pct(spend, ps),
+                "trend_clicks":  _pct(clicks, pc),
+                "trend_conv":    _pct(conv, pv),
+                "best_campaign": dict(best) if best else None,
+            })
+    except Exception as exc:
+        current_app.logger.warning("_fetch_ads_kpis: %s", exc)
+    return out
+
+
 # --------------------------- routes ---------------------------
 
 @account_bp.route("/", methods=["GET"], endpoint="account_index")
@@ -601,6 +675,7 @@ def dashboard():
                     cached_cards = cached.get("cards") or {}
                     ads_connected = cached_cards.get("ads", {}).get("connected", False)
                     ai_warnings = _check_ai_requirements(aid, ads_connected)
+                    ads_on = ads_connected
                     return render_template(
                         "account/dashboard.html",
                         cards=cached_cards,
@@ -612,6 +687,7 @@ def dashboard():
                         connected_percent=cached.get("connected_percent", 0),
                         ai_warnings=ai_warnings,
                         pulse=_quick_pulse(aid),
+                        kpis=_fetch_ads_kpis(aid) if ads_on else {},
                         user=g.user,
                     )
             except (ValueError, TypeError, KeyError):
@@ -653,6 +729,7 @@ def dashboard():
         connected_percent=pct,
         ai_warnings=ai_warnings,
         pulse=_quick_pulse(aid),
+        kpis=_fetch_ads_kpis(aid) if ads_connected else {},
         user=g.user,
     )
 

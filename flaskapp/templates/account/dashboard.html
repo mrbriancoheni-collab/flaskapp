@@ -155,7 +155,7 @@
   </div>
   {% endif %}
 
-  {# ── Google Ads KPIs ──────────────────────────────────────────────────────── #}
+  {# ── Google Ads KPIs (server-rendered) ───────────────────────────────────── #}
   {% if ads_connected %}
   <div>
     <div class="flex items-center justify-between mb-3">
@@ -164,15 +164,105 @@
       <a href="{{ url_for('google_bp.ads_performance') }}" class="text-xs text-indigo-600 hover:text-indigo-700 font-medium">Full report →</a>
       {% endif %}
     </div>
-    <div id="kpiStrip" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      <div class="col-span-2 sm:col-span-4 bg-white rounded-xl border shadow-sm p-5 text-center text-sm text-gray-400">
-        <div class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-400 mr-2 align-middle"></div>
-        Loading campaign data…
+
+    {% set k = kpis or {} %}
+    {% if k.get('has_data') %}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+
+      {# Spend #}
+      <div class="bg-white rounded-xl border shadow-sm p-4">
+        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Spend (MTD)</div>
+        <div class="text-2xl font-bold text-gray-900">${{ '{:,.0f}'.format(k.get('spend', 0) | float) }}</div>
+        <div class="text-xs mt-1
+          {% if k.get('trend_spend') is not none %}{% if k.get('trend_spend') > 0 %}text-red-500{% elif k.get('trend_spend') < 0 %}text-green-600{% else %}text-gray-400{% endif %}{% else %}text-gray-400{% endif %}">
+          {% if k.get('trend_spend') is not none %}
+            {% if k.get('trend_spend') > 0 %}↑{% elif k.get('trend_spend') < 0 %}↓{% else %}→{% endif %}
+            {{ k.get('trend_spend')|abs }}% vs last mo
+            {% if k.get('cpc') %}&nbsp;·&nbsp;${{ '{:,.2f}'.format(k.get('cpc',0)|float) }} CPC{% endif %}
+          {% elif k.get('cpc') %}${{ '{:,.2f}'.format(k.get('cpc',0)|float) }} avg CPC{% endif %}
+        </div>
       </div>
+
+      {# Clicks #}
+      <div class="bg-white rounded-xl border shadow-sm p-4">
+        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Clicks</div>
+        <div class="text-2xl font-bold text-gray-900">{{ '{:,}'.format(k.get('clicks', 0) | int) }}</div>
+        <div class="text-xs mt-1
+          {% if k.get('trend_clicks') is not none %}{% if k.get('trend_clicks') > 0 %}text-green-600{% elif k.get('trend_clicks') < 0 %}text-red-500{% else %}text-gray-400{% endif %}{% else %}text-gray-400{% endif %}">
+          {% if k.get('trend_clicks') is not none %}
+            {% if k.get('trend_clicks') > 0 %}↑{% elif k.get('trend_clicks') < 0 %}↓{% else %}→{% endif %}
+            {{ k.get('trend_clicks')|abs }}% vs last mo
+          {% endif %}
+        </div>
+      </div>
+
+      {# Conversions #}
+      <div class="bg-white rounded-xl border shadow-sm p-4">
+        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Conversions</div>
+        <div class="text-2xl font-bold text-gray-900">{{ k.get('conversions', 0) | float | round(1) }}</div>
+        <div class="text-xs mt-1
+          {% if k.get('trend_conv') is not none %}{% if k.get('trend_conv') > 0 %}text-green-600{% elif k.get('trend_conv') < 0 %}text-red-500{% else %}text-gray-400{% endif %}{% else %}text-gray-400{% endif %}">
+          {% if k.get('trend_conv') is not none %}
+            {% if k.get('trend_conv') > 0 %}↑{% elif k.get('trend_conv') < 0 %}↓{% else %}→{% endif %}
+            {{ k.get('trend_conv')|abs }}% vs last mo
+          {% endif %}
+        </div>
+      </div>
+
+      {# CTR #}
+      <div class="bg-white rounded-xl border shadow-sm p-4">
+        <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">CTR</div>
+        <div class="text-2xl font-bold text-gray-900">{{ k.get('ctr', 0) | float | round(2) }}%</div>
+        <div class="text-xs text-gray-400 mt-1">{{ '{:,}'.format(k.get('impressions', 0) | int) }} impressions</div>
+      </div>
+
     </div>
-    <div id="kpiFooter" class="mt-2 hidden bg-white rounded-xl border shadow-sm px-5 py-3 flex items-center justify-between gap-4 text-sm"></div>
+
+    {% if k.get('best_campaign') %}
+    <div class="mt-2 bg-white rounded-xl border shadow-sm px-5 py-3 flex items-center justify-between gap-4 text-sm">
+      <div class="text-xs text-gray-400">Top campaign</div>
+      <div class="font-semibold text-gray-800 truncate flex-1 mx-3">{{ k.best_campaign.get('name', '') }}</div>
+      <div class="text-xs text-gray-400 shrink-0">{{ k.best_campaign.get('cv', 0) | round(0) | int }} conversions</div>
+      {% if has_endpoint('google_bp.ads_performance') %}
+      <a href="{{ url_for('google_bp.ads_performance') }}" class="text-xs text-indigo-600 font-medium hover:underline shrink-0 ml-2">View →</a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="bg-white rounded-xl border shadow-sm p-5 text-center text-sm text-gray-500">
+      No spend data yet this month.
+      {% if has_endpoint('google_bp.ads_performance') %}
+      <a href="{{ url_for('google_bp.ads_performance') }}" class="text-indigo-600 hover:underline ml-1">View campaigns →</a>
+      {% endif %}
+    </div>
+    {% endif %}
   </div>
+
+  {# ── Automation panel ─────────────────────────────────────────────────────── #}
+  <div>
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+        <i class="fa-solid fa-bolt text-amber-500"></i> AI Automation
+      </h2>
+      {% if has_endpoint('autonomous_bp.control_panel') %}
+      <a href="{{ url_for('autonomous_bp.control_panel') }}" class="text-xs text-indigo-600 font-medium">Configure →</a>
+      {% endif %}
+    </div>
+    <div class="bg-white rounded-xl border shadow-sm p-5 text-sm text-gray-500">
+      {% if has_endpoint('autonomous_bp.control_panel') %}
+      <a href="{{ url_for('autonomous_bp.control_panel') }}"
+         class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition text-sm">
+        <i class="fa-solid fa-robot text-xs"></i> Open Control Panel
+      </a>
+      {% else %}
+      Automation panel is not configured.
+      {% endif %}
+    </div>
+  </div>
+
   {% else %}
+  {# Google Ads not connected #}
   <div class="bg-white rounded-xl border border-dashed border-gray-200 p-6 flex items-center gap-4">
     <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
       <i class="fa-brands fa-google text-blue-500 text-xl"></i>
@@ -184,64 +274,6 @@
     {% if has_endpoint('google_bp.connect_ads') %}
     <a href="{{ url_for('google_bp.connect_ads') }}" class="flex-shrink-0 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition">Connect →</a>
     {% endif %}
-  </div>
-  {% endif %}
-
-  {% if ads_connected %}
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-    <div class="lg:col-span-2">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-          <i class="fa-solid fa-bolt text-amber-500"></i> Top Opportunities
-        </h2>
-        {% if has_endpoint('ads_grader_bp.quick_wins_dashboard') %}
-        <a href="{{ url_for('ads_grader_bp.quick_wins_dashboard') }}" class="text-xs text-indigo-600 font-medium">View all →</a>
-        {% endif %}
-      </div>
-      <div id="quickWinsContainer" class="space-y-3">
-        <div class="bg-white rounded-xl border shadow-sm p-5 text-center text-sm text-gray-400">
-          <div class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-400 mr-2 align-middle"></div>
-          Analyzing campaigns…
-        </div>
-      </div>
-    </div>
-
-    <div>
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-gray-300" id="autonomousDot"></span>
-          Automation
-        </h2>
-        {% if has_endpoint('autonomous_bp.control_panel') %}
-        <a href="{{ url_for('autonomous_bp.control_panel') }}" class="text-xs text-indigo-600 font-medium">Configure →</a>
-        {% endif %}
-      </div>
-      <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
-        <div id="autonomousStatusBody" class="p-4">
-          <div class="flex items-center justify-center py-3">
-            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-400"></div>
-          </div>
-        </div>
-        <div class="border-t">
-          <div class="px-4 py-2">
-            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Recent Actions</span>
-          </div>
-          <ul id="decisionFeedList" class="divide-y divide-gray-100 max-h-48 overflow-y-auto">
-            <li class="px-4 py-3 text-center">
-              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-300 mx-auto"></div>
-            </li>
-          </ul>
-        </div>
-        {% if has_endpoint('autonomous_bp.control_panel') %}
-        <div class="px-4 py-3 border-t">
-          <a href="{{ url_for('autonomous_bp.control_panel') }}"
-             class="block text-center text-xs py-1.5 px-3 rounded-lg border border-indigo-200 text-indigo-600 hover:bg-indigo-50 font-medium transition">
-            Open Control Panel
-          </a>
-        </div>
-        {% endif %}
-      </div>
-    </div>
   </div>
   {% endif %}
 
@@ -260,8 +292,7 @@ function showToast(msg, kind) {
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 4000);
 }
-
-{% if ads_connected %}
+{% if False %}
 // ── KPI Strip ──────────────────────────────────────────────────────────────
 (function loadKpis() {
   const strip  = document.getElementById('kpiStrip');

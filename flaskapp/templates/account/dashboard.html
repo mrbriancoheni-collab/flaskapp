@@ -25,11 +25,13 @@
               here's where things stand.
             </h1>
           </div>
+          {% if has_endpoint('reports_bp.overview') %}
           <a href="{{ url_for('reports_bp.overview') }}"
              class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-50 text-indigo-700 text-sm font-semibold hover:bg-indigo-100 transition whitespace-nowrap">
             <i class="fa-solid fa-heart-pulse text-xs"></i>
             Full Business Pulse
           </a>
+          {% endif %}
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-5 mt-5">

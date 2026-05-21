@@ -651,6 +651,16 @@ def _build_seo_fix_payload(site, url: str, keyword: str = "",
         return None
 
 
+def _is_gsc_connected(aid: int | None) -> bool:
+    if not aid:
+        return False
+    try:
+        from app.google import _is_connected
+        return _is_connected(aid, "gsc")
+    except Exception:
+        return False
+
+
 def _auto_audit_and_fix(site, account_id: int) -> Dict[str, Any]:
     """
     Fetch top GSC pages, audit the lowest-scoring ones, and queue seo_fix jobs.
@@ -1464,6 +1474,7 @@ def content_queue_review():
         recommendations=recommendations,
         last_updated=last_updated,
         queued_keywords=queued_keywords,
+        gsc_connected=_is_gsc_connected(aid),
     )
 
 

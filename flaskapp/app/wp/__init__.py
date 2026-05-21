@@ -2945,33 +2945,50 @@ def geo_pages():
     error = None
 
     if request.method == "POST" and site:
-        service       = (request.form.get("service") or "").strip()
-        cities_raw    = (request.form.get("cities") or "").strip()
         business_name = (request.form.get("business_name") or "").strip()
         phone         = (request.form.get("phone") or "").strip()
         extra_context = (request.form.get("extra_context") or "").strip()
+        pairs_raw     = request.form.getlist("pairs")  # "Service|||City, ST"
 
-        if not service or not cities_raw:
-            flash("Service and at least one city are required.", "error")
+        if not pairs_raw:
+            flash("Select at least one service × city combination.", "error")
         else:
-            # Parse "City, ST" lines
-            cities: List[Dict] = []
-            for line in cities_raw.splitlines():
-                line = line.strip().strip(",")
-                if not line:
+            services_set: dict[str, None] = {}
+            cities_by_service: dict[str, List[Dict]] = {}
+            for pair in pairs_raw:
+                if "|||" not in pair:
                     continue
-                parts = [p.strip() for p in line.split(",")]
-                cities.append({"city": parts[0], "state": parts[1] if len(parts) > 1 else ""})
+                svc, city_st = pair.split("|||", 1)
+                svc = svc.strip()
+                city_st = city_st.strip()
+                parts = [p.strip() for p in city_st.split(",")]
+                city = parts[0]
+                state = parts[1] if len(parts) > 1 else ""
+                if not svc or not city:
+                    continue
+                services_set[svc] = None
+                cities_by_service.setdefault(svc, []).append({"city": city, "state": state})
 
-            if not cities:
-                flash("No valid cities parsed. Use one city per line (e.g. Austin, TX).", "error")
+            if not services_set:
+                flash("No valid pairs found.", "error")
             else:
                 try:
-                    from app.wp.geo_pages import generate_geo_pages
+                    from app.wp.geo_pages import generate_geo_pages_multi
                     from app import db
-                    queued_results = generate_geo_pages(
-                        service=service,
-                        cities=cities,
+                    # Flatten: each service gets its own city list
+                    all_services = list(services_set.keys())
+                    # Build unified city list (deduplicated across services)
+                    all_cities: List[Dict] = []
+                    seen_cities: set = set()
+                    for svc_cities in cities_by_service.values():
+                        for c in svc_cities:
+                            key = (c["city"].lower(), c["state"].lower())
+                            if key not in seen_cities:
+                                seen_cities.add(key)
+                                all_cities.append(c)
+                    queued_results = generate_geo_pages_multi(
+                        services=all_services,
+                        cities=all_cities,
                         business_name=business_name,
                         phone=phone,
                         extra_context=extra_context,

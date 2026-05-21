@@ -1,0 +1,151 @@
+{% extends "base_app.html" %}
+{% block title %}Pricing Intelligence · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Pricing Intelligence</h1>
+      <p class="text-sm text-gray-500 mt-1">
+        AI analysis of your job data to identify where you may be leaving money on the table.
+      </p>
+    </div>
+    <a href="{{ url_for('marketing_bp.revenue') }}"
+       class="px-4 py-2 rounded-lg border text-sm hover:bg-gray-50 flex items-center gap-2">
+      <i class="fa-solid fa-chart-bar"></i> Revenue Dashboard
+    </a>
+  </div>
+
+  {% if not has_data %}
+  <div class="bg-white rounded-xl border p-12 text-center">
+    <i class="fa-solid fa-receipt text-gray-300 text-5xl mb-4"></i>
+    <p class="font-semibold text-gray-700">No job data yet</p>
+    <p class="text-sm text-gray-500 mt-1">
+      Connect ServiceTitan or sync job data to get pricing recommendations.
+    </p>
+  </div>
+  {% else %}
+
+  {# ── AI Narrative ─────────────────────────────────────────────────────────── #}
+  {% if ai_summary %}
+  <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 p-5">
+    <div class="flex items-center gap-2 mb-3">
+      <i class="fa-solid fa-wand-magic-sparkles text-indigo-500"></i>
+      <h2 class="font-bold text-indigo-900">AI Pricing Analysis</h2>
+      <span class="text-xs text-indigo-400 ml-auto">Based on last 12 months</span>
+    </div>
+    <div class="text-sm text-gray-700 whitespace-pre-line leading-relaxed">{{ ai_summary }}</div>
+  </div>
+  {% endif %}
+
+  {# ── Signals ──────────────────────────────────────────────────────────────── #}
+  {% if signals %}
+  <div class="space-y-3">
+    <h2 class="text-base font-semibold text-gray-900">Pricing Signals</h2>
+    {% for s in signals %}
+    {% set badge_color = 'red' if s.severity == 'high' else ('yellow' if s.severity == 'medium' else 'gray') %}
+    <div class="bg-white rounded-xl border shadow-sm p-5 flex items-start gap-4">
+      <div class="flex-shrink-0 w-10 h-10 rounded-full
+        {% if s.type == 'underpriced' %}bg-red-100 text-red-600
+        {% elif s.type == 'inconsistent' %}bg-yellow-100 text-yellow-700
+        {% else %}bg-blue-100 text-blue-600{% endif %}
+        flex items-center justify-center">
+        {% if s.type == 'underpriced' %}
+          <i class="fa-solid fa-arrow-trend-down"></i>
+        {% elif s.type == 'inconsistent' %}
+          <i class="fa-solid fa-shuffle"></i>
+        {% else %}
+          <i class="fa-solid fa-lightbulb"></i>
+        {% endif %}
+      </div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="font-semibold text-gray-900 text-sm">{{ s.job_type }}</span>
+          <span class="text-xs px-1.5 py-0.5 rounded-full font-medium
+            {% if s.severity == 'high' %}bg-red-100 text-red-700
+            {% elif s.severity == 'medium' %}bg-yellow-100 text-yellow-700
+            {% else %}bg-gray-100 text-gray-600{% endif %}">
+            {{ s.severity | capitalize }}
+          </span>
+        </div>
+        <p class="text-sm text-gray-600">{{ s.message }}</p>
+        <p class="text-sm text-indigo-700 mt-1 italic">→ {{ s.recommendation }}</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
+    <i class="fa-solid fa-circle-check text-green-500 text-xl"></i>
+    <div>
+      <p class="font-medium text-green-900">Pricing looks consistent</p>
+      <p class="text-sm text-green-700">No major pricing anomalies detected in your recent jobs.</p>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Job Type Breakdown ────────────────────────────────────────────────────── #}
+  <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b bg-gray-50 flex items-center justify-between">
+      <h2 class="font-semibold text-gray-900">Revenue by Service Type</h2>
+      <span class="text-xs text-gray-400">Last 12 months</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b text-xs text-gray-500">
+          <tr>
+            <th class="px-5 py-2 text-left font-medium">Service Type</th>
+            <th class="px-4 py-2 text-right font-medium">Jobs</th>
+            <th class="px-4 py-2 text-right font-medium">Avg Ticket</th>
+            <th class="px-4 py-2 text-right font-medium">Range</th>
+            <th class="px-4 py-2 text-right font-medium">Total Revenue</th>
+            <th class="px-4 py-2 text-center font-medium w-32">Opportunity</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% set max_rev = job_types[0].total_revenue if job_types else 1 %}
+          {% for j in job_types %}
+          {% set pct = (j.total_revenue / max_rev * 100) | round | int %}
+          {% set is_signal = signals | selectattr('job_type', 'eq', j.job_type_name) | list %}
+          <tr class="hover:bg-gray-50 {% if is_signal %}bg-amber-50/30{% endif %}">
+            <td class="px-5 py-3 font-medium text-gray-900">
+              {{ j.job_type_name or 'Unclassified' }}
+              {% if is_signal %}
+                <i class="fa-solid fa-circle-exclamation text-amber-500 text-xs ml-1" title="Pricing signal detected"></i>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-right text-gray-700">{{ j.job_count }}</td>
+            <td class="px-4 py-3 text-right font-semibold text-gray-900">${{ '%.0f' | format(j.avg_ticket) }}</td>
+            <td class="px-4 py-3 text-right text-gray-500 text-xs">
+              ${{ '%.0f' | format(j.min_ticket) }}–${{ '%.0f' | format(j.max_ticket) }}
+            </td>
+            <td class="px-4 py-3 text-right text-gray-700">${{ '{:,.0f}'.format(j.total_revenue) }}</td>
+            <td class="px-4 py-3">
+              <div class="w-full bg-gray-200 rounded-full h-1.5">
+                <div class="bg-indigo-500 h-1.5 rounded-full" style="width: {{ pct }}%"></div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# ── How to use this ──────────────────────────────────────────────────────── #}
+  <details class="bg-gray-50 border rounded-xl">
+    <summary class="px-5 py-4 cursor-pointer font-semibold text-sm text-gray-700 flex items-center gap-2">
+      <i class="fa-solid fa-circle-info text-gray-400"></i>
+      How to use pricing intelligence
+    </summary>
+    <div class="px-5 pb-5 pt-2 text-sm text-gray-600 space-y-2">
+      <p><strong>Underpriced signals</strong> appear when a service type's average ticket is significantly below your overall average while volume is high — suggesting customers are saying yes easily because your price is low.</p>
+      <p><strong>Inconsistent pricing</strong> flags services with wide ticket spreads, which usually means technicians are quoting differently without a standard process.</p>
+      <p><strong>What to do:</strong> Pick one underpriced service, raise the price by 10%, and track close rate over 30 jobs. If close rate drops by more than 20%, the market won't bear it. If close rate holds, you've found margin.</p>
+    </div>
+  </details>
+
+  {% endif %}
+</div>
+{% endblock %}

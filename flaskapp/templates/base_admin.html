@@ -154,13 +154,6 @@
       {% endif %}
       {% endif %}
 
-      {% if has_endpoint('servicetitan_bp.dashboard') %}
-      <div class="sidebar-label mt-4"><i class="fa-solid fa-wrench"></i>Integrations</div>
-
-      <a class="secondary-link {% if request.endpoint and 'servicetitan_bp' in request.endpoint %}active{% endif %}" href="{{ url_for('servicetitan_bp.dashboard') }}">
-        <i class="fa-solid fa-plug"></i><span>ServiceTitan</span>
-      </a>
-      {% endif %}
 
       <div class="sidebar-label mt-4"><i class="fa-solid fa-chart-line"></i>Analytics</div>
 

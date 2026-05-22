@@ -857,12 +857,6 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register email_workflow_bp")
 
-    try:
-        from app.admin.servicetitan_routes import servicetitan_bp
-        app.register_blueprint(servicetitan_bp)  # url_prefix=/admin/servicetitan
-        app.logger.info("servicetitan_bp registered at /admin/servicetitan")
-    except Exception:
-        app.logger.exception("Failed to register servicetitan_bp")
 
     try:
         from app.admin.lead_campaigns_routes import lead_campaigns_bp
@@ -884,6 +878,14 @@ def create_app():
         app.logger.info("ml_admin_bp registered at /admin/ml")
     except Exception:
         app.logger.exception("Failed to register ml_admin_bp")
+
+    # --- ServiceTitan Integration (account-level) ---
+    try:
+        from app.admin.servicetitan_routes import servicetitan_bp
+        app.register_blueprint(servicetitan_bp)  # url_prefix=/account/servicetitan
+        app.logger.info("servicetitan_bp registered at /account/servicetitan")
+    except Exception:
+        app.logger.exception("Failed to register servicetitan_bp")
 
     # --- Marketing Command Center ---
     try:

@@ -541,6 +541,9 @@
         <a href="{{ url_for('linkedin_bp.index') }}" class="primary-btn {% if SECTION=='linkedin' %}active{% endif %}" title="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
       {% endif %}
       <a href="{{ url_for('reports_bp.overview') if has_endpoint('reports_bp.overview') else url_for('reports_bp.index') }}" class="primary-btn {% if SECTION=='reports' %}active{% endif %}" title="Business Pulse"><i class="fa-solid fa-heart-pulse"></i></a>
+      {% if has_endpoint('servicetitan_bp.dashboard') %}
+        <a href="{{ url_for('servicetitan_bp.dashboard') }}" class="primary-btn {% if SECTION=='servicetitan' %}active{% endif %}" title="ServiceTitan"><i class="fa-solid fa-plug"></i></a>
+      {% endif %}
 
       <div class="mt-auto flex flex-col items-center space-y-1.5 pt-2">
         {% if g.user and g.user.is_admin %}
@@ -812,6 +815,38 @@
         {% endif %}
         <a class="secondary-link {% if epn=='reports_bp.index' %}active{% endif %}" href="{{ url_for('reports_bp.index') }}"><i class="fa-solid fa-gauge"></i><span>Channel Overview</span></a>
         <a class="secondary-link {% if epn=='reports_bp.cpl_dashboard' %}active{% endif %}" href="{{ url_for('reports_bp.cpl_dashboard') }}"><i class="fa-solid fa-dollar-sign"></i><span>Cost per Lead/Customer</span></a>
+      {% elif SECTION == 'servicetitan' %}
+        <div class="sidebar-label"><i class="fa-solid fa-plug"></i>ServiceTitan</div>
+        {% if has_endpoint('servicetitan_bp.dashboard') %}
+        <a class="secondary-link {% if epn=='servicetitan_bp.dashboard' %}active{% endif %}" href="{{ url_for('servicetitan_bp.dashboard') }}">
+          <i class="fa-solid fa-gauge"></i><span>Dashboard</span>
+        </a>
+        {% endif %}
+        {% if has_endpoint('servicetitan_bp.view_capacity') %}
+        <a class="secondary-link {% if epn=='servicetitan_bp.view_capacity' %}active{% endif %}" href="{{ url_for('servicetitan_bp.view_capacity') }}">
+          <i class="fa-solid fa-chart-bar"></i><span>Capacity Forecast</span>
+        </a>
+        {% endif %}
+        {% if has_endpoint('servicetitan_bp.list_customers') %}
+        <a class="secondary-link {% if epn=='servicetitan_bp.list_customers' %}active{% endif %}" href="{{ url_for('servicetitan_bp.list_customers') }}">
+          <i class="fa-solid fa-users"></i><span>Customers</span>
+        </a>
+        {% endif %}
+        {% if has_endpoint('servicetitan_bp.list_jobs') %}
+        <a class="secondary-link {% if epn=='servicetitan_bp.list_jobs' %}active{% endif %}" href="{{ url_for('servicetitan_bp.list_jobs') }}">
+          <i class="fa-solid fa-briefcase"></i><span>Jobs</span>
+        </a>
+        {% endif %}
+        {% if has_endpoint('servicetitan_bp.sync_logs') %}
+        <a class="secondary-link {% if epn=='servicetitan_bp.sync_logs' %}active{% endif %}" href="{{ url_for('servicetitan_bp.sync_logs') }}">
+          <i class="fa-solid fa-clock-rotate-left"></i><span>Sync Logs</span>
+        </a>
+        {% endif %}
+        {% if has_endpoint('servicetitan_bp.settings') %}
+        <a class="secondary-link {% if epn=='servicetitan_bp.settings' %}active{% endif %}" href="{{ url_for('servicetitan_bp.settings') }}">
+          <i class="fa-solid fa-cog"></i><span>Settings</span>
+        </a>
+        {% endif %}
       {% elif SECTION == 'account' %}
         <div class="sidebar-label"><i class="fa-solid fa-user"></i>Account</div>
         {% if has_endpoint('settings_business') %}

@@ -366,7 +366,7 @@ class LeadAutomationService:
         campaigns = LeadCampaign.query.filter(
             LeadCampaign.name.in_(config_map.keys())
         ).order_by(
-            LeadCampaign.last_scraped_at.asc()
+            LeadCampaign.scraping_completed_at.asc()
         ).all()
 
         for campaign in campaigns:
@@ -385,11 +385,11 @@ class LeadAutomationService:
                 keyword = config["keyword"]
                 cities = config["cities"]
 
-                # Load per-city SERP page positions from campaign extra_data.
+                # Load per-city SERP page positions from state file keyed by campaign id.
                 # city_pages tracks how far into Google's results we've gone per city
                 # so each run advances to the next page rather than re-fetching page 1.
-                extra_data = campaign.extra_data or {}
-                city_pages = extra_data.get('city_pages', {})
+                all_city_pages = self.state.setdefault('city_pages', {})
+                city_pages = all_city_pages.setdefault(str(campaign.id), {})
 
                 logger.info(f"Scraping '{keyword}' across {len(cities)} cities for new businesses")
 
@@ -490,11 +490,9 @@ class LeadAutomationService:
                         logger.error(f"Error scraping '{keyword}' in {city}: {e}")
                         continue
 
-                # Persist updated page positions and update campaign timestamps
-                extra_data['city_pages'] = city_pages
-                campaign.extra_data = extra_data
+                # city_pages dict is mutated in-place so state already reflects updates;
+                # just update campaign timestamps
                 campaign.status = 'ready'
-                campaign.last_scraped_at = datetime.utcnow()
                 campaign.scraping_completed_at = datetime.utcnow()
                 campaign.leads_scraped = (campaign.leads_scraped or 0) + total_leads_created
                 db.session.commit()

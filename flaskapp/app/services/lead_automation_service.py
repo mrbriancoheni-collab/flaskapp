@@ -188,12 +188,27 @@ class LeadAutomationService:
         return max(remaining, 0)
 
     def _is_duplicate_domain(self, domain: str) -> bool:
-        """Check if domain has already been processed"""
+        """Check if domain has already been processed (state file + DB)"""
         if not domain:
             return False
 
         domain_clean = domain.lower().replace("http://", "").replace("https://", "").replace("www.", "").split("/")[0]
-        return domain_clean in self.state["processed_domains"]
+
+        # Fast in-memory check first
+        if domain_clean in self.state["processed_domains"]:
+            return True
+
+        # Fall back to DB check so we catch domains added outside this run
+        # (e.g. after a state file reset or manual imports)
+        exists = db.session.query(Lead.id).filter(
+            Lead.website.ilike(f"%{domain_clean}%")
+        ).first()
+        if exists:
+            # Backfill state so future checks are fast
+            self.state["processed_domains"].append(domain_clean)
+            return True
+
+        return False
 
     def _mark_domain_processed(self, domain: str):
         """Mark domain as processed to avoid duplicates"""
@@ -366,7 +381,7 @@ class LeadAutomationService:
         campaigns = LeadCampaign.query.filter(
             LeadCampaign.name.in_(config_map.keys())
         ).order_by(
-            LeadCampaign.last_scraped_at.asc()
+            LeadCampaign.scraping_completed_at.asc()
         ).all()
 
         for campaign in campaigns:
@@ -385,11 +400,11 @@ class LeadAutomationService:
                 keyword = config["keyword"]
                 cities = config["cities"]
 
-                # Load per-city SERP page positions from campaign extra_data.
+                # Load per-city SERP page positions from state file keyed by campaign id.
                 # city_pages tracks how far into Google's results we've gone per city
                 # so each run advances to the next page rather than re-fetching page 1.
-                extra_data = campaign.extra_data or {}
-                city_pages = extra_data.get('city_pages', {})
+                all_city_pages = self.state.setdefault('city_pages', {})
+                city_pages = all_city_pages.setdefault(str(campaign.id), {})
 
                 logger.info(f"Scraping '{keyword}' across {len(cities)} cities for new businesses")
 
@@ -490,11 +505,9 @@ class LeadAutomationService:
                         logger.error(f"Error scraping '{keyword}' in {city}: {e}")
                         continue
 
-                # Persist updated page positions and update campaign timestamps
-                extra_data['city_pages'] = city_pages
-                campaign.extra_data = extra_data
+                # city_pages dict is mutated in-place so state already reflects updates;
+                # just update campaign timestamps
                 campaign.status = 'ready'
-                campaign.last_scraped_at = datetime.utcnow()
                 campaign.scraping_completed_at = datetime.utcnow()
                 campaign.leads_scraped = (campaign.leads_scraped or 0) + total_leads_created
                 db.session.commit()

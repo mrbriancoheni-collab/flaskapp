@@ -322,12 +322,16 @@ class LeadAutomationService:
         }
 
     def _process_campaign_scraping(self) -> int:
-        """Create and scrape campaigns up to daily limit
+        """Re-scrape existing campaigns to find new businesses.
 
-        Each campaign scrapes one keyword across all 100 cities
+        Cycles through all campaigns ordered by last_scraped_at (least recent
+        first), scraping Google SERPs for new home services companies.
+        Existing domain/company dedup prevents adding duplicate leads.
         """
         scraped_count = 0
         campaign_queue = get_campaign_queue()
+        if not campaign_queue:
+            return 0
 
         # Initialize scraper
         try:
@@ -336,57 +340,56 @@ class LeadAutomationService:
             logger.error(f"Cannot initialize scraper: {e}")
             return 0
 
-        while self._can_scrape_today() and self.state["current_campaign_index"] < len(campaign_queue):
-            campaign_config = campaign_queue[self.state["current_campaign_index"]]
+        # Ensure all configured campaigns exist in DB
+        config_map = {c["name"]: c for c in campaign_queue}
+        for config in campaign_queue:
+            if not LeadCampaign.query.filter_by(name=config["name"]).first():
+                campaign = LeadCampaign(
+                    name=config["name"],
+                    industry_service=config["business_type"],
+                    location="USA - Top 100 Cities",
+                    scrape_ads=AUTOMATION_CONFIG["scrape_sources"]["scrape_ads"],
+                    scrape_maps=AUTOMATION_CONFIG["scrape_sources"]["scrape_maps"],
+                    scrape_lsa=AUTOMATION_CONFIG["scrape_sources"]["scrape_lsa"],
+                    scrape_organic=AUTOMATION_CONFIG["scrape_sources"]["scrape_organic"],
+                    max_organic_results=AUTOMATION_CONFIG["scrape_sources"]["max_organic_results"],
+                    daily_email_limit=AUTOMATION_CONFIG["daily_email_limit"],
+                    sequence_delay_days=AUTOMATION_CONFIG["email_sequence_delay_days"],
+                    status='draft'
+                )
+                db.session.add(campaign)
+                self.state["campaigns_created"] += 1
+                logger.info(f"Created campaign: {config['name']}")
+        db.session.commit()
+
+        # Cycle through campaigns ordered by least recently scraped
+        campaigns = LeadCampaign.query.filter(
+            LeadCampaign.name.in_(config_map.keys())
+        ).order_by(
+            LeadCampaign.last_scraped_at.asc()
+        ).all()
+
+        for campaign in campaigns:
+            if not self._can_scrape_today():
+                break
 
             try:
-                # Check if campaign already exists
-                existing = LeadCampaign.query.filter_by(
-                    name=campaign_config["name"]
-                ).first()
-
-                if existing and existing.status in ['ready', 'active']:
-                    logger.info(f"Skipping existing campaign: {campaign_config['name']}")
-                    self.state["current_campaign_index"] += 1
+                config = config_map.get(campaign.name)
+                if not config:
                     continue
 
-                # Create or get campaign
-                if not existing:
-                    campaign = LeadCampaign(
-                        name=campaign_config["name"],
-                        industry_service=campaign_config["business_type"],
-                        location="USA - Top 100 Cities",  # Multi-city campaign
-                        scrape_ads=AUTOMATION_CONFIG["scrape_sources"]["scrape_ads"],
-                        scrape_maps=AUTOMATION_CONFIG["scrape_sources"]["scrape_maps"],
-                        scrape_lsa=AUTOMATION_CONFIG["scrape_sources"]["scrape_lsa"],
-                        scrape_organic=AUTOMATION_CONFIG["scrape_sources"]["scrape_organic"],
-                        max_organic_results=AUTOMATION_CONFIG["scrape_sources"]["max_organic_results"],
-                        daily_email_limit=AUTOMATION_CONFIG["daily_email_limit"],
-                        sequence_delay_days=AUTOMATION_CONFIG["email_sequence_delay_days"],
-                        status='draft'
-                    )
-                    db.session.add(campaign)
-                    db.session.commit()
-                    self.state["campaigns_created"] += 1
-                    logger.info(f"Created campaign: {campaign_config['name']}")
-                else:
-                    campaign = existing
-
-                # Track leads found (for deduplication within campaign)
-                campaign_leads = {}  # {domain: lead_object}
+                # Track leads found in this run (for within-campaign dedup)
+                campaign_leads = {}
                 total_leads_created = 0
 
-                # Get the keyword for this business type
-                keyword = campaign_config["keyword"]
-                cities = campaign_config["cities"]
+                keyword = config["keyword"]
+                cities = config["cities"]
 
-                logger.info(f"Scraping '{keyword}' across {len(cities)} cities")
+                logger.info(f"Scraping '{keyword}' across {len(cities)} cities for new businesses")
 
-                # Loop through all cities for this keyword
                 for city in cities:
-                    # Scrape leads for this city
                     query = f"{keyword} {city}"
-
+    
                     try:
                         results = self.scraper.scrape_campaign(
                             query=query,
@@ -397,22 +400,21 @@ class LeadAutomationService:
                             scrape_organic=campaign.scrape_organic,
                             max_organic=campaign.max_organic_results
                         )
-
+    
                         city_leads_count = 0
-
-                        # Process leads from this city
+    
                         for source_type, items in results.items():
                             for item in items:
                                 domain = item.get('website')
-
+    
                                 # Skip if duplicate domain globally
                                 if self._is_duplicate_domain(domain):
                                     logger.debug(f"Skipping duplicate domain globally: {domain}")
                                     continue
-
+    
                                 # Clean domain for comparison
                                 domain_clean = domain.lower().replace("http://", "").replace("https://", "").replace("www.", "").split("/")[0] if domain else None
-
+    
                                 # Check if this lead already exists in this campaign (from another city)
                                 if domain_clean and domain_clean in campaign_leads:
                                     # Add this city to the existing lead's cities list
@@ -423,13 +425,13 @@ class LeadAutomationService:
                                         existing_lead.extra_data['cities'].append(city)
                                     logger.debug(f"Lead {item['company_name']} also found in: {city}")
                                     continue
-
+    
                                 # Check if lead already exists in database
                                 existing_lead = Lead.query.filter_by(
                                     campaign_id=campaign.id,
                                     company_name=item['company_name']
                                 ).first()
-
+    
                                 if existing_lead:
                                     # Update existing lead with new city
                                     if 'cities' not in existing_lead.extra_data:
@@ -438,12 +440,12 @@ class LeadAutomationService:
                                         existing_lead.extra_data['cities'].append(city)
                                     campaign_leads[domain_clean] = existing_lead
                                     continue
-
+    
                                 # Create new lead
                                 extra_data = item.get('extra_data', {})
                                 extra_data['cities'] = [city]  # Track which city/cities found this lead
                                 extra_data['keyword'] = keyword  # Track the keyword used
-
+    
                                 lead = Lead(
                                     campaign_id=campaign.id,
                                     company_name=item['company_name'],
@@ -457,43 +459,40 @@ class LeadAutomationService:
                                     email_status='pending',
                                     extra_data=extra_data
                                 )
-
+    
                                 db.session.add(lead)
                                 total_leads_created += 1
                                 city_leads_count += 1
-
+    
                                 # Track in campaign_leads for deduplication
                                 if domain_clean:
                                     campaign_leads[domain_clean] = lead
-
+    
                                 # Mark domain as processed globally
                                 self._mark_domain_processed(domain)
-
+    
                         logger.info(f"  - City '{city}': found {city_leads_count} new leads")
-
+    
                     except Exception as e:
                         logger.error(f"Error scraping '{keyword}' in {city}: {e}")
                         continue
 
-                # Update campaign
+                # Update campaign timestamps
                 campaign.status = 'ready'
-                campaign.scraping_started_at = datetime.utcnow()
+                campaign.last_scraped_at = datetime.utcnow()
                 campaign.scraping_completed_at = datetime.utcnow()
-                campaign.leads_scraped = total_leads_created
+                campaign.leads_scraped = (campaign.leads_scraped or 0) + total_leads_created
                 db.session.commit()
 
                 self.state["campaigns_scraped"] += 1
                 self.state["daily_stats"]["scrapes"] += 1
                 scraped_count += 1
 
-                logger.info(f"Scraped campaign {campaign.name}: {total_leads_created} unique leads across {len(cities)} cities")
+                logger.info(f"Scraped campaign '{campaign.name}': {total_leads_created} new leads found")
 
             except Exception as e:
-                logger.error(f"Error scraping campaign {campaign_config['name']}: {e}")
+                logger.error(f"Error scraping campaign {campaign.name}: {e}")
                 db.session.rollback()
-
-            finally:
-                self.state["current_campaign_index"] += 1
 
         return scraped_count
 

@@ -143,10 +143,12 @@ def validate_email_for_outreach(email: str) -> tuple:
     if _is_typo_of_free_domain(domain):
         return False, 'typo_free_domain'
 
-    # 3. Generic role-based local part (exact match or with dots/hyphens stripped)
+    # 3. Generic role-based local part — informational only for B2B outreach.
+    # info@, contact@, admin@ are legitimate first-contact addresses for businesses.
+    # We log but do not block them.
     normalised_local = re.sub(r'[.\-_]', '', local)
     if local in _GENERIC_LOCAL_PARTS or normalised_local in _GENERIC_LOCAL_PARTS:
-        return False, 'generic_local'
+        logger.debug(f"Generic local part for {email} — allowing for B2B outreach")
 
     # 4. Local part too short to be a real name
     if len(local) < _MIN_LOCAL_LENGTH:

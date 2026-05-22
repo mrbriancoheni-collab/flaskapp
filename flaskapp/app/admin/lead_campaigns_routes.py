@@ -130,12 +130,11 @@ def automation_status():
     service = LeadAutomationService()
     progress = service.get_progress_report()
 
-    # Get today's stats
     today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Today's activity
     today_scraped = Lead.query.filter(Lead.created_at >= today_start).count()
     today_enriched = Lead.query.filter(Lead.enriched_at >= today_start).count()
-
-    # Count emails from both tables
     today_legacy_emails = db.session.query(func.count(LeadEmail.id)).filter(
         LeadEmail.sent_at >= today_start
     ).scalar() or 0
@@ -144,23 +143,114 @@ def automation_status():
     ).scalar() or 0
     today_emails = today_legacy_emails + today_contact_emails
 
-    # Check if automation is enabled
-    state_file = os.getenv('AUTOMATION_STATE_FILE', 'automation_state.json')
-    automation_enabled = os.path.exists(state_file)
-    last_run = None
+    # Pipeline totals
+    total_leads = Lead.query.count()
+    total_campaigns = LeadCampaign.query.count()
+    leads_pending_enrichment = Lead.query.filter_by(enrichment_status='pending').count()
+    leads_enriched = Lead.query.filter_by(enrichment_status='completed').count()
 
-    if automation_enabled and os.path.exists(state_file):
-        with open(state_file, 'r') as f:
-            state = json.load(f)
-            last_run = state.get('last_run_date')
+    # Email pipeline
+    contacts_pending = LeadContact.query.filter(
+        LeadContact.email_status == 'pending',
+        LeadContact.email.isnot(None),
+        LeadContact.email != ''
+    ).count()
+    contacts_sent = LeadContact.query.filter(LeadContact.email_status == 'sent').count()
+    legacy_pending = Lead.query.filter(
+        Lead.email_status == 'pending',
+        Lead.enrichment_status == 'completed',
+        Lead.decision_maker_email.isnot(None)
+    ).outerjoin(LeadContact, LeadContact.lead_id == Lead.id).filter(
+        LeadContact.id.is_(None)
+    ).count()
+    total_emails_sent = (
+        db.session.query(func.count(LeadEmail.id)).filter(LeadEmail.status == 'sent').scalar() or 0
+    ) + (
+        db.session.query(func.count(LeadContactEmail.id)).filter(LeadContactEmail.status == 'sent').scalar() or 0
+    )
+
+    # Recent emails (last 5)
+    recent_emails = (
+        LeadContactEmail.query
+        .filter(LeadContactEmail.sent_at.isnot(None))
+        .order_by(LeadContactEmail.sent_at.desc())
+        .limit(5).all()
+    )
+
+    # State file
+    state_file = os.getenv('AUTOMATION_STATE_FILE', 'automation_state.json')
+    last_run = None
+    if os.path.exists(state_file):
+        try:
+            with open(state_file, 'r') as f:
+                state = json.load(f)
+                last_run = state.get('last_run')
+        except Exception:
+            pass
 
     return render_template('admin/lead_campaigns/automation_status.html',
                          progress=progress,
                          today_scraped=today_scraped,
                          today_enriched=today_enriched,
                          today_emails=today_emails,
-                         automation_enabled=automation_enabled,
+                         total_leads=total_leads,
+                         total_campaigns=total_campaigns,
+                         leads_pending_enrichment=leads_pending_enrichment,
+                         leads_enriched=leads_enriched,
+                         contacts_pending=contacts_pending,
+                         contacts_sent=contacts_sent,
+                         legacy_pending=legacy_pending,
+                         total_emails_sent=total_emails_sent,
+                         recent_emails=recent_emails,
                          last_run=last_run)
+
+
+@lead_campaigns_bp.route('/run-scraping', methods=['POST'])
+@require_admin
+def run_scraping_now():
+    """Trigger lead scraping immediately."""
+    from app.services.lead_automation_service import LeadAutomationService
+    from flask import current_app
+    try:
+        service = LeadAutomationService()
+        result = service.run_scraping()
+        flash(f"Scraping complete: {result.get('scraped', 0)} campaigns scraped.", 'success')
+    except Exception as e:
+        current_app.logger.exception("Manual scraping failed")
+        flash(f"Scraping failed: {e}", 'error')
+    return redirect(url_for('lead_campaigns_bp.automation_status'))
+
+
+@lead_campaigns_bp.route('/run-enrichment', methods=['POST'])
+@require_admin
+def run_enrichment_now():
+    """Trigger lead enrichment immediately."""
+    from app.services.lead_automation_service import LeadAutomationService
+    from flask import current_app
+    try:
+        service = LeadAutomationService()
+        result = service.run_enrichment()
+        flash(f"Enrichment complete: {result.get('enriched', 0)} leads enriched.", 'success')
+    except Exception as e:
+        current_app.logger.exception("Manual enrichment failed")
+        flash(f"Enrichment failed: {e}", 'error')
+    return redirect(url_for('lead_campaigns_bp.automation_status'))
+
+
+@lead_campaigns_bp.route('/run-emails', methods=['POST'])
+@require_admin
+def run_emails_now():
+    """Trigger email outreach immediately."""
+    from app.services.lead_automation_service import LeadAutomationService
+    from flask import current_app
+    try:
+        service = LeadAutomationService()
+        result = service.run_email_outreach()
+        flash(f"Email run complete: {result.get('sent', 0)} emails sent.", 'success')
+    except Exception as e:
+        current_app.logger.exception("Manual email run failed")
+        flash(f"Email run failed: {e}", 'error')
+    return redirect(url_for('lead_campaigns_bp.automation_status'))
 
 
 @lead_campaigns_bp.route('/activity')

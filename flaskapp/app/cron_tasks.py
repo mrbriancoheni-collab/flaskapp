@@ -7,7 +7,7 @@ from typing import Optional, List, Tuple
 from sqlalchemy import text
 
 from app import db
-from app.models.wp_job import WPJob
+from app.models_wp import WPJob
 
 
 # =========================

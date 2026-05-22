@@ -188,12 +188,27 @@ class LeadAutomationService:
         return max(remaining, 0)
 
     def _is_duplicate_domain(self, domain: str) -> bool:
-        """Check if domain has already been processed"""
+        """Check if domain has already been processed (state file + DB)"""
         if not domain:
             return False
 
         domain_clean = domain.lower().replace("http://", "").replace("https://", "").replace("www.", "").split("/")[0]
-        return domain_clean in self.state["processed_domains"]
+
+        # Fast in-memory check first
+        if domain_clean in self.state["processed_domains"]:
+            return True
+
+        # Fall back to DB check so we catch domains added outside this run
+        # (e.g. after a state file reset or manual imports)
+        exists = db.session.query(Lead.id).filter(
+            Lead.website.ilike(f"%{domain_clean}%")
+        ).first()
+        if exists:
+            # Backfill state so future checks are fast
+            self.state["processed_domains"].append(domain_clean)
+            return True
+
+        return False
 
     def _mark_domain_processed(self, domain: str):
         """Mark domain as processed to avoid duplicates"""

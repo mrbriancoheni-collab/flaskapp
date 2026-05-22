@@ -102,15 +102,11 @@ class LeadAutomationService:
             logger.info(f"Reset daily stats for {today}")
 
     def _can_scrape_today(self) -> bool:
-        """Check if we can scrape more campaigns today (checks database for all operations)"""
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-
-        # Count all leads created today (from manual + automated operations)
-        today_scrapes = db.session.query(func.count(Lead.id)).filter(
-            Lead.created_at >= today_start
-        ).scalar() or 0
-
-        return today_scrapes < AUTOMATION_CONFIG["daily_scrape_limit"]
+        """Check if we can scrape more campaigns today.
+        Uses state-based counter (campaigns scraped this run day) not lead count,
+        because one campaign can create hundreds of leads across 100 cities.
+        """
+        return self.state["daily_stats"]["scrapes"] < AUTOMATION_CONFIG["daily_scrape_limit"]
 
     def _can_enrich_today(self) -> bool:
         """Check if we can enrich more leads today (checks database for all operations)"""
@@ -225,7 +221,7 @@ class LeadAutomationService:
 
         return {
             "scraped": scraped,
-            "total_campaigns": self.state['campaigns_created']
+            "total_campaigns": LeadCampaign.query.count()
         }
 
     def run_enrichment(self) -> Dict:
@@ -336,6 +332,13 @@ class LeadAutomationService:
             logger.error(f"Cannot initialize scraper: {e}")
             return 0
 
+        # Reset index when we've cycled through all campaigns so they re-scrape
+        if self.state["current_campaign_index"] >= len(campaign_queue):
+            logger.info("All campaigns cycled — resetting index for next scrape cycle")
+            self.state["current_campaign_index"] = 0
+
+        rescrape_after_days = 7  # re-scrape each campaign weekly
+
         while self._can_scrape_today() and self.state["current_campaign_index"] < len(campaign_queue):
             campaign_config = campaign_queue[self.state["current_campaign_index"]]
 
@@ -346,9 +349,18 @@ class LeadAutomationService:
                 ).first()
 
                 if existing and existing.status in ['ready', 'active']:
-                    logger.info(f"Skipping existing campaign: {campaign_config['name']}")
-                    self.state["current_campaign_index"] += 1
-                    continue
+                    # Skip only if scraped recently; re-scrape if older than rescrape_after_days
+                    last_scraped = existing.scraping_completed_at
+                    if last_scraped:
+                        days_since = (datetime.utcnow() - last_scraped).days
+                        if days_since < rescrape_after_days:
+                            logger.info(f"Skipping '{campaign_config['name']}' (scraped {days_since}d ago, re-scrape after {rescrape_after_days}d)")
+                            self.state["current_campaign_index"] += 1
+                            continue
+                    else:
+                        logger.info(f"Skipping existing campaign with no scrape timestamp: {campaign_config['name']}")
+                        self.state["current_campaign_index"] += 1
+                        continue
 
                 # Create or get campaign
                 if not existing:

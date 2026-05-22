@@ -2269,7 +2269,7 @@ def bulk_send_emails_all():
 # ==================== Bounce Sync ====================
 
 @lead_campaigns_bp.route('/sync-bounces', methods=['POST'])
-@login_required
+@require_admin
 def sync_bounces():
     """Pull hard bounces and spam complaints from Brevo and auto-suppress them.
 

@@ -102,15 +102,11 @@ class LeadAutomationService:
             logger.info(f"Reset daily stats for {today}")
 
     def _can_scrape_today(self) -> bool:
-        """Check if we can scrape more campaigns today (checks database for all operations)"""
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-
-        # Count all leads created today (from manual + automated operations)
-        today_scrapes = db.session.query(func.count(Lead.id)).filter(
-            Lead.created_at >= today_start
-        ).scalar() or 0
-
-        return today_scrapes < AUTOMATION_CONFIG["daily_scrape_limit"]
+        """Check if we can scrape more campaigns today.
+        Uses state-based counter (campaigns scraped this run day) not lead count,
+        because one campaign can create hundreds of leads across 100 cities.
+        """
+        return self.state["daily_stats"]["scrapes"] < AUTOMATION_CONFIG["daily_scrape_limit"]
 
     def _can_enrich_today(self) -> bool:
         """Check if we can enrich more leads today (checks database for all operations)"""
@@ -240,7 +236,7 @@ class LeadAutomationService:
 
         return {
             "scraped": scraped,
-            "total_campaigns": self.state['campaigns_created']
+            "total_campaigns": LeadCampaign.query.count()
         }
 
     def run_enrichment(self) -> Dict:

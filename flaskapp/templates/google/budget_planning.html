@@ -10,8 +10,8 @@
 
   <div class="flex items-start justify-between flex-wrap gap-4 mb-6">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Budget & Forecast</h1>
-      <p class="text-sm text-gray-500 mt-0.5">Budget groups · Auto-adjustment · 12-month forecast</p>
+      <h1 class="text-2xl font-bold text-gray-900">Budget planning</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Group your campaigns · set spend limits · see next month's forecast</p>
     </div>
   </div>
 
@@ -45,7 +45,7 @@
     {% if budget_groups %}
     <div class="space-y-4">
       {% for group in budget_groups %}
-      {% set budget_dollars = (group.monthly_budget_target or (group.estimated_monthly_cents or 0) / 100) %}
+      {% set budget_dollars = ((group.monthly_budget_target or (group.estimated_monthly_cents or 0) / 100) | float) %}
       {% set spend_dollars = (group.current_spend_dollars or 0) | float %}
       {% set pct = ((spend_dollars / budget_dollars * 100) | int) if budget_dollars > 0 else 0 %}
       {% set is_active = group.enabled %}
@@ -203,30 +203,15 @@
     {% else %}
     {# Forecast controls #}
     <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm mb-6">
-      <div class="grid grid-cols-3 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Campaign</label>
-          <select id="forecastCampaign" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm">
-            <option value="">Select a campaign…</option>
-            {% for c in forecast_campaigns %}
-            <option value="{{ c.id }}">{{ c.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Service Type</label>
-          <select id="forecastServiceType" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm">
-            <option value="hvac_ac">HVAC – Air Conditioning</option>
-            <option value="hvac_heat">HVAC – Heating</option>
-            <option value="plumbing">Plumbing</option>
-            <option value="electrical">Electrical</option>
-            <option value="roofing">Roofing</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-          <input type="text" id="forecastZip" value="10001" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm">
-        </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Campaign</label>
+        <select id="forecastCampaign" class="block w-full rounded-lg border-gray-300 shadow-sm sm:text-sm">
+          <option value="">Select a campaign…</option>
+          {% for c in forecast_campaigns %}
+          <option value="{{ c.id }}">{{ c.name }}</option>
+          {% endfor %}
+        </select>
+        <p class="text-xs text-gray-500 mt-1">Service type and location are inferred from your account profile and campaign name.</p>
       </div>
       <button onclick="loadForecast()" class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition">
         <i class="fas fa-chart-line"></i> Generate Forecast
@@ -268,8 +253,11 @@
 
     {# 12-month seasonal plan #}
     <div id="forecastSeasonalPlan" class="hidden bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-      <div class="px-5 py-4 border-b border-gray-100">
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
         <h2 class="font-semibold text-gray-900">12-Month Budget Plan</h2>
+        <span id="seasonalModelBadge" class="hidden text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+          <i class="fas fa-flask mr-1"></i><span id="seasonalModelText"></span>
+        </span>
       </div>
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-100 text-sm">
@@ -281,6 +269,7 @@
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Change</th>
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Proj. Leads</th>
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Seasonality</th>
+              <th class="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Why</th>
             </tr>
           </thead>
           <tbody id="seasonalPlanBody" class="divide-y divide-gray-50 bg-white"></tbody>
@@ -293,6 +282,14 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 function getCsrfToken() {
   return document.querySelector('meta[name="csrf-token"]')?.content || '';
 }
@@ -309,16 +306,13 @@ async function saveAutoBudgetSettings() {
       }),
     });
     const data = await res.json();
-    alert(data.success ? 'Auto-budget settings saved.' : 'Error: ' + (data.error || 'unknown'));
-  } catch(e) { alert('Error: ' + e.message); }
+    showToast(data.success ? 'Auto-budget settings saved.' : 'Error: ' + (data.error || 'unknown'), data.success ? 'success' : 'error');
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
 }
 
 async function loadForecast() {
   const campaignId = document.getElementById('forecastCampaign').value;
-  if (!campaignId) { alert('Please select a campaign.'); return; }
-
-  const serviceType = document.getElementById('forecastServiceType').value;
-  const zip = document.getElementById('forecastZip').value;
+  if (!campaignId) { showToast('Please select a campaign.', 'error'); return; }
 
   // Show sections
   document.getElementById('forecastKpis').classList.remove('hidden');
@@ -347,7 +341,7 @@ async function loadForecast() {
     const res = await fetch('/account/google/ads/forecasting/api/forecast/monthly', {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-CSRFToken':csrf},
-      body: JSON.stringify({campaign_id: campaignId, service_type: serviceType, month, year}),
+      body: JSON.stringify({campaign_id: campaignId, month, year}),
     });
     const data = await res.json();
     if (data.success && data.forecast) {
@@ -368,15 +362,20 @@ async function loadForecast() {
     const res = await fetch('/account/google/ads/forecasting/api/forecast/seasonal', {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-CSRFToken':csrf},
-      body: JSON.stringify({campaign_id: campaignId, service_type: serviceType, current_monthly_budget: 5000}),
+      body: JSON.stringify({campaign_id: campaignId, current_monthly_budget: 5000}),
     });
     const data = await res.json();
     if (data.success && data.recommendations) {
+      if (data.service_type_label) {
+        document.getElementById('seasonalModelText').textContent = 'Model: ' + data.service_type_label;
+        document.getElementById('seasonalModelBadge').classList.remove('hidden');
+      }
       const tbody = document.getElementById('seasonalPlanBody');
       tbody.innerHTML = '';
       for (const rec of data.recommendations) {
         const chg = rec.budget_change_pct;
         const cls = chg >= 20 ? 'text-red-600' : chg >= 10 ? 'text-orange-600' : chg <= -10 ? 'text-green-600' : 'text-gray-900';
+        const note = (rec.note || '').replace(/</g, '&lt;');
         tbody.innerHTML += `
           <tr class="hover:bg-gray-50">
             <td class="px-5 py-3 font-medium text-gray-900">${rec.month} ${rec.year}</td>
@@ -385,6 +384,7 @@ async function loadForecast() {
             <td class="px-4 py-3 text-right font-semibold ${cls}">${chg > 0 ? '+' : ''}${(chg || 0).toFixed(1)}%</td>
             <td class="px-4 py-3 text-right text-gray-700">${rec.projected_leads || 0}</td>
             <td class="px-4 py-3 text-right text-gray-700">${(rec.seasonality_factor || 1).toFixed(2)}x</td>
+            <td class="px-5 py-3 text-gray-600 text-xs">${note}</td>
           </tr>
         `;
       }

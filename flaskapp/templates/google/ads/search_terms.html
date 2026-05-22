@@ -22,6 +22,20 @@
   <!-- Sync status -->
   <div id="sync-status" class="hidden rounded-xl px-4 py-3 text-sm border bg-blue-50 border-blue-200 text-blue-800"></div>
 
+  {% if wasted_spend_dollars > 0 %}
+  <div class="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between gap-4">
+    <div>
+      <p class="text-red-800 font-semibold text-sm">
+        ${{ "%.2f" | format(wasted_spend_dollars) }} wasted on {{ wasted_term_count }} irrelevant search term{{ 's' if wasted_term_count != 1 else '' }}
+      </p>
+      <p class="text-red-600 text-xs mt-0.5">These terms show buying intent — people shopping to purchase, not hire a service</p>
+    </div>
+    <button id="block-all-irrelevant" class="px-3 py-1.5 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700 font-medium whitespace-nowrap">
+      Block all irrelevant
+    </button>
+  </div>
+  {% endif %}
+
   {% if not terms_data %}
   <div class="bg-white rounded-xl shadow-sm border p-12 text-center">
     <i class="fa-solid fa-magnifying-glass-chart text-gray-300 text-5xl mb-4"></i>
@@ -45,6 +59,7 @@
       <option value="unactioned">Not actioned</option>
       <option value="keyword">Added as keyword</option>
       <option value="negative">Added as negative</option>
+      <option value="irrelevant">Irrelevant only</option>
     </select>
     <span class="text-xs text-gray-400 ml-auto">Showing <span id="visible-count">{{ terms_data | length }}</span> terms</span>
   </div>
@@ -61,18 +76,21 @@
             <th class="text-right px-4 py-3 w-20">Clicks</th>
             <th class="text-right px-4 py-3 w-24">Spend</th>
             <th class="text-right px-4 py-3 w-20">Conv.</th>
+            <th class="text-center px-4 py-3 w-28">Relevance</th>
+            <th class="text-right px-4 py-3 w-20">CPL</th>
             <th class="text-center px-4 py-3 w-40">Status</th>
             <th class="text-center px-4 py-3 w-48">Actions</th>
           </tr>
         </thead>
         <tbody class="divide-y" id="terms-tbody">
           {% for t in terms_data %}
-          <tr class="hover:bg-gray-50 term-row"
+          <tr class="hover:bg-gray-50 term-row {% if t.relevance == 'irrelevant' %}bg-red-50{% endif %}"
               data-id="{{ t.id }}"
               data-term="{{ t.search_term | lower | e }}"
               data-campaign="{{ t.campaign_id or '' }}"
               data-added-kw="{{ 'true' if t.added_as_keyword else 'false' }}"
-              data-added-neg="{{ 'true' if t.added_as_negative else 'false' }}">
+              data-added-neg="{{ 'true' if t.added_as_negative else 'false' }}"
+              data-relevance="{{ t.relevance }}">
             <td class="px-4 py-3 font-mono text-gray-800 max-w-xs truncate">{{ t.search_term }}</td>
             <td class="px-4 py-3 text-gray-600 text-xs max-w-32 truncate">{{ t.campaign_name or '—' }}</td>
             <td class="px-4 py-3 text-right text-gray-700">{{ t.impressions | int }}</td>
@@ -82,6 +100,18 @@
             </td>
             <td class="px-4 py-3 text-right {% if t.conversions and t.conversions > 0 %}text-green-600 font-semibold{% else %}text-gray-400{% endif %}">
               {{ t.conversions | int if t.conversions else '0' }}
+            </td>
+            <td class="px-4 py-3 text-center">
+              {% if t.relevance == 'irrelevant' %}
+                <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Irrelevant</span>
+              {% elif t.relevance == 'low_quality' %}
+                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Low quality</span>
+              {% else %}
+                <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Relevant</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-right text-gray-600 text-xs">
+              {% if t.cpl %}${{ "%.2f" | format(t.cpl) }}{% else %}—{% endif %}
             </td>
             <td class="px-4 py-3 text-center">
               <span class="term-status-{{ t.id }}">
@@ -123,7 +153,6 @@
 
 <script>
 (function () {
-  // Filter
   const termFilter = document.getElementById('term-filter');
   const campFilter = document.getElementById('camp-filter');
   const actionFilter = document.getElementById('action-filter');
@@ -140,7 +169,8 @@
       const matchAction = !action ||
         (action === 'unactioned' && row.dataset.addedKw === 'false' && row.dataset.addedNeg === 'false') ||
         (action === 'keyword' && row.dataset.addedKw === 'true') ||
-        (action === 'negative' && row.dataset.addedNeg === 'true');
+        (action === 'negative' && row.dataset.addedNeg === 'true') ||
+        (action === 'irrelevant' && row.dataset.relevance === 'irrelevant');
       const show = matchTerm && matchCamp && matchAction;
       row.style.display = show ? '' : 'none';
       if (show) count++;
@@ -152,7 +182,6 @@
   campFilter?.addEventListener('change', applyFilters);
   actionFilter?.addEventListener('change', applyFilters);
 
-  // Add as keyword
   document.querySelectorAll('.add-kw-btn').forEach(btn => {
     btn.addEventListener('click', async function () {
       const id = this.dataset.id;
@@ -181,7 +210,6 @@
     });
   });
 
-  // Add as negative
   document.querySelectorAll('.add-neg-btn').forEach(btn => {
     btn.addEventListener('click', async function () {
       const id = this.dataset.id;
@@ -208,7 +236,6 @@
     });
   });
 
-  // Sync button
   const syncBtn = document.getElementById('sync-btn');
   const syncStatus = document.getElementById('sync-status');
   syncBtn?.addEventListener('click', async function () {
@@ -232,6 +259,32 @@
       syncBtn.innerHTML = '<i class="fa-solid fa-rotate mr-2"></i>Sync from Google Ads';
     }
   });
+
+  const blockAllBtn = document.getElementById('block-all-irrelevant');
+  if (blockAllBtn) {
+    blockAllBtn.addEventListener('click', async function () {
+      const irrelevantRows = Array.from(document.querySelectorAll('.term-row[data-relevance="irrelevant"]'));
+      const negBtns = irrelevantRows
+        .map(row => row.querySelector('.add-neg-btn'))
+        .filter(Boolean);
+      if (!negBtns.length) {
+        blockAllBtn.textContent = 'All blocked';
+        blockAllBtn.disabled = true;
+        return;
+      }
+      blockAllBtn.disabled = true;
+      let done = 0;
+      const total = negBtns.length;
+      blockAllBtn.textContent = `Blocking 0 of ${total}…`;
+      for (const btn of negBtns) {
+        btn.click();
+        done++;
+        blockAllBtn.textContent = `Blocking ${done} of ${total}…`;
+        await new Promise(r => setTimeout(r, 120));
+      }
+      blockAllBtn.textContent = `Blocked ${total}`;
+    });
+  }
 })();
 </script>
 {% endblock %}

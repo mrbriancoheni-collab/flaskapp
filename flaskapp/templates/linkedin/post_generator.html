@@ -1,7 +1,7 @@
 {# templates/linkedin/post_generator.html #}
 {% extends "base_app.html" %}
 {% set SECTION = 'linkedin' %}
-{% block title %}LinkedIn Thought Leader Post Generator{% endblock %}
+{% block title %}Write LinkedIn posts that bring in leads{% endblock %}
 
 {% block content %}
 {% set _ai_available = (ai_available if ai_available is defined else false) %}
@@ -9,9 +9,9 @@
 <div class="max-w-5xl mx-auto space-y-6">
   <!-- Header -->
   <div>
-    <h1 class="text-2xl font-semibold">LinkedIn Thought Leader Post Generator</h1>
+    <h1 class="text-2xl font-semibold">Write LinkedIn posts that bring in leads</h1>
     <p class="text-gray-500 mt-1">
-      Create engaging LinkedIn posts that demonstrate your unique expertise and build your professional brand.
+      Share what you know to win trust and get more calls. We will write the post for you in plain English.
     </p>
   </div>
 
@@ -23,8 +23,8 @@
       </div>
       <div class="text-sm {{ 'text-green-900' if _ai_available else 'text-amber-900' }}">
         {% if _ai_available %}
-          <p class="font-semibold">AI-Powered Content Generation Active</p>
-          <p>Posts are generated using Claude AI to match your unique voice and expertise.</p>
+          <p class="font-semibold">AI writing is turned on</p>
+          <p>Posts are written by Claude AI to sound like you and reflect your experience.</p>
         {% else %}
           <p class="font-semibold">AI Configuration Required</p>
           <p>Add ANTHROPIC_API_KEY to your environment to enable AI post generation.</p>
@@ -37,10 +37,10 @@
   <div class="flex items-center gap-3 mb-4">
     <a href="{{ url_for('linkedin_bp.categories') }}"
        class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-md hover:from-indigo-700 hover:to-purple-700 font-medium text-sm shadow-md">
-      <i class="fa-solid fa-layer-group"></i> Manage Categories & POVs
+      <i class="fa-solid fa-layer-group"></i> Manage topics and points of view
     </a>
     <span class="text-sm text-gray-500">
-      Define your thought leadership categories with unique POVs to generate strategic content
+      Set up your favorite topics and what you believe so posts always sound like you
     </span>
   </div>
 
@@ -48,32 +48,32 @@
     <!-- Input Form -->
     <div class="rounded-lg border bg-white p-6">
       <h2 class="font-semibold mb-4">
-        <i class="fa-solid fa-pen-to-square mr-2 text-blue-600"></i>Post Configuration
+        <i class="fa-solid fa-pen-to-square mr-2 text-blue-600"></i>Tell us what to write about
       </h2>
 
       <form id="postGeneratorForm" class="space-y-4">
         <!-- Category Selector -->
         <div>
           <label for="category" class="block text-sm font-medium text-gray-700 mb-1">
-            Category (Optional)
+            Topic (optional)
           </label>
           <select
             id="category"
             name="category_id"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="">-- Manual Entry (No Category) --</option>
+            <option value="">-- Type your own (no topic saved) --</option>
             <!-- Categories will be loaded via JavaScript -->
           </select>
           <p class="text-xs text-gray-500 mt-1">
-            Select a category to auto-fill your POV and expertise, or use manual entry below
+            Pick a saved topic to auto-fill your expertise, or just type it in below
           </p>
         </div>
 
         <!-- Expertise Field -->
         <div>
           <label for="expertise" class="block text-sm font-medium text-gray-700 mb-1">
-            Your Unique Expertise *
+            What you are great at *
           </label>
           <textarea
             id="expertise"
@@ -81,17 +81,17 @@
             rows="3"
             required
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Example: 15+ years optimizing Google Ads for home services businesses, specialized in seasonal HVAC campaigns and emergency plumbing PPC"
+            placeholder="Example: 20 years fixing AC units in Phoenix, certified on every major brand, known for same-day emergency calls"
           >{{ prefill.expertise if prefill else '' }}</textarea>
           <p class="text-xs text-gray-500 mt-1">
-            What makes you different? What specific knowledge or experience do you bring?
+            What makes your business different? What jobs do you do best?
           </p>
         </div>
 
         <!-- Industry Field -->
         <div>
           <label for="industry" class="block text-sm font-medium text-gray-700 mb-1">
-            Industry
+            Your trade
           </label>
           <select
             id="industry"
@@ -114,7 +114,7 @@
         <!-- Topic Field -->
         <div>
           <label for="topic" class="block text-sm font-medium text-gray-700 mb-1">
-            Topic / Theme *
+            What is the post about? *
           </label>
           <input
             type="text"
@@ -122,29 +122,29 @@
             name="topic"
             required
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Example: Why most HVAC companies waste 40% of their ad spend in summer"
+            placeholder="Example: Why you should replace your AC capacitor before summer hits"
             value="{{ prefill.topic if prefill else '' }}"
           />
           <p class="text-xs text-gray-500 mt-1">
-            What specific insight, lesson, or opinion do you want to share?
+            What tip, story, or warning do you want to share with customers?
           </p>
         </div>
 
         <!-- Tone Field -->
         <div>
           <label for="tone" class="block text-sm font-medium text-gray-700 mb-1">
-            Tone / Style
+            How should it sound?
           </label>
           <select
             id="tone"
             name="tone"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="professional" {{ 'selected' if prefill and prefill.tone == 'professional' else '' }}>Professional & Authoritative</option>
-            <option value="conversational" {{ 'selected' if prefill and prefill.tone == 'conversational' else '' }}>Conversational & Friendly</option>
-            <option value="storytelling" {{ 'selected' if prefill and prefill.tone == 'storytelling' else '' }}>Storytelling & Personal</option>
-            <option value="educational" {{ 'selected' if prefill and prefill.tone == 'educational' else '' }}>Educational & Helpful</option>
-            <option value="provocative" {{ 'selected' if prefill and prefill.tone == 'provocative' else '' }}>Provocative & Debate-Starting</option>
+            <option value="professional" {{ 'selected' if prefill and prefill.tone == 'professional' else '' }}>Professional and trustworthy</option>
+            <option value="conversational" {{ 'selected' if prefill and prefill.tone == 'conversational' else '' }}>Friendly, like talking to a neighbor</option>
+            <option value="storytelling" {{ 'selected' if prefill and prefill.tone == 'storytelling' else '' }}>Tell a story from a real job</option>
+            <option value="educational" {{ 'selected' if prefill and prefill.tone == 'educational' else '' }}>Teach a quick tip</option>
+            <option value="provocative" {{ 'selected' if prefill and prefill.tone == 'provocative' else '' }}>Strong opinion that gets people talking</option>
           </select>
         </div>
 
@@ -158,7 +158,7 @@
             class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
           />
           <label for="include_hashtags" class="text-sm font-medium text-gray-700">
-            Include relevant hashtags
+            Add hashtags so more people find it
           </label>
         </div>
 
@@ -172,7 +172,7 @@
             class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
           />
           <label for="include_cta" class="text-sm font-medium text-gray-700">
-            Include call-to-action
+            Tell readers what to do next (call, book, message)
           </label>
         </div>
 
@@ -184,7 +184,7 @@
           {{ 'disabled' if not _ai_available else '' }}
         >
           <i class="fa-solid fa-wand-magic-sparkles"></i>
-          Generate Thought Leader Post
+          Write my post
         </button>
       </form>
 
@@ -232,7 +232,7 @@
     <div class="rounded-lg border bg-white p-6">
       <div class="flex items-center justify-between mb-4">
         <h2 class="font-semibold">
-          <i class="fa-brands fa-linkedin mr-2 text-blue-600"></i>Generated Post
+          <i class="fa-brands fa-linkedin mr-2 text-blue-600"></i>Your post
         </h2>
         <button
           id="copyBtn"
@@ -367,25 +367,25 @@
   <!-- Best Practices -->
   <div class="rounded-lg border bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
     <h3 class="font-semibold text-blue-900 mb-3">
-      <i class="fa-solid fa-lightbulb mr-2"></i>LinkedIn Thought Leadership Best Practices
+      <i class="fa-solid fa-lightbulb mr-2"></i>Tips for posts that get more calls
     </h3>
     <div class="grid md:grid-cols-2 gap-4 text-sm text-blue-800">
       <div>
         <h4 class="font-semibold mb-2">Structure</h4>
         <ul class="space-y-1">
-          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Hook readers in first 2 lines</li>
-          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Use short paragraphs (1-2 sentences)</li>
-          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Add line breaks for mobile readability</li>
-          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>End with clear call-to-action</li>
+          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Grab attention in the first 2 lines</li>
+          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Keep paragraphs short (1-2 sentences)</li>
+          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Add blank lines so it's easy to read on a phone</li>
+          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>End by telling readers exactly what to do next</li>
         </ul>
       </div>
       <div>
         <h4 class="font-semibold mb-2">Content</h4>
         <ul class="space-y-1">
-          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Share specific numbers and examples</li>
-          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Tell personal stories when relevant</li>
-          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Provide actionable value</li>
-          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Be authentic, not corporate</li>
+          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Share real numbers and real jobs you did</li>
+          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Tell a story from a recent call when you can</li>
+          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Give a tip people can actually use today</li>
+          <li><i class="fa-solid fa-check mr-2 text-blue-600"></i>Sound like yourself, not a fancy company</li>
         </ul>
       </div>
     </div>
@@ -393,6 +393,14 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 // Load categories on page load
 async function loadCategories() {
   try {
@@ -488,7 +496,7 @@ async function generatePost() {
 
   // Validation
   if (!formData.get('expertise') || !formData.get('topic')) {
-    alert('Please fill in your expertise and topic');
+    showToast('Please fill in what you are great at and what the post is about', 'error');
     return;
   }
 
@@ -507,7 +515,7 @@ async function generatePost() {
     const data = await response.json();
 
     if (data.error) {
-      alert('Error: ' + data.error);
+      showToast('Error: ' + data.error, 'error');
       return;
     }
 
@@ -534,10 +542,10 @@ async function generatePost() {
 
   } catch (error) {
     console.error('Error:', error);
-    alert('Failed to generate post. Please try again.');
+    showToast('Failed to write post. Please try again.', 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>Generate Thought Leader Post';
+    btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>Write my post';
   }
 }
 
@@ -582,12 +590,12 @@ document.getElementById('saveScheduleBtn')?.addEventListener('click', async func
 
   // Validation
   if (!postText || postText.trim() === '') {
-    alert('Please generate a post first');
+    showToast('Please write a post first', 'error');
     return;
   }
 
   if (!scheduleDate) {
-    alert('Please select a date');
+    showToast('Please pick a date', 'error');
     return;
   }
 
@@ -613,12 +621,12 @@ document.getElementById('saveScheduleBtn')?.addEventListener('click', async func
     const data = await response.json();
 
     if (data.error) {
-      alert('Error: ' + data.error);
+      showToast('Error: ' + data.error, 'error');
       return;
     }
 
     // Success!
-    alert(data.message || 'Post scheduled successfully!');
+    showToast(data.message || 'Post scheduled!', 'success');
 
     // Hide schedule form
     document.getElementById('scheduleForm').classList.add('hidden');
@@ -641,7 +649,7 @@ document.getElementById('saveScheduleBtn')?.addEventListener('click', async func
 
   } catch (error) {
     console.error('Error:', error);
-    alert('Failed to schedule post. Please try again.');
+    showToast('Failed to schedule post. Please try again.', 'error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = originalText;

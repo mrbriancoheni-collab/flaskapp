@@ -96,7 +96,28 @@ Return only the HTML body content — no <html>, <head>, or <body> tags."""
 
 def generate_geo_pages(
     service: str,
-    cities: List[Dict[str, str]],       # [{"city": "Austin", "state": "TX"}, ...]
+    cities: List[Dict[str, str]],
+    business_name: str,
+    phone: str,
+    extra_context: str,
+    site_id: int,
+    db_session: Any,
+) -> Dict[str, Any]:
+    """Queue one WPJob per city for a single service. Returns summary dict."""
+    return generate_geo_pages_multi(
+        services=[service],
+        cities=cities,
+        business_name=business_name,
+        phone=phone,
+        extra_context=extra_context,
+        site_id=site_id,
+        db_session=db_session,
+    )
+
+
+def generate_geo_pages_multi(
+    services: List[str],
+    cities: List[Dict[str, str]],
     business_name: str,
     phone: str,
     extra_context: str,
@@ -104,42 +125,47 @@ def generate_geo_pages(
     db_session: Any,
 ) -> Dict[str, Any]:
     """
-    Queue one WPJob per city. Returns summary dict.
+    Queue one WPJob per (service, city) pair.
+    Returns {"queued": [...], "skipped": [...]} where values are "Service — City" strings.
     """
     from app.models_wp import WPJob
 
     queued = []
     skipped = []
 
-    for loc in cities:
-        city  = loc.get("city", "").strip()
-        state = loc.get("state", "").strip()
-        if not city:
+    for service in services:
+        service = service.strip()
+        if not service:
             continue
+        for loc in cities:
+            city  = loc.get("city", "").strip()
+            state = loc.get("state", "").strip()
+            if not city:
+                continue
 
-        payload = build_geo_job_payload(
-            service=service,
-            city=city,
-            state=state,
-            business_name=business_name,
-            phone=phone,
-            extra_context=extra_context,
-        )
+            payload = build_geo_job_payload(
+                service=service,
+                city=city,
+                state=state,
+                business_name=business_name,
+                phone=phone,
+                extra_context=extra_context,
+            )
+            label = f"{service} — {city}{', ' + state if state else ''}"
 
-        # Deduplicate: skip if a job with same slug already exists
-        existing = (
-            WPJob.query
-            .filter_by(site_id=site_id, kind="ai_generate")
-            .filter(WPJob.payload["slug"].astext == payload["slug"])
-            .first()
-        )
-        if existing:
-            skipped.append(city)
-            continue
+            existing = (
+                WPJob.query
+                .filter_by(site_id=site_id, kind="ai_generate")
+                .filter(WPJob.payload["slug"].astext == payload["slug"])
+                .first()
+            )
+            if existing:
+                skipped.append(label)
+                continue
 
-        job = WPJob(site_id=site_id, kind="ai_generate", payload=payload)
-        db_session.add(job)
-        queued.append(city)
+            job = WPJob(site_id=site_id, kind="ai_generate", payload=payload)
+            db_session.add(job)
+            queued.append(label)
 
     db_session.commit()
     return {"queued": queued, "skipped": skipped}

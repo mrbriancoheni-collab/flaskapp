@@ -285,6 +285,15 @@ def calculate_weather_impact_multiplier(
         if 'storm' in condition or 'lightning' in condition:
             multiplier = 1.8
 
+    elif service_type == 'pool_cleaning':
+        # Pool service spikes in summer heat, drops when cold
+        if temp_high >= 90:
+            multiplier = 2.0
+        elif temp_high >= 80:
+            multiplier = 1.5
+        elif temp_high <= 50:
+            multiplier = 0.5
+
     return multiplier
 
 

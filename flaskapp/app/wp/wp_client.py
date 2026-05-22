@@ -245,6 +245,7 @@ class WPClient:
         self,
         *,
         post_id: Optional[int] = None,
+        post_type: str = "post",
         title: str,
         html: str,
         excerpt: Optional[str] = None,
@@ -299,15 +300,38 @@ class WPClient:
         if meta:
             payload["meta"] = meta
 
+        collection = "pages" if post_type == "page" else "posts"
         if post_id:
-            r = self._req("POST", f"/wp/v2/posts/{post_id}", json_body=payload)  # WP accepts POST for update
+            r = self._req("POST", f"/wp/v2/{collection}/{post_id}", json_body=payload)
         else:
-            r = self._req("POST", "/wp/v2/posts", json_body=payload)
+            r = self._req("POST", f"/wp/v2/{collection}", json_body=payload)
         return r.json()
 
-    def get_post(self, post_id: int) -> dict:
-        r = self._req("GET", f"/wp/v2/posts/{int(post_id)}")
-        return r.json()
+    def get_post(self, post_id: int, post_type: str = "post") -> dict:
+        """Fetch a post or page by ID. Falls back to the other type on 404."""
+        def _try(pt: str):
+            endpoint = "/wp/v2/pages" if pt == "page" else "/wp/v2/posts"
+            return self._req("GET", f"{endpoint}/{int(post_id)}")
+
+        def _is_404(exc: Exception) -> bool:
+            msg = str(exc)
+            cause = getattr(exc, "__cause__", None)
+            status = getattr(getattr(cause, "response", None), "status_code", None)
+            return status == 404 or "WP API error 404" in msg or "rest_post_invalid_id" in msg
+
+        try:
+            return _try(post_type).json()
+        except Exception as e:
+            if not _is_404(e):
+                raise
+            # Try the other type before giving up
+            alt = "post" if post_type == "page" else "page"
+            try:
+                return _try(alt).json()
+            except Exception as e2:
+                if _is_404(e2):
+                    raise FileNotFoundError(f"Post/page {post_id} not found in WordPress") from e2
+                raise
 
     def list_posts(self, per_page: int = 20, search: str = "",
                    status: str = "any", page: int = 1) -> list:

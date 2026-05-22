@@ -857,12 +857,6 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register email_workflow_bp")
 
-    try:
-        from app.admin.servicetitan_routes import servicetitan_bp
-        app.register_blueprint(servicetitan_bp)  # url_prefix=/admin/servicetitan
-        app.logger.info("servicetitan_bp registered at /admin/servicetitan")
-    except Exception:
-        app.logger.exception("Failed to register servicetitan_bp")
 
     try:
         from app.admin.lead_campaigns_routes import lead_campaigns_bp
@@ -884,6 +878,14 @@ def create_app():
         app.logger.info("ml_admin_bp registered at /admin/ml")
     except Exception:
         app.logger.exception("Failed to register ml_admin_bp")
+
+    # --- ServiceTitan Integration (account-level) ---
+    try:
+        from app.admin.servicetitan_routes import servicetitan_bp
+        app.register_blueprint(servicetitan_bp)  # url_prefix=/account/servicetitan
+        app.logger.info("servicetitan_bp registered at /account/servicetitan")
+    except Exception:
+        app.logger.exception("Failed to register servicetitan_bp")
 
     # --- Marketing Command Center ---
     try:
@@ -993,6 +995,38 @@ def create_app():
     except Exception:
         app.logger.exception("Failed to register report_sharing_bp")
 
+    # --- Lead Intake (Networx / eLocal webhooks + setup) ---------------------
+    try:
+        from app.lead_intake import lead_intake_bp
+        app.register_blueprint(lead_intake_bp)
+        app.logger.info("lead_intake_bp registered")
+    except Exception:
+        app.logger.exception("Failed to register lead_intake_bp")
+
+    # --- Universal Lead Inbox ------------------------------------------------
+    try:
+        from app.lead_inbox import lead_inbox_bp
+        app.register_blueprint(lead_inbox_bp)
+        app.logger.info("lead_inbox_bp registered at /account/leads")
+    except Exception:
+        app.logger.exception("Failed to register lead_inbox_bp")
+
+    # --- Agent Approval (one-tap approve/reject) -----------------------------
+    try:
+        from app.agent_approval import agent_approval_bp
+        app.register_blueprint(agent_approval_bp)
+        app.logger.info("agent_approval_bp registered")
+    except Exception:
+        app.logger.exception("Failed to register agent_approval_bp")
+
+    # --- Reputation Dashboard ------------------------------------------------
+    try:
+        from app.reputation import reputation_bp
+        app.register_blueprint(reputation_bp)
+        app.logger.info("reputation_bp registered at /account/reputation")
+    except Exception:
+        app.logger.exception("Failed to register reputation_bp")
+
     # ---- Apply CSRF exemptions AFTER blueprints are registered -------------
     try:
         for ep in (
@@ -1004,6 +1038,9 @@ def create_app():
             "google_bp.ads_list_customers",   # AJAX endpoint for listing Google Ads customers
             "page_view_tracking_bp.track_pageview",   # JS fetch + sendBeacon (no CSRF token)
             "page_view_tracking_bp.update_page_time",  # navigator.sendBeacon on beforeunload
+            # External webhooks — no browser session, no CSRF token
+            "lead_intake_bp.networx_webhook",
+            "lead_intake_bp.elocal_webhook",
         ):
             fn = app.view_functions.get(ep)
             if fn:

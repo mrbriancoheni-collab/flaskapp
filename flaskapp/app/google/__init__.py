@@ -536,7 +536,12 @@ def _get_gsc_user_tokens(aid: int) -> dict | None:
             ).mappings().first()
         if not row:
             return None
-        return json.loads(row["credentials_json"])
+        data = json.loads(row["credentials_json"])
+        # google-auth Credentials.to_json() uses "token" key; normalize here
+        # so all callers can rely on "access_token"
+        if "token" in data and "access_token" not in data:
+            data["access_token"] = data.pop("token")
+        return data
     except Exception:
         current_app.logger.exception("Failed reading GSC user tokens")
         return None
@@ -663,7 +668,10 @@ def _fetch_gsc_report(site_url: str, start_date: str, end_date: str) -> dict | N
         current_app.logger.warning("GSC: no user access token")
         return None
 
-    base = f"https://searchconsole.googleapis.com/webmasters/v3/sites/{site_url}/searchAnalytics/query"
+    # GSC API requires the site URL to be percent-encoded in the path
+    from urllib.parse import quote
+    encoded_site = quote(site_url, safe="")
+    base = f"https://searchconsole.googleapis.com/webmasters/v3/sites/{encoded_site}/searchAnalytics/query"
     hdrs = {"Authorization": f"Bearer {at}", "Content-Type": "application/json"}
 
     def _post(payload: dict) -> requests.Response:
@@ -853,7 +861,7 @@ def get_gsc_insights(gsc: dict) -> str:
             )
 
             text = response.choices[0].message.content.strip()
-            return text or ""
+            return _format_gsc_insights(text)
 
         else:
             # Fallback to old inline prompt
@@ -882,11 +890,72 @@ def get_gsc_insights(gsc: dict) -> str:
                                 parts.append(block.text)
                 text = "\n".join(parts).strip()
 
-            return text or ""
+            return _format_gsc_insights(text)
 
     except Exception as e:
         current_app.logger.exception("OpenAI insights failed: %s", e)
         return ""
+
+
+def _format_gsc_insights(text: str) -> str:
+    """Convert AI insight output (JSON array or plain text) to rendered HTML."""
+    if not text:
+        return ""
+
+    # Strip markdown code fences the model sometimes adds
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        inner = stripped.split("```", 2)
+        stripped = inner[1].lstrip("json").strip() if len(inner) >= 3 else stripped
+
+    try:
+        import json as _j
+        data = _j.loads(stripped)
+        if not isinstance(data, list):
+            raise ValueError
+    except Exception:
+        import html
+        return f'<p class="whitespace-pre-line text-gray-700">{html.escape(text)}</p>'
+
+    severity_color = {1: "red", 2: "yellow", 3: "blue"}
+    severity_label = {1: "High priority", 2: "Medium priority", 3: "Low priority"}
+
+    parts = []
+    for item in data:
+        title       = item.get("title", "")
+        description = item.get("description", "")
+        impact      = item.get("expected_impact", "")
+        sev         = int(item.get("severity") or 2)
+        steps       = (item.get("action") or {}).get("steps") or []
+        color       = severity_color.get(sev, "gray")
+        label       = severity_label.get(sev, "")
+
+        import html as _html
+        steps_html = ""
+        if steps:
+            lis = "".join(f"<li>{_html.escape(str(s))}</li>" for s in steps)
+            steps_html = (
+                f'<ol class="list-decimal list-inside mt-2 space-y-1 text-gray-600 text-xs">'
+                f"{lis}</ol>"
+            )
+
+        impact_html = (
+            f'<span class="mt-1 inline-block text-xs text-green-700 font-medium">↑ {_html.escape(str(impact))}</span>'
+            if impact else ""
+        )
+
+        parts.append(
+            f'<div class="border-l-4 border-{color}-400 pl-3 py-1">'
+            f'<div class="flex items-start justify-between gap-2">'
+            f'<span class="font-medium text-gray-800 text-sm">{_html.escape(str(title))}</span>'
+            f'<span class="text-xs text-{color}-600 whitespace-nowrap shrink-0">{label}</span>'
+            f"</div>"
+            f'<p class="text-sm text-gray-600 mt-1">{_html.escape(str(description))}</p>'
+            f"{impact_html}{steps_html}"
+            f"</div>"
+        )
+
+    return '<div class="space-y-4">' + "\n".join(parts) + "</div>"
 
 
 # ------------------------- Misc helpers -------------------------
@@ -2964,7 +3033,8 @@ def _compute_realistic_savings(account_id, monthly_spend, avg_cpc, total_clicks,
     max_savings = monthly_spend * 0.25
 
     try:
-        # Pull executed decisions grouped by type with per-row data we need
+        # Deduplicate by (decision_type, title, campaign_id) — keep only the latest row per
+        # unique recommendation so repeated agent runs don't inflate the savings total.
         rows = db.session.execute(
             text("""
                 SELECT decision_type,
@@ -2978,6 +3048,14 @@ def _compute_realistic_savings(account_id, monthly_spend, avg_cpc, total_clicks,
                 WHERE account_id = :aid
                   AND status = 'executed'
                   {date_filter}
+                  AND id IN (
+                      SELECT MAX(id)
+                      FROM agent_decisions
+                      WHERE account_id = :aid
+                        AND status = 'executed'
+                        {date_filter}
+                      GROUP BY decision_type, title, COALESCE(campaign_id, '')
+                  )
                 GROUP BY decision_type
             """.format(
                 date_filter="AND created_at BETWEEN :ds AND :de" if date_start else ""
@@ -3217,12 +3295,21 @@ def ads_performance():
     ai_actions_taken = 0
     wasted_spend_prevented = 0.0
     try:
+        # Deduplicate by (decision_type, title, campaign_id) so repeated agent runs
+        # don't inflate the action count or the fallback savings figure.
         stats = db.session.execute(
             text("""
                 SELECT COUNT(*),
                        COALESCE(SUM(LEAST(COALESCE(expected_monthly_savings, 0), 1000)), 0)
                 FROM agent_decisions
-                WHERE account_id = :aid AND status = 'executed'
+                WHERE account_id = :aid
+                  AND status = 'executed'
+                  AND id IN (
+                      SELECT MAX(id)
+                      FROM agent_decisions
+                      WHERE account_id = :aid AND status = 'executed'
+                      GROUP BY decision_type, title, COALESCE(campaign_id, '')
+                  )
             """),
             {"aid": aid}
         ).fetchone()
@@ -3776,27 +3863,17 @@ def ai_change_log():
 @google_bp.route("/analytics/data", methods=["GET"], endpoint="ga_data")
 @login_required
 def ga_data():
-    # Detect if this is being accessed directly in a browser (not AJAX)
-    # If so, redirect to the main analytics page
-    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-    accepts_json = 'application/json' in request.headers.get('Accept', '')
-
-    if not is_ajax and not accepts_json:
-        # User is accessing this directly - redirect to main analytics page
-        timeframe = request.args.get("timeframe", "28d")
-        return redirect(url_for("google_bp.ga_ui", timeframe=timeframe))
-
     timeframe = request.args.get("timeframe", "28d")
-    start_date, end_date, label = _resolve_timeframe(timeframe)
-
-    aid = current_account_id()
-    env_pid_raw = os.getenv("GA_PROPERTY_ID")
-    prop_id, prop_name = _get_ga_selected_property(aid)
-    effective_prop = prop_id or (_norm_prop_id(env_pid_raw) if env_pid_raw else None)
-    connected_name = prop_name or (_ga_property_name_any(env_pid_raw, aid) if env_pid_raw else None) or os.getenv("GA_PROPERTY_LABEL")
-
+    label = timeframe
     ga = None
     try:
+        start_date, end_date, label = _resolve_timeframe(timeframe)
+        aid = current_account_id()
+        env_pid_raw = os.getenv("GA_PROPERTY_ID")
+        prop_id, prop_name = _get_ga_selected_property(aid)
+        effective_prop = prop_id or (_norm_prop_id(env_pid_raw) if env_pid_raw else None)
+        connected_name = prop_name or (_ga_property_name_any(env_pid_raw, aid) if env_pid_raw else None) or os.getenv("GA_PROPERTY_LABEL")
+
         if effective_prop:
             ga = _fetch_ga_report(effective_prop, start_date, end_date)
             if ga:
@@ -5204,6 +5281,22 @@ def search_terms():
     terms = []
     total_wasted = 0.0
     unreviewed_count = 0
+    irrelevant_count = 0
+
+    # Infer service type for relevance classification
+    service_type = "generic"
+    try:
+        from app.google.forecasting_routes import _infer_service_type
+        service_type = _infer_service_type(aid)
+    except Exception:
+        pass
+
+    try:
+        from app.google.ads import _classify_term
+    except Exception:
+        def _classify_term(term, st):
+            return "relevant"
+
     try:
         q = text("""
             SELECT st.id, st.search_term, st.clicks, st.impressions,
@@ -5226,7 +5319,11 @@ def search_terms():
             cost = r["cost_micros"] / 1_000_000
             conv = float(r["conversions"] or 0)
             cpl = cost / conv if conv > 0 else 0
-            is_wasted = cost > 5 and conv == 0 and not r["added_as_negative"]
+            relevance = _classify_term(r["search_term"], service_type)
+            is_irrelevant = relevance == "irrelevant" and not r["added_as_negative"]
+            is_wasted = is_irrelevant or (cost > 5 and conv == 0 and not r["added_as_negative"])
+            if is_irrelevant:
+                irrelevant_count += 1
             if is_wasted:
                 total_wasted += cost
             if not r["added_as_negative"] and not r["added_as_keyword"]:
@@ -5244,6 +5341,8 @@ def search_terms():
                 "added_as_negative": bool(r["added_as_negative"]),
                 "added_as_keyword": bool(r["added_as_keyword"]),
                 "is_wasted": is_wasted,
+                "relevance": relevance,
+                "is_irrelevant": is_irrelevant,
             })
     except Exception as e:
         current_app.logger.warning(f"search_terms query failed: {e}")
@@ -5256,6 +5355,8 @@ def search_terms():
         campaign_filter=campaign_filter,
         total_wasted=round(total_wasted, 2),
         unreviewed_count=unreviewed_count,
+        irrelevant_count=irrelevant_count,
+        service_type=service_type,
         total_terms=len(terms),
         blocked_count=sum(1 for t in terms if t["added_as_negative"]),
     )
@@ -5793,57 +5894,189 @@ def _apply_mobile_bid_adjustment(aid: int, customer_id: str, opt_data: dict, acc
         return {"success": False, "error": str(e)}
 
 
+# ---------------------------------------------------------------------------
+# Shared headline/description prompt builder
+# ---------------------------------------------------------------------------
+#
+# We ask the LLM to produce headlines in six named categories so that every
+# ad is guaranteed to cover each angle.  The response is a dict keyed by
+# category; callers flatten it with _flatten_rsa_headlines().
+#
+# Category definitions:
+#   service       — what the service IS  ("Pool Cleaning Service")
+#   keyword       — mirrors the user's search  ("Pool Cleaning Near Me")
+#   result        — outcome the customer gets  ("Crystal Clear Water All Season")
+#   cta           — next-step action  ("Call Now – Free Quote")
+#   trust         — objection-handling credibility  ("Licensed & Insured")
+#   differentiator— specific reason to choose you  ("No Contracts Required")
+
+_HEADLINE_CATEGORIES = ["service", "keyword", "result", "cta", "trust", "differentiator"]
+
+# Default per-category counts that sum to 15 (full RSA)
+_HEADLINE_COUNTS_FULL = {
+    "service": 3, "keyword": 3, "result": 3,
+    "cta": 2, "trust": 2, "differentiator": 2,
+}
+
+
+def _rsa_headline_counts(total: int) -> dict[str, int]:
+    """Scale per-category counts to approximate `total` headlines."""
+    base = {k: max(1, round(v * total / 15)) for k, v in _HEADLINE_COUNTS_FULL.items()}
+    # Adjust to hit total exactly
+    diff = total - sum(base.values())
+    for cat in _HEADLINE_CATEGORIES:
+        if diff == 0:
+            break
+        base[cat] += 1 if diff > 0 else -1
+        diff += -1 if diff > 0 else 1
+    return base
+
+
+def _build_rsa_headline_prompt(
+    business_name: str,
+    *,
+    keywords: list[str] | None = None,
+    keyword_theme: str | None = None,
+    existing_headlines: list[str] | None = None,
+    counts: dict[str, int] | None = None,
+    extra_context: str | None = None,
+) -> str:
+    """
+    Build the LLM prompt for structured RSA headline generation.
+
+    Returns a prompt string.  The expected response is JSON with one key per
+    category, each holding a list of headline strings (≤ 30 chars each).
+    """
+    counts = counts or _HEADLINE_COUNTS_FULL
+    kw_text = ", ".join(keywords[:10]) if keywords else keyword_theme or ""
+
+    lines = [f"Business: {business_name}"]
+    if kw_text:
+        lines.append(f"Keywords / theme: {kw_text}")
+    if extra_context:
+        lines.append(extra_context)
+    if existing_headlines:
+        sample = ", ".join(existing_headlines[:8])
+        lines.append(f"Do NOT duplicate these existing headlines: {sample}")
+
+    context = "\n".join(lines)
+
+    category_specs = "\n".join(
+        f'  "{cat}": {n} headlines  —  '
+        + {
+            "service":       "name the service clearly (what you do)",
+            "keyword":       "mirror the user's search query naturally",
+            "result":        "the outcome / transformation the customer gets",
+            "cta":           "next-step action (call, book, get a quote)",
+            "trust":         "credibility signal (license, reviews, years of experience)",
+            "differentiator": "why choose you over the competition (unique policy, speed, etc.)",
+        }[cat]
+        for cat, n in counts.items()
+    )
+
+    total = sum(counts.values())
+    return f"""{context}
+
+Write {total} Google Ads RSA headlines (max 30 chars each) spread across
+these six categories:
+
+{category_specs}
+
+Rules:
+- Every headline ≤ 30 characters (hard limit — truncation kills meaning)
+- No headline repeated across categories
+- Capitalize like a title (not ALL CAPS)
+- No punctuation at the very end (Google strips it)
+- Prefer concrete specifics over vague filler ("500+ Reviews" not "Great Reviews")
+
+Return ONLY valid JSON — no prose, no markdown fences:
+{{
+  "service": [...],
+  "keyword": [...],
+  "result": [...],
+  "cta": [...],
+  "trust": [...],
+  "differentiator": [...]
+}}"""
+
+
+def _flatten_rsa_headlines(parsed: dict, limit: int = 15) -> list[str]:
+    """Flatten categorized headline dict to ordered list, preserving category interleave."""
+    result: list[str] = []
+    # Copy each bucket so we don't mutate the caller's dict
+    buckets = [list(parsed.get(cat, [])) for cat in _HEADLINE_CATEGORIES]
+    while len(result) < limit and any(buckets):
+        for bucket in buckets:
+            if bucket and len(result) < limit:
+                result.append(bucket.pop(0)[:30])
+    return result
+
+
+def _parse_rsa_response(response: str, limit: int = 15) -> list[str]:
+    """Parse a categorized headline JSON response into a flat list."""
+    import json as _json
+    raw = response
+    if "```json" in raw:
+        raw = raw.split("```json")[1].split("```")[0]
+    elif "```" in raw:
+        raw = raw.split("```")[1].split("```")[0]
+    raw = raw.strip()
+    data = _json.loads(raw)
+    if isinstance(data, dict) and any(k in data for k in _HEADLINE_CATEGORIES):
+        return _flatten_rsa_headlines(data, limit)
+    # Fallback: old flat format
+    if "headlines" in data:
+        return [h[:30] for h in data["headlines"][:limit]]
+    raise ValueError(f"Unexpected response shape: {list(data.keys())}")
+
+
+# ---------------------------------------------------------------------------
+
+
 def _generate_mobile_ad_copy(business_name: str, keywords: list, website_url: str = "") -> dict:
     """Generate mobile-optimized RSA ad copy using AI."""
     try:
         from app.ai_clients import chatgpt_response
         import json
 
-        # Get top keywords for context (limit to 10)
-        keyword_text = ", ".join([k.get("text", "") for k in keywords[:10] if k.get("text")])
+        kw_list = [k.get("text", "") for k in keywords[:10] if k.get("text")]
+        prompt = _build_rsa_headline_prompt(
+            business_name,
+            keywords=kw_list,
+            extra_context="Optimise for mobile: favour short punchy text and tap-to-call CTAs.",
+        )
 
-        prompt = f"""Generate mobile-optimized Google RSA ad copy for a business.
+        # Append description request to the same call
+        prompt += """
 
-Business: {business_name}
-Keywords: {keyword_text}
-Website: {website_url}
-
-Requirements:
-- Headlines: 10-15 short, punchy headlines (max 30 chars each)
-- Descriptions: 3-4 concise descriptions (max 90 chars each)
-- Focus on mobile users: urgency, tap-to-call CTAs, "Call Now", "Same Day", etc.
-- Include numbers, benefits, and action words
-- Make headlines scan-friendly for mobile
-
-Return ONLY valid JSON in this format:
-{{
-  "headlines": ["Call Now - Fast Service", "Same Day Repair Available", ...],
-  "descriptions": ["Get a free estimate today. Licensed professionals ready to help.", ...]
-}}"""
+Also return 4 descriptions (max 90 chars each) in a "descriptions" key.
+Each description should cover a different angle: benefits, speed, trust, and a CTA."""
 
         response = chatgpt_response(prompt)
 
-        # Try to parse JSON from response
         try:
-            # Extract JSON if it's wrapped in markdown code blocks
-            if "```json" in response:
-                response = response.split("```json")[1].split("```")[0].strip()
-            elif "```" in response:
-                response = response.split("```")[1].split("```")[0].strip()
+            raw = response
+            if "```json" in raw:
+                raw = raw.split("```json")[1].split("```")[0]
+            elif "```" in raw:
+                raw = raw.split("```")[1].split("```")[0]
+            data = json.loads(raw.strip())
 
-            ad_copy = json.loads(response)
+            headlines = _flatten_rsa_headlines(
+                {k: data[k] for k in _HEADLINE_CATEGORIES if k in data}, limit=15
+            )
+            # Fallback to flat format if categories missing
+            if not headlines and "headlines" in data:
+                headlines = [h[:30] for h in data["headlines"][:15]]
 
-            # Validate required fields
-            if "headlines" not in ad_copy or "descriptions" not in ad_copy:
-                raise ValueError("Missing required fields")
+            descriptions = [d[:90] for d in (data.get("descriptions") or [])[:4]]
 
-            # Trim headlines to 30 chars and descriptions to 90 chars
-            ad_copy["headlines"] = [h[:30] for h in ad_copy["headlines"][:15]]
-            ad_copy["descriptions"] = [d[:90] for d in ad_copy["descriptions"][:4]]
+            if not headlines or not descriptions:
+                raise ValueError("Missing headlines or descriptions in response")
 
-            return {"success": True, "ad_copy": ad_copy}
+            return {"success": True, "ad_copy": {"headlines": headlines, "descriptions": descriptions}}
 
-        except json.JSONDecodeError as e:
+        except (json.JSONDecodeError, ValueError) as e:
             current_app.logger.error(f"Failed to parse AI response as JSON: {e}")
             return {"success": False, "error": f"AI returned invalid JSON: {str(e)}"}
 
@@ -6016,50 +6249,22 @@ def _generate_rsa_headline_variations(business_name: str, existing_headlines: li
     """Generate additional RSA headline variations using AI."""
     try:
         from app.ai_clients import chatgpt_response
-        import json
 
-        existing_text = "\n".join([f"- {h}" for h in existing_headlines if h]) if existing_headlines else "None yet"
-
-        prompt = f"""Generate {needed} RSA headline variations for a Google Search campaign.
-
-Business: {business_name}
-
-Existing Headlines (for context - don't duplicate):
-{existing_text}
-
-Requirements:
-- Headlines: {needed} NEW headlines (max 30 chars each)
-- Make them complementary to existing headlines
-- Mix of benefit-focused, action-oriented, and trust-building
-- Include numbers, urgency, and local appeal where appropriate
-- Examples: "24/7 Emergency Service", "Licensed Professionals", "Same Day Appointments"
-
-Return ONLY valid JSON:
-{{"headlines": ["Fast Service - Call Now", "Licensed Professionals", ...]}}"""
+        counts = _rsa_headline_counts(needed)
+        prompt = _build_rsa_headline_prompt(
+            business_name,
+            existing_headlines=existing_headlines,
+            counts=counts,
+        )
 
         response = chatgpt_response(prompt)
 
-        # Parse JSON from response
         try:
-            # Extract JSON if it's wrapped in markdown code blocks
-            if "```json" in response:
-                response = response.split("```json")[1].split("```")[0].strip()
-            elif "```" in response:
-                response = response.split("```")[1].split("```")[0].strip()
-
-            result = json.loads(response)
-
-            # Validate and trim
-            if "headlines" not in result:
-                raise ValueError("Missing headlines field")
-
-            headlines = [h[:30] for h in result["headlines"][:needed]]
-
+            headlines = _parse_rsa_response(response, limit=needed)
             return {"success": True, "headlines": headlines}
-
-        except json.JSONDecodeError as e:
-            current_app.logger.error(f"Failed to parse AI response as JSON: {e}")
-            return {"success": False, "error": f"AI returned invalid JSON: {str(e)}"}
+        except (ValueError, Exception) as e:
+            current_app.logger.error(f"Failed to parse AI response: {e}")
+            return {"success": False, "error": str(e)}
 
     except Exception as e:
         current_app.logger.error(f"Error generating RSA headline variations: {e}")
@@ -6224,45 +6429,22 @@ def _generate_pmax_headlines(business_name: str, existing_headlines: list, neede
     """Generate Performance Max headlines using AI."""
     try:
         from app.ai_clients import chatgpt_response
-        import json
 
-        existing_text = "\n".join([f"- {h}" for h in existing_headlines if h]) if existing_headlines else "None yet"
-
-        prompt = f"""Generate {needed} Performance Max headline variations for a business.
-
-Business: {business_name}
-
-Existing Headlines:
-{existing_text}
-
-Requirements:
-- Headlines: {needed} NEW headlines (max 30 chars each, don't duplicate existing)
-- Make them punchy, benefit-focused, and action-oriented
-- Include variety: some with urgency, some with benefits, some with credibility
-- Avoid duplicating existing headlines
-
-Return ONLY valid JSON in this format:
-{{
-  "headlines": ["Fast Service - Call Now", "Licensed Professionals", ...]
-}}"""
+        counts = _rsa_headline_counts(needed)
+        prompt = _build_rsa_headline_prompt(
+            business_name,
+            existing_headlines=existing_headlines,
+            counts=counts,
+            extra_context="These are for a Performance Max campaign — keep copy broad and benefit-led.",
+        )
 
         response = chatgpt_response(prompt)
 
         try:
-            if "```json" in response:
-                response = response.split("```json")[1].split("```")[0].strip()
-            elif "```" in response:
-                response = response.split("```")[1].split("```")[0].strip()
-
-            result = json.loads(response)
-            if "headlines" not in result:
-                raise ValueError("Missing headlines field")
-
-            headlines = [h[:30] for h in result["headlines"][:needed]]
+            headlines = _parse_rsa_response(response, limit=needed)
             return {"success": True, "headlines": headlines}
-
-        except json.JSONDecodeError as e:
-            return {"success": False, "error": f"AI returned invalid JSON: {str(e)}"}
+        except (ValueError, Exception) as e:
+            return {"success": False, "error": str(e)}
 
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -7825,49 +8007,42 @@ def _generate_complete_rsa_ad(business_name: str, ad_group_name: str, keywords: 
 
         keywords_text = ", ".join(keywords[:10])  # Use first 10 keywords
 
-        prompt = f"""Generate a complete Responsive Search Ad for Google Ads.
+        prompt = _build_rsa_headline_prompt(
+            business_name,
+            keywords=keywords[:10],
+            extra_context=f"Ad group: {ad_group_name}",
+        )
+        prompt += """
 
-Business: {business_name}
-Ad Group: {ad_group_name}
-Keywords: {keywords_text}
-
-Requirements:
-- Headlines: 15 unique headlines (max 30 chars each)
-- Descriptions: 4 unique descriptions (max 90 chars each)
-- Make them relevant to the keywords
-- Include variety: urgency, benefits, credibility, action-oriented
-- Focus on what makes this business stand out
-
-Return ONLY valid JSON in this format:
-{{
-  "headlines": ["Fast Service - Call Now", "Licensed Professionals", ...],
-  "descriptions": ["Get professional service from licensed experts. Same-day appointments available.", ...]
-}}"""
+Also return 4 descriptions (max 90 chars each) in a "descriptions" key.
+Cover four angles: (1) benefits + social proof, (2) speed/availability,
+(3) trust/credentials, (4) CTA with offer or urgency."""
 
         response = chatgpt_response(prompt)
 
         try:
-            if "```json" in response:
-                response = response.split("```json")[1].split("```")[0].strip()
-            elif "```" in response:
-                response = response.split("```")[1].split("```")[0].strip()
+            import json as _json
+            raw = response
+            if "```json" in raw:
+                raw = raw.split("```json")[1].split("```")[0]
+            elif "```" in raw:
+                raw = raw.split("```")[1].split("```")[0]
+            result = _json.loads(raw.strip())
 
-            result = json.loads(response)
+            headlines = _flatten_rsa_headlines(
+                {k: result[k] for k in _HEADLINE_CATEGORIES if k in result}, limit=15
+            )
+            if not headlines and "headlines" in result:
+                headlines = [h[:30] for h in result["headlines"][:15]]
 
-            if "headlines" not in result or "descriptions" not in result:
+            descriptions = [d[:90] for d in (result.get("descriptions") or [])[:4]]
+
+            if not headlines or not descriptions:
                 raise ValueError("Missing headlines or descriptions field")
 
-            # Truncate to character limits
-            headlines = [h[:30] for h in result["headlines"][:15]]
-            descriptions = [d[:90] for d in result["descriptions"][:4]]
+            return {"success": True, "headlines": headlines, "descriptions": descriptions}
 
-            return {
-                "success": True,
-                "headlines": headlines,
-                "descriptions": descriptions
-            }
-
-        except json.JSONDecodeError as e:
+        except _json.JSONDecodeError as e:
             return {"success": False, "error": f"AI returned invalid JSON: {str(e)}"}
 
     except Exception as e:
@@ -10466,17 +10641,34 @@ def connect_gsc():
 @google_bp.route("/gsc/callback")
 def gsc_callback():
     """
-    Handles Google's redirect back to us. Exchanges code for tokens, stores flags,
-    and sends the user to the GSC UI page.
+    Handles Google's redirect back to us. Exchanges code for tokens, stores them
+    in the DB, and sends the user to the GSC UI page.
     """
     try:
+        aid = current_account_id()
         redirect_uri = url_for("google_bp.gsc_callback", _external=True)
-        creds = _exchange_code_for_creds(redirect_uri)   # must exist
+        creds = _exchange_code_for_creds(redirect_uri)
 
-        # Optional: pick a property/site to save for display
+        # google-auth Credentials.to_json() uses key "token"; normalize to
+        # "access_token" so our readers (_gsc_user_access_token etc.) find it.
+        token_json = json.loads(creds.to_json())
+        if "token" in token_json and "access_token" not in token_json:
+            token_json["access_token"] = token_json.pop("token")
+
+        # Persist using the ORM model directly — avoids _store_tokens which
+        # references columns (access_token, refresh_token, token_expiry) that
+        # don't exist in the google_oauth_tokens table schema.
+        from app.models_google import GoogleOAuthToken
+        tok = GoogleOAuthToken.query.filter_by(account_id=aid, product="gsc").first()
+        if tok is None:
+            tok = GoogleOAuthToken(account_id=aid, product="gsc")
+            db.session.add(tok)
+        tok.credentials_json = json.dumps(token_json)
+
+        # Pick the first accessible site and store on the same row
         site_url = ""
         try:
-            svc = _build_gsc_service(creds)              # must exist
+            svc = _build_gsc_service(creds)
             sites = (svc.sites().list().execute() or {})
             for s in (sites.get("siteEntry") or []):
                 if s.get("permissionLevel") in (
@@ -10485,97 +10677,93 @@ def gsc_callback():
                     site_url = s.get("siteUrl") or ""
                     break
         except Exception:
-            # If listing sites fails, we still consider the account "connected"
             current_app.logger.info("GSC list sites failed; proceeding as connected", exc_info=True)
 
-        # --- Always mirror state into the session so the UI updates instantly ---
-        session["gsc_connected"] = True
         if site_url:
-            session["gsc_site_url"] = site_url
-            session["gsc_property_id"] = site_url  # if you store property_id == site_url
+            tok.gsc_site = site_url
 
-        # --- Persist on the user, if authenticated (nice-to-have, not required for UI) ---
-        if getattr(current_user, "is_authenticated", False):
-            try:
-                setattr(current_user, "gsc_connected", True)
-                if site_url:
-                    setattr(current_user, "gsc_site_url", site_url)
-                    setattr(current_user, "gsc_property_id", site_url)
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-                current_app.logger.exception("Failed to persist GSC flags on user")
-        else:
-            flash("Connected to Google. Please sign in again to finalize linking.", "warning")
+        db.session.commit()
 
         flash("Google Search Console connected.", "success")
         return redirect(url_for("google_bp.gsc_ui"))
 
     except Exception as e:
         current_app.logger.exception("GSC OAuth callback failed: %s", e)
+        db.session.rollback()
         flash("Could not complete Search Console connection. Please try again.", "error")
         return redirect(url_for("google_bp.gsc_ui"))
 
 
 @google_bp.route("/gsc")
 def gsc_ui():
-    # Connection flag: session OR user model
-    connected = bool(session.get("gsc_connected"))
-    try:
-        connected = connected or bool(getattr(current_user, "gsc_connected", False))
-    except Exception:
-        pass
+    aid = current_account_id()
 
-    # Property/Site values (session first, then user model)
-    site_url = session.get("gsc_site_url") or getattr(current_user, "gsc_site_url", None)
-    property_id = session.get("gsc_property_id") or getattr(current_user, "gsc_property_id", None)
+    # Use the DB token table as the authoritative connection check
+    connected = _is_connected(aid, "gsc")
+
+    site_url = _get_gsc_selected_site(aid) if connected else None
+
+    # If connected but no site saved yet, try to auto-select one
+    if connected and not site_url:
+        try:
+            _ensure_default_gsc_site_selected(aid)
+            site_url = _get_gsc_selected_site(aid)
+        except Exception:
+            current_app.logger.info("gsc_ui: could not auto-select site", exc_info=True)
 
     gsc = {}
+    insights = ""
 
     if connected:
-        # TODO: replace with your real fetchers
-        # summary_raw = fetch_gsc_summary(property_id, start, end)
-        # top_queries_raw = fetch_gsc_queries(property_id, start, end)
-        # top_pages_raw = fetch_gsc_pages(property_id, start, end)
+        from datetime import date, timedelta
+        end_dt = date.today() - timedelta(days=3)   # GSC has ~3 day lag
+        start_dt = end_dt - timedelta(days=27)
+        start_date = start_dt.isoformat()
+        end_date = end_dt.isoformat()
 
-        # For now: minimal structure so template renders the "real" block
-        # Structure compatible with new insights system
-        clicks = 0
-        impressions = 0
-        ctr_pct = 0.0
-        avg_position = 0.0
+        data = None
+        try:
+            if site_url:
+                data = _fetch_gsc_report(site_url, start_date, end_date)
+        except Exception:
+            current_app.logger.exception("gsc_ui: fetch failed")
+
+        if data:
+            clicks = data.get("clicks", 0)
+            impressions = data.get("impressions", 0)
+            ctr_pct = data.get("ctr_pct", 0.0)
+            avg_position = data.get("avg_position", 0.0)
+        else:
+            clicks = impressions = 0
+            ctr_pct = avg_position = 0.0
 
         gsc = {
-            "property": site_url or property_id or "Search Console property",
+            "property": site_url or "Search Console property",
             "site_url": site_url,
             "period": "Last 28 days",
             "clicks": clicks,
             "impressions": impressions,
             "ctr_pct": ctr_pct,
             "avg_position": avg_position,
-            "top_queries": [],
-            "top_pages": [],
-            # Add summary dict for new insights system compatibility
+            "top_queries": (data or {}).get("top_queries", []),
+            "top_pages": (data or {}).get("top_pages", []),
             "summary": {
                 "clicks": clicks,
                 "impressions": impressions,
                 "ctr_pct": ctr_pct,
                 "avg_position": avg_position,
-                "avg_ctr": ctr_pct / 100.0  # Convert percentage to decimal
-            }
+                "avg_ctr": ctr_pct / 100.0,
+            },
         }
 
-        # Only call AI when we actually have real numbers
-        has_real = (gsc.get("clicks", 0) or 0) > 0 or (gsc.get("impressions", 0) or 0) > 0
+        has_real = clicks > 0 or impressions > 0
         insights = get_gsc_insights(gsc) if has_real else ""
-    else:
-        insights = ""  # keep empty on demo
 
     return render_template(
         "google/gsc.html",
         gsc=gsc,
         connected_gsc=connected,
-        insights=insights,   # <— NEW
+        insights=insights,
         epn=request.endpoint
     )
 
@@ -11351,7 +11539,16 @@ def oauth_callback():
         return redirect(url_for("google_bp.index"))
 
     aid = current_account_id()
-    _store_tokens(aid, product, token_json)
+
+    # Persist using the ORM model directly — _store_tokens() references columns
+    # (access_token, refresh_token, token_expiry) that don't exist in the table.
+    from app.models_google import GoogleOAuthToken
+    _tok = GoogleOAuthToken.query.filter_by(account_id=aid, product=product).first()
+    if _tok is None:
+        _tok = GoogleOAuthToken(account_id=aid, product=product)
+        db.session.add(_tok)
+    _tok.credentials_json = json.dumps(token_json)
+    db.session.commit()
 
     if product == "ga":
         try:

@@ -169,7 +169,9 @@ class KeywordOptimizerAgent(BaseAgent):
                         'severity': 'low',
                         'search_query': term_text,
                         'conversions': term_convs,
-                        'cpa': term_cpa
+                        'cpa': term_cpa,
+                        'campaign_id': term.get('campaign_id', ''),
+                        'ad_group_id': term.get('ad_group_id', ''),
                     })
 
         return opportunities
@@ -233,9 +235,12 @@ class KeywordOptimizerAgent(BaseAgent):
                     reasoning="Proven performer as search term - add as keyword",
                     account_id=0,
                     customer_id='',
+                    ad_group_id=opp.get('ad_group_id', ''),
                     action_data={
                         'keyword_text': opp['search_query'],
-                        'match_type': 'PHRASE'
+                        'match_type': 'PHRASE',
+                        'ad_group_id': opp.get('ad_group_id', ''),
+                        'campaign_id': opp.get('campaign_id', ''),
                     },
                     risk_level=DecisionRiskLevel.LOW,
                     requires_approval=False,

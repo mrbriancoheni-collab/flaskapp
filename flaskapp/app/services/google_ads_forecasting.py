@@ -733,9 +733,10 @@ def _identify_voice_search_queries(account_id: int) -> List[Dict]:
     local_indicators = ['near me', 'nearby', 'close to', 'around here', 'open now', 'hours', 'directions']
 
     try:
+        # Use search_terms table (the actual table name in the schema)
         query = text("""
-            SELECT DISTINCT search_term, impressions, clicks, conversions
-            FROM search_term_reports
+            SELECT search_term, impressions, clicks, conversions
+            FROM search_terms
             WHERE account_id = :account_id
               AND date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
             ORDER BY impressions DESC
@@ -759,7 +760,7 @@ def _identify_voice_search_queries(account_id: int) -> List[Dict]:
                     'search_term': row.search_term,
                     'impressions': row.impressions or 0,
                     'clicks': row.clicks or 0,
-                    'conversions': row.conversions or 0,
+                    'conversions': float(row.conversions or 0),
                     'is_question': is_question,
                     'has_local_intent': has_local_intent,
                     'word_count': word_count
@@ -957,14 +958,14 @@ def _check_competitive_pressure(account_id: int, entity_id: int) -> Optional[Dic
     try:
         query = text("""
             SELECT
-                COUNT(DISTINCT CASE WHEN data_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+                COUNT(DISTINCT CASE WHEN report_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
                                     THEN competitor_domain END) as recent_competitors,
-                COUNT(DISTINCT CASE WHEN data_date < DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-                                    AND data_date >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+                COUNT(DISTINCT CASE WHEN report_date < DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+                                    AND report_date >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
                                     THEN competitor_domain END) as previous_competitors
             FROM competitive_auction_insights
             WHERE campaign_id = :entity_id
-              AND data_date >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
+              AND report_date >= DATE_SUB(CURDATE(), INTERVAL 14 DAY)
         """)
 
         result = db.session.execute(query, {'entity_id': entity_id}).first()
@@ -1074,11 +1075,17 @@ def _get_base_seasonal_forecast(historical_data: Dict, forecast_date: date) -> D
 def _get_current_daily_budget(account_id: int, category: str) -> float:
     """Get current daily budget for campaigns in a category."""
     try:
+        # Use budget_groups table which has min/max daily budget settings
         query = text("""
-            SELECT AVG(daily_budget_cents) / 100.0 as avg_budget
-            FROM ads_campaigns
+            SELECT AVG(
+                CASE
+                    WHEN max_daily_budget IS NOT NULL THEN max_daily_budget
+                    ELSE monthly_budget_target / 30
+                END
+            ) as avg_budget
+            FROM budget_groups
             WHERE account_id = :account_id
-              AND status = 'enabled'
+              AND enabled = TRUE
         """)
 
         result = db.session.execute(query, {'account_id': account_id}).first()

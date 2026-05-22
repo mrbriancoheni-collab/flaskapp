@@ -370,6 +370,15 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
 // Store recommendations data for JavaScript access
 const recommendations = {{ recommendations|tojson }};
 
@@ -379,7 +388,7 @@ const recommendations = {{ recommendations|tojson }};
 function applyAutomatedFix(recommendationId) {
     const rec = recommendations.find(r => r.id === recommendationId);
     if (!rec) {
-        alert('Recommendation not found');
+        showToast('Recommendation not found', 'error');
         return;
     }
 
@@ -415,17 +424,17 @@ function applyAutomatedFix(recommendationId) {
         button.disabled = false;
 
         if (data.success) {
-            alert('✓ ' + data.message);
+            showToast(data.message, 'success');
             // Reload page to show updated data
             location.reload();
         } else {
-            alert('Error: ' + (data.error || 'Failed to apply fix'));
+            showToast('Error: ' + (data.error || 'Failed to apply fix'), 'error');
         }
     })
     .catch(error => {
         button.textContent = originalText;
         button.disabled = false;
-        alert('Error: ' + error.message);
+        showToast('Error: ' + error.message, 'error');
     });
 }
 
@@ -472,7 +481,7 @@ function buildFixData(rec) {
         case 'copy_testing':
         case 'landing_page':
             // These require manual intervention
-            alert('This optimization requires manual changes. Click "Manual Edit" to proceed with custom modifications.');
+            showToast('This optimization requires manual changes. Click "Manual Edit" to proceed with custom modifications.', 'info');
             return null;
     }
 
@@ -485,7 +494,7 @@ function buildFixData(rec) {
 function openManualEdit(recommendationId) {
     const rec = recommendations.find(r => r.id === recommendationId);
     if (!rec) {
-        alert('Recommendation not found');
+        showToast('Recommendation not found', 'error');
         return;
     }
 
@@ -627,7 +636,7 @@ function handleManualEditSubmit(e) {
         try {
             data.params.schedule = JSON.parse(formData.get('schedule'));
         } catch (e) {
-            alert('Invalid schedule JSON format');
+            showToast('Invalid schedule JSON format', 'error');
             return;
         }
     }
@@ -652,18 +661,18 @@ function handleManualEditSubmit(e) {
         submitBtn.disabled = false;
 
         if (data.success) {
-            alert('✓ ' + data.message);
+            showToast(data.message, 'success');
             closeManualEdit();
             // Reload page to show updated data
             location.reload();
         } else {
-            alert('Error: ' + (data.error || 'Failed to apply changes'));
+            showToast('Error: ' + (data.error || 'Failed to apply changes'), 'error');
         }
     })
     .catch(error => {
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
-        alert('Error: ' + error.message);
+        showToast('Error: ' + error.message, 'error');
     });
 }
 

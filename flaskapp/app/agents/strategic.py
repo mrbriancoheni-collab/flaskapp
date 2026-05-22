@@ -185,12 +185,14 @@ class StrategicDirectorAgent(BaseAgent):
             })
 
         # 6. Campaign type diversity analysis
-        # Recommend complementary campaign types for better coverage
+        # These are generic playbook recommendations — flagged as low priority
+        # because "add a brand campaign" or "try PMax" rarely beats account-
+        # specific tactical wins (negative keywords, bid adjustments, etc).
         if has_pmax_campaigns and not has_search_campaigns:
             # User has only Performance Max - recommend adding Search campaigns
             opportunities.append({
                 'type': 'add_search_campaigns',
-                'severity': 'medium',
+                'severity': 'low',
                 'reason': 'pmax_only',
                 'pmax_count': len(pmax_campaigns),
                 'message': 'Add Search campaigns for more control and keyword-level insights'
@@ -200,7 +202,7 @@ class StrategicDirectorAgent(BaseAgent):
             # User has only Search campaigns - recommend adding Performance Max
             opportunities.append({
                 'type': 'add_pmax_campaign',
-                'severity': 'medium',
+                'severity': 'low',
                 'reason': 'search_only',
                 'search_count': len(search_campaigns),
                 'message': 'Add Performance Max campaign to reach more placements (YouTube, Display, Discover, Gmail)'
@@ -210,7 +212,7 @@ class StrategicDirectorAgent(BaseAgent):
             # User has no campaigns or only other campaign types
             opportunities.append({
                 'type': 'create_campaign_structure',
-                'severity': 'high',
+                'severity': 'medium',
                 'reason': 'no_standard_campaigns',
                 'message': 'Create a balanced campaign structure with both Search and Performance Max campaigns'
             })
@@ -290,8 +292,8 @@ class StrategicDirectorAgent(BaseAgent):
                     },
                     risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,
-                    confidence=0.88,
-                    expected_improvement_pct=15.0,  # 15% more leads expected
+                    confidence=0.40,  # Generic playbook recommendation, not account-specific
+                    expected_improvement_pct=5.0,  # Conservative — brand campaigns are not a guaranteed win
                 )
                 decisions.append(decision)
 
@@ -323,8 +325,8 @@ class StrategicDirectorAgent(BaseAgent):
                     },
                     risk_level=DecisionRiskLevel.HIGH,
                     requires_approval=True,  # Campaign creation requires asset preparation
-                    confidence=0.85,
-                    expected_improvement_pct=20.0,  # 20% more reach expected
+                    confidence=0.40,  # Generic playbook recommendation, not account-specific
+                    expected_improvement_pct=5.0,  # Conservative — PMax is not a guaranteed win
                 )
                 decisions.append(decision)
 

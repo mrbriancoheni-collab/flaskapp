@@ -115,7 +115,8 @@ class SerpAPIScraperService:
         scrape_maps: bool = True,
         scrape_lsa: bool = True,
         scrape_organic: bool = True,
-        max_organic: int = 5
+        max_organic: int = 5,
+        start: int = 0,
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Scrape all result types for a campaign
@@ -128,11 +129,12 @@ class SerpAPIScraperService:
             scrape_lsa: Include Local Services Ads
             scrape_organic: Include organic results
             max_organic: Max number of organic results
+            start: Organic result offset for pagination (0=page1, 10=page2, …)
 
         Returns:
             Dict with keys: 'ads', 'maps', 'lsa', 'organic'
         """
-        logger.info(f"Scraping SERP for query='{query}' location='{location}'")
+        logger.info(f"Scraping SERP for query='{query}' location='{location}' start={start}")
 
         results = {
             'ads': [],
@@ -151,8 +153,9 @@ class SerpAPIScraperService:
                 'hl': 'en',
                 'gl': 'us',
                 'google_domain': 'google.com',
-                'num': 20,  # Request more results (helps get more organic + triggers more result types)
-                'no_cache': 'false',  # Use cache when available to save credits
+                'num': 10,
+                'start': start,
+                'no_cache': 'true' if start > 0 else 'false',
             }
 
             # Retry logic for rate limiting (429 errors)

@@ -221,6 +221,14 @@
 </div>
 
 <script nonce="{{ g.csp_nonce }}">
+function showToast(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 function approveDecision(decisionId) {
     if (!confirm('Are you sure you want to approve this decision? This action will execute the change in Google Ads.')) {
         return;
@@ -236,14 +244,14 @@ function approveDecision(decisionId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Decision approved successfully!');
+            showToast('Change approved and applied!', 'success');
             location.reload();
         } else {
-            alert('Error: ' + (data.error || 'Unknown error'));
+            showToast('Error: ' + (data.error || 'Unknown error'), 'error');
         }
     })
     .catch(error => {
-        alert('Error approving decision: ' + error);
+        showToast('Error approving: ' + error, 'error');
     });
 }
 
@@ -262,14 +270,14 @@ function rejectDecision(decisionId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Decision rejected');
+            showToast('Change rejected.', 'info');
             location.reload();
         } else {
-            alert('Error: ' + (data.error || 'Unknown error'));
+            showToast('Error: ' + (data.error || 'Unknown error'), 'error');
         }
     })
     .catch(error => {
-        alert('Error rejecting decision: ' + error);
+        showToast('Error rejecting: ' + error, 'error');
     });
 }
 
@@ -308,16 +316,16 @@ function runAgentsNow() {
                 }
             }
 
-            alert(msg + '\n\nReloading...');
+            showToast(msg + ' Reloading...', 'success');
             location.reload();
         } else {
-            alert('Error running agents: ' + (data.error || 'Unknown error'));
+            showToast('Error running agents: ' + (data.error || 'Unknown error'), 'error');
             btn.disabled = false;
             btn.innerHTML = originalText;
         }
     })
     .catch(error => {
-        alert('Error running agents: ' + error);
+        showToast('Error running agents: ' + error, 'error');
         btn.disabled = false;
         btn.innerHTML = originalText;
     });
@@ -341,19 +349,16 @@ function autoExecuteLowRisk() {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            alert('Done!\n\n' +
-                'Executed: ' + data.executed + '\n' +
-                'Failed: ' + data.failed + '\n' +
-                'Total found: ' + data.total_found);
+            showToast('Done! Executed: ' + data.executed + ' · Failed: ' + data.failed, 'success');
             location.reload();
         } else {
-            alert('Error: ' + (data.error || 'Unknown error'));
+            showToast('Error: ' + (data.error || 'Unknown error'), 'error');
             btn.disabled = false;
             btn.innerHTML = originalText;
         }
     })
     .catch(error => {
-        alert('Error: ' + error);
+        showToast('Error: ' + error, 'error');
         btn.disabled = false;
         btn.innerHTML = originalText;
     });

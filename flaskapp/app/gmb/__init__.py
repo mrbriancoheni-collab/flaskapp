@@ -20,6 +20,7 @@ from flask import (
     flash,
     jsonify,
 )
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from sqlalchemy import text
 
 from app import db
@@ -122,6 +123,21 @@ def _oauth_client() -> Tuple[Optional[str], Optional[str], str]:
     csec = current_app.config.get("GOOGLE_GMB_SECRET") or os.getenv("GOOGLE_GMB_SECRET")
     cb = _callback_uri()
     return cid, csec, cb
+
+
+def _make_gmb_state(aid: int) -> str:
+    """Sign the account id into the OAuth state param (no session needed)."""
+    s = URLSafeTimedSerializer(current_app.secret_key, salt="gmb-oauth-state")
+    return s.dumps(aid)
+
+
+def _verify_gmb_state(state: str, max_age: int = 900) -> int | None:
+    """Return the account_id encoded in state, or None if invalid/expired."""
+    s = URLSafeTimedSerializer(current_app.secret_key, salt="gmb-oauth-state")
+    try:
+        return s.loads(state, max_age=max_age)
+    except (BadSignature, SignatureExpired):
+        return None
 
 
 def _store_tokens(
@@ -760,9 +776,8 @@ def start():
         "access_type": "offline",
         "include_granted_scopes": "true",
         "prompt": "consent",
-        "state": secrets.token_urlsafe(24),
+        "state": _make_gmb_state(current_account_id()),
     }
-    session["gmb_oauth_state"] = params["state"]
 
     from urllib.parse import urlencode
     return redirect(f"{GOOGLE_AUTH_URL}?{urlencode(params)}")
@@ -779,10 +794,10 @@ def callback():
 
     code = request.args.get("code")
     state = request.args.get("state")
-    if not code or not state or state != session.get("gmb_oauth_state"):
+    aid = _verify_gmb_state(state) if state else None
+    if not code or not aid:
         flash("Invalid or missing OAuth state.", "error")
         return redirect(url_for("gmb_bp.index"))
-    session.pop("gmb_oauth_state", None)
 
     client_id, client_secret, redirect_uri = _oauth_client()
     if not client_id or not client_secret:
@@ -809,8 +824,13 @@ def callback():
         return redirect(url_for("gmb_bp.index"))
 
     try:
-        aid = current_account_id()
-        _store_tokens(aid, token_json, product="gbp")
+        from app.models_google import GoogleOAuthToken
+        tok = GoogleOAuthToken.query.filter_by(account_id=aid, product="gmb").first()
+        if tok is None:
+            tok = GoogleOAuthToken(account_id=aid, product="gmb")
+            db.session.add(tok)
+        tok.credentials_json = json.dumps(token_json)
+        db.session.commit()
         if not _get_session_profile():
             _set_session_profile(dict(_SAMPLE_PROFILE))
     except Exception:
@@ -1050,11 +1070,31 @@ def reviews_ai_draft():
 @login_required
 def insights():
     """
-    Show last saved insights (if any) and allow regeneration.
+    Show last saved insights. Auto-generates on first visit or when stale (>6 h).
     """
     aid = current_account_id()
     connected = _is_connected(aid)
     latest = _load_latest_insights(aid)
+
+    if connected:
+        stale = not latest or (
+            datetime.utcnow() - latest["generated_at"]
+        ).total_seconds() > 21600  # 6 hours
+        if stale:
+            try:
+                at = _gbp_access_token_for(aid)
+                if at:
+                    loc = _gbp_list_first_location_name(at)
+                    if loc:
+                        metrics = _gbp_fetch_performance(at, loc, days=28)
+                        summary = _gbp_metrics_to_prompt(metrics)
+                        html = _openai_insights_from_metrics(summary)
+                        _save_insights(aid, html)
+                        session["gmb_insights_html"] = html
+                        latest = {"generated_at": datetime.utcnow(), "html": html}
+            except Exception:
+                current_app.logger.exception("Auto-insights generation failed")
+
     session_html = session.get("gmb_insights_html")
     return render_template(
         "gmb/insights.html",

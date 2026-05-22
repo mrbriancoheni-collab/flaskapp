@@ -1,5 +1,5 @@
 {% extends "base_app.html" %}
-{% block title %}E-E-A-T Checker · {{ app_name }}{% endblock %}
+{% block title %}Trust signals check · {{ app_name }}{% endblock %}
 
 {% macro status_icon(status) %}
   {% if status == 'pass' %}<i class="fa-solid fa-circle-check text-green-500"></i>
@@ -12,8 +12,8 @@
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">E-E-A-T Checker</h1>
-      <p class="text-gray-500 text-sm mt-1">Experience · Expertise · Authoritativeness · Trustworthiness</p>
+      <h1 class="text-2xl font-bold text-gray-900">Trust signals: experience, expertise, authority, trust</h1>
+      <p class="text-gray-500 text-sm mt-1">Things that show Google (and your customers) that you're a real, trustworthy business — like licenses, reviews, photos, and clear contact info.</p>
     </div>
     {% if result %}
     <div class="flex items-center gap-2">
@@ -31,9 +31,9 @@
         </span>
       </div>
       <div>
-        <p class="text-sm font-semibold text-gray-800">E-E-A-T Score</p>
+        <p class="text-sm font-semibold text-gray-800">Trust score</p>
         <p class="text-xs text-gray-400">
-          {{ 'Strong signals' if sc >= 80 else ('Needs improvement' if sc >= 50 else 'Critical gaps') }}
+          {{ 'Strong trust signals' if sc >= 80 else ('Needs work' if sc >= 50 else 'Big gaps to fix') }}
         </p>
       </div>
     </div>
@@ -59,7 +59,7 @@
       </div>
       <button type="submit"
               class="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
-        <i class="fa-solid fa-shield-halved mr-1"></i>Run E-E-A-T Audit
+        <i class="fa-solid fa-shield-halved mr-1"></i>Check trust signals
       </button>
     </form>
   </div>
@@ -104,8 +104,8 @@
   {% elif not result %}
   <div class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">
     <i class="fa-solid fa-shield-halved text-5xl mb-4"></i>
-    <p class="text-gray-600 mb-1">Enter a URL to check its E-E-A-T signals.</p>
-    <p class="text-xs text-gray-400">Checks 13 trust and authority factors Google's quality raters look for.</p>
+    <p class="text-gray-600 mb-1">Enter a page address to check its trust signals.</p>
+    <p class="text-xs text-gray-400">We check 13 things Google looks for to decide if your business is trustworthy.</p>
   </div>
   {% endif %}
 

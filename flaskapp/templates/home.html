@@ -152,6 +152,37 @@
   ]
 }
 </script>
+
+<!-- HowTo Schema — improves AI answer extraction for "how does FieldSprout work" queries -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to cut Google Ads costs with FieldSprout",
+  "description": "FieldSprout's AI agents automatically reduce wasted ad spend and book more jobs for home service businesses in three steps.",
+  "totalTime": "PT30S",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "position": 1,
+      "name": "Connect your Google Ads account",
+      "text": "Link your existing Google Ads account in 30 seconds using Google's secure OAuth flow. No complex setup or account transfers required."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 2,
+      "name": "AI agents analyze your campaigns",
+      "text": "FieldSprout's AI scans every keyword, bid, search term, and quality score — identifying wasted spend, missed keywords, and optimization opportunities automatically."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 3,
+      "name": "Watch your cost per lead drop",
+      "text": "The AI continuously optimizes bids, adds negative keywords, improves Quality Scores, and reallocates budget 24/7 — delivering 20–40% lower cost per lead within 30 days."
+    }
+  ]
+}
+</script>
 {% endblock %}
 
 {% block content %}
@@ -164,7 +195,7 @@
   <div class="absolute top-10 left-10 hidden lg:block animate-float">
     <div class="bg-white rounded-full px-4 py-2 shadow-lg flex items-center gap-2 text-sm">
       <span class="text-green-500">●</span>
-      <span class="font-semibold"><span id="weeklySignups">1</span> pros signed up this week</span>
+      <span class="font-semibold"><span id="weeklySignups">14</span> pros signed up this week</span>
     </div>
   </div>
 
@@ -188,17 +219,17 @@
     <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-400">
       {% if has_endpoint('signup') %}
         <a href="{{ url_for(ep('signup')) }}?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
-          <span class="relative z-10">Try FieldSprout →</span>
+          <span class="relative z-10">Start free trial →</span>
           <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
         </a>
       {% elif has_endpoint('register') %}
         <a href="{{ url_for(ep('register')) }}?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
-          <span class="relative z-10">Try FieldSprout →</span>
+          <span class="relative z-10">Start free trial →</span>
           <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
         </a>
       {% else %}
         <a href="/signup?plan=annual" class="btn btn-primary btn-lg group relative overflow-hidden">
-          <span class="relative z-10">Try FieldSprout →</span>
+          <span class="relative z-10">Start free trial →</span>
           <span class="absolute inset-0 bg-gradient-to-r from-green-600 to-green-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
         </a>
       {% endif %}
@@ -209,6 +240,13 @@
         See How It Works
       </a>
     </div>
+
+    <!-- Trust microcopy under hero CTAs -->
+    <p class="mt-4 text-sm text-gray-500 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 animate-fade-in-up animation-delay-400">
+      <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-check text-green-500"></i>14-day free trial</span>
+      <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-check text-green-500"></i>No credit card required</span>
+      <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-check text-green-500"></i>Connect Google account in 30s</span>
+    </p>
 
     <!-- Video Showcase -->
     <div class="mt-12 max-w-4xl mx-auto animate-fade-in-up animation-delay-600">

@@ -160,16 +160,24 @@ def ai_control():
 
 
 def _load_agent_stats(account_id: int) -> list:
+    # Deduplicate by (decision_type, title, campaign_id) keeping the latest row per
+    # unique recommendation, so repeated agent runs don't inflate counts or savings.
     rows = db.session.execute(text("""
         SELECT
             agent_type,
-            COUNT(*) as total_decisions,
-            SUM(CASE WHEN status = 'executed' THEN 1 ELSE 0 END) as executed_count,
-            AVG(confidence) as avg_confidence,
-            SUM(expected_monthly_savings) as total_expected_savings,
-            SUM(expected_monthly_leads) as total_expected_leads
+            COUNT(*)                                                    AS total_decisions,
+            SUM(CASE WHEN status = 'executed' THEN 1 ELSE 0 END)       AS executed_count,
+            AVG(confidence)                                             AS avg_confidence,
+            SUM(expected_monthly_savings)                               AS total_expected_savings,
+            SUM(expected_monthly_leads)                                 AS total_expected_leads
         FROM agent_decisions
         WHERE account_id = :aid
+          AND id IN (
+              SELECT MAX(id)
+              FROM agent_decisions
+              WHERE account_id = :aid
+              GROUP BY decision_type, title, COALESCE(campaign_id, '')
+          )
         GROUP BY agent_type
         ORDER BY total_decisions DESC
     """), {"aid": account_id}).mappings().all()
@@ -177,6 +185,22 @@ def _load_agent_stats(account_id: int) -> list:
 
 
 def _load_pending_decisions(account_id: int):
+    # Demote generic playbook decisions (add Search/PMax campaign, balanced
+    # structure) that aren't account-specific wins. Idempotent — after the
+    # first run for an account, the WHERE clause matches nothing.
+    try:
+        db.session.execute(text("""
+            UPDATE agent_decisions
+            SET confidence = 0.40
+            WHERE account_id = :aid
+              AND status = 'pending'
+              AND decision_type IN ('create_search_campaign', 'create_pmax_campaign', 'create_balanced_campaigns')
+              AND confidence > 0.5
+        """), {"aid": account_id})
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
     rows = db.session.execute(text("""
         SELECT
             id, agent_id, agent_type, decision_type,
@@ -191,6 +215,7 @@ def _load_pending_decisions(account_id: int):
             CASE risk_level
                 WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4
             END,
+            confidence DESC,
             created_at DESC
     """), {"aid": account_id}).mappings().all()
     pending = [dict(r) for r in rows]

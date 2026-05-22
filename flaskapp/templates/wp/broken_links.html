@@ -1,19 +1,19 @@
 {% extends "base_app.html" %}
-{% block title %}Broken Links · {{ app_name }}{% endblock %}
+{% block title %}Broken Pages · {{ app_name }}{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto space-y-6">
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Broken Link Scanner</h1>
-      <p class="text-gray-500 text-sm mt-1">Scan published posts for 404s, dead links, and connection errors</p>
+      <h1 class="text-2xl font-bold text-gray-900">Find Broken Links</h1>
+      <p class="text-gray-500 text-sm mt-1">Check your pages for links that go nowhere. Broken links frustrate customers and hurt your Google ranking.</p>
     </div>
     {% if report %}
     <div class="flex gap-4 text-sm">
       <span class="text-gray-500">{{ report.total_links }} links checked</span>
       <span class="{% if report.broken_count > 0 %}text-red-600 font-semibold{% else %}text-green-600 font-semibold{% endif %}">
-        {{ report.broken_count }} broken
+        {{ report.broken_count }} broken link{{ 's' if report.broken_count != 1 }}
       </span>
     </div>
     {% endif %}
@@ -48,12 +48,12 @@
     <form method="POST" action="{{ url_for('wp_bp.broken_links') }}">
       <div class="flex flex-wrap items-center gap-4">
         <div>
-          <p class="font-medium text-gray-800">Scan your WordPress posts</p>
-          <p class="text-sm text-gray-500 mt-0.5">Checks up to 30 posts and 80 links. Typically takes 10–30 seconds.</p>
+          <p class="font-medium text-gray-800">Check your pages for broken links</p>
+          <p class="text-sm text-gray-500 mt-0.5">Looks at up to 30 pages and 80 links. Usually takes 10–30 seconds.</p>
         </div>
         <button type="submit"
                 class="ml-auto px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm">
-          <i class="fa-solid fa-magnifying-glass mr-1.5"></i>Run Scan
+          <i class="fa-solid fa-magnifying-glass mr-1.5"></i>Check My Pages
         </button>
       </div>
     </form>
@@ -73,7 +73,7 @@
   <div class="grid grid-cols-3 gap-4">
     <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
       <p class="text-2xl font-bold text-gray-800">{{ report.posts_scanned }}</p>
-      <p class="text-xs text-gray-500 mt-1">Posts Scanned</p>
+      <p class="text-xs text-gray-500 mt-1">Pages Checked</p>
     </div>
     <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
       <p class="text-2xl font-bold text-gray-800">{{ report.total_links }}</p>
@@ -81,7 +81,7 @@
     </div>
     <div class="bg-white rounded-xl border shadow-sm p-4 text-center">
       <p class="text-2xl font-bold text-red-600">{{ report.broken_count }}</p>
-      <p class="text-xs text-gray-500 mt-1">Broken Links</p>
+      <p class="text-xs text-gray-500 mt-1">Broken Links Found</p>
     </div>
   </div>
 
@@ -139,7 +139,7 @@
     </table>
     <div class="px-5 py-3 border-t bg-gray-50 text-right">
       <a href="{{ url_for('wp_bp.edit_post', post_id=p.post_id) }}"
-         class="text-xs text-indigo-600 hover:underline">Edit post to fix links →</a>
+         class="text-xs text-indigo-600 hover:underline">Edit page to fix links →</a>
     </div>
   </div>
   {% endfor %}

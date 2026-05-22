@@ -1,0 +1,195 @@
+{% extends "base_app.html" %}
+{% block title %}Lead Source Setup – FieldSprout{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8">
+
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Lead Source Setup</h1>
+    <p class="text-gray-500 mt-1">Connect Networx and eLocal to pipe every inbound lead into your FieldSprout inbox automatically.</p>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="mb-4 rounded-lg px-4 py-3 text-sm {% if cat == 'success' %}bg-green-50 text-green-800 border border-green-200{% else %}bg-red-50 text-red-800 border border-red-200{% endif %}">
+        {{ msg }}
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- Networx card -->
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm mb-6">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+        <i class="fa-solid fa-bolt text-white text-sm"></i>
+      </div>
+      <div>
+        <h2 class="font-semibold text-gray-900">Networx</h2>
+        <p class="text-xs text-gray-500">Pay-per-lead · Zapier bridge</p>
+      </div>
+    </div>
+    <div class="px-6 py-5 space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Your Networx Webhook URL</label>
+        <p class="text-xs text-gray-500 mb-2">Paste this into Zapier → Action → Webhooks by Zapier → POST. Any new Networx lead will immediately appear in your Lead Inbox.</p>
+        <div class="flex gap-2">
+          <input type="text" id="networx-url" value="{{ networx_webhook_url }}" readonly
+                 class="flex-1 text-xs font-mono bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
+          <button onclick="copyUrl('networx-url')"
+                  class="px-3 py-2 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors whitespace-nowrap">
+            <i class="fa-regular fa-copy mr-1"></i> Copy
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-blue-50 rounded-lg p-4 text-sm text-blue-800">
+        <p class="font-semibold mb-2"><i class="fa-solid fa-circle-info mr-1"></i> Zapier Setup (2 minutes)</p>
+        <ol class="list-decimal list-inside space-y-1 text-blue-700">
+          <li>In Zapier: New Zap → Trigger: <strong>Networx → New Lead</strong></li>
+          <li>Action: <strong>Webhooks by Zapier → POST</strong></li>
+          <li>Paste the URL above → Data: <code class="bg-blue-100 px-1 rounded">Payload type: JSON</code></li>
+          <li>Map fields: name, phone, email, city, service_type, lead_cost</li>
+          <li>Test &amp; publish</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- eLocal card -->
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm mb-6">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center">
+        <i class="fa-solid fa-phone text-white text-sm"></i>
+      </div>
+      <div>
+        <h2 class="font-semibold text-gray-900">eLocal</h2>
+        <p class="text-xs text-gray-500">Pay-per-call · Tracking number tagging</p>
+      </div>
+    </div>
+    <div class="px-6 py-5 space-y-4">
+      <div class="bg-orange-50 rounded-lg p-4 text-sm text-orange-800">
+        <p class="font-semibold mb-1"><i class="fa-solid fa-circle-info mr-1"></i> How eLocal integration works</p>
+        <p class="text-orange-700">eLocal routes calls to a dedicated tracking number. Enter the Twilio number you assigned to eLocal below — every call on that number will be tagged <strong>source: eLocal</strong> in your Lead Inbox and counted toward eLocal ROI.</p>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">eLocal Tracking Number (E.164)</label>
+        <p class="text-xs text-gray-500 mb-2">The Twilio number eLocal calls are routed to. e.g. <code>+15125550100</code></p>
+        <input type="text" name="elocal_tracking_number" form="config-form"
+               value="{{ cfg.elocal_tracking_number or '' }}"
+               placeholder="+15125550100"
+               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">eLocal Webhook URL (data leads)</label>
+        <p class="text-xs text-gray-500 mb-2">If eLocal sends data leads in addition to calls, use this URL in their partner portal.</p>
+        <div class="flex gap-2">
+          <input type="text" id="elocal-url" value="{{ elocal_webhook_url }}" readonly
+                 class="flex-1 text-xs font-mono bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
+          <button onclick="copyUrl('elocal-url')"
+                  class="px-3 py-2 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors whitespace-nowrap">
+            <i class="fa-regular fa-copy mr-1"></i> Copy
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Config form -->
+  <form id="config-form" method="POST" class="space-y-6">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <!-- Cost per lead defaults -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
+      <div class="px-6 py-4 border-b border-gray-100">
+        <h2 class="font-semibold text-gray-900">Default Lead Costs</h2>
+        <p class="text-xs text-gray-500 mt-0.5">Used for ROI reporting when a lead doesn't include a cost field.</p>
+      </div>
+      <div class="px-6 py-5 grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Networx cost per lead ($)</label>
+          <input type="number" step="0.01" name="networx_default_lead_cost"
+                 value="{{ cfg.networx_default_lead_cost or '45.00' }}"
+                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">eLocal cost per call ($)</label>
+          <input type="number" step="0.01" name="elocal_default_lead_cost"
+                 value="{{ cfg.elocal_default_lead_cost or '35.00' }}"
+                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+        </div>
+      </div>
+    </div>
+
+    <!-- Missed call SMS -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
+      <div class="px-6 py-4 border-b border-gray-100">
+        <h2 class="font-semibold text-gray-900">Missed Call Text-Back</h2>
+        <p class="text-xs text-gray-500 mt-0.5">Auto-sent within seconds of any missed call on your tracking numbers.</p>
+      </div>
+      <div class="px-6 py-5">
+        <label class="block text-sm font-medium text-gray-700 mb-1">SMS Message</label>
+        <textarea name="missed_call_sms_body" rows="3"
+                  placeholder="Sorry we missed your call — text us here and we'll help right away."
+                  class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">{{ cfg.missed_call_sms_body or '' }}</textarea>
+        <p class="text-xs text-gray-400 mt-1">Leave blank to use the system default.</p>
+      </div>
+    </div>
+
+    <!-- Review request -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
+      <div class="px-6 py-4 border-b border-gray-100">
+        <h2 class="font-semibold text-gray-900">Review Request</h2>
+        <p class="text-xs text-gray-500 mt-0.5">Sent automatically when a lead is marked <strong>Completed</strong> in your inbox.</p>
+      </div>
+      <div class="px-6 py-5 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Google Review Link</label>
+          <input type="url" name="review_link_google"
+                 value="{{ cfg.review_link_google or '' }}"
+                 placeholder="https://g.page/r/XXXX/review"
+                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Yelp Review Link</label>
+          <input type="url" name="review_link_yelp"
+                 value="{{ cfg.review_link_yelp or '' }}"
+                 placeholder="https://www.yelp.com/writeareview/biz/..."
+                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">SMS Template</label>
+          <textarea name="review_request_sms_template" rows="3"
+                    placeholder="Hi {name}, it was great working with you! If you have a moment, we'd really appreciate a review: {google_link}"
+                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500">{{ cfg.review_request_sms_template or '' }}</textarea>
+          <p class="text-xs text-gray-400 mt-1">Variables: <code>{name}</code> <code>{job_type}</code> <code>{google_link}</code> <code>{yelp_link}</code></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex gap-3">
+      <button type="submit"
+              class="px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors text-sm">
+        Save Settings
+      </button>
+      <button type="submit" name="rotate_secret" value="1"
+              onclick="return confirm('Rotate webhook secret? Your existing Zapier zap URL will stop working until updated.')"
+              class="px-5 py-2.5 bg-white text-gray-700 font-semibold rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-sm">
+        Rotate Webhook Secret
+      </button>
+    </div>
+  </form>
+</div>
+
+<script nonce="{{ g.csp_nonce }}">
+function copyUrl(inputId) {
+  const el = document.getElementById(inputId);
+  navigator.clipboard.writeText(el.value).then(() => {
+    const btn = el.nextElementSibling;
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Copied';
+    btn.classList.replace('bg-indigo-600', 'bg-green-600');
+    setTimeout(() => { btn.innerHTML = orig; btn.classList.replace('bg-green-600', 'bg-indigo-600'); }, 2000);
+  });
+}
+</script>
+{% endblock %}

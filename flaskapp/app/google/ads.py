@@ -55,9 +55,10 @@ def optimize():
     Renders the Google Ads Optimize UI (tabs driven by ?tab=).
     Template: templates/google/ads/optimize.html
     """
-    from app.models_ads import AdsCampaign, AdsAd
+    from app.models_ads import AdsCampaign, AdsAd, GadsStatsDaily
     AdsCampaign.ensure_columns()
     AdsAd.ensure_columns()
+    GadsStatsDaily.ensure_columns()
     # Check if user has paid plan
     if not is_paid_account():
         flash("Google Ads Optimizer is available on paid plans. Upgrade to access optimization tools.", "warning")
@@ -81,53 +82,49 @@ def optimize():
             today = date.today()
             thirty_ago = today - timedelta(days=30)
 
-            # KPIs: try campaign-level rows with account_id first, then fall back
-            # to account-level aggregate rows (written by performance_memory), then
-            # to campaign rows with no account_id (nullable column).
-            kpi_rows = db.session.execute(text("""
-                SELECT SUM(cost_micros)/1000000.0 AS spend,
-                       SUM(clicks) AS clicks,
-                       SUM(conversions) AS conversions,
-                       SUM(impressions) AS impressions
-                FROM gads_stats_daily
-                WHERE (account_id = :aid OR account_id IS NULL)
-                  AND entity_type = 'campaign'
-                  AND date >= :d
-            """), {"aid": aid, "d": thirty_ago}).mappings().one_or_none()
-
-            # If campaign rows empty, try account-level aggregate row
-            if not kpi_rows or not any([kpi_rows.get("spend"), kpi_rows.get("clicks"), kpi_rows.get("impressions")]):
+            # KPIs: campaign-level stats scoped to THIS account via the
+            # ads_campaigns join. Isolated try/except so if this single query
+            # fails the rest of the cockpit (health score, badges) still loads.
+            try:
                 kpi_rows = db.session.execute(text("""
-                    SELECT SUM(cost_micros)/1000000.0 AS spend,
-                           SUM(clicks) AS clicks,
-                           SUM(conversions) AS conversions,
-                           SUM(impressions) AS impressions
-                    FROM gads_stats_daily
-                    WHERE entity_type = 'account'
-                      AND date >= :d
-                """), {"d": thirty_ago}).mappings().one_or_none()
+                    SELECT SUM(gs.cost_micros)/1000000.0 AS spend,
+                           SUM(gs.clicks)               AS clicks,
+                           SUM(gs.conversions)          AS conversions,
+                           SUM(gs.impressions)          AS impressions
+                    FROM gads_stats_daily gs
+                    JOIN ads_campaigns ac ON ac.id = gs.entity_id AND ac.account_id = :aid
+                    WHERE gs.entity_type = 'campaign'
+                      AND gs.date >= :d
+                """), {"aid": aid, "d": thirty_ago}).mappings().one_or_none()
+            except Exception:
+                current_app.logger.exception("cockpit KPI query failed")
+                db.session.rollback()
+                kpi_rows = None
 
-            # Quick health score from DB
-            kw_count = db.session.execute(
-                text("SELECT COUNT(*) FROM keywords k JOIN ad_groups ag ON ag.id=k.ad_group_id JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid AND k.status!='removed'"),
-                {"aid": aid}
-            ).scalar() or 0
-            neg_count = db.session.execute(
-                text("SELECT COUNT(*) FROM negative_keywords nk LEFT JOIN ads_campaigns ac ON ac.id=nk.campaign_id WHERE (ac.account_id=:aid OR nk.campaign_id IS NULL) AND nk.id IS NOT NULL"),
-                {"aid": aid}
-            ).scalar() or 0
-            ad_count = db.session.execute(
-                text("SELECT COUNT(*) FROM ads a JOIN ad_groups ag ON ag.id=a.ad_group_id JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid AND a.status!='removed'"),
-                {"aid": aid}
-            ).scalar() or 0
-            camp_count = db.session.execute(
-                text("SELECT COUNT(*) FROM ads_campaigns WHERE account_id=:aid AND status!='removed'"),
-                {"aid": aid}
-            ).scalar() or 0
-            ag_count = db.session.execute(
-                text("SELECT COUNT(*) FROM ad_groups ag JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid"),
-                {"aid": aid}
-            ).scalar() or 0
+            # Quick health score from DB — each count wrapped individually so a
+            # missing table or column doesn't zero out the whole cockpit.
+            def _safe_scalar(sql, params):
+                try:
+                    return db.session.execute(text(sql), params).scalar() or 0
+                except Exception:
+                    db.session.rollback()
+                    return 0
+
+            kw_count = _safe_scalar(
+                "SELECT COUNT(*) FROM keywords k JOIN ad_groups ag ON ag.id=k.ad_group_id JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid AND k.status!='removed'",
+                {"aid": aid})
+            neg_count = _safe_scalar(
+                "SELECT COUNT(*) FROM negative_keywords nk LEFT JOIN ads_campaigns ac ON ac.id=nk.campaign_id WHERE (ac.account_id=:aid OR nk.campaign_id IS NULL) AND nk.id IS NOT NULL",
+                {"aid": aid})
+            ad_count = _safe_scalar(
+                "SELECT COUNT(*) FROM ads a JOIN ad_groups ag ON ag.id=a.ad_group_id JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid AND a.status!='removed'",
+                {"aid": aid})
+            camp_count = _safe_scalar(
+                "SELECT COUNT(*) FROM ads_campaigns WHERE account_id=:aid AND status!='removed'",
+                {"aid": aid})
+            ag_count = _safe_scalar(
+                "SELECT COUNT(*) FROM ad_groups ag JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid",
+                {"aid": aid})
 
             neg_ratio = neg_count / max(kw_count, 1)
             waste_score = min(100, int((neg_ratio / 2.5) * 100))
@@ -158,33 +155,42 @@ def optimize():
                 overall = int(waste_score * 0.35 + struct_score * 0.30 + ctr_score * 0.35)
                 grade = "A+" if overall >= 90 else ("A" if overall >= 85 else ("A-" if overall >= 80 else ("B+" if overall >= 75 else ("B" if overall >= 70 else ("B-" if overall >= 65 else ("C+" if overall >= 60 else ("C" if overall >= 55 else ("C-" if overall >= 50 else ("D" if overall >= 40 else "F")))))))))
 
-            # Top pending actions
-            top_actions = OptimizerRecommendation.query.filter_by(
+            # Top pending actions / counts — each isolated so a missing table
+            # or column never blanks out the whole cockpit.
+            def _safe_list(fn, default=None):
+                try:
+                    return fn()
+                except Exception:
+                    db.session.rollback()
+                    return default if default is not None else []
+
+            top_actions = _safe_list(lambda: OptimizerRecommendation.query.filter_by(
                 account_id=aid, status="open"
-            ).order_by(OptimizerRecommendation.severity.asc()).limit(8).all()
+            ).order_by(OptimizerRecommendation.severity.asc()).limit(8).all())
 
-            # Active rules / actions today
-            active_rules = AIActionRule.query.filter_by(account_id=aid, enabled=True).count()
-            actions_today = AIAction.query.filter(
-                AIAction.account_id == aid,
-                AIAction.created_at >= today
-            ).count()
+            active_rules = _safe_list(
+                lambda: AIActionRule.query.filter_by(account_id=aid, enabled=True).count(),
+                default=0)
+            actions_today = _safe_list(lambda: AIAction.query.filter(
+                AIAction.account_id == aid, AIAction.created_at >= today
+            ).count(), default=0)
 
-            # Counts for sub-tool badges
-            pending_optimizer = OptimizerRecommendation.query.filter_by(account_id=aid, status="open").count()
-            pending_terms = db.session.execute(
-                text("SELECT COUNT(*) FROM search_terms st JOIN ads_campaigns ac ON ac.id=st.campaign_id WHERE ac.account_id=:aid AND st.added_as_keyword=0 AND st.added_as_negative=0"),
-                {"aid": aid}
-            ).scalar() or 0
-            ab_running = db.session.execute(
-                text("SELECT COUNT(DISTINCT variant_group) FROM ads a JOIN ad_groups ag ON ag.id=a.ad_group_id JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid AND a.variant_group IS NOT NULL"),
-                {"aid": aid}
-            ).scalar() or 0
+            pending_optimizer = _safe_list(lambda: OptimizerRecommendation.query.filter_by(
+                account_id=aid, status="open").count(), default=0)
+            pending_terms = _safe_scalar(
+                "SELECT COUNT(*) FROM search_terms st JOIN ads_campaigns ac ON ac.id=st.campaign_id "
+                "WHERE ac.account_id=:aid AND st.added_as_keyword=0 AND st.added_as_negative=0",
+                {"aid": aid})
+            ab_running = _safe_scalar(
+                "SELECT COUNT(DISTINCT variant_group) FROM ads a "
+                "JOIN ad_groups ag ON ag.id=a.ad_group_id "
+                "JOIN ads_campaigns ac ON ac.id=ag.campaign_id "
+                "WHERE ac.account_id=:aid AND a.variant_group IS NOT NULL",
+                {"aid": aid})
 
-            # Recent activity (last 10 actions)
-            recent_actions = AIAction.query.filter_by(account_id=aid).order_by(
+            recent_actions = _safe_list(lambda: AIAction.query.filter_by(account_id=aid).order_by(
                 AIAction.created_at.desc()
-            ).limit(10).all()
+            ).limit(10).all())
 
             cockpit = {
                 "health": {"overall": overall, "grade": grade, "waste": waste_score, "structure": struct_score, "ctr": ctr_score},
@@ -409,35 +415,36 @@ def overview():
     Query params: ?days=30 (default 30)
     Tries account-level rows first, then falls back to summing campaign rows.
     """
+    from datetime import date as _date, timedelta as _td
+    from app.models_ads import AdsCampaign, GadsStatsDaily
+    AdsCampaign.ensure_columns()
+    GadsStatsDaily.ensure_columns()
+
     aid = current_account_id()
-    days = int(request.args.get("days", 30))
+    days = max(1, min(int(request.args.get("days", 30)), 365))
+    cutoff = _date.today() - _td(days=days)
 
-    def _query(etype, use_aid):
-        filters = "AND entity_type = :et AND date >= (CURRENT_DATE - INTERVAL :days DAY)"
-        params: dict = {"et": etype, "days": days}
-        if use_aid:
-            filters += " AND (account_id = :aid OR account_id IS NULL)"
-            params["aid"] = aid
-        return db.session.execute(text(f"""
-            SELECT
-              COALESCE(SUM(impressions),0) AS impressions,
-              COALESCE(SUM(clicks),0) AS clicks,
-              COALESCE(SUM(cost_micros),0) AS cost_micros,
-              COALESCE(SUM(conversions),0) AS conversions,
-              CASE WHEN COALESCE(SUM(clicks),0) > 0
-                   THEN COALESCE(SUM(cost_micros),0)/1000000.0/COALESCE(SUM(clicks),0)
-                   ELSE 0 END AS avg_cpc
-            FROM gads_stats_daily
-            WHERE 1=1 {filters}
-        """), params).mappings().first() or {}
-
-    row = _query("account", use_aid=True)
-    if not row or not (row.get("impressions") or row.get("clicks") or row.get("cost_micros")):
-        row = _query("campaign", use_aid=True)
-    if not row or not (row.get("impressions") or row.get("clicks") or row.get("cost_micros")):
-        row = _query("account", use_aid=False)
+    # Scope strictly to this account via the ads_campaigns join. We compute the
+    # cutoff date in Python instead of `INTERVAL :days DAY` because MySQL can't
+    # parameterize the value inside an INTERVAL expression — the parameterized
+    # form silently returned no rows, which is why KPIs were all zero.
+    row = db.session.execute(text("""
+        SELECT
+          COALESCE(SUM(gs.impressions), 0)   AS impressions,
+          COALESCE(SUM(gs.clicks), 0)        AS clicks,
+          COALESCE(SUM(gs.cost_micros), 0)   AS cost_micros,
+          COALESCE(SUM(gs.conversions), 0)   AS conversions,
+          CASE WHEN COALESCE(SUM(gs.clicks), 0) > 0
+               THEN COALESCE(SUM(gs.cost_micros), 0)/1000000.0/COALESCE(SUM(gs.clicks), 0)
+               ELSE 0 END                    AS avg_cpc
+        FROM gads_stats_daily gs
+        JOIN ads_campaigns ac ON ac.id = gs.entity_id AND ac.account_id = :aid
+        WHERE gs.entity_type = 'campaign'
+          AND gs.date >= :cutoff
+    """), {"aid": aid, "cutoff": cutoff}).mappings().first() or {}
 
     return jsonify(dict(row))
+
 
 
 # ---------------------------
@@ -1102,6 +1109,168 @@ def sync():
 # ---------------------------
 # Search Terms tab
 # ---------------------------
+
+# ---- Generic intent signals (apply to every vertical) ----
+#
+# Classification order:
+#   1. Generic service-intent  → relevant (hire-someone language)
+#   2. Per-vertical service signal → relevant (vertical-specific verbs)
+#   3. Generic product/DIY intent → irrelevant
+#   4. Per-vertical buying pattern → irrelevant (catches vertical-specific
+#      product nouns, brand names, dimensions, materials)
+#   5. Default → relevant
+
+_GENERIC_SERVICE_INTENT = [
+    # "near me" alone is service intent; "for sale near me" handled by product layer
+    r"\bnear me\b",
+    r"\bin my area\b", r"\bin my city\b", r"\bin my town\b",
+    r"\bcompan(?:y|ies)\b",
+    r"\bcontractor[s]?\b",
+    r"\bprofessional[s]?\b", r"\bpro[s]?\b(?!\w)",
+    r"\bhire\b", r"\bhiring\b",
+    r"\bemergency\b", r"\bsame.?day\b", r"\b24.?hour\b", r"\b24/7\b",
+    # "my <noun>" implies they own one — "clean my pool", "fix my roof"
+    r"\b(?:clean|fix|repair|service|treat|inspect|tune.?up)\s+(?:my|our)\b",
+    # frequency words imply recurring service
+    r"\bweekly\b", r"\bmonthly\b", r"\bbi.?weekly\b", r"\brecurring\b",
+    r"\bquote\s+for\b", r"\bestimate\s+for\b",
+    r"\bbook(?:ing)?\b", r"\bappointment[s]?\b", r"\bscheduling\b",
+]
+
+_GENERIC_PRODUCT_INTENT = [
+    r"\bfor sale\b",
+    r"\bon sale\b",
+    r"\bamazon\b", r"\bhome depot\b", r"\blowes?\b", r"\bcostco\b", r"\bwalmart\b",
+    r"\bebay\b", r"\bcraigslist\b", r"\bwayfair\b",
+    r"\bdiy\b", r"\bdo it yourself\b",
+    r"\bhow to\b",
+    r"\bbest\b.{0,20}\b(?:brand|product|model|\d{4})\b",
+    r"\b(?:vs|versus)\b",
+    r"\breview[s]?\b",
+    r"\b(?:model|sku|part)\s*#?\s*\w*\d", # part numbers / model #s
+    r"\bkit[s]?\b",
+    r"\bbuy\s+\w+",     # "buy chlorine", "buy pump", etc.
+    r"\bpurchase\b",
+    r"\border\s+online\b",
+    r"\bshipping\b", r"\bdelivery\b",
+    r"\bwholesale\b",
+    r"\bused\b\s+\w+\s+(?:for sale|near me)?",  # "used pump for sale"
+    r"\b\d+[x×]\d+\b",                       # dimensions like 12x24 (product spec)
+    r"\b\d+\s*(?:foot|ft)\s+(?:wide|long|tall|deep)\b",
+    r"\bbtu\b", r"\bseer\b",                 # spec numbers → shopping
+]
+
+# ---- Per-vertical layers (tiebreakers) ----
+
+_SERVICE_SIGNALS = {
+    "pool_cleaning": [
+        r"\bcleaning\b", r"\bcleans\b",
+        r"\bmaintenan", r"\bmaintain",
+        r"\bservic",
+        r"\brepair", r"\btreatment\b", r"\btreating\b",
+        r"\bcare\b",
+    ],
+    "roofing": [
+        r"\brepair\b", r"\breplace\b", r"\bleak[s]?\b",
+        r"\binspect", r"\bservic", r"\bmaintenan",
+        r"\bre.?roof", r"\breplacement\b",
+    ],
+    "hvac_ac": [
+        r"\brepair\b", r"\bservic", r"\bmaintenan", r"\btune.?up\b",
+        r"\brecharge\b", r"\brefrigerant\b", r"\bleak[s]?\b",
+    ],
+    "plumbing": [
+        r"\brepair\b", r"\bservic", r"\bleak[s]?\b",
+        r"\bclog(?:ged)?\b", r"\bbackup\b", r"\bunclog\b",
+    ],
+    "generic": [],
+}
+
+_POOL_PRODUCT_NOUNS = (
+    r"chlorine|chemicals?|algaecide|vacuum|cleaner[s]?|robot|"
+    r"pump[s]?|filter[s]?|brush(?:es)?|shock|cover[s]?|heater[s]?|"
+    r"liner[s]?|skimmer[s]?|salt|tablets?|ph\b|alkalinity"
+)
+
+_BUYING_PATTERNS = {
+    "pool_cleaning": [
+        # pool/product + price/cost in either direction
+        r"\bpool[s]?\b.{0,30}\b(cost[s]?|price[sd]?)\b",
+        r"\b(cost[s]?|price[sd]?)\b.{0,30}\bpool[s]?\b",
+        rf"\b({_POOL_PRODUCT_NOUNS})\b.{{0,30}}\b(cost[s]?|price[sd]?)\b",
+        rf"\b(cost[s]?|price[sd]?)\b.{{0,30}}\b({_POOL_PRODUCT_NOUNS})\b",
+        # vertical-specific product/build language
+        r"\bfiberglass\b", r"\bviny[l]?\b", r"\bconcrete pool\b",
+        r"\bbuild\b", r"\binstall(?:ation)?\b",
+        r"\binground pool\b", r"\babove.?ground pool\b",
+        r"\bcheap pool\b", r"\baffordable pool\b",
+    ],
+    "roofing": [
+        r"\broof\s+(cost[s]?|price[sd]?)\b",
+        r"\bmaterial[s]?\b", r"\bshingle[s]?\b", r"\btile[s]?\b",
+        r"\bmetal roof\b", r"\basphalt\b",
+        r"\bper square\b", r"\bsquare foot\b",
+        r"\binstall(?:ation)?\b",
+    ],
+    "hvac_ac": [
+        r"\bac\s+(cost[s]?|price[sd]?|unit[s]?)\b",
+        r"\bhvac\s+(cost[s]?|price[sd]?|unit[s]?)\b",
+        r"\btrane\b", r"\bcarrier\b", r"\blennox\b", r"\bgoodman\b", r"\brheem\b",
+        r"\binstall(?:ation)?\b",
+    ],
+    "plumbing": [
+        r"\bplumb(?:ing)?\s+(cost[s]?|price[sd]?)\b",
+        r"\bparts?\b", r"\bfixture[s]?\b",
+        r"\bfaucet[s]?\b", r"\btoilet[s]?\b", r"\bsink[s]?\b",
+        r"\binstall(?:ation)?\b",
+    ],
+    "generic": [
+        r"\bcheap\b", r"\baffordable\b",
+        r"\bcost[s]?\b", r"\bprice[sd]?\b",
+    ],
+}
+
+
+def _classify_term(term: str, service_type: str) -> str:
+    """
+    Decide if a search term is 'relevant' (someone wants to hire us) or
+    'irrelevant' (someone wants to buy a product / DIY).
+
+    Order:
+      1. Generic service-intent → relevant (hire-me language is unambiguous)
+      2. Generic product/DIY intent → irrelevant (diy / for sale / amazon
+         override vertical verbs — "diy roof repair" is product even though
+         "repair" is a roofing service verb)
+      3. Vertical service signal → relevant
+      4. Vertical buying pattern → irrelevant
+      5. Default → relevant
+    """
+    import re
+    t = (term or "").lower()
+
+    # 1. Generic service-intent (hire-me language)
+    if any(re.search(p, t) for p in _GENERIC_SERVICE_INTENT):
+        # Exception: "for sale near me" is still product intent
+        if not re.search(r"\bfor sale\b", t):
+            return "relevant"
+
+    # 2. Generic product/DIY intent — unambiguous shopping language
+    if any(re.search(p, t) for p in _GENERIC_PRODUCT_INTENT):
+        return "irrelevant"
+
+    # 3. Vertical-specific service verbs
+    signals = _SERVICE_SIGNALS.get(service_type, [])
+    if signals and any(re.search(p, t) for p in signals):
+        return "relevant"
+
+    # 4. Vertical-specific buying patterns (product nouns + price, brand names, etc.)
+    patterns = _BUYING_PATTERNS.get(service_type, _BUYING_PATTERNS["generic"])
+    if any(re.search(p, t) for p in patterns):
+        return "irrelevant"
+
+    return "relevant"
+
+
 @gads_bp.get("/search-terms")
 @login_required
 def search_terms():
@@ -1133,6 +1302,25 @@ def search_terms():
         current_app.logger.exception("Error loading search terms")
         terms_data = []
 
+    service_type = "generic"
+    try:
+        from app.google.forecasting_routes import _infer_service_type
+        service_type = _infer_service_type(aid)
+    except Exception:
+        pass
+
+    for t in terms_data:
+        t["relevance"] = _classify_term(t["search_term"], service_type)
+        conv = t.get("conversions")
+        cost = t.get("cost_micros") or 0
+        t["cpl"] = round(cost / 1_000_000 / conv, 2) if conv and conv > 0 else None
+
+    wasted_spend_dollars = sum(
+        (t["cost_micros"] or 0) / 1_000_000
+        for t in terms_data if t["relevance"] == "irrelevant"
+    )
+    wasted_term_count = sum(1 for t in terms_data if t["relevance"] == "irrelevant")
+
     campaigns_list = [
         {"id": c.id, "name": c.name}
         for c in AdsCampaign.query.filter_by(account_id=aid).order_by(AdsCampaign.name).all()
@@ -1142,6 +1330,9 @@ def search_terms():
         "google/ads/search_terms.html",
         terms_data=terms_data,
         campaigns_list=campaigns_list,
+        wasted_spend_dollars=wasted_spend_dollars,
+        wasted_term_count=wasted_term_count,
+        service_type=service_type,
     )
 
 

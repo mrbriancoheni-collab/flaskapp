@@ -3,17 +3,52 @@
 {% block title %}Google Ads · {% if tab == 'cockpit' %}Command Center{% else %}Optimize{% endif %}{% endblock %}
 {% block content %}
 {% include "google/components/gads_nav.html" %}
+<script>
+window.showToast = window.showToast || function(msg, kind) {
+  const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+  const t = document.createElement('div');
+  t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+};
+window.appConfirm = window.appConfirm || function(message) {
+  return new Promise(resolve => {
+    const back = document.createElement('div');
+    back.className = 'fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4';
+    back.innerHTML = '<div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"><p class="text-sm text-gray-800 mb-5"></p><div class="flex justify-end gap-3"><button type="button" data-a="c" class="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50">Cancel</button><button type="button" data-a="o" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">OK</button></div></div>';
+    back.querySelector('p').textContent = message;
+    document.body.appendChild(back);
+    back.querySelector('[data-a="o"]').onclick = () => { back.remove(); resolve(true); };
+    back.querySelector('[data-a="c"]').onclick = () => { back.remove(); resolve(false); };
+  });
+};
+window.appPrompt = window.appPrompt || function(message, defaultValue) {
+  return new Promise(resolve => {
+    const back = document.createElement('div');
+    back.className = 'fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4';
+    back.innerHTML = '<div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"><p class="text-sm text-gray-800 mb-3"></p><input type="text" class="w-full rounded-lg border px-3 py-2 text-sm mb-5"><div class="flex justify-end gap-3"><button type="button" data-a="c" class="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50">Cancel</button><button type="button" data-a="o" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">OK</button></div></div>';
+    back.querySelector('p').textContent = message;
+    const input = back.querySelector('input');
+    input.value = defaultValue || '';
+    document.body.appendChild(back);
+    input.focus();
+    back.querySelector('[data-a="o"]').onclick = () => { const v = input.value; back.remove(); resolve(v); };
+    back.querySelector('[data-a="c"]').onclick = () => { back.remove(); resolve(null); };
+  });
+};
+</script>
 <div class="max-w-7xl mx-auto">
 
   <!-- Header -->
   <div class="flex items-center justify-between mb-6">
     <div>
       {% if tab == 'cockpit' %}
-      <h1 class="text-2xl font-semibold tracking-tight">Google Ads — Command Center</h1>
-      <p class="text-gray-500">Your account at a glance. Health score, top actions, and every tool in one place.</p>
+      <h1 class="text-2xl font-semibold tracking-tight">Google Ads — Mission Control</h1>
+      <p class="text-gray-500">Your whole ad account at a glance — how it's doing, what needs fixing, and every tool in one place.</p>
       {% else %}
-      <h1 class="text-2xl font-semibold tracking-tight">Google Ads — Optimize</h1>
-      <p class="text-gray-500">Manage campaigns, ad groups, ads, keywords, negatives, budgets, and bidding.</p>
+      <h1 class="text-2xl font-semibold tracking-tight">Google Ads — Tune Up</h1>
+      <p class="text-gray-500">Manage your campaigns, ads, keywords, search-blocking words, budgets, and what you pay per click.</p>
       {% endif %}
     </div>
     <div class="flex items-center gap-3">
@@ -47,11 +82,11 @@
     <!-- Dynamic cards get injected into #kpi-cards; below is SSR fallback -->
     <div id="kpi-cards" class="grid grid-cols-2 md:grid-cols-5 gap-3">
       {% set cards = [
-          ('Spend', '$' ~ stats.spend),
-          ('Impressions', stats.impr),
+          ('Ad spend', '$' ~ stats.spend),
+          ('Times your ad showed', stats.impr),
           ('Clicks', stats.clicks),
-          ('Conversions', stats.conv),
-          ('Avg CPA', '$' ~ stats.cpa)
+          ('Leads', stats.conv),
+          ('$ per booked job (avg)', '$' ~ stats.cpa)
       ] %}
       {% for label, value in cards %}
       <div class="rounded-xl border bg-white p-4">
@@ -69,7 +104,7 @@
     {# Command Center first #}
     <a href="{{ url_for('gads_bp.optimize') }}?tab=cockpit"
        class="whitespace-nowrap border-b-2 px-3 py-2 flex items-center gap-1.5 {{ 'border-indigo-600 text-indigo-700 font-medium' if tab=='cockpit' else 'border-transparent text-gray-500 hover:text-gray-700' }}">
-      <i class="fa-solid fa-gauge-high text-xs"></i> Command Center
+      <i class="fa-solid fa-gauge-high text-xs"></i> Mission Control
     </a>
     <span class="text-gray-200 px-1">|</span>
     {% for t,label in [
@@ -77,8 +112,8 @@
       ('adgroups','Ad Groups'),
       ('ads','Ads'),
       ('keywords','Keywords'),
-      ('negatives','Negatives'),
-      ('optimizer','Optimizer'),
+      ('negatives','Block bad searches'),
+      ('optimizer','Tune up'),
       ('publish','Create/Publish')
     ] %}
       <a href="{{ url_for('gads_bp.optimize') }}?tab={{t}}"
@@ -93,15 +128,15 @@
     </a>
     <a href="{{ url_for('gads_bp.conversions') }}"
        class="whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-gray-500 hover:text-gray-700">
-      Conversions
+      Leads tracking
     </a>
     <a href="{{ url_for('gads_bp.rules_list') }}"
        class="whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-gray-500 hover:text-gray-700">
-      Rules
+      Automatic actions
     </a>
     <a href="{{ url_for('gads_bp.ab_tests') }}"
        class="whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-gray-500 hover:text-gray-700">
-      A/B Tests
+      Side-by-side tests
     </a>
     <a href="{{ url_for('gads_bp.analysis_doc') }}"
        class="whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-gray-400 hover:text-gray-600 text-xs flex items-center gap-1">
@@ -160,7 +195,7 @@
           </div>
           <div class="bg-gray-50 rounded p-1">
             <div class="font-semibold">{{ health.get('ctr', 0) }}</div>
-            <div class="text-gray-400">CTR</div>
+            <div class="text-gray-400">Click rate</div>
           </div>
         </div>
         {% if not connected %}
@@ -171,11 +206,11 @@
       <!-- KPI Cards (30d) -->
       <div class="lg:col-span-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {% set kpi_list = [
-          ('fa-dollar-sign','Spend (30d)', '$' ~ (kpis.get('spend', 0)|round(2)), 'indigo'),
+          ('fa-dollar-sign','Ad spend (30d)', '$' ~ (kpis.get('spend', 0)|round(2)), 'indigo'),
           ('fa-mouse-pointer','Clicks', kpis.get('clicks', 0)|int, 'blue'),
-          ('fa-bullseye','Conversions', kpis.get('conversions', 0)|round(1), 'green'),
-          ('fa-eye','Impressions', kpis.get('impressions', 0)|int, 'purple'),
-          ('fa-tag','Avg CPA', '$' ~ (kpis.get('cpa', 0)|round(2)), 'rose'),
+          ('fa-bullseye','Leads', kpis.get('conversions', 0)|round(1), 'green'),
+          ('fa-eye','Times shown', kpis.get('impressions', 0)|int, 'purple'),
+          ('fa-tag','$ per booked job', '$' ~ (kpis.get('cpa', 0)|round(2)), 'rose'),
         ] %}
         {% for icon, label, value, color in kpi_list %}
         <div class="bg-white rounded-xl border p-4">
@@ -196,7 +231,7 @@
       <div class="lg:col-span-2 bg-white rounded-xl border">
         <div class="flex items-center justify-between px-4 py-3 border-b">
           <h2 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
-            <i class="fa-solid fa-bolt text-amber-500"></i> Top Pending Actions
+            <i class="fa-solid fa-bolt text-amber-500"></i> Top things to fix
           </h2>
           <a href="{{ url_for('gads_bp.optimize') }}?tab=optimizer" class="text-xs text-indigo-600 hover:underline">View all →</a>
         </div>
@@ -252,16 +287,16 @@
         </h2>
         {# Tools grid — hardcoded paths to avoid url_for failures on optional blueprints #}
         {% set tools = [
-          ('/account/google/ads/?tab=optimizer', 'fa-wand-magic-sparkles', 'Optimizer', badges.get('optimizer', 0), 'indigo', 'AI recommendations'),
-          ('/account/google/ads/rules', 'fa-robot', 'Auto Rules', badges.get('rules', 0), 'violet', 'Automated actions'),
-          ('/account/google/ads/search-terms', 'fa-magnifying-glass', 'Search Terms', badges.get('search_terms', 0), 'blue', 'Mine & block terms'),
-          ('/account/google/ads/ab-tests', 'fa-flask', 'A/B Tests', badges.get('ab_tests', 0), 'cyan', 'Ad variant testing'),
-          ('/account/google/ads/conversions', 'fa-bullseye', 'Conversions', 0, 'green', 'Conversion tracking'),
-          ('/account/google/ads/alerts', 'fa-bell', 'Alerts', 0, 'amber', 'Performance alerts'),
-          ('/account/google/ads/forecasting', 'fa-chart-line', 'Forecasting', 0, 'purple', 'Seasonal & anomaly'),
-          ('/account/google/ads/competitive', 'fa-chess', 'Competitive', 0, 'rose', 'Auction insights'),
-          ('/account/google/ads/budget', 'fa-wallet', 'Budgets', 0, 'orange', 'Budget groups'),
-          ('/account/google/ads/agents/dashboard', 'fa-microchip-ai', 'AI Agents', 0, 'slate', 'Autonomous actions'),
+          ('/account/google/ads/?tab=optimizer', 'fa-wand-magic-sparkles', 'Tune up', badges.get('optimizer', 0), 'indigo', 'Smart suggestions'),
+          ('/account/google/ads/rules', 'fa-robot', 'Automatic actions', badges.get('rules', 0), 'violet', 'Set & forget tweaks'),
+          ('/account/google/ads/search-terms', 'fa-magnifying-glass', 'Search terms', badges.get('search_terms', 0), 'blue', 'See & block bad searches'),
+          ('/account/google/ads/ab-tests', 'fa-flask', 'Side-by-side tests', badges.get('ab_tests', 0), 'cyan', 'Test ad headlines'),
+          ('/account/google/ads/conversions', 'fa-bullseye', 'Leads tracking', 0, 'green', 'What counts as a lead'),
+          ('/account/google/ads/alerts', 'fa-bell', 'Alerts', 0, 'amber', 'Get warned about issues'),
+          ('/account/google/ads/forecasting', 'fa-chart-line', 'Forecasts', 0, 'purple', 'What to expect'),
+          ('/account/google/ads/competitive', 'fa-chess', 'Competitors', 0, 'rose', 'Who you compete with'),
+          ('/account/google/ads/budget', 'fa-wallet', 'Budgets', 0, 'orange', 'Plan your spend'),
+          ('/account/google/ads/agents/dashboard', 'fa-microchip-ai', 'AI assistants', 0, 'slate', 'Hands-off helpers'),
         ] %}
         <div class="grid grid-cols-2 gap-2">
           {% for href, icon, label, badge, color, sub in tools %}
@@ -315,6 +350,60 @@
     </div>
 
     <script>
+    if (typeof showToast === 'undefined') {
+      window.showToast = function(msg, kind) {
+        const colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-gray-800' };
+        const t = document.createElement('div');
+        t.className = `fixed top-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg text-sm text-white ${colors[kind] || colors.info}`;
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 4000);
+      };
+    }
+    if (typeof appConfirm === 'undefined') {
+      window.appConfirm = function(message) {
+        return new Promise(resolve => {
+          const back = document.createElement('div');
+          back.className = 'fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4';
+          back.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+              <p class="text-sm text-gray-800 mb-5"></p>
+              <div class="flex justify-end gap-3">
+                <button type="button" data-a="c" class="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="button" data-a="o" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">OK</button>
+              </div>
+            </div>`;
+          back.querySelector('p').textContent = message;
+          document.body.appendChild(back);
+          back.querySelector('[data-a="o"]').onclick = () => { back.remove(); resolve(true); };
+          back.querySelector('[data-a="c"]').onclick = () => { back.remove(); resolve(false); };
+        });
+      };
+    }
+    if (typeof appPrompt === 'undefined') {
+      window.appPrompt = function(message, defaultValue) {
+        return new Promise(resolve => {
+          const back = document.createElement('div');
+          back.className = 'fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4';
+          back.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+              <p class="text-sm text-gray-800 mb-3"></p>
+              <input type="text" class="w-full rounded-lg border px-3 py-2 text-sm mb-5">
+              <div class="flex justify-end gap-3">
+                <button type="button" data-a="c" class="px-4 py-2 text-sm border rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="button" data-a="o" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">OK</button>
+              </div>
+            </div>`;
+          back.querySelector('p').textContent = message;
+          const input = back.querySelector('input');
+          input.value = defaultValue || '';
+          document.body.appendChild(back);
+          input.focus();
+          back.querySelector('[data-a="o"]').onclick = () => { const v = input.value; back.remove(); resolve(v); };
+          back.querySelector('[data-a="c"]').onclick = () => { back.remove(); resolve(null); };
+        });
+      };
+    }
     async function applyAction(recId, btn) {
       btn.disabled = true;
       btn.textContent = '…';
@@ -350,8 +439,9 @@
           if (id) highPriority.push(id);
         }
       });
-      if (!highPriority.length) { alert('No high-priority (red) actions found.'); return; }
-      if (!confirm('Apply ' + highPriority.length + ' high-priority action(s)?')) return;
+      if (!highPriority.length) { showToast('No high-priority (red) actions found.', 'info'); return; }
+      const okBulk = await appConfirm('Apply ' + highPriority.length + ' high-priority action(s)?');
+      if (!okBulk) return;
       for (const id of highPriority) {
         const btn = document.querySelector('#action-row-' + id + ' button');
         if (btn) await applyAction(id, btn);
@@ -610,11 +700,11 @@
               <th class="text-right px-3 py-2 w-24">Ad Groups</th>
               <th class="text-right px-3 py-2 w-24">Keywords</th>
               <th class="text-right px-3 py-2 w-28">30d Spend</th>
-              <th class="text-right px-3 py-2 w-28">30d Conv.</th>
-              <th class="text-right px-3 py-2 w-24" title="Search Impression Share">Impr. Share</th>
-              <th class="text-right px-3 py-2 w-24" title="IS Lost to Budget">Lost/Budget</th>
-              <th class="text-right px-3 py-2 w-24" title="IS Lost to Rank">Lost/Rank</th>
-              <th class="text-left px-3 py-2 w-36">Bid Strategy</th>
+              <th class="text-right px-3 py-2 w-28">30d Leads</th>
+              <th class="text-right px-3 py-2 w-24" title="Your share of searches">Your share of searches</th>
+              <th class="text-right px-3 py-2 w-24" title="Searches you missed because budget ran out">Missed (budget)</th>
+              <th class="text-right px-3 py-2 w-24" title="Searches you missed because competitors ranked higher">Missed (rank)</th>
+              <th class="text-left px-3 py-2 w-36">Max you pay per click</th>
               <th class="text-center px-3 py-2 w-32">Actions</th>
             </tr>
           </thead>
@@ -699,10 +789,10 @@
                 <select class="bid-strategy-select text-xs rounded border px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-300 w-full"
                         data-id="{{ c.id }}">
                   {% for strat, label in [
-                    ('manual_cpc','Manual CPC'),
-                    ('enhanced_cpc','Enhanced CPC'),
-                    ('target_cpa','Target CPA'),
-                    ('target_roas','Target ROAS'),
+                    ('manual_cpc','You set max per click'),
+                    ('enhanced_cpc','You set, Google adjusts'),
+                    ('target_cpa','Aim for $ per booked job'),
+                    ('target_roas','Aim for $ earned per $1 spent'),
                     ('maximize_conversions','Max Conversions'),
                     ('maximize_conversion_value','Max Conv. Value'),
                   ] %}
@@ -1028,7 +1118,7 @@
       <div class="flex items-center justify-between mb-4">
         <div>
           <h2 class="text-lg font-semibold">Keywords</h2>
-          <p class="text-xs text-gray-500 mt-0.5">Quality Score data syncs from Google Ads. Low QS (1–6) means higher CPCs — fix ad relevance and landing pages.</p>
+          <p class="text-xs text-gray-500 mt-0.5">Google's quality grade (1–10) for each keyword. A low grade (1–6) means you pay more per click — improve ad wording and landing pages to boost it.</p>
         </div>
         <button id="btn-show-add-keyword"
                 class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
@@ -1149,7 +1239,7 @@
               <th class="text-left px-3 py-2">Campaign</th>
               <th class="text-left px-3 py-2">Ad Group</th>
               <th class="text-right px-3 py-2 w-24">Max CPC</th>
-              <th class="text-center px-3 py-2 w-24">Quality Score</th>
+              <th class="text-center px-3 py-2 w-24">Google's quality grade</th>
               <th class="text-center px-3 py-2 w-20">Actions</th>
             </tr>
           </thead>
@@ -1680,7 +1770,7 @@
     applySelectedBtn.addEventListener("click", async () => {
       const checkboxes = document.querySelectorAll(".optimization-checkbox:checked");
       if (checkboxes.length === 0) {
-        alert("Please select at least one optimization to apply.");
+        showToast("Please select at least one suggestion to apply.", "info");
         return;
       }
 
@@ -1707,7 +1797,7 @@
         }
 
         const out = await res.json();
-        alert(`✓ Successfully queued ${recommendation_ids.length} optimization(s)!\n\nAction IDs: ${(out.action_ids || []).join(', ')}`);
+        showToast(`Queued ${recommendation_ids.length} suggestion(s).`, 'success');
 
         // Uncheck all and reload
         document.querySelectorAll(".optimization-checkbox:checked").forEach(cb => cb.checked = false);
@@ -1718,7 +1808,7 @@
         await loadOptimizer();
       } catch (error) {
         console.error("Error applying optimizations:", error);
-        alert(`Failed to apply optimizations: ${error.message}\n\nPlease try again or contact support.`);
+        showToast(`Failed to apply: ${error.message}`, 'error');
       } finally {
         applyBtn.disabled = false;
         applyBtn.innerHTML = originalText;
@@ -1788,10 +1878,10 @@
       const strategy = this.value;
       let targetCpa = null, targetRoas = null;
       if (strategy === 'target_cpa') {
-        targetCpa = prompt('Enter target CPA ($):');
+        targetCpa = await appPrompt('Target $ per booked job ($):');
         if (!targetCpa) { this.value = this.dataset.prev || 'manual_cpc'; return; }
       } else if (strategy === 'target_roas') {
-        targetRoas = prompt('Enter target ROAS (e.g. 4.0 for 400%):');
+        targetRoas = await appPrompt('Target return on ad spend (e.g. 4.0 for $4 earned per $1 spent):');
         if (!targetRoas) { this.value = this.dataset.prev || 'manual_cpc'; return; }
       }
       this.dataset.prev = strategy;
@@ -1802,9 +1892,9 @@
           body: JSON.stringify({bid_strategy: strategy, target_cpa: targetCpa, target_roas: targetRoas}),
         });
         const data = await r.json();
-        if (!data.ok) alert('Error saving bid strategy: ' + data.error);
+        if (!data.ok) showToast('Error saving max-per-click setup: ' + data.error, 'error');
       } catch (e) {
-        alert('Request failed: ' + e.message);
+        showToast('Request failed: ' + e.message, 'error');
       }
     });
     // Store initial value
@@ -1818,7 +1908,7 @@
     btn.addEventListener('click', async function () {
       const id = this.dataset.id;
       const srcName = this.dataset.name;
-      const newName = prompt('Clone name:', srcName + ' (Copy)');
+      const newName = await appPrompt('Name for the copy:', srcName + ' (Copy)');
       if (!newName) return;
       this.disabled = true;
       this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
@@ -1833,12 +1923,12 @@
           this.innerHTML = '<i class="fa-solid fa-check text-green-600"></i>';
           setTimeout(() => window.location.reload(), 800);
         } else {
-          alert('Clone failed: ' + data.error);
+          showToast('Copy failed: ' + data.error, 'error');
           this.innerHTML = '<i class="fa-solid fa-copy"></i>';
           this.disabled = false;
         }
       } catch (e) {
-        alert('Request failed: ' + e.message);
+        showToast('Request failed: ' + e.message, 'error');
         this.innerHTML = '<i class="fa-solid fa-copy"></i>';
         this.disabled = false;
       }

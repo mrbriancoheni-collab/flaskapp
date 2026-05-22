@@ -1,14 +1,14 @@
 {% extends "base_app.html" %}
-{% block title %}Content Calendar · {{ app_name }}{% endblock %}
+{% block title %}Schedule of pages to publish · {{ app_name }}{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto space-y-6">
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">AI Content Calendar</h1>
+      <h1 class="text-2xl font-bold text-gray-900">Schedule of when to publish new pages</h1>
       <p class="text-gray-500 text-sm mt-1">
-        12-week publishing plan built from your keyword gaps, quick wins, and declining pages
+        A 12-week plan of what to write and when. Built from topics you should write about but haven't, easy wins, and pages losing traffic.
       </p>
     </div>
     {% if calendar_items %}
@@ -39,19 +39,19 @@
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
     <div class="bg-white rounded-xl border shadow-sm p-3 text-center">
       <p class="text-xl font-bold text-gray-800">{{ signals_summary.missing_count }}</p>
-      <p class="text-xs text-gray-500 mt-0.5">Untapped Keywords</p>
+      <p class="text-xs text-gray-500 mt-0.5">Searches you don't show up for yet</p>
     </div>
     <div class="bg-white rounded-xl border shadow-sm p-3 text-center">
       <p class="text-xl font-bold text-amber-600">{{ signals_summary.quick_wins }}</p>
-      <p class="text-xs text-gray-500 mt-0.5">Quick Wins</p>
+      <p class="text-xs text-gray-500 mt-0.5">Easy wins</p>
     </div>
     <div class="bg-white rounded-xl border shadow-sm p-3 text-center">
       <p class="text-xl font-bold text-red-500">{{ signals_summary.declining_count }}</p>
-      <p class="text-xs text-gray-500 mt-0.5">Declining Pages</p>
+      <p class="text-xs text-gray-500 mt-0.5">Pages losing traffic</p>
     </div>
     <div class="bg-white rounded-xl border shadow-sm p-3 text-center">
       <p class="text-xl font-bold text-purple-500">{{ signals_summary.cannibal_count }}</p>
-      <p class="text-xs text-gray-500 mt-0.5">Cannibalisations</p>
+      <p class="text-xs text-gray-500 mt-0.5">Pages competing with each other</p>
     </div>
   </div>
   {% endif %}
@@ -142,22 +142,22 @@
   </div>
 
   <p class="text-xs text-gray-400 text-center">
-    Calendar generated from your Google Search Console data. Regenerate anytime — it updates as your rankings change.
+    This schedule is built from your real Google data. Rebuild it anytime — it changes as your pages move up and down on Google.
   </p>
 
   {% elif gsc_connected %}
   <div class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">
     <i class="fa-solid fa-calendar-days text-5xl mb-4"></i>
-    <p class="text-gray-600">No keyword data found to generate a calendar.</p>
-    <p class="text-xs mt-1">Build up some GSC data by running a monitoring check first.</p>
+    <p class="text-gray-600">Not enough search data yet to build a schedule.</p>
+    <p class="text-xs mt-1">Run a site check first so we have something to work with.</p>
   </div>
   {% elif not error %}
   <div class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">
     <i class="fa-solid fa-calendar-days text-5xl mb-4"></i>
-    <p class="text-gray-600 mb-4">Connect Google Search Console to generate a data-driven content calendar.</p>
+    <p class="text-gray-600 mb-4">Connect Google Search Console so we can build a schedule from your real data.</p>
     <a href="{{ url_for('google_bp.index') }}"
        class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
-      Connect GSC
+      Connect Google Search Console
     </a>
   </div>
   {% endif %}

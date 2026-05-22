@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from datetime import datetime, timedelta
 
 from app import db
-from app.auth.session_helpers import require_admin
+from app.auth.utils import login_required
 from app.models import (
     ServiceTitanConnection,
     ServiceTitanCustomer,
@@ -17,11 +17,11 @@ from app.models import (
 from app.services.servicetitan_service import ServiceTitanService
 
 
-servicetitan_bp = Blueprint("servicetitan_bp", __name__, url_prefix="/admin/servicetitan")
+servicetitan_bp = Blueprint("servicetitan_bp", __name__, url_prefix="/account/servicetitan")
 
 
 @servicetitan_bp.route("/")
-@require_admin
+@login_required
 def dashboard():
     """ServiceTitan integration dashboard"""
     user = g.user
@@ -57,7 +57,7 @@ def dashboard():
             capacity_score = round(avg_score, 1)
 
     return render_template(
-        "admin/servicetitan/dashboard.html",
+        "account/servicetitan/dashboard.html",
         connection=connection,
         recent_syncs=recent_syncs,
         customer_count=customer_count,
@@ -69,7 +69,7 @@ def dashboard():
 
 
 @servicetitan_bp.route("/settings", methods=["GET", "POST"])
-@require_admin
+@login_required
 def settings():
     """Configure ServiceTitan API connection"""
     user = g.user
@@ -110,13 +110,13 @@ def settings():
         return redirect(url_for("servicetitan_bp.dashboard"))
 
     return render_template(
-        "admin/servicetitan/settings.html",
+        "account/servicetitan/settings.html",
         connection=connection
     )
 
 
 @servicetitan_bp.route("/test-connection", methods=["POST"])
-@require_admin
+@login_required
 def test_connection():
     """Test ServiceTitan API connection"""
     user = g.user
@@ -129,7 +129,7 @@ def test_connection():
 
 
 @servicetitan_bp.route("/sync/customers", methods=["POST"])
-@require_admin
+@login_required
 def sync_customers():
     """Manually trigger customer data sync"""
     user = g.user
@@ -154,7 +154,7 @@ def sync_customers():
 
 
 @servicetitan_bp.route("/sync/jobs", methods=["POST"])
-@require_admin
+@login_required
 def sync_jobs():
     """Manually trigger job data sync"""
     user = g.user
@@ -178,7 +178,7 @@ def sync_jobs():
 
 
 @servicetitan_bp.route("/sync/capacity", methods=["POST"])
-@require_admin
+@login_required
 def sync_capacity():
     """Calculate capacity metrics for upcoming days"""
     user = g.user
@@ -204,7 +204,7 @@ def sync_capacity():
 
 
 @servicetitan_bp.route("/customers")
-@require_admin
+@login_required
 def list_customers():
     """View synced customers"""
     user = g.user
@@ -231,14 +231,14 @@ def list_customers():
     ).paginate(page=page, per_page=per_page, error_out=False)
 
     return render_template(
-        "admin/servicetitan/customers.html",
+        "account/servicetitan/customers.html",
         customers=customers,
         search=search
     )
 
 
 @servicetitan_bp.route("/jobs")
-@require_admin
+@login_required
 def list_jobs():
     """View synced jobs"""
     user = g.user
@@ -273,7 +273,7 @@ def list_jobs():
     statuses = [s[0] for s in statuses if s[0]]
 
     return render_template(
-        "admin/servicetitan/jobs.html",
+        "account/servicetitan/jobs.html",
         jobs=jobs,
         statuses=statuses,
         selected_status=status,
@@ -283,7 +283,7 @@ def list_jobs():
 
 
 @servicetitan_bp.route("/capacity")
-@require_admin
+@login_required
 def view_capacity():
     """View capacity metrics and forecasting"""
     user = g.user
@@ -312,7 +312,7 @@ def view_capacity():
         recommendation_class = "info"
 
     return render_template(
-        "admin/servicetitan/capacity.html",
+        "account/servicetitan/capacity.html",
         capacity_data=capacity_data,
         budget_multiplier=budget_multiplier,
         recommendation=recommendation,
@@ -321,7 +321,7 @@ def view_capacity():
 
 
 @servicetitan_bp.route("/sync-logs")
-@require_admin
+@login_required
 def sync_logs():
     """View sync operation logs"""
     user = g.user
@@ -337,6 +337,6 @@ def sync_logs():
     ).paginate(page=page, per_page=per_page, error_out=False)
 
     return render_template(
-        "admin/servicetitan/sync_logs.html",
+        "account/servicetitan/sync_logs.html",
         logs=logs
     )

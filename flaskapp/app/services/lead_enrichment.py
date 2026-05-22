@@ -184,8 +184,23 @@ class LeadEnrichmentService:
         """Detect email format pattern from a known real email address."""
         try:
             local = email.split('@')[0].lower()
-            if '.' in local and len(local.split('.')) == 2:
-                return f"firstname.lastname@{domain}"
+            # firstname.lastname  (e.g. john.smith)
+            if '.' in local:
+                parts = local.split('.')
+                if len(parts) == 2 and len(parts[0]) > 1 and len(parts[1]) > 1:
+                    # could also be f.lastname (single initial before dot)
+                    if len(parts[0]) == 1:
+                        return f"flast@{domain}"  # f.last → flast pattern
+                    return f"firstname.lastname@{domain}"
+            # first_last or first-last
+            if '_' in local:
+                return f"first_last@{domain}"
+            if '-' in local:
+                return f"first-last@{domain}"
+            # flast (single char prefix + surname, no separator)
+            # heuristic: short local looks like initial+surname
+            if len(local) <= 8 and len(local) >= 4:
+                return f"flast@{domain}"
             if len(local) <= 10:
                 return f"first@{domain}"
             return f"firstnamelastname@{domain}"
@@ -357,14 +372,22 @@ class LeadEnrichmentService:
         name_parts = full_name.lower().split()
         first_name = name_parts[0] if name_parts else ''
         last_name = name_parts[-1] if len(name_parts) > 1 else ''
+        first_initial = first_name[0] if first_name else ''
 
-        if 'firstname.lastname' in email_format:
+        fmt = email_format.lower()
+        if 'firstname.lastname' in fmt:
             return f"{first_name}.{last_name}@{domain}"
-        elif 'firstlast' in email_format or 'firstnamelastname' in email_format:
+        elif 'first_last' in fmt:
+            return f"{first_name}_{last_name}@{domain}"
+        elif 'first-last' in fmt:
+            return f"{first_name}-{last_name}@{domain}"
+        elif 'f.last' in fmt:
+            return f"{first_initial}.{last_name}@{domain}"
+        elif 'firstlast' in fmt or 'firstnamelastname' in fmt:
             return f"{first_name}{last_name}@{domain}"
-        elif 'first' in email_format:
+        elif 'flast' in fmt:
+            return f"{first_initial}{last_name}@{domain}"
+        elif 'first' in fmt:
             return f"{first_name}@{domain}"
-        elif 'flast' in email_format:
-            return f"{first_name[0]}{last_name}@{domain}"
         else:
             return f"{first_name}@{domain}"

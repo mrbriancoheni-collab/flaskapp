@@ -315,7 +315,7 @@ The excerpt must be 145-155 characters optimised as a meta description."""
     excerpt = "Clear, practical tips you can use today—plus when to call a pro."
     return {"title": title, "html": html, "excerpt": excerpt}
 
-def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None) -> dict:
+def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None, retry_errors: bool = False) -> dict:
     if site is None:
         site = _current_site()
     if not site:
@@ -323,6 +323,20 @@ def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None) -> dict:
 
     processed = 0
     now = datetime.utcnow()
+
+    # Reset recent error jobs back to queued so they get a retry
+    if retry_errors:
+        error_jobs = (
+            WPJob.query
+            .filter(WPJob.site_id == site.id,
+                    WPJob.status == "error")
+            .all()
+        )
+        for ej in error_jobs:
+            ej.status = "queued"
+            ej.last_error = None
+        if error_jobs:
+            db.session.commit()
 
     due_jobs = (
         WPJob.query
@@ -455,9 +469,22 @@ def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None) -> dict:
                 post_id = int(p.get("post_id", 0))
                 if not post_id:
                     raise ValueError("seo_fix job missing post_id")
+                post_type = p.get("post_type", "post")
 
-                # Fetch current post to preserve content
-                existing = c.get_post(post_id)
+                # Fetch current post/page to preserve content
+                try:
+                    existing = c.get_post(post_id, post_type=post_type)
+                except Exception as _fetch_err:
+                    _emsg = str(_fetch_err)
+                    if "404" in _emsg or "rest_post_invalid_id" in _emsg or "not found" in _emsg.lower():
+                        # Post was deleted from WordPress — skip gracefully
+                        job.status = "done"
+                        db.session.add(WPLog(site_id=site.id, job_id=job.id, level="warning",
+                                            message=f"Skipped seo_fix: post {post_id} no longer exists in WordPress"))
+                        db.session.commit()
+                        processed += 1
+                        continue
+                    raise
                 current_content = existing.get("content", {}).get("rendered", "")
 
                 # Inject/replace schema block at end of content
@@ -490,7 +517,7 @@ def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None) -> dict:
                 if schema_html:
                     fixes_applied.append("JSON-LD schema")
 
-                c.create_or_update_post(**kwargs)
+                c.create_or_update_post(post_type=post_type, **kwargs)
                 msg = (
                     f"SEO auto-fix applied to post {post_id} "
                     f"[{', '.join(fixes_applied) or 'no changes'}] "
@@ -574,6 +601,7 @@ def _build_seo_fix_payload(site, url: str, keyword: str = "",
         if not post:
             return None
         post_id = int(post["id"])
+        post_type = post.get("type", "post")  # "post" or "page"
 
         # Generate schema
         schema_html = ""
@@ -611,6 +639,7 @@ def _build_seo_fix_payload(site, url: str, keyword: str = "",
 
         return {
             "post_id":   post_id,
+            "post_type": post_type,
             "post_url":  url,
             "schema_html": schema_html,
             "yoast_desc":  yoast_desc,
@@ -621,6 +650,16 @@ def _build_seo_fix_payload(site, url: str, keyword: str = "",
     except Exception:
         current_app.logger.exception("_build_seo_fix_payload failed for %s", url)
         return None
+
+
+def _is_gsc_connected(aid: int | None) -> bool:
+    if not aid:
+        return False
+    try:
+        from app.google import _is_connected
+        return _is_connected(aid, "gsc")
+    except Exception:
+        return False
 
 
 def _auto_audit_and_fix(site, account_id: int) -> Dict[str, Any]:
@@ -819,6 +858,19 @@ def settings():
 
             db.session.commit()
             flash("Saved WordPress settings.", "success")
+
+            # Auto-test connection immediately after saving
+            try:
+                _pw = pw if pw and pw != "********" else site.app_password
+                c = WPClient(base, user, _pw)
+                res = c.auth_check()
+                if res.get("ok"):
+                    flash(f"Connection verified — WordPress is reachable.", "success")
+                else:
+                    flash(f"Saved, but connection test failed: {res.get('error', 'could not verify')}. Check your credentials.", "warning")
+            except Exception as _te:
+                flash(f"Saved, but connection test failed: {_te}", "warning")
+
         except OperationalError:
             current_app.logger.exception("Saving WPSite failed (schema mismatch).")
             flash("Database schema is out of date for WordPress settings. Please run the migration to add wp_sites.account_id (you can keep using env vars meanwhile).", "error")
@@ -1095,11 +1147,39 @@ def run_now():
     except Exception:
         max_jobs = 5
 
-    result = _process_queue(max_jobs=max_jobs)
+    result = _process_queue(max_jobs=max(max_jobs, 20), retry_errors=True)
+    is_ajax = "application/json" in (request.accept_mimetypes.best or "")
+    if is_ajax:
+        return jsonify(result)
     if result.get("ok"):
         flash(f"Processed {result.get('processed', 0)} job(s).", "success")
     else:
         flash(result.get("error") or "Failed to process jobs.", "error")
+    return see_other("wp_bp.publisher")
+
+
+@wp_bp.route("/publisher/clear-errors", methods=["POST"], endpoint="clear_errors")
+@login_required
+def clear_errors():
+    """Directly dismiss all error jobs for the current site — no retry."""
+    site = _current_site()
+    if not site:
+        flash("No WordPress site configured.", "error")
+        return see_other("wp_bp.publisher")
+    try:
+        with db.engine.begin() as conn:
+            r = conn.execute(
+                text(
+                    "UPDATE wp_jobs SET status='done', last_error=NULL, updated_at=NOW() "
+                    "WHERE site_id=:sid AND status='error'"
+                ),
+                {"sid": site.id},
+            )
+            count = r.rowcount
+        flash(f"Cleared {count} error job(s).", "success")
+    except Exception as e:
+        current_app.logger.exception("clear_errors failed")
+        flash(f"Could not clear errors: {e}", "error")
     return see_other("wp_bp.publisher")
 
 @wp_bp.route("/analyze", methods=["GET", "POST"], endpoint="analyze")
@@ -1411,7 +1491,100 @@ def content_queue_review():
         recommendations=recommendations,
         last_updated=last_updated,
         queued_keywords=queued_keywords,
+        gsc_connected=_is_gsc_connected(aid),
     )
+
+
+
+# ---------- on-demand content recommendations ----------
+
+@wp_bp.route("/generate-recommendations", methods=["POST"], endpoint="generate_recommendations")
+@login_required
+def generate_recommendations():
+    """Run the SEO keyword-gap → AI content recommendations pipeline immediately for this account."""
+    import json
+    import re as _re
+
+    aid = _account_id()
+    if not aid:
+        flash("No account found.", "error")
+        return see_other("wp_bp.content_queue_review")
+
+    try:
+        from app.seo.keyword_gaps import run_keyword_gap_analysis
+        from app.google import _is_connected, _get_gsc_selected_site
+        from app.ai_clients import get_ai_client
+        from app.models_seo import SEOScanResult
+
+        if not _is_connected(aid, "gsc"):
+            flash("Google Search Console is not connected — connect it first so we can analyze your keyword gaps.", "error")
+            return see_other("wp_bp.content_queue_review")
+
+        gsc_url = _get_gsc_selected_site(aid)
+        if not gsc_url:
+            flash("No GSC property selected. Go to Google → Search Console to pick one.", "warning")
+            return see_other("wp_bp.content_queue_review")
+
+        gap = run_keyword_gap_analysis(aid, gsc_url)
+        if gap.get("error"):
+            flash(f"Keyword gap analysis failed: {gap['error']}", "error")
+            return see_other("wp_bp.content_queue_review")
+
+        missing  = gap.get("missing_content", [])[:10]
+        wins     = gap.get("quick_wins", [])[:10]
+        clusters = gap.get("clusters", [])[:8]
+        gap_context = (
+            f"Missing content opportunities: {json.dumps(missing)}\n"
+            f"Quick wins (positions 4-20): {json.dumps(wins)}\n"
+            f"Keyword clusters: {json.dumps(clusters)}"
+        )
+
+        try:
+            from app.models_ads import AIPrompt
+            p = AIPrompt.query.filter_by(prompt_key="seo_content_recommendations", is_active=True).first()
+            tmpl = p.prompt_template if p else None
+        except Exception:
+            tmpl = None
+
+        prompt = (tmpl or (
+            "Based on this keyword gap analysis data, recommend topic clusters.\n\n"
+            "{gap_context}\n\n"
+            "Return a JSON array of 6-8 topic cluster recommendations with: "
+            "cluster_name, pillar_topic, supporting_topics (3-5 titles), "
+            "monthly_searches_potential, rationale. JSON only."
+        )).replace("{gap_context}", gap_context)
+
+        client = get_ai_client()
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1800,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = resp.content[0].text
+        match = _re.search(r'\[.*\]', raw, _re.DOTALL)
+        if not match:
+            flash("AI returned an unexpected format. Try again in a moment.", "error")
+            return see_other("wp_bp.content_queue_review")
+
+        recs = json.loads(match.group())
+        SEOScanResult.save_result(
+            account_id=aid,
+            site_id=None,
+            scan_type="content_recommendations",
+            issue_count=0,
+            item_count=len(recs),
+            data={
+                "recommendations": recs,
+                "generated_at": datetime.utcnow().isoformat(),
+            },
+        )
+        flash(f"Generated {len(recs)} topic cluster recommendations — select topics below to queue posts.", "success")
+
+    except Exception as exc:
+        current_app.logger.exception("generate_recommendations failed: %s", exc)
+        flash(f"Something went wrong: {exc}", "error")
+
+    return see_other("wp_bp.content_queue_review")
 
 
 # ---------- schedule view ----------
@@ -1739,13 +1912,10 @@ def tech_seo():
     return render_template("wp/tech_seo.html", site=site, result=result)
 
 
-@wp_bp.route("/seo-audit", methods=["GET", "POST"], endpoint="seo_audit")
+@wp_bp.route("/seo-audit", methods=["GET"], endpoint="seo_audit")
 @login_required
 def seo_audit():
     site = _current_site()
-    result = None
-
-    # Fetch published posts AND pages for the dropdown (best-effort)
     wp_posts = []
     if site:
         try:
@@ -1755,29 +1925,30 @@ def seo_audit():
                 title = (p.get("title") or {}).get("rendered") or f"{kind.title()} {p.get('id')}"
                 return {"id": p.get("id"), "title": title, "link": p.get("link", ""), "kind": kind}
 
-            posts = [_to_item(p, "post") for p in (c.list_posts(per_page=100, status="publish") or []) if p.get("link")]
             pages = [_to_item(p, "page") for p in (c.list_pages(per_page=100) or []) if p.get("link")]
-            # Group: pages first (usually higher SEO value), then posts
+            posts = [_to_item(p, "post") for p in (c.list_posts(per_page=100, status="publish") or []) if p.get("link")]
             wp_posts = pages + posts
         except Exception:
-            current_app.logger.debug("seo_audit: could not fetch WP posts/pages for dropdown")
+            current_app.logger.debug("seo_audit: could not fetch WP posts/pages")
+    return render_template("wp/seo_audit.html", site=site, wp_posts=wp_posts)
 
-    if request.method == "POST":
-        url = (request.form.get("url") or "").strip()
-        keyword = (request.form.get("keyword") or "").strip()
-        if not url:
-            flash("URL is required.", "error")
-            return see_other("wp_bp.seo_audit")
-        try:
-            from app.wp.seo_audit import audit_url
-            result = audit_url(url, keyword)
-            if result.get("error"):
-                flash(result["error"], "error")
-                result = None
-        except Exception:
-            current_app.logger.exception("SEO audit failed")
-            flash("Audit failed — please try again.", "error")
-    return render_template("wp/seo_audit.html", result=result, site=site, wp_posts=wp_posts)
+
+@wp_bp.route("/seo-audit/scan", methods=["GET"], endpoint="seo_audit_scan")
+@login_required
+def seo_audit_scan():
+    """AJAX endpoint — audit a single URL and return JSON."""
+    from flask import jsonify
+    url = (request.args.get("url") or "").strip()
+    keyword = (request.args.get("keyword") or "").strip()
+    if not url:
+        return jsonify({"error": "url required"}), 400
+    try:
+        from app.wp.seo_audit import audit_url
+        result = audit_url(url, keyword)
+        return jsonify(result)
+    except Exception:
+        current_app.logger.exception("SEO audit scan failed for %s", url)
+        return jsonify({"error": "Audit failed"}), 500
 
 
 @wp_bp.route("/seo-audit/ai-review", methods=["GET", "POST"], endpoint="seo_audit_review")
@@ -2881,33 +3052,50 @@ def geo_pages():
     error = None
 
     if request.method == "POST" and site:
-        service       = (request.form.get("service") or "").strip()
-        cities_raw    = (request.form.get("cities") or "").strip()
         business_name = (request.form.get("business_name") or "").strip()
         phone         = (request.form.get("phone") or "").strip()
         extra_context = (request.form.get("extra_context") or "").strip()
+        pairs_raw     = request.form.getlist("pairs")  # "Service|||City, ST"
 
-        if not service or not cities_raw:
-            flash("Service and at least one city are required.", "error")
+        if not pairs_raw:
+            flash("Select at least one service × city combination.", "error")
         else:
-            # Parse "City, ST" lines
-            cities: List[Dict] = []
-            for line in cities_raw.splitlines():
-                line = line.strip().strip(",")
-                if not line:
+            services_set: dict[str, None] = {}
+            cities_by_service: dict[str, List[Dict]] = {}
+            for pair in pairs_raw:
+                if "|||" not in pair:
                     continue
-                parts = [p.strip() for p in line.split(",")]
-                cities.append({"city": parts[0], "state": parts[1] if len(parts) > 1 else ""})
+                svc, city_st = pair.split("|||", 1)
+                svc = svc.strip()
+                city_st = city_st.strip()
+                parts = [p.strip() for p in city_st.split(",")]
+                city = parts[0]
+                state = parts[1] if len(parts) > 1 else ""
+                if not svc or not city:
+                    continue
+                services_set[svc] = None
+                cities_by_service.setdefault(svc, []).append({"city": city, "state": state})
 
-            if not cities:
-                flash("No valid cities parsed. Use one city per line (e.g. Austin, TX).", "error")
+            if not services_set:
+                flash("No valid pairs found.", "error")
             else:
                 try:
-                    from app.wp.geo_pages import generate_geo_pages
+                    from app.wp.geo_pages import generate_geo_pages_multi
                     from app import db
-                    queued_results = generate_geo_pages(
-                        service=service,
-                        cities=cities,
+                    # Flatten: each service gets its own city list
+                    all_services = list(services_set.keys())
+                    # Build unified city list (deduplicated across services)
+                    all_cities: List[Dict] = []
+                    seen_cities: set = set()
+                    for svc_cities in cities_by_service.values():
+                        for c in svc_cities:
+                            key = (c["city"].lower(), c["state"].lower())
+                            if key not in seen_cities:
+                                seen_cities.add(key)
+                                all_cities.append(c)
+                    queued_results = generate_geo_pages_multi(
+                        services=all_services,
+                        cities=all_cities,
                         business_name=business_name,
                         phone=phone,
                         extra_context=extra_context,

@@ -63,10 +63,18 @@ class AdsCampaign(db.Model):
         from flask import current_app
         from sqlalchemy import text, inspect
         needed = {
+            # columns added after initial table creation — order matters for readability, not execution
+            "account_id":        "INT NULL",
+            "google_campaign_id": "VARCHAR(64) NULL",
+            "google_customer_id": "VARCHAR(32) NULL",
             "bid_strategy":      "VARCHAR(32) NULL DEFAULT 'manual_cpc'",
             "target_cpa_micros": "BIGINT NULL",
             "target_roas":       "FLOAT NULL",
             "budget_group_id":   "INT NULL",
+            "objective":         "VARCHAR(50) NULL",
+            "network":           "VARCHAR(40) NULL",
+            "start_date":        "DATE NULL",
+            "end_date":          "DATE NULL",
         }
         try:
             existing = {c["name"] for c in inspect(db.engine).get_columns("ads_campaigns")}
@@ -301,6 +309,36 @@ class GadsStatsDaily(db.Model):
                             name="uq_gads_stats_daily"),
         {"extend_existing": True},
     )
+
+    @classmethod
+    def ensure_columns(cls) -> None:
+        """Add columns that may be missing from older table schemas."""
+        from flask import current_app
+        from sqlalchemy import text, inspect
+        needed = {
+            "account_id":        "INT NULL",
+            "google_entity_id":  "BIGINT NULL",
+            "search_impr_share": "FLOAT NULL",
+            "lost_is_budget":    "FLOAT NULL",
+            "lost_is_rank":      "FLOAT NULL",
+            "quality_score":     "INT NULL",
+            "landing_page_exp":  "VARCHAR(32) NULL",
+            "ad_relevance":      "VARCHAR(32) NULL",
+            "expected_ctr":      "VARCHAR(32) NULL",
+            "avg_cpc":           "FLOAT NULL",
+            "conversion_value":  "FLOAT NULL",
+        }
+        try:
+            existing = {c["name"] for c in inspect(db.engine).get_columns("gads_stats_daily")}
+            missing = [c for c in needed if c not in existing]
+            if not missing:
+                return
+            clauses = ", ".join(f"ADD COLUMN {c} {needed[c]}" for c in missing)
+            with db.engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE gads_stats_daily {clauses}"))
+            current_app.logger.info("gads_stats_daily: added missing columns: %s", missing)
+        except Exception as exc:
+            current_app.logger.warning("gads_stats_daily ensure_columns failed: %s", exc)
 
 
 class SearchTerm(db.Model):

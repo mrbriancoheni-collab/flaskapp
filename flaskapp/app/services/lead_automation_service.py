@@ -166,22 +166,38 @@ class LeadAutomationService:
                 self._brevo_today_count = -1
 
         if self._brevo_today_count >= 0:
-            if local_count > self._brevo_today_count:
-                # We recorded more sends than Brevo accepted — possible data loss
+            # Brevo's aggregated report API has a multi-hour reporting lag, so
+            # local_count > brevo_count is normal early in the day and should not
+            # trigger a warning. Only warn when the gap is large enough that lag
+            # alone cannot explain it (threshold: local exceeds Brevo by >100).
+            gap = local_count - self._brevo_today_count
+            if gap > 100:
                 logger.warning(
                     f"Possible dropped sends — local DB: {local_count}, "
-                    f"Brevo total: {self._brevo_today_count} (all email types). "
-                    f"Some lead emails may not have reached Brevo."
+                    f"Brevo total: {self._brevo_today_count} (all email types, ~2-6 h lag). "
+                    f"Gap of {gap} is too large to be reporting lag alone."
                 )
             else:
                 logger.info(
                     f"Lead outreach sent today (local DB): {local_count} | "
-                    f"Brevo account total (all types): {self._brevo_today_count}"
+                    f"Brevo account total (all types, ~2-6 h lag): {self._brevo_today_count}"
                 )
 
         remaining = daily_limit - local_count
         logger.info(f"Daily email budget: {local_count}/{daily_limit} used, {remaining} remaining")
         return max(remaining, 0)
+
+    # TLD suffixes that belong to non-commercial entities and consistently
+    # bounce or get blocked when targeted for B2B outreach.
+    _BLOCKED_EMAIL_TLDS = {'.edu', '.gov', '.mil', '.k12'}
+
+    def _is_blocked_email_domain(self, email: str) -> bool:
+        """Return True if the email is from a domain we must not send to."""
+        if not email or '@' not in email:
+            return False
+        domain_part = email.split('@')[-1].lower()
+        return any(domain_part == tld.lstrip('.') or domain_part.endswith(tld)
+                   for tld in self._BLOCKED_EMAIL_TLDS)
 
     def _is_duplicate_domain(self, domain: str) -> bool:
         """Check if domain has already been processed (state file + DB)"""
@@ -565,11 +581,19 @@ class LeadAutomationService:
                     if existing_contact:
                         continue
 
+                    contact_email = contact_data.get('email')
+                    if contact_email and self._is_blocked_email_domain(contact_email):
+                        logger.info(
+                            f"Skipping contact {contact_data['name']} at lead {lead.id}: "
+                            f"blocked email domain ({contact_email})"
+                        )
+                        contact_email = None  # Store contact without email
+
                     contact = LeadContact(
                         lead_id=lead.id,
                         name=contact_data['name'],
                         title=contact_data.get('title'),
-                        email=contact_data.get('email'),
+                        email=contact_email,
                         linkedin_url=contact_data.get('linkedin_url'),
                         role_category=contact_data.get('role_category', 'other'),
                         is_primary=(idx == 0),  # First contact is primary
@@ -735,6 +759,12 @@ If you'd prefer not to receive these emails, please reply with "unsubscribe" and
                 break
 
             email = contact.email.strip()
+
+            if self._is_blocked_email_domain(email):
+                logger.info(f"Skipping contact {contact.id} ({email}): blocked email domain — marking invalid")
+                contact.email_status = 'invalid'
+                db.session.commit()
+                continue
 
             if email.lower() in unsubscribed_emails:
                 logger.debug(f"Skipping contact {contact.id} ({email}): unsubscribed")

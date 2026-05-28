@@ -58,6 +58,22 @@ def _format_gads_datetime(dt_obj: datetime) -> str:
     return utc.strftime("%Y-%m-%d %H:%M:%S+00:00")
 
 
+def _normalize_phone(phone: str) -> Optional[str]:
+    """
+    Normalise a raw phone string to E.164 (+1XXXXXXXXXX for US numbers).
+    Returns None if the number cannot be normalised.
+    """
+    import re as _re
+    if not phone:
+        return None
+    digits = _re.sub(r"\D", "", phone)
+    if len(digits) == 10:
+        return f"+1{digits}"
+    if len(digits) == 11 and digits[0] == "1":
+        return f"+{digits}"
+    return None
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # A. Handle CallRail Webhook
 # ─────────────────────────────────────────────────────────────────────────────
@@ -138,6 +154,36 @@ def handle_callrail_webhook(payload: dict, account_id: int) -> dict:
         return {"accepted": False, "reason": f"DB error: {exc}"}
 
     logger.info("CallRail webhook accepted: record_id=%s gclid=%s account=%s", record.id, gclid, account_id)
+
+    # ── Store phone→GCLID mapping for Skimmer job matching ───────────────────
+    customer_phone = (payload.get("customer_phone_number") or payload.get("caller_number") or "").strip()
+    if gclid and customer_phone:
+        try:
+            from app.models_skimmer import PhoneGclidMap
+            phone_e164 = _normalize_phone(customer_phone)
+            if phone_e164:
+                existing_map = PhoneGclidMap.query.filter_by(
+                    account_id=account_id, phone_e164=phone_e164
+                ).first()
+                if existing_map:
+                    existing_map.gclid = gclid
+                    existing_map.expires_at = datetime.utcnow() + timedelta(days=90)
+                else:
+                    db.session.add(PhoneGclidMap(
+                        account_id=account_id,
+                        phone_e164=phone_e164,
+                        gclid=gclid,
+                        utm_source=payload.get("utm_source"),
+                        utm_medium=payload.get("utm_medium"),
+                        utm_campaign=payload.get("utm_campaign"),
+                        keyword=payload.get("keywords"),
+                        expires_at=datetime.utcnow() + timedelta(days=90),
+                    ))
+                db.session.flush()
+                db.session.commit()
+        except Exception as _exc:
+            logger.warning("Could not upsert PhoneGclidMap for account %s: %s", account_id, _exc)
+
     return {"accepted": True, "record_id": record.id}
 
 

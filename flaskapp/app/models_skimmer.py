@@ -5,6 +5,7 @@ SQLAlchemy models for the Skimmer CRM integration.
 Tables:
   skimmer_auth      — per-account Skimmer credentials & settings
   phone_gclid_map   — phone → GCLID look-up built from CallRail/click events
+  email_gclid_map   — email → GCLID look-up built from website form captures
   skimmer_jobs      — imported Skimmer work orders / jobs
 """
 from __future__ import annotations
@@ -205,6 +206,7 @@ class SkimmerJob(db.Model):
             "offline_conv_status":    "VARCHAR(16) NULL",
             "review_sent_at":         "DATETIME NULL",
             "raw_json":               "TEXT NULL",
+            "match_method":           "VARCHAR(32) NULL",
         }
         try:
             existing = {c["name"] for c in inspect(db.engine).get_columns("skimmer_jobs")}
@@ -217,3 +219,63 @@ class SkimmerJob(db.Model):
             current_app.logger.info("skimmer_jobs: added missing columns: %s", missing)
         except Exception as exc:
             current_app.logger.warning("skimmer_jobs ensure_columns failed: %s", exc)
+
+
+# ---------------------------------------------------------------------------
+# EmailGclidMap
+# ---------------------------------------------------------------------------
+
+class EmailGclidMap(db.Model):
+    __tablename__ = "email_gclid_map"
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    account_id = db.Column(db.Integer, index=True, nullable=False)
+
+    # Lowercased customer email address
+    email = db.Column(db.String(255), index=True, nullable=False)
+
+    # Google click identifier
+    gclid = db.Column(db.String(255), nullable=False)
+
+    # Optional UTM fields from the originating click
+    utm_source = db.Column(db.String(128), nullable=True)
+    utm_medium = db.Column(db.String(128), nullable=True)
+    utm_campaign = db.Column(db.String(255), nullable=True)
+    keyword = db.Column(db.String(255), nullable=True)
+    landing_page = db.Column(db.String(1024), nullable=True)
+
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    expires_at = db.Column(db.DateTime, default=_90days_from_now, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("account_id", "email", name="uq_email_gclid"),
+        db.Index("ix_email_gclid_account_email", "account_id", "email"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<EmailGclidMap {self.email} → {self.gclid[:12]}…>"
+
+    @classmethod
+    def ensure_columns(cls) -> None:
+        from flask import current_app
+        from sqlalchemy import text, inspect
+
+        needed = {
+            "utm_source":    "VARCHAR(128) NULL",
+            "utm_medium":    "VARCHAR(128) NULL",
+            "utm_campaign":  "VARCHAR(255) NULL",
+            "keyword":       "VARCHAR(255) NULL",
+            "landing_page":  "VARCHAR(1024) NULL",
+            "expires_at":    "DATETIME NOT NULL",
+        }
+        try:
+            existing = {c["name"] for c in inspect(db.engine).get_columns("email_gclid_map")}
+            missing = [c for c in needed if c not in existing]
+            if not missing:
+                return
+            clauses = ", ".join(f"ADD COLUMN {c} {needed[c]}" for c in missing)
+            with db.engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE email_gclid_map {clauses}"))
+            current_app.logger.info("email_gclid_map: added missing columns: %s", missing)
+        except Exception as exc:
+            current_app.logger.warning("email_gclid_map ensure_columns failed: %s", exc)

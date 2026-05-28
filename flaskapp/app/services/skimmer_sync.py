@@ -219,47 +219,120 @@ def sync_completed_jobs(account_id: int) -> dict:
 
 def match_jobs_to_gclids(account_id: int) -> dict:
     """
-    For SkimmerJob rows without a matched_gclid, look up PhoneGclidMap and populate.
+    Match unmatched SkimmerJob rows to GCLIDs using 3 strategies in priority order:
+    1. Phone E.164  (PhoneGclidMap — from CallRail or form capture, real GCLIDs only)
+    2. Email        (EmailGclidMap — from website form capture)
+    3. Call View    (PhoneGclidMap with synthetic CALL_VIEW: keys — from Google Ads Call View sync)
 
-    Returns {"matched": N, "unmatched": N}.
+    Returns {
+        "matched": N,
+        "by_phone": N,
+        "by_email": N,
+        "by_call_view": N,
+        "unmatched": N,
+    }.
     """
     from app import db
-    from app.models_skimmer import SkimmerJob, PhoneGclidMap
+    from app.models_skimmer import SkimmerJob, PhoneGclidMap, EmailGclidMap
 
-    result: Dict[str, Any] = {"matched": 0, "unmatched": 0}
+    result: Dict[str, Any] = {
+        "matched": 0,
+        "by_phone": 0,
+        "by_email": 0,
+        "by_call_view": 0,
+        "unmatched": 0,
+    }
 
+    # ── Load all unmatched jobs ───────────────────────────────────────────────
     try:
         jobs = (
             SkimmerJob.query
             .filter(
                 SkimmerJob.account_id == account_id,
                 SkimmerJob.matched_gclid.is_(None),
-                SkimmerJob.customer_phone_e164.isnot(None),
             )
             .all()
         )
     except Exception as exc:
         logger.exception("match_jobs_to_gclids query failed for account %s", account_id)
-        return {"matched": 0, "unmatched": 0, "error": str(exc)}
+        return {**result, "error": str(exc)}
 
     now = datetime.utcnow()
+
     for job in jobs:
-        try:
-            mapping = (
-                PhoneGclidMap.query
-                .filter_by(account_id=account_id, phone_e164=job.customer_phone_e164)
-                .filter(PhoneGclidMap.expires_at > now)
-                .order_by(PhoneGclidMap.created_at.desc())
-                .first()
-            )
-            if mapping:
-                job.matched_gclid = mapping.gclid
-                result["matched"] += 1
-            else:
-                result["unmatched"] += 1
-        except Exception as exc:
-            logger.warning("Error matching job %s: %s", job.id, exc)
+        matched = False
+
+        # ── Strategy 1: Phone → real GCLID (exclude CALL_VIEW: synthetic keys) ─
+        if not matched and job.customer_phone_e164:
+            try:
+                mapping = (
+                    PhoneGclidMap.query
+                    .filter_by(account_id=account_id, phone_e164=job.customer_phone_e164)
+                    .filter(PhoneGclidMap.expires_at > now)
+                    .filter(~PhoneGclidMap.gclid.startswith("CALL_VIEW:"))
+                    .order_by(PhoneGclidMap.created_at.desc())
+                    .first()
+                )
+                if mapping:
+                    job.matched_gclid = mapping.gclid
+                    job.match_method = "phone"
+                    result["by_phone"] += 1
+                    result["matched"] += 1
+                    matched = True
+            except Exception as exc:
+                logger.warning("Phone match error for job %s: %s", job.id, exc)
+
+        # ── Strategy 2: Email → EmailGclidMap ────────────────────────────────
+        if not matched and job.customer_email:
+            try:
+                email_lower = job.customer_email.strip().lower()
+                em = (
+                    EmailGclidMap.query
+                    .filter_by(account_id=account_id, email=email_lower)
+                    .filter(EmailGclidMap.expires_at > now)
+                    .order_by(EmailGclidMap.created_at.desc())
+                    .first()
+                )
+                if em:
+                    job.matched_gclid = em.gclid
+                    job.match_method = "email"
+                    result["by_email"] += 1
+                    result["matched"] += 1
+                    matched = True
+            except Exception as exc:
+                logger.warning("Email match error for job %s: %s", job.id, exc)
+
+        # ── Strategy 3: Phone → CALL_VIEW synthetic key ───────────────────────
+        if not matched and job.customer_phone_e164:
+            try:
+                cv_mapping = (
+                    PhoneGclidMap.query
+                    .filter_by(account_id=account_id, phone_e164=job.customer_phone_e164)
+                    .filter(PhoneGclidMap.gclid.startswith("CALL_VIEW:"))
+                    .order_by(PhoneGclidMap.created_at.desc())
+                    .first()
+                )
+                if cv_mapping:
+                    job.matched_gclid = cv_mapping.gclid
+                    job.match_method = "call_view"
+                    result["by_call_view"] += 1
+                    result["matched"] += 1
+                    matched = True
+            except Exception as exc:
+                logger.warning("Call view match error for job %s: %s", job.id, exc)
+
+        if not matched:
             result["unmatched"] += 1
+
+    logger.info(
+        "match_jobs_to_gclids account=%s matched=%d (phone=%d email=%d call_view=%d) unmatched=%d",
+        account_id,
+        result["matched"],
+        result["by_phone"],
+        result["by_email"],
+        result["by_call_view"],
+        result["unmatched"],
+    )
 
     try:
         db.session.commit()

@@ -295,7 +295,7 @@ window.appPrompt = window.appPrompt || function(message, defaultValue) {
     <!-- Row 2: Top Actions + Sub-tool Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-      <!-- Top Actions panel (takes 2 cols) -->
+      <!-- Top Actions panel (takes 2 cols) - conversational cards -->
       <div class="lg:col-span-2 bg-white rounded-xl border">
         <div class="flex items-center justify-between px-4 py-3 border-b">
           <h2 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
@@ -307,29 +307,55 @@ window.appPrompt = window.appPrompt || function(message, defaultValue) {
           {% set top_actions = cp.get('top_actions', []) %}
           {% if top_actions %}
             {% for rec in top_actions %}
-            <div class="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition" id="action-row-{{ rec.id }}">
-              <div class="mt-0.5 flex-shrink-0">
-                {% if rec.severity == 1 %}
-                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-600 text-xs font-bold">!</span>
-                {% elif rec.severity == 2 %}
-                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-600 text-xs font-bold">!</span>
-                {% else %}
-                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600 text-xs">i</span>
-                {% endif %}
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-gray-900 truncate">{{ rec.title }}</p>
-                <p class="text-xs text-gray-500 truncate">{{ rec.details[:120] }}{% if rec.details|length > 120 %}…{% endif %}</p>
+            {# Severity color strip: 1=red, 2=orange, 3=yellow, 4-5=blue #}
+            {% if rec.severity == 1 %}
+              {% set sev_strip = 'bg-red-500' %}
+              {% set sev_badge = 'bg-red-100 text-red-700 border-red-200' %}
+              {% set sev_label = 'Urgent' %}
+            {% elif rec.severity == 2 %}
+              {% set sev_strip = 'bg-orange-400' %}
+              {% set sev_badge = 'bg-orange-100 text-orange-700 border-orange-200' %}
+              {% set sev_label = 'High' %}
+            {% elif rec.severity == 3 %}
+              {% set sev_strip = 'bg-yellow-400' %}
+              {% set sev_badge = 'bg-yellow-100 text-yellow-700 border-yellow-200' %}
+              {% set sev_label = 'Medium' %}
+            {% else %}
+              {% set sev_strip = 'bg-blue-400' %}
+              {% set sev_badge = 'bg-blue-100 text-blue-700 border-blue-200' %}
+              {% set sev_label = 'Low' %}
+            {% endif %}
+            <div class="flex items-stretch hover:bg-gray-50 transition" id="action-row-{{ rec.id }}">
+              <!-- Severity color strip -->
+              <div class="w-1 flex-shrink-0 rounded-bl-none {{ sev_strip }}"></div>
+              <div class="flex-1 px-4 py-3 min-w-0">
+                <!-- Headline + impact badge -->
+                <div class="flex items-start gap-2 flex-wrap">
+                  <p class="text-sm font-semibold text-gray-900 flex-1 min-w-0">{{ rec.title }}</p>
+                  <span class="inline-block flex-shrink-0 px-1.5 py-0.5 text-[10px] font-semibold rounded border {{ sev_badge }}">{{ sev_label }}</span>
+                </div>
+                <!-- Expected dollar impact -->
                 {% if rec.expected_impact %}
-                <span class="inline-block mt-0.5 text-xs text-green-700 bg-green-50 rounded px-1.5 py-0.5">{{ rec.expected_impact }}</span>
+                <p class="text-xs text-green-700 font-medium mt-0.5">
+                  <i class="fa-solid fa-arrow-trend-up text-[10px] mr-0.5"></i>{{ rec.expected_impact }}
+                </p>
                 {% endif %}
-              </div>
-              <div class="flex-shrink-0 flex items-center gap-2">
-                <span class="text-xs text-gray-400 capitalize">{{ rec.category.replace('_',' ') }}</span>
-                <button onclick="applyAction({{ rec.id }}, this)"
-                        class="px-2.5 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">
-                  Apply
-                </button>
+                <!-- Detail panel (toggled) -->
+                <div id="detail-{{ rec.id }}" class="hidden mt-2 text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2 border">
+                  {{ rec.details or 'No additional details.' }}
+                </div>
+                <!-- Action buttons -->
+                <div class="flex items-center gap-2 mt-2">
+                  <button onclick="applyAction({{ rec.id }}, this)"
+                          class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Do It For Me
+                  </button>
+                  <button type="button"
+                          onclick="var d=document.getElementById('detail-{{ rec.id }}'); d.classList.toggle('hidden'); this.textContent = d.classList.contains('hidden') ? 'Tell Me More' : 'Hide Details';"
+                          class="px-3 py-1.5 text-xs border rounded-lg hover:bg-gray-100 transition text-gray-600">
+                    Tell Me More
+                  </button>
+                </div>
               </div>
             </div>
             {% endfor %}

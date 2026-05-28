@@ -822,6 +822,34 @@ def create_app():
         app.logger.exception("Failed to register gads_bp")
 
     try:
+        from app.google.dayparting_routes import dayparting_bp
+        app.register_blueprint(dayparting_bp)
+        app.logger.info("dayparting_bp registered at /account/google/ads/dayparting")
+    except Exception:
+        app.logger.exception("Failed to register dayparting_bp")
+
+    try:
+        from app.google.rsa_routes import rsa_bp
+        app.register_blueprint(rsa_bp)
+        app.logger.info("rsa_bp registered at /account/google/ads/rsa")
+    except Exception:
+        app.logger.exception("Failed to register rsa_bp")
+
+    try:
+        from app.google.auction_insights_routes import auction_insights_bp
+        app.register_blueprint(auction_insights_bp)
+        app.logger.info("auction_insights_bp registered at /account/google/ads/competitors")
+    except Exception:
+        app.logger.exception("Failed to register auction_insights_bp")
+
+    try:
+        from app.google.offline_conversions_routes import offline_conv_bp
+        app.register_blueprint(offline_conv_bp)
+        app.logger.info("offline_conv_bp registered at /account/google/ads/offline-conversions")
+    except Exception:
+        app.logger.exception("Failed to register offline_conv_bp")
+
+    try:
         from app.telephony import telephony_bp
         app.register_blueprint(telephony_bp)
         app.logger.info("telephony_bp registered at /telephony")

@@ -850,6 +850,13 @@ def create_app():
         app.logger.exception("Failed to register offline_conv_bp")
 
     try:
+        from app.integrations import integrations_hub_bp
+        app.register_blueprint(integrations_hub_bp)
+        app.logger.info("integrations_hub_bp registered at /account/integrations")
+    except Exception:
+        app.logger.exception("Failed to register integrations_hub_bp")
+
+    try:
         from app.google.skimmer_routes import skimmer_bp
         app.register_blueprint(skimmer_bp)
         app.logger.info("skimmer_bp registered at /account/integrations/skimmer")

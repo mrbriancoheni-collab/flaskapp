@@ -1,0 +1,132 @@
+{% extends "base_app.html" %}
+{% block title %}Set Your Goals · Google Ads{% endblock %}
+
+{% block content %}
+{% include "google/components/gads_nav.html" %}
+<div class="max-w-2xl mx-auto py-8 px-4">
+
+  <div class="mb-8 text-center">
+    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-100 mb-4">
+      <i class="fa-solid fa-bullseye text-indigo-600 text-xl"></i>
+    </div>
+    <h1 class="text-2xl font-bold text-gray-900">What's your goal?</h1>
+    <p class="text-gray-500 mt-2">Tell us what success looks like and we'll tune everything to hit it.</p>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+      <div class="mb-4 rounded-lg border px-4 py-3 text-sm
+                  {{ 'bg-green-50 border-green-300 text-green-800' if category == 'success' else 'bg-red-50 border-red-300 text-red-800' }}">
+        {{ message }}
+      </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST" action="{{ url_for('gads_bp.goals_save') }}" class="space-y-5">
+
+    <!-- Monthly leads target -->
+    <div class="rounded-xl border bg-white p-6">
+      <label class="block text-sm font-semibold text-gray-900 mb-1">
+        How many new customer calls or leads do you want per month?
+      </label>
+      <p class="text-xs text-gray-500 mb-3">This is your main goal — how many jobs or bookings a month you're aiming for.</p>
+      <div class="flex items-center gap-3">
+        <input type="number" name="target_monthly_leads" id="target_monthly_leads"
+               min="1" max="9999" placeholder="e.g. 20"
+               value="{{ goal.target_monthly_leads if goal and goal.target_monthly_leads else '' }}"
+               class="w-40 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+        <span class="text-sm text-gray-500">leads / month</span>
+      </div>
+    </div>
+
+    <!-- Target CPA -->
+    <div class="rounded-xl border bg-white p-6">
+      <label class="block text-sm font-semibold text-gray-900 mb-1">
+        What's the most you'd want to pay per lead?
+      </label>
+      <p class="text-xs text-gray-500 mb-3">If you're willing to spend up to $50 to book one new customer, enter 50. We'll flag when your cost per lead goes above this.</p>
+      <div class="flex items-center gap-2">
+        <span class="text-gray-500 text-sm font-medium">$</span>
+        <input type="number" name="target_cpa" id="target_cpa"
+               min="1" step="0.01" placeholder="e.g. 50"
+               value="{{ (goal.target_cpa_cents / 100)|round(2) if goal and goal.target_cpa_cents else '' }}"
+               class="w-40 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+        <span class="text-sm text-gray-500">per lead</span>
+      </div>
+    </div>
+
+    <!-- Customer lifetime value -->
+    <div class="rounded-xl border bg-white p-6">
+      <label class="block text-sm font-semibold text-gray-900 mb-1">
+        What's a new customer worth to you over their lifetime?
+        <span class="text-xs font-normal text-gray-400 ml-1">(optional)</span>
+      </label>
+      <p class="text-xs text-gray-500 mb-3">Think long-term — if a typical customer comes back or refers others, what's the total value? Helps us show ROI more accurately.</p>
+      <div class="flex items-center gap-2">
+        <span class="text-gray-500 text-sm font-medium">$</span>
+        <input type="number" name="customer_lifetime_value" id="customer_lifetime_value"
+               min="1" step="0.01" placeholder="e.g. 1200"
+               value="{{ (goal.customer_lifetime_value_cents / 100)|round(2) if goal and goal.customer_lifetime_value_cents else '' }}"
+               class="w-40 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+        <span class="text-sm text-gray-500">lifetime value</span>
+      </div>
+    </div>
+
+    <!-- Monthly budget -->
+    <div class="rounded-xl border bg-white p-6">
+      <label class="block text-sm font-semibold text-gray-900 mb-1">
+        What's your total monthly ad budget?
+        <span class="text-xs font-normal text-gray-400 ml-1">(optional)</span>
+      </label>
+      <p class="text-xs text-gray-500 mb-3">Your total Google Ads spend ceiling per month. We'll warn you if you're on track to overspend.</p>
+      <div class="flex items-center gap-2">
+        <span class="text-gray-500 text-sm font-medium">$</span>
+        <input type="number" name="monthly_budget" id="monthly_budget"
+               min="1" step="0.01" placeholder="e.g. 2000"
+               value="{{ (goal.monthly_budget_cents / 100)|round(2) if goal and goal.monthly_budget_cents else '' }}"
+               class="w-40 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+        <span class="text-sm text-gray-500">/ month</span>
+      </div>
+    </div>
+
+    <!-- Business type -->
+    <div class="rounded-xl border bg-white p-6">
+      <label class="block text-sm font-semibold text-gray-900 mb-1" for="business_type">
+        What type of business do you run?
+      </label>
+      <p class="text-xs text-gray-500 mb-3">We use this to compare your results to similar businesses and give smarter suggestions.</p>
+      <select name="business_type" id="business_type"
+              class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+        <option value="">— Select your business type —</option>
+        {% set types = [
+          ('hvac', 'HVAC'),
+          ('plumbing', 'Plumbing'),
+          ('roofing', 'Roofing'),
+          ('electrical', 'Electrical'),
+          ('landscaping', 'Landscaping'),
+          ('pest_control', 'Pest Control'),
+          ('cleaning', 'Cleaning'),
+          ('other', 'Other'),
+        ] %}
+        {% for val, label in types %}
+        <option value="{{ val }}" {{ 'selected' if goal and goal.business_type == val else '' }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Submit -->
+    <button type="submit"
+            class="w-full py-3 bg-indigo-600 text-white font-semibold rounded-xl text-base hover:bg-indigo-500 transition flex items-center justify-center gap-2">
+      <i class="fa-solid fa-flag-checkered"></i> Set My Goals
+    </button>
+
+    <p class="text-center text-xs text-gray-400">
+      You can update these any time from your Mission Control page.
+    </p>
+
+  </form>
+
+</div>
+{% endblock %}

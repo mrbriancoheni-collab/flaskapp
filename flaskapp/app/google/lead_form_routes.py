@@ -3,11 +3,15 @@
 Google Ads Lead Form Extension webhook routes.
 
 Blueprint: lead_form_bp
-Prefix:    /webhooks/google  (+ one login-required page under /account/integrations)
+Routes (all full absolute paths, no url_prefix):
+  POST /webhooks/google/lead-form/<account_id>         — Google webhook (public)
+  GET  /webhooks/google/lead-form/<account_id>/verify  — Google endpoint check (public)
+  GET  /account/integrations/lead-forms                — Dashboard (login required)
 """
 from __future__ import annotations
 
 import logging
+import re as _re
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -23,15 +27,11 @@ from app.auth.utils import login_required, current_account_id
 
 logger = logging.getLogger(__name__)
 
+# No url_prefix — every route specifies its full path directly.
 lead_form_bp = Blueprint("lead_form_bp", __name__)
 
-# Two logical prefixes are needed:
-#   /webhooks/google/lead-form/...   (public, no auth)
-#   /account/integrations/lead-forms (login required)
-# We achieve this by specifying full paths on every route.
-
 # ---------------------------------------------------------------------------
-# EmailGclidMap — imported defensively
+# EmailGclidMap — imported defensively (parallel agent may not have landed yet)
 # ---------------------------------------------------------------------------
 try:
     from app.models_skimmer import EmailGclidMap
@@ -41,11 +41,11 @@ except ImportError:
 
 
 # ---------------------------------------------------------------------------
-# Phone normalisation (same logic as gclid_capture_routes)
+# Phone normalisation (same rule as gclid_capture_routes)
 # ---------------------------------------------------------------------------
-import re as _re
 
 def _normalize_phone(raw: str) -> Optional[str]:
+    """Strip non-digits; return E.164 (+1XXXXXXXXXX) or None."""
     digits = _re.sub(r"\D", "", raw or "")
     if len(digits) == 10:
         return "+1" + digits
@@ -99,7 +99,7 @@ def _upsert_email(account_id: int, email: str, gclid: str) -> None:
 # GET /webhooks/google/lead-form/<account_id>/verify  — Google endpoint check
 # ---------------------------------------------------------------------------
 
-@lead_form_bp.get("/lead-form/<int:account_id>/verify")
+@lead_form_bp.get("/webhooks/google/lead-form/<int:account_id>/verify")
 def lead_form_verify(account_id: int):
     """Google calls this GET to confirm the webhook endpoint is reachable."""
     return "OK", 200
@@ -109,7 +109,7 @@ def lead_form_verify(account_id: int):
 # POST /webhooks/google/lead-form/<account_id>  — receive lead
 # ---------------------------------------------------------------------------
 
-@lead_form_bp.post("/lead-form/<int:account_id>")
+@lead_form_bp.post("/webhooks/google/lead-form/<int:account_id>")
 def lead_form_webhook(account_id: int):
     """
     Receive a Google Ads Lead Form Extension webhook payload.
@@ -151,8 +151,8 @@ def lead_form_webhook(account_id: int):
             full_name = val
 
     logger.info(
-        "Lead form webhook account=%s gclid=%s email=%s phone=%s campaign=%s",
-        account_id, gclid, email, phone_e164, campaign_id,
+        "Lead form webhook account=%s gclid=%s email=%s phone=%s campaign=%s name=%s",
+        account_id, gclid, email, phone_e164, campaign_id, full_name,
     )
 
     # Upsert maps if we have a GCLID to associate
@@ -162,6 +162,7 @@ def lead_form_webhook(account_id: int):
                 _upsert_phone(account_id, phone_e164, gclid)
             if email:
                 _upsert_email(account_id, email, gclid)
+            db.session.commit()
         except Exception as exc:
             db.session.rollback()
             logger.exception("lead_form_webhook: map upsert failed account=%s", account_id)
@@ -185,7 +186,9 @@ def lead_form_webhook(account_id: int):
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        logger.exception("lead_form_webhook: OfflineConversionImport failed account=%s", account_id)
+        logger.exception(
+            "lead_form_webhook: OfflineConversionImport creation failed account=%s", account_id
+        )
         return jsonify({"error": str(exc)}), 500
 
     return jsonify({"ok": True}), 200
@@ -193,16 +196,9 @@ def lead_form_webhook(account_id: int):
 
 # ---------------------------------------------------------------------------
 # GET /account/integrations/lead-forms  — login required dashboard
-# This route uses a different prefix so we register it directly on the blueprint
-# but with an absolute path via the route decorator.
 # ---------------------------------------------------------------------------
 
-# We need a second blueprint prefix anchor — use url_prefix="" workaround by
-# defining this route with an absolute path on a companion blueprint.
-# Since we cannot change __init__.py, we attach it to lead_form_bp using an
-# explicit path override via the `endpoint` kwarg and a full absolute route.
-
-@lead_form_bp.get("/../../account/integrations/lead-forms", endpoint="lead_forms_page")
+@lead_form_bp.get("/account/integrations/lead-forms")
 @login_required
 def lead_forms_page():
     """Dashboard: shows webhook URL and recent lead form submissions."""
@@ -224,7 +220,9 @@ def lead_forms_page():
             .all()
         )
     except Exception as exc:
-        logger.warning("Could not load recent lead form submissions for account %s: %s", aid, exc)
+        logger.warning(
+            "Could not load recent lead form submissions for account %s: %s", aid, exc
+        )
 
     return render_template(
         "integrations/lead_forms.html",

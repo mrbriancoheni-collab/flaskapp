@@ -1,11 +1,15 @@
 # app/services/google_ads_auction_insights.py
 """
-Google Ads Auction Insights Sync & Analysis Service.
+Auction Insights Sync + Competitive Intelligence Service.
 
-Three public entry points:
-  sync_auction_insights(account_id)         – pull from API, upsert DB
-  get_competitor_summary(account_id)        – aggregate + plain-English insights
-  auto_respond_to_impression_loss(account_id) – generate OptimizerRecommendation
+Pulls auction insight data from the Google Ads API, stores it in the
+AuctionInsight table, and provides aggregated competitor summaries and
+automated competitive-response recommendations.
+
+Public API:
+  sync_auction_insights(account_id)         -> {"synced": N, "errors": []}
+  get_competitor_summary(account_id)        -> {your_avg_impression_share, competitors, ...}
+  auto_respond_to_impression_loss(account_id) -> {"triggered": bool, ...}
 """
 from __future__ import annotations
 
@@ -37,39 +41,33 @@ def _resolve_ads_context(account_id: int) -> Optional[Dict[str, Any]]:
         return None
 
 
-def _gaql_search(account_id: int, query: str) -> List[dict]:
-    """Run a GAQL query and return rows as plain dicts."""
-    ctx = _resolve_ads_context(account_id)
-    if not ctx:
-        return []
-
-    customer_id = ctx.get("customer_id")
-    login_customer_id = ctx.get("login_customer_id")
-    if not customer_id:
-        return []
-
+def _ads_search(
+    account_id: int,
+    customer_id: str,
+    query: str,
+    login_customer_id: Optional[str] = None,
+) -> List[dict]:
     try:
         from app.google.utils_ads import google_ads_search
         from app.google.token_utils import ensure_access_token
         access_token, _ = ensure_access_token(account_id, ("ads", "lsa"))
-        rows = google_ads_search(
+        return google_ads_search(
             access_token=access_token,
             customer_id=customer_id,
             query=query,
             login_customer_id=login_customer_id,
             stream=True,
-        )
-        return rows or []
+        ) or []
     except Exception as exc:
-        logger.info("Auction insights GAQL failed: %s", exc)
+        logger.warning("google_ads_search failed: %s", exc)
         return []
 
 
 # ---------------------------------------------------------------------------
-# Task A – sync_auction_insights
+# A. sync_auction_insights
 # ---------------------------------------------------------------------------
 
-_AUCTION_GAQL = """
+_AUCTION_INSIGHT_GAQL = """
 SELECT
   campaign.id,
   campaign.name,
@@ -89,9 +87,9 @@ ORDER BY metrics.auction_insight_search_impression_share DESC
 
 def sync_auction_insights(account_id: int) -> Dict[str, Any]:
     """
-    Pull auction insights from Google Ads and upsert into AuctionInsight table.
+    Pull auction insight data from the Google Ads API and upsert into the
+    AuctionInsight table (unique on account_id + campaign_id + date + domain).
 
-    Uniqueness key: (account_id, campaign_id, date, domain).
     Returns {"synced": N, "errors": []}.
     """
     from app import db
@@ -99,121 +97,126 @@ def sync_auction_insights(account_id: int) -> Dict[str, Any]:
 
     result: Dict[str, Any] = {"synced": 0, "errors": []}
 
-    try:
-        AuctionInsight.ensure_columns()
-    except Exception:
-        pass
+    ctx = _resolve_ads_context(account_id)
+    if not ctx:
+        result["errors"].append("Could not resolve Google Ads credentials.")
+        return result
 
-    rows = _gaql_search(account_id, _AUCTION_GAQL)
+    customer_id = ctx.get("customer_id")
+    login_customer_id = ctx.get("login_customer_id")
+    if not customer_id:
+        result["errors"].append("No Google Ads customer_id configured for this account.")
+        return result
+
+    rows = _ads_search(account_id, customer_id, _AUCTION_INSIGHT_GAQL, login_customer_id)
+
     if not rows:
         result["errors"].append(
-            "No auction insight rows returned — Google Ads may not be connected "
-            "or campaigns haven't run long enough to generate auction data."
+            "No auction insight rows returned. "
+            "Campaigns may not have enough data yet, or your account has no competitors."
         )
         return result
 
-    # Build a map of google_campaign_id → local AdsCampaign.id
-    campaign_id_map: Dict[int, Optional[int]] = {}
+    # Build a google_campaign_id -> local_campaign_id lookup (avoid N+1 queries)
+    campaign_cache: Dict[str, Optional[int]] = {}
 
+    def _local_campaign_id(google_cid: str) -> Optional[int]:
+        if google_cid not in campaign_cache:
+            camp = AdsCampaign.query.filter_by(
+                account_id=account_id,
+                google_campaign_id=google_cid,
+            ).first()
+            campaign_cache[google_cid] = camp.id if camp else None
+        return campaign_cache[google_cid]
+
+    synced = 0
     for row in rows:
         try:
-            camp = row.get("campaign", {})
-            seg = row.get("segments", {})
-            ai = row.get("auction_insight", {})
+            camp_data = row.get("campaign", {})
             metrics = row.get("metrics", {})
+            seg = row.get("segments", {})
+            # Field key varies by SDK version (camelCase vs snake_case)
+            ai_data = row.get("auctionInsight", {}) or row.get("auction_insight", {})
 
-            google_cid = int(camp.get("id") or 0)
-            date_str = seg.get("date", "")
-            domain = ai.get("domain") or row.get("domain", "")
+            google_cid = str(camp_data.get("id", ""))
+            date_str = seg.get("date")
+            domain = ai_data.get("domain") or row.get("domain", "")
 
             if not google_cid or not date_str or not domain:
                 continue
 
-            try:
-                date_obj = dt.date.fromisoformat(date_str)
-            except ValueError:
-                continue
-
-            # Resolve local campaign id (cached per sync run)
-            if google_cid not in campaign_id_map:
-                local_camp = AdsCampaign.query.filter_by(
-                    account_id=account_id,
-                    google_campaign_id=google_cid,
-                ).first()
-                campaign_id_map[google_cid] = local_camp.id if local_camp else None
-
-            local_camp_id = campaign_id_map[google_cid]
+            date_obj = dt.date.fromisoformat(date_str)
+            local_cid = _local_campaign_id(google_cid)
 
             impression_share = _float(
-                metrics.get("auction_insight_search_impression_share")
+                metrics.get("auctionInsightSearchImpressionShare")
+                or metrics.get("auction_insight_search_impression_share")
             )
             overlap_rate = _float(
-                metrics.get("auction_insight_search_overlap_rate")
+                metrics.get("auctionInsightSearchOverlapRate")
+                or metrics.get("auction_insight_search_overlap_rate")
             )
             position_above_rate = _float(
-                metrics.get("auction_insight_search_position_above_rate")
+                metrics.get("auctionInsightSearchPositionAboveRate")
+                or metrics.get("auction_insight_search_position_above_rate")
             )
             top_of_page_rate = _float(
-                metrics.get("auction_insight_search_top_impression_percentage")
+                metrics.get("auctionInsightSearchTopImpressionPercentage")
+                or metrics.get("auction_insight_search_top_impression_percentage")
             )
             abs_top_of_page_rate = _float(
-                metrics.get(
-                    "auction_insight_search_absolute_top_impression_percentage"
-                )
+                metrics.get("auctionInsightSearchAbsoluteTopImpressionPercentage")
+                or metrics.get("auction_insight_search_absolute_top_impression_percentage")
             )
             outranking_share = _float(
-                metrics.get("auction_insight_search_outranking_share")
+                metrics.get("auctionInsightSearchOutrankingShare")
+                or metrics.get("auction_insight_search_outranking_share")
             )
 
-            existing = AuctionInsight.query.filter_by(
+            # Upsert
+            ai_row = AuctionInsight.query.filter_by(
                 account_id=account_id,
-                campaign_id=local_camp_id,
+                campaign_id=local_cid,
                 date=date_obj,
                 domain=domain,
             ).first()
 
-            if existing:
-                existing.impression_share = impression_share
-                existing.overlap_rate = overlap_rate
-                existing.position_above_rate = position_above_rate
-                existing.top_of_page_rate = top_of_page_rate
-                existing.abs_top_of_page_rate = abs_top_of_page_rate
-                existing.outranking_share = outranking_share
-            else:
-                db.session.add(
-                    AuctionInsight(
-                        account_id=account_id,
-                        campaign_id=local_camp_id,
-                        date=date_obj,
-                        domain=domain,
-                        impression_share=impression_share,
-                        overlap_rate=overlap_rate,
-                        position_above_rate=position_above_rate,
-                        top_of_page_rate=top_of_page_rate,
-                        abs_top_of_page_rate=abs_top_of_page_rate,
-                        outranking_share=outranking_share,
-                    )
+            if ai_row is None:
+                ai_row = AuctionInsight(
+                    account_id=account_id,
+                    campaign_id=local_cid,
+                    date=date_obj,
+                    domain=domain,
                 )
+                db.session.add(ai_row)
 
-            result["synced"] += 1
+            ai_row.impression_share = impression_share
+            ai_row.overlap_rate = overlap_rate
+            ai_row.position_above_rate = position_above_rate
+            ai_row.top_of_page_rate = top_of_page_rate
+            ai_row.abs_top_of_page_rate = abs_top_of_page_rate
+            ai_row.outranking_share = outranking_share
+
+            synced += 1
 
         except Exception as exc:
-            logger.exception("Error processing auction insight row: %s", exc)
+            logger.warning("Error processing auction insight row: %s", exc)
             result["errors"].append(str(exc))
 
     try:
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        logger.error("DB commit failed in sync_auction_insights: %s", exc)
+        logger.error("DB commit failed during auction insight sync: %s", exc)
         result["errors"].append(f"DB commit error: {exc}")
-        result["synced"] = 0
+        synced = 0
 
+    result["synced"] = synced
     return result
 
 
 # ---------------------------------------------------------------------------
-# Task B – get_competitor_summary
+# B. get_competitor_summary
 # ---------------------------------------------------------------------------
 
 def _plain_english_insight(
@@ -224,312 +227,321 @@ def _plain_english_insight(
     position_above_rate: float,
     outranking_share: float,
 ) -> str:
-    """Generate a single plain-English sentence about this competitor."""
+    """Return a single plain-English sentence describing the competitive situation."""
     gap = their_is - your_is
 
     if gap >= 0.20:
-        approx_fraction = (
-            "1 in 3 searches" if gap < 0.35
-            else "more than 1 in 2 searches"
-        )
-        above_pct = round(position_above_rate * 100)
+        above_pct = int(round(position_above_rate * 100))
         return (
-            f"You're being outbid by {domain} on {approx_fraction} — "
-            f"they appear above you about {above_pct}% of the time."
+            f"You're being outbid by {domain} on roughly 1 in 3 searches — "
+            f"they appear above you {above_pct}% of the time."
         )
-
     if overlap_rate >= 0.70:
         return (
-            f"{domain} is competing directly with you on most of your keywords — "
-            f"your ads appear together {round(overlap_rate * 100)}% of the time."
+            f"{domain} is competing directly with you on most of your keywords. "
+            "They show up alongside your ads very frequently."
         )
-
     if outranking_share >= 0.50:
+        outrank_pct = int(round(outranking_share * 100))
         return (
-            f"You're beating {domain} more than half the time — keep it up."
+            f"You're beating {domain} more than half the time — "
+            f"you outrank them on {outrank_pct}% of shared searches. Keep it up."
         )
-
-    if gap <= -0.15:
+    if gap > 0.05:
+        gap_pct = int(round(gap * 100))
         return (
-            f"You're ahead of {domain} by a healthy margin. "
-            f"Focus on maintaining your quality score to stay on top."
+            f"{domain} has a {gap_pct}% higher impression share than you right now. "
+            "Consider reviewing your bids or budget to close the gap."
         )
-
     return (
-        f"{domain} is a nearby competitor — you both show up for similar searches "
-        f"about {round(overlap_rate * 100)}% of the time."
+        f"You and {domain} are fairly evenly matched. "
+        "Monitor their impression share for changes week over week."
+    )
+
+
+def _build_top_opportunity(competitors: List[dict], your_is: float) -> str:
+    if not competitors:
+        return "Sync the latest auction data to see where you have room to grow."
+
+    top = competitors[0]
+    their_is = top["their_impression_share"]
+    domain = top["domain"]
+    gap = their_is - your_is
+
+    if gap >= 0.15:
+        gap_pct = int(round(gap * 100))
+        daily_estimate = max(10, int(gap_pct * 1.2))
+        return (
+            f"Increase your daily budget by ~${daily_estimate}/day to close "
+            f"the impression share gap with {domain} ({gap_pct}% behind them right now)."
+        )
+    if gap >= 0.05:
+        gap_pct = int(round(gap * 100))
+        return (
+            f"You're {gap_pct}% behind {domain} in impression share. "
+            "Raising your target CPA or tightening keyword match types could help."
+        )
+    if your_is >= 0.60:
+        return (
+            "Your impression share is strong. Focus on improving ad quality "
+            "and landing page experience to convert more of those impressions."
+        )
+    return (
+        "Review your keyword bids and daily budget to capture more of the "
+        "available search traffic in your market."
     )
 
 
 def get_competitor_summary(account_id: int) -> Dict[str, Any]:
     """
-    Aggregate AuctionInsight rows for the account and return a structured summary.
+    Aggregate AuctionInsight rows for the last 30 days and return a structured
+    competitor summary with plain-English insights.
 
     Returns:
-      {
-        "your_avg_impression_share": float,
-        "competitors": [
-          {
-            "domain": str,
-            "their_impression_share": float,
-            "your_impression_share": float,
-            "overlap_rate": float,
-            "position_above_rate": float,
-            "outranking_share": float,
-            "insight": str,
-          }, ...
-        ],
-        "top_opportunity": str,
-        "last_synced": datetime | None,
-      }
+        {
+          "your_avg_impression_share": float,   # e.g. 0.42
+          "competitors": [
+            {
+              "domain": str,
+              "their_impression_share": float,
+              "your_impression_share": float,
+              "overlap_rate": float,
+              "position_above_rate": float,
+              "outranking_share": float,
+              "insight": str,
+            },
+            ...
+          ],
+          "top_opportunity": str,
+          "last_synced": datetime | None,
+        }
     """
     from app.models_ads import AuctionInsight
     from sqlalchemy import func
 
     cutoff = dt.date.today() - dt.timedelta(days=30)
 
+    # Your average impression share from campaign stats (more reliable than auction rows)
+    try:
+        from app.models_ads import GadsStatsDaily
+        val = (
+            GadsStatsDaily.query
+            .with_entities(func.avg(GadsStatsDaily.search_impr_share))
+            .filter(
+                GadsStatsDaily.account_id == account_id,
+                GadsStatsDaily.entity_type == "campaign",
+                GadsStatsDaily.date >= cutoff,
+                GadsStatsDaily.search_impr_share.isnot(None),
+            )
+            .scalar()
+        )
+        your_avg_is = float(val or 0.0)
+    except Exception:
+        your_avg_is = 0.0
+
+    # Top 5 competitors by average impression share over last 30 days
     rows = (
         AuctionInsight.query
+        .with_entities(
+            AuctionInsight.domain,
+            func.avg(AuctionInsight.impression_share).label("avg_is"),
+            func.avg(AuctionInsight.overlap_rate).label("avg_overlap"),
+            func.avg(AuctionInsight.position_above_rate).label("avg_par"),
+            func.avg(AuctionInsight.outranking_share).label("avg_outranking"),
+        )
         .filter(
             AuctionInsight.account_id == account_id,
             AuctionInsight.date >= cutoff,
         )
+        .group_by(AuctionInsight.domain)
+        .order_by(func.avg(AuctionInsight.impression_share).desc())
+        .limit(5)
         .all()
     )
 
-    if not rows:
-        return {
-            "your_avg_impression_share": 0.0,
-            "competitors": [],
-            "top_opportunity": (
-                "No auction data yet. Click \"Sync Latest Data\" to pull your "
-                "latest auction insights from Google Ads."
-            ),
-            "last_synced": None,
-        }
-
-    # Account-level avg impression share is NOT stored per-competitor row;
-    # we approximate it as the average across ALL rows for this account (all domains).
-    # In practice the caller should store their own IS separately. For now we use
-    # the median of outranking_share as a proxy for "your" position.
-    # Better: the impression_share on rows where domain == "you" / own domain.
-    # Since Google Ads doesn't include the account's own IS in this table directly,
-    # we compute it as (1 - mean competitor IS) as a rough proxy, capped sanely.
-    all_competitor_is = [r.impression_share or 0.0 for r in rows]
-    mean_competitor_is = sum(all_competitor_is) / len(all_competitor_is) if all_competitor_is else 0.5
-    your_avg_is = max(0.05, min(0.95, 1.0 - mean_competitor_is))
-
-    # Aggregate by domain
-    domain_data: Dict[str, Dict[str, Any]] = {}
-    for r in rows:
-        d = r.domain
-        if d not in domain_data:
-            domain_data[d] = {
-                "is_sum": 0.0,
-                "overlap_sum": 0.0,
-                "above_sum": 0.0,
-                "outranking_sum": 0.0,
-                "count": 0,
-            }
-        bucket = domain_data[d]
-        bucket["is_sum"] += r.impression_share or 0.0
-        bucket["overlap_sum"] += r.overlap_rate or 0.0
-        bucket["above_sum"] += r.position_above_rate or 0.0
-        bucket["outranking_sum"] += r.outranking_share or 0.0
-        bucket["count"] += 1
-
-    # Build sorted competitor list — top 5 by avg IS
-    competitors_raw = []
-    for domain, data in domain_data.items():
-        n = data["count"]
-        avg_is = data["is_sum"] / n
-        competitors_raw.append(
-            {
-                "domain": domain,
-                "their_impression_share": round(avg_is, 4),
-                "your_impression_share": round(your_avg_is, 4),
-                "overlap_rate": round(data["overlap_sum"] / n, 4),
-                "position_above_rate": round(data["above_sum"] / n, 4),
-                "outranking_share": round(data["outranking_sum"] / n, 4),
-            }
-        )
-
-    competitors_raw.sort(key=lambda x: x["their_impression_share"], reverse=True)
-    top5 = competitors_raw[:5]
-
-    # Attach plain-English insight
     competitors = []
-    for c in top5:
-        insight = _plain_english_insight(
-            domain=c["domain"],
-            their_is=c["their_impression_share"],
-            your_is=your_avg_is,
-            overlap_rate=c["overlap_rate"],
-            position_above_rate=c["position_above_rate"],
-            outranking_share=c["outranking_share"],
-        )
-        competitors.append({**c, "insight": insight})
+    for r in rows:
+        domain = r.domain
+        their_is = float(r.avg_is or 0.0)
+        overlap = float(r.avg_overlap or 0.0)
+        par = float(r.avg_par or 0.0)
+        outranking = float(r.avg_outranking or 0.0)
 
-    # Top opportunity
-    biggest_threat = top5[0] if top5 else None
-    if biggest_threat and (biggest_threat["their_impression_share"] - your_avg_is) >= 0.20:
-        gap_pct = round((biggest_threat["their_impression_share"] - your_avg_is) * 100)
-        # Rough dollar estimate: ~$10/day per 5% IS gap is a common rule of thumb
-        budget_bump = round((gap_pct / 5) * 10)
-        top_opportunity = (
-            f"Increase your daily budget by ~${budget_bump}/day to close the "
-            f"{gap_pct}% impression share gap with {biggest_threat['domain']}."
-        )
-    elif biggest_threat:
-        top_opportunity = (
-            f"Your impression share is competitive. Focus on ad quality and "
-            f"landing page relevance to pull ahead of {biggest_threat['domain']}."
-        )
-    else:
-        top_opportunity = "No significant competitors detected in the last 30 days."
+        competitors.append({
+            "domain": domain,
+            "their_impression_share": round(their_is, 4),
+            "your_impression_share": round(your_avg_is, 4),
+            "overlap_rate": round(overlap, 4),
+            "position_above_rate": round(par, 4),
+            "outranking_share": round(outranking, 4),
+            "insight": _plain_english_insight(
+                domain, their_is, your_avg_is, overlap, par, outranking
+            ),
+        })
 
-    last_synced = max((r.created_at for r in rows), default=None)
+    last_row = (
+        AuctionInsight.query
+        .filter_by(account_id=account_id)
+        .order_by(AuctionInsight.created_at.desc())
+        .first()
+    )
 
     return {
         "your_avg_impression_share": round(your_avg_is, 4),
         "competitors": competitors,
-        "top_opportunity": top_opportunity,
-        "last_synced": last_synced.isoformat() if last_synced else None,
+        "top_opportunity": _build_top_opportunity(competitors, your_avg_is),
+        "last_synced": last_row.created_at if last_row else None,
     }
 
 
 # ---------------------------------------------------------------------------
-# Task C – auto_respond_to_impression_loss
+# C. auto_respond_to_impression_loss
 # ---------------------------------------------------------------------------
 
 def auto_respond_to_impression_loss(account_id: int) -> Dict[str, Any]:
     """
-    Detect competitor impression share gains vs our drops and fire an
-    OptimizerRecommendation if thresholds are exceeded.
+    Check whether a top competitor gained >10% impression share in the last
+    7 days vs the previous 7 days, while our own IS dropped >5%.
 
-    Compares last-7-days vs previous-7-days for each competitor.
-    Threshold: competitor gained >10% IS while our IS dropped >5%.
+    If triggered, creates an OptimizerRecommendation (category="competitive_response",
+    severity=2).
 
-    Returns {"recommendations_created": N, "details": [...], "errors": []}.
+    Returns {"triggered": bool, "recommendation_id": int|None, "details": str}.
     """
     from app import db
     from app.models_ads import AuctionInsight, OptimizerRecommendation
-
-    result: Dict[str, Any] = {
-        "recommendations_created": 0,
-        "details": [],
-        "errors": [],
-    }
+    from sqlalchemy import func
 
     today = dt.date.today()
-    recent_start = today - dt.timedelta(days=7)
-    prev_start = today - dt.timedelta(days=14)
-    prev_end = today - dt.timedelta(days=8)
+    week_end = today - dt.timedelta(days=1)
+    week_start = week_end - dt.timedelta(days=6)
+    prev_end = week_start - dt.timedelta(days=1)
+    prev_start = prev_end - dt.timedelta(days=6)
 
-    def _avg_is(start: dt.date, end: dt.date) -> Dict[str, float]:
-        """Return {domain: avg_impression_share} for a date window."""
+    result: Dict[str, Any] = {
+        "triggered": False,
+        "recommendation_id": None,
+        "details": "",
+    }
+
+    # --- Fetch our IS for both windows ---
+    def _your_avg_is(date_from: dt.date, date_to: dt.date) -> float:
+        try:
+            from app.models_ads import GadsStatsDaily
+            val = (
+                GadsStatsDaily.query
+                .with_entities(func.avg(GadsStatsDaily.search_impr_share))
+                .filter(
+                    GadsStatsDaily.account_id == account_id,
+                    GadsStatsDaily.entity_type == "campaign",
+                    GadsStatsDaily.date.between(date_from, date_to),
+                    GadsStatsDaily.search_impr_share.isnot(None),
+                )
+                .scalar()
+            )
+            return float(val or 0.0)
+        except Exception:
+            return 0.0
+
+    your_current = _your_avg_is(week_start, week_end)
+    your_previous = _your_avg_is(prev_start, prev_end)
+    your_drop = your_previous - your_current  # positive means we dropped
+
+    # --- Fetch competitor IS for both windows ---
+    def _comp_is_map(date_from: dt.date, date_to: dt.date) -> Dict[str, float]:
         rows = (
             AuctionInsight.query
+            .with_entities(
+                AuctionInsight.domain,
+                func.avg(AuctionInsight.impression_share).label("avg_is"),
+            )
             .filter(
                 AuctionInsight.account_id == account_id,
-                AuctionInsight.date >= start,
-                AuctionInsight.date <= end,
+                AuctionInsight.date.between(date_from, date_to),
             )
+            .group_by(AuctionInsight.domain)
             .all()
         )
-        domain_buckets: Dict[str, list] = {}
-        for r in rows:
-            domain_buckets.setdefault(r.domain, []).append(r.impression_share or 0.0)
-        return {
-            d: sum(vals) / len(vals)
-            for d, vals in domain_buckets.items()
-        }
+        return {r.domain: float(r.avg_is or 0.0) for r in rows}
 
-    recent_is = _avg_is(recent_start, today)
-    prev_is = _avg_is(prev_start, prev_end)
+    current_comp = _comp_is_map(week_start, week_end)
+    previous_comp = _comp_is_map(prev_start, prev_end)
 
-    if not recent_is:
-        result["errors"].append(
-            "No auction insight data for the last 7 days. Run a sync first."
+    # Find competitor with the largest IS gain this week
+    best_domain: Optional[str] = None
+    best_gain: float = 0.0
+    best_current_is: float = 0.0
+    best_previous_is: float = 0.0
+
+    for domain, current_is in current_comp.items():
+        prev_is = previous_comp.get(domain, current_is)
+        gain = current_is - prev_is
+        if gain > best_gain:
+            best_gain = gain
+            best_domain = domain
+            best_current_is = current_is
+            best_previous_is = prev_is
+
+    # Only trigger when: competitor gained >10% AND our IS dropped >5%
+    if not best_domain or best_gain < 0.10 or your_drop < 0.05:
+        result["details"] = (
+            f"No significant competitive threat detected this week. "
+            f"Your IS change: {your_drop:+.1%}. "
+            f"Top competitor IS gain: {best_gain:.1%}."
         )
         return result
 
-    # Our impression share proxy (same method as get_competitor_summary)
-    recent_vals = list(recent_is.values())
-    prev_vals = list(prev_is.values())
+    # --- Build recommendation ---
+    your_drop_pct = int(round(your_drop * 100))
+    their_gain_pct = int(round(best_gain * 100))
+    gap = best_current_is - your_current
+    # Rough heuristic: ~$12/day per 10% IS gap
+    daily_cents = max(1000, int(gap * 120 * 100))
 
-    our_recent_is = max(0.05, 1.0 - (sum(recent_vals) / len(recent_vals))) if recent_vals else 0.5
-    our_prev_is = max(0.05, 1.0 - (sum(prev_vals) / len(prev_vals))) if prev_vals else 0.5
+    title = (
+        f"Competitor {best_domain} is gaining ground — "
+        f"your impression share dropped {your_drop_pct}% this week"
+    )
 
-    our_drop = our_prev_is - our_recent_is  # positive means we dropped
+    details = (
+        f"{best_domain} grew their search impression share by {their_gain_pct}% "
+        f"this week (from {best_previous_is:.0%} to {best_current_is:.0%}), "
+        f"while your impression share fell {your_drop_pct}% "
+        f"(from {your_previous:.0%} to {your_current:.0%}). "
+        f"Adding approximately ${daily_cents / 100:.0f}/day to your daily budget "
+        f"should help you recover the {gap:.0%} impression share gap."
+    )
 
-    for domain, their_recent in recent_is.items():
-        their_prev = prev_is.get(domain, their_recent)
-        their_gain = their_recent - their_prev  # positive means they gained
-
-        if their_gain > 0.10 and our_drop > 0.05:
-            # Generate a recommendation
-            our_drop_pct = round(our_drop * 100, 1)
-            their_gain_pct = round(their_gain * 100, 1)
-
-            title = (
-                f"Competitor {domain} is gaining ground — "
-                f"your impression share dropped {our_drop_pct}% this week"
-            )
-
-            # Dollar estimate: ~$10/day per 5% IS gap
-            gap_pct = round((their_recent - our_recent_is) * 100)
-            budget_cents = max(500, round((gap_pct / 5) * 10 * 100))  # in cents
-
-            details = (
-                f"{domain} increased their impression share by {their_gain_pct}% "
-                f"over the past week while yours fell {our_drop_pct}%. "
-                f"They're now showing up {round(their_recent * 100)}% of the time "
-                f"versus your {round(our_recent_is * 100)}%. "
-                f"Increasing your daily budget by approximately "
-                f"${budget_cents // 100}/day could recover the lost ground."
-            )
-
-            suggested_action = {
-                "action": "increase_budget",
-                "amount_cents": budget_cents,
-                "reasoning": (
-                    f"{domain} gained {their_gain_pct}% impression share this week. "
-                    f"Adding ${budget_cents // 100}/day to your top campaigns should "
-                    f"restore competitive parity."
-                ),
-            }
-
-            rec = OptimizerRecommendation(
-                account_id=account_id,
-                scope_type="account",
-                scope_id=account_id,
-                category="competitive_response",
-                title=title,
-                details=details,
-                expected_impact=f"Recover ~{our_drop_pct}% impression share",
-                severity=2,
-                suggested_action_json=json.dumps(suggested_action),
-                status="open",
-            )
-            db.session.add(rec)
-
-            result["recommendations_created"] += 1
-            result["details"].append(
-                {
-                    "domain": domain,
-                    "their_gain_pct": their_gain_pct,
-                    "our_drop_pct": our_drop_pct,
-                    "budget_increase_usd": budget_cents // 100,
-                }
-            )
+    suggested_action = {
+        "action": "increase_budget",
+        "amount_cents": daily_cents,
+        "reasoning": (
+            f"{best_domain} gained {their_gain_pct}% impression share this week. "
+            f"Adding ${daily_cents / 100:.0f}/day to your campaigns should close "
+            f"the {gap:.0%} impression share gap."
+        ),
+    }
 
     try:
+        rec = OptimizerRecommendation(
+            account_id=account_id,
+            scope_type="account",
+            scope_id=account_id,
+            category="competitive_response",
+            title=title,
+            details=details,
+            severity=2,
+            suggested_action_json=json.dumps(suggested_action),
+            status="open",
+        )
+        db.session.add(rec)
         db.session.commit()
+        result["triggered"] = True
+        result["recommendation_id"] = rec.id
+        result["details"] = details
     except Exception as exc:
         db.session.rollback()
-        logger.error("DB commit failed in auto_respond_to_impression_loss: %s", exc)
-        result["errors"].append(f"DB commit error: {exc}")
-        result["recommendations_created"] = 0
+        logger.error("Failed to save competitive_response recommendation: %s", exc)
+        result["details"] = f"DB error while saving recommendation: {exc}"
 
     return result

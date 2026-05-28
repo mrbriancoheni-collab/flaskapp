@@ -170,41 +170,109 @@ window.appPrompt = window.appPrompt || function(message, defaultValue) {
     </div>
     {% endif %}
 
+    {# ---- Goal progress bar (shown when goals are set) ---- #}
+    {% set gp = health.get('goal_performance') %}
+    {% if gp %}
+    <div class="rounded-xl border bg-white p-4 flex items-center gap-4">
+      <div class="flex-shrink-0">
+        {% if gp.on_track %}
+        <i class="fa-solid fa-circle-check text-green-500 text-2xl"></i>
+        {% else %}
+        <i class="fa-solid fa-flag text-indigo-400 text-2xl"></i>
+        {% endif %}
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold text-gray-900">
+          {% if gp.on_track %}
+          You've hit your monthly lead goal of {{ gp.target_leads }}!
+          {% else %}
+          You've hit {{ gp.actual_leads }} of your {{ gp.target_leads }} monthly lead target
+          {% endif %}
+        </p>
+        <div class="mt-1.5 h-2 bg-gray-100 rounded-full overflow-hidden w-full max-w-sm">
+          {% set pct = [(gp.actual_leads / gp.target_leads * 100)|int, 100]|min %}
+          <div class="h-2 rounded-full {{ 'bg-green-500' if gp.on_track else 'bg-indigo-500' }}"
+               style="width: {{ pct }}%"></div>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">{{ gp.gap_message }}</p>
+      </div>
+      <a href="{{ url_for('gads_bp.goals_page') }}"
+         class="flex-shrink-0 text-xs text-indigo-600 hover:underline whitespace-nowrap">Edit goals →</a>
+    </div>
+    {% endif %}
+
     <!-- Row 1: Health score + KPI cards -->
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
 
-      <!-- Health Score card -->
-      <div class="bg-white rounded-xl border p-5 flex flex-col items-center justify-center gap-2">
+      <!-- Health Score card (7-dimension) -->
+      <div class="bg-white rounded-xl border p-5 flex flex-col gap-3 lg:col-span-2">
         {% set score = health.get('overall', 0) %}
         {% set grade = health.get('grade', 'N/A') %}
-        {% set color = 'text-green-600' if score >= 75 else ('text-amber-500' if score >= 55 else 'text-red-600') %}
-        {% set ring = 'border-green-400' if score >= 75 else ('border-amber-400' if score >= 55 else 'border-red-400') %}
-        <div class="w-28 h-28 rounded-full border-8 {{ ring }} flex flex-col items-center justify-center">
-          <span class="text-3xl font-bold {{ color }}">{{ score }}</span>
-          <span class="text-sm font-semibold {{ color }}">{{ grade }}</span>
+        {% set color = 'text-green-600' if score >= 75 else ('text-amber-500' if score >= 50 else 'text-red-600') %}
+        {% set ring = 'border-green-400' if score >= 75 else ('border-amber-400' if score >= 50 else 'border-red-400') %}
+
+        <!-- Score circle + label -->
+        <div class="flex items-center gap-4">
+          <div class="w-20 h-20 rounded-full border-8 {{ ring }} flex flex-col items-center justify-center flex-shrink-0">
+            <span class="text-2xl font-bold {{ color }}">{{ score }}</span>
+            <span class="text-xs font-semibold {{ color }}">{{ grade }}</span>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-gray-900">Account Health Score</p>
+            <p class="text-xs text-gray-500 mt-0.5">Based on 7 dimensions of account performance</p>
+            {% if not connected %}
+            <p class="text-xs text-amber-600 mt-1">Connect Google Ads for live data</p>
+            {% endif %}
+            {% if not gp %}
+            <a href="{{ url_for('gads_bp.goals_page') }}"
+               class="inline-block mt-1.5 text-xs text-indigo-600 hover:underline">Set goals to track progress →</a>
+            {% endif %}
+          </div>
         </div>
-        <p class="text-xs font-medium text-gray-700">Account Health Score</p>
-        <div class="w-full grid grid-cols-3 gap-1 text-xs text-center mt-1">
-          <div class="bg-gray-50 rounded p-1">
-            <div class="font-semibold">{{ health.get('waste', 0) }}</div>
-            <div class="text-gray-400">Waste</div>
+
+        <!-- 7-dimension bars -->
+        {% set dims = health.get('dimensions', {}) %}
+        {% if dims %}
+        <div class="space-y-2 mt-1">
+          {% for key, dim in dims.items() %}
+          {% set dc = 'bg-green-500' if dim.color == 'green' else ('bg-amber-400' if dim.color == 'yellow' else 'bg-red-500') %}
+          {% set tc = 'text-green-700' if dim.color == 'green' else ('text-amber-700' if dim.color == 'yellow' else 'text-red-700') %}
+          <div class="group relative">
+            <div class="flex items-center justify-between text-xs mb-0.5">
+              <span class="text-gray-600 font-medium">{{ dim.label }}</span>
+              <span class="{{ tc }} font-semibold">{{ dim.score }}/100</span>
+            </div>
+            <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div class="{{ dc }} h-1.5 rounded-full transition-all" style="width: {{ dim.score }}%"></div>
+            </div>
+            <!-- Detail tooltip on hover -->
+            <div class="hidden group-hover:block absolute left-0 bottom-full mb-1 z-10 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 max-w-xs shadow-lg">
+              {{ dim.detail }}
+            </div>
           </div>
-          <div class="bg-gray-50 rounded p-1">
-            <div class="font-semibold">{{ health.get('structure', 0) }}</div>
-            <div class="text-gray-400">Structure</div>
-          </div>
-          <div class="bg-gray-50 rounded p-1">
-            <div class="font-semibold">{{ health.get('ctr', 0) }}</div>
-            <div class="text-gray-400">Click rate</div>
-          </div>
+          {% endfor %}
         </div>
-        {% if not connected %}
-        <p class="text-xs text-amber-600 text-center">Connect Google Ads for live data</p>
+        {% endif %}
+
+        <!-- Top issues -->
+        {% set issues = health.get('top_issues', []) %}
+        {% if issues %}
+        <div class="border-t pt-3 space-y-1.5">
+          <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Top Issues</p>
+          {% for issue in issues %}
+          {% set ibg = 'bg-red-50 border-red-200 text-red-800' if issue.impact == 'High' else ('bg-amber-50 border-amber-200 text-amber-800' if issue.impact == 'Medium' else 'bg-blue-50 border-blue-200 text-blue-800') %}
+          <div class="flex items-center gap-2 text-xs">
+            <span class="inline-block px-1.5 py-0.5 rounded border font-semibold {{ ibg }}">{{ issue.impact }}</span>
+            <span class="text-gray-700 flex-1 min-w-0 truncate">{{ issue.title }}</span>
+            <a href="{{ url_for('gads_bp.optimize') }}?tab=optimizer" class="text-indigo-600 hover:underline whitespace-nowrap">Fix it →</a>
+          </div>
+          {% endfor %}
+        </div>
         {% endif %}
       </div>
 
       <!-- KPI Cards (30d) -->
-      <div class="lg:col-span-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div class="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-3 content-start">
         {% set kpi_list = [
           ('fa-dollar-sign','Ad spend (30d)', '$' ~ (kpis.get('spend', 0)|round(2)), 'indigo'),
           ('fa-mouse-pointer','Clicks', kpis.get('clicks', 0)|int, 'blue'),
@@ -227,7 +295,7 @@ window.appPrompt = window.appPrompt || function(message, defaultValue) {
     <!-- Row 2: Top Actions + Sub-tool Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-      <!-- Top Actions panel (takes 2 cols) -->
+      <!-- Top Actions panel (takes 2 cols) - conversational cards -->
       <div class="lg:col-span-2 bg-white rounded-xl border">
         <div class="flex items-center justify-between px-4 py-3 border-b">
           <h2 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
@@ -239,29 +307,55 @@ window.appPrompt = window.appPrompt || function(message, defaultValue) {
           {% set top_actions = cp.get('top_actions', []) %}
           {% if top_actions %}
             {% for rec in top_actions %}
-            <div class="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition" id="action-row-{{ rec.id }}">
-              <div class="mt-0.5 flex-shrink-0">
-                {% if rec.severity == 1 %}
-                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-600 text-xs font-bold">!</span>
-                {% elif rec.severity == 2 %}
-                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-600 text-xs font-bold">!</span>
-                {% else %}
-                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600 text-xs">i</span>
-                {% endif %}
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-gray-900 truncate">{{ rec.title }}</p>
-                <p class="text-xs text-gray-500 truncate">{{ rec.details[:120] }}{% if rec.details|length > 120 %}…{% endif %}</p>
+            {# Severity color strip: 1=red, 2=orange, 3=yellow, 4-5=blue #}
+            {% if rec.severity == 1 %}
+              {% set sev_strip = 'bg-red-500' %}
+              {% set sev_badge = 'bg-red-100 text-red-700 border-red-200' %}
+              {% set sev_label = 'Urgent' %}
+            {% elif rec.severity == 2 %}
+              {% set sev_strip = 'bg-orange-400' %}
+              {% set sev_badge = 'bg-orange-100 text-orange-700 border-orange-200' %}
+              {% set sev_label = 'High' %}
+            {% elif rec.severity == 3 %}
+              {% set sev_strip = 'bg-yellow-400' %}
+              {% set sev_badge = 'bg-yellow-100 text-yellow-700 border-yellow-200' %}
+              {% set sev_label = 'Medium' %}
+            {% else %}
+              {% set sev_strip = 'bg-blue-400' %}
+              {% set sev_badge = 'bg-blue-100 text-blue-700 border-blue-200' %}
+              {% set sev_label = 'Low' %}
+            {% endif %}
+            <div class="flex items-stretch hover:bg-gray-50 transition" id="action-row-{{ rec.id }}">
+              <!-- Severity color strip -->
+              <div class="w-1 flex-shrink-0 rounded-bl-none {{ sev_strip }}"></div>
+              <div class="flex-1 px-4 py-3 min-w-0">
+                <!-- Headline + impact badge -->
+                <div class="flex items-start gap-2 flex-wrap">
+                  <p class="text-sm font-semibold text-gray-900 flex-1 min-w-0">{{ rec.title }}</p>
+                  <span class="inline-block flex-shrink-0 px-1.5 py-0.5 text-[10px] font-semibold rounded border {{ sev_badge }}">{{ sev_label }}</span>
+                </div>
+                <!-- Expected dollar impact -->
                 {% if rec.expected_impact %}
-                <span class="inline-block mt-0.5 text-xs text-green-700 bg-green-50 rounded px-1.5 py-0.5">{{ rec.expected_impact }}</span>
+                <p class="text-xs text-green-700 font-medium mt-0.5">
+                  <i class="fa-solid fa-arrow-trend-up text-[10px] mr-0.5"></i>{{ rec.expected_impact }}
+                </p>
                 {% endif %}
-              </div>
-              <div class="flex-shrink-0 flex items-center gap-2">
-                <span class="text-xs text-gray-400 capitalize">{{ rec.category.replace('_',' ') }}</span>
-                <button onclick="applyAction({{ rec.id }}, this)"
-                        class="px-2.5 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">
-                  Apply
-                </button>
+                <!-- Detail panel (toggled) -->
+                <div id="detail-{{ rec.id }}" class="hidden mt-2 text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2 border">
+                  {{ rec.details or 'No additional details.' }}
+                </div>
+                <!-- Action buttons -->
+                <div class="flex items-center gap-2 mt-2">
+                  <button onclick="applyAction({{ rec.id }}, this)"
+                          class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Do It For Me
+                  </button>
+                  <button type="button"
+                          onclick="var d=document.getElementById('detail-{{ rec.id }}'); d.classList.toggle('hidden'); this.textContent = d.classList.contains('hidden') ? 'Tell Me More' : 'Hide Details';"
+                          class="px-3 py-1.5 text-xs border rounded-lg hover:bg-gray-100 transition text-gray-600">
+                    Tell Me More
+                  </button>
+                </div>
               </div>
             </div>
             {% endfor %}

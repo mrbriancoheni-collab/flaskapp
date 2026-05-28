@@ -28,6 +28,7 @@ from app.models_ads import (
     GadsStatsDaily,
     SearchTerm,
     ConversionAction,
+    AdsAccountGoal,
 )
 from app.models_ai_actions import AIActionRule, AIAction
 from app.auth.utils import login_required, is_paid_account, current_account_id
@@ -101,59 +102,34 @@ def optimize():
                 db.session.rollback()
                 kpi_rows = None
 
-            # Quick health score from DB — each count wrapped individually so a
-            # missing table or column doesn't zero out the whole cockpit.
+            spend = float(kpi_rows["spend"] or 0) if kpi_rows else 0
+            clicks = int(kpi_rows["clicks"] or 0) if kpi_rows else 0
+            conversions = float(kpi_rows["conversions"] or 0) if kpi_rows else 0
+            impressions = int(kpi_rows["impressions"] or 0) if kpi_rows else 0
+            has_stats = spend > 0 or clicks > 0 or impressions > 0
+            ctr = (clicks / impressions * 100) if impressions else 0
+
+            # Load account goals for health score goal_performance section
+            aid_goals = None
+            try:
+                aid_goals = AdsAccountGoal.query.filter_by(account_id=aid).first()
+            except Exception:
+                pass
+
+            # Rich 7-dimension health score via dedicated service
+            health = {"overall": 0, "grade": "N/A"}
+            try:
+                from app.services.google_ads_health_score import compute_health_score
+                health = compute_health_score(aid, aid_goals=aid_goals)
+            except Exception:
+                current_app.logger.exception("Health score computation failed")
+
             def _safe_scalar(sql, params):
                 try:
                     return db.session.execute(text(sql), params).scalar() or 0
                 except Exception:
                     db.session.rollback()
                     return 0
-
-            kw_count = _safe_scalar(
-                "SELECT COUNT(*) FROM keywords k JOIN ad_groups ag ON ag.id=k.ad_group_id JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid AND k.status!='removed'",
-                {"aid": aid})
-            neg_count = _safe_scalar(
-                "SELECT COUNT(*) FROM negative_keywords nk LEFT JOIN ads_campaigns ac ON ac.id=nk.campaign_id WHERE (ac.account_id=:aid OR nk.campaign_id IS NULL) AND nk.id IS NOT NULL",
-                {"aid": aid})
-            ad_count = _safe_scalar(
-                "SELECT COUNT(*) FROM ads a JOIN ad_groups ag ON ag.id=a.ad_group_id JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid AND a.status!='removed'",
-                {"aid": aid})
-            camp_count = _safe_scalar(
-                "SELECT COUNT(*) FROM ads_campaigns WHERE account_id=:aid AND status!='removed'",
-                {"aid": aid})
-            ag_count = _safe_scalar(
-                "SELECT COUNT(*) FROM ad_groups ag JOIN ads_campaigns ac ON ac.id=ag.campaign_id WHERE ac.account_id=:aid",
-                {"aid": aid})
-
-            neg_ratio = neg_count / max(kw_count, 1)
-            waste_score = min(100, int((neg_ratio / 2.5) * 100))
-            ads_per_ag = ad_count / max(ag_count, 1)
-            kw_per_ag = kw_count / max(ag_count, 1)
-            struct_score = 40
-            if 2 <= camp_count <= 10: struct_score += 15
-            if 3 <= ads_per_ag <= 5: struct_score += 20
-            elif ads_per_ag >= 2: struct_score += 10
-            if 5 <= kw_per_ag <= 20: struct_score += 20
-            elif kw_per_ag >= 3: struct_score += 10
-            struct_score = min(100, struct_score)
-
-            spend = float(kpi_rows["spend"] or 0) if kpi_rows else 0
-            clicks = int(kpi_rows["clicks"] or 0) if kpi_rows else 0
-            conversions = float(kpi_rows["conversions"] or 0) if kpi_rows else 0
-            impressions = int(kpi_rows["impressions"] or 0) if kpi_rows else 0
-            has_stats = spend > 0 or clicks > 0 or impressions > 0
-
-            ctr = (clicks / impressions * 100) if impressions else 0
-            # When we have NO stats data the health score defaults are meaningful:
-            # structure score still reflects actual DB structure, ctr defaults to 50
-            ctr_score = (90 if ctr >= 6 else (80 if ctr >= 5 else (70 if ctr >= 4 else (55 if ctr >= 3 else (40 if ctr >= 2 else 25))))) if ctr > 0 else (50 if has_stats else 0)
-            # If no stats at all, show 0/N/A so user knows sync is needed
-            if not has_stats and not camp_count:
-                overall, grade = 0, "N/A"
-            else:
-                overall = int(waste_score * 0.35 + struct_score * 0.30 + ctr_score * 0.35)
-                grade = "A+" if overall >= 90 else ("A" if overall >= 85 else ("A-" if overall >= 80 else ("B+" if overall >= 75 else ("B" if overall >= 70 else ("B-" if overall >= 65 else ("C+" if overall >= 60 else ("C" if overall >= 55 else ("C-" if overall >= 50 else ("D" if overall >= 40 else "F")))))))))
 
             # Top pending actions / counts — each isolated so a missing table
             # or column never blanks out the whole cockpit.
@@ -193,7 +169,7 @@ def optimize():
             ).limit(10).all())
 
             cockpit = {
-                "health": {"overall": overall, "grade": grade, "waste": waste_score, "structure": struct_score, "ctr": ctr_score},
+                "health": health,
                 "kpis": {"spend": round(spend, 2), "clicks": clicks, "conversions": round(conversions, 1), "impressions": impressions, "ctr": round(ctr, 2), "cpa": round(spend / conversions, 2) if conversions else 0},
                 "needs_sync": not has_stats,
                 "top_actions": top_actions,
@@ -1859,3 +1835,85 @@ def analysis_doc():
         "google/ads/analysis_doc.html",
         now=datetime.datetime.utcnow().strftime("%B %d, %Y"),
     )
+
+
+# ---------------------------------------------------------------------------
+# Goals onboarding
+# ---------------------------------------------------------------------------
+@gads_bp.get("/goals")
+@login_required
+def goals_page():
+    """Render the goal-setting wizard."""
+    aid = current_account_id()
+    goal = None
+    try:
+        goal = AdsAccountGoal.query.filter_by(account_id=aid).first()
+    except Exception:
+        pass
+    return render_template("google/ads/goals.html", goal=goal)
+
+
+@gads_bp.post("/goals")
+@login_required
+def goals_save():
+    """Save or update account goals."""
+    aid = current_account_id()
+    if not aid:
+        flash("Not authenticated.", "error")
+        return redirect(url_for("gads_bp.goals_page"))
+
+    try:
+        target_leads = request.form.get("target_monthly_leads")
+        target_cpa_raw = request.form.get("target_cpa")
+        clv_raw = request.form.get("customer_lifetime_value")
+        budget_raw = request.form.get("monthly_budget")
+        business_type = request.form.get("business_type", "").strip() or None
+
+        target_cpa_cents = int(float(target_cpa_raw) * 100) if target_cpa_raw else None
+        clv_cents = int(float(clv_raw) * 100) if clv_raw else None
+        budget_cents = int(float(budget_raw) * 100) if budget_raw else None
+
+        goal = AdsAccountGoal.query.filter_by(account_id=aid).first()
+        if goal is None:
+            goal = AdsAccountGoal(account_id=aid)
+            db.session.add(goal)
+
+        if target_leads:
+            goal.target_monthly_leads = int(target_leads)
+        goal.target_cpa_cents = target_cpa_cents
+        goal.customer_lifetime_value_cents = clv_cents
+        goal.monthly_budget_cents = budget_cents
+        goal.business_type = business_type
+        goal.onboarding_completed = True
+
+        db.session.commit()
+        flash("Goals saved! We'll tune your recommendations to hit them.", "success")
+    except Exception:
+        current_app.logger.exception("goals_save error")
+        db.session.rollback()
+        flash("Something went wrong saving your goals. Please try again.", "error")
+
+    return redirect(url_for("gads_bp.optimize", tab="cockpit"))
+
+
+@gads_bp.get("/goals.json")
+@login_required
+def goals_json():
+    """Return current goals as JSON."""
+    aid = current_account_id()
+    try:
+        goal = AdsAccountGoal.query.filter_by(account_id=aid).first()
+        if goal is None:
+            return jsonify({})
+        return jsonify({
+            "target_monthly_leads": goal.target_monthly_leads,
+            "target_cpa_cents": goal.target_cpa_cents,
+            "target_cpa_dollars": round(goal.target_cpa_cents / 100, 2) if goal.target_cpa_cents else None,
+            "customer_lifetime_value_cents": goal.customer_lifetime_value_cents,
+            "monthly_budget_cents": goal.monthly_budget_cents,
+            "business_type": goal.business_type,
+            "onboarding_completed": goal.onboarding_completed,
+        })
+    except Exception:
+        current_app.logger.exception("goals_json error")
+        return jsonify({"error": "Failed to load goals"}), 500

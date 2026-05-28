@@ -168,6 +168,8 @@
     {% set SECTION = 'linkedin' %}
   {% elif bp == 'ads_grader_bp' or path.startswith('/ads-grader') %}
     {% set SECTION = 'ads_grader' %}
+  {% elif bp == 'integrations_hub_bp' or path.startswith('/account/integrations') or path.startswith('/track/snippet') or path.startswith('/account/integrations/lead-forms') %}
+    {% set SECTION = 'integrations' %}
   {% elif 'account_bp.' in epn or path.startswith('/account') %}
     {% set SECTION = 'account' %}
   {% endif %}
@@ -499,6 +501,12 @@
         </a>
       {% endif %}
 
+      {% if has_endpoint('integrations_hub_bp.hub') %}
+        <a href="{{ url_for('integrations_hub_bp.hub') }}" class="block px-3 py-3 nav-link min-h-12 {% if SECTION=='integrations' %}font-semibold text-indigo-600{% endif %}">
+          <i class="fa-solid fa-plug"></i><span>Integrations</span>
+        </a>
+      {% endif %}
+
       <div class="pt-3 mt-3 border-t"></div>
       {% if g.user and g.user.is_admin %}
         <a href="{{ url_for('admin_bp.dashboard') }}" class="block px-3 py-3 nav-link min-h-12"><i class="fa-solid fa-shield-halved"></i><span>Admin Dashboard</span></a>
@@ -541,8 +549,8 @@
         <a href="{{ url_for('linkedin_bp.index') }}" class="primary-btn {% if SECTION=='linkedin' %}active{% endif %}" title="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
       {% endif %}
       <a href="{{ url_for('reports_bp.overview') if has_endpoint('reports_bp.overview') else url_for('reports_bp.index') }}" class="primary-btn {% if SECTION=='reports' %}active{% endif %}" title="Business Pulse"><i class="fa-solid fa-heart-pulse"></i></a>
-      {% if has_endpoint('servicetitan_bp.dashboard') %}
-        <a href="{{ url_for('servicetitan_bp.dashboard') }}" class="primary-btn {% if SECTION=='servicetitan' %}active{% endif %}" title="ServiceTitan"><i class="fa-solid fa-plug"></i></a>
+      {% if has_endpoint('integrations_hub_bp.hub') %}
+        <a href="{{ url_for('integrations_hub_bp.hub') }}" class="primary-btn {% if SECTION=='integrations' %}active{% endif %}" title="Integrations"><i class="fa-solid fa-plug"></i></a>
       {% endif %}
 
       <div class="mt-auto flex flex-col items-center space-y-1.5 pt-2">
@@ -847,6 +855,27 @@
           <i class="fa-solid fa-cog"></i><span>Settings</span>
         </a>
         {% endif %}
+      {% elif SECTION == 'integrations' %}
+        <div class="sidebar-label"><i class="fa-solid fa-plug"></i>Integrations</div>
+        {% if has_endpoint('integrations_hub_bp.hub') %}
+        <a class="secondary-link {% if epn=='integrations_hub_bp.hub' %}active{% endif %}" href="{{ url_for('integrations_hub_bp.hub') }}">
+          <i class="fa-solid fa-grid-2"></i><span>All Integrations</span>
+        </a>
+        {% endif %}
+        <div class="sidebar-label mt-3">CRM</div>
+        <a class="secondary-link {% if path.startswith('/account/integrations/skimmer') %}active{% endif %}" href="/account/integrations/skimmer">
+          <i class="fa-solid fa-water"></i><span>Skimmer</span>
+        </a>
+        <div class="sidebar-label mt-3">Lead Tracking</div>
+        <a class="secondary-link {% if path.startswith('/account/google/ads/offline-conversions') %}active{% endif %}" href="/account/google/ads/offline-conversions">
+          <i class="fa-solid fa-phone"></i><span>Phone Call Tracking</span>
+        </a>
+        <a class="secondary-link {% if path.startswith('/track/snippet') %}active{% endif %}" href="/track/snippet">
+          <i class="fa-solid fa-code"></i><span>Website Click Capture</span>
+        </a>
+        <a class="secondary-link {% if path.startswith('/account/integrations/lead-forms') %}active{% endif %}" href="/account/integrations/lead-forms">
+          <i class="fa-solid fa-file-lines"></i><span>Google Lead Forms</span>
+        </a>
       {% elif SECTION == 'account' %}
         <div class="sidebar-label"><i class="fa-solid fa-user"></i>Account</div>
         {% if has_endpoint('settings_business') %}

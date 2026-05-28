@@ -367,10 +367,16 @@ def hub():
     aid = current_account_id()
     sections = _build_sections(aid)
 
-    all_integrations = [i for s in sections for i in s["integrations"]]
-    non_coming_soon = [i for i in all_integrations if not i["coming_soon"]]
-    connected_count = sum(1 for i in non_coming_soon if i["connected"])
-    total_count = len(non_coming_soon)
+    # A category counts as "available" only if it has at least one non-coming-soon integration.
+    # It counts as "connected" if at least one of those is connected.
+    for s in sections:
+        available = [i for i in s["integrations"] if not i["coming_soon"]]
+        s["section_connected"] = any(i["connected"] for i in available)
+        s["section_available"] = bool(available)
+
+    available_sections = [s for s in sections if s["section_available"]]
+    connected_count = sum(1 for s in available_sections if s["section_connected"])
+    total_count = len(available_sections)
 
     return render_template(
         "integrations/index.html",

@@ -1,0 +1,94 @@
+{% extends 'base_app.html' %}
+{% block title %}Integrations{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-6xl mx-auto px-4 py-8">
+
+  <!-- Header -->
+  <div class="mb-6">
+    <h1 class="text-2xl font-semibold text-gray-900">Integrations</h1>
+    <p class="text-gray-500 mt-1">
+      Connect the tools your business already uses. The more connected, the smarter your marketing gets.
+    </p>
+  </div>
+
+  <!-- Connected count banner -->
+  <div class="mb-6 rounded-xl bg-indigo-50 border border-indigo-100 px-5 py-4 flex items-center justify-between">
+    <span class="text-sm font-medium text-indigo-900">
+      <i class="fa-solid fa-plug mr-2"></i>
+      {{ connected_count }} of {{ total_count }} integrations connected
+    </span>
+    <span class="text-xs text-indigo-600">More connections = smarter optimization</span>
+  </div>
+
+  <!-- Sections -->
+  {% for section in sections %}
+  <div class="flex items-center gap-3 mb-4 mt-8">
+    <div class="p-2 bg-gray-100 rounded-lg">
+      <i class="fa-solid {{ section.icon }} text-gray-600"></i>
+    </div>
+    <div>
+      <h2 class="font-semibold text-gray-900">{{ section.title }}</h2>
+      <p class="text-xs text-gray-500">{{ section.description }}</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for intg in section.integrations %}
+    <div class="rounded-xl border bg-white p-5 flex flex-col gap-3">
+
+      <!-- Top row: icon + name + badge -->
+      <div class="flex items-start justify-between gap-2">
+        <div class="flex items-center gap-3">
+          <div class="bg-gray-50 rounded-xl p-3 flex-shrink-0">
+            <i class="{{ intg.icon }} {{ intg.icon_color }} text-xl"></i>
+          </div>
+          <span class="font-semibold text-gray-900 leading-tight">{{ intg.name }}</span>
+        </div>
+        <div class="flex-shrink-0 mt-0.5">
+          {% if intg.coming_soon %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-500">Coming soon</span>
+          {% elif intg.connected %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">&#9679; Connected</span>
+          {% else %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">&#9675; Not connected</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Description -->
+      <p class="text-sm text-gray-600">{{ intg.description }}</p>
+
+      <!-- Stat line -->
+      {% if intg.stat %}
+      <p class="text-xs text-gray-400">
+        <i class="fa-regular fa-clock mr-1"></i>{{ intg.stat }}
+      </p>
+      {% endif %}
+
+      <!-- Action button -->
+      <div class="mt-auto pt-1">
+        {% if intg.coming_soon %}
+          <button disabled class="w-full text-center text-sm px-4 py-2 rounded-lg bg-gray-100 text-gray-400 cursor-not-allowed">
+            Coming Soon
+          </button>
+        {% elif intg.connected %}
+          <a href="{{ intg.manage_url }}"
+             class="block w-full text-center text-sm px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">
+            Manage
+          </a>
+        {% else %}
+          <a href="{{ intg.connect_url }}"
+             class="block w-full text-center text-sm px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
+            Connect
+          </a>
+        {% endif %}
+      </div>
+
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+</div>
+{% endblock %}

@@ -857,6 +857,20 @@ def create_app():
         app.logger.exception("Failed to register skimmer_bp")
 
     try:
+        from app.google.gclid_capture_routes import gclid_capture_bp
+        app.register_blueprint(gclid_capture_bp)
+        app.logger.info("gclid_capture_bp registered at /track")
+    except Exception:
+        app.logger.exception("Failed to register gclid_capture_bp")
+
+    try:
+        from app.google.lead_form_routes import lead_form_bp
+        app.register_blueprint(lead_form_bp)
+        app.logger.info("lead_form_bp registered at /webhooks/google + /account/integrations/lead-forms")
+    except Exception:
+        app.logger.exception("Failed to register lead_form_bp")
+
+    try:
         from app.telephony import telephony_bp
         app.register_blueprint(telephony_bp)
         app.logger.info("telephony_bp registered at /telephony")

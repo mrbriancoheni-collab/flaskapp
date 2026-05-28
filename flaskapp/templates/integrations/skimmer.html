@@ -180,6 +180,63 @@
     </form>
   </div>
 
+  <!-- ── How We Find Your Google Ads Clicks ────────────────────────────── -->
+  <div class="bg-white border rounded-xl p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="text-base font-semibold text-gray-700">How We Find Your Google Ads Clicks</h2>
+        <p class="text-sm text-gray-500 mt-0.5">Four ways we match completed jobs back to the ad that brought them in.</p>
+      </div>
+      <span id="matchRateBadge" class="text-xs font-medium px-3 py-1 rounded-full bg-blue-50 text-blue-700 hidden"></span>
+    </div>
+
+    <div class="divide-y divide-gray-100" id="matchMethodsList">
+      <!-- Row: Phone Matching -->
+      <div class="flex items-center gap-4 py-3">
+        <span id="mm-phone-icon" class="text-xl w-7 text-center text-gray-300">○</span>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-gray-800">Phone Matching <span class="text-gray-400 font-normal">(CallRail)</span></p>
+          <p class="text-xs text-gray-500">We store the phone number tied to each Google Ads call — when Skimmer delivers a job with that number, we link it.</p>
+        </div>
+        <span id="mm-phone-count" class="text-xs text-gray-400 whitespace-nowrap">—</span>
+        <a href="{{ url_for('skimmer_bp.dashboard') }}" class="text-xs text-blue-600 hover:underline whitespace-nowrap">Settings</a>
+      </div>
+
+      <!-- Row: Email Matching -->
+      <div class="flex items-center gap-4 py-3">
+        <span id="mm-email-icon" class="text-xl w-7 text-center text-gray-300">○</span>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-gray-800">Email Matching <span class="text-gray-400 font-normal">(Website Form)</span></p>
+          <p class="text-xs text-gray-500">Our JavaScript snippet captures the GCLID when a visitor submits a form on your site — email becomes the match key.</p>
+        </div>
+        <span id="mm-email-count" class="text-xs text-gray-400 whitespace-nowrap">—</span>
+        <a href="/track/snippet" class="text-xs text-blue-600 hover:underline whitespace-nowrap">Get Snippet</a>
+      </div>
+
+      <!-- Row: Google Call View -->
+      <div class="flex items-center gap-4 py-3">
+        <span class="text-xl w-7 text-center">⚙️</span>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-gray-800">Google Call View</p>
+          <p class="text-xs text-gray-500">Google Ads call reporting links phone numbers directly to clicks — syncs automatically with your Google Ads account.</p>
+        </div>
+        <span id="mm-callview-count" class="text-xs text-gray-400 whitespace-nowrap">—</span>
+        <span class="text-xs text-gray-400 whitespace-nowrap">Auto</span>
+      </div>
+
+      <!-- Row: Manual Upload -->
+      <div class="flex items-center gap-4 py-3">
+        <span class="text-xl w-7 text-center">📋</span>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-gray-800">Manual Upload</p>
+          <p class="text-xs text-gray-500">Upload a CSV of past customer contacts with GCLIDs to back-fill historical matches.</p>
+        </div>
+        <span id="mm-manual-count" class="text-xs text-gray-400 whitespace-nowrap">—</span>
+        <a href="/track/snippet#manual" class="text-xs text-blue-600 hover:underline whitespace-nowrap">Upload CSV</a>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Recent jobs table ───────────────────────────────────────────────── -->
   <div class="bg-white border rounded-xl p-6 mb-6">
     <div class="flex items-center justify-between mb-4">
@@ -194,6 +251,7 @@
             <th class="pb-2 pr-4">Service</th>
             <th class="pb-2 pr-4">Completed</th>
             <th class="pb-2 pr-4">Revenue</th>
+            <th class="pb-2 pr-4">Match Method</th>
             <th class="pb-2 pr-4">Ad Matched</th>
             <th class="pb-2 pr-4">Conv. Sent</th>
             <th class="pb-2">Review Sent</th>
@@ -201,7 +259,7 @@
         </thead>
         <tbody id="jobsTableBody">
           <tr>
-            <td colspan="7" class="py-8 text-center text-gray-400 text-sm">Loading…</td>
+            <td colspan="8" class="py-8 text-center text-gray-400 text-sm">Loading…</td>
           </tr>
         </tbody>
       </table>
@@ -275,6 +333,43 @@ function loadStats() {
     .catch(() => {});
 }
 
+// ── Load match stats (capture method breakdown) ────────────────────────────
+function loadMatchStats() {
+  fetch("{{ url_for('skimmer_bp.match_stats_json') }}")
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) return;
+
+      // Phone row
+      const phoneIcon = document.getElementById("mm-phone-icon");
+      const phoneCount = document.getElementById("mm-phone-count");
+      if (phoneIcon) phoneIcon.textContent = d.phone_count > 0 ? "✅" : "○";
+      if (phoneCount) phoneCount.textContent = d.phone_count > 0 ? d.phone_count + " stored" : "None stored";
+
+      // Email row
+      const emailIcon = document.getElementById("mm-email-icon");
+      const emailCount = document.getElementById("mm-email-count");
+      if (emailIcon) emailIcon.textContent = d.email_count > 0 ? "✅" : "○";
+      if (emailCount) emailCount.textContent = d.email_count > 0 ? d.email_count + " stored" : "None stored";
+
+      // Call view row
+      const cvCount = document.getElementById("mm-callview-count");
+      if (cvCount) cvCount.textContent = d.call_view_count > 0 ? d.call_view_count + " matched" : "Auto";
+
+      // Manual row
+      const mCount = document.getElementById("mm-manual-count");
+      if (mCount) mCount.textContent = d.manual_count > 0 ? d.manual_count + " matched" : "Upload CSV";
+
+      // Match rate badge
+      const badge = document.getElementById("matchRateBadge");
+      if (badge && (d.total_matched + d.total_unmatched) > 0) {
+        badge.textContent = d.match_rate + "% match rate";
+        badge.classList.remove("hidden");
+      }
+    })
+    .catch(() => {});
+}
+
 // ── Load jobs table ────────────────────────────────────────────────────────
 function loadJobs() {
   fetch("{{ url_for('skimmer_bp.jobs_json') }}")
@@ -283,7 +378,7 @@ function loadJobs() {
       const tbody = document.getElementById("jobsTableBody");
       if (!tbody) return;
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-gray-400 text-sm">No jobs synced yet.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-gray-400 text-sm">No jobs synced yet.</td></tr>';
         return;
       }
       tbody.innerHTML = rows.map(j => `
@@ -292,15 +387,16 @@ function loadJobs() {
           <td class="py-2 pr-4 text-gray-500">${esc(j.service_type || "—")}</td>
           <td class="py-2 pr-4 text-gray-500">${fmtDate(j.completed_at)}</td>
           <td class="py-2 pr-4 text-gray-700">${fmtMoney(j.invoice_total_cents)}</td>
-          <td class="py-2 pr-4">${badge(j.matched_gclid)}</td>
-          <td class="py-2 pr-4">${badge(j.offline_conv_pushed_at)}</td>
-          <td class="py-2">${badge(j.review_sent_at)}</td>
+          <td class="py-2 pr-4">${matchMethodBadge(j.match_method)}</td>
+          <td class="py-2 pr-4">${yesNoBadge(j.matched_gclid)}</td>
+          <td class="py-2 pr-4">${yesNoBadge(j.offline_conv_pushed_at)}</td>
+          <td class="py-2">${yesNoBadge(j.review_sent_at)}</td>
         </tr>
       `).join("");
     })
     .catch(() => {
       const tbody = document.getElementById("jobsTableBody");
-      if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="py-4 text-center text-red-400 text-sm">Failed to load jobs.</td></tr>';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="py-4 text-center text-red-400 text-sm">Failed to load jobs.</td></tr>';
     });
 }
 
@@ -375,9 +471,20 @@ function fmtMoney(cents) {
   if (cents == null) return '<span class="text-gray-300">—</span>';
   return "$" + (cents / 100).toFixed(2);
 }
-function badge(val) {
+function yesNoBadge(val) {
   if (val) return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">✓ Yes</span>';
   return '<span class="text-gray-300 text-xs">—</span>';
+}
+function matchMethodBadge(method) {
+  if (!method) return '<span class="text-gray-300 text-xs">—</span>';
+  const map = {
+    phone:     { cls: "bg-green-100 text-green-700",  label: "📞 Phone" },
+    email:     { cls: "bg-blue-100 text-blue-700",    label: "✉️ Email" },
+    call_view: { cls: "bg-purple-100 text-purple-700", label: "📊 Call View" },
+    manual:    { cls: "bg-gray-100 text-gray-600",    label: "📋 Manual" },
+  };
+  const cfg = map[method] || { cls: "bg-gray-100 text-gray-500", label: esc(method) };
+  return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cfg.cls}">${cfg.label}</span>`;
 }
 function setText(id, val) {
   const el = document.getElementById(id);
@@ -396,6 +503,7 @@ function showToast(msg, ok) {
 {% if auth and auth.api_key_encrypted %}
 document.addEventListener("DOMContentLoaded", function() {
   loadStats();
+  loadMatchStats();
   loadJobs();
 });
 {% endif %}

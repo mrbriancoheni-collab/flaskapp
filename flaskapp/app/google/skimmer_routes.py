@@ -194,6 +194,7 @@ def jobs_json():
                 "completed_at": j.completed_at.isoformat() if j.completed_at else None,
                 "invoice_total_cents": j.invoice_total_cents,
                 "matched_gclid": j.matched_gclid,
+                "match_method": getattr(j, "match_method", None),
                 "offline_conv_pushed_at": (
                     j.offline_conv_pushed_at.isoformat() if j.offline_conv_pushed_at else None
                 ),
@@ -375,6 +376,77 @@ def webhook():
         db.session.rollback()
         logger.exception("Webhook job upsert failed for account %s", account_id)
         return jsonify({"error": str(exc)}), 500
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GET /match-stats.json — GCLID match method breakdown
+# ─────────────────────────────────────────────────────────────────────────────
+
+@skimmer_bp.get("/match-stats.json")
+@login_required
+def match_stats_json():
+    """
+    Return counts for each GCLID capture method and overall match rate.
+
+    JSON schema:
+      phone_count     — active PhoneGclidMap rows for this account
+      email_count     — active EmailGclidMap rows for this account (0 if model absent)
+      call_view_count — SkimmerJob rows matched via call_view
+      manual_count    — SkimmerJob rows matched via manual upload
+      total_matched   — SkimmerJob rows with a matched_gclid
+      total_unmatched — SkimmerJob rows without a matched_gclid
+      match_rate      — percentage matched (0-100, rounded to 1 dp)
+    """
+    from app.models_skimmer import PhoneGclidMap, SkimmerJob
+    from sqlalchemy import func
+
+    # EmailGclidMap may not exist yet (parallel agent)
+    try:
+        from app.models_skimmer import EmailGclidMap
+        _has_email = True
+    except ImportError:
+        _has_email = False
+
+    aid = current_account_id()
+
+    try:
+        phone_count = PhoneGclidMap.query.filter_by(account_id=aid).count()
+    except Exception:
+        phone_count = 0
+
+    try:
+        email_count = EmailGclidMap.query.filter_by(account_id=aid).count() if _has_email else 0
+    except Exception:
+        email_count = 0
+
+    try:
+        base = SkimmerJob.query.filter_by(account_id=aid)
+        total_jobs = base.count()
+        total_matched = base.filter(SkimmerJob.matched_gclid.isnot(None)).count()
+        total_unmatched = total_jobs - total_matched
+
+        # match_method counts — only available if column exists
+        try:
+            call_view_count = base.filter(SkimmerJob.match_method == "call_view").count()
+            manual_count = base.filter(SkimmerJob.match_method == "manual").count()
+        except Exception:
+            call_view_count = 0
+            manual_count = 0
+
+        match_rate = round(100 * total_matched / total_jobs, 1) if total_jobs else 0.0
+    except Exception as exc:
+        logger.warning("match_stats_json failed for account %s: %s", aid, exc)
+        return jsonify({"error": str(exc)}), 500
+
+    return jsonify({
+        "phone_count": phone_count,
+        "email_count": email_count,
+        "call_view_count": call_view_count,
+        "manual_count": manual_count,
+        "total_matched": total_matched,
+        "total_unmatched": total_unmatched,
+        "match_rate": match_rate,
+    })
 
 
 # ─────────────────────────────────────────────────────────────────────────────

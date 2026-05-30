@@ -322,6 +322,17 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
+    # Multi-location keyword overlap detection — daily at 7:30 AM UTC
+    scheduler.add_job(
+        func=run_overlap_detection_all_groups,
+        trigger='cron',
+        hour=7,
+        minute=30,
+        id='overlap_detection_daily',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
     # Upload pending offline conversions to Google Ads — every 4 hours
     scheduler.add_job(
         func=upload_offline_conversions_all_accounts,
@@ -332,7 +343,7 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
-    app.logger.info("Registered 18 scheduled background jobs")
+    app.logger.info("Registered 19 scheduled background jobs")
 
 
 # ===== Scheduled Job Functions =====
@@ -1061,7 +1072,23 @@ def list_all_jobs() -> list:
 
 
 # ---------------------------------------------------------------------------
-# New automation jobs — Google Ads intelligence + Skimmer CRM
+# New automation jobs — Google Ads intelligence + Skimmer CRM + multiloc
+# ---------------------------------------------------------------------------
+
+def run_overlap_detection_all_groups(app: Flask):
+    """Daily job: detect keyword overlap between locations in the same group."""
+    with app.app_context():
+        try:
+            from app.services.overlap_detection import detect_overlaps_for_all_groups
+            results = detect_overlaps_for_all_groups()
+            total = sum(results.values())
+            current_app.logger.info(
+                f"Overlap detection complete: {len(results)} groups, {total} overlaps found"
+            )
+        except Exception:
+            current_app.logger.exception("Overlap detection job failed")
+
+
 # ---------------------------------------------------------------------------
 
 def _ensure_new_model_columns(app: Flask):
@@ -1090,6 +1117,15 @@ def _ensure_new_model_columns(app: Flask):
                     current_app.logger.warning("ensure_columns failed for %s: %s", model.__tablename__, exc)
         except Exception as exc:
             current_app.logger.warning("_ensure_new_model_columns (skimmer): %s", exc)
+
+        try:
+            from app.models_multiloc import LocationGroup, LocationGroupMember, KeywordOverlap
+            LocationGroup.ensure_columns()
+            LocationGroupMember.ensure_columns()
+            KeywordOverlap.ensure_columns()
+            current_app.logger.info("multiloc model columns ensured")
+        except Exception:
+            current_app.logger.exception("Failed to ensure multiloc model columns")
 
 
 def sync_call_view_all_accounts(app: Flask):

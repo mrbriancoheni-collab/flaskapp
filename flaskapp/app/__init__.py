@@ -864,6 +864,20 @@ def create_app():
         app.logger.exception("Failed to register skimmer_bp")
 
     try:
+        from app.multiloc import multiloc_bp
+        app.register_blueprint(multiloc_bp)
+        app.logger.info("multiloc_bp registered")
+    except Exception:
+        app.logger.exception("Failed to register multiloc_bp")
+
+    try:
+        from app.multiloc import multiloc_bp
+        app.register_blueprint(multiloc_bp)
+        app.logger.info("multiloc_bp registered")
+    except Exception:
+        app.logger.exception("Failed to register multiloc_bp")
+
+    try:
         from app.google.gclid_capture_routes import gclid_capture_bp
         app.register_blueprint(gclid_capture_bp)
         app.logger.info("gclid_capture_bp registered at /track")

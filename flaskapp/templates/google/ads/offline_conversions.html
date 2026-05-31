@@ -375,6 +375,7 @@
 
     try {
       const resp = await fetch('/account/google/ads/offline-conversions/upload', {method: 'POST'});
+      if (window.handle402 && window.handle402(resp)) return;
       const data = await resp.json();
       if (uploadStatus) {
         if (data.ok || (data.uploaded !== undefined && data.failed === 0)) {

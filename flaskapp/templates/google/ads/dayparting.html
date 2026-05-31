@@ -405,8 +405,17 @@
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Applying…';
 
-    post('/account/google/ads/dayparting/apply', _currentAdjustments)
+    fetch('/account/google/ads/dayparting/apply', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(_currentAdjustments),
+    })
+      .then(r => {
+        if (window.handle402(r)) return null;
+        return r.json();
+      })
       .then(result => {
+        if (!result) return;
         const applied = result.applied || 0;
         const errs    = result.errors || [];
         if (errs.length) {

@@ -1889,6 +1889,22 @@
 
   {% block body_extra %}{% endblock %}
 
+  {% include "components/pricing_modal.html" %}
+
+  <script nonce="{{ g.csp_nonce }}">
+  window.handle402 = function(response) {
+    if (response && response.status === 402) {
+      if (typeof openPricingModal === 'function') {
+        openPricingModal();
+      } else {
+        window.location.href = '/pricing';
+      }
+      return true;
+    }
+    return false;
+  };
+  </script>
+
   {% if is_logged_in() and has_endpoint('google_bp.get_ai_actions_summary') %}
   <script nonce="{{ g.csp_nonce }}">
   // Fetch pending AI actions count and show badge

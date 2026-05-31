@@ -267,8 +267,12 @@
     btn.disabled = true;
     btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Checking…`;
     fetch(BASE + "/auto-respond", { method: "POST", credentials: "same-origin" })
-      .then(r => r.json())
+      .then(r => {
+        if (window.handle402(r)) return null;
+        return r.json();
+      })
       .then(data => {
+        if (!data) return;
         if (data.triggered) {
           showBanner("Threat detected — a recommendation has been added to your Optimize queue.", "ok");
         } else {

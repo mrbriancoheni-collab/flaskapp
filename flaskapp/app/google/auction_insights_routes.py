@@ -11,7 +11,7 @@ import logging
 
 from flask import Blueprint, jsonify, render_template
 
-from app.auth.utils import login_required, current_account_id
+from app.auth.utils import login_required, current_account_id, growth_required
 
 log = logging.getLogger(__name__)
 
@@ -80,6 +80,7 @@ def summary_json():
 
 @auction_insights_bp.post("/auto-respond")
 @login_required
+@growth_required
 def auto_respond():
     """
     POST /account/google/ads/competitors/auto-respond

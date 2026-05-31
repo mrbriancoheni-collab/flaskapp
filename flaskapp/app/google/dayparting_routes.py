@@ -11,7 +11,7 @@ import logging
 from flask import Blueprint, jsonify, render_template, request
 
 from app import db
-from app.auth.utils import login_required, current_account_id
+from app.auth.utils import login_required, current_account_id, growth_required
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +76,7 @@ def compute():
 
 @dayparting_bp.post("/apply")
 @login_required
+@growth_required
 def apply():
     """
     Accepts a JSON list of adjustment dicts (from /compute) in the request body,

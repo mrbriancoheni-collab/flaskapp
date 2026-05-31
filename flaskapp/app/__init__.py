@@ -75,7 +75,7 @@ def create_app():
         PASSWORD_REQUIRE_SYMBOL=True,
 
         # Paid-plan rules
-        PAID_PLANS=tuple(_os.getenv("PAID_PLANS", "pro,team,enterprise").split(",")),
+        PAID_PLANS=tuple(_os.getenv("PAID_PLANS", "growth,pro,managed,active,trialing,basic,premium").split(",")),
         PAID_STRIPE_STATES=("active", "trialing"),
         ACCOUNT_TABLE_NAME=_os.getenv("ACCOUNT_TABLE_NAME", "accounts"),
         ACCOUNT_PLAN_FIELD=_os.getenv("ACCOUNT_PLAN_FIELD", "plan"),

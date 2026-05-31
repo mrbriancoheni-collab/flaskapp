@@ -17,7 +17,7 @@ from flask import (
 )
 
 from app import db
-from app.auth.utils import login_required, current_account_id
+from app.auth.utils import login_required, current_account_id, growth_required
 
 offline_conv_bp = Blueprint(
     "offline_conv_bp",
@@ -121,6 +121,7 @@ def callrail_webhook(account_id: int):
 
 @offline_conv_bp.post("/upload")
 @login_required
+@growth_required
 def upload():
     """Push all pending offline conversions to Google Ads."""
     from app.services.google_ads_offline_conversions import upload_pending_conversions
@@ -160,6 +161,7 @@ def stats_json():
 
 @offline_conv_bp.post("/manual")
 @login_required
+@growth_required
 def manual_import():
     """
     Accept a JSON array of conversion records:

@@ -375,8 +375,12 @@
 
     const url = window.location.pathname.replace(/\/$/, "") + "/auto-promote";
     fetch(url, { method: "POST", credentials: "same-origin" })
-      .then(r => r.json())
+      .then(r => {
+        if (window.handle402(r)) return null;
+        return r.json();
+      })
       .then(data => {
+        if (!data) return;
         showBanner(data.message || "Done.", data.ok ? "ok" : "err");
       })
       .catch(() => showBanner("Auto-promote failed.", "err"))

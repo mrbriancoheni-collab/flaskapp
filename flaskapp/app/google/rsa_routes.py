@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from flask import Blueprint, render_template, jsonify
 
-from app.auth.utils import login_required, current_account_id
+from app.auth.utils import login_required, current_account_id, growth_required
 
 rsa_bp = Blueprint("rsa_bp", __name__, url_prefix="/account/google/ads/rsa")
 
@@ -56,6 +56,7 @@ def report_json():
 
 @rsa_bp.post("/auto-promote")
 @login_required
+@growth_required
 def auto_promote():
     """Run the auto-promote logic and create recommendations. Returns JSON."""
     from app.services.google_ads_rsa_sync import auto_promote_winners

@@ -3,11 +3,12 @@ from uuid import uuid4
 from flask import render_template, redirect, url_for, flash, request
 
 from app.multiloc import multiloc_bp
-from app.auth.utils import login_required, current_account_id
+from app.auth.utils import login_required, current_account_id, pro_required
 
 
 @multiloc_bp.route("/", methods=["GET"])
 @login_required
+@pro_required
 def dashboard():
     from app.models_multiloc import LocationGroup, LocationGroupMember, KeywordOverlap
     from app.models import GoogleAdsAuth
@@ -43,6 +44,7 @@ def dashboard():
 
 @multiloc_bp.route("/setup", methods=["GET"])
 @login_required
+@pro_required
 def setup():
     from app.models_multiloc import LocationGroupMember
 
@@ -56,6 +58,7 @@ def setup():
 
 @multiloc_bp.route("/setup", methods=["POST"])
 @login_required
+@pro_required
 def setup_post():
     from app.models_multiloc import LocationGroup, LocationGroupMember
     from app import db
@@ -87,6 +90,7 @@ def setup_post():
 
 @multiloc_bp.route("/join/<token>", methods=["GET"])
 @login_required
+@pro_required
 def join(token):
     from app.models_multiloc import LocationGroup, LocationGroupMember
     from app import db
@@ -119,6 +123,7 @@ def join(token):
 
 @multiloc_bp.route("/overlap", methods=["GET"])
 @login_required
+@pro_required
 def overlap():
     from app.models_multiloc import LocationGroup, LocationGroupMember, KeywordOverlap
 
@@ -169,6 +174,7 @@ def overlap():
 
 @multiloc_bp.route("/leave", methods=["POST"])
 @login_required
+@pro_required
 def leave():
     from app.models_multiloc import LocationGroup, LocationGroupMember
     from app import db
@@ -201,6 +207,7 @@ def leave():
 
 @multiloc_bp.route("/scan", methods=["POST"])
 @login_required
+@pro_required
 def scan():
     flash("Scan queued", "info")
     return redirect(url_for("multiloc_bp.overlap"))

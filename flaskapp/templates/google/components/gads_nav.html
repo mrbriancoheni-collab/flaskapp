@@ -42,6 +42,24 @@
         <i class="fas fa-wand-magic-sparkles text-xs"></i> Optimize
       </a>
 
+      <a href="{{ url_for('auction_insights_bp.competitors_page') }}"
+         class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition
+                {{ 'bg-indigo-50 text-indigo-700' if _active == 'competitors' else 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
+        <i class="fas fa-chess text-xs"></i> Competitors
+      </a>
+
+      <a href="{{ url_for('rsa_bp.rsa_page') }}"
+         class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition
+                {{ 'bg-indigo-50 text-indigo-700' if _active == 'rsa' else 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
+        <i class="fas fa-pen-nib text-xs"></i> Ad Copy
+      </a>
+
+      <a href="{{ url_for('offline_conv_bp.imports_page') }}"
+         class="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition
+                {{ 'bg-indigo-50 text-indigo-700' if _active == 'offline_conversions' else 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
+        <i class="fas fa-phone text-xs"></i> Call Tracking
+      </a>
+
     </div>
   </div>
 </nav>

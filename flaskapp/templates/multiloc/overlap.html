@@ -1,0 +1,119 @@
+{% extends 'base_app.html' %}
+{% block title %}Keyword Conflicts{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-6xl mx-auto px-4 py-8">
+
+  <!-- Header -->
+  <div class="mb-2">
+    <a href="{{ url_for('multiloc_bp.dashboard') }}"
+       class="text-sm text-indigo-600 hover:text-indigo-800 transition-colors">
+      <i class="fa-solid fa-arrow-left mr-1"></i> Back to locations
+    </a>
+  </div>
+
+  <div class="mb-6 mt-3">
+    <h1 class="text-2xl font-semibold text-gray-900">Keyword Conflicts</h1>
+    <p class="text-gray-500 mt-1">
+      These keywords are being targeted by more than one of your locations.
+      You're competing against yourself and inflating your own costs.
+    </p>
+  </div>
+
+  {% if not overlap_groups %}
+  <!-- No conflicts state -->
+  <div class="rounded-xl border bg-white p-10 flex flex-col items-center text-center">
+    <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-green-100 mb-4">
+      <i class="fa-solid fa-circle-check text-green-600 text-2xl"></i>
+    </div>
+    <h2 class="text-lg font-semibold text-gray-900 mb-1">No conflicts detected</h2>
+    <p class="text-sm text-gray-500 mb-6">Your locations are not competing against each other on any keywords.</p>
+    <form method="POST" action="{{ url_for('multiloc_bp.scan') }}">
+      <button type="submit"
+              class="rounded-lg px-4 py-2 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
+        <i class="fa-solid fa-rotate mr-1"></i> Run fresh scan
+      </button>
+    </form>
+  </div>
+
+  {% else %}
+
+  <!-- Summary stat -->
+  <div class="mb-6 rounded-xl bg-yellow-50 border border-yellow-200 px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <p class="text-sm text-yellow-800">
+      <i class="fa-solid fa-triangle-exclamation mr-2 text-yellow-500"></i>
+      <strong>{{ overlap_groups | length }} unique keyword{{ 's' if overlap_groups | length != 1 }} in conflict</strong>
+      across {{ total_overlaps }} location pair{{ 's' if total_overlaps != 1 }}.
+    </p>
+    <form method="POST" action="{{ url_for('multiloc_bp.scan') }}" class="flex-shrink-0">
+      <button type="submit"
+              class="rounded-lg px-4 py-2 text-sm font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border border-yellow-300 transition-colors">
+        <i class="fa-solid fa-rotate mr-1"></i> Run fresh scan
+      </button>
+    </form>
+  </div>
+
+  <!-- Overlaps table -->
+  <div class="rounded-xl border bg-white overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <th class="px-5 py-3">Keyword</th>
+            <th class="px-5 py-3">Match Type</th>
+            <th class="px-5 py-3">Location A</th>
+            <th class="px-5 py-3">Location B</th>
+            <th class="px-5 py-3">Detected</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for og in overlap_groups %}
+          {% for row in og.rows %}
+          <tr class="hover:bg-gray-50 transition-colors">
+            <!-- Keyword -->
+            <td class="px-5 py-3">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 font-mono">
+                {{ og.keyword_text }}
+              </span>
+            </td>
+            <!-- Match type -->
+            <td class="px-5 py-3">
+              {% set mt = (og.match_type or '') | upper %}
+              {% if mt == 'EXACT' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                  EXACT
+                </span>
+              {% elif mt == 'PHRASE' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                  PHRASE
+                </span>
+              {% else %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                  {{ mt or 'BROAD' }}
+                </span>
+              {% endif %}
+            </td>
+            <!-- Location A -->
+            <td class="px-5 py-3 text-gray-700">
+              {{ label_map.get(row.account_id_a) or ('Account #' ~ row.account_id_a) }}
+            </td>
+            <!-- Location B -->
+            <td class="px-5 py-3 text-gray-700">
+              {{ label_map.get(row.account_id_b) or ('Account #' ~ row.account_id_b) }}
+            </td>
+            <!-- Detected -->
+            <td class="px-5 py-3 text-gray-400 text-xs whitespace-nowrap">
+              {{ row.detected_at.strftime('%b %-d, %Y') if row.detected_at else '—' }}
+            </td>
+          </tr>
+          {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% endif %}
+
+</div>
+{% endblock %}

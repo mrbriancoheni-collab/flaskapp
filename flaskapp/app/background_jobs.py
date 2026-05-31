@@ -30,13 +30,39 @@ from typing import Callable, Optional
 from flask import Flask, current_app
 
 
+def _safe_db_cleanup():
+    """Remove the scoped DB session after a background-thread job completes.
+
+    SQLAlchemy's scoped_session is thread-local. Background threads that use
+    app_context() but are NOT Passenger request threads will hold a DB
+    connection open indefinitely unless we explicitly call session.remove().
+    This is the primary cause of connection-pool exhaustion and worker OOM.
+    """
+    try:
+        from app import db
+        db.session.remove()
+    except Exception:
+        pass
+
+
 def init_scheduler(app: Flask):
     """
     Initialize APScheduler with the Flask app.
 
-    Args:
-        app: Flask application instance
+    Set DISABLE_SCHEDULER=1 in your environment to skip starting the in-process
+    scheduler (recommended for Passenger/shared-hosting deployments — use system
+    cron + run_job.py instead).
     """
+    # ── Hard kill-switch for Passenger / shared-hosting deployments ──────────
+    if os.environ.get('DISABLE_SCHEDULER', '').strip() in ('1', 'true', 'yes'):
+        app.logger.info(
+            "DISABLE_SCHEDULER is set — skipping in-process scheduler. "
+            "Use system cron + run_job.py to run jobs externally."
+        )
+        # Still run ensure_columns so new model tables are created on deploy
+        _ensure_new_model_columns(app)
+        return None
+
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
         from apscheduler.executors.pool import ThreadPoolExecutor
@@ -49,58 +75,59 @@ def init_scheduler(app: Flask):
 
     # Don't initialize scheduler in certain contexts
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'false':
-        # Skip in Flask reloader parent process
         return None
 
-    # Only run scheduler in one Gunicorn worker to prevent duplicate jobs
-    # The worker that gets the lock file first becomes the scheduler worker
+    # ── Single-worker lock: only one Passenger/Gunicorn worker runs the scheduler
     import fcntl
     lock_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.scheduler.lock')
 
     try:
-        # Try to acquire exclusive lock (non-blocking)
         lock_file = open(lock_file_path, 'w')
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        # Store lock file handle to prevent garbage collection closing it
         app._scheduler_lock = lock_file
-        app.logger.info("This worker acquired scheduler lock - will run background jobs")
+        app.logger.info("Acquired scheduler lock — running background jobs in this worker")
     except (IOError, OSError):
-        # Another worker already has the lock - skip scheduler initialization
-        app.logger.info("Another worker has scheduler lock - skipping scheduler in this worker")
+        app.logger.info("Scheduler lock held by another worker — skipping scheduler here")
         return None
 
-    # Configuration - use in-memory job store (simpler, no pickling issues)
-    # Using 1 worker to minimize resource usage on shared hosting
-    executors = {
-        'default': ThreadPoolExecutor(max_workers=1)
-    }
-
+    # ── Conservative config for shared hosting ───────────────────────────────
+    # max_workers=1: only one job runs at a time; no thread-pool growth
+    executors = {'default': ThreadPoolExecutor(max_workers=1)}
     job_defaults = {
-        'coalesce': True,  # Combine missed runs
-        'max_instances': 1,  # Don't run same job concurrently
-        'misfire_grace_time': 300  # 5 minutes grace period for missed jobs
+        'coalesce': True,       # merge missed firings into one run
+        'max_instances': 1,     # never run the same job twice concurrently
+        'misfire_grace_time': 600,  # 10-minute grace so slow jobs aren't skipped
     }
 
-    # Create scheduler (no jobstores = uses MemoryJobStore by default)
     scheduler = BackgroundScheduler(
         executors=executors,
         job_defaults=job_defaults,
         timezone='UTC'
     )
 
-    # Register scheduled jobs
     register_scheduled_jobs(scheduler, app)
 
-    # Start scheduler
-    scheduler.start()
-    app.logger.info("Background job scheduler started")
+    # After every job finishes (success or error), release the SQLAlchemy
+    # scoped session so the thread's DB connection returns to the pool.
+    # Without this, background threads hold connections open indefinitely,
+    # exhausting the pool and eventually crashing the worker.
+    from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
 
-    # Store scheduler on app
+    def _after_job(event):
+        _safe_db_cleanup()
+
+    scheduler.add_listener(_after_job, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
+
+    scheduler.start()
+    app.logger.info("Background job scheduler started with %d jobs",
+                    len(scheduler.get_jobs()))
+
+    _ensure_new_model_columns(app)
+
     app.scheduler = scheduler
 
-    # Shutdown scheduler when app context tears down
     import atexit
-    atexit.register(lambda: scheduler.shutdown())
+    atexit.register(lambda: scheduler.shutdown(wait=False))
 
     return scheduler
 
@@ -264,7 +291,83 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
-    app.logger.info("Registered 11 scheduled background jobs")
+    # Google Ads Call View sync — daily at 4:30 AM UTC
+    scheduler.add_job(
+        func=sync_call_view_all_accounts,
+        trigger='cron',
+        hour=4,
+        minute=30,
+        id='sync_call_view_all_accounts',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    # Dayparting analysis + auto-apply — daily at 5:00 AM UTC
+    scheduler.add_job(
+        func=sync_dayparting_all_accounts,
+        trigger='cron',
+        hour=5,
+        minute=0,
+        id='sync_dayparting_all_accounts',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    # Auction insights sync — daily at 5:30 AM UTC
+    scheduler.add_job(
+        func=sync_auction_insights_all_accounts,
+        trigger='cron',
+        hour=5,
+        minute=30,
+        id='sync_auction_insights_all_accounts',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    # RSA asset performance sync — daily at 6:00 AM UTC
+    scheduler.add_job(
+        func=sync_rsa_assets_all_accounts,
+        trigger='cron',
+        hour=6,
+        minute=0,
+        id='sync_rsa_assets_all_accounts',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    # Skimmer CRM sync (jobs → GCLID match → offline conversions → review emails) — daily at 7:00 AM UTC
+    scheduler.add_job(
+        func=sync_skimmer_all_accounts,
+        trigger='cron',
+        hour=7,
+        minute=0,
+        id='sync_skimmer_all_accounts',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    # Multi-location keyword overlap detection — daily at 7:30 AM UTC
+    scheduler.add_job(
+        func=run_overlap_detection_all_groups,
+        trigger='cron',
+        hour=7,
+        minute=30,
+        id='overlap_detection_daily',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    # Upload pending offline conversions to Google Ads — every 4 hours
+    scheduler.add_job(
+        func=upload_offline_conversions_all_accounts,
+        trigger='interval',
+        hours=4,
+        id='upload_offline_conversions_all_accounts',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    app.logger.info("Registered 19 scheduled background jobs")
 
 
 # ===== Scheduled Job Functions =====
@@ -990,3 +1093,177 @@ def list_all_jobs() -> list:
     except Exception as e:
         current_app.logger.error(f"Error listing jobs: {e}", exc_info=True)
         return []
+
+
+# ---------------------------------------------------------------------------
+# New automation jobs — Google Ads intelligence + Skimmer CRM + multiloc
+# ---------------------------------------------------------------------------
+
+def run_overlap_detection_all_groups(app: Flask):
+    """Daily job: detect keyword overlap between locations in the same group."""
+    with app.app_context():
+        try:
+            from app.services.overlap_detection import detect_overlaps_for_all_groups
+            results = detect_overlaps_for_all_groups()
+            total = sum(results.values())
+            current_app.logger.info(
+                f"Overlap detection complete: {len(results)} groups, {total} overlaps found"
+            )
+        except Exception:
+            current_app.logger.exception("Overlap detection job failed")
+
+
+# ---------------------------------------------------------------------------
+
+def _ensure_new_model_columns(app: Flask):
+    """Call ensure_columns on all models added after initial schema creation."""
+    with app.app_context():
+        try:
+            from app.models_ads import (
+                GadsHourlyStats, AuctionInsight, RsaAsset,
+                OfflineConversionImport, DaypartBidAdjustment, AdsAccountGoal,
+            )
+            for model in (GadsHourlyStats, AuctionInsight, RsaAsset,
+                          OfflineConversionImport, DaypartBidAdjustment, AdsAccountGoal):
+                try:
+                    model.ensure_columns()
+                except Exception as exc:
+                    current_app.logger.warning("ensure_columns failed for %s: %s", model.__tablename__, exc)
+        except Exception as exc:
+            current_app.logger.warning("_ensure_new_model_columns (ads): %s", exc)
+
+        try:
+            from app.models_skimmer import SkimmerAuth, PhoneGclidMap, EmailGclidMap, SkimmerJob
+            for model in (SkimmerAuth, PhoneGclidMap, EmailGclidMap, SkimmerJob):
+                try:
+                    model.ensure_columns()
+                except Exception as exc:
+                    current_app.logger.warning("ensure_columns failed for %s: %s", model.__tablename__, exc)
+        except Exception as exc:
+            current_app.logger.warning("_ensure_new_model_columns (skimmer): %s", exc)
+
+        try:
+            from app.models_multiloc import LocationGroup, LocationGroupMember, KeywordOverlap
+            LocationGroup.ensure_columns()
+            LocationGroupMember.ensure_columns()
+            KeywordOverlap.ensure_columns()
+            current_app.logger.info("multiloc model columns ensured")
+        except Exception:
+            current_app.logger.exception("Failed to ensure multiloc model columns")
+
+
+def sync_call_view_all_accounts(app: Flask):
+    """Pull Google Ads Call View data for all connected accounts."""
+    with app.app_context():
+        try:
+            from app.models import GoogleAdsAuth
+            auths = GoogleAdsAuth.query.all()
+            for auth in auths:
+                try:
+                    from app.services.google_ads_call_view_sync import sync_call_view
+                    result = sync_call_view(auth.account_id)
+                    current_app.logger.info("call_view sync account %s: %s", auth.account_id, result)
+                except Exception as exc:
+                    current_app.logger.warning("call_view sync failed account %s: %s", auth.account_id, exc)
+        except Exception as exc:
+            current_app.logger.error("sync_call_view_all_accounts error: %s", exc, exc_info=True)
+
+
+def sync_dayparting_all_accounts(app: Flask):
+    """Sync hourly stats, compute bid adjustments, and auto-apply for all accounts."""
+    with app.app_context():
+        try:
+            from app.models import GoogleAdsAuth
+            from app.services.google_ads_dayparting import (
+                sync_hourly_stats, compute_daypart_adjustments, apply_daypart_adjustments,
+            )
+            auths = GoogleAdsAuth.query.all()
+            for auth in auths:
+                try:
+                    sync_hourly_stats(auth.account_id)
+                    adjustments = compute_daypart_adjustments(auth.account_id)
+                    if adjustments:
+                        result = apply_daypart_adjustments(auth.account_id, adjustments)
+                        current_app.logger.info(
+                            "dayparting account %s: %d adjustments applied", auth.account_id, result.get("applied", 0)
+                        )
+                except Exception as exc:
+                    current_app.logger.warning("dayparting failed account %s: %s", auth.account_id, exc)
+        except Exception as exc:
+            current_app.logger.error("sync_dayparting_all_accounts error: %s", exc, exc_info=True)
+
+
+def sync_auction_insights_all_accounts(app: Flask):
+    """Sync competitor auction insights and auto-create recommendations for all accounts."""
+    with app.app_context():
+        try:
+            from app.models import GoogleAdsAuth
+            from app.services.google_ads_auction_insights import (
+                sync_auction_insights, auto_respond_to_impression_loss,
+            )
+            auths = GoogleAdsAuth.query.all()
+            for auth in auths:
+                try:
+                    sync_auction_insights(auth.account_id)
+                    auto_respond_to_impression_loss(auth.account_id)
+                except Exception as exc:
+                    current_app.logger.warning("auction insights failed account %s: %s", auth.account_id, exc)
+        except Exception as exc:
+            current_app.logger.error("sync_auction_insights_all_accounts error: %s", exc, exc_info=True)
+
+
+def sync_rsa_assets_all_accounts(app: Flask):
+    """Sync RSA asset performance and auto-flag winners/losers for all accounts."""
+    with app.app_context():
+        try:
+            from app.models import GoogleAdsAuth
+            from app.services.google_ads_rsa_sync import sync_rsa_assets, auto_promote_winners
+            auths = GoogleAdsAuth.query.all()
+            for auth in auths:
+                try:
+                    sync_rsa_assets(auth.account_id)
+                    auto_promote_winners(auth.account_id)
+                except Exception as exc:
+                    current_app.logger.warning("RSA sync failed account %s: %s", auth.account_id, exc)
+        except Exception as exc:
+            current_app.logger.error("sync_rsa_assets_all_accounts error: %s", exc, exc_info=True)
+
+
+def sync_skimmer_all_accounts(app: Flask):
+    """Run full Skimmer sync pipeline for all connected accounts."""
+    with app.app_context():
+        try:
+            from app.models_skimmer import SkimmerAuth
+            from app.services.skimmer_sync import run_full_sync
+            auths = SkimmerAuth.query.filter_by(sync_enabled=True).all()
+            for auth in auths:
+                try:
+                    result = run_full_sync(auth.account_id)
+                    current_app.logger.info("skimmer sync account %s: %s", auth.account_id, result)
+                except Exception as exc:
+                    current_app.logger.warning("skimmer sync failed account %s: %s", auth.account_id, exc)
+        except Exception as exc:
+            current_app.logger.error("sync_skimmer_all_accounts error: %s", exc, exc_info=True)
+
+
+def upload_offline_conversions_all_accounts(app: Flask):
+    """Upload pending offline conversion imports to Google Ads for all accounts."""
+    with app.app_context():
+        try:
+            from app.models_ads import OfflineConversionImport
+            from app import db
+            account_ids = [
+                row[0] for row in
+                db.session.execute(
+                    db.text("SELECT DISTINCT account_id FROM offline_conversion_imports WHERE status='pending'")
+                ).fetchall()
+            ]
+            from app.services.google_ads_offline_conversions import upload_pending_conversions
+            for aid in account_ids:
+                try:
+                    result = upload_pending_conversions(aid)
+                    current_app.logger.info("offline conv upload account %s: %s", aid, result)
+                except Exception as exc:
+                    current_app.logger.warning("offline conv upload failed account %s: %s", aid, exc)
+        except Exception as exc:
+            current_app.logger.error("upload_offline_conversions_all_accounts error: %s", exc, exc_info=True)

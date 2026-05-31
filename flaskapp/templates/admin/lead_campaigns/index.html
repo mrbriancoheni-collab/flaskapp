@@ -594,7 +594,10 @@ async function triggerGlobalScraping(btn) {
         const data = await response.json();
 
         if (data.success) {
-            alert(`Success! Scraped ${data.scraped} campaigns.\nTotal campaigns: ${data.total_campaigns}`);
+            const msg = data.scraped > 0
+                ? `Success! Scraped ${data.scraped} of ${data.total_campaigns} campaigns.\nLeads are being added in the background.`
+                : `All campaigns were scraped recently (within the last 7 days).\n${data.total_campaigns} campaigns exist — re-scraping resumes automatically next cycle.`;
+            alert(msg);
             location.reload();
         } else {
             alert(`Error: ${data.error || 'Unknown error'}`);

@@ -165,3 +165,63 @@ def _diagnostic_wrapper(wsgi_app):
 
 application = _diagnostic_wrapper(application)
 
+
+def _health_wrapper(wsgi_app):
+    """
+    Expose /_health at the WSGI layer so Passenger and monitoring tools can
+    verify the process is alive without touching Flask routing.
+
+    Returns a JSON summary that's useful for debugging crashes:
+      - Python version and process PID
+      - Whether DISABLE_SCHEDULER is set
+      - Active thread count (high = scheduler leak)
+      - DB pool state (overflow = connection leak)
+      - Memory RSS in MB (growing over time = leak)
+    """
+    import json as _json
+
+    def middleware(environ, start_response):
+        if environ.get("PATH_INFO", "") in ("/_health", "/health"):
+            try:
+                import sys, threading, os as _os
+                info = {
+                    "status": "ok",
+                    "pid": _os.getpid(),
+                    "python": sys.version,
+                    "scheduler_disabled": bool(_os.environ.get("DISABLE_SCHEDULER")),
+                    "threads": threading.active_count(),
+                }
+                # Memory usage (Linux only, safe to fail)
+                try:
+                    with open(f"/proc/{_os.getpid()}/status") as f:
+                        for line in f:
+                            if line.startswith("VmRSS:"):
+                                info["mem_rss_mb"] = round(int(line.split()[1]) / 1024, 1)
+                                break
+                except Exception:
+                    pass
+                # DB pool state
+                try:
+                    from app import db
+                    pool = db.engine.pool
+                    info["db_pool_size"] = pool.size()
+                    info["db_pool_checked_out"] = pool.checkedout()
+                    info["db_pool_overflow"] = pool.overflow()
+                except Exception:
+                    pass
+            except Exception as exc:
+                info = {"status": "error", "error": str(exc)}
+
+            body = _json.dumps(info, indent=2).encode()
+            start_response("200 OK", [
+                ("Content-Type", "application/json"),
+                ("Content-Length", str(len(body))),
+            ])
+            return [body]
+
+        return wsgi_app(environ, start_response)
+    return middleware
+
+
+application = _health_wrapper(application)
+

@@ -75,7 +75,7 @@ def create_app():
         PASSWORD_REQUIRE_SYMBOL=True,
 
         # Paid-plan rules
-        PAID_PLANS=tuple(_os.getenv("PAID_PLANS", "pro,team,enterprise").split(",")),
+        PAID_PLANS=tuple(_os.getenv("PAID_PLANS", "growth,pro,managed,active,trialing,basic,premium").split(",")),
         PAID_STRIPE_STATES=("active", "trialing"),
         ACCOUNT_TABLE_NAME=_os.getenv("ACCOUNT_TABLE_NAME", "accounts"),
         ACCOUNT_PLAN_FIELD=_os.getenv("ACCOUNT_PLAN_FIELD", "plan"),
@@ -820,6 +820,76 @@ def create_app():
         app.register_blueprint(gads_bp)  # no extra prefix here
     except Exception:
         app.logger.exception("Failed to register gads_bp")
+
+    try:
+        from app.google.dayparting_routes import dayparting_bp
+        app.register_blueprint(dayparting_bp)
+        app.logger.info("dayparting_bp registered at /account/google/ads/dayparting")
+    except Exception:
+        app.logger.exception("Failed to register dayparting_bp")
+
+    try:
+        from app.google.rsa_routes import rsa_bp
+        app.register_blueprint(rsa_bp)
+        app.logger.info("rsa_bp registered at /account/google/ads/rsa")
+    except Exception:
+        app.logger.exception("Failed to register rsa_bp")
+
+    try:
+        from app.google.auction_insights_routes import auction_insights_bp
+        app.register_blueprint(auction_insights_bp)
+        app.logger.info("auction_insights_bp registered at /account/google/ads/competitors")
+    except Exception:
+        app.logger.exception("Failed to register auction_insights_bp")
+
+    try:
+        from app.google.offline_conversions_routes import offline_conv_bp
+        app.register_blueprint(offline_conv_bp)
+        app.logger.info("offline_conv_bp registered at /account/google/ads/offline-conversions")
+    except Exception:
+        app.logger.exception("Failed to register offline_conv_bp")
+
+    try:
+        from app.integrations import integrations_hub_bp
+        app.register_blueprint(integrations_hub_bp)
+        app.logger.info("integrations_hub_bp registered at /account/integrations")
+    except Exception:
+        app.logger.exception("Failed to register integrations_hub_bp")
+
+    try:
+        from app.google.skimmer_routes import skimmer_bp
+        app.register_blueprint(skimmer_bp)
+        app.logger.info("skimmer_bp registered at /account/integrations/skimmer")
+    except Exception:
+        app.logger.exception("Failed to register skimmer_bp")
+
+    try:
+        from app.multiloc import multiloc_bp
+        app.register_blueprint(multiloc_bp)
+        app.logger.info("multiloc_bp registered")
+    except Exception:
+        app.logger.exception("Failed to register multiloc_bp")
+
+    try:
+        from app.multiloc import multiloc_bp
+        app.register_blueprint(multiloc_bp)
+        app.logger.info("multiloc_bp registered")
+    except Exception:
+        app.logger.exception("Failed to register multiloc_bp")
+
+    try:
+        from app.google.gclid_capture_routes import gclid_capture_bp
+        app.register_blueprint(gclid_capture_bp)
+        app.logger.info("gclid_capture_bp registered at /track")
+    except Exception:
+        app.logger.exception("Failed to register gclid_capture_bp")
+
+    try:
+        from app.google.lead_form_routes import lead_form_bp
+        app.register_blueprint(lead_form_bp)
+        app.logger.info("lead_form_bp registered at /webhooks/google + /account/integrations/lead-forms")
+    except Exception:
+        app.logger.exception("Failed to register lead_form_bp")
 
     try:
         from app.telephony import telephony_bp

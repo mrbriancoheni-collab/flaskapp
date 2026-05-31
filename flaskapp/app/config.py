@@ -23,19 +23,34 @@ class Config:
     STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY") or os.environ.get("STRIPE_PUBLIC_KEY", "")
     STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
-    # Price IDs for checkout sessions
-    STRIPE_MONTHLY_PRICE_ID = os.environ.get("STRIPE_MONTHLY_PRICE_ID", "")
-    STRIPE_YEARLY_PRICE_ID = os.environ.get("STRIPE_YEARLY_PRICE_ID", "")
+    # ── Tier: Growth ($99/mo · $79/mo annual) ───────────────────────────────
+    STRIPE_GROWTH_MONTHLY_PRICE_ID = os.environ.get("STRIPE_GROWTH_MONTHLY_PRICE_ID", "")
+    STRIPE_GROWTH_YEARLY_PRICE_ID  = os.environ.get("STRIPE_GROWTH_YEARLY_PRICE_ID", "")
+    STRIPE_GROWTH_MONTHLY_LINK     = os.environ.get("STRIPE_GROWTH_MONTHLY_LINK", "")
+    STRIPE_GROWTH_YEARLY_LINK      = os.environ.get("STRIPE_GROWTH_YEARLY_LINK", "")
 
-    # Payment Links (alternative to checkout sessions)
+    # ── Tier: Pro ($249/mo · $199/mo annual) ────────────────────────────────
+    STRIPE_PRO_MONTHLY_PRICE_ID = os.environ.get("STRIPE_PRO_MONTHLY_PRICE_ID", "")
+    STRIPE_PRO_YEARLY_PRICE_ID  = os.environ.get("STRIPE_PRO_YEARLY_PRICE_ID", "")
+    STRIPE_PRO_MONTHLY_LINK     = os.environ.get("STRIPE_PRO_MONTHLY_LINK", "")
+    STRIPE_PRO_YEARLY_LINK      = os.environ.get("STRIPE_PRO_YEARLY_LINK", "")
+
+    # ── Tier: Managed ($997/mo) ──────────────────────────────────────────────
+    STRIPE_MANAGED_MONTHLY_PRICE_ID = os.environ.get("STRIPE_MANAGED_MONTHLY_PRICE_ID", "")
+    STRIPE_MANAGED_MONTHLY_LINK     = os.environ.get("STRIPE_MANAGED_MONTHLY_LINK", "")
+
+    # ── Legacy price IDs (existing customers — do not remove) ───────────────
+    # Old single-tier setup: monthly=$250, annual=$2,400/yr
+    STRIPE_MONTHLY_PRICE_ID = (
+        os.environ.get("STRIPE_MONTHLY_PRICE_ID")
+        or os.environ.get("STRIPE_PRICE_BASIC", "")
+    )
+    STRIPE_YEARLY_PRICE_ID = (
+        os.environ.get("STRIPE_YEARLY_PRICE_ID")
+        or os.environ.get("STRIPE_PRICE_PRO", "")
+    )
     STRIPE_MONTHLY_LINK = os.environ.get("STRIPE_MONTHLY_LINK", "")
-    STRIPE_YEARLY_LINK = os.environ.get("STRIPE_YEARLY_LINK", "")
-
-    # Backward-compat fallback if you still had the old names set
-    if not STRIPE_MONTHLY_PRICE_ID:
-        STRIPE_MONTHLY_PRICE_ID = os.environ.get("STRIPE_PRICE_BASIC", "")
-    if not STRIPE_YEARLY_PRICE_ID:
-        STRIPE_YEARLY_PRICE_ID = os.environ.get("STRIPE_PRICE_PRO", "")
+    STRIPE_YEARLY_LINK  = os.environ.get("STRIPE_YEARLY_LINK", "")
 
     # Google Ads API configuration (for existing integrations)
     GOOGLE_ADS_DEVELOPER_TOKEN = os.getenv("GOOGLE_ADS_DEVELOPER_TOKEN") or None

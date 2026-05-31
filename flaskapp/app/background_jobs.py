@@ -30,13 +30,39 @@ from typing import Callable, Optional
 from flask import Flask, current_app
 
 
+def _safe_db_cleanup():
+    """Remove the scoped DB session after a background-thread job completes.
+
+    SQLAlchemy's scoped_session is thread-local. Background threads that use
+    app_context() but are NOT Passenger request threads will hold a DB
+    connection open indefinitely unless we explicitly call session.remove().
+    This is the primary cause of connection-pool exhaustion and worker OOM.
+    """
+    try:
+        from app import db
+        db.session.remove()
+    except Exception:
+        pass
+
+
 def init_scheduler(app: Flask):
     """
     Initialize APScheduler with the Flask app.
 
-    Args:
-        app: Flask application instance
+    Set DISABLE_SCHEDULER=1 in your environment to skip starting the in-process
+    scheduler (recommended for Passenger/shared-hosting deployments — use system
+    cron + run_job.py instead).
     """
+    # ── Hard kill-switch for Passenger / shared-hosting deployments ──────────
+    if os.environ.get('DISABLE_SCHEDULER', '').strip() in ('1', 'true', 'yes'):
+        app.logger.info(
+            "DISABLE_SCHEDULER is set — skipping in-process scheduler. "
+            "Use system cron + run_job.py to run jobs externally."
+        )
+        # Still run ensure_columns so new model tables are created on deploy
+        _ensure_new_model_columns(app)
+        return None
+
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
         from apscheduler.executors.pool import ThreadPoolExecutor
@@ -49,61 +75,59 @@ def init_scheduler(app: Flask):
 
     # Don't initialize scheduler in certain contexts
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'false':
-        # Skip in Flask reloader parent process
         return None
 
-    # Only run scheduler in one Gunicorn worker to prevent duplicate jobs
-    # The worker that gets the lock file first becomes the scheduler worker
+    # ── Single-worker lock: only one Passenger/Gunicorn worker runs the scheduler
     import fcntl
     lock_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.scheduler.lock')
 
     try:
-        # Try to acquire exclusive lock (non-blocking)
         lock_file = open(lock_file_path, 'w')
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        # Store lock file handle to prevent garbage collection closing it
         app._scheduler_lock = lock_file
-        app.logger.info("This worker acquired scheduler lock - will run background jobs")
+        app.logger.info("Acquired scheduler lock — running background jobs in this worker")
     except (IOError, OSError):
-        # Another worker already has the lock - skip scheduler initialization
-        app.logger.info("Another worker has scheduler lock - skipping scheduler in this worker")
+        app.logger.info("Scheduler lock held by another worker — skipping scheduler here")
         return None
 
-    # Configuration - use in-memory job store (simpler, no pickling issues)
-    # Using 1 worker to minimize resource usage on shared hosting
-    executors = {
-        'default': ThreadPoolExecutor(max_workers=1)
-    }
-
+    # ── Conservative config for shared hosting ───────────────────────────────
+    # max_workers=1: only one job runs at a time; no thread-pool growth
+    executors = {'default': ThreadPoolExecutor(max_workers=1)}
     job_defaults = {
-        'coalesce': True,  # Combine missed runs
-        'max_instances': 1,  # Don't run same job concurrently
-        'misfire_grace_time': 300  # 5 minutes grace period for missed jobs
+        'coalesce': True,       # merge missed firings into one run
+        'max_instances': 1,     # never run the same job twice concurrently
+        'misfire_grace_time': 600,  # 10-minute grace so slow jobs aren't skipped
     }
 
-    # Create scheduler (no jobstores = uses MemoryJobStore by default)
     scheduler = BackgroundScheduler(
         executors=executors,
         job_defaults=job_defaults,
         timezone='UTC'
     )
 
-    # Register scheduled jobs
     register_scheduled_jobs(scheduler, app)
 
-    # Start scheduler
-    scheduler.start()
-    app.logger.info("Background job scheduler started")
+    # After every job finishes (success or error), release the SQLAlchemy
+    # scoped session so the thread's DB connection returns to the pool.
+    # Without this, background threads hold connections open indefinitely,
+    # exhausting the pool and eventually crashing the worker.
+    from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
 
-    # Ensure new model columns exist (safe no-op after first run)
+    def _after_job(event):
+        _safe_db_cleanup()
+
+    scheduler.add_listener(_after_job, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
+
+    scheduler.start()
+    app.logger.info("Background job scheduler started with %d jobs",
+                    len(scheduler.get_jobs()))
+
     _ensure_new_model_columns(app)
 
-    # Store scheduler on app
     app.scheduler = scheduler
 
-    # Shutdown scheduler when app context tears down
     import atexit
-    atexit.register(lambda: scheduler.shutdown())
+    atexit.register(lambda: scheduler.shutdown(wait=False))
 
     return scheduler
 

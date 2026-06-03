@@ -9,10 +9,46 @@
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "WebPage",
-  "name": "Lower Ad Cost for Home Service Businesses",
-  "description": "Reduce Google Ads cost per lead for HVAC, plumbing, electrical, and roofing companies with AI-powered optimization.",
-  "url": "https://fieldsprout.io/solutions/lower-ad-cost"
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://fieldsprout.io/lower-ad-cost#webpage",
+      "name": "Lower Your Google Ads Cost Per Lead | FieldSprout",
+      "description": "AI-powered bid management and negative keyword automation that cuts wasted spend and delivers more calls for less money.",
+      "url": "https://fieldsprout.io/lower-ad-cost",
+      "isPartOf": {"@id": "https://fieldsprout.io/#website"}
+    },
+    {
+      "@type": "HowTo",
+      "name": "How to Lower Your Google Ads Cost Per Lead",
+      "step": [
+        {"@type": "HowToStep", "name": "Audit your search term report", "text": "FieldSprout automatically scans your search terms weekly to find irrelevant queries draining your budget."},
+        {"@type": "HowToStep", "name": "Add negative keywords", "text": "AI agents build a negative keyword list from your search term waste and apply it across campaigns."},
+        {"@type": "HowToStep", "name": "Optimize bids by time and device", "text": "FieldSprout adjusts bids based on your historical conversion data, reducing spend during low-converting windows."},
+        {"@type": "HowToStep", "name": "Improve ad relevance", "text": "Better ad copy matched to search intent improves Quality Score, which lowers your cost-per-click automatically."}
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How quickly can I lower my Google Ads cost per lead?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Most FieldSprout users see a 20–40% reduction in cost per lead within the first 60 days as the AI eliminates wasted spend on irrelevant search terms."}
+        },
+        {
+          "@type": "Question",
+          "name": "What causes high cost per lead in Google Ads for home services?",
+          "acceptedAnswer": {"@type": "Answer", "text": "The main culprits are broad match keywords showing ads for irrelevant searches, missing negative keywords, poor Quality Scores from weak ad copy, and bidding too high during low-converting hours."}
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need to manage bids manually?",
+          "acceptedAnswer": {"@type": "Answer", "text": "No. FieldSprout's AI agents handle bid adjustments automatically based on your conversion data, so you can focus on running your business."}
+        }
+      ]
+    }
+  ]
 }
 </script>
 {% endblock %}

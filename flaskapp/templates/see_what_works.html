@@ -9,10 +9,36 @@
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "WebPage",
-  "name": "See What Works — Marketing Attribution for Home Services",
-  "description": "Full attribution analytics for home service businesses — from ad click to booked job, across Google, GLSA, Facebook, and more.",
-  "url": "https://fieldsprout.io/solutions/see-what-works"
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://fieldsprout.io/see-what-works#webpage",
+      "name": "Google Ads Analytics for Home Service Businesses | FieldSprout",
+      "description": "See exactly which campaigns, keywords, and ads drive phone calls. FieldSprout translates Google Ads data into plain-English insights you can act on.",
+      "url": "https://fieldsprout.io/see-what-works",
+      "isPartOf": {"@id": "https://fieldsprout.io/#website"}
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I know which Google Ads are actually driving calls?",
+          "acceptedAnswer": {"@type": "Answer", "text": "FieldSprout connects call tracking to your campaigns so you can see exactly which keywords and ads generated phone calls, not just clicks."}
+        },
+        {
+          "@type": "Question",
+          "name": "Can I see performance by campaign, ad group, and keyword?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. FieldSprout's analytics dashboard breaks down cost, clicks, calls, and conversion rate at every level — campaign, ad group, keyword, and even individual ad copy."}
+        },
+        {
+          "@type": "Question",
+          "name": "How often is my performance data updated?",
+          "acceptedAnswer": {"@type": "Answer", "text": "FieldSprout syncs with Google Ads daily and surfaces weekly summary insights so you always have a current picture of what's working and what's wasting money."}
+        }
+      ]
+    }
+  ]
 }
 </script>
 {% endblock %}

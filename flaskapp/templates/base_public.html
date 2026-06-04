@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>{% block title %}FieldSprout — Get Found. Grow Leads. Book Jobs.{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}FieldSprout helps local service pros get found, grow leads, and book more jobs with AI-powered campaigns and review automation.{% endblock %}">
-  <meta name="robots" content="{% block meta_robots %}index, follow{% endblock %}">
+  <meta name="robots" content="{% block meta_robots %}index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1{% endblock %}">
   <link rel="canonical" href="{% block canonical %}https://fieldsprout.io{{ request.path }}{% endblock %}">
 
   <!-- Open Graph -->
@@ -404,27 +404,6 @@
     .animation-delay-400 { animation-delay: 0.4s; }
     .animation-delay-600 { animation-delay: 0.6s; }
   </style>
-
-  <!-- Organization Schema for AI Search & Entity Recognition -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "FieldSprout",
-    "url": "https://fieldsprout.io",
-    "logo": "https://fieldsprout.io/static/brand/logos/fieldsprout-wordmark.svg",
-    "description": "AI agents that autonomously optimize Google Ads, Facebook Ads, and local marketing for home service businesses.",
-    "sameAs": [
-      "https://www.linkedin.com/company/fieldsprout",
-      "https://twitter.com/fieldsprout"
-    ],
-    "contactPoint": {
-      "@type": "ContactPoint",
-      "contactType": "Customer Service",
-      "email": "support@fieldsprout.io"
-    }
-  }
-  </script>
 
   {% block head_extra %}{% endblock %}
 </head>

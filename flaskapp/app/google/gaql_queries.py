@@ -72,6 +72,79 @@ WHERE segments.date BETWEEN '{start}' AND '{end}'
   AND ad_group_criterion.status != 'REMOVED'
 """
 
+# Structure queries — no date filter, used to sync all entities regardless of impressions
+
+CAMPAIGN_STRUCTURE = """
+SELECT
+  campaign.id,
+  campaign.name,
+  campaign.status,
+  campaign.advertising_channel_type,
+  campaign.campaign_budget
+FROM campaign
+WHERE campaign.status != 'REMOVED'
+"""
+
+ADGROUP_STRUCTURE = """
+SELECT
+  ad_group.id,
+  ad_group.name,
+  ad_group.status,
+  ad_group.cpc_bid_micros,
+  campaign.id
+FROM ad_group
+WHERE ad_group.status != 'REMOVED'
+  AND campaign.status != 'REMOVED'
+"""
+
+KEYWORD_STRUCTURE = """
+SELECT
+  ad_group_criterion.criterion_id,
+  ad_group_criterion.keyword.text,
+  ad_group_criterion.keyword.match_type,
+  ad_group_criterion.status,
+  ad_group_criterion.effective_cpc_bid_micros,
+  campaign.id,
+  ad_group.id
+FROM ad_group_criterion
+WHERE ad_group_criterion.type = 'KEYWORD'
+  AND ad_group_criterion.status != 'REMOVED'
+  AND campaign.status != 'REMOVED'
+  AND ad_group.status != 'REMOVED'
+"""
+
+NEGATIVE_KEYWORD_STRUCTURE = """
+SELECT
+  campaign_criterion.criterion_id,
+  campaign_criterion.keyword.text,
+  campaign_criterion.keyword.match_type,
+  campaign_criterion.negative,
+  campaign.id
+FROM campaign_criterion
+WHERE campaign_criterion.type = 'KEYWORD'
+  AND campaign_criterion.negative = TRUE
+"""
+
+AD_STRUCTURE = """
+SELECT
+  ad_group_ad.ad.id,
+  ad_group_ad.ad.type,
+  ad_group_ad.ad.responsive_search_ad.headlines,
+  ad_group_ad.ad.responsive_search_ad.descriptions,
+  ad_group_ad.ad.expanded_text_ad.headline_part1,
+  ad_group_ad.ad.expanded_text_ad.headline_part2,
+  ad_group_ad.ad.expanded_text_ad.description,
+  ad_group_ad.ad.final_urls,
+  ad_group_ad.ad.display_url,
+  ad_group_ad.status,
+  ad_group_ad.ad_strength,
+  ad_group.id,
+  campaign.id
+FROM ad_group_ad
+WHERE ad_group_ad.status != 'REMOVED'
+  AND campaign.status != 'REMOVED'
+"""
+
 SEARCH_TERMS_30D = """
 SELECT
   search_term_view.search_term,

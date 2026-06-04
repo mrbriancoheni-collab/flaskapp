@@ -21,6 +21,7 @@ Example crontab entries (crontab -e):
     15 */4 * * * cd /home/fieldsprout/flaskapp && python run_job.py upload_offline_conversions_all_accounts >> logs/cron.log 2>&1
 
     # Daily jobs (all UTC)
+    0  4 * * * cd /home/fieldsprout/flaskapp && python run_job.py sync_structure_all_accounts >> logs/cron.log 2>&1
     30 4 * * * cd /home/fieldsprout/flaskapp && python run_job.py sync_call_view_all_accounts >> logs/cron.log 2>&1
     0  5 * * * cd /home/fieldsprout/flaskapp && python run_job.py sync_dayparting_all_accounts >> logs/cron.log 2>&1
     30 5 * * * cd /home/fieldsprout/flaskapp && python run_job.py sync_auction_insights_all_accounts >> logs/cron.log 2>&1
@@ -96,6 +97,7 @@ JOB_MAP = {
     'sync_skimmer_all_accounts':            'sync_skimmer_all_accounts',
     'run_overlap_detection_all_groups':     'run_overlap_detection_all_groups',
     'upload_offline_conversions_all_accounts': 'upload_offline_conversions_all_accounts',
+    'sync_structure_all_accounts':             'sync_structure_all_accounts',
 }
 
 

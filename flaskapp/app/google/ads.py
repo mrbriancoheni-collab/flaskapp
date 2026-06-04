@@ -1059,6 +1059,13 @@ def sync():
     result = {"sync": {}, "optimizer": {}, "errors": []}
 
     try:
+        from app.services.google_ads_sync import sync_structure, sync_account
+        result["structure"] = sync_structure(aid)
+    except Exception as exc:
+        current_app.logger.exception("Google Ads structure sync failed for account %s", aid)
+        result["errors"].append(f"Structure: {exc}")
+
+    try:
         from app.services.google_ads_sync import sync_account
         result["sync"] = sync_account(aid, days=days)
     except Exception as exc:

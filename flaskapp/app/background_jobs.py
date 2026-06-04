@@ -335,6 +335,17 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
+    # Full structure sync (all entities, no date filter) — daily at 4:00 AM UTC
+    scheduler.add_job(
+        func=sync_structure_all_accounts,
+        trigger='cron',
+        hour=4,
+        minute=0,
+        id='sync_structure_all_accounts',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
     # Skimmer CRM sync (jobs → GCLID match → offline conversions → review emails) — daily at 7:00 AM UTC
     scheduler.add_job(
         func=sync_skimmer_all_accounts,
@@ -1267,3 +1278,29 @@ def upload_offline_conversions_all_accounts(app: Flask):
                     current_app.logger.warning("offline conv upload failed account %s: %s", aid, exc)
         except Exception as exc:
             current_app.logger.error("upload_offline_conversions_all_accounts error: %s", exc, exc_info=True)
+
+
+def sync_structure_all_accounts(app: Flask):
+    """
+    Sync full account structure (campaigns, ad groups, keywords, ads, negatives)
+    for all connected accounts — without a date filter so zero-impression keywords
+    and newly created entities are captured.
+    """
+    with app.app_context():
+        try:
+            from app.models import GoogleAdsAuth
+            from app.services.google_ads_sync import sync_structure
+            auths = GoogleAdsAuth.query.all()
+            for auth in auths:
+                try:
+                    result = sync_structure(auth.account_id)
+                    current_app.logger.info(
+                        "structure sync account %s: campaigns=%s kw=%s ads=%s errors=%s",
+                        auth.account_id,
+                        result.get("campaigns"), result.get("keywords"),
+                        result.get("ads"), result.get("errors"),
+                    )
+                except Exception as exc:
+                    current_app.logger.warning("structure sync failed account %s: %s", auth.account_id, exc)
+        except Exception as exc:
+            current_app.logger.error("sync_structure_all_accounts error: %s", exc, exc_info=True)

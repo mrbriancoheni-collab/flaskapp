@@ -164,6 +164,30 @@ ORDER BY metrics.cost_micros DESC
 LIMIT 5000
 """
 
+SEARCH_TERMS_DYNAMIC = """
+SELECT
+  search_term_view.search_term,
+  search_term_view.status,
+  campaign.id,
+  campaign.name,
+  ad_group.id,
+  ad_group.name,
+  metrics.impressions,
+  metrics.clicks,
+  metrics.cost_micros,
+  metrics.conversions
+FROM search_term_view
+WHERE segments.date DURING {date_range}
+  AND metrics.impressions > 0
+ORDER BY metrics.cost_micros DESC
+LIMIT 5000
+"""
+
+
+def gaql_date_range(days: int) -> str:
+    """Return the GAQL DURING literal for a given number of days (7, 30, 90)."""
+    return {7: "LAST_7_DAYS", 30: "LAST_30_DAYS", 90: "LAST_90_DAYS"}.get(days, "LAST_30_DAYS")
+
 BUDGET_STATS = """
 SELECT
   campaign_budget.id,

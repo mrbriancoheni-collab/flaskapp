@@ -87,7 +87,7 @@ async function undoAction(actionId, btn) {
       {% endif %}
     </div>
     <div class="flex items-center gap-3">
-      {% if last_synced_at %}
+      {% if last_synced_at is defined and last_synced_at %}
       <span class="text-xs {{ 'text-amber-600 font-medium' if last_synced_stale else 'text-gray-400' }}"
             title="{{ last_synced_at.strftime('%Y-%m-%d %H:%M') }} UTC">
         {% if last_synced_stale %}<i class="fa-solid fa-triangle-exclamation mr-1"></i>{% endif %}
@@ -98,6 +98,12 @@ async function undoAction(actionId, btn) {
         <i class="fa-solid fa-triangle-exclamation mr-1"></i> Never synced
       </span>
       {% endif %}
+      <!-- Date range selector -->
+      <div id="date-range-selector" class="inline-flex rounded-lg border overflow-hidden text-sm">
+        <button data-days="7"  class="date-range-btn px-3 py-2 hover:bg-gray-50 border-r">Last 7 days</button>
+        <button data-days="30" class="date-range-btn px-3 py-2 hover:bg-gray-50 border-r">Last 30 days</button>
+        <button data-days="90" class="date-range-btn px-3 py-2 hover:bg-gray-50">Last 90 days</button>
+      </div>
       <a href="{{ url_for('gads_bp.optimize') }}" class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"><i class="fa-solid fa-rotate-right"></i> Refresh</a>
       <button id="gads-sync-btn-top" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500">
         <i class="fa-solid fa-rotate"></i> Sync Data
@@ -639,6 +645,23 @@ async function undoAction(actionId, btn) {
                 disabled>
           <i class="fa-solid fa-check mr-2"></i>Apply Selected Optimizations
         </button>
+      </div>
+
+      <!-- Smart Bulk Actions -->
+      <div class="mt-6 rounded-xl border bg-white p-5">
+        <h3 class="text-sm font-semibold text-gray-900 mb-1">Smart Actions</h3>
+        <p class="text-xs text-gray-500 mb-4">One-click bulk optimizations based on your account data.</p>
+        <div class="flex flex-wrap gap-3">
+          <button id="btn-pause-wasted"
+                  class="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 transition">
+            <i class="fa-solid fa-pause"></i> Pause wasted spend
+          </button>
+          <button id="btn-tighten-broad"
+                  class="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 transition">
+            <i class="fa-solid fa-filter"></i> Tighten broad match
+          </button>
+        </div>
+        <p id="smart-action-status" class="mt-3 text-xs text-gray-500 hidden"></p>
       </div>
     </section>
     {% endif %}
@@ -1447,7 +1470,18 @@ async function undoAction(actionId, btn) {
                 {% endif %}
               </td>
               <td class="px-3 py-2 text-center">
-                <span class="text-gray-400 text-xs">—</span>
+                {% set qs = kw.quality_score %}
+                {% if qs and qs > 0 %}
+                  {% if qs <= 3 %}
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">{{ qs }} Needs work</span>
+                  {% elif qs <= 6 %}
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">{{ qs }} OK</span>
+                  {% else %}
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">{{ qs }} Great</span>
+                  {% endif %}
+                {% else %}
+                  <span class="text-gray-400 text-xs">—</span>
+                {% endif %}
               </td>
               <td class="px-3 py-2 text-center">
                 <div class="flex items-center justify-center gap-1">
@@ -2035,14 +2069,136 @@ async function undoAction(actionId, btn) {
     }
   });
 
+  // --- Date range selector ---
+  (function() {
+    const LS_KEY = 'gads_date_range_days';
+    const saved = parseInt(localStorage.getItem(LS_KEY) || '30', 10);
+    const validDays = [7, 30, 90];
+    const days = validDays.includes(saved) ? saved : 30;
+
+    function applyDateRange(d) {
+      localStorage.setItem(LS_KEY, String(d));
+      const url = new URL(window.location.href);
+      url.searchParams.set('days', String(d));
+      window.location.href = url.toString();
+    }
+
+    function highlightBtn(d) {
+      document.querySelectorAll('.date-range-btn').forEach(btn => {
+        const active = parseInt(btn.dataset.days, 10) === d;
+        btn.classList.toggle('bg-indigo-50', active);
+        btn.classList.toggle('text-indigo-700', active);
+        btn.classList.toggle('font-medium', active);
+      });
+    }
+
+    const urlDays = parseInt(new URLSearchParams(window.location.search).get('days') || '0', 10);
+    const activeDays = validDays.includes(urlDays) ? urlDays : days;
+    if (!urlDays && activeDays !== 30) {
+      applyDateRange(activeDays);
+      return;
+    }
+    highlightBtn(activeDays);
+
+    document.querySelectorAll('.date-range-btn').forEach(btn => {
+      btn.addEventListener('click', () => applyDateRange(parseInt(btn.dataset.days, 10)));
+    });
+
+    loadKPI(activeDays);
+  })();
+
   // Initial loads (only run the ones visible on the current tab)
   try {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get("tab") || "campaigns";
-    // Always load KPIs so header is fresh
-    loadKPI(30);
     if (tab === "optimizer") loadOptimizer();
   } catch(_) {}
+})();
+
+// Smart bulk actions
+(function() {
+  const base = "{{ url_for('gads_bp.overview')|replace('/overview','') }}";
+  const CSRF = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+  function getDays() {
+    return parseInt(new URLSearchParams(window.location.search).get('days') || '30', 10);
+  }
+
+  function setStatus(msg, color) {
+    const el = document.getElementById('smart-action-status');
+    if (!el) return;
+    el.textContent = msg;
+    el.className = `mt-3 text-xs ${color}`;
+    el.classList.remove('hidden');
+  }
+
+  const btnPause = document.getElementById('btn-pause-wasted');
+  if (btnPause) {
+    btnPause.addEventListener('click', async () => {
+      const days = getDays();
+      btnPause.disabled = true;
+      btnPause.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking…';
+      try {
+        const previewRes = await fetch(`${base}/bulk-pause-wasted?days=${days}&preview=1`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF() },
+          body: JSON.stringify({ preview: true }),
+        });
+        const preview = await previewRes.json();
+        if (preview.error) { setStatus('Error: ' + preview.error, 'text-red-600'); btnPause.disabled = false; btnPause.innerHTML = '<i class="fa-solid fa-pause"></i> Pause wasted spend'; return; }
+        const count = preview.paused ?? preview.would_pause ?? 0;
+        const savedDollars = ((preview.saved_micros || 0) / 1_000_000).toFixed(2);
+        if (count === 0) { setStatus('No qualifying keywords found (need spend > $5 + 0 conversions).', 'text-gray-500'); btnPause.disabled = false; btnPause.innerHTML = '<i class="fa-solid fa-pause"></i> Pause wasted spend'; return; }
+        const ok = await appConfirm(`Pausing ${count} keyword${count !== 1 ? 's' : ''} will stop $${savedDollars} in wasted spend. Continue?`);
+        if (!ok) { btnPause.disabled = false; btnPause.innerHTML = '<i class="fa-solid fa-pause"></i> Pause wasted spend'; return; }
+        const res = await fetch(`${base}/bulk-pause-wasted?days=${days}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF() },
+          body: JSON.stringify({}),
+        });
+        const data = await res.json();
+        if (data.error) { setStatus('Error: ' + data.error, 'text-red-600'); }
+        else { setStatus(`Paused ${data.paused} keyword${data.paused !== 1 ? 's' : ''}, saving $${((data.saved_micros||0)/1_000_000).toFixed(2)}.`, 'text-green-700'); }
+      } catch(e) {
+        setStatus('Request failed: ' + e.message, 'text-red-600');
+      }
+      btnPause.disabled = false;
+      btnPause.innerHTML = '<i class="fa-solid fa-pause"></i> Pause wasted spend';
+    });
+  }
+
+  const btnTighten = document.getElementById('btn-tighten-broad');
+  if (btnTighten) {
+    btnTighten.addEventListener('click', async () => {
+      btnTighten.disabled = true;
+      btnTighten.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking…';
+      try {
+        const previewRes = await fetch(`${base}/bulk-tighten-broad?preview=1`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF() },
+          body: JSON.stringify({ preview: true }),
+        });
+        const preview = await previewRes.json();
+        if (preview.error) { setStatus('Error: ' + preview.error, 'text-red-600'); btnTighten.disabled = false; btnTighten.innerHTML = '<i class="fa-solid fa-filter"></i> Tighten broad match'; return; }
+        const count = preview.changed ?? preview.would_change ?? 0;
+        if (count === 0) { setStatus('No broad match keywords flagged for tightening.', 'text-gray-500'); btnTighten.disabled = false; btnTighten.innerHTML = '<i class="fa-solid fa-filter"></i> Tighten broad match'; return; }
+        const ok = await appConfirm(`Change ${count} broad match keyword${count !== 1 ? 's' : ''} to phrase match? This cannot be undone without a manual edit.`);
+        if (!ok) { btnTighten.disabled = false; btnTighten.innerHTML = '<i class="fa-solid fa-filter"></i> Tighten broad match'; return; }
+        const res = await fetch(`${base}/bulk-tighten-broad`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF() },
+          body: JSON.stringify({}),
+        });
+        const data = await res.json();
+        if (data.error) { setStatus('Error: ' + data.error, 'text-red-600'); }
+        else { setStatus(`Changed ${data.changed} keyword${data.changed !== 1 ? 's' : ''} to phrase match.`, 'text-green-700'); }
+      } catch(e) {
+        setStatus('Request failed: ' + e.message, 'text-red-600');
+      }
+      btnTighten.disabled = false;
+      btnTighten.innerHTML = '<i class="fa-solid fa-filter"></i> Tighten broad match';
+    });
+  }
 })();
 
 // Bid strategy selects (item 9)

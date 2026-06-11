@@ -66,6 +66,9 @@ def optimize():
         return redirect(url_for("account_bp.pricing"))
 
     tab = request.args.get("tab", "cockpit")
+    days = int(request.args.get("days", 30))
+    if days not in (7, 30, 90):
+        days = 30
     aid = current_account_id()
 
     connected = False
@@ -235,7 +238,16 @@ def optimize():
                 text("""
                     SELECT k.id, k.text, k.match_type, k.status, k.max_cpc_cents,
                            ag.name as adgroup_name, ag.campaign_id,
-                           ac.name as campaign_name
+                           ac.name as campaign_name,
+                           (
+                               SELECT gs.quality_score
+                               FROM gads_stats_daily gs
+                               WHERE gs.entity_type = 'keyword'
+                                 AND gs.entity_id = k.id
+                                 AND gs.quality_score IS NOT NULL
+                               ORDER BY gs.date DESC
+                               LIMIT 1
+                           ) AS quality_score
                     FROM keywords k
                     JOIN ad_groups ag ON ag.id = k.ad_group_id
                     JOIN ads_campaigns ac ON ac.id = ag.campaign_id
@@ -383,6 +395,7 @@ def optimize():
     return render_template(
         "google/ads/optimize.html",
         tab=tab,
+        days=days,
         connected=connected,
         gads_stats=gads_stats,
         keywords_data=keywords_data,
@@ -1106,6 +1119,145 @@ def negatives_delete(neg_id: int):
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception("negatives_delete error")
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------
+# Smart Bulk Actions
+# ---------------------------
+
+@gads_bp.post("/bulk-pause-wasted")
+@login_required
+def bulk_pause_wasted():
+    """
+    Pause all enabled keywords with spend > $5 and 0 conversions in the given date window.
+    Query param: ?days=7|30|90 (default 30)
+    Returns {"paused": N, "saved_micros": M}
+    """
+    if not is_paid_account():
+        return jsonify({"error": "Paid plan required"}), 403
+
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    days = int(request.args.get("days", 30))
+    if days not in (7, 30, 90):
+        days = 30
+    preview = request.args.get("preview") == "1"
+
+    from datetime import date as _date, timedelta as _td
+    cutoff = _date.today() - _td(days=days)
+
+    try:
+        rows = db.session.execute(text("""
+            SELECT gs.entity_id AS kw_id,
+                   SUM(gs.cost_micros) AS total_cost_micros
+            FROM gads_stats_daily gs
+            JOIN keywords k ON k.id = gs.entity_id
+            JOIN ad_groups ag ON ag.id = k.ad_group_id
+            JOIN ads_campaigns ac ON ac.id = ag.campaign_id
+            WHERE gs.entity_type = 'keyword'
+              AND ac.account_id = :aid
+              AND gs.date >= :cutoff
+              AND k.status = 'enabled'
+            GROUP BY gs.entity_id
+            HAVING SUM(gs.cost_micros) >= 5000000 AND SUM(gs.conversions) = 0
+        """), {"aid": aid, "cutoff": cutoff}).mappings().all()
+
+        if preview:
+            count = len(rows)
+            total_micros = sum(int(r["total_cost_micros"]) for r in rows)
+            return jsonify({"paused": count, "saved_micros": total_micros})
+
+        paused = 0
+        saved_micros = 0
+        executor = None
+        try:
+            from app.services.google_ads_auto_executor import GoogleAdsAutoExecutor
+            executor = GoogleAdsAutoExecutor(account_id=aid)
+        except Exception:
+            pass
+
+        for row in rows:
+            kw = AdsKeyword.query.get(row["kw_id"])
+            if not kw:
+                continue
+            if executor:
+                try:
+                    executor.execute_pause_keyword(kw.id)
+                except Exception:
+                    pass
+            kw.status = "paused"
+            paused += 1
+            saved_micros += int(row["total_cost_micros"])
+
+        db.session.commit()
+        return jsonify({"paused": paused, "saved_micros": saved_micros})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("bulk_pause_wasted error")
+        return jsonify({"error": str(e)}), 500
+
+
+@gads_bp.post("/bulk-tighten-broad")
+@login_required
+def bulk_tighten_broad():
+    """
+    Change all open broad_match optimizer recommendations to phrase match.
+    Returns {"changed": N}
+    """
+    if not is_paid_account():
+        return jsonify({"error": "Paid plan required"}), 403
+
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    preview = request.args.get("preview") == "1"
+
+    try:
+        import json as _json
+        recs = OptimizerRecommendation.query.filter_by(
+            account_id=aid, status="open", category="broad_match"
+        ).all()
+
+        if preview:
+            return jsonify({"changed": len(recs)})
+
+        changed = 0
+        executor = None
+        try:
+            from app.services.google_ads_auto_executor import GoogleAdsAutoExecutor
+            executor = GoogleAdsAutoExecutor(account_id=aid)
+        except Exception:
+            pass
+
+        for rec in recs:
+            try:
+                suggested = _json.loads(rec.suggested_action_json) if isinstance(rec.suggested_action_json, str) else (rec.suggested_action_json or {})
+                kw_id = suggested.get("keyword_id")
+                if not kw_id:
+                    continue
+                kw = AdsKeyword.query.get(kw_id)
+                if not kw:
+                    continue
+                if executor:
+                    try:
+                        executor.execute_change_match_type(int(kw_id), to="phrase")
+                    except Exception:
+                        pass
+                kw.match_type = "phrase"
+                rec.status = "applied"
+                changed += 1
+            except Exception:
+                continue
+
+        db.session.commit()
+        return jsonify({"changed": changed})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("bulk_tighten_broad error")
         return jsonify({"error": str(e)}), 500
 
 

@@ -75,6 +75,22 @@ def optimize():
     except Exception:
         pass
 
+    # Data freshness — when did the last sync complete?
+    last_synced_at = None
+    last_synced_stale = False
+    if aid:
+        try:
+            from datetime import datetime as _dt, timedelta as _td
+            raw = db.session.execute(text(
+                "SELECT setting_value FROM account_settings "
+                "WHERE account_id = :aid AND setting_key = 'gads_last_synced_at' LIMIT 1"
+            ), {"aid": aid}).scalar()
+            if raw:
+                last_synced_at = _dt.fromisoformat(raw)
+                last_synced_stale = (_dt.utcnow() - last_synced_at) > _td(hours=24)
+        except Exception:
+            db.session.rollback()
+
     # ---- Command Center (cockpit) data ----
     cockpit: dict = {}
     if tab == "cockpit" and aid:
@@ -370,13 +386,18 @@ def optimize():
         connected=connected,
         gads_stats=gads_stats,
         keywords_data=keywords_data,
+        keywords_truncated=len(keywords_data) >= 1000,
         negatives_data=negatives_data,
+        negatives_truncated=len(negatives_data) >= 1000,
         campaigns_list=campaigns_list,
         adgroups_list=adgroups_list,
         campaigns_tab_data=campaigns_tab_data,
         adgroups_tab_data=adgroups_tab_data,
         ads_tab_data=ads_tab_data,
+        ads_truncated=len(ads_tab_data) >= 500,
         cockpit=cockpit,
+        last_synced_at=last_synced_at,
+        last_synced_stale=last_synced_stale,
     )
 
 
@@ -492,7 +513,7 @@ def optimizer_apply():
                     errors.append({"id": rec_id, "error": "Not found or unauthorized"})
                     continue
                 if rec.status == "applied":
-                    applied.append(rec_id)
+                    applied.append({"id": rec_id, "api_status": "already_applied"})
                     continue
 
                 import json as _json
@@ -502,22 +523,61 @@ def optimizer_apply():
                 api_status = "local_only"
                 action_type = suggested.get("action_type") or rec.category
 
-                # --- Local DB mutations (always attempted) ---
-                if action_type in ("budget", "increase_budget") and suggested.get("new_budget_micros"):
-                    camp = AdsCampaign.query.get(suggested.get("campaign_id"))
-                    if camp:
-                        camp.daily_budget_cents = int(suggested["new_budget_micros"] / 10000)
-                        api_status = "local_db"
+                # --- Google Ads API mutation first, local DB mirror second ---
+                # The local row is only updated when the API push succeeds (or
+                # when no executor is available, in which case we surface
+                # "local_only" so the UI can warn the user).
+                if action_type in ("budget", "increase_budget"):
+                    new_micros = suggested.get("new_budget_micros") or (
+                        int(suggested["suggested_budget_cents"]) * 10000
+                        if suggested.get("suggested_budget_cents") else None
+                    )
+                    camp_id = suggested.get("campaign_id")
+                    if new_micros and camp_id:
+                        if executor:
+                            try:
+                                executor.execute_update_budget(int(camp_id), int(new_micros))
+                                api_status = "pushed_to_google"
+                            except Exception as api_err:
+                                current_app.logger.warning(f"Budget push failed for rec {rec_id}: {api_err}")
+                                errors.append({"id": rec_id, "error": f"Google Ads push failed: {api_err}"})
+                                continue
+                        camp = AdsCampaign.query.get(camp_id)
+                        if camp:
+                            camp.daily_budget_cents = int(new_micros / 10000)
+                            if api_status != "pushed_to_google":
+                                api_status = "local_db"
                 elif action_type in ("pause_keyword", "keyword_paused") and suggested.get("keyword_id"):
+                    if executor:
+                        try:
+                            executor.execute_pause_keyword(int(suggested["keyword_id"]))
+                            api_status = "pushed_to_google"
+                        except Exception as api_err:
+                            current_app.logger.warning(f"Keyword pause push failed for rec {rec_id}: {api_err}")
+                            errors.append({"id": rec_id, "error": f"Google Ads push failed: {api_err}"})
+                            continue
                     kw = AdsKeyword.query.get(suggested["keyword_id"])
                     if kw:
                         kw.status = "paused"
-                        api_status = "local_db"
+                        if api_status != "pushed_to_google":
+                            api_status = "local_db"
                 elif action_type in ("change_match_type", "broad_match") and suggested.get("keyword_id"):
+                    to_match = (suggested.get("to") or "phrase").lower()
+                    if executor:
+                        try:
+                            executor.execute_change_match_type(int(suggested["keyword_id"]), to=to_match)
+                            api_status = "pushed_to_google"
+                        except Exception as api_err:
+                            current_app.logger.warning(f"Match type push failed for rec {rec_id}: {api_err}")
+                            errors.append({"id": rec_id, "error": f"Google Ads push failed: {api_err}"})
+                            continue
                     kw = AdsKeyword.query.get(suggested["keyword_id"])
                     if kw:
-                        kw.match_type = (suggested.get("to") or "phrase").lower()
-                        api_status = "local_db"
+                        # In Google a match-type change = new keyword + pause old;
+                        # locally we mirror the end state on the same row.
+                        kw.match_type = to_match
+                        if api_status != "pushed_to_google":
+                            api_status = "local_db"
 
                 # --- Attempt real Google Ads API mutation via executor ---
                 if executor and action_type in ("negative_keyword", "wasted_spend") and suggested.get("negatives"):
@@ -559,18 +619,21 @@ def optimizer_apply():
 
                 # Mark recommendation applied
                 rec.status = "applied"
-                applied.append(rec_id)
+                applied.append({"id": rec_id, "api_status": api_status})
 
             except Exception as e:
                 current_app.logger.exception(f"Error applying rec {rec_id}")
                 errors.append({"id": rec_id, "error": str(e)})
 
         db.session.commit()
+        pushed = sum(1 for a in applied if a["api_status"] == "pushed_to_google")
+        local_only = len(applied) - pushed
         return jsonify({
             "applied": len(applied),
-            "applied_ids": applied,
+            "applied_ids": [a["id"] for a in applied],
+            "pushed_to_google": pushed,
+            "local_only": local_only,
             "errors": errors,
-            "api_status": "pushed_to_google" if executor else "local_only",
         })
 
     except Exception as e:
@@ -1091,6 +1154,14 @@ def sync():
         result["conversions"] = sync_conversions(aid)
     except Exception as exc:
         current_app.logger.warning("Conversions sync failed for account %s: %s", aid, exc)
+
+    # Record sync timestamp so every tab can show data freshness
+    try:
+        from app.google.autonomous_routes import _save_setting
+        from datetime import datetime as _dt
+        _save_setting(aid, "gads_last_synced_at", _dt.utcnow().isoformat())
+    except Exception:
+        current_app.logger.warning("Could not record gads_last_synced_at for account %s", aid)
 
     status = 200 if not result["errors"] else 207
     return jsonify(result), status

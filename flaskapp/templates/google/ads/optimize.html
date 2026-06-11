@@ -52,6 +52,17 @@ window.appPrompt = window.appPrompt || function(message, defaultValue) {
       {% endif %}
     </div>
     <div class="flex items-center gap-3">
+      {% if last_synced_at %}
+      <span class="text-xs {{ 'text-amber-600 font-medium' if last_synced_stale else 'text-gray-400' }}"
+            title="{{ last_synced_at.strftime('%Y-%m-%d %H:%M') }} UTC">
+        {% if last_synced_stale %}<i class="fa-solid fa-triangle-exclamation mr-1"></i>{% endif %}
+        Synced {{ last_synced_at.strftime('%b %-d, %H:%M') }} UTC
+      </span>
+      {% elif connected %}
+      <span class="text-xs text-amber-600 font-medium">
+        <i class="fa-solid fa-triangle-exclamation mr-1"></i> Never synced
+      </span>
+      {% endif %}
       <a href="{{ url_for('gads_bp.optimize') }}" class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"><i class="fa-solid fa-rotate-right"></i> Refresh</a>
       <button id="gads-sync-btn-top" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500">
         <i class="fa-solid fa-rotate"></i> Sync Data
@@ -499,6 +510,9 @@ window.appPrompt = window.appPrompt || function(message, defaultValue) {
       };
     }
     async function applyAction(recId, btn) {
+      if (!window.confirm('Apply this optimization? The change will be pushed to your live Google Ads account immediately.')) {
+        return;
+      }
       btn.disabled = true;
       btn.textContent = '…';
       try {
@@ -1409,6 +1423,9 @@ window.appPrompt = window.appPrompt || function(message, defaultValue) {
         </table>
       </div>
       <p class="text-xs text-gray-400 mt-2">Showing <span id="kw-visible-count">{{ keywords_data|length }}</span> of {{ keywords_data|length }} keywords</p>
+      {% if keywords_truncated %}
+      <p class="text-xs text-amber-600 mt-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>This list is capped at 1,000 keywords — your account has more. Use the campaign filter to narrow down.</p>
+      {% endif %}
 
       {% else %}
       <!-- Empty state -->
@@ -1869,6 +1886,15 @@ window.appPrompt = window.appPrompt || function(message, defaultValue) {
       }
 
       const recommendation_ids = Array.from(checkboxes).map(cb => Number(cb.getAttribute("data-id")));
+
+      // Confirm before touching the live account
+      const confirmed = window.confirm(
+        `Apply ${recommendation_ids.length} optimization(s)?\n\n` +
+        `These changes will be pushed to your live Google Ads account ` +
+        `(keyword pauses, match type changes, budget updates) and take effect immediately.`
+      );
+      if (!confirmed) return;
+
       const applyBtn = applySelectedBtn;
       const originalText = applyBtn.innerHTML;
 
@@ -1891,7 +1917,15 @@ window.appPrompt = window.appPrompt || function(message, defaultValue) {
         }
 
         const out = await res.json();
-        showToast(`Queued ${recommendation_ids.length} suggestion(s).`, 'success');
+        if (out.local_only > 0) {
+          showToast(
+            `${out.pushed_to_google || 0} pushed to Google Ads · ${out.local_only} saved locally only ` +
+            `(reconnect Google Ads to push everything live).`, 'info');
+        } else if ((out.errors || []).length > 0) {
+          showToast(`Applied ${out.applied || 0}, ${out.errors.length} failed: ${out.errors[0].error || ''}`, 'error');
+        } else {
+          showToast(`Applied ${out.applied || recommendation_ids.length} optimization(s) to your Google Ads account.`, 'success');
+        }
 
         // Uncheck all and reload
         document.querySelectorAll(".optimization-checkbox:checked").forEach(cb => cb.checked = false);
@@ -2039,18 +2073,27 @@ async function doSync(btn) {
     const r = await fetch('/account/google/ads/sync', {method: 'POST'});
     const data = await r.json();
     const s = data.sync || {};
+    const errs = (data.errors || []).concat(s.errors || []);
     const msg = `Synced: ${s.campaigns_synced || 0} campaigns · ${s.keywords_synced || 0} keywords · ${s.search_terms_synced || 0} search terms · ${data.optimizer?.created || 0} recommendations`;
     btn.title = msg;
-    btn.innerHTML = '<i class="fa-solid fa-check text-green-300"></i> Done';
+    if (errs.length > 0) {
+      btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-300"></i> Partial';
+      if (typeof showToast === 'function') {
+        showToast('Sync finished with issues: ' + errs[0], 'error');
+      }
+    } else {
+      btn.innerHTML = '<i class="fa-solid fa-check text-green-300"></i> Done';
+    }
     setTimeout(() => {
       btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Sync Data';
       btn.disabled = false;
-      if (window.location.search.includes('cockpit') || !window.location.search) {
+      if (errs.length === 0 && (window.location.search.includes('cockpit') || !window.location.search)) {
         window.location.reload();
       }
-    }, 2500);
+    }, errs.length > 0 ? 5000 : 2500);
     if (typeof loadOptimizer === 'function') loadOptimizer();
   } catch (e) {
+    if (typeof showToast === 'function') showToast('Sync failed: ' + e.message, 'error');
     btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Sync Data';
     btn.disabled = false;
   }

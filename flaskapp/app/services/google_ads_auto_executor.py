@@ -1006,6 +1006,151 @@ Be conservative: when in doubt, mark as RELEVANT (false). Only mark terms IRRELE
         logger.info(f"Added negative keyword [{match_type}]: {resource_name}")
         return resource_name
 
+    def _resolve_keyword_google_ids(self, keyword_local_id: int) -> Optional[dict]:
+        """
+        Look up the Google resource IDs needed to mutate a keyword:
+        criterion_id, google ad_group_id, and keyword text/match_type.
+        Returns None if the keyword was never synced from Google.
+        """
+        row = db.session.execute(text("""
+            SELECT k.google_keyword_id, k.text, k.match_type, k.max_cpc_cents,
+                   ag.google_ad_group_id
+            FROM keywords k
+            JOIN ad_groups ag ON ag.id = k.ad_group_id
+            WHERE k.id = :kid
+        """), {"kid": keyword_local_id}).mappings().first()
+        if not row or not row["google_keyword_id"] or not row["google_ad_group_id"]:
+            return None
+        return dict(row)
+
+    def execute_pause_keyword(self, keyword_local_id: int) -> str:
+        """
+        Pause a keyword in the real Google Ads account.
+        Returns the mutated resource_name.
+        """
+        ids = self._resolve_keyword_google_ids(keyword_local_id)
+        if not ids:
+            raise ValueError(f"Keyword {keyword_local_id} has no Google IDs — sync first")
+
+        client = self._get_google_ads_client()
+        customer_id = self._customer_id
+
+        svc = client.get_service("AdGroupCriterionService")
+        op = client.get_type("AdGroupCriterionOperation")
+        criterion = op.update
+        criterion.resource_name = svc.ad_group_criterion_path(
+            customer_id, ids["google_ad_group_id"], ids["google_keyword_id"]
+        )
+        criterion.status = client.enums.AdGroupCriterionStatusEnum.PAUSED
+        op.update_mask.paths.append("status")
+
+        response = svc.mutate_ad_group_criteria(customer_id=customer_id, operations=[op])
+        resource_name = response.results[0].resource_name
+        logger.info("Paused keyword in Google Ads: %s", resource_name)
+        return resource_name
+
+    def execute_change_match_type(self, keyword_local_id: int, to: str = "phrase") -> dict:
+        """
+        Google Ads does not allow changing a keyword's match type in place.
+        The standard pattern: create a new keyword with the target match type,
+        then pause the original.
+
+        Returns {"created": resource_name, "paused": resource_name}.
+        """
+        ids = self._resolve_keyword_google_ids(keyword_local_id)
+        if not ids:
+            raise ValueError(f"Keyword {keyword_local_id} has no Google IDs — sync first")
+
+        client = self._get_google_ads_client()
+        customer_id = self._customer_id
+
+        agc_service = client.get_service("AdGroupCriterionService")
+        ag_service = client.get_service("AdGroupService")
+
+        match_enum = {
+            "exact": client.enums.KeywordMatchTypeEnum.EXACT,
+            "phrase": client.enums.KeywordMatchTypeEnum.PHRASE,
+            "broad": client.enums.KeywordMatchTypeEnum.BROAD,
+        }.get((to or "phrase").lower(), client.enums.KeywordMatchTypeEnum.PHRASE)
+
+        # 1. Create replacement keyword with the new match type
+        create_op = client.get_type("AdGroupCriterionOperation")
+        new_crit = create_op.create
+        new_crit.ad_group = ag_service.ad_group_path(customer_id, ids["google_ad_group_id"])
+        new_crit.status = client.enums.AdGroupCriterionStatusEnum.ENABLED
+        new_crit.keyword.text = ids["text"]
+        new_crit.keyword.match_type = match_enum
+        if ids.get("max_cpc_cents"):
+            new_crit.cpc_bid_micros = int(ids["max_cpc_cents"]) * 10000
+
+        # 2. Pause the original broad keyword
+        pause_op = client.get_type("AdGroupCriterionOperation")
+        old_crit = pause_op.update
+        old_crit.resource_name = agc_service.ad_group_criterion_path(
+            customer_id, ids["google_ad_group_id"], ids["google_keyword_id"]
+        )
+        old_crit.status = client.enums.AdGroupCriterionStatusEnum.PAUSED
+        pause_op.update_mask.paths.append("status")
+
+        response = agc_service.mutate_ad_group_criteria(
+            customer_id=customer_id, operations=[create_op, pause_op]
+        )
+        created = response.results[0].resource_name
+        paused = response.results[1].resource_name
+        logger.info("Match type change: created %s, paused %s", created, paused)
+        return {"created": created, "paused": paused}
+
+    def execute_update_budget(self, campaign_local_id: int, new_budget_micros: int) -> str:
+        """
+        Update a campaign's daily budget in the real Google Ads account.
+        Looks up the campaign's budget resource via GAQL, then mutates it.
+        Returns the mutated budget resource_name.
+        """
+        row = db.session.execute(text(
+            "SELECT google_campaign_id FROM ads_campaigns WHERE id = :cid"
+        ), {"cid": campaign_local_id}).first()
+        if not row or not row[0]:
+            raise ValueError(f"Campaign {campaign_local_id} has no Google ID — sync first")
+        google_campaign_id = row[0]
+
+        client = self._get_google_ads_client()
+        customer_id = self._customer_id
+
+        # Find the budget resource attached to this campaign
+        ga_service = client.get_service("GoogleAdsService")
+        query = (
+            "SELECT campaign.id, campaign.campaign_budget, "
+            "campaign_budget.explicitly_shared "
+            f"FROM campaign WHERE campaign.id = {int(google_campaign_id)}"
+        )
+        budget_resource = None
+        shared = False
+        for batch in ga_service.search_stream(customer_id=customer_id, query=query):
+            for r in batch.results:
+                budget_resource = r.campaign.campaign_budget
+                shared = bool(r.campaign_budget.explicitly_shared)
+        if not budget_resource:
+            raise ValueError(f"No budget found for campaign {google_campaign_id}")
+        if shared:
+            raise ValueError(
+                "This campaign uses a shared budget — adjust it in Google Ads "
+                "to avoid changing other campaigns unintentionally."
+            )
+
+        budget_service = client.get_service("CampaignBudgetService")
+        op = client.get_type("CampaignBudgetOperation")
+        budget = op.update
+        budget.resource_name = budget_resource
+        budget.amount_micros = int(new_budget_micros)
+        op.update_mask.paths.append("amount_micros")
+
+        response = budget_service.mutate_campaign_budgets(
+            customer_id=customer_id, operations=[op]
+        )
+        resource_name = response.results[0].resource_name
+        logger.info("Updated budget: %s -> %d micros", resource_name, new_budget_micros)
+        return resource_name
+
     def undo_action(self, action_id: int, user_id: Optional[int] = None, reason: Optional[str] = None) -> bool:
         """
         Undo a previously executed AI action.

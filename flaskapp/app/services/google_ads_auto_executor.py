@@ -1263,14 +1263,63 @@ Be conservative: when in doubt, mark as RELEVANT (false). Only mark terms IRRELE
         logger.info(f"Removed negative keyword criterion: {resource_name}")
 
     def _undo_keyword_pause(self, action: AIAction) -> None:
-        """Undo keyword pause by re-enabling it."""
-        # TODO: Implement keyword re-enabling via Google Ads API
-        pass
+        """Undo keyword pause by re-enabling it via AdGroupCriterionService."""
+        before = action.before_value or {}
+        google_keyword_id = before.get("google_keyword_id") or action.keyword_id
+        google_ad_group_id = before.get("google_ad_group_id") or action.ad_group_id
+
+        if not google_keyword_id or not google_ad_group_id:
+            raise ValueError(
+                f"Action {action.id} missing google_keyword_id or google_ad_group_id in before_value"
+            )
+
+        client = self._get_google_ads_client()
+        customer_id = self._customer_id
+
+        svc = client.get_service("AdGroupCriterionService")
+        op = client.get_type("AdGroupCriterionOperation")
+        criterion = op.update
+        criterion.resource_name = svc.ad_group_criterion_path(
+            customer_id, str(google_ad_group_id), str(google_keyword_id)
+        )
+        criterion.status = client.enums.AdGroupCriterionStatusEnum.ENABLED
+        op.update_mask.paths.append("status")
+
+        response = svc.mutate_ad_group_criteria(customer_id=customer_id, operations=[op])
+        resource_name = response.results[0].resource_name
+        logger.info("Re-enabled keyword in Google Ads: %s", resource_name)
 
     def _undo_bid_adjustment(self, action: AIAction) -> None:
-        """Undo bid adjustment by reverting to previous bid."""
-        # TODO: Implement bid revert via Google Ads API
-        pass
+        """Undo bid adjustment by reverting to the previous bid stored in before_value."""
+        before = action.before_value or {}
+        previous_bid_micros = before.get("bid_micros") or before.get("previous_bid_micros")
+        google_keyword_id = before.get("google_keyword_id") or action.keyword_id
+        google_ad_group_id = before.get("google_ad_group_id") or action.ad_group_id
+
+        if previous_bid_micros is None:
+            raise ValueError(
+                f"Action {action.id} has no previous bid in before_value — cannot undo"
+            )
+        if not google_keyword_id or not google_ad_group_id:
+            raise ValueError(
+                f"Action {action.id} missing google_keyword_id or google_ad_group_id in before_value"
+            )
+
+        client = self._get_google_ads_client()
+        customer_id = self._customer_id
+
+        svc = client.get_service("AdGroupCriterionService")
+        op = client.get_type("AdGroupCriterionOperation")
+        criterion = op.update
+        criterion.resource_name = svc.ad_group_criterion_path(
+            customer_id, str(google_ad_group_id), str(google_keyword_id)
+        )
+        criterion.effective_cpc_bid_micros = int(previous_bid_micros)
+        op.update_mask.paths.append("effective_cpc_bid_micros")
+
+        response = svc.mutate_ad_group_criteria(customer_id=customer_id, operations=[op])
+        resource_name = response.results[0].resource_name
+        logger.info("Reverted bid in Google Ads: %s -> %d micros", resource_name, int(previous_bid_micros))
 
     def get_recent_actions(self, days: int = 7, limit: int = 100) -> List[AIAction]:
         """Get recent AI actions for this account."""

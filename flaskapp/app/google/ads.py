@@ -1713,6 +1713,45 @@ def rules_delete(rule_id: int):
     return jsonify({"ok": True})
 
 
+@gads_bp.post("/actions/<int:action_id>/undo")
+@login_required
+def action_undo(action_id: int):
+    """
+    Reverse an AI action in Google Ads and mark it as undone.
+    Supports: keyword_paused, bid_adjusted, negative_keyword_added.
+    """
+    from app.models_ai_actions import AIAction
+    from app.auth.utils import current_user_id
+
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    action = AIAction.query.filter_by(id=action_id, account_id=aid).first()
+    if not action:
+        return jsonify({"error": "Action not found"}), 404
+
+    if not action.is_undoable:
+        if action.status == "undone":
+            return jsonify({"error": "Action already undone"}), 409
+        if not action.can_undo:
+            return jsonify({"error": "This action cannot be undone"}), 422
+        return jsonify({"error": f"Action cannot be undone (status: {action.status})"}), 422
+
+    try:
+        from app.services.google_ads_auto_executor import GoogleAdsAutoExecutor
+        executor = GoogleAdsAutoExecutor(account_id=aid)
+        uid = current_user_id() if callable(current_user_id) else None
+        success = executor.undo_action(action_id, user_id=uid)
+        if not success:
+            return jsonify({"error": "Undo failed — check server logs"}), 500
+        return jsonify({"ok": True, "status": "undone"})
+    except Exception as exc:
+        current_app.logger.exception("action_undo error for action %s", action_id)
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 500
+
+
 @gads_bp.post("/rules/run")
 @login_required
 def rules_run():

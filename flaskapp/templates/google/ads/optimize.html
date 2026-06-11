@@ -37,6 +37,41 @@ window.appPrompt = window.appPrompt || function(message, defaultValue) {
     back.querySelector('[data-a="c"]').onclick = () => { back.remove(); resolve(null); };
   });
 };
+async function undoAction(actionId, btn) {
+  btn.disabled = true;
+  btn.textContent = '…';
+  try {
+    const r = await fetch('/account/google/ads/actions/' + actionId + '/undo', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+    });
+    const d = await r.json();
+    if (r.ok && d.ok) {
+      const row = document.getElementById('activity-row-' + actionId);
+      if (row) {
+        row.classList.add('opacity-50');
+        btn.remove();
+        const undoneLabel = document.createElement('span');
+        undoneLabel.className = 'text-xs text-gray-400 flex-shrink-0';
+        undoneLabel.textContent = 'Undone';
+        row.appendChild(undoneLabel);
+        const icon = row.querySelector('i');
+        if (icon) {
+          icon.className = 'fa-solid fa-rotate-left text-gray-400 text-xs flex-shrink-0';
+        }
+      }
+      showToast('Action undone successfully', 'success');
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Undo';
+      showToast(d.error || 'Undo failed', 'error');
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Undo';
+    showToast('Undo failed — network error', 'error');
+  }
+}
 </script>
 <div class="max-w-7xl mx-auto">
 
@@ -430,10 +465,13 @@ window.appPrompt = window.appPrompt || function(message, defaultValue) {
       <div class="divide-y">
         {% set recent = cp.get('recent_actions', []) %}
         {% if recent %}
+          {% set undoable_types = ['keyword_paused', 'bid_adjusted', 'negative_keyword_added'] %}
           {% for act in recent %}
-          <div class="flex items-center gap-3 px-4 py-2.5 text-sm">
+          <div class="flex items-center gap-3 px-4 py-2.5 text-sm activity-row {{ 'opacity-50' if act.status == 'undone' else '' }}" id="activity-row-{{ act.id }}">
             {% if act.status == 'executed' or act.status == 'applied' %}
             <i class="fa-solid fa-circle-check text-green-500 text-xs flex-shrink-0"></i>
+            {% elif act.status == 'undone' %}
+            <i class="fa-solid fa-rotate-left text-gray-400 text-xs flex-shrink-0"></i>
             {% elif act.status == 'failed' %}
             <i class="fa-solid fa-circle-xmark text-red-400 text-xs flex-shrink-0"></i>
             {% elif act.status == 'pending' %}
@@ -446,6 +484,15 @@ window.appPrompt = window.appPrompt || function(message, defaultValue) {
               {% if act.campaign_name %}<span class="text-xs text-gray-400">{{ act.campaign_name }}</span>{% endif %}
             </div>
             <span class="text-xs text-gray-400 flex-shrink-0">{{ act.created_at.strftime('%b %-d %H:%M') if act.created_at else '' }}</span>
+            {% if act.status == 'executed' and act.action_type in undoable_types %}
+            <button class="undo-btn text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded border border-gray-200 hover:border-red-300 transition flex-shrink-0"
+                    data-action-id="{{ act.id }}"
+                    onclick="undoAction({{ act.id }}, this)">Undo</button>
+            {% elif act.status == 'executed' %}
+            <span class="text-xs text-gray-300 flex-shrink-0" title="This action cannot be undone">—</span>
+            {% elif act.status == 'undone' %}
+            <span class="text-xs text-gray-400 flex-shrink-0">Undone</span>
+            {% endif %}
           </div>
           {% endfor %}
         {% else %}

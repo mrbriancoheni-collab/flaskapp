@@ -412,9 +412,20 @@ async function undoAction(actionId, btn) {
             </div>
             {% endfor %}
           {% else %}
-            <div class="px-4 py-8 text-center text-sm text-gray-400">
-              <i class="fa-solid fa-check-circle text-green-400 text-2xl mb-2 block"></i>
-              No pending actions. Run a sync to generate recommendations.
+            <div class="px-4 py-10 text-center">
+              {% if cp.get('needs_sync') %}
+              <i class="fa-solid fa-rotate text-gray-300 text-4xl mb-3 block"></i>
+              <p class="text-sm font-semibold text-gray-700">Nothing to fix yet</p>
+              <p class="text-sm text-gray-500 mt-1 mb-4">Sync your Google Ads account and we'll look for ways to save you money.</p>
+              <button onclick="doSync(this)"
+                      class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
+                <i class="fa-solid fa-rotate"></i> Sync Data
+              </button>
+              {% else %}
+              <i class="fa-solid fa-circle-check text-green-400 text-4xl mb-3 block"></i>
+              <p class="text-sm font-semibold text-gray-700">You're all caught up!</p>
+              <p class="text-sm text-gray-500 mt-1">No new recommendations right now. We check your account daily.</p>
+              {% endif %}
             </div>
           {% endif %}
         </div>
@@ -502,7 +513,11 @@ async function undoAction(actionId, btn) {
           </div>
           {% endfor %}
         {% else %}
-          <div class="px-4 py-6 text-center text-sm text-gray-400">No recent activity.</div>
+          <div class="px-4 py-10 text-center">
+            <i class="fa-solid fa-clock-rotate-left text-gray-300 text-4xl mb-3 block"></i>
+            <p class="text-sm font-semibold text-gray-700">No AI actions yet</p>
+            <p class="text-sm text-gray-500 mt-1">Once your agent starts optimizing, every change will be logged here.</p>
+          </div>
         {% endif %}
       </div>
     </div>
@@ -1270,16 +1285,24 @@ async function undoAction(actionId, btn) {
 
       {% else %}
       <!-- Empty state -->
+      {% set never_synced = not (last_synced_at is defined and last_synced_at) %}
       <div class="rounded-xl border bg-white p-12 text-center shadow-sm">
-        <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50">
-          <i class="fa-solid fa-rectangle-ad text-indigo-400 text-2xl"></i>
-        </div>
+        <i class="fa-solid fa-rectangle-ad text-gray-300 text-4xl mb-4"></i>
+        {% if never_synced %}
+        <h3 class="text-base font-semibold text-gray-800 mb-1">No ads synced yet</h3>
+        <p class="text-sm text-gray-500 mb-4">Sync your Google Ads account to see your ads here.</p>
+        <button onclick="doSync(this)"
+                class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
+          <i class="fa-solid fa-rotate"></i> Sync Data
+        </button>
+        {% else %}
         <h3 class="text-base font-semibold text-gray-800 mb-1">No ads yet</h3>
-        <p class="text-sm text-gray-500 mb-4">Create a campaign with ads to start showing your ads.</p>
+        <p class="text-sm text-gray-500 mb-4">Ads are what customers see on Google — create a campaign to write your first one.</p>
         <a href="{{ url_for('gads_bp.optimize') }}?tab=publish"
            class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
           <i class="fa-solid fa-plus"></i> Create Campaign
         </a>
+        {% endif %}
       </div>
       {% endif %}
 
@@ -1510,16 +1533,24 @@ async function undoAction(actionId, btn) {
 
       {% else %}
       <!-- Empty state -->
+      {% set never_synced = not (last_synced_at is defined and last_synced_at) %}
       <div class="rounded-xl border bg-white p-12 text-center shadow-sm">
-        <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50">
-          <i class="fa-solid fa-key text-indigo-400 text-2xl"></i>
-        </div>
-        <h3 class="text-base font-semibold text-gray-800 mb-1">No keywords found</h3>
-        <p class="text-sm text-gray-500 mb-4">Add keywords to your ad groups to start targeting searches.</p>
+        <i class="fa-solid fa-key text-gray-300 text-4xl mb-4"></i>
+        {% if never_synced %}
+        <h3 class="text-base font-semibold text-gray-800 mb-1">No keywords synced yet</h3>
+        <p class="text-sm text-gray-500 mb-4">Sync your Google Ads account to see your keywords here.</p>
+        <button onclick="doSync(this)"
+                class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
+          <i class="fa-solid fa-rotate"></i> Sync Data
+        </button>
+        {% else %}
+        <h3 class="text-base font-semibold text-gray-800 mb-1">No keywords yet</h3>
+        <p class="text-sm text-gray-500 mb-4">Keywords are the searches you want your ad to show up for — add your first one to start reaching customers.</p>
         <button id="btn-show-add-keyword-empty"
                 class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
           <i class="fa-solid fa-plus"></i> Add Your First Keyword
         </button>
+        {% endif %}
       </div>
       {% endif %}
 
@@ -1654,7 +1685,7 @@ async function undoAction(actionId, btn) {
                   <td class="px-3 py-2 text-gray-600 text-xs">{{ nk.campaign_name or '—' }}</td>
                   <td class="px-3 py-2 text-center">
                     <button class="neg-remove-btn text-red-400 hover:text-red-600 transition"
-                            data-id="{{ nk.id }}" title="Remove negative keyword">
+                            data-id="{{ nk.id }}" data-text="{{ nk.text | e }}" title="Remove negative keyword">
                       <i class="fa-solid fa-trash text-xs"></i>
                     </button>
                   </td>
@@ -1711,7 +1742,7 @@ async function undoAction(actionId, btn) {
                   <td class="px-3 py-2 text-gray-600 text-xs">{{ nk.adgroup_name or '—' }}</td>
                   <td class="px-3 py-2 text-center">
                     <button class="neg-remove-btn text-red-400 hover:text-red-600 transition"
-                            data-id="{{ nk.id }}" title="Remove negative keyword">
+                            data-id="{{ nk.id }}" data-text="{{ nk.text | e }}" title="Remove negative keyword">
                       <i class="fa-solid fa-trash text-xs"></i>
                     </button>
                   </td>
@@ -1726,11 +1757,9 @@ async function undoAction(actionId, btn) {
       {% else %}
       <!-- Empty state -->
       <div class="rounded-xl border bg-white p-12 text-center shadow-sm">
-        <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
-          <i class="fa-solid fa-ban text-red-400 text-2xl"></i>
-        </div>
+        <i class="fa-solid fa-ban text-gray-300 text-4xl mb-4"></i>
         <h3 class="text-base font-semibold text-gray-800 mb-1">No negative keywords yet</h3>
-        <p class="text-sm text-gray-500 mb-4">Add negative keywords to stop wasting budget on irrelevant searches.</p>
+        <p class="text-sm text-gray-500 mb-4">These block junk searches from wasting your budget — like "free" or "DIY" when you sell a paid service.</p>
         <div class="flex items-center justify-center gap-3">
           <button id="btn-show-add-negative-empty"
                   class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
@@ -1738,10 +1767,10 @@ async function undoAction(actionId, btn) {
           </button>
           <a href="{{ url_for('gads_bp.search_terms') }}"
              class="inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm hover:bg-gray-50 transition text-gray-600">
-            <i class="fa-solid fa-magnifying-glass"></i> Search Terms Report
+            <i class="fa-solid fa-magnifying-glass"></i> Review Search Terms
           </a>
         </div>
-        <p class="text-xs text-gray-400 mt-4">Tip: Review your search terms report to find candidates for negative keywords.</p>
+        <p class="text-xs text-gray-400 mt-4">Tip: Your search terms report shows what people actually typed — block anything that isn't a real customer.</p>
       </div>
       {% endif %}
 
@@ -1906,6 +1935,18 @@ async function undoAction(actionId, btn) {
     const rows = await res.json();
     const tbody = document.querySelector("#optimizer-table tbody");
     if (!tbody) return;
+    if (!rows.length) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="px-4 py-12 text-center">
+            <i class="fa-solid fa-circle-check text-green-400 text-4xl mb-3 block"></i>
+            <p class="text-sm font-semibold text-gray-700">You're all caught up!</p>
+            <p class="text-sm text-gray-500 mt-1">No new recommendations right now. We check your account daily.</p>
+          </td>
+        </tr>`;
+      updateSelectedCount();
+      return;
+    }
     tbody.innerHTML = rows.map(r => `
       <tr class="hover:bg-gray-50">
         <td class="px-3 py-2">
@@ -2264,6 +2305,152 @@ async function undoAction(actionId, btn) {
         this.disabled = false;
       }
     });
+  });
+})();
+
+// Keyword & negative-keyword tables: selection, delete confirmations, empty-state CTAs
+(function () {
+  const base = "{{ url_for('gads_bp.overview')|replace('/overview','') }}";
+
+  // ----- Keywords tab: checkbox selection + bulk action bar -----
+  const kwBar = document.getElementById('kw-bulk-bar');
+  const kwLabel = document.getElementById('kw-selected-label');
+  function kwChecked() { return Array.from(document.querySelectorAll('.kw-checkbox:checked')); }
+  function refreshKwBar() {
+    if (!kwBar) return;
+    const n = kwChecked().length;
+    kwBar.classList.toggle('hidden', n === 0);
+    kwBar.classList.toggle('flex', n > 0);
+    if (kwLabel) kwLabel.textContent = n + ' keyword' + (n === 1 ? '' : 's') + ' selected';
+  }
+  document.querySelectorAll('.kw-checkbox').forEach(cb => cb.addEventListener('change', refreshKwBar));
+  const kwAll = document.getElementById('kw-select-all');
+  if (kwAll) kwAll.addEventListener('change', function () {
+    document.querySelectorAll('.kw-checkbox').forEach(cb => {
+      const row = cb.closest('tr');
+      if (!row || row.style.display !== 'none') cb.checked = this.checked;
+    });
+    refreshKwBar();
+  });
+
+  document.querySelectorAll('#kw-bulk-bar [data-bulk]').forEach(btn => {
+    btn.addEventListener('click', async function () {
+      const action = this.dataset.bulk;
+      const boxes = kwChecked();
+      if (!boxes.length) return;
+      const ids = boxes.map(cb => parseInt(cb.dataset.id, 10)).filter(Boolean);
+      if (action === 'delete') {
+        let msg;
+        if (boxes.length === 1) {
+          const kwText = boxes[0].closest('tr')?.dataset.text || 'this keyword';
+          msg = 'Delete keyword "' + kwText + '"? Your ad will stop showing for these searches.';
+        } else {
+          msg = 'Delete ' + boxes.length + ' keywords? Your ads will stop showing for all of these searches.';
+        }
+        if (!window.confirm(msg)) return;
+      }
+      this.disabled = true;
+      try {
+        const r = await fetch(base + '/keywords/bulk-action', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({action: action, ids: ids}),
+        });
+        const data = await r.json();
+        if (r.ok && data.ok) {
+          window.location.reload();
+          return;
+        }
+        showToast(data.error || 'Action failed', 'error');
+      } catch (e) {
+        showToast('Request failed: ' + e.message, 'error');
+      }
+      this.disabled = false;
+    });
+  });
+
+  // ----- Negatives tab: single remove with confirmation -----
+  document.querySelectorAll('.neg-remove-btn').forEach(btn => {
+    btn.addEventListener('click', async function () {
+      const negText = this.dataset.text || 'this term';
+      if (!window.confirm('Remove the negative keyword "' + negText + '"? Your ads may start showing for these searches again.')) return;
+      this.disabled = true;
+      try {
+        const r = await fetch(base + '/negatives/' + this.dataset.id, {method: 'DELETE'});
+        const data = await r.json();
+        if (r.ok && data.ok) {
+          this.closest('tr')?.remove();
+          showToast('Negative keyword removed', 'success');
+          return;
+        }
+        showToast(data.error || 'Remove failed', 'error');
+      } catch (e) {
+        showToast('Request failed: ' + e.message, 'error');
+      }
+      this.disabled = false;
+    });
+  });
+
+  // ----- Negatives tab: checkbox selection + bulk remove -----
+  const negBar = document.getElementById('neg-bulk-bar');
+  const negLabel = document.getElementById('neg-selected-label');
+  function negChecked() { return Array.from(document.querySelectorAll('.neg-checkbox:checked')); }
+  function refreshNegBar() {
+    if (!negBar) return;
+    const n = negChecked().length;
+    negBar.classList.toggle('hidden', n === 0);
+    negBar.classList.toggle('flex', n > 0);
+    if (negLabel) negLabel.textContent = n + ' negative keyword' + (n === 1 ? '' : 's') + ' selected';
+  }
+  document.querySelectorAll('.neg-checkbox').forEach(cb => cb.addEventListener('change', refreshNegBar));
+  document.querySelectorAll('.neg-section-select-all').forEach(master => {
+    master.addEventListener('change', function () {
+      document.querySelectorAll('.neg-checkbox[data-section="' + this.dataset.section + '"]')
+        .forEach(cb => { cb.checked = this.checked; });
+      refreshNegBar();
+    });
+  });
+  const negBulkRemove = document.getElementById('neg-bulk-remove');
+  if (negBulkRemove) negBulkRemove.addEventListener('click', async function () {
+    const boxes = negChecked();
+    if (!boxes.length) return;
+    let msg;
+    if (boxes.length === 1) {
+      const row = boxes[0].closest('tr');
+      const negText = row?.querySelector('.neg-remove-btn')?.dataset.text || 'this term';
+      msg = 'Remove the negative keyword "' + negText + '"? Your ads may start showing for these searches again.';
+    } else {
+      msg = 'Remove ' + boxes.length + ' negative keywords? Your ads may start showing for these searches again.';
+    }
+    if (!window.confirm(msg)) return;
+    this.disabled = true;
+    let removed = 0;
+    for (const cb of boxes) {
+      try {
+        const r = await fetch(base + '/negatives/' + cb.dataset.id, {method: 'DELETE'});
+        const data = await r.json();
+        if (r.ok && data.ok) { cb.closest('tr')?.remove(); removed++; }
+      } catch (e) { /* keep going; summary toast below */ }
+    }
+    this.disabled = false;
+    refreshNegBar();
+    showToast(removed
+      ? 'Removed ' + removed + ' negative keyword' + (removed === 1 ? '' : 's')
+      : 'Could not remove the selected negative keywords', removed ? 'success' : 'error');
+  });
+
+  // ----- Empty-state CTAs: open the inline add forms -----
+  document.getElementById('btn-show-add-keyword-empty')?.addEventListener('click', () => {
+    document.getElementById('add-keyword-form')?.classList.remove('hidden');
+  });
+  document.getElementById('btn-show-add-negative-empty')?.addEventListener('click', () => {
+    document.getElementById('add-negative-form')?.classList.remove('hidden');
+  });
+  document.getElementById('btn-show-add-keyword')?.addEventListener('click', () => {
+    document.getElementById('add-keyword-form')?.classList.toggle('hidden');
+  });
+  document.getElementById('btn-show-add-negative')?.addEventListener('click', () => {
+    document.getElementById('add-negative-form')?.classList.toggle('hidden');
   });
 })();
 

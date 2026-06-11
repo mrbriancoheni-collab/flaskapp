@@ -474,7 +474,8 @@ def optimizer_data():
         text(
             """
             SELECT id, scope_type, scope_id, category, title, details,
-                   expected_impact, severity, status, created_at
+                   expected_impact, severity, status, created_at,
+                   suggested_action_json
             FROM optimizer_recommendations
             ORDER BY severity ASC, created_at DESC
             LIMIT 200

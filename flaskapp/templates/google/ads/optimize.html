@@ -1,4 +1,5 @@
 {% extends "base_app.html" %}
+{% from "components/jargon_tip.html" import jargon %}
 {% set gads_active = 'structure' %}
 {% block title %}Google Ads · {% if tab == 'cockpit' %}Command Center{% else %}Optimize{% endif %}{% endblock %}
 {% block content %}
@@ -642,6 +643,7 @@ async function undoAction(actionId, btn) {
               <th class="text-left px-3 py-2 w-16">
                 <input type="checkbox" id="select-all-optimizations" class="h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500" title="Select all">
               </th>
+              <th class="px-2 py-2 w-8"><span class="sr-only">Expand</span></th>
               <th class="text-left px-3 py-2 w-32">Priority</th>
               <th class="text-left px-3 py-2 w-28">Type</th>
               <th class="text-left px-3 py-2">Recommendation</th>
@@ -893,10 +895,10 @@ async function undoAction(actionId, btn) {
               <th class="text-right px-3 py-2 w-24">Ad Groups</th>
               <th class="text-right px-3 py-2 w-24">Keywords</th>
               <th class="text-right px-3 py-2 w-28">30d Spend</th>
-              <th class="text-right px-3 py-2 w-28">30d Leads</th>
-              <th class="text-right px-3 py-2 w-24" title="Your share of searches">Your share of searches</th>
-              <th class="text-right px-3 py-2 w-24" title="Searches you missed because budget ran out">Missed (budget)</th>
-              <th class="text-right px-3 py-2 w-24" title="Searches you missed because competitors ranked higher">Missed (rank)</th>
+              <th class="text-right px-3 py-2 w-28">30d Leads {{ jargon("Actions that matter — calls, form fills, bookings.") }}</th>
+              <th class="text-right px-3 py-2 w-24">Your share of searches {{ jargon("Out of all the searches your ad could have shown for, the % of times it actually did. Marketers call this impression share.") }}</th>
+              <th class="text-right px-3 py-2 w-24">Missed (budget) {{ jargon("Searches you missed because your daily budget ran out.") }}</th>
+              <th class="text-right px-3 py-2 w-24">Missed (rank) {{ jargon("Searches you missed because competitors' ads ranked higher than yours.") }}</th>
               <th class="text-left px-3 py-2 w-36">Max you pay per click</th>
               <th class="text-center px-3 py-2 w-32">Actions</th>
             </tr>
@@ -1092,11 +1094,11 @@ async function undoAction(actionId, btn) {
               <th class="text-left px-3 py-2">Ad Group</th>
               <th class="text-left px-3 py-2">Campaign</th>
               <th class="text-left px-3 py-2 w-32">Status</th>
-              <th class="text-right px-3 py-2 w-28">Max CPC</th>
+              <th class="text-right px-3 py-2 w-28">Max CPC {{ jargon("Cost per click: what you pay on average when someone clicks your ad. Max CPC is the most you're willing to pay.") }}</th>
               <th class="text-right px-3 py-2 w-24">Keywords</th>
               <th class="text-right px-3 py-2 w-20">Ads</th>
               <th class="text-right px-3 py-2 w-28">30d Spend</th>
-              <th class="text-right px-3 py-2 w-28">30d Conv.</th>
+              <th class="text-right px-3 py-2 w-28">30d Conv. {{ jargon("Conversions: actions that matter — calls, form fills, bookings.") }}</th>
               <th class="text-center px-3 py-2 w-24">Actions</th>
             </tr>
           </thead>
@@ -1337,7 +1339,7 @@ async function undoAction(actionId, btn) {
                    class="w-full rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
           </div>
           <div>
-            <label class="block text-xs text-gray-500 mb-1">Match Type</label>
+            <label class="block text-xs text-gray-500 mb-1">Match Type {{ jargon("Controls how closely a search must match your keyword. Exact = tightest, Broad = loosest.") }}</label>
             <select id="new-kw-match" class="w-full rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
               <option value="broad">Broad</option>
               <option value="phrase" selected>Phrase</option>
@@ -1345,7 +1347,7 @@ async function undoAction(actionId, btn) {
             </select>
           </div>
           <div>
-            <label class="block text-xs text-gray-500 mb-1">Max CPC ($)</label>
+            <label class="block text-xs text-gray-500 mb-1">Max CPC ($) {{ jargon("Cost per click: what you pay on average when someone clicks your ad. Max CPC is the most you're willing to pay.") }}</label>
             <input id="new-kw-cpc" type="number" min="0" step="0.01" placeholder="e.g. 1.50"
                    class="w-full rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
           </div>
@@ -1435,12 +1437,12 @@ async function undoAction(actionId, btn) {
                 <input type="checkbox" id="kw-select-all" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
               </th>
               <th class="text-left px-3 py-2">Keyword</th>
-              <th class="text-left px-3 py-2 w-28">Match Type</th>
+              <th class="text-left px-3 py-2 w-28">Match Type {{ jargon("Controls how closely a search must match your keyword. Exact = tightest, Broad = loosest.") }}</th>
               <th class="text-left px-3 py-2 w-24">Status</th>
               <th class="text-left px-3 py-2">Campaign</th>
               <th class="text-left px-3 py-2">Ad Group</th>
-              <th class="text-right px-3 py-2 w-24">Max CPC</th>
-              <th class="text-center px-3 py-2 w-24">Google's quality grade</th>
+              <th class="text-right px-3 py-2 w-24">Max CPC {{ jargon("Cost per click: what you pay on average when someone clicks your ad. Max CPC is the most you're willing to pay.") }}</th>
+              <th class="text-center px-3 py-2 w-24">Google's quality grade {{ jargon("Google's 1–10 rating of how relevant your ad and keyword are. Higher scores = cheaper clicks.") }}</th>
               <th class="text-center px-3 py-2 w-20">Actions</th>
             </tr>
           </thead>
@@ -1566,7 +1568,7 @@ async function undoAction(actionId, btn) {
       <!-- Header -->
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h2 class="text-lg font-semibold">Negative Keywords</h2>
+          <h2 class="text-lg font-semibold">Negative Keywords {{ jargon("A word or phrase you block so your ad never shows for those searches.") }}</h2>
           <p class="text-xs text-gray-500 mt-0.5">Negative keywords prevent your ads from showing for irrelevant searches. Phrase match recommended for most terms.</p>
         </div>
         <button id="btn-show-add-negative"
@@ -1585,7 +1587,7 @@ async function undoAction(actionId, btn) {
                    class="w-full rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
           </div>
           <div>
-            <label class="block text-xs text-gray-500 mb-1">Match Type</label>
+            <label class="block text-xs text-gray-500 mb-1">Match Type {{ jargon("Controls how closely a search must match your keyword. Exact = tightest, Broad = loosest.") }}</label>
             <select id="new-neg-match" class="w-full rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
               <option value="BROAD">Broad</option>
               <option value="PHRASE" selected>Phrase (recommended)</option>
@@ -1658,7 +1660,7 @@ async function undoAction(actionId, btn) {
                            data-section="campaign">
                   </th>
                   <th class="text-left px-3 py-2">Term</th>
-                  <th class="text-left px-3 py-2 w-28">Match Type</th>
+                  <th class="text-left px-3 py-2 w-28">Match Type {{ jargon("Controls how closely a search must match your keyword. Exact = tightest, Broad = loosest.") }}</th>
                   <th class="text-left px-3 py-2">Campaign</th>
                   <th class="text-center px-3 py-2 w-20">Remove</th>
                 </tr>
@@ -1713,7 +1715,7 @@ async function undoAction(actionId, btn) {
                            data-section="adgroup">
                   </th>
                   <th class="text-left px-3 py-2">Term</th>
-                  <th class="text-left px-3 py-2 w-28">Match Type</th>
+                  <th class="text-left px-3 py-2 w-28">Match Type {{ jargon("Controls how closely a search must match your keyword. Exact = tightest, Broad = loosest.") }}</th>
                   <th class="text-left px-3 py-2">Campaign</th>
                   <th class="text-left px-3 py-2">Ad Group</th>
                   <th class="text-center px-3 py-2 w-20">Remove</th>
@@ -1827,6 +1829,13 @@ async function undoAction(actionId, btn) {
     return res;
   }
 
+  // Small jargon tooltip for JS-rendered labels (mirrors the Jinja jargon macro)
+  function tipIcon(text) {
+    return `<span class="group relative inline-block align-middle">` +
+      `<i class="fa-solid fa-circle-question text-gray-300 group-hover:text-gray-500 text-[11px] cursor-help ml-0.5"></i>` +
+      `<span class="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 top-full mt-1.5 z-30 w-56 whitespace-normal rounded-lg bg-gray-900 px-3 py-2 text-xs leading-snug text-white text-left shadow-lg pointer-events-none">${text}</span></span>`;
+  }
+
   // --- KPI ---
   async function loadKPI(days) {
     document.getElementById("kpi-days").textContent = String(days);
@@ -1844,7 +1853,7 @@ async function undoAction(actionId, btn) {
           <div class="kpi-label">Last ${days} days</div>
         </div>
         <div class="kpi">
-          <div class="kpi-label">Impressions</div>
+          <div class="kpi-label">Impressions ${tipIcon('How many times your ad was shown.')}</div>
           <div class="kpi-value">${fmt(kpi.impressions).toLocaleString()}</div>
           <div class="kpi-label">Last ${days} days</div>
         </div>
@@ -1854,12 +1863,12 @@ async function undoAction(actionId, btn) {
           <div class="kpi-label">Last ${days} days</div>
         </div>
         <div class="kpi">
-          <div class="kpi-label">Conversions</div>
+          <div class="kpi-label">Conversions ${tipIcon('Actions that matter — calls, form fills, bookings.')}</div>
           <div class="kpi-value">${fmt(kpi.conversions).toLocaleString()}</div>
           <div class="kpi-label">Last ${days} days</div>
         </div>
         <div class="kpi">
-          <div class="kpi-label">Avg CPC</div>
+          <div class="kpi-label">Avg CPC ${tipIcon('Cost per click: what you pay on average when someone clicks your ad.')}</div>
           <div class="kpi-value">${currency(kpi.avg_cpc || 0)}</div>
           <div class="kpi-label">Last ${days} days</div>
         </div>
@@ -1930,6 +1939,115 @@ async function undoAction(actionId, btn) {
     return badges[severity] || `<span class="text-gray-600">${severity}</span>`;
   }
 
+  // Escape untrusted strings before injecting into HTML
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = String(s ?? '');
+    return d.innerHTML;
+  }
+
+  const money = v => '$' + Number(v).toFixed(2);
+
+  // Build the plain-English "why are we suggesting this?" panel for a
+  // recommendation, using the metrics stored in suggested_action_json.
+  function buildRecExplanation(r) {
+    let a = {};
+    try { a = JSON.parse(r.suggested_action_json || '{}') || {}; } catch (e) { a = {}; }
+
+    let text = '';
+    const facts = [];   // [label, value] chips showing the underlying data
+
+    switch (r.category) {
+      case 'wasted_spend': {
+        text = `This keyword spent ${a.spend != null ? money(a.spend) : 'money'} over the last 30 days but produced 0 leads.`;
+        if (a.clicks != null) {
+          text += ` That's ${a.clicks} click${a.clicks === 1 ? '' : 's'} you paid for that never turned into a call, form fill, or booking.`;
+        }
+        if (a.account_avg_cpa) {
+          text += ` For comparison, the average keyword in your account converts at ${money(a.account_avg_cpa)} per lead — this one has given you nothing back.`;
+        }
+        text += ' Pausing it stops the waste, and you can always turn it back on later.';
+        if (a.keyword_text) facts.push(['Keyword', '"' + a.keyword_text + '"']);
+        if (a.spend != null) facts.push(['Spent (30d)', money(a.spend)]);
+        if (a.clicks != null) facts.push(['Clicks', a.clicks]);
+        facts.push(['Leads', '0']);
+        if (a.account_avg_cpa) facts.push(['Account avg. cost per lead', money(a.account_avg_cpa)]);
+        break;
+      }
+      case 'broad_match': {
+        text = 'Broad match lets Google show your ad for loosely related searches — not just the words you picked.';
+        if (a.spend != null) {
+          const conv = Number(a.conversions || 0);
+          text += ` This keyword spent ${money(a.spend)} with ${conv} lead${conv === 1 ? '' : 's'} — switching to phrase match keeps your ad on relevant searches only.`;
+        } else {
+          text += ' Switching to phrase match keeps your ad on relevant searches only.';
+        }
+        if (a.reason) text += ' ' + a.reason;
+        if (a.keyword_text) facts.push(['Keyword', '"' + a.keyword_text + '"']);
+        if (a.spend != null) facts.push(['Spent (30d)', money(a.spend)]);
+        if (a.clicks != null) facts.push(['Clicks', a.clicks]);
+        if (a.conversions != null) facts.push(['Leads', Number(a.conversions)]);
+        if (a.keyword_cpa) facts.push(['Cost per lead', money(a.keyword_cpa)]);
+        if (a.benchmark_cpa) facts.push(['Phrase/exact avg. cost per lead', money(a.benchmark_cpa)]);
+        facts.push(['Change', 'Broad → Phrase match']);
+        break;
+      }
+      case 'budget': {
+        const cur = a.current_budget_cents != null ? money(a.current_budget_cents / 100) : null;
+        const sug = a.suggested_budget_cents != null ? money(a.suggested_budget_cents / 100) : null;
+        text = `This campaign is hitting its daily budget cap${cur ? ' of ' + cur + '/day' : ''} and missing an estimated ${a.lost_is_budget_pct != null ? a.lost_is_budget_pct + '%' : 'a share'} of available impressions — searches where your ad could have shown, but didn't because the day's money had already run out.`;
+        if (sug) text += ` Raising the budget to ${sug}/day would let your ad keep showing for more of those searches.`;
+        if (cur) facts.push(['Current daily budget', cur + '/day']);
+        if (sug) facts.push(['Suggested daily budget', sug + '/day']);
+        if (a.lost_is_budget_pct != null) facts.push(['Impressions missed (budget)', a.lost_is_budget_pct + '%']);
+        if (a.avg_impression_share_pct != null) facts.push(['Current impression share', a.avg_impression_share_pct + '%']);
+        break;
+      }
+      case 'qs':
+      case 'low_qs': {
+        const qs = a.quality_score;
+        text = `Google rates this keyword's relevance as ${qs != null ? qs : '?'}/10. Low scores mean you pay more per click than competitors do for the same ad spot.`;
+        const subLabels = { 'Landing Page': 'Landing page experience', 'Ad Relevance': 'Ad relevance', 'Expected CTR': 'Expected click-through rate' };
+        const weak = Object.entries(a.sub_scores || {})
+          .filter(([, v]) => v === 'BELOW_AVERAGE')
+          .map(([k]) => subLabels[k] || k);
+        if (weak.length) text += ` Google says the weak spot is: ${weak.join(', ').toLowerCase()}.`;
+        if (a.fix_hint) text += ' ' + a.fix_hint;
+        text += ' Raising the score makes every click cheaper.';
+        if (a.keyword_text) facts.push(['Keyword', '"' + a.keyword_text + '"']);
+        if (qs != null) facts.push(['Quality Score', qs + '/10']);
+        if (a.impressions != null) facts.push(['Times shown (14d)', Number(a.impressions).toLocaleString()]);
+        if (a.spend != null) facts.push(['Spent (14d)', money(a.spend)]);
+        break;
+      }
+      case 'impression_share': {
+        text = 'Impression share is the percentage of searches where your ad actually appeared, out of all the searches it was eligible to show for.';
+        text += ` This campaign is missing ${a.lost_is_rank_pct != null ? a.lost_is_rank_pct + '%' : 'a chunk'} of those searches because competitors' ads rank higher — usually due to low quality scores or bids set too low. Those are potential customers who never saw your ad.`;
+        if (a.avg_impression_share_pct != null) facts.push(['Current impression share', a.avg_impression_share_pct + '%']);
+        if (a.lost_is_rank_pct != null) facts.push(['Missed (outranked)', a.lost_is_rank_pct + '%']);
+        break;
+      }
+      default:
+        text = r.details || 'No additional details available.';
+    }
+
+    if (a.campaign_name) facts.push(['Campaign', a.campaign_name]);
+
+    const factsHtml = facts.length ? `
+      <div class="flex flex-wrap gap-2 mt-2">
+        ${facts.map(([k, v]) => `
+          <span class="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs">
+            <span class="text-gray-400">${esc(k)}</span>
+            <span class="font-semibold text-gray-700">${esc(v)}</span>
+          </span>`).join('')}
+      </div>` : '';
+
+    return `
+      <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Why we're suggesting this</div>
+      <p class="text-sm text-gray-700 leading-relaxed max-w-3xl">${esc(text)}</p>
+      ${factsHtml}`;
+  }
+
   async function loadOptimizer() {
     const res = await fetch(`${base}/optimizer/data`);
     const rows = await res.json();
@@ -1948,13 +2066,18 @@ async function undoAction(actionId, btn) {
       return;
     }
     tbody.innerHTML = rows.map(r => `
-      <tr class="hover:bg-gray-50">
+      <tr class="rec-row hover:bg-gray-50 cursor-pointer" data-rec-id="${r.id}">
         <td class="px-3 py-2">
           <input type="checkbox" class="optimization-checkbox h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
                  data-id="${r.id}"
                  data-title="${(r.title ?? '').replace(/"/g, '&quot;')}"
                  data-category="${r.category ?? ''}"
                  data-severity="${r.severity ?? ''}">
+        </td>
+        <td class="px-2 py-2 text-center">
+          <button type="button" class="rec-toggle-btn text-gray-400 hover:text-gray-600 p-1" title="Show why">
+            <i class="rec-chevron fa-solid fa-chevron-right text-xs transition-transform duration-150"></i>
+          </button>
         </td>
         <td class="px-3 py-2">${getSeverityBadge(r.severity)}</td>
         <td class="px-3 py-2">
@@ -1968,6 +2091,11 @@ async function undoAction(actionId, btn) {
         </td>
         <td class="px-3 py-2">${formatROI(r.expected_impact)}</td>
       </tr>
+      <tr id="rec-detail-${r.id}" class="rec-detail-row hidden">
+        <td colspan="6" class="bg-gray-50 px-6 py-3 border-t border-gray-100">
+          ${buildRecExplanation(r)}
+        </td>
+      </tr>
     `).join("");
 
     // Wire up checkboxes
@@ -1976,6 +2104,21 @@ async function undoAction(actionId, btn) {
       cb.addEventListener("change", updateSelectedCount);
     });
   }
+
+  // Expand/collapse recommendation detail rows (click the chevron or the row)
+  (function () {
+    const tbody = document.querySelector("#optimizer-table tbody");
+    if (!tbody) return;
+    tbody.addEventListener("click", (e) => {
+      if (e.target.closest("input, a, label")) return;     // don't fight the checkbox
+      const row = e.target.closest("tr.rec-row");
+      if (!row) return;
+      const detail = document.getElementById("rec-detail-" + row.dataset.recId);
+      const chevron = row.querySelector(".rec-chevron");
+      if (detail) detail.classList.toggle("hidden");
+      if (chevron) chevron.classList.toggle("rotate-90");
+    });
+  })();
 
   function updateSelectedCount() {
     const checkboxes = document.querySelectorAll(".optimization-checkbox");

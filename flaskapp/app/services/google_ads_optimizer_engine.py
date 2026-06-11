@@ -72,6 +72,28 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
         db.session.add(rec)
         summary["created"] += 1
 
+    # Account benchmark: average cost per conversion across all keywords (30d).
+    # Surfaced in the "wasted spend" detail panel so users can compare a
+    # zero-conversion keyword against what a typical keyword costs per lead.
+    account_avg_cpa = None
+    try:
+        bench = db.session.execute(text("""
+            SELECT SUM(gs.cost_micros) AS cost, SUM(gs.conversions) AS conv
+            FROM gads_stats_daily gs
+            JOIN keywords k ON k.id = gs.entity_id
+            JOIN ad_groups ag ON ag.id = k.ad_group_id
+            JOIN ads_campaigns ac ON ac.id = ag.campaign_id
+            WHERE gs.entity_type = 'keyword'
+              AND ac.account_id = :aid
+              AND gs.date >= (CURRENT_DATE - INTERVAL 30 DAY)
+        """), {"aid": account_id}).mappings().one_or_none()
+        if bench and bench["conv"] and float(bench["conv"]) > 0:
+            account_avg_cpa = round(
+                (bench["cost"] or 0) / 1_000_000 / float(bench["conv"]), 2
+            )
+    except Exception:
+        db.session.rollback()
+
     # ── 1. Wasted spend — keywords with spend but 0 conversions (30d) ──────
     try:
         rows = db.session.execute(text("""
@@ -106,6 +128,11 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
                 "keyword_text": r["kw_text"],
                 "match_type": r["match_type"],
                 "ad_group_id": r["ag_id"],
+                "campaign_name": r["camp_name"],
+                "spend": round(spend, 2),
+                "clicks": int(r["total_clicks"] or 0),
+                "conversions": 0,
+                "account_avg_cpa": account_avg_cpa,
             }
             severity = 1 if spend > 50 else (2 if spend > 20 else 3)
             _save(OptimizerRecommendation(
@@ -157,8 +184,11 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
             action = {
                 "type": "increase_budget",
                 "campaign_id": r["camp_local_id"],
+                "campaign_name": r["camp_name"],
                 "current_budget_cents": r["daily_budget_cents"],
                 "suggested_budget_cents": int(suggested_budget * 100),
+                "lost_is_budget_pct": lost_pct,
+                "avg_impression_share_pct": round((r["avg_is"] or 0) * 100, 1),
             }
             _save(OptimizerRecommendation(
                 account_id=account_id,
@@ -238,8 +268,13 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
                 "type": "fix_quality_score",
                 "keyword_id": r["kw_local_id"],
                 "keyword_text": r["kw_text"],
+                "match_type": r["match_type"],
+                "campaign_name": r["camp_name"],
                 "quality_score": qs,
                 "sub_scores": dict(sub_scores),
+                "spend": round(spend, 2),
+                "impressions": int(r["total_impr"] or 0),
+                "fix_hint": fix_hint,
             }
             _save(OptimizerRecommendation(
                 account_id=account_id,
@@ -287,7 +322,9 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
             action = {
                 "type": "improve_ad_rank",
                 "campaign_id": r["camp_local_id"],
+                "campaign_name": r["camp_name"],
                 "lost_is_rank_pct": lost_pct,
+                "avg_impression_share_pct": round((r["avg_is"] or 0) * 100, 1),
             }
             _save(OptimizerRecommendation(
                 account_id=account_id,
@@ -414,6 +451,13 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
                 "from": "broad",
                 "to": "phrase",
                 "ad_group_id": r["ag_id"],
+                "campaign_name": r["camp_name"],
+                "spend": round(spend, 2),
+                "clicks": int(r["total_clicks"] or 0),
+                "conversions": conv,
+                "keyword_cpa": round(kw_cpa, 2) if kw_cpa else None,
+                "benchmark_cpa": round(bench_cpa, 2) if bench_cpa else None,
+                "reason": reason,
             }
             _save(OptimizerRecommendation(
                 account_id=account_id,

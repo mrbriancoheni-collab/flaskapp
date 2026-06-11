@@ -1292,44 +1292,66 @@ _BUYING_PATTERNS = {
 }
 
 
-def _classify_term(term: str, service_type: str) -> str:
-    """
-    Decide if a search term is 'relevant' (someone wants to hire us) or
-    'irrelevant' (someone wants to buy a product / DIY).
+_IRRELEVANT_REASONS = {
+    "diy": "People searching this want to do it themselves, not hire a professional",
+    "product": "People searching this want to buy a product, not hire a service",
+    "for_sale": "People searching this want to buy a product, not hire a service",
+    "retailer": "This search leads to a retail store, not a service provider",
+    "informational": "This is a research query, not a ready-to-buy search",
+    "price_comparison": "This searcher is comparison-shopping, not ready to call",
+    "buying_pattern": "This search is unlikely to convert to a paying customer",
+}
 
-    Order:
-      1. Generic service-intent → relevant (hire-me language is unambiguous)
-      2. Generic product/DIY intent → irrelevant (diy / for sale / amazon
-         override vertical verbs — "diy roof repair" is product even though
-         "repair" is a roofing service verb)
-      3. Vertical service signal → relevant
-      4. Vertical buying pattern → irrelevant
-      5. Default → relevant
+
+def _classify_term_with_reason(term: str, service_type: str) -> tuple:
+    """
+    Returns (classification, reason) where classification is 'relevant' or
+    'irrelevant' and reason is a plain-English string for irrelevant terms
+    (None for relevant terms).
     """
     import re
     t = (term or "").lower()
 
     # 1. Generic service-intent (hire-me language)
     if any(re.search(p, t) for p in _GENERIC_SERVICE_INTENT):
-        # Exception: "for sale near me" is still product intent
         if not re.search(r"\bfor sale\b", t):
-            return "relevant"
+            return "relevant", None
 
     # 2. Generic product/DIY intent — unambiguous shopping language
     if any(re.search(p, t) for p in _GENERIC_PRODUCT_INTENT):
-        return "irrelevant"
+        if re.search(r"\bdiy\b|\bdo it yourself\b|\bhow to\b", t):
+            reason = _IRRELEVANT_REASONS["diy"]
+        elif re.search(r"\bfor sale\b|\bon sale\b", t):
+            reason = _IRRELEVANT_REASONS["for_sale"]
+        elif re.search(r"\bamazon\b|\bhome depot\b|\blowes?\b|\bcostco\b|\bwalmart\b|\bebay\b|\bcraigslist\b|\bwayfair\b", t):
+            reason = _IRRELEVANT_REASONS["retailer"]
+        elif re.search(r"\breview[s]?\b|\bvs\b|\bversus\b|\bcompare\b|\bbest\b", t):
+            reason = _IRRELEVANT_REASONS["informational"]
+        elif re.search(r"\bcost[s]?\b|\bprice[sd]?\b|\bcheap\b|\baffordable\b", t):
+            reason = _IRRELEVANT_REASONS["price_comparison"]
+        else:
+            reason = _IRRELEVANT_REASONS["product"]
+        return "irrelevant", reason
 
     # 3. Vertical-specific service verbs
     signals = _SERVICE_SIGNALS.get(service_type, [])
     if signals and any(re.search(p, t) for p in signals):
-        return "relevant"
+        return "relevant", None
 
     # 4. Vertical-specific buying patterns (product nouns + price, brand names, etc.)
     patterns = _BUYING_PATTERNS.get(service_type, _BUYING_PATTERNS["generic"])
     if any(re.search(p, t) for p in patterns):
-        return "irrelevant"
+        if re.search(r"\bcost[s]?\b|\bprice[sd]?\b|\bcheap\b|\baffordable\b", t):
+            reason = _IRRELEVANT_REASONS["price_comparison"]
+        else:
+            reason = _IRRELEVANT_REASONS["buying_pattern"]
+        return "irrelevant", reason
 
-    return "relevant"
+    return "relevant", None
+
+
+def _classify_term(term: str, service_type: str) -> str:
+    return _classify_term_with_reason(term, service_type)[0]
 
 
 @gads_bp.get("/search-terms")
@@ -1371,7 +1393,7 @@ def search_terms():
         pass
 
     for t in terms_data:
-        t["relevance"] = _classify_term(t["search_term"], service_type)
+        t["relevance"], t["irrelevant_reason"] = _classify_term_with_reason(t["search_term"], service_type)
         conv = t.get("conversions")
         cost = t.get("cost_micros") or 0
         t["cpl"] = round(cost / 1_000_000 / conv, 2) if conv and conv > 0 else None
@@ -1481,6 +1503,87 @@ def search_term_add_negative(term_id: int):
     except Exception as exc:
         db.session.rollback()
         current_app.logger.exception("search_term_add_negative error")
+        return jsonify({"error": str(exc)}), 500
+
+
+@gads_bp.post("/block-irrelevant-search-terms")
+@login_required
+def block_irrelevant_search_terms():
+    """
+    Classify all unblocked search terms for this account and add the irrelevant
+    ones as campaign-level EXACT negative keywords. Saves one AIAction row per
+    blocked term and returns the count blocked.
+    """
+    if not is_paid_account():
+        return jsonify({"error": "Paid plan required"}), 403
+
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    from app.models_ads import SearchTerm
+
+    service_type = "generic"
+    try:
+        from app.google.forecasting_routes import _infer_service_type
+        service_type = _infer_service_type(aid)
+    except Exception:
+        pass
+
+    try:
+        rows = db.session.execute(text("""
+            SELECT st.id, st.search_term, st.campaign_id
+            FROM search_terms st
+            LEFT JOIN ads_campaigns ac ON ac.id = st.campaign_id
+            WHERE (ac.account_id = :aid OR st.campaign_id IS NULL)
+              AND st.date >= (CURRENT_DATE - INTERVAL 30 DAY)
+              AND st.added_as_negative = 0
+        """), {"aid": aid}).mappings().all()
+    except Exception as exc:
+        current_app.logger.exception("block_irrelevant_search_terms: query failed")
+        return jsonify({"error": str(exc)}), 500
+
+    blocked = 0
+    try:
+        from datetime import datetime as _dt
+        for row in rows:
+            classification, _ = _classify_term_with_reason(row["search_term"], service_type)
+            if classification != "irrelevant":
+                continue
+
+            st = SearchTerm.query.get(row["id"])
+            if not st:
+                continue
+
+            neg = NegativeKeyword(
+                scope="campaign",
+                campaign_id=st.campaign_id,
+                text=st.search_term,
+                match_type="EXACT",
+            )
+            db.session.add(neg)
+            st.added_as_negative = True
+
+            action = AIAction(
+                account_id=aid,
+                action_type="search_term_blocked",
+                title=f"Blocked irrelevant search term: {st.search_term}",
+                description=f"Added '{st.search_term}' as campaign-level EXACT negative keyword",
+                campaign_id=str(st.campaign_id) if st.campaign_id else None,
+                after_value={"search_term": st.search_term, "match_type": "EXACT", "scope": "campaign"},
+                status="executed",
+                executed_at=_dt.utcnow(),
+                executed_by="bulk_block",
+                can_undo=True,
+            )
+            db.session.add(action)
+            blocked += 1
+
+        db.session.commit()
+        return jsonify({"ok": True, "blocked": blocked})
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception("block_irrelevant_search_terms error")
         return jsonify({"error": str(exc)}), 500
 
 

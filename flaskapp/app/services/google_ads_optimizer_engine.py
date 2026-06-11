@@ -12,6 +12,8 @@ Recommendation categories:
   low_qs           — keywords with quality score ≤ 4
   impression_share — campaigns losing IS due to rank (lost_is_rank > 30%)
   paused_performer — keywords paused but historically had conversions
+  broad_match      — broad match keywords underperforming vs phrase/exact,
+                     or any broad keyword in verticals where broad rarely works
 """
 from __future__ import annotations
 
@@ -27,6 +29,18 @@ LOW_QS_THRESHOLD = 4                  # QS ≤ 4 is actionable
 BUDGET_IS_LOSS_THRESHOLD = 0.20       # >20% IS lost to budget
 RANK_IS_LOSS_THRESHOLD = 0.30         # >30% IS lost to rank
 MIN_IMPRESSIONS = 100                 # ignore low-traffic keywords for QS
+BROAD_MIN_SPEND_MICROS = 10_000_000   # $10 broad-match spend before we judge it
+BROAD_CPA_MULTIPLIER = 2.0            # broad CPA > 2x phrase/exact CPA → flag
+
+# Verticals where search queries are dominated by product/DIY intent, so broad
+# match mostly buys irrelevant clicks ("pool pump", "lawn mower", "bug spray").
+# For these we recommend phrase/exact only.
+NO_BROAD_INDUSTRIES = {
+    "pool", "pools", "pool_service", "pool-service", "pool maintenance",
+    "pool_maintenance", "lawn", "lawn_care", "lawn-care", "lawncare",
+    "pest", "pest_control", "pest-control",
+    "cleaning", "house_cleaning", "house-cleaning",
+}
 
 
 def generate_recommendations(account_id: int) -> Dict[str, Any]:
@@ -294,6 +308,136 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
         db.session.rollback()
         summary["errors"].append(f"Rank IS pass: {exc}")
         logger.exception("Rank IS analysis failed for account %s", account_id)
+
+    # ── 5. Broad match audit ────────────────────────────────────────────────
+    # Two layers:
+    #   a) Vertical rule — in product/DIY-heavy industries (pool, lawn, pest,
+    #      cleaning) broad match mostly buys irrelevant clicks; flag every
+    #      enabled broad keyword regardless of performance.
+    #   b) Performance rule — in any vertical, a broad keyword that spent
+    #      ≥$10 with zero conversions, or whose CPA is >2x the account's
+    #      phrase/exact CPA, should be tightened to phrase match.
+    try:
+        no_broad_vertical = False
+        try:
+            ind_row = db.session.execute(text(
+                "SELECT industry FROM business_profiles WHERE account_id = :aid "
+                "ORDER BY id DESC LIMIT 1"
+            ), {"aid": account_id}).scalar()
+            if ind_row:
+                ind_norm = str(ind_row).strip().lower().replace(" ", "_")
+                no_broad_vertical = any(tag in ind_norm for tag in (
+                    "pool", "lawn", "pest", "cleaning"
+                ))
+        except Exception:
+            db.session.rollback()
+
+        # Account benchmark: CPA of phrase/exact keywords over 30d
+        bench = db.session.execute(text("""
+            SELECT SUM(gs.cost_micros) AS cost, SUM(gs.conversions) AS conv
+            FROM gads_stats_daily gs
+            JOIN keywords k ON k.id = gs.entity_id
+            JOIN ad_groups ag ON ag.id = k.ad_group_id
+            JOIN ads_campaigns ac ON ac.id = ag.campaign_id
+            WHERE gs.entity_type = 'keyword'
+              AND ac.account_id = :aid
+              AND gs.date >= (CURRENT_DATE - INTERVAL 30 DAY)
+              AND k.match_type IN ('phrase', 'exact')
+        """), {"aid": account_id}).mappings().one_or_none()
+        bench_cpa = None
+        if bench and bench["conv"] and float(bench["conv"]) > 0:
+            bench_cpa = (bench["cost"] or 0) / 1_000_000 / float(bench["conv"])
+
+        rows = db.session.execute(text("""
+            SELECT k.id AS kw_local_id,
+                   k.text AS kw_text,
+                   ag.id AS ag_id,
+                   ac.name AS camp_name,
+                   COALESCE(SUM(gs.cost_micros), 0) AS total_cost_micros,
+                   COALESCE(SUM(gs.conversions), 0) AS total_conversions,
+                   COALESCE(SUM(gs.clicks), 0) AS total_clicks
+            FROM keywords k
+            JOIN ad_groups ag ON ag.id = k.ad_group_id
+            JOIN ads_campaigns ac ON ac.id = ag.campaign_id
+            LEFT JOIN gads_stats_daily gs ON gs.entity_type = 'keyword'
+                 AND gs.entity_id = k.id
+                 AND gs.date >= (CURRENT_DATE - INTERVAL 30 DAY)
+            WHERE ac.account_id = :aid
+              AND k.status = 'enabled'
+              AND k.match_type = 'broad'
+            GROUP BY k.id, k.text, ag.id, ac.name
+            ORDER BY total_cost_micros DESC
+            LIMIT 50
+        """), {"aid": account_id}).mappings().all()
+
+        for r in rows:
+            spend = (r["total_cost_micros"] or 0) / 1_000_000
+            conv = float(r["total_conversions"] or 0)
+            kw_cpa = (spend / conv) if conv > 0 else None
+
+            flagged = False
+            reason = ""
+            severity = 3
+
+            if no_broad_vertical:
+                flagged = True
+                reason = (
+                    "Your industry sees heavy product/DIY search traffic, so broad "
+                    "match tends to buy clicks from shoppers and DIYers instead of "
+                    "service customers. Phrase or exact match keeps your ads on "
+                    "hire-intent searches."
+                )
+                severity = 2 if spend > 20 else 3
+            elif spend >= BROAD_MIN_SPEND_MICROS / 1_000_000 and conv == 0:
+                flagged = True
+                reason = (
+                    f"This broad keyword has spent ${spend:.2f} over 30 days with "
+                    f"{int(r['total_clicks'])} clicks and zero conversions — broad "
+                    f"match is likely pulling in irrelevant searches."
+                )
+                severity = 2
+            elif bench_cpa and kw_cpa and kw_cpa > bench_cpa * BROAD_CPA_MULTIPLIER:
+                flagged = True
+                reason = (
+                    f"This broad keyword's cost per lead (${kw_cpa:.2f}) is more than "
+                    f"double your phrase/exact average (${bench_cpa:.2f})."
+                )
+                severity = 2
+
+            if not flagged:
+                continue
+
+            action = {
+                "type": "change_match_type",
+                "keyword_id": r["kw_local_id"],
+                "keyword_text": r["kw_text"],
+                "from": "broad",
+                "to": "phrase",
+                "ad_group_id": r["ag_id"],
+            }
+            _save(OptimizerRecommendation(
+                account_id=account_id,
+                scope_type="keyword",
+                scope_id=r["kw_local_id"],
+                category="broad_match",
+                title=f'Switch "{r["kw_text"]}" from broad to phrase match',
+                details=(
+                    f'Keyword "{r["kw_text"]}" (broad) in campaign "{r["camp_name"]}". '
+                    + reason
+                    + ' Switching to phrase match keeps the reach for relevant '
+                      'searches while filtering out loosely related queries.'
+                ),
+                expected_impact=(
+                    f"Save up to ${spend:.2f}/month in off-target clicks"
+                    if spend > 0 else "Prevent off-target spend before it starts"
+                ),
+                severity=severity,
+                suggested_action_json=json.dumps(action),
+            ))
+    except Exception as exc:
+        db.session.rollback()
+        summary["errors"].append(f"Broad match pass: {exc}")
+        logger.exception("Broad match analysis failed for account %s", account_id)
 
     # ── Commit all recommendations ──────────────────────────────────────────
     try:

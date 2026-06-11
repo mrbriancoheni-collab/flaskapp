@@ -513,6 +513,11 @@ def optimizer_apply():
                     if kw:
                         kw.status = "paused"
                         api_status = "local_db"
+                elif action_type in ("change_match_type", "broad_match") and suggested.get("keyword_id"):
+                    kw = AdsKeyword.query.get(suggested["keyword_id"])
+                    if kw:
+                        kw.match_type = (suggested.get("to") or "phrase").lower()
+                        api_status = "local_db"
 
                 # --- Attempt real Google Ads API mutation via executor ---
                 if executor and action_type in ("negative_keyword", "wasted_spend") and suggested.get("negatives"):
@@ -887,7 +892,9 @@ def keywords_add():
 
     payload = request.get_json(force=True) or {}
     kw_text = (payload.get("text") or "").strip()
-    match_type = (payload.get("match_type") or "broad").lower()
+    # Default to phrase — broad match must be an explicit choice, since it
+    # routinely pulls in product/DIY queries for home-service advertisers.
+    match_type = (payload.get("match_type") or "phrase").lower()
     ad_group_id = payload.get("ad_group_id")
     max_cpc_cents = payload.get("max_cpc_cents")
 

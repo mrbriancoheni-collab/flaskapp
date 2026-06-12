@@ -128,11 +128,6 @@ async function undoAction(actionId, btn) {
   <section id="kpi" class="mb-6">
     <div class="flex items-center justify-between mb-2">
       <h3 class="text-sm font-medium">Account KPIs (<span id="kpi-days">30</span>d)</h3>
-      <div class="flex items-center gap-2 text-xs">
-        <button id="kpi-7"  class="px-2 py-1 rounded border hover:bg-gray-50">7d</button>
-        <button id="kpi-30" class="px-2 py-1 rounded border bg-gray-100">30d</button>
-        <button id="kpi-90" class="px-2 py-1 rounded border hover:bg-gray-50">90d</button>
-      </div>
     </div>
 
     <!-- Dynamic cards get injected into #kpi-cards; below is SSR fallback -->
@@ -276,6 +271,42 @@ async function undoAction(actionId, btn) {
     {% set health = cp.get('health', {}) %}
     {% set kpis = cp.get('kpis', {}) %}
     {% set badges = cp.get('badges', {}) %}
+    {% set priority_action = cp.get('priority_action') %}
+    {% set pending_count = badges.get('optimizer', 0) %}
+
+    <!-- Today's Priority Card -->
+    {% if not cp.get('needs_sync') %}
+    {% if priority_action %}
+    <div class="rounded-2xl overflow-hidden shadow-md mb-6">
+      <div class="bg-gradient-to-r from-green-600 to-indigo-600 px-5 py-3 flex items-center gap-2">
+        <i class="fa-solid fa-bolt text-yellow-300 text-base"></i>
+        <span class="text-white font-semibold text-sm tracking-wide">Your agent found something to fix</span>
+      </div>
+      <div class="bg-white px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div class="flex-1 min-w-0">
+          <p class="text-base font-bold text-gray-900 leading-snug">{{ priority_action.title }}</p>
+          <p class="text-sm text-gray-500 mt-1">{{ priority_action.details[:160] }}{% if priority_action.details|length > 160 %}…{% endif %}</p>
+        </div>
+        <div class="flex flex-col items-start sm:items-end gap-1 flex-shrink-0">
+          <a href="?tab=optimizer"
+             class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm shadow transition whitespace-nowrap">
+            Fix it now <i class="fa-solid fa-arrow-right text-xs"></i>
+          </a>
+          {% if pending_count > 1 %}
+          <a href="?tab=optimizer" class="text-xs text-gray-400 hover:text-indigo-600 hover:underline">
+            or review all {{ pending_count }} issues
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="rounded-xl border border-green-200 bg-green-50 px-4 py-3 flex items-center gap-3 mb-6">
+      <i class="fa-solid fa-circle-check text-green-500 text-lg flex-shrink-0"></i>
+      <p class="text-sm text-green-800">Your account looks good — no urgent fixes right now.</p>
+    </div>
+    {% endif %}
+    {% endif %}
 
     {% if cp.get('needs_sync') %}
     <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 flex items-start gap-3 mb-2">
@@ -1171,7 +1202,7 @@ async function undoAction(actionId, btn) {
 
       {% if campaigns_tab_data %}
       <div class="overflow-auto rounded-xl border bg-white shadow-sm">
-        <table id="campaigns-table" class="min-w-full text-sm">
+        <table id="campaigns-table" class="mobile-card-table min-w-full text-sm">
           <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
             <tr>
               <th class="px-3 py-2 w-8">
@@ -1198,18 +1229,18 @@ async function undoAction(actionId, btn) {
                 data-id="{{ c.id }}"
                 data-name="{{ c.name | lower | e }}"
                 data-status="{{ c.status }}">
-              <td class="px-3 py-2">
+              <td class="px-3 py-2" data-label="">
                 <input type="checkbox" class="camp-checkbox h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" data-id="{{ c.id }}">
               </td>
-              <td class="px-3 py-2 font-medium text-gray-900">{{ c.name }}</td>
-              <td class="px-3 py-2">
+              <td class="px-3 py-2 font-medium text-gray-900" data-label="Campaign">{{ c.name }}</td>
+              <td class="px-3 py-2" data-label="Status">
                 <span class="camp-status-badge inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium
                   {{ 'bg-green-100 text-green-700' if c.status == 'enabled' else 'bg-amber-100 text-amber-700' }}">
                   <span class="w-1.5 h-1.5 rounded-full {{ 'bg-green-500' if c.status == 'enabled' else 'bg-amber-500' }}"></span>
                   {{ c.status|title }}
                 </span>
               </td>
-              <td class="px-3 py-2">
+              <td class="px-3 py-2" data-label="Daily Budget">
                 <span class="camp-budget-display" data-id="{{ c.id }}" data-cents="{{ c.daily_budget_cents or 0 }}">
                   ${{ "%.2f"|format((c.daily_budget_cents or 0) / 100) }}/day
                 </span>
@@ -1225,51 +1256,51 @@ async function undoAction(actionId, btn) {
                   <button class="camp-budget-cancel-btn ml-1 text-xs text-gray-400 hover:text-gray-600" data-id="{{ c.id }}">Cancel</button>
                 </span>
               </td>
-              <td class="px-3 py-2">
+              <td class="px-3 py-2" data-label="Network">
                 {% if c.network %}
                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">{{ c.network }}</span>
                 {% else %}
                 <span class="text-gray-400">—</span>
                 {% endif %}
               </td>
-              <td class="px-3 py-2 text-right text-gray-700">{{ c.adgroup_count }}</td>
-              <td class="px-3 py-2 text-right text-gray-700">{{ c.keyword_count }}</td>
-              <td class="px-3 py-2 text-right text-gray-700">
+              <td class="px-3 py-2 text-right text-gray-700" data-label="Ad Groups">{{ c.adgroup_count }}</td>
+              <td class="px-3 py-2 text-right text-gray-700" data-label="Keywords">{{ c.keyword_count }}</td>
+              <td class="px-3 py-2 text-right text-gray-700" data-label="30d Spend">
                 {% if c.spend_30d and c.spend_30d > 0 %}
                   ${{ "%.2f"|format(c.spend_30d) }}
                 {% else %}
                   <span class="text-gray-400">—</span>
                 {% endif %}
               </td>
-              <td class="px-3 py-2 text-right text-gray-700">
+              <td class="px-3 py-2 text-right text-gray-700" data-label="30d Leads">
                 {% if c.conversions_30d and c.conversions_30d > 0 %}
                   {{ c.conversions_30d|int }}
                 {% else %}
                   <span class="text-gray-400">—</span>
                 {% endif %}
               </td>
-              <td class="px-3 py-2 text-right text-sm">
+              <td class="px-3 py-2 text-right text-sm" data-label="Impr. Share">
                 {% if c.avg_impr_share is not none and c.avg_impr_share %}
                   <span class="font-medium {% if c.avg_impr_share >= 0.7 %}text-green-600{% elif c.avg_impr_share >= 0.4 %}text-amber-600{% else %}text-red-600{% endif %}">
                     {{ (c.avg_impr_share * 100)|round(1) }}%
                   </span>
                 {% else %}<span class="text-gray-300">—</span>{% endif %}
               </td>
-              <td class="px-3 py-2 text-right text-sm">
+              <td class="px-3 py-2 text-right text-sm" data-label="Missed (budget)">
                 {% if c.avg_lost_is_budget is not none and c.avg_lost_is_budget %}
                   <span class="{% if c.avg_lost_is_budget > 0.2 %}text-red-600 font-semibold{% else %}text-gray-500{% endif %}">
                     {{ (c.avg_lost_is_budget * 100)|round(1) }}%
                   </span>
                 {% else %}<span class="text-gray-300">—</span>{% endif %}
               </td>
-              <td class="px-3 py-2 text-right text-sm">
+              <td class="px-3 py-2 text-right text-sm" data-label="Missed (rank)">
                 {% if c.avg_lost_is_rank is not none and c.avg_lost_is_rank %}
                   <span class="{% if c.avg_lost_is_rank > 0.3 %}text-amber-600 font-semibold{% else %}text-gray-500{% endif %}">
                     {{ (c.avg_lost_is_rank * 100)|round(1) }}%
                   </span>
                 {% else %}<span class="text-gray-300">—</span>{% endif %}
               </td>
-              <td class="px-3 py-2">
+              <td class="px-3 py-2" data-label="Bid Strategy">
                 <select class="bid-strategy-select text-xs rounded border px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-300 w-full"
                         data-id="{{ c.id }}">
                   {% for strat, label in [
@@ -1284,7 +1315,7 @@ async function undoAction(actionId, btn) {
                   {% endfor %}
                 </select>
               </td>
-              <td class="px-3 py-2 text-center">
+              <td class="px-3 py-2 text-center" data-label="Actions">
                 <div class="flex justify-center gap-1">
                   <button class="camp-toggle-btn text-xs px-2 py-1 rounded border hover:bg-gray-50 transition"
                           data-id="{{ c.id }}" data-status="{{ c.status }}" title="{{ 'Pause' if c.status == 'enabled' else 'Enable' }}">
@@ -1719,7 +1750,7 @@ async function undoAction(actionId, btn) {
       <!-- Keywords table -->
       {% if keywords_data %}
       <div class="overflow-auto rounded-xl border bg-white shadow-sm">
-        <table id="keywords-table" class="min-w-full text-sm">
+        <table id="keywords-table" class="mobile-card-table min-w-full text-sm">
           <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
             <tr>
               <th class="px-3 py-2 w-8">
@@ -1743,12 +1774,12 @@ async function undoAction(actionId, btn) {
                 data-status="{{ kw.status }}"
                 data-match="{{ kw.match_type }}"
                 data-text="{{ kw.text | lower | e }}">
-              <td class="px-3 py-2">
+              <td class="px-3 py-2" data-label="">
                 <input type="checkbox" class="kw-checkbox h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                        data-id="{{ kw.id }}" data-status="{{ kw.status }}">
               </td>
-              <td class="px-3 py-2 font-medium text-gray-900">{{ kw.text }}</td>
-              <td class="px-3 py-2">
+              <td class="px-3 py-2 font-medium text-gray-900" data-label="Keyword">{{ kw.text }}</td>
+              <td class="px-3 py-2" data-label="Match Type">
                 {% if kw.match_type == 'broad' %}
                   <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700">Broad</span>
                 {% elif kw.match_type == 'phrase' %}
@@ -1759,7 +1790,7 @@ async function undoAction(actionId, btn) {
                   <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">{{ kw.match_type }}</span>
                 {% endif %}
               </td>
-              <td class="px-3 py-2">
+              <td class="px-3 py-2" data-label="Status">
                 {% if kw.status == 'enabled' %}
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
                     <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Enabled
@@ -1774,16 +1805,16 @@ async function undoAction(actionId, btn) {
                   </span>
                 {% endif %}
               </td>
-              <td class="px-3 py-2 text-gray-600 text-xs">{{ kw.campaign_name }}</td>
-              <td class="px-3 py-2 text-gray-600 text-xs">{{ kw.adgroup_name }}</td>
-              <td class="px-3 py-2 text-right text-gray-700">
+              <td class="px-3 py-2 text-gray-600 text-xs" data-label="Campaign">{{ kw.campaign_name }}</td>
+              <td class="px-3 py-2 text-gray-600 text-xs" data-label="Ad Group">{{ kw.adgroup_name }}</td>
+              <td class="px-3 py-2 text-right text-gray-700" data-label="Max CPC">
                 {% if kw.max_cpc_cents %}
                   ${{ "%.2f"|format(kw.max_cpc_cents / 100) }}
                 {% else %}
                   <span class="text-gray-400">—</span>
                 {% endif %}
               </td>
-              <td class="px-3 py-2 text-center">
+              <td class="px-3 py-2 text-center" data-label="Quality">
                 {% set qs = kw.quality_score %}
                 {% if qs and qs > 0 %}
                   {% if qs <= 3 %}
@@ -1797,7 +1828,7 @@ async function undoAction(actionId, btn) {
                   <span class="text-gray-400 text-xs">—</span>
                 {% endif %}
               </td>
-              <td class="px-3 py-2 text-center">
+              <td class="px-3 py-2 text-center" data-label="Actions">
                 <div class="flex items-center justify-center gap-1">
                   {% if kw.status == 'enabled' %}
                   <button class="kw-action-btn text-amber-500 hover:text-amber-700 transition"
@@ -2166,13 +2197,15 @@ async function undoAction(actionId, btn) {
     if (el) el.innerHTML = html;
   }
 
-  // KPI controls
-  const btn7  = document.getElementById("kpi-7");
-  const btn30 = document.getElementById("kpi-30");
-  const btn90 = document.getElementById("kpi-90");
-  if (btn7)  btn7.addEventListener("click", () => (loadKPI(7),  btn7.classList.add('bg-gray-100'), btn30.classList.remove('bg-gray-100'), btn90.classList.remove('bg-gray-100')));
-  if (btn30) btn30.addEventListener("click", () => (loadKPI(30), btn30.classList.add('bg-gray-100'), btn7.classList.remove('bg-gray-100'), btn90.classList.remove('bg-gray-100')));
-  if (btn90) btn90.addEventListener("click", () => (loadKPI(90), btn90.classList.add('bg-gray-100'), btn7.classList.remove('bg-gray-100'), btn30.classList.remove('bg-gray-100')));
+  // KPI controls — driven by outer #date-range-selector buttons
+  document.querySelectorAll('.date-range-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const days = parseInt(this.dataset.days, 10);
+      loadKPI(days);
+      document.querySelectorAll('.date-range-btn').forEach(b => b.classList.remove('bg-gray-100'));
+      this.classList.add('bg-gray-100');
+    });
+  });
 
   // --- Optimizer ---
   function formatROI(impactData) {

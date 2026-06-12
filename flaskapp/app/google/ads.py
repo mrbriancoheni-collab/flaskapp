@@ -205,11 +205,17 @@ def optimize():
                 AIAction.created_at.desc()
             ).limit(10).all())
 
+            priority_action = _safe_list(lambda: OptimizerRecommendation.query.filter_by(
+                account_id=aid, status="open"
+            ).order_by(OptimizerRecommendation.severity.asc(), OptimizerRecommendation.id.asc()).first(),
+            default=None)
+
             cockpit = {
                 "health": health,
                 "kpis": {"spend": round(spend, 2), "clicks": clicks, "conversions": round(conversions, 1), "impressions": impressions, "ctr": round(ctr, 2), "cpa": round(spend / conversions, 2) if conversions else 0},
                 "needs_sync": not has_stats,
                 "top_actions": top_actions,
+                "priority_action": priority_action,
                 "active_rules": active_rules,
                 "actions_today": actions_today,
                 "badges": {"optimizer": pending_optimizer, "rules": active_rules, "search_terms": pending_terms, "ab_tests": ab_running},

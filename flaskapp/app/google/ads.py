@@ -432,6 +432,16 @@ def optimize():
             "cpa": kpis.get("cpa", 0),
         }
 
+    # Count pending optimizer recommendations for the "Fix Problems" badge
+    pending_recs_count = 0
+    if aid:
+        try:
+            pending_recs_count = OptimizerRecommendation.query.filter_by(
+                account_id=aid, status="pending"
+            ).count()
+        except Exception:
+            current_app.logger.exception("Error counting pending recs")
+
     return render_template(
         "google/ads/optimize.html",
         tab=tab,
@@ -454,6 +464,7 @@ def optimize():
         last_synced_at=last_synced_at,
         last_synced_stale=last_synced_stale,
         gads_goals=gads_goals,
+        pending_recs_count=pending_recs_count,
     )
 
 

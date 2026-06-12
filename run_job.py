@@ -38,6 +38,7 @@ Example crontab entries (crontab -e):
     0 3 * * 0 cd /home/fieldsprout/flaskapp && python run_job.py cleanup_old_audit_logs >> logs/cron.log 2>&1
     0 8 * * 1 cd /home/fieldsprout/flaskapp && python run_job.py generate_google_ads_insights_weekly >> logs/cron.log 2>&1
     0 6 * * 1 cd /home/fieldsprout/flaskapp && python run_job.py run_strategic_agents >> logs/cron.log 2>&1
+    0 13 * * 1 cd /home/fieldsprout/flaskapp && python run_job.py send_weekly_digest_all_accounts >> logs/cron.log 2>&1
 
 To enable this mode, set DISABLE_SCHEDULER=1 in your Passenger environment
 variables (via cPanel > Software > Setup Python App > Environment Variables,
@@ -98,6 +99,7 @@ JOB_MAP = {
     'run_overlap_detection_all_groups':     'run_overlap_detection_all_groups',
     'upload_offline_conversions_all_accounts': 'upload_offline_conversions_all_accounts',
     'sync_structure_all_accounts':             'sync_structure_all_accounts',
+    'send_weekly_digest_all_accounts':         'send_weekly_digest_all_accounts',
 }
 
 

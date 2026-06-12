@@ -202,6 +202,19 @@ def optimize():
             current_app.logger.exception("Error loading cockpit data")
             cockpit = {"health": {"overall": 0, "grade": "N/A"}, "kpis": {}, "top_actions": [], "badges": {}, "recent_actions": [], "connected": connected}
 
+    # Latest stored weekly digest for the "Your Week in Review" card
+    weekly_digest = None
+    if tab == "cockpit" and aid:
+        try:
+            from app.services.google_ads_digest import get_latest_digest, render_digest_text
+            latest = get_latest_digest(aid)
+            if latest:
+                weekly_digest = render_digest_text(latest["digest"])
+                weekly_digest["week_start"] = latest["digest"].get("week_start")
+                weekly_digest["week_end"] = latest["digest"].get("week_end")
+        except Exception:
+            current_app.logger.exception("Error loading weekly digest for cockpit")
+
     keywords_data: list = []
     negatives_data: list = []
     campaigns_list: list = []
@@ -409,6 +422,7 @@ def optimize():
         ads_tab_data=ads_tab_data,
         ads_truncated=len(ads_tab_data) >= 500,
         cockpit=cockpit,
+        weekly_digest=weekly_digest,
         last_synced_at=last_synced_at,
         last_synced_stale=last_synced_stale,
     )

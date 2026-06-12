@@ -378,7 +378,19 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
-    app.logger.info("Registered 19 scheduled background jobs")
+    # Weekly plain-English performance digest email (Monday 1 PM UTC / morning US)
+    scheduler.add_job(
+        func=send_weekly_digest_all_accounts,
+        trigger='cron',
+        day_of_week='mon',
+        hour=13,
+        minute=0,
+        id='send_weekly_digest_all_accounts',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    app.logger.info("Registered 20 scheduled background jobs")
 
 
 # ===== Scheduled Job Functions =====
@@ -1278,6 +1290,112 @@ def upload_offline_conversions_all_accounts(app: Flask):
                     current_app.logger.warning("offline conv upload failed account %s: %s", aid, exc)
         except Exception as exc:
             current_app.logger.error("upload_offline_conversions_all_accounts error: %s", exc, exc_info=True)
+
+
+def send_weekly_digest_all_accounts(app: Flask):
+    """
+    Generate the weekly plain-English performance digest for every Google
+    Ads-connected account, store it, and queue an email to the account owner.
+
+    Runs Monday mornings (1 PM UTC). Accounts with no data, no history, and
+    no agent activity are skipped so brand-new accounts don't get empty emails.
+    """
+    with app.app_context():
+        from flask import render_template
+        from app import db
+        from app.models import Account, User
+        from app.models_google import GoogleOAuthToken
+        from app.models_billing import EmailQueue
+        from app.services.google_ads_digest import generate_weekly_digest, render_digest_text
+
+        try:
+            accounts = Account.query.join(
+                GoogleOAuthToken, Account.id == GoogleOAuthToken.account_id
+            ).filter(
+                GoogleOAuthToken.product == 'ads',
+                Account.status == 'active'
+            ).all()
+
+            if not accounts:
+                current_app.logger.info("No active Google Ads accounts for weekly digest")
+                return
+
+            queued = 0
+            skipped = 0
+            errors = 0
+
+            for account in accounts:
+                try:
+                    digest = generate_weekly_digest(account.id)
+
+                    quiet_week = (
+                        not digest.get("has_data")
+                        and not digest.get("prior_week")
+                        and not (digest.get("agent") or {}).get("total_actions")
+                    )
+                    if quiet_week:
+                        skipped += 1
+                        continue
+
+                    user = (
+                        User.query.filter_by(account_id=account.id, role='owner').first()
+                        or User.query.filter_by(account_id=account.id).order_by(User.id).first()
+                    )
+                    if not user:
+                        skipped += 1
+                        continue
+
+                    text_parts = render_digest_text(digest)
+
+                    tw = digest.get("this_week") or {}
+                    leads = int(round(float(tw.get("leads") or 0)))
+                    spend = float(tw.get("spend") or 0)
+                    if spend > 0 and leads > 0:
+                        subject = (
+                            f"Your week in review: {leads} lead{'s' if leads != 1 else ''} "
+                            f"for ${spend:,.0f}"
+                        )
+                    elif spend > 0:
+                        subject = f"Your week in review: ${spend:,.0f} spent, still working on those leads"
+                    else:
+                        subject = "Your week in review: your ads didn't run last week"
+
+                    def _friendly(iso_date):
+                        d = datetime.fromisoformat(iso_date)
+                        return f"{d.strftime('%b')} {d.day}"
+
+                    html_body = render_template(
+                        'emails/google_ads_weekly_digest.html',
+                        text=text_parts,
+                        week_start=_friendly(digest["week_start"]),
+                        week_end=_friendly(digest["week_end"]),
+                        dashboard_url=f"{current_app.config.get('BASE_URL', 'https://app.fieldsprout.com')}/account/google/ads/?tab=cockpit",
+                        current_year=datetime.utcnow().year,
+                    )
+
+                    db.session.add(EmailQueue(
+                        to_email=user.email,
+                        subject=subject,
+                        html_body=html_body,
+                    ))
+                    db.session.commit()
+                    queued += 1
+
+                except Exception as e:
+                    db.session.rollback()
+                    current_app.logger.error(
+                        f"Error building weekly digest for account {account.id}: {e}",
+                        exc_info=True
+                    )
+                    errors += 1
+                    continue
+
+            current_app.logger.info(
+                f"[JOB] Weekly digest complete: queued={queued}, skipped={skipped}, errors={errors}"
+            )
+
+        except Exception as e:
+            current_app.logger.error(f"Error in weekly digest job: {e}", exc_info=True)
 
 
 def sync_structure_all_accounts(app: Flask):

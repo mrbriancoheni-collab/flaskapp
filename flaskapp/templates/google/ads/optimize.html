@@ -223,6 +223,44 @@ async function undoAction(actionId, btn) {
     </div>
     {% endif %}
 
+    {# ---- Your Week in Review (latest stored weekly digest) ---- #}
+    {% if weekly_digest %}
+    <div class="rounded-xl border bg-white overflow-hidden">
+      <div class="px-5 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <i class="fa-solid fa-newspaper text-indigo-500"></i>
+          <p class="font-semibold text-gray-900 truncate">Your Week in Review</p>
+        </div>
+        {% if weekly_digest.week_start and weekly_digest.week_end %}
+        <span class="text-xs text-gray-500 whitespace-nowrap">{{ weekly_digest.week_start }} – {{ weekly_digest.week_end }}</span>
+        {% endif %}
+      </div>
+      <div class="p-5 space-y-3">
+        <p class="text-base font-semibold text-gray-900">{{ weekly_digest.headline }}</p>
+        {% if weekly_digest.summary_lines %}
+        <ul class="space-y-1.5">
+          {% for line in weekly_digest.summary_lines %}
+          <li class="text-sm text-gray-600 flex items-start gap-2">
+            <i class="fa-solid fa-circle text-[5px] text-gray-300 mt-2 flex-shrink-0"></i>
+            <span>{{ line }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        {% if weekly_digest.agent_lines %}
+        <div class="rounded-lg bg-indigo-50 px-4 py-3 space-y-1.5">
+          {% for line in weekly_digest.agent_lines %}
+          <p class="text-sm text-indigo-800 flex items-start gap-2">
+            <i class="fa-solid fa-robot text-indigo-400 text-xs mt-1 flex-shrink-0"></i>
+            <span>{{ line }}</span>
+          </p>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
     {# ---- Goal progress bar (shown when goals are set) ---- #}
     {% set gp = health.get('goal_performance') %}
     {% if gp %}

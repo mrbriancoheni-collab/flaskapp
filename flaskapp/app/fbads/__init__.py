@@ -117,19 +117,79 @@ def _store_fb_token(aid: int, token: str, expires_in: Optional[int]) -> None:
     session["fb_expires_at"] = expires_at.isoformat()
 
 
+def _try_refresh_token(token_row) -> None:
+    """
+    Attempt a proactive token refresh using Facebook's fb_exchange_token grant.
+    Updates expires_at in DB if successful. On any failure, leaves token unchanged.
+    token_row must expose .access_token and .account_id (positional indices 0 and the aid).
+    """
+    try:
+        app_id = current_app.config.get("FB_APP_ID") or os.getenv("FB_APP_ID")
+        app_secret = current_app.config.get("FB_APP_SECRET") or os.getenv("FB_APP_SECRET")
+        if not app_id or not app_secret:
+            return
+        resp = requests.get(
+            f"{GRAPH}/oauth/access_token",
+            params=dict(
+                grant_type="fb_exchange_token",
+                client_id=app_id,
+                client_secret=app_secret,
+                fb_exchange_token=token_row[0],
+            ),
+            timeout=30,
+        )
+        if not resp.ok:
+            return
+        data = resp.json()
+        new_token = data.get("access_token")
+        expires_in = data.get("expires_in")
+        if not new_token:
+            return
+        new_expires = datetime.utcnow() + timedelta(seconds=int(expires_in or 60 * 60 * 24 * 60))
+        if db:
+            with db.engine.connect() as conn:
+                conn.execute(
+                    text(
+                        "UPDATE facebook_tokens SET access_token=:t, expires_at=:exp, updated_at=NOW() "
+                        "WHERE account_id=:aid"
+                    ),
+                    dict(t=new_token, exp=new_expires, aid=token_row[2]),
+                )
+                conn.commit()
+        current_app.logger.info("FB token proactively refreshed for account %s", token_row[2])
+    except Exception:
+        current_app.logger.exception("FB proactive token refresh failed; existing token unchanged.")
+
+
 def _get_fb_token(aid: int) -> Optional[str]:
     if db:
         try:
             with db.engine.connect() as conn:
                 result = conn.execute(
-                    text("SELECT access_token, expires_at FROM facebook_tokens WHERE account_id=:aid LIMIT 1"),
+                    text("SELECT access_token, expires_at, account_id FROM facebook_tokens WHERE account_id=:aid LIMIT 1"),
                     {"aid": aid},
                 )
                 row = result.fetchone()
                 if row:
+                    # Check hard expiry
+                    if row[1] and row[1] < datetime.utcnow():
+                        # Token expired — do NOT delete, just signal reconnect
+                        return None
+                    # Proactive refresh if expiring within 7 days
+                    if row[1] and row[1] < datetime.utcnow() + timedelta(days=7):
+                        _try_refresh_token(row)
                     return row[0]
         except Exception:
             current_app.logger.exception("FB token DB read failed; trying session fallback.")
+    # Session fallback
+    exp_str = session.get("fb_expires_at")
+    if exp_str:
+        try:
+            exp_dt = datetime.fromisoformat(exp_str)
+            if exp_dt < datetime.utcnow():
+                return None
+        except Exception:
+            pass
     return session.get("fb_access_token")
 
 
@@ -375,7 +435,7 @@ def select_account():
     tok = _get_fb_token(aid)
 
     if not tok:
-        flash("Please connect your Facebook account first.", "warning")
+        flash("Your Facebook connection expired — please reconnect to continue.", "warning")
         return redirect(url_for("fbads_bp.connect"))
 
     # Fetch available ad accounts
@@ -455,7 +515,8 @@ def fb_connect():
         "ads_management",
         "read_insights",
         "business_management",
-        "pages_show_list"
+        "pages_show_list",
+        "leads_retrieval"
     ])
     from urllib.parse import urlencode
     params = dict(
@@ -1067,6 +1128,9 @@ def campaigns():
     """View and manage Facebook Ad campaigns"""
     aid = current_account_id()
     tok = _get_fb_token(aid)
+    if tok is None:
+        flash("Your Facebook connection expired — please reconnect to continue.", "warning")
+        return redirect(url_for("fbads_bp.connect"))
     connected = bool(tok)
     selected = _get_selected_account(aid)
 
@@ -1152,11 +1216,14 @@ def create_test_campaign():
     """
     aid = current_account_id()
     tok = _get_fb_token(aid)
+    if tok is None:
+        flash("Your Facebook connection expired — please reconnect to continue.", "warning")
+        return redirect(url_for("fbads_bp.connect"))
     connected = bool(tok)
     selected = _get_selected_account(aid)
 
     if not connected:
-        flash("Please connect your Facebook account first.", "warning")
+        flash("Your Facebook connection expired — please reconnect to continue.", "warning")
         return redirect(url_for("fbads_bp.connect"))
 
     if not selected:
@@ -1270,6 +1337,9 @@ def adsets():
     """View and manage Facebook Ad sets"""
     aid = current_account_id()
     tok = _get_fb_token(aid)
+    if tok is None:
+        flash("Your Facebook connection expired — please reconnect to continue.", "warning")
+        return redirect(url_for("fbads_bp.connect"))
     connected = bool(tok)
     selected = _get_selected_account(aid)
 
@@ -1486,6 +1556,9 @@ def ads():
     """View and manage Facebook Ads"""
     aid = current_account_id()
     tok = _get_fb_token(aid)
+    if tok is None:
+        flash("Your Facebook connection expired — please reconnect to continue.", "warning")
+        return redirect(url_for("fbads_bp.connect"))
     connected = bool(tok)
     selected = _get_selected_account(aid)
 
@@ -1620,6 +1693,39 @@ def _apply_facebook_fix(access_token: str, action_type: str, entity_type: str, e
     - update_schedule: Modify ad schedule
     - duplicate_winner: Duplicate high-performing ad
     """
+    # Facebook-specific error code messages
+    FB_ERROR_MESSAGES = {
+        190: "Your Facebook connection has expired. Please reconnect.",
+        200: "Permission denied by Facebook.",  # FB error code 200 means permission denied
+        4: "Facebook rate limit reached — please try again in a few minutes.",
+        10: "Permission denied. Make sure your Facebook App has ads_management permission.",
+        100: "Invalid parameter sent to Facebook API.",
+        368: "Your ad account has been flagged. Please check Facebook Ads Manager.",
+    }
+
+    def _parse_fb_response(resp, current_access_token: str, current_entity_id: str):
+        """Parse a Facebook API response and return a structured result dict, or None if success."""
+        try:
+            data = resp.json()
+        except Exception:
+            data = {}
+
+        fb_error = data.get('error', {})
+        fb_code = fb_error.get('code')
+        fb_msg = fb_error.get('message', resp.text)
+
+        if not resp.ok or fb_code:
+            user_msg = FB_ERROR_MESSAGES.get(fb_code, fb_msg or "Facebook API error")
+            # For expired token (code 190), clear the stored token to force reconnect
+            if fb_code == 190:
+                try:
+                    aid = current_account_id()
+                    _clear_fb_token(aid)
+                except Exception:
+                    pass
+            return {"success": False, "error": user_msg, "fb_code": fb_code}
+        return None  # No error
+
     try:
         if action_type == 'adjust_budget':
             # Update budget for campaign or ad set
@@ -1638,14 +1744,14 @@ def _apply_facebook_fix(access_token: str, action_type: str, entity_type: str, e
                 payload['daily_budget'] = int(float(budget_value) * 100)
 
             resp = requests.post(endpoint, data=payload, timeout=30)
-            if resp.status_code == 200:
-                return {
-                    "success": True,
-                    "message": f"Budget updated to ${budget_value}",
-                    "details": {"new_budget": budget_value}
-                }
-            else:
-                return {"success": False, "error": f"API error: {resp.text}"}
+            err = _parse_fb_response(resp, access_token, entity_id)
+            if err:
+                return err
+            return {
+                "success": True,
+                "message": f"Budget updated to ${budget_value}",
+                "details": {"new_budget": budget_value}
+            }
 
         elif action_type == 'pause_entity':
             # Pause campaign, ad set, or ad
@@ -1656,14 +1762,14 @@ def _apply_facebook_fix(access_token: str, action_type: str, entity_type: str, e
             }
 
             resp = requests.post(endpoint, data=payload, timeout=30)
-            if resp.status_code == 200:
-                return {
-                    "success": True,
-                    "message": f"{entity_type.title()} paused successfully",
-                    "details": {"status": "PAUSED"}
-                }
-            else:
-                return {"success": False, "error": f"API error: {resp.text}"}
+            err = _parse_fb_response(resp, access_token, entity_id)
+            if err:
+                return err
+            return {
+                "success": True,
+                "message": f"{entity_type.title()} paused successfully",
+                "details": {"status": "PAUSED"}
+            }
 
         elif action_type == 'enable_entity':
             # Enable campaign, ad set, or ad
@@ -1674,14 +1780,14 @@ def _apply_facebook_fix(access_token: str, action_type: str, entity_type: str, e
             }
 
             resp = requests.post(endpoint, data=payload, timeout=30)
-            if resp.status_code == 200:
-                return {
-                    "success": True,
-                    "message": f"{entity_type.title()} enabled successfully",
-                    "details": {"status": "ACTIVE"}
-                }
-            else:
-                return {"success": False, "error": f"API error: {resp.text}"}
+            err = _parse_fb_response(resp, access_token, entity_id)
+            if err:
+                return err
+            return {
+                "success": True,
+                "message": f"{entity_type.title()} enabled successfully",
+                "details": {"status": "ACTIVE"}
+            }
 
         elif action_type == 'adjust_bid':
             # Update bid strategy or bid amount for ad set
@@ -1702,14 +1808,14 @@ def _apply_facebook_fix(access_token: str, action_type: str, entity_type: str, e
                 payload['bid_amount'] = int(float(bid_amount) * 100)  # Convert to cents
 
             resp = requests.post(endpoint, data=payload, timeout=30)
-            if resp.status_code == 200:
-                return {
-                    "success": True,
-                    "message": "Bid strategy updated",
-                    "details": {"bid_strategy": bid_strategy, "bid_amount": bid_amount}
-                }
-            else:
-                return {"success": False, "error": f"API error: {resp.text}"}
+            err = _parse_fb_response(resp, access_token, entity_id)
+            if err:
+                return err
+            return {
+                "success": True,
+                "message": "Bid strategy updated",
+                "details": {"bid_strategy": bid_strategy, "bid_amount": bid_amount}
+            }
 
         elif action_type == 'update_schedule':
             # Update ad schedule for ad set
@@ -1727,14 +1833,14 @@ def _apply_facebook_fix(access_token: str, action_type: str, entity_type: str, e
             }
 
             resp = requests.post(endpoint, data=payload, timeout=30)
-            if resp.status_code == 200:
-                return {
-                    "success": True,
-                    "message": "Ad schedule updated",
-                    "details": {"schedule": schedule}
-                }
-            else:
-                return {"success": False, "error": f"API error: {resp.text}"}
+            err = _parse_fb_response(resp, access_token, entity_id)
+            if err:
+                return err
+            return {
+                "success": True,
+                "message": "Ad schedule updated",
+                "details": {"schedule": schedule}
+            }
 
         elif action_type == 'duplicate_winner':
             # Duplicate a high-performing ad
@@ -1767,15 +1873,15 @@ def _apply_facebook_fix(access_token: str, action_type: str, entity_type: str, e
             }
 
             resp = requests.post(endpoint, data=payload, timeout=30)
-            if resp.status_code == 200:
-                new_ad = resp.json()
-                return {
-                    "success": True,
-                    "message": "Ad duplicated successfully (started paused)",
-                    "details": {"new_ad_id": new_ad.get('id')}
-                }
-            else:
-                return {"success": False, "error": f"API error: {resp.text}"}
+            err = _parse_fb_response(resp, access_token, entity_id)
+            if err:
+                return err
+            new_ad = resp.json()
+            return {
+                "success": True,
+                "message": "Ad duplicated successfully (started paused)",
+                "details": {"new_ad_id": new_ad.get('id')}
+            }
 
         else:
             return {"success": False, "error": f"Unknown action type: {action_type}"}

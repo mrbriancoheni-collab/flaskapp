@@ -45,9 +45,10 @@ class FacebookAdsOAuthHelper:
             Authorization URL to redirect user to
         """
         app_id = current_app.config.get('FB_APP_ID') or os.getenv('FB_APP_ID')
+        REDIRECT_URI = os.environ.get('FB_REDIRECT_URI', 'https://fieldsprout.io/account/fbads/callback')
         redirect_uri = current_app.config.get('FB_ADS_GRADER_REDIRECT_URI') or \
                       os.getenv('FB_ADS_GRADER_REDIRECT_URI') or \
-                      'https://fieldsprout.io/account/fbads/callback'
+                      REDIRECT_URI
 
         if not app_id:
             raise ValueError("FB_APP_ID not configured")
@@ -94,9 +95,10 @@ class FacebookAdsOAuthHelper:
         # Get configuration
         app_id = current_app.config.get('FB_APP_ID') or os.getenv('FB_APP_ID')
         app_secret = current_app.config.get('FB_APP_SECRET') or os.getenv('FB_APP_SECRET')
+        REDIRECT_URI = os.environ.get('FB_REDIRECT_URI', 'https://fieldsprout.io/account/fbads/callback')
         redirect_uri = current_app.config.get('FB_ADS_GRADER_REDIRECT_URI') or \
                       os.getenv('FB_ADS_GRADER_REDIRECT_URI') or \
-                      'https://fieldsprout.io/account/fbads/callback'
+                      REDIRECT_URI
 
         if not app_id or not app_secret:
             logger.error("FB_APP_ID or FB_APP_SECRET not configured")

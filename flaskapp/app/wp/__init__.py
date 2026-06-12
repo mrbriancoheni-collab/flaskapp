@@ -158,7 +158,7 @@ def _openai_key() -> Optional[str]:
 
 # ---------- queue processor ----------
 
-def _ai_generate_post(brief: Dict[str, Any]) -> Dict[str, Any]:
+def _ai_generate_post(brief: Dict[str, Any], site: Optional["WPSite"] = None) -> Dict[str, Any]:
     """
     Produce {title, html, excerpt} from a brief.
     Priority: 1) URL analyzer  2) Claude  3) OpenAI  4) heuristic stub
@@ -174,6 +174,14 @@ def _ai_generate_post(brief: Dict[str, Any]) -> Dict[str, Any]:
     topics = brief.get("topics") or []
     cluster_name = brief.get("cluster_name") or ""
     supporting_context = brief.get("supporting_context") or ""
+
+    # Brand voice / language directives from site settings
+    _LANG_NAMES = {
+        "es": "Spanish", "fr": "French", "pt": "Portuguese", "de": "German",
+    }
+    brand_voice = getattr(site, "brand_voice", None) or ""
+    brand_avoid = getattr(site, "brand_avoid", None) or ""
+    content_language = getattr(site, "content_language", None) or "en"
 
     # 1) Analyzer — scrape and rewrite from a source URL
     if source_url and analyze_url:
@@ -195,6 +203,19 @@ def _ai_generate_post(brief: Dict[str, Any]) -> Dict[str, Any]:
     outline_line = f"Suggested outline:\n{outline}" if outline else ""
     brief_block = "\n".join(filter(None, [kw_line, extra_line, cluster_line, context_line, outline_line, prompt]))
 
+    # Build brand voice directives
+    _brand_directives = []
+    if brand_voice:
+        _brand_directives.append(f"Write in this style: {brand_voice}")
+    if brand_avoid:
+        _brand_directives.append(f"Avoid: {brand_avoid}")
+    if content_language and content_language != "en":
+        _lang_name = _LANG_NAMES.get(content_language, content_language)
+        _brand_directives.append(
+            f"Write the entire post in {_lang_name}. All headings, body text, and meta description must be in {_lang_name}."
+        )
+    brand_directive_block = ("\n".join(_brand_directives) + "\n") if _brand_directives else ""
+
     # 2) Claude (primary AI writer)
     try:
         from app.ai_clients import get_ai_client
@@ -211,7 +232,7 @@ Requirements:
 - Include short paragraphs and bullet lists where appropriate
 - Naturally incorporate the primary keyword in the title, first paragraph, and 2-3 subheadings
 - End with a clear call-to-action paragraph
-
+{brand_directive_block}
 Return ONLY valid JSON with these exact keys:
 {{"title": "...", "html": "...", "excerpt": "..."}}
 
@@ -263,10 +284,18 @@ The excerpt must be 145-155 characters optimised as a meta description."""
     if key:
         try:
             import requests
+            _openai_brand = ""
+            if brand_voice:
+                _openai_brand += f" Write in this style: {brand_voice}."
+            if brand_avoid:
+                _openai_brand += f" Avoid: {brand_avoid}."
+            if content_language and content_language != "en":
+                _lang_name = _LANG_NAMES.get(content_language, content_language)
+                _openai_brand += f" Write the entire post in {_lang_name}."
             sys_msg = (
                 "You are a senior content writer for a local services blog. "
                 "Write helpful, original, practical content with clear structure (H2/H3), "
-                "and a short meta-style excerpt. Return STRICT JSON: {title, html, excerpt}."
+                f"and a short meta-style excerpt. Return STRICT JSON: {{title, html, excerpt}}.{_openai_brand}"
             )
             user_msg = _json.dumps({
                 "brief": brief_block,
@@ -585,7 +614,7 @@ def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None, retry_error
 
             elif job.kind == "ai_generate":
                 brief = job.payload or {}
-                draft = _ai_generate_post(brief)
+                draft = _ai_generate_post(brief, site=site)
 
                 needs_approval = bool(brief.get("require_approval")) or bool(getattr(site, "autopilot_require_approval", False))
 
@@ -979,10 +1008,22 @@ def settings():
         site = None
 
     if request.method == "POST":
+        is_brand_voice_post = bool(request.form.get("brand_voice_form"))
         is_autopilot_post = any(k in request.form for k in (
             "autopilot_enabled", "autopilot_daily_new",
             "autopilot_daily_refresh", "autopilot_require_approval"
         ))
+
+        if is_brand_voice_post:
+            if not site:
+                flash("Please save your WordPress connection first.", "error")
+                return see_other("wp_bp.settings")
+            site.brand_voice = (request.form.get("brand_voice") or "").strip() or None
+            site.brand_avoid = (request.form.get("brand_avoid") or "").strip() or None
+            site.content_language = (request.form.get("content_language") or "en").strip()
+            db.session.commit()
+            flash("Brand voice settings saved.", "success")
+            return see_other("wp_bp.settings")
 
         if is_autopilot_post:
             if not site:
@@ -1931,6 +1972,122 @@ def insights():
                            autopilot_stats=autopilot_stats, post_gsc=post_gsc,
                            aid=aid)
 
+# ---------- freshness auto-refresh ----------
+
+def _run_weekly_freshness_scan(site: "WPSite") -> Dict[str, Any]:
+    """
+    Scan all published posts for staleness (age > 365 days).
+    For each stale post with staleness_score >= 60 that has no queued/running
+    refresh or ai_generate job, queue a 'refresh' job (max 3 per run).
+    """
+    if not site or not site.id:
+        return {"ok": False, "error": "No site"}
+
+    queued_count = 0
+    stale_posts = []
+
+    try:
+        c = WPClient(site.base_url, site.username, site.app_password)
+        raw = c.list_posts(per_page=50, status="publish")
+
+        from datetime import timezone
+        import re as _re
+        now = datetime.now(timezone.utc)
+
+        for p in raw:
+            modified_str = p.get("modified_gmt") or p.get("modified", "")
+            try:
+                modified = datetime.fromisoformat(
+                    modified_str.replace("Z", "+00:00") if modified_str else ""
+                )
+                if modified.tzinfo is None:
+                    modified = modified.replace(tzinfo=timezone.utc)
+                days_old = (now - modified).days
+            except Exception:
+                days_old = 0
+
+            # Age score: over 365 days old → over 50 staleness; at 730 days → 100
+            age_score = min(days_old / 365 * 50, 50)
+            staleness = round(age_score)  # traffic decay not available in background
+
+            if days_old > 365 and staleness >= 60:
+                stale_posts.append({
+                    "id": p.get("id"),
+                    "title": _re.sub(r"<[^>]+>", "", p.get("title", {}).get("rendered", "")),
+                    "url": (p.get("link") or "").rstrip("/"),
+                    "days_old": days_old,
+                    "staleness": staleness,
+                })
+
+        # Save scan results
+        try:
+            from app.models_seo import SEOScanResult
+            aid = site.account_id
+            if aid:
+                SEOScanResult.save_result(
+                    account_id=aid, site_id=site.id,
+                    scan_type="freshness",
+                    issue_count=len(stale_posts),
+                    item_count=len(raw),
+                    data={
+                        "stale_count": len(stale_posts),
+                        "total": len(raw),
+                        "stale_posts": [
+                            {"url": sp["url"], "days_old": sp["days_old"], "staleness": sp["staleness"]}
+                            for sp in stale_posts[:20]
+                        ],
+                    },
+                )
+        except Exception:
+            pass
+
+        # Queue refresh jobs for stale posts (max 3 per run)
+        MAX_STALE_REFRESH = 3
+        for sp in stale_posts:
+            if queued_count >= MAX_STALE_REFRESH:
+                break
+
+            post_id = sp.get("id")
+            if not post_id:
+                continue
+
+            # Skip if there is already a queued or running refresh/ai_generate job for this post
+            existing = WPJob.query.filter(
+                WPJob.site_id == site.id,
+                WPJob.kind.in_(["refresh", "ai_generate"]),
+                WPJob.status.in_(["queued", "running"]),
+            ).all()
+            already_queued = any(
+                str((j.payload or {}).get("post_id")) == str(post_id)
+                for j in existing
+            )
+            if already_queued:
+                continue
+
+            job = WPJob(
+                site_id=site.id,
+                kind="refresh",
+                status="queued",
+                payload={
+                    "post_id": post_id,
+                    "url": sp["url"],
+                    "action": "refresh_stale",
+                    "reason": "Post is over 1 year old — refreshing title and meta to stay current",
+                },
+            )
+            db.session.add(job)
+            queued_count += 1
+
+        if queued_count:
+            db.session.commit()
+
+    except Exception as exc:
+        current_app.logger.exception("_run_weekly_freshness_scan failed for site %s", site.id)
+        return {"ok": False, "error": str(exc)}
+
+    return {"ok": True, "stale_found": len(stale_posts), "refresh_queued": queued_count}
+
+
 # ---------- cron (no login) ----------
 
 @wp_bp.route("/cron-runner", methods=["GET"])
@@ -1988,9 +2145,21 @@ def cron_runner():
         current_app.logger.exception("SEO auto-fix hook failed in cron_runner")
         seo_fix_results = [{"error": str(exc)}]
 
+    # Hook freshness scan — auto-queues refresh jobs for posts > 1 year old
+    freshness_results = []
+    try:
+        sites = WPSite.query.all()
+        for site in sites:
+            r = _run_weekly_freshness_scan(site)
+            freshness_results.append({"site": site.base_url, **r})
+    except Exception as exc:
+        current_app.logger.exception("Freshness scan hook failed in cron_runner")
+        freshness_results = [{"error": str(exc)}]
+
     return jsonify({"ran_at": ran_at, **result,
                     "seo_monitor": seo_monitor_results,
-                    "seo_auto_fix": seo_fix_results}), 200
+                    "seo_auto_fix": seo_fix_results,
+                    "freshness_scan": freshness_results}), 200
 
 # ---------- legacy / compatibility aliases ----------
 
@@ -3076,6 +3245,115 @@ def image_seo():
         posts_data=posts_data,
         error=error,
     )
+
+
+@wp_bp.route("/bulk-fix-alt-text", methods=["POST"], endpoint="bulk_fix_alt_text")
+@login_required
+def bulk_fix_alt_text():
+    """
+    Queue edit jobs for each image missing alt text (up to 20 per run).
+    Uses AI to generate descriptive alt text from the image filename/title.
+    Returns JSON: {"queued": N}
+    """
+    site = _current_site()
+    if not site:
+        return jsonify({"error": "No WordPress site configured"}), 400
+
+    import re as _re
+
+    queued = 0
+    try:
+        c = WPClient(site.base_url, site.username, site.app_password)
+        raw = c.list_posts(per_page=30, status="publish")
+
+        # Collect images missing alt text across all posts
+        missing_images: List[Dict[str, Any]] = []
+        for p in raw:
+            pid = p.get("id")
+            content = p.get("content", {}).get("rendered", "") or ""
+            for idx, m in enumerate(_re.finditer(
+                r'<img[^>]*src=["\']([^"\']+)["\'][^>]*>',
+                content, _re.IGNORECASE,
+            )):
+                full_tag = m.group(0)
+                src = m.group(1)
+                alt_m = _re.search(r'alt=["\']([^"\']*)["\']', full_tag, _re.IGNORECASE)
+                alt = alt_m.group(1) if alt_m else None
+                filename = src.split("/")[-1].split("?")[0]
+                is_decorative = bool(_re.match(r'(icon|logo|bg|background|divider)', filename, _re.I))
+                if (alt is None or alt.strip() == "") and not is_decorative:
+                    missing_images.append({
+                        "post_id": pid,
+                        "src": src,
+                        "filename": filename,
+                        "idx": idx,
+                    })
+            if len(missing_images) >= 20:
+                break
+
+        missing_images = missing_images[:20]
+
+        # Determine if AI is available
+        has_ai = bool(
+            current_app.config.get("OPENAI_API_KEY")
+            or current_app.config.get("ANTHROPIC_API_KEY")
+            or os.getenv("OPENAI_API_KEY")
+            or os.getenv("ANTHROPIC_API_KEY")
+        )
+
+        # Group by post_id so we can queue one edit job per post
+        from collections import defaultdict
+        posts_to_fix: Dict[int, List[Dict]] = defaultdict(list)
+        for img in missing_images:
+            posts_to_fix[img["post_id"]].append(img)
+
+        for pid, imgs in posts_to_fix.items():
+            # Build src → alt_text mapping for this post
+            alt_map: Dict[str, str] = {}
+            for img in imgs:
+                filename = img["filename"]
+                # Fallback alt text from filename
+                name_only = _re.sub(r'\.[^.]+$', '', filename)
+                fallback_alt = _re.sub(r'[-_]+', ' ', name_only).strip()
+
+                if has_ai:
+                    try:
+                        from app.ai_clients import get_ai_client
+                        ai_client = get_ai_client()
+                        resp = ai_client.messages.create(
+                            model="claude-haiku-4-5-20251001",
+                            max_tokens=60,
+                            messages=[{"role": "user", "content": (
+                                f"Write a 5-10 word descriptive alt text for a website image titled: "
+                                f"'{filename}'. Focus on describing what the image shows, not its "
+                                f"filename format. Return only the alt text, no quotes or punctuation at end."
+                            )}],
+                        )
+                        generated = resp.content[0].text.strip().strip('"\'')
+                        alt_map[img["src"]] = generated if generated else fallback_alt
+                    except Exception:
+                        alt_map[img["src"]] = fallback_alt
+                else:
+                    alt_map[img["src"]] = fallback_alt
+
+            payload = {
+                "post_id": pid,
+                "alt_updates": alt_map,
+                "action": "bulk_fix_alt_text",
+                "source": "bulk_fix_alt_text",
+            }
+            job = WPJob(site_id=site.id, kind="edit", payload=payload)
+            db.session.add(job)
+            queued += 1
+
+        if queued:
+            db.session.commit()
+
+    except Exception as exc:
+        current_app.logger.exception("bulk_fix_alt_text failed")
+        return jsonify({"error": str(exc)}), 500
+
+    return jsonify({"queued": queued})
 
 
 @wp_bp.route("/content-quality", methods=["GET"], endpoint="content_quality")

@@ -120,10 +120,12 @@
           </td>
           <td class="px-4 py-2.5 text-right">
             <form method="POST" action="{{ url_for('wp_bp.queue_refresh') }}" class="inline">
-              <input type="hidden" name="post_url" value="{{ p.url }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="post_id" value="{{ p.id }}">
+              <input type="hidden" name="status" value="publish">
               <button type="submit"
                       class="text-xs px-2.5 py-1 border border-indigo-300 text-indigo-600 rounded hover:bg-indigo-50 whitespace-nowrap">
-                Refresh →
+                Refresh now →
               </button>
             </form>
           </td>

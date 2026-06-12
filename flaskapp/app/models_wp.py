@@ -16,6 +16,9 @@ class WPSite(db.Model):
     autopilot_daily_new = db.Column(db.Integer, default=1, nullable=False)
     autopilot_daily_refresh = db.Column(db.Integer, default=1, nullable=False)
     autopilot_require_approval = db.Column(db.Boolean, default=True, nullable=False)
+    brand_voice = db.Column(db.Text, nullable=True)
+    brand_avoid = db.Column(db.Text, nullable=True)
+    content_language = db.Column(db.String(10), nullable=True, default="en")
     created_at = db.Column(db.DateTime)
     updated_at = db.Column(db.DateTime)
 
@@ -30,6 +33,21 @@ class WPSite(db.Model):
             if "account_id" not in existing:
                 _db.session.execute(text(
                     "ALTER TABLE wp_sites ADD COLUMN account_id INT NULL"
+                ))
+                _db.session.commit()
+            if "brand_voice" not in existing:
+                _db.session.execute(text(
+                    "ALTER TABLE wp_sites ADD COLUMN brand_voice TEXT NULL"
+                ))
+                _db.session.commit()
+            if "brand_avoid" not in existing:
+                _db.session.execute(text(
+                    "ALTER TABLE wp_sites ADD COLUMN brand_avoid TEXT NULL"
+                ))
+                _db.session.commit()
+            if "content_language" not in existing:
+                _db.session.execute(text(
+                    "ALTER TABLE wp_sites ADD COLUMN content_language VARCHAR(10) NULL DEFAULT 'en'"
                 ))
                 _db.session.commit()
         except Exception:

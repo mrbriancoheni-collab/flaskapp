@@ -122,6 +122,57 @@
         </form>
       </div>
 
+      <!-- Brand Voice Card -->
+      <div class="bg-white rounded-xl border shadow-sm">
+        <div class="p-5 border-b flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+            <i class="fa-solid fa-pen-nib"></i>
+          </div>
+          <div>
+            <h2 class="font-semibold text-gray-900">Brand Voice</h2>
+            <p class="text-sm text-gray-500">Tell the AI how to write for your brand</p>
+          </div>
+        </div>
+
+        <form method="post" action="{{ url_for('wp_bp.settings') }}" class="p-5 space-y-4">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <input type="hidden" name="brand_voice_form" value="1">
+          <input type="hidden" name="base_url" value="{{ site.base_url if site else '' }}">
+          <input type="hidden" name="username" value="{{ site.username if site else '' }}">
+          <input type="hidden" name="app_password" value="********">
+
+          <p class="text-sm text-gray-500">This applies to all AI-generated content for your site.</p>
+
+          <div>
+            <label class="block text-sm font-medium mb-1">How should your content sound?</label>
+            <textarea name="brand_voice" rows="2" class="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. Friendly and helpful, like a neighbor who's a plumbing expert. Conversational, never stuffy.">{{ site.brand_voice or '' }}</textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">What to avoid</label>
+            <textarea name="brand_avoid" rows="2" class="w-full border rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. Don't use 'utilize', avoid jargon, never mention competitors.">{{ site.brand_avoid or '' }}</textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Content language</label>
+            <select name="content_language" class="border rounded-lg px-3 py-2 text-sm">
+              <option value="en" {{ 'selected' if (site.content_language or 'en') == 'en' }}>English</option>
+              <option value="es" {{ 'selected' if site.content_language == 'es' }}>Spanish (Español)</option>
+              <option value="fr" {{ 'selected' if site.content_language == 'fr' }}>French (Français)</option>
+              <option value="pt" {{ 'selected' if site.content_language == 'pt' }}>Portuguese (Português)</option>
+              <option value="de" {{ 'selected' if site.content_language == 'de' }}>German (Deutsch)</option>
+            </select>
+          </div>
+
+          <div class="pt-2">
+            <button type="submit" class="px-5 py-2.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition font-medium flex items-center gap-2">
+              <i class="fa-solid fa-save"></i>
+              Save Brand Voice
+            </button>
+          </div>
+        </form>
+      </div>
+
       <!-- Autopilot Card -->
       <div class="bg-white rounded-xl border shadow-sm">
         <div class="p-5 border-b flex items-center justify-between">

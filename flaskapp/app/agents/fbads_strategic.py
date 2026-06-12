@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import logging
 from .base import BaseAgent, AgentDecision, AgentCapability, DecisionRiskLevel
 from .event_bus import AgentEventBus
+from .fb_agent_executor import _fb_execute_action
 
 logger = logging.getLogger(__name__)
 
@@ -377,22 +378,76 @@ class FBStrategicDirectorAgent(BaseAgent):
         return {'success': False, 'error': f'Unknown decision type: {decision_type}'}
 
     def _reallocate_budget(self, decision: AgentDecision, client: Any) -> Dict[str, Any]:
-        """Reallocate budget between campaigns."""
-        # Would integrate with Facebook Marketing API
+        """Reallocate budget: reduce underperformers, increase top performers."""
+        account_id = decision.account_id
+        from_campaigns = decision.action_data.get('from_campaigns', [])
+        to_campaigns = decision.action_data.get('to_campaigns', [])
+        amount = decision.action_data.get('amount', 0)
+
+        results = []
+        all_success = True
+
+        # Reduce budget on underperformers (cut by 50% of reallocation amount spread evenly)
+        if from_campaigns:
+            per_campaign_reduction = amount / len(from_campaigns)
+            for cid in from_campaigns:
+                r = _fb_execute_action(
+                    account_id=account_id,
+                    entity_id=str(cid),
+                    entity_type='campaign',
+                    action='adjust_budget',
+                    params={'daily_budget': max(1.0, per_campaign_reduction)},
+                )
+                results.append({'campaign_id': cid, 'direction': 'reduce', **r})
+                if not r.get('success'):
+                    all_success = False
+
+        # Increase budget on top performers
+        if to_campaigns:
+            per_campaign_increase = amount / len(to_campaigns)
+            for cid in to_campaigns:
+                r = _fb_execute_action(
+                    account_id=account_id,
+                    entity_id=str(cid),
+                    entity_type='campaign',
+                    action='adjust_budget',
+                    params={'daily_budget': per_campaign_increase},
+                )
+                results.append({'campaign_id': cid, 'direction': 'increase', **r})
+                if not r.get('success'):
+                    all_success = False
+
         return {
-            'success': True,
-            'from_campaigns_updated': len(decision.action_data['from_campaigns']),
-            'to_campaigns_updated': len(decision.action_data['to_campaigns']),
-            'amount_reallocated': decision.action_data['amount']
+            'success': all_success,
+            'from_campaigns_updated': len(from_campaigns),
+            'to_campaigns_updated': len(to_campaigns),
+            'amount_reallocated': amount,
+            'details': results,
         }
 
     def _scale_campaign(self, decision: AgentDecision, client: Any) -> Dict[str, Any]:
-        """Increase campaign budget."""
+        """Increase campaign daily budget via real API call."""
+        account_id = decision.account_id
+        campaign_id = decision.campaign_id or decision.action_data.get('campaign_id')
+        new_budget = decision.action_data.get('new_budget')
+
+        if not campaign_id:
+            return {'success': False, 'error': 'No campaign_id in decision'}
+        if not new_budget:
+            return {'success': False, 'error': 'No new_budget in action_data'}
+
+        result = _fb_execute_action(
+            account_id=account_id,
+            entity_id=str(campaign_id),
+            entity_type='campaign',
+            action='adjust_budget',
+            params={'daily_budget': float(new_budget)},
+        )
         return {
-            'success': True,
-            'campaign_id': decision.campaign_id,
-            'old_budget': decision.action_data['current_budget'],
-            'new_budget': decision.action_data['new_budget']
+            **result,
+            'campaign_id': campaign_id,
+            'old_budget': decision.action_data.get('current_budget'),
+            'new_budget': new_budget,
         }
 
 

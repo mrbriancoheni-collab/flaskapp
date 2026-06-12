@@ -510,6 +510,145 @@ async function undoAction(actionId, btn) {
       </div>
     </div>
 
+    {# ---- Account Health (onboarding health check) — self-contained block ---- #}
+    <div id="account-health-card" class="bg-white rounded-xl border">
+      <div class="flex items-center justify-between px-4 py-3 border-b">
+        <h2 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
+          <i class="fa-solid fa-stethoscope text-teal-500"></i> Account Health
+        </h2>
+        {% if health_check %}
+        <button id="health-recheck-btn" onclick="runHealthCheck(this)"
+                class="text-xs text-indigo-600 hover:underline flex items-center gap-1">
+          <i class="fa-solid fa-rotate"></i> Re-check
+        </button>
+        {% endif %}
+      </div>
+
+      {% if health_check %}
+      {% set hc_score = health_check.get('score', 0) %}
+      {% if hc_score >= 85 %}
+        {% set hc_color = 'text-green-600' %}{% set hc_ring = 'border-green-400' %}
+      {% elif hc_score >= 60 %}
+        {% set hc_color = 'text-amber-500' %}{% set hc_ring = 'border-amber-400' %}
+      {% else %}
+        {% set hc_color = 'text-red-600' %}{% set hc_ring = 'border-red-400' %}
+      {% endif %}
+      {% set hc_checks = health_check.get('checks', []) %}
+      {% set hc_problems = hc_checks | selectattr('status', 'ne', 'pass') | list %}
+      {% set hc_passed = hc_checks | selectattr('status', 'eq', 'pass') | list %}
+
+      <div class="p-5 flex flex-col sm:flex-row gap-5">
+        <div class="flex-shrink-0 flex sm:flex-col items-center gap-3 sm:gap-1">
+          <div class="w-20 h-20 rounded-full border-8 {{ hc_ring }} flex items-center justify-center">
+            <span class="text-2xl font-bold {{ hc_color }}">{{ hc_score }}</span>
+          </div>
+          <div class="text-center">
+            <p class="text-xs font-semibold text-gray-700">Setup score</p>
+            {% if health_check.get('ran_at') %}
+            <p class="text-[10px] text-gray-400">Checked {{ health_check.ran_at[:10] }}</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="flex-1 min-w-0 space-y-3">
+          {% if hc_problems %}
+          {% for c in hc_problems %}
+          <div class="rounded-lg border p-3 {{ 'border-red-200 bg-red-50' if c.status == 'fail' else 'border-amber-200 bg-amber-50' }}">
+            <div class="flex items-start gap-2">
+              {% if c.status == 'fail' %}
+              <i class="fa-solid fa-circle-xmark text-red-500 mt-0.5 flex-shrink-0"></i>
+              {% else %}
+              <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5 flex-shrink-0"></i>
+              {% endif %}
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold {{ 'text-red-900' if c.status == 'fail' else 'text-amber-900' }}">{{ c.title }}</p>
+                <p class="text-xs mt-0.5 {{ 'text-red-700' if c.status == 'fail' else 'text-amber-700' }}">{{ c.explanation }}</p>
+                {% set fix = c.get('fix_action') %}
+                {% if fix %}
+                <div class="mt-2">
+                  {% if fix.type == 'sync' %}
+                  <button onclick="doSync(this)"
+                          class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white border rounded-lg hover:bg-gray-50 transition text-gray-700">
+                    <i class="fa-solid fa-rotate"></i> {{ fix.get('label', 'Sync now') }}
+                  </button>
+                  {% elif fix.type == 'link' and fix.href %}
+                  <a href="{{ fix.href }}"
+                     class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white border rounded-lg hover:bg-gray-50 transition text-gray-700">
+                    {{ fix.get('label', 'Fix it') }} <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                  </a>
+                  {% endif %}
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="rounded-lg border border-green-200 bg-green-50 p-3 flex items-center gap-2">
+            <i class="fa-solid fa-circle-check text-green-500"></i>
+            <p class="text-sm text-green-800 font-medium">No setup problems found — your account passed every check.</p>
+          </div>
+          {% endif %}
+
+          {% if hc_passed %}
+          <details class="group">
+            <summary class="cursor-pointer text-xs text-gray-500 hover:text-gray-700 select-none flex items-center gap-1.5">
+              <i class="fa-solid fa-chevron-right text-[9px] transition-transform group-open:rotate-90"></i>
+              {{ hc_passed | length }} check{{ 's' if hc_passed | length != 1 else '' }} passed ✓
+            </summary>
+            <div class="mt-2 space-y-1.5 pl-4">
+              {% for c in hc_passed %}
+              <div class="flex items-start gap-2 text-xs">
+                <i class="fa-solid fa-circle-check text-green-400 mt-0.5 flex-shrink-0"></i>
+                <div>
+                  <span class="font-medium text-gray-700">{{ c.title }}</span>
+                  <span class="text-gray-400"> — {{ c.explanation }}</span>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </details>
+          {% endif %}
+        </div>
+      </div>
+
+      {% else %}
+      <div class="px-4 py-8 text-center">
+        <i class="fa-solid fa-stethoscope text-gray-300 text-4xl mb-3 block"></i>
+        <p class="text-sm font-semibold text-gray-700">Check your account setup</p>
+        <p class="text-sm text-gray-500 mt-1 mb-4">We'll scan for common setup problems — like missing lead tracking or paying for junk searches — and explain how to fix them.</p>
+        <button id="health-run-btn" onclick="runHealthCheck(this)"
+                class="inline-flex items-center gap-2 rounded-lg bg-teal-600 text-white px-4 py-2 text-sm hover:bg-teal-500 transition">
+          <i class="fa-solid fa-stethoscope"></i> Run health check
+        </button>
+      </div>
+      {% endif %}
+    </div>
+
+    <script>
+    async function runHealthCheck(btn) {
+      const original = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking…';
+      try {
+        const r = await fetch('/account/google/ads/health-check', { method: 'POST' });
+        const d = await r.json();
+        if (r.ok && typeof d.score === 'number') {
+          if (typeof showToast !== 'undefined') showToast('Health check complete — score ' + d.score + '/100', 'success');
+          window.location.reload();
+        } else {
+          btn.disabled = false;
+          btn.innerHTML = original;
+          if (typeof showToast !== 'undefined') showToast(d.error || 'Health check failed. Please try again.', 'error');
+        }
+      } catch (e) {
+        btn.disabled = false;
+        btn.innerHTML = original;
+        if (typeof showToast !== 'undefined') showToast('Health check failed. Please try again.', 'error');
+      }
+    }
+    </script>
+
     <!-- Row 3: Recent Activity -->
     <div class="bg-white rounded-xl border">
       <div class="flex items-center justify-between px-4 py-3 border-b">

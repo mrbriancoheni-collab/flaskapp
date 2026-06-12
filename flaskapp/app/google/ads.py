@@ -215,6 +215,15 @@ def optimize():
         except Exception:
             current_app.logger.exception("Error loading weekly digest for cockpit")
 
+    # Latest stored onboarding health check for the "Account Health" card
+    health_check = None
+    if tab == "cockpit" and aid:
+        try:
+            from app.services.google_ads_health_check import get_stored_health_check
+            health_check = get_stored_health_check(aid)
+        except Exception:
+            current_app.logger.exception("Error loading health check for cockpit")
+
     keywords_data: list = []
     negatives_data: list = []
     campaigns_list: list = []
@@ -423,6 +432,7 @@ def optimize():
         ads_truncated=len(ads_tab_data) >= 500,
         cockpit=cockpit,
         weekly_digest=weekly_digest,
+        health_check=health_check,
         last_synced_at=last_synced_at,
         last_synced_stale=last_synced_stale,
     )
@@ -1330,8 +1340,38 @@ def sync():
     except Exception:
         current_app.logger.warning("Could not record gads_last_synced_at for account %s", aid)
 
+    # Best-effort: refresh the onboarding health check with the new data
+    try:
+        from app.services.google_ads_health_check import run_health_check, store_health_check
+        hc = run_health_check(aid)
+        store_health_check(aid, hc)
+        result["health_check"] = {"score": hc["score"]}
+    except Exception:
+        current_app.logger.warning("Health check after sync failed for account %s", aid)
+
     status = 200 if not result["errors"] else 207
     return jsonify(result), status
+
+
+@gads_bp.post("/health-check")
+@login_required
+def health_check():
+    """
+    Run the onboarding account health check, store the result, and return it.
+    Returns {"score": 0-100, "ran_at": "...", "checks": [...]}.
+    """
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    try:
+        from app.services.google_ads_health_check import run_health_check, store_health_check
+        result = run_health_check(aid)
+        store_health_check(aid, result)
+        return jsonify(result)
+    except Exception as e:
+        current_app.logger.exception("Health check failed for account %s", aid)
+        return jsonify({"error": str(e)}), 500
 
 
 # ---------------------------

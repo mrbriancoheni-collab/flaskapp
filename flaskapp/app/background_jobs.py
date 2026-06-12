@@ -291,6 +291,18 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
+    # Facebook Ads daily sync (daily at 3:30 AM UTC)
+    # Pulls campaigns, adsets, ads, and last-30-day insights into local DB
+    scheduler.add_job(
+        func=sync_fb_all_accounts,
+        trigger='cron',
+        hour=3,
+        minute=30,
+        id='sync_fb_all_accounts',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
     # Google Ads Call View sync — daily at 4:30 AM UTC
     scheduler.add_job(
         func=sync_call_view_all_accounts,
@@ -390,7 +402,7 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
-    app.logger.info("Registered 20 scheduled background jobs")
+    app.logger.info("Registered 21 scheduled background jobs")
 
 
 # ===== Scheduled Job Functions =====
@@ -961,6 +973,67 @@ def run_strategic_agents(app: Flask):
 
         except Exception as e:
             current_app.logger.error(f"Error running strategic agents: {e}", exc_info=True)
+
+
+def sync_fb_all_accounts(app: Flask):
+    """
+    Daily sync of Facebook campaigns, adsets, ads, and insights.
+
+    Iterates over every app account that has a non-expired Facebook token
+    and calls sync_fb_account(account_id) for each one.
+    """
+    with app.app_context():
+        from app import db
+        from sqlalchemy import text
+
+        try:
+            current_app.logger.info("[JOB] Starting FB Ads daily sync for all accounts")
+
+            # Find all accounts with a non-expired FB token
+            try:
+                with db.engine.connect() as conn:
+                    rows = conn.execute(
+                        text(
+                            "SELECT account_id FROM facebook_tokens "
+                            "WHERE expires_at IS NULL OR expires_at > NOW()"
+                        )
+                    ).fetchall()
+            except Exception as exc:
+                current_app.logger.error(
+                    "[JOB] sync_fb_all_accounts: could not query facebook_tokens — %s", exc
+                )
+                return
+
+            account_ids = [r[0] for r in rows]
+            current_app.logger.info(
+                "[JOB] sync_fb_all_accounts: found %d account(s) with valid FB token",
+                len(account_ids),
+            )
+
+            success_count = 0
+            error_count = 0
+            for account_id in account_ids:
+                try:
+                    from app.services.fbads_sync import sync_fb_account
+                    sync_fb_account(account_id)
+                    success_count += 1
+                except Exception as exc:
+                    current_app.logger.error(
+                        "[JOB] sync_fb_all_accounts: error syncing account %s — %s",
+                        account_id, exc,
+                        exc_info=True,
+                    )
+                    error_count += 1
+
+            current_app.logger.info(
+                "[JOB] FB Ads daily sync complete: %d succeeded, %d failed",
+                success_count, error_count,
+            )
+
+        except Exception as exc:
+            current_app.logger.error(
+                "[JOB] sync_fb_all_accounts: unexpected error — %s", exc, exc_info=True
+            )
 
 
 def run_google_ads_auto_executor(app: Flask):

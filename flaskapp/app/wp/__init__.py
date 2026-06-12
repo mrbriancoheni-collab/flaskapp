@@ -315,6 +315,160 @@ The excerpt must be 145-155 characters optimised as a meta description."""
     excerpt = "Clear, practical tips you can use today—plus when to call a pro."
     return {"title": title, "html": html, "excerpt": excerpt}
 
+AUTOPILOT_HARD_CAP = 5  # absolute max ai_generate jobs per site per day from autopilot
+
+
+def _run_daily_content_queue(site: "WPSite") -> dict:
+    """
+    Autopilot content scheduler: queue `ai_generate` jobs for a site up to the
+    configured daily limit, with three safety gates:
+
+    1. Daily cap enforcement  — never exceed `autopilot_daily_new` today.
+    2. New site grace period  — sites < 7 days old always require approval.
+    3. Hard cap               — never queue more than AUTOPILOT_HARD_CAP (5) per day.
+
+    Returns a summary dict.
+    """
+    if not getattr(site, "autopilot_enabled", False):
+        return {"ok": True, "skipped": "autopilot_disabled", "queued": 0}
+
+    configured_daily = int(getattr(site, "autopilot_daily_new", 1) or 1)
+    require_approval = bool(getattr(site, "autopilot_require_approval", True))
+
+    # Gate 3: Hard cap check — warn if configured limit exceeds the hard cap
+    effective_daily = configured_daily
+    if configured_daily > AUTOPILOT_HARD_CAP:
+        current_app.logger.warning(
+            "Autopilot site %d: autopilot_daily_new=%d exceeds hard cap %d — capping at %d.",
+            site.id, configured_daily, AUTOPILOT_HARD_CAP, AUTOPILOT_HARD_CAP,
+        )
+        db.session.add(WPLog(
+            site_id=site.id,
+            level="warn",
+            message=(
+                f"Autopilot daily cap exceeded: configured={configured_daily}, "
+                f"hard cap={AUTOPILOT_HARD_CAP}. Capping to {AUTOPILOT_HARD_CAP}."
+            ),
+        ))
+        effective_daily = AUTOPILOT_HARD_CAP
+
+    # Gate 1: Count how many ai_generate jobs were already queued/published today
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    already_queued_today = WPJob.query.filter(
+        WPJob.site_id == site.id,
+        WPJob.kind == "ai_generate",
+        WPJob.status.in_(["queued", "running", "done"]),
+        WPJob.created_at >= today_start,
+    ).count()
+
+    if already_queued_today >= effective_daily:
+        return {
+            "ok": True,
+            "skipped": "daily_cap_reached",
+            "queued": 0,
+            "already_today": already_queued_today,
+            "effective_daily": effective_daily,
+        }
+
+    slots_remaining = effective_daily - already_queued_today
+
+    # Gate 2: New site grace period — first 7 days always require approval
+    grace_period_approval = False
+    site_created_at = getattr(site, "created_at", None)
+    if site_created_at:
+        age_days = (datetime.utcnow() - site_created_at).days
+        if age_days < 7 and not require_approval:
+            grace_period_approval = True
+            current_app.logger.info(
+                "Autopilot site %d: new site grace period (age=%d days) — forcing approval.",
+                site.id, age_days,
+            )
+            db.session.add(WPLog(
+                site_id=site.id,
+                level="info",
+                message=(
+                    f"New site: requiring approval for first 7 days of autopilot "
+                    f"(site age {age_days} day(s))."
+                ),
+            ))
+
+    force_approval = require_approval or grace_period_approval
+
+    queued = 0
+    for _ in range(slots_remaining):
+        payload = {
+            "source": "autopilot",
+            "require_approval": force_approval,
+            "needs_approval": force_approval,
+            "status": "draft" if force_approval else "publish",
+        }
+        job = WPJob(site_id=site.id, kind="ai_generate", payload=payload)
+        db.session.add(job)
+        queued += 1
+
+    if queued:
+        db.session.commit()
+
+    return {
+        "ok": True,
+        "queued": queued,
+        "already_today": already_queued_today,
+        "effective_daily": effective_daily,
+        "force_approval": force_approval,
+    }
+
+
+def _validate_post_quality(
+    title: str,
+    html_body: str,
+    target_keyword: str = "",
+    min_words: int = 600,
+) -> dict:
+    """
+    Lightweight quality gate for AI-generated posts.
+
+    Returns:
+        {
+            "ok": bool,          # True = no quality warnings
+            "warnings": [...],   # list of human-readable warning strings
+            "word_count": int,
+        }
+    """
+    import re as _re
+
+    warnings: list = []
+
+    # Strip tags to count words
+    plain = _re.sub(r"<[^>]+>", " ", html_body or "")
+    word_count = len(plain.split())
+
+    threshold = int(min_words * 0.85)
+    if word_count < threshold:
+        warnings.append(
+            f"Word count too low: {word_count} words (minimum threshold {threshold}, target {min_words})."
+        )
+
+    # Keyword presence
+    if target_keyword:
+        kw_lower = target_keyword.lower()
+        title_has_kw = kw_lower in (title or "").lower()
+        body_has_kw  = kw_lower in plain.lower()
+        if not title_has_kw:
+            warnings.append(f"Primary keyword '{target_keyword}' missing from title.")
+        if not body_has_kw:
+            warnings.append(f"Primary keyword '{target_keyword}' missing from post body.")
+
+    # Basic structure: at least one <h2>
+    if not _re.search(r"<h2[\s>]", html_body or "", _re.IGNORECASE):
+        warnings.append("Post body contains no <h2> headings — add subheadings for structure.")
+
+    return {
+        "ok": len(warnings) == 0,
+        "warnings": warnings,
+        "word_count": word_count,
+    }
+
+
 def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None, retry_errors: bool = False) -> dict:
     if site is None:
         site = _current_site()
@@ -434,6 +588,38 @@ def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None, retry_error
                 draft = _ai_generate_post(brief)
 
                 needs_approval = bool(brief.get("require_approval")) or bool(getattr(site, "autopilot_require_approval", False))
+
+                # AI post quality gate — only enforced for autopilot-queued jobs
+                _is_autopilot_job = brief.get("source") not in ("manual", "manual_queue")
+                _qa = _validate_post_quality(
+                    title=draft.get("title") or "",
+                    html_body=draft.get("html") or "",
+                    target_keyword=brief.get("primary_keyword") or "",
+                    min_words=600,
+                )
+                if not _qa["ok"]:
+                    for _warn in _qa["warnings"]:
+                        db.session.add(WPLog(
+                            site_id=site.id, job_id=job.id,
+                            level="warn",
+                            message=f"Quality warning: {_warn}",
+                        ))
+                    current_app.logger.warning(
+                        "ai_generate job %d quality warnings: %s (word_count=%d)",
+                        job.id, _qa["warnings"], _qa["word_count"],
+                    )
+                    # Force human review when autopilot would have published without approval
+                    if _is_autopilot_job and not needs_approval:
+                        needs_approval = True
+                        db.session.add(WPLog(
+                            site_id=site.id, job_id=job.id,
+                            level="warn",
+                            message=(
+                                "Quality gate: post flagged for human review "
+                                f"(word_count={_qa['word_count']}, warnings={len(_qa['warnings'])})."
+                            ),
+                        ))
+
                 status = "draft" if needs_approval else "publish"
 
                 # Upload featured image to WP media library before creating the post

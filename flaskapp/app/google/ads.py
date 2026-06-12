@@ -94,6 +94,24 @@ def optimize():
         except Exception:
             db.session.rollback()
 
+    # Owner-stated goals (target cost per lead, monthly budget cap)
+    gads_goals = {"target_cpl": None, "max_monthly_budget": None}
+    if aid:
+        try:
+            import json as _json
+            raw_goals = db.session.execute(text(
+                "SELECT setting_value FROM account_settings "
+                "WHERE account_id = :aid AND setting_key = 'gads_goals' LIMIT 1"
+            ), {"aid": aid}).scalar()
+            if raw_goals:
+                parsed = _json.loads(raw_goals)
+                for k in gads_goals:
+                    v = parsed.get(k)
+                    if v is not None:
+                        gads_goals[k] = float(v)
+        except Exception:
+            db.session.rollback()
+
     # ---- Command Center (cockpit) data ----
     cockpit: dict = {}
     if tab == "cockpit" and aid:
@@ -435,6 +453,7 @@ def optimize():
         health_check=health_check,
         last_synced_at=last_synced_at,
         last_synced_stale=last_synced_stale,
+        gads_goals=gads_goals,
     )
 
 
@@ -2290,8 +2309,44 @@ def goals_page():
 @gads_bp.post("/goals")
 @login_required
 def goals_save():
-    """Save or update account goals."""
+    """Save or update account goals.
+
+    JSON body ({"target_cpl": ..., "max_monthly_budget": ...}) → stored in
+    account_settings under 'gads_goals' so the optimizer engine can steer
+    recommendations toward the owner's goal; returns JSON.
+    Form body → legacy goal-setting wizard (AdsAccountGoal row + redirect).
+    """
     aid = current_account_id()
+
+    if request.is_json:
+        if not aid:
+            return jsonify({"error": "Not authenticated"}), 401
+        payload = request.get_json(silent=True) or {}
+        goals = {}
+        for key, label in (
+            ("target_cpl", "cost per lead"),
+            ("max_monthly_budget", "monthly budget cap"),
+        ):
+            val = payload.get(key)
+            if val is None or val == "":
+                goals[key] = None
+                continue
+            try:
+                num = float(val)
+            except (TypeError, ValueError):
+                return jsonify({"error": f"Please enter a number for {label}."}), 400
+            if num <= 0:
+                return jsonify({"error": f"Your {label} must be more than $0."}), 400
+            goals[key] = round(num, 2)
+        try:
+            import json as _json
+            from app.google.autonomous_routes import _save_setting
+            _save_setting(aid, "gads_goals", _json.dumps(goals))
+            return jsonify({"ok": True, "goals": goals})
+        except Exception:
+            current_app.logger.exception("goals_save (json) error")
+            return jsonify({"error": "Could not save your goals. Please try again."}), 500
+
     if not aid:
         flash("Not authenticated.", "error")
         return redirect(url_for("gads_bp.goals_page"))

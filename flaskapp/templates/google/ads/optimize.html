@@ -809,6 +809,50 @@ async function undoAction(actionId, btn) {
     <!-- ═══════════════════════════════════════════════════════ -->
     {% if tab == 'optimizer' %}
     <section id="optimizer">
+      <!-- Your Goals card -->
+      {% set has_goals = gads_goals and (gads_goals.target_cpl or gads_goals.max_monthly_budget) %}
+      <div id="goals-card" class="mb-6 rounded-xl border bg-white p-5"
+           data-goals='{{ (gads_goals or {"target_cpl": none, "max_monthly_budget": none}) | tojson }}'>
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-gray-900">Your Goals</h3>
+          <button id="goals-edit-btn" type="button"
+                  class="text-xs font-medium text-indigo-600 hover:text-indigo-800 {{ '' if has_goals else 'hidden' }}">
+            Edit
+          </button>
+        </div>
+        <div id="goals-summary" class="mt-2 {{ '' if has_goals else 'hidden' }}">
+          <p class="text-sm text-gray-700">
+            <span id="goals-summary-text" class="font-medium"></span>
+            <span id="goals-actual-cpl" class="ml-2 hidden"></span>
+          </p>
+        </div>
+        <div id="goals-form" class="mt-3 {{ 'hidden' if has_goals else '' }}">
+          <p class="text-sm text-gray-600 mb-3">Tell us your goal and we'll optimize toward it.</p>
+          <div class="flex flex-wrap items-end gap-4">
+            <div>
+              <label for="goal-target-cpl" class="block text-xs text-gray-500 mb-1">What's a good cost per lead for you?</label>
+              <div class="flex items-center gap-1">
+                <span class="text-sm text-gray-500">$</span>
+                <input id="goal-target-cpl" type="number" min="1" step="0.01" placeholder="45"
+                       class="w-28 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+              </div>
+            </div>
+            <div>
+              <label for="goal-max-budget" class="block text-xs text-gray-500 mb-1">Monthly budget cap (optional)</label>
+              <div class="flex items-center gap-1">
+                <span class="text-sm text-gray-500">$</span>
+                <input id="goal-max-budget" type="number" min="1" step="0.01" placeholder="1200"
+                       class="w-28 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+              </div>
+            </div>
+            <button id="goals-save-btn" type="button"
+                    class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="flex items-center justify-between mb-2">
         <h3 class="text-sm font-medium">Optimizer Recommendations</h3>
         <button id="btn-reload-optimizer" class="px-3 py-1.5 text-sm rounded border hover:bg-gray-50">Reload</button>
@@ -2295,6 +2339,99 @@ async function undoAction(actionId, btn) {
       if (detail) detail.classList.toggle("hidden");
       if (chevron) chevron.classList.toggle("rotate-90");
     });
+  })();
+
+  // --- Your Goals card ---
+  (function () {
+    const card = document.getElementById("goals-card");
+    if (!card) return;
+    let goals = {};
+    try { goals = JSON.parse(card.dataset.goals || "{}"); } catch (e) {}
+
+    const summary = document.getElementById("goals-summary");
+    const summaryText = document.getElementById("goals-summary-text");
+    const actualCplEl = document.getElementById("goals-actual-cpl");
+    const form = document.getElementById("goals-form");
+    const editBtn = document.getElementById("goals-edit-btn");
+    const saveBtn = document.getElementById("goals-save-btn");
+    const cplInput = document.getElementById("goal-target-cpl");
+    const budgetInput = document.getElementById("goal-max-budget");
+
+    const money = v => `$${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+    const hasGoals = () => !!(goals.target_cpl || goals.max_monthly_budget);
+
+    function renderSummary() {
+      const parts = [];
+      if (goals.target_cpl) parts.push(`Goal: leads under ${money(goals.target_cpl)}`);
+      if (goals.max_monthly_budget) parts.push(`Budget cap: ${money(goals.max_monthly_budget)}/mo`);
+      summaryText.textContent = parts.join(" · ");
+    }
+
+    async function renderActualCpl() {
+      if (!goals.target_cpl) { actualCplEl.classList.add("hidden"); return; }
+      try {
+        const res = await fetch(`${base}/overview?days=30`);
+        const kpi = await res.json();
+        const spend = (Number(kpi.cost_micros) || 0) / 1_000_000;
+        const conv = Number(kpi.conversions) || 0;
+        if (!conv) { actualCplEl.classList.add("hidden"); return; }
+        const cpl = spend / conv;
+        const under = cpl <= goals.target_cpl;
+        actualCplEl.className = `ml-2 font-semibold ${under ? "text-green-600" : "text-red-600"}`;
+        actualCplEl.textContent = `Right now you're paying ${money(cpl.toFixed(2))} per lead`;
+      } catch (e) {
+        actualCplEl.classList.add("hidden");
+      }
+    }
+
+    function showForm() {
+      if (goals.target_cpl) cplInput.value = goals.target_cpl;
+      if (goals.max_monthly_budget) budgetInput.value = goals.max_monthly_budget;
+      form.classList.remove("hidden");
+      summary.classList.add("hidden");
+      editBtn.classList.add("hidden");
+    }
+
+    function showSummary() {
+      renderSummary();
+      renderActualCpl();
+      form.classList.add("hidden");
+      summary.classList.remove("hidden");
+      editBtn.classList.remove("hidden");
+    }
+
+    editBtn.addEventListener("click", showForm);
+
+    saveBtn.addEventListener("click", async () => {
+      const cpl = cplInput.value.trim();
+      const budget = budgetInput.value.trim();
+      if (!cpl && !budget) {
+        showToast("Enter a cost per lead or a monthly budget cap first.", "info");
+        return;
+      }
+      saveBtn.disabled = true;
+      try {
+        const res = await apiPost(`${base}/goals`, {
+          target_cpl: cpl || null,
+          max_monthly_budget: budget || null,
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          showToast(data.error || "Could not save your goals.", "error");
+          return;
+        }
+        goals = data.goals || {};
+        showToast("Goals saved! We'll optimize toward them.", "success");
+        if (hasGoals()) showSummary();
+        if (typeof loadOptimizer === "function") loadOptimizer();
+      } catch (e) {
+        showToast("Could not save your goals: " + e.message, "error");
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    if (hasGoals()) showSummary();
   })();
 
   function updateSelectedCount() {

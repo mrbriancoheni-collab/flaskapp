@@ -43,6 +43,35 @@ NO_BROAD_INDUSTRIES = {
 }
 
 
+def _load_goals(db, account_id: int) -> Dict[str, Any]:
+    """
+    Read the owner's stated goals from account_settings (key 'gads_goals').
+    Returns {"target_cpl": float|None, "max_monthly_budget": float|None}.
+    """
+    from sqlalchemy import text
+
+    goals: Dict[str, Any] = {"target_cpl": None, "max_monthly_budget": None}
+    try:
+        raw = db.session.execute(text(
+            "SELECT setting_value FROM account_settings "
+            "WHERE account_id = :aid AND setting_key = 'gads_goals' LIMIT 1"
+        ), {"aid": account_id}).scalar()
+        if raw:
+            data = json.loads(raw)
+            for key in goals:
+                val = data.get(key)
+                if val is not None:
+                    try:
+                        num = float(val)
+                        if num > 0:
+                            goals[key] = num
+                    except (TypeError, ValueError):
+                        pass
+    except Exception:
+        db.session.rollback()
+    return goals
+
+
 def generate_recommendations(account_id: int) -> Dict[str, Any]:
     """
     Run all analysis passes and upsert OptimizerRecommendation rows.
@@ -56,6 +85,23 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
     from sqlalchemy import text
 
     summary = {"account_id": account_id, "created": 0, "errors": []}
+
+    # The owner's stated goals steer priority and framing for every pass below.
+    goals = _load_goals(db, account_id)
+    target_cpl = goals.get("target_cpl")
+    max_monthly_budget = goals.get("max_monthly_budget")
+
+    # Projected monthly spend if every enabled campaign hits its daily budget.
+    current_monthly_budget = None
+    if max_monthly_budget:
+        try:
+            total_daily_cents = db.session.execute(text(
+                "SELECT COALESCE(SUM(daily_budget_cents), 0) FROM ads_campaigns "
+                "WHERE account_id = :aid AND status = 'enabled'"
+            ), {"aid": account_id}).scalar() or 0
+            current_monthly_budget = round(total_daily_cents / 100 * 30.4, 2)
+        except Exception:
+            db.session.rollback()
 
     # ── Clear stale open recommendations for this account ──────────────────
     try:
@@ -133,8 +179,17 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
                 "clicks": int(r["total_clicks"] or 0),
                 "conversions": 0,
                 "account_avg_cpa": account_avg_cpa,
+                "goal_target_cpl": target_cpl,
             }
             severity = 1 if spend > 50 else (2 if spend > 20 else 3)
+            goal_note = ""
+            if target_cpl:
+                goal_note = (
+                    f' Your goal is leads under ${target_cpl:.2f} each — '
+                    f'this spend bought none at all.'
+                )
+                if spend >= target_cpl:
+                    severity = 1
             _save(OptimizerRecommendation(
                 account_id=account_id,
                 scope_type="keyword",
@@ -146,6 +201,7 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
                     f'"{r["camp_name"]}" has spent ${spend:.2f} over 30 days with '
                     f'{int(r["total_clicks"])} clicks and zero conversions. '
                     f'Pausing it will free budget for better-performing keywords.'
+                    + goal_note
                 ),
                 expected_impact=f"Save ~${spend:.2f}/month",
                 severity=severity,
@@ -155,6 +211,117 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
         db.session.rollback()
         summary["errors"].append(f"Wasted spend pass: {exc}")
         logger.exception("Wasted spend analysis failed for account %s", account_id)
+
+    # ── 1b. Cost per lead over goal — converting keywords above 1.5x target ─
+    # Wasted-spend only covers zero-conversion keywords, so nothing here
+    # duplicates a rec from pass 1.
+    if target_cpl:
+        try:
+            cpa_limit = target_cpl * 1.5
+            rows = db.session.execute(text("""
+                SELECT gs.entity_id AS kw_local_id,
+                       SUM(gs.cost_micros) AS total_cost_micros,
+                       SUM(gs.conversions) AS total_conversions,
+                       SUM(gs.clicks) AS total_clicks,
+                       k.text AS kw_text,
+                       k.match_type,
+                       ag.id AS ag_id,
+                       ac.name AS camp_name
+                FROM gads_stats_daily gs
+                JOIN keywords k ON k.id = gs.entity_id
+                JOIN ad_groups ag ON ag.id = k.ad_group_id
+                JOIN ads_campaigns ac ON ac.id = ag.campaign_id
+                WHERE gs.entity_type = 'keyword'
+                  AND ac.account_id = :aid
+                  AND gs.date >= (CURRENT_DATE - INTERVAL 30 DAY)
+                  AND k.status = 'enabled'
+                GROUP BY gs.entity_id, k.text, k.match_type, ag.id, ac.name
+                HAVING total_conversions > 0
+                   AND (total_cost_micros / 1000000.0) / total_conversions > :cpa_limit
+                ORDER BY total_cost_micros DESC
+                LIMIT 50
+            """), {"aid": account_id, "cpa_limit": cpa_limit}).mappings().all()
+
+            for r in rows:
+                spend = (r["total_cost_micros"] or 0) / 1_000_000
+                conv = float(r["total_conversions"])
+                kw_cpa = spend / conv
+                action = {
+                    "type": "pause_keyword",
+                    "keyword_id": r["kw_local_id"],
+                    "keyword_text": r["kw_text"],
+                    "match_type": r["match_type"],
+                    "ad_group_id": r["ag_id"],
+                    "campaign_name": r["camp_name"],
+                    "spend": round(spend, 2),
+                    "clicks": int(r["total_clicks"] or 0),
+                    "conversions": conv,
+                    "keyword_cpa": round(kw_cpa, 2),
+                    "account_avg_cpa": account_avg_cpa,
+                    "goal_target_cpl": target_cpl,
+                    "goal_violation": "cpl_over_goal",
+                }
+                _save(OptimizerRecommendation(
+                    account_id=account_id,
+                    scope_type="keyword",
+                    scope_id=r["kw_local_id"],
+                    category="wasted_spend",
+                    title=(
+                        f'"{r["kw_text"]}" costs ${kw_cpa:.2f} per lead — '
+                        f'your goal is ${target_cpl:.2f}'
+                    ),
+                    details=(
+                        f'This keyword costs ${kw_cpa:.2f} per lead — your goal is '
+                        f'${target_cpl:.2f}. Over 30 days, "{r["kw_text"]}" '
+                        f'({r["match_type"]}) in campaign "{r["camp_name"]}" spent '
+                        f'${spend:.2f} for {conv:.0f} lead(s). Pausing it or lowering '
+                        f'its bid will pull your average cost per lead toward your goal.'
+                    ),
+                    expected_impact=(
+                        f"Save ~${(kw_cpa - target_cpl) * conv:.2f}/month vs your goal"
+                    ),
+                    severity=1,
+                    suggested_action_json=json.dumps(action),
+                ))
+        except Exception as exc:
+            db.session.rollback()
+            summary["errors"].append(f"CPL over goal pass: {exc}")
+            logger.exception("CPL over goal analysis failed for account %s", account_id)
+
+    # ── 1c. Monthly budgets exceed the owner's cap ──────────────────────────
+    if max_monthly_budget and current_monthly_budget and current_monthly_budget > max_monthly_budget:
+        try:
+            overage = round(current_monthly_budget - max_monthly_budget, 2)
+            action = {
+                "type": "trim_budgets",
+                "current_monthly_budget": current_monthly_budget,
+                "goal_max_monthly_budget": max_monthly_budget,
+                "overage": overage,
+            }
+            _save(OptimizerRecommendation(
+                account_id=account_id,
+                scope_type="account",
+                scope_id=account_id,
+                category="budget",
+                title=(
+                    f'Campaign budgets add up to ${current_monthly_budget:,.0f}/month — '
+                    f'${overage:,.0f} over your ${max_monthly_budget:,.0f} cap'
+                ),
+                details=(
+                    f'Your campaign daily budgets add up to about '
+                    f'${current_monthly_budget:,.2f} per month, which is '
+                    f'${overage:,.2f} over the ${max_monthly_budget:,.2f}/month cap '
+                    f'you set. Trim daily budgets — start with campaigns that get '
+                    f'few leads — to stay inside your budget.'
+                ),
+                expected_impact=f"Keep spend under ${max_monthly_budget:,.0f}/month",
+                severity=1,
+                suggested_action_json=json.dumps(action),
+            ))
+        except Exception as exc:
+            db.session.rollback()
+            summary["errors"].append(f"Budget cap pass: {exc}")
+            logger.exception("Budget cap analysis failed for account %s", account_id)
 
     # ── 2. Budget-constrained campaigns (lost IS > 20% due to budget) ──────
     try:
@@ -177,10 +344,35 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
             LIMIT 20
         """), {"aid": account_id, "threshold": BUDGET_IS_LOSS_THRESHOLD}).mappings().all()
 
+        # Headroom left under the owner's monthly cap; each suggested increase
+        # below draws it down so the total never goes over.
+        remaining_headroom = None
+        if max_monthly_budget and current_monthly_budget is not None:
+            remaining_headroom = max_monthly_budget - current_monthly_budget
+
         for r in rows:
             lost_pct = round((r["avg_lost_budget"] or 0) * 100, 1)
             current_budget = (r["daily_budget_cents"] or 0) / 100
             suggested_budget = round(current_budget * 1.30, 2)
+            budget_note = None
+
+            if remaining_headroom is not None:
+                if remaining_headroom < 1:
+                    # No room under the cap — never suggest spending more.
+                    continue
+                increase_monthly = (suggested_budget - current_budget) * 30.4
+                if increase_monthly > remaining_headroom:
+                    suggested_budget = round(
+                        current_budget + remaining_headroom / 30.4, 2
+                    )
+                    if suggested_budget <= current_budget:
+                        continue
+                    increase_monthly = (suggested_budget - current_budget) * 30.4
+                    budget_note = (
+                        f"kept within your ${max_monthly_budget:,.0f}/month budget"
+                    )
+                remaining_headroom -= increase_monthly
+
             action = {
                 "type": "increase_budget",
                 "campaign_id": r["camp_local_id"],
@@ -189,6 +381,8 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
                 "suggested_budget_cents": int(suggested_budget * 100),
                 "lost_is_budget_pct": lost_pct,
                 "avg_impression_share_pct": round((r["avg_is"] or 0) * 100, 1),
+                "goal_max_monthly_budget": max_monthly_budget,
+                "budget_note": budget_note,
             }
             _save(OptimizerRecommendation(
                 account_id=account_id,
@@ -199,7 +393,8 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
                 details=(
                     f'Campaign "{r["camp_name"]}" is losing {lost_pct}% of available '
                     f'impressions because the daily budget of ${current_budget:.2f} runs out. '
-                    f'Increasing to ${suggested_budget:.2f}/day (+30%) could recover these impressions.'
+                    f'Increasing to ${suggested_budget:.2f}/day could recover these impressions'
+                    + (f' — {budget_note}.' if budget_note else '.')
                 ),
                 expected_impact=f"Recover ~{lost_pct}% impression share",
                 severity=2 if lost_pct > 40 else 3,
@@ -444,6 +639,13 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
             if not flagged:
                 continue
 
+            if target_cpl and kw_cpa and kw_cpa > target_cpl * 1.5:
+                severity = 1
+                reason += (
+                    f" At ${kw_cpa:.2f} per lead it is also well over your "
+                    f"${target_cpl:.2f} goal."
+                )
+
             action = {
                 "type": "change_match_type",
                 "keyword_id": r["kw_local_id"],
@@ -457,6 +659,7 @@ def generate_recommendations(account_id: int) -> Dict[str, Any]:
                 "conversions": conv,
                 "keyword_cpa": round(kw_cpa, 2) if kw_cpa else None,
                 "benchmark_cpa": round(bench_cpa, 2) if bench_cpa else None,
+                "goal_target_cpl": target_cpl,
                 "reason": reason,
             }
             _save(OptimizerRecommendation(

@@ -3998,6 +3998,70 @@ def seo_health():
     )
 
 
+@wp_bp.route("/keyword-rankings", methods=["GET"], endpoint="keyword_rankings")
+@login_required
+def keyword_rankings():
+    """Keyword Ranking History — weekly GSC position snapshots with trend view."""
+    site = _current_site()
+    aid = _account_id()
+
+    url_filter = request.args.get("url") or None
+    trends = []
+    first_run = True
+    last_updated = None
+    error = None
+
+    if aid:
+        try:
+            from app.services.keyword_rank_tracker import get_ranking_trends
+            from app.models_wp import KeywordRankSnapshot
+
+            trends = get_ranking_trends(aid, url=url_filter, days=90)
+            first_run = len(trends) == 0
+
+            # Find most recent snapshot date for the "Last updated" header
+            latest_snap = (
+                KeywordRankSnapshot.query
+                .filter_by(account_id=aid)
+                .order_by(KeywordRankSnapshot.snapshot_date.desc())
+                .first()
+            )
+            if latest_snap:
+                last_updated = latest_snap.snapshot_date
+        except Exception as exc:
+            logger.exception("Error loading keyword ranking trends")
+            error = str(exc)
+
+    return render_template(
+        "wp/keyword_rankings.html",
+        site=site,
+        trends=trends,
+        first_run=first_run,
+        last_updated=last_updated,
+        url_filter=url_filter,
+        error=error,
+    )
+
+
+@wp_bp.route("/snapshot-rankings", methods=["POST"], endpoint="snapshot_rankings")
+@login_required
+def snapshot_rankings_now():
+    """Manually trigger a GSC keyword ranking snapshot for the current account."""
+    aid = _account_id()
+    if not aid:
+        return jsonify({"ok": False, "error": "Not authenticated"}), 401
+
+    try:
+        from app.services.keyword_rank_tracker import snapshot_rankings
+        result = snapshot_rankings(aid)
+        if "error" in result:
+            return jsonify({"ok": False, "error": result["error"]}), 400
+        return jsonify({"ok": True, "snapshots": result.get("snapshots", 0), "urls": result.get("urls", 0)})
+    except Exception as exc:
+        logger.exception("Snapshot rankings failed")
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 # allow WPLog(...).save() convenience
 def _save(self):
     db.session.add(self)

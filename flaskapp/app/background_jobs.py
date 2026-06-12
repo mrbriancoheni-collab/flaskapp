@@ -402,7 +402,20 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
-    app.logger.info("Registered 21 scheduled background jobs")
+    # Keyword ranking snapshots (weekly, Monday 06:30 UTC)
+    # Runs after strategic agents (6 AM) so GSC data is already fresh
+    scheduler.add_job(
+        func=snapshot_keyword_rankings_all_accounts,
+        trigger='cron',
+        day_of_week='mon',
+        hour=6,
+        minute=30,
+        id='snapshot_keyword_rankings_all_accounts',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    app.logger.info("Registered 22 scheduled background jobs")
 
 
 # ===== Scheduled Job Functions =====
@@ -1034,6 +1047,71 @@ def sync_fb_all_accounts(app: Flask):
             current_app.logger.error(
                 "[JOB] sync_fb_all_accounts: unexpected error — %s", exc, exc_info=True
             )
+
+
+def snapshot_keyword_rankings_all_accounts(app: Flask):
+    """
+    Weekly keyword ranking snapshot for all accounts with GSC connected.
+
+    Pulls this week's GSC top-100 keyword positions for every account that
+    has Google Search Console connected and stores them as KeywordRankSnapshot
+    rows so trending data accumulates over time.
+
+    Registered: weekly, Monday 06:30 UTC.
+    """
+    with app.app_context():
+        try:
+            current_app.logger.info("[JOB] Starting weekly keyword ranking snapshots")
+
+            from app.models import Account
+            from app.models_google import GoogleOAuthToken
+            from app.services.keyword_rank_tracker import snapshot_rankings
+
+            # Find all active accounts with GSC connected
+            accounts = Account.query.join(
+                GoogleOAuthToken, Account.id == GoogleOAuthToken.account_id
+            ).filter(
+                GoogleOAuthToken.product == 'gsc',
+                Account.status == 'active',
+            ).all()
+
+            if not accounts:
+                current_app.logger.info("[JOB] No active GSC accounts found — skipping keyword snapshots")
+                return
+
+            success_count = 0
+            error_count = 0
+            total_snapshots = 0
+
+            for account in accounts:
+                try:
+                    result = snapshot_rankings(account.id)
+                    if "error" in result:
+                        current_app.logger.warning(
+                            f"[JOB] Keyword snapshot skipped for account {account.id}: {result['error']}"
+                        )
+                        error_count += 1
+                    else:
+                        total_snapshots += result.get("snapshots", 0)
+                        success_count += 1
+                        current_app.logger.info(
+                            f"[JOB] Account {account.id}: {result['snapshots']} snapshots across {result['urls']} URLs"
+                        )
+                except Exception as e:
+                    current_app.logger.error(
+                        f"[JOB] Error snapshotting rankings for account {account.id}: {e}",
+                        exc_info=True,
+                    )
+                    error_count += 1
+                    continue
+
+            current_app.logger.info(
+                f"[JOB] Keyword ranking snapshots complete: "
+                f"{total_snapshots} rows written, {success_count} accounts succeeded, {error_count} errors"
+            )
+
+        except Exception as e:
+            current_app.logger.error(f"Error in keyword ranking snapshot job: {e}", exc_info=True)
 
 
 def run_google_ads_auto_executor(app: Flask):

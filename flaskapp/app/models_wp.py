@@ -77,3 +77,21 @@ class WPLog(db.Model):
     level = db.Column(db.String(16), default="info", nullable=False)  # info|warn|error
     message = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+class KeywordRankSnapshot(db.Model):
+    __tablename__ = 'wp_keyword_rank_snapshots'
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    account_id = db.Column(db.Integer, db.ForeignKey('accounts.id'), nullable=False, index=True)
+    wp_site_id = db.Column(db.Integer, nullable=True)  # FK to wp_sites if multi-site
+    url = db.Column(db.String(512), nullable=False)
+    keyword = db.Column(db.String(255), nullable=False)
+    position = db.Column(db.Numeric(6, 2))   # Google's average position
+    impressions = db.Column(db.Integer)
+    clicks = db.Column(db.Integer)
+    ctr = db.Column(db.Numeric(6, 4))
+    snapshot_date = db.Column(db.Date, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    __table_args__ = (
+        db.UniqueConstraint('account_id', 'url', 'keyword', 'snapshot_date', name='uq_kw_snapshot'),
+    )

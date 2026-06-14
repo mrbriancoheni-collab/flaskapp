@@ -265,6 +265,21 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
+    # Cross-Channel Strategic Orchestrator (weekly, Monday 5 AM UTC)
+    # The umbrella over ALL channels: ranks each channel by efficiency and shifts
+    # budget/priority across them. Runs BEFORE the channel operational/strategic
+    # jobs (6 AM) so each channel picks up fresh directives the same morning.
+    scheduler.add_job(
+        func=run_strategic_orchestrator_all_accounts,
+        trigger='cron',
+        day_of_week='mon',
+        hour=5,
+        minute=0,
+        id='run_strategic_orchestrator_all_accounts',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
     # Google Ads AI Agents - Strategic (weekly, Monday 6 AM UTC)
     # Portfolio-level decisions: campaign type diversity, major budget reallocation.
     # Runs weekly so structural suggestions don't flood the approval queue.
@@ -415,7 +430,7 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
-    app.logger.info("Registered 22 scheduled background jobs")
+    app.logger.info("Registered 23 scheduled background jobs")
 
 
 # ===== Scheduled Job Functions =====
@@ -986,6 +1001,87 @@ def run_strategic_agents(app: Flask):
 
         except Exception as e:
             current_app.logger.error(f"Error running strategic agents: {e}", exc_info=True)
+
+
+def run_strategic_orchestrator_all_accounts(app: Flask):
+    """
+    Run the cross-channel strategic orchestrator for every active/trial account.
+
+    This is the umbrella over ALL channels. For each account it ranks the
+    connected channels by efficiency (cost per lead) and shifts budget/priority
+    from the weakest toward the strongest, writing per-channel directives that
+    each channel's operational agents pick up automatically.
+
+    Cadence-gated via should_run_agent(account_id, 'strategic', 'strategic') so
+    it effectively runs weekly per account and backs off quiet accounts.
+    Registered: weekly, Monday 05:00 UTC (before the channel operational jobs).
+    """
+    with app.app_context():
+        from app import db
+        from sqlalchemy import text
+        from app.services.agent_cadence import should_run_agent, record_agent_run
+        from app.services.strategic_orchestrator import run_strategic_orchestrator
+
+        try:
+            current_app.logger.info("[JOB] Starting cross-channel strategic orchestrator")
+
+            try:
+                with db.engine.connect() as conn:
+                    rows = conn.execute(text("""
+                        SELECT id AS account_id
+                        FROM accounts
+                        WHERE status IN ('active', 'trial')
+                    """)).fetchall()
+            except Exception as exc:
+                current_app.logger.error(
+                    "[JOB] strategic orchestrator: could not query accounts — %s", exc
+                )
+                return
+
+            account_ids = [r[0] for r in rows]
+            current_app.logger.info(
+                "[JOB] strategic orchestrator: %d active/trial account(s)", len(account_ids)
+            )
+
+            ran = 0
+            skipped = 0
+            errors = 0
+
+            for account_id in account_ids:
+                run_now, reason = should_run_agent(account_id, 'strategic', 'strategic')
+                if not run_now:
+                    skipped += 1
+                    continue
+                try:
+                    result = run_strategic_orchestrator(account_id) or {}
+                    channels = int(result.get('channels', 0) or 0)
+                    changed = int(result.get('changed', 0) or 0)
+                    record_agent_run(
+                        account_id, 'strategic', 'strategic',
+                        decisions_made=changed, opportunities_found=channels,
+                    )
+                    ran += 1
+                    if channels:
+                        current_app.logger.info(
+                            "[JOB] account %s: %d channel(s), %d directive change(s)",
+                            account_id, channels, changed,
+                        )
+                except Exception as exc:
+                    current_app.logger.error(
+                        "[JOB] strategic orchestrator failed for account %s — %s",
+                        account_id, exc, exc_info=True,
+                    )
+                    errors += 1
+
+            current_app.logger.info(
+                "[JOB] Strategic orchestrator complete: ran=%d, skipped=%d, errors=%d",
+                ran, skipped, errors,
+            )
+
+        except Exception as exc:
+            current_app.logger.error(
+                "[JOB] run_strategic_orchestrator_all_accounts error: %s", exc, exc_info=True
+            )
 
 
 def sync_fb_all_accounts(app: Flask):

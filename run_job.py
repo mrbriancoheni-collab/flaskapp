@@ -38,6 +38,7 @@ Example crontab entries (crontab -e):
     0 2 * * 0 cd /home/fieldsprout/flaskapp && python run_job.py cleanup_expired_invites >> logs/cron.log 2>&1
     0 3 * * 0 cd /home/fieldsprout/flaskapp && python run_job.py cleanup_old_audit_logs >> logs/cron.log 2>&1
     0 8 * * 1 cd /home/fieldsprout/flaskapp && python run_job.py generate_google_ads_insights_weekly >> logs/cron.log 2>&1
+    0 5 * * 1 cd /home/fieldsprout/flaskapp && python run_job.py run_strategic_orchestrator >> logs/cron.log 2>&1
     0 6 * * 1 cd /home/fieldsprout/flaskapp && python run_job.py run_strategic_agents >> logs/cron.log 2>&1
     30 6 * * 1 cd /home/fieldsprout/flaskapp && python run_job.py snapshot_keyword_rankings >> logs/cron.log 2>&1
     0 13 * * 1 cd /home/fieldsprout/flaskapp && python run_job.py send_weekly_digest_all_accounts >> logs/cron.log 2>&1
@@ -92,6 +93,7 @@ JOB_MAP = {
     'run_negative_keyword_agents':          'run_negative_keyword_agents',
     'run_operational_agents':               'run_operational_agents',
     'run_strategic_agents':                 'run_strategic_agents',
+    'run_strategic_orchestrator':           'run_strategic_orchestrator_all_accounts',
     'run_google_ads_auto_executor':         'run_google_ads_auto_executor',
     'sync_call_view_all_accounts':          'sync_call_view_all_accounts',
     'sync_dayparting_all_accounts':         'sync_dayparting_all_accounts',

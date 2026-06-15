@@ -96,6 +96,7 @@ def optimize():
 
     # Owner-stated goals (target cost per lead, monthly budget cap)
     gads_goals = {"target_cpl": None, "max_monthly_budget": None}
+    strategy_setup_complete = False
     if aid:
         try:
             import json as _json
@@ -109,6 +110,21 @@ def optimize():
                     v = parsed.get(k)
                     if v is not None:
                         gads_goals[k] = float(v)
+        except Exception:
+            db.session.rollback()
+
+    # Check if strategy wizard has been completed
+    if aid:
+        try:
+            rows = db.session.execute(text(
+                "SELECT setting_key, setting_value FROM account_settings "
+                "WHERE account_id = :aid AND setting_key IN ('strategy_setup_complete', 'target_cpl')"
+            ), {"aid": aid}).mappings().all()
+            settings_map = {r["setting_key"]: r["setting_value"] for r in rows}
+            strategy_setup_complete = (
+                settings_map.get("strategy_setup_complete") == "1"
+                or bool(settings_map.get("target_cpl"))
+            )
         except Exception:
             db.session.rollback()
 
@@ -471,6 +487,7 @@ def optimize():
         last_synced_stale=last_synced_stale,
         gads_goals=gads_goals,
         pending_recs_count=pending_recs_count,
+        strategy_setup_complete=strategy_setup_complete,
     )
 
 
@@ -2423,3 +2440,86 @@ def goals_json():
     except Exception:
         current_app.logger.exception("goals_json error")
         return jsonify({"error": "Failed to load goals"}), 500
+
+
+# ---------------------------------------------------------------------------
+# Strategy Setup wizard — GET (prefill) / POST (save)
+# ---------------------------------------------------------------------------
+
+_STRATEGY_KEYS = [
+    "target_cpl",
+    "total_monthly_budget",
+    "growth_mode",
+    "business_description",
+    "services_offered",
+    "services_exclude",
+]
+
+
+@gads_bp.get("/strategy-setup")
+@login_required
+def strategy_setup_get():
+    """Return current strategy settings as JSON for pre-filling the wizard."""
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "Not authenticated"}), 401
+    try:
+        from app.google.autonomous_routes import _save_setting
+        keys_ph = ", ".join(f"'{k}'" for k in _STRATEGY_KEYS)
+        rows = db.session.execute(text(f"""
+            SELECT setting_key, setting_value
+            FROM account_settings
+            WHERE account_id = :aid AND setting_key IN ({keys_ph})
+        """), {"aid": aid}).mappings().all()
+        data = {r["setting_key"]: r["setting_value"] for r in rows}
+        return jsonify(data)
+    except Exception:
+        current_app.logger.exception("strategy_setup_get error")
+        db.session.rollback()
+        return jsonify({}), 200  # return empty rather than erroring the wizard
+
+
+@gads_bp.post("/strategy-setup")
+@login_required
+def strategy_setup_post():
+    """Save strategy wizard answers to account_settings and trigger re-run of strategic agent."""
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    payload = request.get_json(silent=True) or {}
+
+    # Validate numeric fields
+    for num_key, label in (("target_cpl", "target cost per lead"), ("total_monthly_budget", "monthly budget")):
+        val = payload.get(num_key)
+        if val is not None and val != "":
+            try:
+                num = float(val)
+                if num <= 0:
+                    return jsonify({"error": f"Your {label} must be more than $0."}), 400
+            except (TypeError, ValueError):
+                return jsonify({"error": f"Please enter a number for your {label}."}), 400
+
+    try:
+        from app.google.autonomous_routes import _save_setting
+
+        for key in _STRATEGY_KEYS:
+            val = payload.get(key)
+            if val is not None:
+                _save_setting(aid, key, str(val).strip())
+
+        # Mark wizard as complete
+        _save_setting(aid, "strategy_setup_complete", "1")
+
+        # Trigger strategic orchestrator to re-run immediately with new context
+        try:
+            from app.services.agent_cadence import force_due
+            force_due(aid, "google", "strategic")
+        except Exception:
+            current_app.logger.warning("strategy_setup_post: force_due failed", exc_info=True)
+
+        return jsonify({"ok": True})
+
+    except Exception:
+        current_app.logger.exception("strategy_setup_post error")
+        return jsonify({"error": "Could not save your strategy. Please try again."}), 500

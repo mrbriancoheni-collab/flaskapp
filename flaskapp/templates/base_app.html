@@ -687,6 +687,15 @@
         </a>
         {% endif %}
 
+        {# Strategy Setup — opens wizard modal; visible whenever Google Ads section is active #}
+        {% if has_endpoint('gads_bp.optimize') %}
+        <button type="button"
+                onclick="if(window.FSStrategy){FSStrategy.open();}else{window.location='/account/google/ads/?_open_strategy=1'}"
+                class="secondary-link w-full text-left {% if epn=='gads_bp.strategy_setup_get' %}active{% endif %}">
+          <i class="fa-solid fa-sliders text-indigo-500"></i><span>Strategy Setup</span>
+        </button>
+        {% endif %}
+
         {# Local Services Ads #}
         {% if has_endpoint('glsa_bp.dashboard') %}
         <a class="secondary-link {% if is_glsa_section %}active{% endif %}" href="{{ url_for('glsa_bp.dashboard') }}">

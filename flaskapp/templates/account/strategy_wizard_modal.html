@@ -1,0 +1,452 @@
+{#
+  Strategy Setup Wizard Modal
+  A 6-step guided wizard that collects business strategy info from the account owner.
+  Include this partial in any page. Hidden by default; open with FSStrategy.open().
+  Auto-opens when target_cpl is not yet set (cockpit page handles the trigger).
+#}
+
+<!-- Strategy Wizard Modal Backdrop -->
+<div id="strategy-wizard-modal"
+     class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+     role="dialog" aria-modal="true" aria-labelledby="sw-title">
+
+  <!-- Modal Card -->
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-auto overflow-hidden flex flex-col"
+       style="max-height:90vh;">
+
+    <!-- Progress bar -->
+    <div class="h-1.5 bg-gray-100 flex-shrink-0">
+      <div id="sw-progress-bar"
+           class="h-1.5 bg-indigo-600 rounded-r-full transition-all duration-300"
+           style="width:16.67%"></div>
+    </div>
+
+    <!-- Scrollable body -->
+    <div class="overflow-y-auto flex-1 p-6 sm:p-8">
+
+      <!-- Step counter -->
+      <div class="flex items-center justify-between mb-6">
+        <span id="sw-step-label" class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Step 1 of 6</span>
+        <button type="button" id="sw-close-btn"
+                class="text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Close wizard">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- ── STEP 1: Target CPL ── -->
+      <div class="sw-step" data-step="1">
+        <div class="mb-1 text-2xl font-bold text-gray-900" id="sw-title">
+          What do you want to pay for a new lead?
+        </div>
+        <p class="text-sm text-gray-500 mb-6">
+          This helps us know when to stop a campaign that's costing too much — we'll pause it before it burns through your budget.
+        </p>
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="sw-target-cpl">
+          Target cost per lead ($)
+        </label>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">$</span>
+          <input type="number" id="sw-target-cpl" name="target_cpl"
+                 min="1" step="1" placeholder="50"
+                 class="w-full border rounded-xl pl-7 pr-4 py-3 text-gray-900 text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+        </div>
+        <p class="mt-2 text-xs text-gray-400">For example: if you typically close 1 in 4 leads and a job is worth $200, entering $50 makes sense.</p>
+      </div>
+
+      <!-- ── STEP 2: Monthly Budget ── -->
+      <div class="sw-step hidden" data-step="2">
+        <div class="mb-1 text-2xl font-bold text-gray-900">
+          What's your total monthly ad budget?
+        </div>
+        <p class="text-sm text-gray-500 mb-6">
+          We use this as a safety ceiling — your AI assistant will never let spending go above this, even if the algorithm tries to push it higher.
+        </p>
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="sw-monthly-budget">
+          Monthly budget ($)
+        </label>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">$</span>
+          <input type="number" id="sw-monthly-budget" name="total_monthly_budget"
+                 min="1" step="1" placeholder="2000"
+                 class="w-full border rounded-xl pl-7 pr-4 py-3 text-gray-900 text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+        </div>
+        <p class="mt-2 text-xs text-gray-400">Include all channels you're running (Google, Facebook, etc.) if you want us to track the total. Google-only is fine too.</p>
+      </div>
+
+      <!-- ── STEP 3: Growth Mode ── -->
+      <div class="sw-step hidden" data-step="3">
+        <div class="mb-1 text-2xl font-bold text-gray-900">
+          What's your growth goal right now?
+        </div>
+        <p class="text-sm text-gray-500 mb-6">
+          This tells our AI whether to push hard for volume, cut waste, or stay steady — it changes how it makes decisions every week.
+        </p>
+        <div class="space-y-3" role="radiogroup" aria-label="Growth mode">
+
+          <label class="sw-radio-card flex items-start gap-3 border-2 border-gray-200 rounded-xl p-4 cursor-pointer hover:border-indigo-400 transition-colors">
+            <input type="radio" name="growth_mode" value="more_leads" class="mt-0.5 accent-indigo-600">
+            <div>
+              <div class="font-semibold text-gray-900">Get more leads</div>
+              <div class="text-sm text-gray-500">I have budget to grow — bring me more jobs even if the cost per lead goes up a bit.</div>
+            </div>
+          </label>
+
+          <label class="sw-radio-card flex items-start gap-3 border-2 border-gray-200 rounded-xl p-4 cursor-pointer hover:border-indigo-400 transition-colors">
+            <input type="radio" name="growth_mode" value="reduce_cpl" class="mt-0.5 accent-indigo-600">
+            <div>
+              <div class="font-semibold text-gray-900">Reduce cost per lead</div>
+              <div class="text-sm text-gray-500">I want to get the same (or more) leads for less money. Efficiency first.</div>
+            </div>
+          </label>
+
+          <label class="sw-radio-card flex items-start gap-3 border-2 border-gray-200 rounded-xl p-4 cursor-pointer hover:border-indigo-400 transition-colors">
+            <input type="radio" name="growth_mode" value="protect" class="mt-0.5 accent-indigo-600">
+            <div>
+              <div class="font-semibold text-gray-900">Protect what's working</div>
+              <div class="text-sm text-gray-500">Things are running well. Don't rock the boat — just keep it stable and flag anything that looks off.</div>
+            </div>
+          </label>
+
+        </div>
+      </div>
+
+      <!-- ── STEP 4: Business Description ── -->
+      <div class="sw-step hidden" data-step="4">
+        <div class="mb-1 text-2xl font-bold text-gray-900">
+          Tell us about your business
+        </div>
+        <p class="text-sm text-gray-500 mb-6">
+          A couple of sentences helps our AI write better ad copy and understand who your best customers are.
+        </p>
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="sw-biz-desc">
+          What does your business do? (2-3 sentences)
+        </label>
+        <textarea id="sw-biz-desc" name="business_description"
+                  rows="4" placeholder="e.g. We're a family-owned plumbing company in Austin serving homeowners and small businesses. We specialize in emergency repairs, drain cleaning, and bathroom remodels. We've been in business for 12 years and pride ourselves on same-day service."
+                  class="w-full border rounded-xl px-4 py-3 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"></textarea>
+        <p class="mt-2 text-xs text-gray-400">No need to be formal — just describe what you do and who you help.</p>
+      </div>
+
+      <!-- ── STEP 5: Services Offered ── -->
+      <div class="sw-step hidden" data-step="5">
+        <div class="mb-1 text-2xl font-bold text-gray-900">
+          What services do you offer?
+        </div>
+        <p class="text-sm text-gray-500 mb-6">
+          We use this to make sure your ads target the right searches and don't miss services you want to promote.
+        </p>
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="sw-services">
+          List your services (one per line, or comma-separated)
+        </label>
+        <textarea id="sw-services" name="services_offered"
+                  rows="5" placeholder="e.g.&#10;Drain cleaning&#10;Emergency plumbing&#10;Water heater installation&#10;Bathroom remodels&#10;Leak detection"
+                  class="w-full border rounded-xl px-4 py-3 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"></textarea>
+        <p class="mt-2 text-xs text-gray-400">Include seasonal or specialty services too — the more detail, the better the targeting.</p>
+      </div>
+
+      <!-- ── STEP 6: Services to Exclude ── -->
+      <div class="sw-step hidden" data-step="6">
+        <div class="mb-1 text-2xl font-bold text-gray-900">
+          Any services you do NOT want to advertise?
+        </div>
+        <p class="text-sm text-gray-500 mb-6">
+          Sometimes you're full, or a service isn't profitable enough to advertise. Tell us what to leave out so we don't attract jobs you can't take or don't want.
+        </p>
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="sw-services-exclude">
+          Services to exclude from ads (optional)
+        </label>
+        <textarea id="sw-services-exclude" name="services_exclude"
+                  rows="4" placeholder="e.g.&#10;Septic installation (we don't do this)&#10;Commercial jobs (too big for our team right now)"
+                  class="w-full border rounded-xl px-4 py-3 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"></textarea>
+        <p class="mt-2 text-xs text-gray-400">This field is optional — hit "Skip" if nothing comes to mind.</p>
+
+        <!-- Final step confirmation message -->
+        <div class="mt-5 rounded-xl bg-indigo-50 border border-indigo-200 p-4 text-sm text-indigo-800">
+          <i class="fa-solid fa-circle-check text-indigo-500 mr-2"></i>
+          Almost done! We'll use your answers to tune the AI — you can always update this later from the Strategy Setup link in the sidebar.
+        </div>
+      </div>
+
+    </div><!-- end scrollable body -->
+
+    <!-- Footer: Back / Next / Save -->
+    <div class="flex-shrink-0 border-t bg-gray-50 px-6 py-4 flex items-center justify-between gap-3">
+
+      <!-- Back button (hidden on step 1) -->
+      <button type="button" id="sw-back-btn"
+              class="hidden inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+        <i class="fa-solid fa-arrow-left text-xs"></i> Back
+      </button>
+      <div id="sw-back-placeholder" class="w-4"></div><!-- keeps Next right-aligned on step 1 -->
+
+      <div class="flex items-center gap-2">
+        <!-- Skip button (only step 6) -->
+        <button type="button" id="sw-skip-btn"
+                class="hidden px-4 py-2 rounded-xl text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+          Skip
+        </button>
+
+        <!-- Next / Save button -->
+        <button type="button" id="sw-next-btn"
+                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors">
+          Next <i class="fa-solid fa-arrow-right text-xs"></i>
+        </button>
+      </div>
+
+    </div>
+
+  </div><!-- end modal card -->
+</div><!-- end backdrop -->
+
+<!-- Saving overlay -->
+<div id="sw-saving-overlay"
+     class="hidden fixed inset-0 bg-black bg-opacity-40 z-[60] items-center justify-center">
+  <div class="bg-white rounded-2xl shadow-xl px-8 py-6 text-center">
+    <i class="fa-solid fa-spinner fa-spin text-indigo-600 text-2xl mb-3 block"></i>
+    <div class="font-semibold text-gray-900">Saving your strategy...</div>
+    <div class="text-sm text-gray-500 mt-1">Just a moment</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var TOTAL_STEPS = 6;
+  var currentStep = 1;
+
+  // ── DOM refs ──────────────────────────────────────────────────────────────
+  var modal    = document.getElementById('strategy-wizard-modal');
+  var overlay  = document.getElementById('sw-saving-overlay');
+  var bar      = document.getElementById('sw-progress-bar');
+  var label    = document.getElementById('sw-step-label');
+  var backBtn  = document.getElementById('sw-back-btn');
+  var backPh   = document.getElementById('sw-back-placeholder');
+  var nextBtn  = document.getElementById('sw-next-btn');
+  var skipBtn  = document.getElementById('sw-skip-btn');
+  var closeBtn = document.getElementById('sw-close-btn');
+  var steps    = document.querySelectorAll('#strategy-wizard-modal .sw-step');
+
+  // Highlight selected radio card
+  function bindRadioCards() {
+    document.querySelectorAll('.sw-radio-card input[type="radio"]').forEach(function(radio) {
+      radio.addEventListener('change', function() {
+        var group = radio.closest('.space-y-3');
+        if (!group) return;
+        group.querySelectorAll('.sw-radio-card').forEach(function(card) {
+          card.classList.remove('border-indigo-600', 'bg-indigo-50');
+          card.classList.add('border-gray-200');
+        });
+        radio.closest('.sw-radio-card').classList.remove('border-gray-200');
+        radio.closest('.sw-radio-card').classList.add('border-indigo-600', 'bg-indigo-50');
+      });
+    });
+  }
+
+  // ── Open / close ─────────────────────────────────────────────────────────
+  function openWizard() {
+    currentStep = 1;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    goToStep(1);
+    prefillFields();
+  }
+
+  function closeWizard() {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  // ── Prefill from server ───────────────────────────────────────────────────
+  function prefillFields() {
+    fetch('/account/google/ads/strategy-setup', {
+      headers: {'Accept': 'application/json'},
+    })
+    .then(function(r) { return r.ok ? r.json() : {}; })
+    .then(function(d) {
+      if (d.target_cpl)           document.getElementById('sw-target-cpl').value = d.target_cpl;
+      if (d.total_monthly_budget) document.getElementById('sw-monthly-budget').value = d.total_monthly_budget;
+      if (d.growth_mode) {
+        var radio = document.querySelector('input[name="growth_mode"][value="' + d.growth_mode + '"]');
+        if (radio) {
+          radio.checked = true;
+          radio.dispatchEvent(new Event('change'));
+        }
+      }
+      if (d.business_description) document.getElementById('sw-biz-desc').value = d.business_description;
+      if (d.services_offered)     document.getElementById('sw-services').value = d.services_offered;
+      if (d.services_exclude)     document.getElementById('sw-services-exclude').value = d.services_exclude;
+    })
+    .catch(function() { /* ignore — fields stay empty */ });
+  }
+
+  // ── Step navigation ───────────────────────────────────────────────────────
+  function goToStep(n) {
+    currentStep = n;
+
+    // Show/hide steps
+    steps.forEach(function(s) {
+      s.classList.toggle('hidden', parseInt(s.dataset.step) !== n);
+    });
+
+    // Progress bar
+    bar.style.width = ((n / TOTAL_STEPS) * 100).toFixed(2) + '%';
+    label.textContent = 'Step ' + n + ' of ' + TOTAL_STEPS;
+
+    // Back button / placeholder
+    if (n === 1) {
+      backBtn.classList.add('hidden');
+      backPh.classList.remove('hidden');
+    } else {
+      backBtn.classList.remove('hidden');
+      backPh.classList.add('hidden');
+    }
+
+    // Skip button (step 6 only — services_exclude is optional)
+    skipBtn.classList.toggle('hidden', n !== TOTAL_STEPS);
+
+    // Next button label
+    if (n === TOTAL_STEPS) {
+      nextBtn.innerHTML = 'Save &amp; Start Optimizing <i class="fa-solid fa-arrow-right text-xs"></i>';
+    } else {
+      nextBtn.innerHTML = 'Next <i class="fa-solid fa-arrow-right text-xs"></i>';
+    }
+
+    // Focus first interactive field
+    var firstField = document.querySelector('.sw-step[data-step="' + n + '"] input:not([type="radio"]), .sw-step[data-step="' + n + '"] textarea');
+    if (firstField) setTimeout(function() { firstField.focus(); }, 60);
+  }
+
+  // ── Validation ────────────────────────────────────────────────────────────
+  function validateStep(n) {
+    if (n === 1) {
+      var v = parseFloat(document.getElementById('sw-target-cpl').value);
+      if (!v || v <= 0) { showStepError('Please enter a dollar amount for your target cost per lead.'); return false; }
+    }
+    if (n === 2) {
+      var v2 = parseFloat(document.getElementById('sw-monthly-budget').value);
+      if (!v2 || v2 <= 0) { showStepError('Please enter your monthly ad budget.'); return false; }
+    }
+    if (n === 3) {
+      var checked = document.querySelector('input[name="growth_mode"]:checked');
+      if (!checked) { showStepError('Please choose a growth goal to continue.'); return false; }
+    }
+    if (n === 4) {
+      var desc = document.getElementById('sw-biz-desc').value.trim();
+      if (!desc) { showStepError('Please tell us a little about your business.'); return false; }
+    }
+    if (n === 5) {
+      var svc = document.getElementById('sw-services').value.trim();
+      if (!svc) { showStepError('Please list at least one service you offer.'); return false; }
+    }
+    // Step 6 is optional — always valid
+    return true;
+  }
+
+  function showStepError(msg) {
+    if (typeof window.showToast === 'function') {
+      window.showToast(msg, 'error');
+    } else {
+      alert(msg);
+    }
+  }
+
+  // ── Collect all form values ────────────────────────────────────────────────
+  function collectPayload() {
+    var growthRadio = document.querySelector('input[name="growth_mode"]:checked');
+    return {
+      target_cpl:           document.getElementById('sw-target-cpl').value.trim() || null,
+      total_monthly_budget: document.getElementById('sw-monthly-budget').value.trim() || null,
+      growth_mode:          growthRadio ? growthRadio.value : null,
+      business_description: document.getElementById('sw-biz-desc').value.trim() || null,
+      services_offered:     document.getElementById('sw-services').value.trim() || null,
+      services_exclude:     document.getElementById('sw-services-exclude').value.trim() || null,
+    };
+  }
+
+  // ── Save to server ────────────────────────────────────────────────────────
+  function saveStrategy(payload) {
+    overlay.classList.remove('hidden');
+    overlay.classList.add('flex');
+    nextBtn.disabled = true;
+
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    var headers  = {'Content-Type': 'application/json', 'Accept': 'application/json'};
+    if (csrfMeta) headers['X-CSRFToken'] = csrfMeta.content;
+
+    fetch('/account/google/ads/strategy-setup', {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(payload),
+    })
+    .then(function(r) { return r.json().then(function(d) { return {ok: r.ok, data: d}; }); })
+    .then(function(res) {
+      overlay.classList.add('hidden');
+      overlay.classList.remove('flex');
+      nextBtn.disabled = false;
+      if (res.ok && res.data.ok) {
+        closeWizard();
+        if (typeof window.showToast === 'function') {
+          window.showToast('Strategy saved! Your AI assistant is ready to optimize.', 'success');
+        }
+        setTimeout(function() { window.location.reload(); }, 1800);
+      } else {
+        showStepError(res.data.error || 'Could not save your strategy. Please try again.');
+      }
+    })
+    .catch(function() {
+      overlay.classList.add('hidden');
+      overlay.classList.remove('flex');
+      nextBtn.disabled = false;
+      showStepError('Network error — please check your connection and try again.');
+    });
+  }
+
+  // ── Button handlers ───────────────────────────────────────────────────────
+  nextBtn.addEventListener('click', function() {
+    if (!validateStep(currentStep)) return;
+    if (currentStep === TOTAL_STEPS) {
+      saveStrategy(collectPayload());
+    } else {
+      goToStep(currentStep + 1);
+    }
+  });
+
+  backBtn.addEventListener('click', function() {
+    if (currentStep > 1) goToStep(currentStep - 1);
+  });
+
+  skipBtn.addEventListener('click', function() {
+    document.getElementById('sw-services-exclude').value = '';
+    saveStrategy(collectPayload());
+  });
+
+  closeBtn.addEventListener('click', closeWizard);
+
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) closeWizard();
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeWizard();
+  });
+
+  modal.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+      nextBtn.click();
+    }
+  });
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  bindRadioCards();
+
+  // ── Public API ────────────────────────────────────────────────────────────
+  window.FSStrategy = {
+    open: openWizard,
+    close: closeWizard,
+  };
+
+})();
+</script>

@@ -457,7 +457,19 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
-    app.logger.info("Registered 25 scheduled background jobs")
+    # WordPress operational agents (daily at 02:00 UTC)
+    # Checks site health, queues content based on organic directive from orchestrator
+    scheduler.add_job(
+        func=run_wp_operational_agents,
+        trigger='cron',
+        hour=2,
+        minute=0,
+        id='run_wp_operational_agents',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    app.logger.info("Registered 26 scheduled background jobs")
 
 
 # ===== Scheduled Job Functions =====
@@ -1757,3 +1769,27 @@ def sync_structure_all_accounts(app: Flask):
                     current_app.logger.warning("structure sync failed account %s: %s", auth.account_id, exc)
         except Exception as exc:
             current_app.logger.error("sync_structure_all_accounts error: %s", exc, exc_info=True)
+
+
+def run_wp_operational_agents(app: Flask):
+    """Run WordPress site health and content strategy agents for all WP accounts.
+
+    Delegates to app.tasks.wp_agent_scheduler.run_wp_operational_agents which
+    handles cadence gating, directive reading, and agent orchestration.
+    """
+    try:
+        from app.tasks.wp_agent_scheduler import run_wp_operational_agents as _run
+        result = _run(app)
+        with app.app_context():
+            current_app.logger.info(
+                "run_wp_operational_agents: checked=%s ran=%s skipped=%s errors=%s",
+                result.get("accounts_checked"),
+                result.get("accounts_run"),
+                result.get("accounts_skipped"),
+                result.get("errors"),
+            )
+    except Exception as exc:
+        with app.app_context():
+            current_app.logger.error(
+                "run_wp_operational_agents failed: %s", exc, exc_info=True
+            )

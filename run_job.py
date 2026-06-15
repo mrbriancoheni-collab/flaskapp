@@ -36,6 +36,7 @@ Example crontab entries (crontab -e):
     0  7 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_negative_keyword_agents >> logs/cron.log 2>&1
     0  7 * * * cd /home/fieldsprout/flaskapp && python run_job.py sync_skimmer_all_accounts >> logs/cron.log 2>&1
     30 7 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_overlap_detection_all_groups >> logs/cron.log 2>&1
+    0  2 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_wp_operational >> logs/cron.log 2>&1
     0  8 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_lead_automation_daily >> logs/cron.log 2>&1
     0  9 * * * cd /home/fieldsprout/flaskapp && python run_job.py generate_google_ads_insights_daily >> logs/cron.log 2>&1
     0 12 * * * cd /home/fieldsprout/flaskapp && python run_job.py send_to_all_unsent_today >> logs/cron.log 2>&1
@@ -114,6 +115,7 @@ JOB_MAP = {
     'snapshot_keyword_rankings':               'snapshot_keyword_rankings_all_accounts',
     'run_fb_operational':                      'run_fb_operational_agents',
     'run_fb_tactical':                         'run_fb_tactical_agents',
+    'run_wp_operational':                      'run_wp_operational_agents',
 }
 
 

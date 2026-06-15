@@ -343,11 +343,16 @@ def run_strategic_orchestrator(account_id: int) -> Dict[str, Any]:
     Gathers each channel's performance, ranks them by efficiency, shifts budget
     from the weakest toward the strongest, pushes the resulting directives down
     into each channel's operational layer, and records a cross-channel summary.
+
+    Channels are partitioned into paid and organic:
+    - Paid channels (paid=True): ranked by CPL; budget is shifted from worst to best.
+    - Organic channels (paid=False / e.g. WordPress): no budget allocated; direction
+      ('grow' | 'maintain') is derived from how paid CPL compares to the target.
     """
     _load_providers()
 
     # 1. Gather performance from every registered provider; keep those with data.
-    summaries: List[Dict[str, Any]] = []
+    all_summaries: List[Dict[str, Any]] = []
     for provider in list(CHANNEL_REGISTRY.values()):
         try:
             summary = provider.get_performance_summary(account_id)
@@ -356,37 +361,40 @@ def run_strategic_orchestrator(account_id: int) -> Dict[str, Any]:
                            getattr(provider, "name", "?"), account_id, exc)
             continue
         if summary and summary.get("has_data"):
-            summaries.append(summary)
+            all_summaries.append(summary)
 
-    channels_with_data = len(summaries)
+    channels_with_data = len(all_summaries)
 
     if channels_with_data == 0:
         _log_execution(account_id, opportunities=0, decisions=0)
         return {"channels": 0, "changed": 0, "summary": []}
 
-    # 2. Total monthly budget: explicit total -> single-channel budget -> sum of
-    #    current 30-day spend. Account target CPL defaults to 80.
+    # Partition into paid vs organic.
+    paid_summaries = [s for s in all_summaries if s.get("paid", True)]
+    organic_summaries = [s for s in all_summaries if not s.get("paid", True)]
+
+    # 2. Total monthly budget (paid channels only).
     acct = _get_settings(account_id, ["total_monthly_budget", "monthly_budget", "target_cpl"])
     total_budget = _to_float(acct.get("total_monthly_budget"), 0.0)
     if total_budget <= 0:
         total_budget = _to_float(acct.get("monthly_budget"), 0.0)
     if total_budget <= 0:
-        total_budget = round(sum(s["spend_30d"] for s in summaries), 2)
+        total_budget = round(sum(s["spend_30d"] for s in paid_summaries), 2)
     account_target_cpl = _to_float(acct.get("target_cpl"), 80.0)
     if account_target_cpl <= 0:
         account_target_cpl = 80.0
 
-    # 3. Rank + allocate.
-    plans = _rank_and_allocate(summaries, total_budget, account_target_cpl)
+    # 3. Rank + allocate (paid channels only).
+    plans = _rank_and_allocate(paid_summaries, total_budget, account_target_cpl) if paid_summaries else []
 
-    # Identify the best (lowest-CPL) channel for rationale phrasing.
+    # Identify the best (lowest-CPL) paid channel for rationale phrasing.
     ranked = sorted(
         plans,
         key=lambda p: p["cpl"] if p["cpl"] is not None else float("inf"),
     )
     best = ranked[0] if ranked else None
 
-    # 4. Push directives down to each channel + persist per-channel directive.
+    # 4. Push directives down to paid channels + persist per-channel directive.
     changed = 0
     summary_out: List[Dict[str, Any]] = []
     for plan in plans:
@@ -428,7 +436,81 @@ def run_strategic_orchestrator(account_id: int) -> Dict[str, Any]:
             "rationale": rationale,
         })
 
-    # 5. Persist the cross-channel summary.
+    # 5. Organic branch — direction derived from paid CPL vs target.
+    #    If paid is expensive (CPL > 120% of target): push organic to 'grow'
+    #    so more organic leads reduce paid dependency.
+    #    Otherwise: 'maintain' — paid is healthy, keep organic ticking over.
+    if organic_summaries:
+        # Compute average paid CPL across all paid channels with data.
+        paid_cpls = [s["cpl"] for s in paid_summaries if s.get("cpl") is not None and s["cpl"] > 0]
+        avg_paid_cpl: Optional[float] = (
+            round(sum(paid_cpls) / len(paid_cpls), 2) if paid_cpls else None
+        )
+
+        for s in organic_summaries:
+            channel_name = s.get("channel") or s.get("name") or "wordpress"
+
+            if avg_paid_cpl is not None and avg_paid_cpl > account_target_cpl * 1.2:
+                action = "grow"
+                rationale = (
+                    f"Paid leads averaging {_money(avg_paid_cpl)} vs "
+                    f"{_money(account_target_cpl)} target — "
+                    f"push organic ({channel_name}) to grow and reduce paid dependency."
+                )
+            else:
+                action = "maintain"
+                if avg_paid_cpl is not None:
+                    rationale = (
+                        f"Paid performance is on track at {_money(avg_paid_cpl)}/lead — "
+                        f"maintain organic ({channel_name}) presence."
+                    )
+                else:
+                    rationale = (
+                        f"No paid channel data available — "
+                        f"maintain organic ({channel_name}) presence."
+                    )
+
+            organic_directive = {
+                "action": action,
+                "budget_shift_amount": 0,
+                "rationale": rationale,
+                "updated_at": datetime.utcnow().isoformat(),
+            }
+
+            # Push to the channel provider (writes to account_settings).
+            organic_provider = CHANNEL_REGISTRY.get(channel_name)
+            if organic_provider is not None:
+                try:
+                    organic_provider.apply_directives(account_id, organic_directive)
+                except Exception as exc:
+                    logger.warning(
+                        "apply_directives failed for organic channel %s account %s: %s",
+                        channel_name, account_id, exc,
+                    )
+            else:
+                # Fallback: write directly to account_settings.
+                _save_setting(
+                    account_id,
+                    f"strategy_directive_{channel_name}",
+                    json.dumps(organic_directive),
+                )
+
+            if action != "maintain":
+                changed += 1
+
+            summary_out.append({
+                "channel": channel_name,
+                "spend_30d": 0.0,
+                "leads_30d": s.get("leads_30d", 0),
+                "cpl": None,
+                "priority": action,
+                "current_budget": 0.0,
+                "new_budget": 0.0,
+                "target_cpl": None,
+                "rationale": rationale,
+            })
+
+    # 6. Persist the cross-channel summary.
     _save_setting(account_id, "strategic_orchestration", json.dumps({
         "account_id": account_id,
         "total_monthly_budget": total_budget,
@@ -439,10 +521,10 @@ def run_strategic_orchestrator(account_id: int) -> Dict[str, Any]:
         "generated_at": datetime.utcnow().isoformat(),
     }))
 
-    # 6. Log to agent_execution_log (strategic layer).
+    # 7. Log to agent_execution_log (strategic layer).
     _log_execution(account_id, opportunities=channels_with_data, decisions=changed)
 
-    # 7. Return.
+    # 8. Return.
     return {"channels": channels_with_data, "changed": changed, "summary": summary_out}
 
 

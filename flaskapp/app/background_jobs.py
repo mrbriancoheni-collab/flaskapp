@@ -318,6 +318,33 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
+    # Facebook Ads AI Agents - Operational (every 6 hours)
+    # Runs FBStrategicDirectorAgent, FBAccountStructureAgent, FBCampaignManagerAgent,
+    # FBBudgetGuardianAgent, FBCreativeAnalystAgent, FBSpendOptimizerAgent,
+    # FBDaypartingAgent, FBGeoOptimizerAgent, FBRetargetingAgent, FBPixelHealthAgent
+    # Each account is cadence-gated (backs off on quiet accounts, up to 2 days)
+    scheduler.add_job(
+        func=run_fb_operational_agents,
+        trigger='interval',
+        hours=6,
+        id='run_fb_operational_agents',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    # Facebook Ads AI Agents - Tactical (every 4 hours)
+    # Runs FBAudienceOptimizerAgent, FBPlacementOptimizerAgent,
+    # FBBidOptimizerAgent, FBCreativeOptimizerAgent
+    # Each account is cadence-gated (backs off on quiet accounts)
+    scheduler.add_job(
+        func=run_fb_tactical_agents,
+        trigger='interval',
+        hours=4,
+        id='run_fb_tactical_agents',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
     # Google Ads Call View sync — daily at 4:30 AM UTC
     scheduler.add_job(
         func=sync_call_view_all_accounts,
@@ -430,7 +457,7 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
-    app.logger.info("Registered 23 scheduled background jobs")
+    app.logger.info("Registered 25 scheduled background jobs")
 
 
 # ===== Scheduled Job Functions =====
@@ -1142,6 +1169,67 @@ def sync_fb_all_accounts(app: Flask):
         except Exception as exc:
             current_app.logger.error(
                 "[JOB] sync_fb_all_accounts: unexpected error — %s", exc, exc_info=True
+            )
+
+
+def run_fb_operational_agents(app: Flask):
+    """
+    Run Facebook Ads operational-layer AI agents for all accounts with a valid
+    Facebook token.
+
+    Agents run at operational layer (base interval 6 h, cadence-adaptive):
+    FBStrategicDirectorAgent, FBAccountStructureAgent, FBCampaignManagerAgent,
+    FBBudgetGuardianAgent, FBCreativeAnalystAgent, FBSpendOptimizerAgent,
+    FBDaypartingAgent, FBGeoOptimizerAgent, FBRetargetingAgent, FBPixelHealthAgent.
+
+    Each agent reads the strategy_directive_facebook written by the cross-channel
+    strategic orchestrator so its decisions are aligned with the top-level channel
+    priority (grow / maintain / cut).
+    """
+    with app.app_context():
+        try:
+            current_app.logger.info("[JOB] Starting FB operational agents for all accounts")
+
+            from app.tasks.fb_agent_scheduler import run_fb_operational_agents as _run
+
+            success_count, error_count = _run(app)
+
+            current_app.logger.info(
+                "[JOB] FB operational agents completed: %d succeeded, %d failed",
+                success_count, error_count,
+            )
+
+        except Exception as exc:
+            current_app.logger.error(
+                "[JOB] run_fb_operational_agents failed: %s", exc, exc_info=True
+            )
+
+
+def run_fb_tactical_agents(app: Flask):
+    """
+    Run Facebook Ads tactical-layer AI agents for all accounts with a valid
+    Facebook token.
+
+    Agents run at tactical layer (base interval 4 h, cadence-adaptive):
+    FBAudienceOptimizerAgent, FBPlacementOptimizerAgent,
+    FBBidOptimizerAgent, FBCreativeOptimizerAgent.
+    """
+    with app.app_context():
+        try:
+            current_app.logger.info("[JOB] Starting FB tactical agents for all accounts")
+
+            from app.tasks.fb_agent_scheduler import run_fb_tactical_agents as _run
+
+            success_count, error_count = _run(app)
+
+            current_app.logger.info(
+                "[JOB] FB tactical agents completed: %d succeeded, %d failed",
+                success_count, error_count,
+            )
+
+        except Exception as exc:
+            current_app.logger.error(
+                "[JOB] run_fb_tactical_agents failed: %s", exc, exc_info=True
             )
 
 

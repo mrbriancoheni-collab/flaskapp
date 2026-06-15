@@ -22,6 +22,12 @@
   <!-- Sync status -->
   <div id="sync-status" class="hidden rounded-xl px-4 py-3 text-sm border bg-blue-50 border-blue-200 text-blue-800"></div>
 
+  <!-- Toast notification -->
+  <div id="bulk-toast" class="hidden fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-sm rounded-xl px-5 py-3 shadow-lg flex items-center gap-2">
+    <i class="fa-solid fa-circle-check text-green-400"></i>
+    <span id="bulk-toast-msg"></span>
+  </div>
+
   {% if wasted_spend_dollars > 0 %}
   <div class="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between gap-4">
     <div>
@@ -30,17 +36,23 @@
       </p>
       <p class="text-red-600 text-xs mt-0.5">These terms show buying intent — people shopping to purchase, not hire a service</p>
     </div>
-    <button id="block-all-irrelevant" class="px-3 py-1.5 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700 font-medium whitespace-nowrap">
-      Block all irrelevant
+    <button id="block-all-irrelevant"
+            data-count="{{ wasted_term_count }}"
+            class="px-3 py-1.5 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700 font-medium whitespace-nowrap">
+      Block all {{ wasted_term_count }} irrelevant
     </button>
   </div>
   {% endif %}
 
   {% if not terms_data %}
   <div class="bg-white rounded-xl shadow-sm border p-12 text-center">
-    <i class="fa-solid fa-magnifying-glass-chart text-gray-300 text-5xl mb-4"></i>
-    <p class="text-gray-600 mb-2">No search term data yet.</p>
-    <p class="text-sm text-gray-400">Click "Sync from Google Ads" to pull the last 30 days of search terms.</p>
+    <i class="fa-solid fa-magnifying-glass-chart text-gray-300 text-4xl mb-4"></i>
+    <h3 class="text-base font-semibold text-gray-800 mb-1">No search terms yet</h3>
+    <p class="text-sm text-gray-500 mb-4">Data appears after your ads start getting clicks — sync to pull the last 30 days of searches.</p>
+    <button onclick="document.getElementById('sync-btn')?.click()"
+            class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500 transition">
+      <i class="fa-solid fa-rotate"></i> Sync from Google Ads
+    </button>
   </div>
   {% else %}
 
@@ -103,7 +115,12 @@
             </td>
             <td class="px-4 py-3 text-center">
               {% if t.relevance == 'irrelevant' %}
-                <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Irrelevant</span>
+                <div class="flex flex-col items-center gap-0.5">
+                  <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Irrelevant</span>
+                  {% if t.irrelevant_reason %}
+                  <span class="text-xs text-red-500 max-w-36 leading-tight" title="{{ t.irrelevant_reason }}">{{ t.irrelevant_reason }}</span>
+                  {% endif %}
+                </div>
               {% elif t.relevance == 'low_quality' %}
                 <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Low quality</span>
               {% else %}
@@ -213,6 +230,8 @@
   document.querySelectorAll('.add-neg-btn').forEach(btn => {
     btn.addEventListener('click', async function () {
       const id = this.dataset.id;
+      const term = this.closest('tr')?.dataset.term || 'this search';
+      if (!window.confirm(`Block "${term}"? Your ads will stop showing when people search for this.`)) return;
       this.disabled = true;
       this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
       try {
@@ -261,28 +280,55 @@
   });
 
   const blockAllBtn = document.getElementById('block-all-irrelevant');
+  const bulkToast = document.getElementById('bulk-toast');
+  const bulkToastMsg = document.getElementById('bulk-toast-msg');
+
+  function showToast(msg) {
+    if (!bulkToast || !bulkToastMsg) return;
+    bulkToastMsg.textContent = msg;
+    bulkToast.classList.remove('hidden');
+    setTimeout(() => bulkToast.classList.add('hidden'), 4000);
+  }
+
   if (blockAllBtn) {
     blockAllBtn.addEventListener('click', async function () {
-      const irrelevantRows = Array.from(document.querySelectorAll('.term-row[data-relevance="irrelevant"]'));
-      const negBtns = irrelevantRows
-        .map(row => row.querySelector('.add-neg-btn'))
-        .filter(Boolean);
-      if (!negBtns.length) {
-        blockAllBtn.textContent = 'All blocked';
-        blockAllBtn.disabled = true;
-        return;
-      }
+      const count = parseInt(blockAllBtn.dataset.count || '0', 10);
+      if (!count) return;
+      const confirmed = window.confirm(
+        `Block all ${count} irrelevant search term${count !== 1 ? 's' : ''} as campaign-level negative keywords?\n\nThis will prevent your ads from showing on these searches.`
+      );
+      if (!confirmed) return;
+
       blockAllBtn.disabled = true;
-      let done = 0;
-      const total = negBtns.length;
-      blockAllBtn.textContent = `Blocking 0 of ${total}…`;
-      for (const btn of negBtns) {
-        btn.click();
-        done++;
-        blockAllBtn.textContent = `Blocking ${done} of ${total}…`;
-        await new Promise(r => setTimeout(r, 120));
+      blockAllBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Blocking…';
+
+      try {
+        const r = await fetch('/account/google/ads/block-irrelevant-search-terms', {method: 'POST'});
+        const data = await r.json();
+        if (data.ok) {
+          const n = data.blocked || 0;
+          showToast(`Blocked ${n} irrelevant search term${n !== 1 ? 's' : ''} as negative keywords`);
+          blockAllBtn.textContent = `Blocked ${n}`;
+          document.querySelectorAll('.term-row[data-relevance="irrelevant"] .add-neg-btn').forEach(btn => {
+            const row = btn.closest('tr');
+            const id = row?.dataset.id;
+            if (id) {
+              const statusEl = document.querySelector(`.term-status-${id}`);
+              if (statusEl) statusEl.innerHTML = '<span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Negative</span>';
+              row.dataset.addedNeg = 'true';
+            }
+            btn.remove();
+          });
+        } else {
+          blockAllBtn.disabled = false;
+          blockAllBtn.textContent = `Block all ${count} irrelevant`;
+          showToast(`Error: ${data.error || 'Unknown error'}`);
+        }
+      } catch (e) {
+        blockAllBtn.disabled = false;
+        blockAllBtn.textContent = `Block all ${count} irrelevant`;
+        showToast(`Request failed: ${e.message}`);
       }
-      blockAllBtn.textContent = `Blocked ${total}`;
     });
   }
 })();

@@ -265,6 +265,21 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
+    # Cross-Channel Strategic Orchestrator (weekly, Monday 5 AM UTC)
+    # The umbrella over ALL channels: ranks each channel by efficiency and shifts
+    # budget/priority across them. Runs BEFORE the channel operational/strategic
+    # jobs (6 AM) so each channel picks up fresh directives the same morning.
+    scheduler.add_job(
+        func=run_strategic_orchestrator_all_accounts,
+        trigger='cron',
+        day_of_week='mon',
+        hour=5,
+        minute=0,
+        id='run_strategic_orchestrator_all_accounts',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
     # Google Ads AI Agents - Strategic (weekly, Monday 6 AM UTC)
     # Portfolio-level decisions: campaign type diversity, major budget reallocation.
     # Runs weekly so structural suggestions don't flood the approval queue.
@@ -287,6 +302,18 @@ def register_scheduled_jobs(scheduler, app):
         trigger='interval',
         hours=4,
         id='run_google_ads_auto_executor',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    # Facebook Ads daily sync (daily at 3:30 AM UTC)
+    # Pulls campaigns, adsets, ads, and last-30-day insights into local DB
+    scheduler.add_job(
+        func=sync_fb_all_accounts,
+        trigger='cron',
+        hour=3,
+        minute=30,
+        id='sync_fb_all_accounts',
         replace_existing=True,
         kwargs={'app': app}
     )
@@ -335,6 +362,17 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
+    # Full structure sync (all entities, no date filter) — daily at 4:00 AM UTC
+    scheduler.add_job(
+        func=sync_structure_all_accounts,
+        trigger='cron',
+        hour=4,
+        minute=0,
+        id='sync_structure_all_accounts',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
     # Skimmer CRM sync (jobs → GCLID match → offline conversions → review emails) — daily at 7:00 AM UTC
     scheduler.add_job(
         func=sync_skimmer_all_accounts,
@@ -367,7 +405,32 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
-    app.logger.info("Registered 19 scheduled background jobs")
+    # Weekly plain-English performance digest email (Monday 1 PM UTC / morning US)
+    scheduler.add_job(
+        func=send_weekly_digest_all_accounts,
+        trigger='cron',
+        day_of_week='mon',
+        hour=13,
+        minute=0,
+        id='send_weekly_digest_all_accounts',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    # Keyword ranking snapshots (weekly, Monday 06:30 UTC)
+    # Runs after strategic agents (6 AM) so GSC data is already fresh
+    scheduler.add_job(
+        func=snapshot_keyword_rankings_all_accounts,
+        trigger='cron',
+        day_of_week='mon',
+        hour=6,
+        minute=30,
+        id='snapshot_keyword_rankings_all_accounts',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    app.logger.info("Registered 23 scheduled background jobs")
 
 
 # ===== Scheduled Job Functions =====
@@ -940,6 +1003,213 @@ def run_strategic_agents(app: Flask):
             current_app.logger.error(f"Error running strategic agents: {e}", exc_info=True)
 
 
+def run_strategic_orchestrator_all_accounts(app: Flask):
+    """
+    Run the cross-channel strategic orchestrator for every active/trial account.
+
+    This is the umbrella over ALL channels. For each account it ranks the
+    connected channels by efficiency (cost per lead) and shifts budget/priority
+    from the weakest toward the strongest, writing per-channel directives that
+    each channel's operational agents pick up automatically.
+
+    Cadence-gated via should_run_agent(account_id, 'strategic', 'strategic') so
+    it effectively runs weekly per account and backs off quiet accounts.
+    Registered: weekly, Monday 05:00 UTC (before the channel operational jobs).
+    """
+    with app.app_context():
+        from app import db
+        from sqlalchemy import text
+        from app.services.agent_cadence import should_run_agent, record_agent_run
+        from app.services.strategic_orchestrator import run_strategic_orchestrator
+
+        try:
+            current_app.logger.info("[JOB] Starting cross-channel strategic orchestrator")
+
+            try:
+                with db.engine.connect() as conn:
+                    rows = conn.execute(text("""
+                        SELECT id AS account_id
+                        FROM accounts
+                        WHERE status IN ('active', 'trial')
+                    """)).fetchall()
+            except Exception as exc:
+                current_app.logger.error(
+                    "[JOB] strategic orchestrator: could not query accounts — %s", exc
+                )
+                return
+
+            account_ids = [r[0] for r in rows]
+            current_app.logger.info(
+                "[JOB] strategic orchestrator: %d active/trial account(s)", len(account_ids)
+            )
+
+            ran = 0
+            skipped = 0
+            errors = 0
+
+            for account_id in account_ids:
+                run_now, reason = should_run_agent(account_id, 'strategic', 'strategic')
+                if not run_now:
+                    skipped += 1
+                    continue
+                try:
+                    result = run_strategic_orchestrator(account_id) or {}
+                    channels = int(result.get('channels', 0) or 0)
+                    changed = int(result.get('changed', 0) or 0)
+                    record_agent_run(
+                        account_id, 'strategic', 'strategic',
+                        decisions_made=changed, opportunities_found=channels,
+                    )
+                    ran += 1
+                    if channels:
+                        current_app.logger.info(
+                            "[JOB] account %s: %d channel(s), %d directive change(s)",
+                            account_id, channels, changed,
+                        )
+                except Exception as exc:
+                    current_app.logger.error(
+                        "[JOB] strategic orchestrator failed for account %s — %s",
+                        account_id, exc, exc_info=True,
+                    )
+                    errors += 1
+
+            current_app.logger.info(
+                "[JOB] Strategic orchestrator complete: ran=%d, skipped=%d, errors=%d",
+                ran, skipped, errors,
+            )
+
+        except Exception as exc:
+            current_app.logger.error(
+                "[JOB] run_strategic_orchestrator_all_accounts error: %s", exc, exc_info=True
+            )
+
+
+def sync_fb_all_accounts(app: Flask):
+    """
+    Daily sync of Facebook campaigns, adsets, ads, and insights.
+
+    Iterates over every app account that has a non-expired Facebook token
+    and calls sync_fb_account(account_id) for each one.
+    """
+    with app.app_context():
+        from app import db
+        from sqlalchemy import text
+
+        try:
+            current_app.logger.info("[JOB] Starting FB Ads daily sync for all accounts")
+
+            # Find all accounts with a non-expired FB token
+            try:
+                with db.engine.connect() as conn:
+                    rows = conn.execute(
+                        text(
+                            "SELECT account_id FROM facebook_tokens "
+                            "WHERE expires_at IS NULL OR expires_at > NOW()"
+                        )
+                    ).fetchall()
+            except Exception as exc:
+                current_app.logger.error(
+                    "[JOB] sync_fb_all_accounts: could not query facebook_tokens — %s", exc
+                )
+                return
+
+            account_ids = [r[0] for r in rows]
+            current_app.logger.info(
+                "[JOB] sync_fb_all_accounts: found %d account(s) with valid FB token",
+                len(account_ids),
+            )
+
+            success_count = 0
+            error_count = 0
+            for account_id in account_ids:
+                try:
+                    from app.services.fbads_sync import sync_fb_account
+                    sync_fb_account(account_id)
+                    success_count += 1
+                except Exception as exc:
+                    current_app.logger.error(
+                        "[JOB] sync_fb_all_accounts: error syncing account %s — %s",
+                        account_id, exc,
+                        exc_info=True,
+                    )
+                    error_count += 1
+
+            current_app.logger.info(
+                "[JOB] FB Ads daily sync complete: %d succeeded, %d failed",
+                success_count, error_count,
+            )
+
+        except Exception as exc:
+            current_app.logger.error(
+                "[JOB] sync_fb_all_accounts: unexpected error — %s", exc, exc_info=True
+            )
+
+
+def snapshot_keyword_rankings_all_accounts(app: Flask):
+    """
+    Weekly keyword ranking snapshot for all accounts with GSC connected.
+
+    Pulls this week's GSC top-100 keyword positions for every account that
+    has Google Search Console connected and stores them as KeywordRankSnapshot
+    rows so trending data accumulates over time.
+
+    Registered: weekly, Monday 06:30 UTC.
+    """
+    with app.app_context():
+        try:
+            current_app.logger.info("[JOB] Starting weekly keyword ranking snapshots")
+
+            from app.models import Account
+            from app.models_google import GoogleOAuthToken
+            from app.services.keyword_rank_tracker import snapshot_rankings
+
+            # Find all active accounts with GSC connected
+            accounts = Account.query.join(
+                GoogleOAuthToken, Account.id == GoogleOAuthToken.account_id
+            ).filter(
+                GoogleOAuthToken.product == 'gsc',
+                Account.status == 'active',
+            ).all()
+
+            if not accounts:
+                current_app.logger.info("[JOB] No active GSC accounts found — skipping keyword snapshots")
+                return
+
+            success_count = 0
+            error_count = 0
+            total_snapshots = 0
+
+            for account in accounts:
+                try:
+                    result = snapshot_rankings(account.id)
+                    if "error" in result:
+                        current_app.logger.warning(
+                            f"[JOB] Keyword snapshot skipped for account {account.id}: {result['error']}"
+                        )
+                        error_count += 1
+                    else:
+                        total_snapshots += result.get("snapshots", 0)
+                        success_count += 1
+                        current_app.logger.info(
+                            f"[JOB] Account {account.id}: {result['snapshots']} snapshots across {result['urls']} URLs"
+                        )
+                except Exception as e:
+                    current_app.logger.error(
+                        f"[JOB] Error snapshotting rankings for account {account.id}: {e}",
+                        exc_info=True,
+                    )
+                    error_count += 1
+                    continue
+
+            current_app.logger.info(
+                f"[JOB] Keyword ranking snapshots complete: "
+                f"{total_snapshots} rows written, {success_count} accounts succeeded, {error_count} errors"
+            )
+
+        except Exception as e:
+            current_app.logger.error(f"Error in keyword ranking snapshot job: {e}", exc_info=True)
+
+
 def run_google_ads_auto_executor(app: Flask):
     """
     Run Google Ads Auto-Executor for all active accounts.
@@ -1267,3 +1537,135 @@ def upload_offline_conversions_all_accounts(app: Flask):
                     current_app.logger.warning("offline conv upload failed account %s: %s", aid, exc)
         except Exception as exc:
             current_app.logger.error("upload_offline_conversions_all_accounts error: %s", exc, exc_info=True)
+
+
+def send_weekly_digest_all_accounts(app: Flask):
+    """
+    Generate the weekly plain-English performance digest for every Google
+    Ads-connected account, store it, and queue an email to the account owner.
+
+    Runs Monday mornings (1 PM UTC). Accounts with no data, no history, and
+    no agent activity are skipped so brand-new accounts don't get empty emails.
+    """
+    with app.app_context():
+        from flask import render_template
+        from app import db
+        from app.models import Account, User
+        from app.models_google import GoogleOAuthToken
+        from app.models_billing import EmailQueue
+        from app.services.google_ads_digest import generate_weekly_digest, render_digest_text
+
+        try:
+            accounts = Account.query.join(
+                GoogleOAuthToken, Account.id == GoogleOAuthToken.account_id
+            ).filter(
+                GoogleOAuthToken.product == 'ads',
+                Account.status == 'active'
+            ).all()
+
+            if not accounts:
+                current_app.logger.info("No active Google Ads accounts for weekly digest")
+                return
+
+            queued = 0
+            skipped = 0
+            errors = 0
+
+            for account in accounts:
+                try:
+                    digest = generate_weekly_digest(account.id)
+
+                    quiet_week = (
+                        not digest.get("has_data")
+                        and not digest.get("prior_week")
+                        and not (digest.get("agent") or {}).get("total_actions")
+                    )
+                    if quiet_week:
+                        skipped += 1
+                        continue
+
+                    user = (
+                        User.query.filter_by(account_id=account.id, role='owner').first()
+                        or User.query.filter_by(account_id=account.id).order_by(User.id).first()
+                    )
+                    if not user:
+                        skipped += 1
+                        continue
+
+                    text_parts = render_digest_text(digest)
+
+                    tw = digest.get("this_week") or {}
+                    leads = int(round(float(tw.get("leads") or 0)))
+                    spend = float(tw.get("spend") or 0)
+                    if spend > 0 and leads > 0:
+                        subject = (
+                            f"Your week in review: {leads} lead{'s' if leads != 1 else ''} "
+                            f"for ${spend:,.0f}"
+                        )
+                    elif spend > 0:
+                        subject = f"Your week in review: ${spend:,.0f} spent, still working on those leads"
+                    else:
+                        subject = "Your week in review: your ads didn't run last week"
+
+                    def _friendly(iso_date):
+                        d = datetime.fromisoformat(iso_date)
+                        return f"{d.strftime('%b')} {d.day}"
+
+                    html_body = render_template(
+                        'emails/google_ads_weekly_digest.html',
+                        text=text_parts,
+                        week_start=_friendly(digest["week_start"]),
+                        week_end=_friendly(digest["week_end"]),
+                        dashboard_url=f"{current_app.config.get('BASE_URL', 'https://app.fieldsprout.com')}/account/google/ads/?tab=cockpit",
+                        current_year=datetime.utcnow().year,
+                    )
+
+                    db.session.add(EmailQueue(
+                        to_email=user.email,
+                        subject=subject,
+                        html_body=html_body,
+                    ))
+                    db.session.commit()
+                    queued += 1
+
+                except Exception as e:
+                    db.session.rollback()
+                    current_app.logger.error(
+                        f"Error building weekly digest for account {account.id}: {e}",
+                        exc_info=True
+                    )
+                    errors += 1
+                    continue
+
+            current_app.logger.info(
+                f"[JOB] Weekly digest complete: queued={queued}, skipped={skipped}, errors={errors}"
+            )
+
+        except Exception as e:
+            current_app.logger.error(f"Error in weekly digest job: {e}", exc_info=True)
+
+
+def sync_structure_all_accounts(app: Flask):
+    """
+    Sync full account structure (campaigns, ad groups, keywords, ads, negatives)
+    for all connected accounts — without a date filter so zero-impression keywords
+    and newly created entities are captured.
+    """
+    with app.app_context():
+        try:
+            from app.models import GoogleAdsAuth
+            from app.services.google_ads_sync import sync_structure
+            auths = GoogleAdsAuth.query.all()
+            for auth in auths:
+                try:
+                    result = sync_structure(auth.account_id)
+                    current_app.logger.info(
+                        "structure sync account %s: campaigns=%s kw=%s ads=%s errors=%s",
+                        auth.account_id,
+                        result.get("campaigns"), result.get("keywords"),
+                        result.get("ads"), result.get("errors"),
+                    )
+                except Exception as exc:
+                    current_app.logger.warning("structure sync failed account %s: %s", auth.account_id, exc)
+        except Exception as exc:
+            current_app.logger.error("sync_structure_all_accounts error: %s", exc, exc_info=True)

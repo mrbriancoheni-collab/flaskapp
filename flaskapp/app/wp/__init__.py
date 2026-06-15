@@ -158,7 +158,7 @@ def _openai_key() -> Optional[str]:
 
 # ---------- queue processor ----------
 
-def _ai_generate_post(brief: Dict[str, Any]) -> Dict[str, Any]:
+def _ai_generate_post(brief: Dict[str, Any], site: Optional["WPSite"] = None) -> Dict[str, Any]:
     """
     Produce {title, html, excerpt} from a brief.
     Priority: 1) URL analyzer  2) Claude  3) OpenAI  4) heuristic stub
@@ -174,6 +174,14 @@ def _ai_generate_post(brief: Dict[str, Any]) -> Dict[str, Any]:
     topics = brief.get("topics") or []
     cluster_name = brief.get("cluster_name") or ""
     supporting_context = brief.get("supporting_context") or ""
+
+    # Brand voice / language directives from site settings
+    _LANG_NAMES = {
+        "es": "Spanish", "fr": "French", "pt": "Portuguese", "de": "German",
+    }
+    brand_voice = getattr(site, "brand_voice", None) or ""
+    brand_avoid = getattr(site, "brand_avoid", None) or ""
+    content_language = getattr(site, "content_language", None) or "en"
 
     # 1) Analyzer — scrape and rewrite from a source URL
     if source_url and analyze_url:
@@ -195,6 +203,19 @@ def _ai_generate_post(brief: Dict[str, Any]) -> Dict[str, Any]:
     outline_line = f"Suggested outline:\n{outline}" if outline else ""
     brief_block = "\n".join(filter(None, [kw_line, extra_line, cluster_line, context_line, outline_line, prompt]))
 
+    # Build brand voice directives
+    _brand_directives = []
+    if brand_voice:
+        _brand_directives.append(f"Write in this style: {brand_voice}")
+    if brand_avoid:
+        _brand_directives.append(f"Avoid: {brand_avoid}")
+    if content_language and content_language != "en":
+        _lang_name = _LANG_NAMES.get(content_language, content_language)
+        _brand_directives.append(
+            f"Write the entire post in {_lang_name}. All headings, body text, and meta description must be in {_lang_name}."
+        )
+    brand_directive_block = ("\n".join(_brand_directives) + "\n") if _brand_directives else ""
+
     # 2) Claude (primary AI writer)
     try:
         from app.ai_clients import get_ai_client
@@ -211,7 +232,7 @@ Requirements:
 - Include short paragraphs and bullet lists where appropriate
 - Naturally incorporate the primary keyword in the title, first paragraph, and 2-3 subheadings
 - End with a clear call-to-action paragraph
-
+{brand_directive_block}
 Return ONLY valid JSON with these exact keys:
 {{"title": "...", "html": "...", "excerpt": "..."}}
 
@@ -263,10 +284,18 @@ The excerpt must be 145-155 characters optimised as a meta description."""
     if key:
         try:
             import requests
+            _openai_brand = ""
+            if brand_voice:
+                _openai_brand += f" Write in this style: {brand_voice}."
+            if brand_avoid:
+                _openai_brand += f" Avoid: {brand_avoid}."
+            if content_language and content_language != "en":
+                _lang_name = _LANG_NAMES.get(content_language, content_language)
+                _openai_brand += f" Write the entire post in {_lang_name}."
             sys_msg = (
                 "You are a senior content writer for a local services blog. "
                 "Write helpful, original, practical content with clear structure (H2/H3), "
-                "and a short meta-style excerpt. Return STRICT JSON: {title, html, excerpt}."
+                f"and a short meta-style excerpt. Return STRICT JSON: {{title, html, excerpt}}.{_openai_brand}"
             )
             user_msg = _json.dumps({
                 "brief": brief_block,
@@ -314,6 +343,160 @@ The excerpt must be 145-155 characters optimised as a meta description."""
 <p>If you need help, contact our team for fast, friendly service.</p>"""
     excerpt = "Clear, practical tips you can use today—plus when to call a pro."
     return {"title": title, "html": html, "excerpt": excerpt}
+
+AUTOPILOT_HARD_CAP = 5  # absolute max ai_generate jobs per site per day from autopilot
+
+
+def _run_daily_content_queue(site: "WPSite") -> dict:
+    """
+    Autopilot content scheduler: queue `ai_generate` jobs for a site up to the
+    configured daily limit, with three safety gates:
+
+    1. Daily cap enforcement  — never exceed `autopilot_daily_new` today.
+    2. New site grace period  — sites < 7 days old always require approval.
+    3. Hard cap               — never queue more than AUTOPILOT_HARD_CAP (5) per day.
+
+    Returns a summary dict.
+    """
+    if not getattr(site, "autopilot_enabled", False):
+        return {"ok": True, "skipped": "autopilot_disabled", "queued": 0}
+
+    configured_daily = int(getattr(site, "autopilot_daily_new", 1) or 1)
+    require_approval = bool(getattr(site, "autopilot_require_approval", True))
+
+    # Gate 3: Hard cap check — warn if configured limit exceeds the hard cap
+    effective_daily = configured_daily
+    if configured_daily > AUTOPILOT_HARD_CAP:
+        current_app.logger.warning(
+            "Autopilot site %d: autopilot_daily_new=%d exceeds hard cap %d — capping at %d.",
+            site.id, configured_daily, AUTOPILOT_HARD_CAP, AUTOPILOT_HARD_CAP,
+        )
+        db.session.add(WPLog(
+            site_id=site.id,
+            level="warn",
+            message=(
+                f"Autopilot daily cap exceeded: configured={configured_daily}, "
+                f"hard cap={AUTOPILOT_HARD_CAP}. Capping to {AUTOPILOT_HARD_CAP}."
+            ),
+        ))
+        effective_daily = AUTOPILOT_HARD_CAP
+
+    # Gate 1: Count how many ai_generate jobs were already queued/published today
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    already_queued_today = WPJob.query.filter(
+        WPJob.site_id == site.id,
+        WPJob.kind == "ai_generate",
+        WPJob.status.in_(["queued", "running", "done"]),
+        WPJob.created_at >= today_start,
+    ).count()
+
+    if already_queued_today >= effective_daily:
+        return {
+            "ok": True,
+            "skipped": "daily_cap_reached",
+            "queued": 0,
+            "already_today": already_queued_today,
+            "effective_daily": effective_daily,
+        }
+
+    slots_remaining = effective_daily - already_queued_today
+
+    # Gate 2: New site grace period — first 7 days always require approval
+    grace_period_approval = False
+    site_created_at = getattr(site, "created_at", None)
+    if site_created_at:
+        age_days = (datetime.utcnow() - site_created_at).days
+        if age_days < 7 and not require_approval:
+            grace_period_approval = True
+            current_app.logger.info(
+                "Autopilot site %d: new site grace period (age=%d days) — forcing approval.",
+                site.id, age_days,
+            )
+            db.session.add(WPLog(
+                site_id=site.id,
+                level="info",
+                message=(
+                    f"New site: requiring approval for first 7 days of autopilot "
+                    f"(site age {age_days} day(s))."
+                ),
+            ))
+
+    force_approval = require_approval or grace_period_approval
+
+    queued = 0
+    for _ in range(slots_remaining):
+        payload = {
+            "source": "autopilot",
+            "require_approval": force_approval,
+            "needs_approval": force_approval,
+            "status": "draft" if force_approval else "publish",
+        }
+        job = WPJob(site_id=site.id, kind="ai_generate", payload=payload)
+        db.session.add(job)
+        queued += 1
+
+    if queued:
+        db.session.commit()
+
+    return {
+        "ok": True,
+        "queued": queued,
+        "already_today": already_queued_today,
+        "effective_daily": effective_daily,
+        "force_approval": force_approval,
+    }
+
+
+def _validate_post_quality(
+    title: str,
+    html_body: str,
+    target_keyword: str = "",
+    min_words: int = 600,
+) -> dict:
+    """
+    Lightweight quality gate for AI-generated posts.
+
+    Returns:
+        {
+            "ok": bool,          # True = no quality warnings
+            "warnings": [...],   # list of human-readable warning strings
+            "word_count": int,
+        }
+    """
+    import re as _re
+
+    warnings: list = []
+
+    # Strip tags to count words
+    plain = _re.sub(r"<[^>]+>", " ", html_body or "")
+    word_count = len(plain.split())
+
+    threshold = int(min_words * 0.85)
+    if word_count < threshold:
+        warnings.append(
+            f"Word count too low: {word_count} words (minimum threshold {threshold}, target {min_words})."
+        )
+
+    # Keyword presence
+    if target_keyword:
+        kw_lower = target_keyword.lower()
+        title_has_kw = kw_lower in (title or "").lower()
+        body_has_kw  = kw_lower in plain.lower()
+        if not title_has_kw:
+            warnings.append(f"Primary keyword '{target_keyword}' missing from title.")
+        if not body_has_kw:
+            warnings.append(f"Primary keyword '{target_keyword}' missing from post body.")
+
+    # Basic structure: at least one <h2>
+    if not _re.search(r"<h2[\s>]", html_body or "", _re.IGNORECASE):
+        warnings.append("Post body contains no <h2> headings — add subheadings for structure.")
+
+    return {
+        "ok": len(warnings) == 0,
+        "warnings": warnings,
+        "word_count": word_count,
+    }
+
 
 def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None, retry_errors: bool = False) -> dict:
     if site is None:
@@ -431,9 +614,41 @@ def _process_queue(max_jobs: int = 5, site: Optional[WPSite] = None, retry_error
 
             elif job.kind == "ai_generate":
                 brief = job.payload or {}
-                draft = _ai_generate_post(brief)
+                draft = _ai_generate_post(brief, site=site)
 
                 needs_approval = bool(brief.get("require_approval")) or bool(getattr(site, "autopilot_require_approval", False))
+
+                # AI post quality gate — only enforced for autopilot-queued jobs
+                _is_autopilot_job = brief.get("source") not in ("manual", "manual_queue")
+                _qa = _validate_post_quality(
+                    title=draft.get("title") or "",
+                    html_body=draft.get("html") or "",
+                    target_keyword=brief.get("primary_keyword") or "",
+                    min_words=600,
+                )
+                if not _qa["ok"]:
+                    for _warn in _qa["warnings"]:
+                        db.session.add(WPLog(
+                            site_id=site.id, job_id=job.id,
+                            level="warn",
+                            message=f"Quality warning: {_warn}",
+                        ))
+                    current_app.logger.warning(
+                        "ai_generate job %d quality warnings: %s (word_count=%d)",
+                        job.id, _qa["warnings"], _qa["word_count"],
+                    )
+                    # Force human review when autopilot would have published without approval
+                    if _is_autopilot_job and not needs_approval:
+                        needs_approval = True
+                        db.session.add(WPLog(
+                            site_id=site.id, job_id=job.id,
+                            level="warn",
+                            message=(
+                                "Quality gate: post flagged for human review "
+                                f"(word_count={_qa['word_count']}, warnings={len(_qa['warnings'])})."
+                            ),
+                        ))
+
                 status = "draft" if needs_approval else "publish"
 
                 # Upload featured image to WP media library before creating the post
@@ -793,10 +1008,22 @@ def settings():
         site = None
 
     if request.method == "POST":
+        is_brand_voice_post = bool(request.form.get("brand_voice_form"))
         is_autopilot_post = any(k in request.form for k in (
             "autopilot_enabled", "autopilot_daily_new",
             "autopilot_daily_refresh", "autopilot_require_approval"
         ))
+
+        if is_brand_voice_post:
+            if not site:
+                flash("Please save your WordPress connection first.", "error")
+                return see_other("wp_bp.settings")
+            site.brand_voice = (request.form.get("brand_voice") or "").strip() or None
+            site.brand_avoid = (request.form.get("brand_avoid") or "").strip() or None
+            site.content_language = (request.form.get("content_language") or "en").strip()
+            db.session.commit()
+            flash("Brand voice settings saved.", "success")
+            return see_other("wp_bp.settings")
 
         if is_autopilot_post:
             if not site:
@@ -1745,6 +1972,122 @@ def insights():
                            autopilot_stats=autopilot_stats, post_gsc=post_gsc,
                            aid=aid)
 
+# ---------- freshness auto-refresh ----------
+
+def _run_weekly_freshness_scan(site: "WPSite") -> Dict[str, Any]:
+    """
+    Scan all published posts for staleness (age > 365 days).
+    For each stale post with staleness_score >= 60 that has no queued/running
+    refresh or ai_generate job, queue a 'refresh' job (max 3 per run).
+    """
+    if not site or not site.id:
+        return {"ok": False, "error": "No site"}
+
+    queued_count = 0
+    stale_posts = []
+
+    try:
+        c = WPClient(site.base_url, site.username, site.app_password)
+        raw = c.list_posts(per_page=50, status="publish")
+
+        from datetime import timezone
+        import re as _re
+        now = datetime.now(timezone.utc)
+
+        for p in raw:
+            modified_str = p.get("modified_gmt") or p.get("modified", "")
+            try:
+                modified = datetime.fromisoformat(
+                    modified_str.replace("Z", "+00:00") if modified_str else ""
+                )
+                if modified.tzinfo is None:
+                    modified = modified.replace(tzinfo=timezone.utc)
+                days_old = (now - modified).days
+            except Exception:
+                days_old = 0
+
+            # Age score: over 365 days old → over 50 staleness; at 730 days → 100
+            age_score = min(days_old / 365 * 50, 50)
+            staleness = round(age_score)  # traffic decay not available in background
+
+            if days_old > 365 and staleness >= 60:
+                stale_posts.append({
+                    "id": p.get("id"),
+                    "title": _re.sub(r"<[^>]+>", "", p.get("title", {}).get("rendered", "")),
+                    "url": (p.get("link") or "").rstrip("/"),
+                    "days_old": days_old,
+                    "staleness": staleness,
+                })
+
+        # Save scan results
+        try:
+            from app.models_seo import SEOScanResult
+            aid = site.account_id
+            if aid:
+                SEOScanResult.save_result(
+                    account_id=aid, site_id=site.id,
+                    scan_type="freshness",
+                    issue_count=len(stale_posts),
+                    item_count=len(raw),
+                    data={
+                        "stale_count": len(stale_posts),
+                        "total": len(raw),
+                        "stale_posts": [
+                            {"url": sp["url"], "days_old": sp["days_old"], "staleness": sp["staleness"]}
+                            for sp in stale_posts[:20]
+                        ],
+                    },
+                )
+        except Exception:
+            pass
+
+        # Queue refresh jobs for stale posts (max 3 per run)
+        MAX_STALE_REFRESH = 3
+        for sp in stale_posts:
+            if queued_count >= MAX_STALE_REFRESH:
+                break
+
+            post_id = sp.get("id")
+            if not post_id:
+                continue
+
+            # Skip if there is already a queued or running refresh/ai_generate job for this post
+            existing = WPJob.query.filter(
+                WPJob.site_id == site.id,
+                WPJob.kind.in_(["refresh", "ai_generate"]),
+                WPJob.status.in_(["queued", "running"]),
+            ).all()
+            already_queued = any(
+                str((j.payload or {}).get("post_id")) == str(post_id)
+                for j in existing
+            )
+            if already_queued:
+                continue
+
+            job = WPJob(
+                site_id=site.id,
+                kind="refresh",
+                status="queued",
+                payload={
+                    "post_id": post_id,
+                    "url": sp["url"],
+                    "action": "refresh_stale",
+                    "reason": "Post is over 1 year old — refreshing title and meta to stay current",
+                },
+            )
+            db.session.add(job)
+            queued_count += 1
+
+        if queued_count:
+            db.session.commit()
+
+    except Exception as exc:
+        current_app.logger.exception("_run_weekly_freshness_scan failed for site %s", site.id)
+        return {"ok": False, "error": str(exc)}
+
+    return {"ok": True, "stale_found": len(stale_posts), "refresh_queued": queued_count}
+
+
 # ---------- cron (no login) ----------
 
 @wp_bp.route("/cron-runner", methods=["GET"])
@@ -1802,9 +2145,21 @@ def cron_runner():
         current_app.logger.exception("SEO auto-fix hook failed in cron_runner")
         seo_fix_results = [{"error": str(exc)}]
 
+    # Hook freshness scan — auto-queues refresh jobs for posts > 1 year old
+    freshness_results = []
+    try:
+        sites = WPSite.query.all()
+        for site in sites:
+            r = _run_weekly_freshness_scan(site)
+            freshness_results.append({"site": site.base_url, **r})
+    except Exception as exc:
+        current_app.logger.exception("Freshness scan hook failed in cron_runner")
+        freshness_results = [{"error": str(exc)}]
+
     return jsonify({"ran_at": ran_at, **result,
                     "seo_monitor": seo_monitor_results,
-                    "seo_auto_fix": seo_fix_results}), 200
+                    "seo_auto_fix": seo_fix_results,
+                    "freshness_scan": freshness_results}), 200
 
 # ---------- legacy / compatibility aliases ----------
 
@@ -2892,6 +3247,115 @@ def image_seo():
     )
 
 
+@wp_bp.route("/bulk-fix-alt-text", methods=["POST"], endpoint="bulk_fix_alt_text")
+@login_required
+def bulk_fix_alt_text():
+    """
+    Queue edit jobs for each image missing alt text (up to 20 per run).
+    Uses AI to generate descriptive alt text from the image filename/title.
+    Returns JSON: {"queued": N}
+    """
+    site = _current_site()
+    if not site:
+        return jsonify({"error": "No WordPress site configured"}), 400
+
+    import re as _re
+
+    queued = 0
+    try:
+        c = WPClient(site.base_url, site.username, site.app_password)
+        raw = c.list_posts(per_page=30, status="publish")
+
+        # Collect images missing alt text across all posts
+        missing_images: List[Dict[str, Any]] = []
+        for p in raw:
+            pid = p.get("id")
+            content = p.get("content", {}).get("rendered", "") or ""
+            for idx, m in enumerate(_re.finditer(
+                r'<img[^>]*src=["\']([^"\']+)["\'][^>]*>',
+                content, _re.IGNORECASE,
+            )):
+                full_tag = m.group(0)
+                src = m.group(1)
+                alt_m = _re.search(r'alt=["\']([^"\']*)["\']', full_tag, _re.IGNORECASE)
+                alt = alt_m.group(1) if alt_m else None
+                filename = src.split("/")[-1].split("?")[0]
+                is_decorative = bool(_re.match(r'(icon|logo|bg|background|divider)', filename, _re.I))
+                if (alt is None or alt.strip() == "") and not is_decorative:
+                    missing_images.append({
+                        "post_id": pid,
+                        "src": src,
+                        "filename": filename,
+                        "idx": idx,
+                    })
+            if len(missing_images) >= 20:
+                break
+
+        missing_images = missing_images[:20]
+
+        # Determine if AI is available
+        has_ai = bool(
+            current_app.config.get("OPENAI_API_KEY")
+            or current_app.config.get("ANTHROPIC_API_KEY")
+            or os.getenv("OPENAI_API_KEY")
+            or os.getenv("ANTHROPIC_API_KEY")
+        )
+
+        # Group by post_id so we can queue one edit job per post
+        from collections import defaultdict
+        posts_to_fix: Dict[int, List[Dict]] = defaultdict(list)
+        for img in missing_images:
+            posts_to_fix[img["post_id"]].append(img)
+
+        for pid, imgs in posts_to_fix.items():
+            # Build src → alt_text mapping for this post
+            alt_map: Dict[str, str] = {}
+            for img in imgs:
+                filename = img["filename"]
+                # Fallback alt text from filename
+                name_only = _re.sub(r'\.[^.]+$', '', filename)
+                fallback_alt = _re.sub(r'[-_]+', ' ', name_only).strip()
+
+                if has_ai:
+                    try:
+                        from app.ai_clients import get_ai_client
+                        ai_client = get_ai_client()
+                        resp = ai_client.messages.create(
+                            model="claude-haiku-4-5-20251001",
+                            max_tokens=60,
+                            messages=[{"role": "user", "content": (
+                                f"Write a 5-10 word descriptive alt text for a website image titled: "
+                                f"'{filename}'. Focus on describing what the image shows, not its "
+                                f"filename format. Return only the alt text, no quotes or punctuation at end."
+                            )}],
+                        )
+                        generated = resp.content[0].text.strip().strip('"\'')
+                        alt_map[img["src"]] = generated if generated else fallback_alt
+                    except Exception:
+                        alt_map[img["src"]] = fallback_alt
+                else:
+                    alt_map[img["src"]] = fallback_alt
+
+            payload = {
+                "post_id": pid,
+                "alt_updates": alt_map,
+                "action": "bulk_fix_alt_text",
+                "source": "bulk_fix_alt_text",
+            }
+            job = WPJob(site_id=site.id, kind="edit", payload=payload)
+            db.session.add(job)
+            queued += 1
+
+        if queued:
+            db.session.commit()
+
+    except Exception as exc:
+        current_app.logger.exception("bulk_fix_alt_text failed")
+        return jsonify({"error": str(exc)}), 500
+
+    return jsonify({"queued": queued})
+
+
 @wp_bp.route("/content-quality", methods=["GET"], endpoint="content_quality")
 @login_required
 def content_quality():
@@ -3532,6 +3996,70 @@ def seo_health():
         scans=scans,
         now=datetime.utcnow(),
     )
+
+
+@wp_bp.route("/keyword-rankings", methods=["GET"], endpoint="keyword_rankings")
+@login_required
+def keyword_rankings():
+    """Keyword Ranking History — weekly GSC position snapshots with trend view."""
+    site = _current_site()
+    aid = _account_id()
+
+    url_filter = request.args.get("url") or None
+    trends = []
+    first_run = True
+    last_updated = None
+    error = None
+
+    if aid:
+        try:
+            from app.services.keyword_rank_tracker import get_ranking_trends
+            from app.models_wp import KeywordRankSnapshot
+
+            trends = get_ranking_trends(aid, url=url_filter, days=90)
+            first_run = len(trends) == 0
+
+            # Find most recent snapshot date for the "Last updated" header
+            latest_snap = (
+                KeywordRankSnapshot.query
+                .filter_by(account_id=aid)
+                .order_by(KeywordRankSnapshot.snapshot_date.desc())
+                .first()
+            )
+            if latest_snap:
+                last_updated = latest_snap.snapshot_date
+        except Exception as exc:
+            logger.exception("Error loading keyword ranking trends")
+            error = str(exc)
+
+    return render_template(
+        "wp/keyword_rankings.html",
+        site=site,
+        trends=trends,
+        first_run=first_run,
+        last_updated=last_updated,
+        url_filter=url_filter,
+        error=error,
+    )
+
+
+@wp_bp.route("/snapshot-rankings", methods=["POST"], endpoint="snapshot_rankings")
+@login_required
+def snapshot_rankings_now():
+    """Manually trigger a GSC keyword ranking snapshot for the current account."""
+    aid = _account_id()
+    if not aid:
+        return jsonify({"ok": False, "error": "Not authenticated"}), 401
+
+    try:
+        from app.services.keyword_rank_tracker import snapshot_rankings
+        result = snapshot_rankings(aid)
+        if "error" in result:
+            return jsonify({"ok": False, "error": result["error"]}), 400
+        return jsonify({"ok": True, "snapshots": result.get("snapshots", 0), "urls": result.get("urls", 0)})
+    except Exception as exc:
+        logger.exception("Snapshot rankings failed")
+        return jsonify({"ok": False, "error": str(exc)}), 500
 
 
 # allow WPLog(...).save() convenience

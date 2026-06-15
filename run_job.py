@@ -21,6 +21,8 @@ Example crontab entries (crontab -e):
     15 */4 * * * cd /home/fieldsprout/flaskapp && python run_job.py upload_offline_conversions_all_accounts >> logs/cron.log 2>&1
 
     # Daily jobs (all UTC)
+    30 3 * * * cd /home/fieldsprout/flaskapp && python run_job.py sync_fb_all_accounts >> logs/cron.log 2>&1
+    0  4 * * * cd /home/fieldsprout/flaskapp && python run_job.py sync_structure_all_accounts >> logs/cron.log 2>&1
     30 4 * * * cd /home/fieldsprout/flaskapp && python run_job.py sync_call_view_all_accounts >> logs/cron.log 2>&1
     0  5 * * * cd /home/fieldsprout/flaskapp && python run_job.py sync_dayparting_all_accounts >> logs/cron.log 2>&1
     30 5 * * * cd /home/fieldsprout/flaskapp && python run_job.py sync_auction_insights_all_accounts >> logs/cron.log 2>&1
@@ -36,7 +38,10 @@ Example crontab entries (crontab -e):
     0 2 * * 0 cd /home/fieldsprout/flaskapp && python run_job.py cleanup_expired_invites >> logs/cron.log 2>&1
     0 3 * * 0 cd /home/fieldsprout/flaskapp && python run_job.py cleanup_old_audit_logs >> logs/cron.log 2>&1
     0 8 * * 1 cd /home/fieldsprout/flaskapp && python run_job.py generate_google_ads_insights_weekly >> logs/cron.log 2>&1
+    0 5 * * 1 cd /home/fieldsprout/flaskapp && python run_job.py run_strategic_orchestrator >> logs/cron.log 2>&1
     0 6 * * 1 cd /home/fieldsprout/flaskapp && python run_job.py run_strategic_agents >> logs/cron.log 2>&1
+    30 6 * * 1 cd /home/fieldsprout/flaskapp && python run_job.py snapshot_keyword_rankings >> logs/cron.log 2>&1
+    0 13 * * 1 cd /home/fieldsprout/flaskapp && python run_job.py send_weekly_digest_all_accounts >> logs/cron.log 2>&1
 
 To enable this mode, set DISABLE_SCHEDULER=1 in your Passenger environment
 variables (via cPanel > Software > Setup Python App > Environment Variables,
@@ -74,7 +79,7 @@ for env_path in [
         load_dotenv(env_path, override=False)
         break
 
-# Map of job_name → function in background_jobs
+# Map of job_name → function name in background_jobs
 JOB_MAP = {
     'cleanup_expired_invites':              'cleanup_expired_invites',
     'sync_subscription_statuses':           'sync_subscription_statuses',
@@ -88,6 +93,7 @@ JOB_MAP = {
     'run_negative_keyword_agents':          'run_negative_keyword_agents',
     'run_operational_agents':               'run_operational_agents',
     'run_strategic_agents':                 'run_strategic_agents',
+    'run_strategic_orchestrator':           'run_strategic_orchestrator_all_accounts',
     'run_google_ads_auto_executor':         'run_google_ads_auto_executor',
     'sync_call_view_all_accounts':          'sync_call_view_all_accounts',
     'sync_dayparting_all_accounts':         'sync_dayparting_all_accounts',
@@ -96,6 +102,10 @@ JOB_MAP = {
     'sync_skimmer_all_accounts':            'sync_skimmer_all_accounts',
     'run_overlap_detection_all_groups':     'run_overlap_detection_all_groups',
     'upload_offline_conversions_all_accounts': 'upload_offline_conversions_all_accounts',
+    'sync_structure_all_accounts':             'sync_structure_all_accounts',
+    'send_weekly_digest_all_accounts':         'send_weekly_digest_all_accounts',
+    'sync_fb_all_accounts':                    'sync_fb_all_accounts',
+    'snapshot_keyword_rankings':               'snapshot_keyword_rankings_all_accounts',
 }
 
 

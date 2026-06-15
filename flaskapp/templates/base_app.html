@@ -112,6 +112,14 @@
     .dark .skeleton-card {
       background: #1f2937;
     }
+
+    /* Mobile card-style tables */
+    @media (max-width: 640px) {
+      .mobile-card-table thead { display: none; }
+      .mobile-card-table tbody tr { display: block; border: 1px solid #e5e7eb; border-radius: 0.75rem; margin-bottom: 0.75rem; padding: 0.75rem; background: white; }
+      .mobile-card-table tbody td { display: flex; justify-content: space-between; align-items: center; padding: 0.25rem 0; border: none; font-size: 0.875rem; }
+      .mobile-card-table tbody td::before { content: attr(data-label); font-size: 0.75rem; color: #6b7280; font-weight: 500; margin-right: 0.5rem; flex-shrink: 0; }
+    }
   </style>
 
   <script defer src="{{ url_for('static', filename='js/app_shell.js') }}"></script>

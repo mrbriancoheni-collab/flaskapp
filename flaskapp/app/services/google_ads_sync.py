@@ -137,13 +137,12 @@ def _upsert_stats(
 
 
 def _get_or_create_campaign(session, account_id: int, google_cid: int, name: str, status: str) -> int:
-    """Return local AdsCampaign.id, creating a minimal row if needed."""
+    """Return local AdsCampaign.id, creating or updating a row as needed."""
     from app.models_ads import AdsCampaign
     camp = AdsCampaign.query.filter_by(
         account_id=account_id, google_campaign_id=str(google_cid)
     ).first()
     if camp is None:
-        # Claim any orphaned row written before account_id column existed
         camp = AdsCampaign.query.filter(
             AdsCampaign.account_id.is_(None),
             AdsCampaign.google_campaign_id == str(google_cid),
@@ -161,6 +160,11 @@ def _get_or_create_campaign(session, account_id: int, google_cid: int, name: str
         )
         session.add(camp)
         session.flush()
+    else:
+        if name:
+            camp.name = name
+        if status:
+            camp.status = status.lower()
     return camp.id
 
 
@@ -178,28 +182,267 @@ def _get_or_create_adgroup(session, campaign_local_id: int, google_agid: int, na
         )
         session.add(ag)
         session.flush()
+    else:
+        if name:
+            ag.name = name
+        if status:
+            ag.status = status.lower()
     return ag.id
 
 
 def _get_or_create_keyword(
     session, adgroup_local_id: int, google_criterion_id: int,
-    text: str, match_type: str, status: str
+    text: str, match_type: str, status: str,
+    max_cpc_micros: Optional[int] = None,
 ) -> int:
     from app.models_ads import AdsKeyword
+    norm_mt = (match_type or "broad").lower()
+    norm_status = status.lower() if status else "enabled"
+
+    # Primary lookup: by google_keyword_id
     kw = AdsKeyword.query.filter_by(
         ad_group_id=adgroup_local_id, google_keyword_id=str(google_criterion_id)
     ).first()
+
+    if kw is None and text:
+        # Fallback: match by text+match_type (handles manually-created rows with no google_keyword_id)
+        kw = AdsKeyword.query.filter_by(
+            ad_group_id=adgroup_local_id, text=text, match_type=norm_mt
+        ).first()
+        if kw is not None:
+            kw.google_keyword_id = str(google_criterion_id)
+
     if kw is None:
         kw = AdsKeyword(
             ad_group_id=adgroup_local_id,
             text=text or "",
-            match_type=(match_type or "broad").lower(),
-            status=status.lower() if status else "enabled",
+            match_type=norm_mt,
+            status=norm_status,
             google_keyword_id=str(google_criterion_id),
         )
+        if max_cpc_micros:
+            kw.max_cpc_cents = max_cpc_micros // 10000
         session.add(kw)
         session.flush()
+    else:
+        kw.status = norm_status
+        if max_cpc_micros:
+            kw.max_cpc_cents = max_cpc_micros // 10000
     return kw.id
+
+
+def sync_structure(account_id: int) -> Dict[str, Any]:
+    """
+    Pull the full account structure (campaigns, ad groups, keywords, ads, negatives)
+    without a date filter so every entity is captured regardless of impression volume.
+
+    This runs before sync_account's date-windowed stats pull so the keywords table
+    is populated correctly — including zero-traffic keywords.
+    """
+    from flask import current_app
+    from app import db
+    from app.google.utils_ads import resolve_ads_context, google_ads_search
+    from app.google.token_utils import ensure_access_token
+    from app.google.gaql_queries import (
+        CAMPAIGN_STRUCTURE, ADGROUP_STRUCTURE, KEYWORD_STRUCTURE,
+        NEGATIVE_KEYWORD_STRUCTURE, AD_STRUCTURE,
+    )
+    from app.models_ads import AdsCampaign, AdsAdGroup, AdsKeyword, NegativeKeyword, AdsAd
+
+    summary: Dict[str, Any] = {
+        "campaigns": 0, "adgroups": 0, "keywords": 0,
+        "negatives": 0, "ads": 0, "errors": [],
+    }
+
+    try:
+        ctx = resolve_ads_context(account_id)
+        customer_id = ctx.get("customer_id")
+        login_customer_id = ctx.get("login_customer_id")
+        if not customer_id:
+            summary["errors"].append("No customer_id configured.")
+            return summary
+        access_token, _ = ensure_access_token(account_id, ("ads", "lsa"))
+    except Exception as exc:
+        summary["errors"].append(f"Credential error: {exc}")
+        return summary
+
+    def _search(q: str) -> List[dict]:
+        return google_ads_search(
+            access_token=access_token,
+            customer_id=customer_id,
+            query=q,
+            login_customer_id=login_customer_id,
+            stream=True,
+        )
+
+    # ── Campaigns ────────────────────────────────────────────────────────────
+    try:
+        for row in _search(CAMPAIGN_STRUCTURE):
+            c = row.get("campaign", {})
+            gid = _int(c.get("id"))
+            if not gid:
+                continue
+            _get_or_create_campaign(db.session, account_id, gid, c.get("name", ""), c.get("status", "ENABLED"))
+            summary["campaigns"] += 1
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        summary["errors"].append(f"Campaign structure: {exc}")
+        logger.exception("Campaign structure sync failed for account %s", account_id)
+
+    # ── Ad groups ────────────────────────────────────────────────────────────
+    try:
+        for row in _search(ADGROUP_STRUCTURE):
+            ag = row.get("adGroup", {})
+            c = row.get("campaign", {})
+            gaid = _int(ag.get("id"))
+            gcid = _int(c.get("id"))
+            if not gaid or not gcid:
+                continue
+            camp_local = _get_or_create_campaign(db.session, account_id, gcid, "", "ENABLED")
+            _get_or_create_adgroup(db.session, camp_local, gaid, ag.get("name", ""), ag.get("status", "ENABLED"))
+            summary["adgroups"] += 1
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        summary["errors"].append(f"Ad group structure: {exc}")
+        logger.exception("Ad group structure sync failed for account %s", account_id)
+
+    # ── Keywords ─────────────────────────────────────────────────────────────
+    try:
+        for row in _search(KEYWORD_STRUCTURE):
+            crit = row.get("adGroupCriterion", {})
+            c = row.get("campaign", {})
+            ag = row.get("adGroup", {})
+            gcrid = _int(crit.get("criterionId"))
+            gcid = _int(c.get("id"))
+            gaid = _int(ag.get("id"))
+            if not gcrid or not gaid:
+                continue
+            kw_data = crit.get("keyword", {})
+            camp_local = _get_or_create_campaign(db.session, account_id, gcid, "", "ENABLED")
+            ag_local = _get_or_create_adgroup(db.session, camp_local, gaid, "", "ENABLED")
+            _get_or_create_keyword(
+                db.session, ag_local, gcrid,
+                kw_data.get("text", ""),
+                kw_data.get("matchType", "BROAD"),
+                crit.get("status", "ENABLED"),
+                max_cpc_micros=_int(crit.get("effectiveCpcBidMicros")),
+            )
+            summary["keywords"] += 1
+        db.session.commit()
+        logger.info("Keyword structure synced: %d keywords", summary["keywords"])
+    except Exception as exc:
+        db.session.rollback()
+        summary["errors"].append(f"Keyword structure: {exc}")
+        logger.exception("Keyword structure sync failed for account %s", account_id)
+
+    # ── Negative keywords (campaign-level) ──────────────────────────────────
+    try:
+        for row in _search(NEGATIVE_KEYWORD_STRUCTURE):
+            cc = row.get("campaignCriterion", {})
+            c = row.get("campaign", {})
+            gcid = _int(c.get("id"))
+            if not gcid:
+                continue
+            kw_data = cc.get("keyword", {})
+            term = kw_data.get("text", "").strip()
+            if not term:
+                continue
+            camp_local = _get_or_create_campaign(db.session, account_id, gcid, "", "ENABLED")
+            mt = (kw_data.get("matchType") or "EXACT").upper()
+            existing = NegativeKeyword.query.filter_by(
+                campaign_id=camp_local,
+                text=term,
+                match_type=mt,
+                scope="campaign",
+            ).first()
+            if not existing:
+                db.session.add(NegativeKeyword(
+                    campaign_id=camp_local,
+                    text=term,
+                    match_type=mt,
+                    scope="campaign",
+                ))
+            summary["negatives"] += 1
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        summary["errors"].append(f"Negative keyword structure: {exc}")
+        logger.exception("Negative keyword structure sync failed for account %s", account_id)
+
+    # ── Ads (RSA + ETA) ──────────────────────────────────────────────────────
+    try:
+        for row in _search(AD_STRUCTURE):
+            aga = row.get("adGroupAd", {})
+            ad_data = aga.get("ad", {})
+            c = row.get("campaign", {})
+            ag = row.get("adGroup", {})
+            google_ad_id = str(_int(ad_data.get("id"))) if ad_data.get("id") else None
+            gaid = _int(ag.get("id"))
+            gcid = _int(c.get("id"))
+            if not google_ad_id or not gaid:
+                continue
+
+            camp_local = _get_or_create_campaign(db.session, account_id, gcid, "", "ENABLED")
+            ag_local = _get_or_create_adgroup(db.session, camp_local, gaid, "", "ENABLED")
+
+            existing_ad = AdsAd.query.filter_by(
+                ad_group_id=ag_local, google_ad_id=google_ad_id
+            ).first()
+
+            status = (aga.get("status") or "ENABLED").lower()
+            rsa = ad_data.get("responsiveSearchAd", {})
+            eta = ad_data.get("expandedTextAd", {})
+
+            # Extract headlines/descriptions (RSA)
+            headlines = [h.get("text", "") for h in (rsa.get("headlines") or [])]
+            descriptions = [d.get("text", "") for d in (rsa.get("descriptions") or [])]
+
+            final_urls = ad_data.get("finalUrls") or []
+            final_url = final_urls[0] if final_urls else ""
+
+            def _trunc(s, n):
+                return (s or "")[:n]
+
+            h1 = _trunc(headlines[0] if headlines else eta.get("headlinePart1", ""), 30)
+            h2 = _trunc(headlines[1] if len(headlines) > 1 else eta.get("headlinePart2", ""), 30)
+            h3 = _trunc(headlines[2] if len(headlines) > 2 else "", 30)
+            desc1 = _trunc(descriptions[0] if descriptions else eta.get("description", ""), 90)
+
+            if existing_ad:
+                existing_ad.status = status
+                if h1:
+                    existing_ad.headline1 = h1
+                if h2:
+                    existing_ad.headline2 = h2
+                if h3:
+                    existing_ad.headline3 = h3
+                if desc1:
+                    existing_ad.description1 = desc1
+                if final_url:
+                    existing_ad.final_url = final_url
+            else:
+                new_ad = AdsAd(
+                    ad_group_id=ag_local,
+                    google_ad_id=google_ad_id,
+                    status=status,
+                    headline1=h1 or "(no headline)",
+                    headline2=h2 or None,
+                    headline3=h3 or None,
+                    description1=desc1 or None,
+                    final_url=final_url or "",
+                )
+                db.session.add(new_ad)
+            summary["ads"] += 1
+        db.session.commit()
+        logger.info("Ad structure synced: %d ads", summary["ads"])
+    except Exception as exc:
+        db.session.rollback()
+        summary["errors"].append(f"Ad structure: {exc}")
+        logger.exception("Ad structure sync failed for account %s", account_id)
+
+    return summary
 
 
 def sync_account(account_id: int, days: int = 30) -> Dict[str, Any]:

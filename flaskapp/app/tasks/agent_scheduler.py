@@ -70,24 +70,41 @@ def run_agents_for_all_accounts(layer: str = 'all'):
 
     print(f"Running {layer} agents for {len(accounts)} accounts...")
 
+    from app.services.agent_cadence import should_run_agent, record_agent_run
+
     success_count = 0
     error_count = 0
+    skip_count = 0
 
     for account in accounts:
+        account_id = account['account_id']
+
+        run_now, reason = should_run_agent(account_id, 'google', layer)
+        if not run_now:
+            skip_count += 1
+            print(f"– Account {account_id} skipped ({reason})")
+            continue
+
         try:
-            run_agents_for_account(
-                account_id=account['account_id'],
+            totals = run_agents_for_account(
+                account_id=account_id,
                 customer_id=account['customer_id'],
                 credentials_json=account['credentials_json'],
                 layer=layer
-            )
+            ) or {}
             success_count += 1
-            print(f"✓ Account {account['account_id']} completed")
+            record_agent_run(
+                account_id, 'google', layer,
+                decisions_made=int(totals.get('decisions', 0) or 0),
+                opportunities_found=int(totals.get('opportunities', 0) or 0),
+            )
+            print(f"✓ Account {account_id} completed")
         except Exception as e:
             error_count += 1
-            print(f"✗ Account {account['account_id']} failed: {str(e)}")
+            print(f"✗ Account {account_id} failed: {str(e)}")
 
-    print(f"\nCompleted: {success_count} succeeded, {error_count} failed")
+    print(f"\nran {success_count}, skipped {skip_count} (not due)")
+    print(f"Completed: {success_count} succeeded, {error_count} failed, {skip_count} skipped")
     return success_count, error_count
 
 
@@ -808,6 +825,7 @@ def run_agents_for_account(
         ]
 
     # Run agents and log execution
+    totals = {'decisions': 0, 'opportunities': 0}
     for agent in agents:
         # Inject ML context and LLM advice into the agent's context
         agent_class_name = type(agent).__name__
@@ -856,6 +874,9 @@ def run_agents_for_account(
                     'status': 'completed'
                 })
 
+            totals['decisions'] += int(result.get('decisions_made', 0) or 0)
+            totals['opportunities'] += int(result.get('opportunities_found', 0) or 0)
+
             print(f"  ✓ {agent.agent_type}: {result['decisions_made']} decisions")
 
         except Exception as e:
@@ -877,3 +898,5 @@ def run_agents_for_account(
 
             print(f"  ✗ {agent.agent_type} failed: {str(e)}")
             # Continue running remaining agents instead of stopping
+
+    return totals

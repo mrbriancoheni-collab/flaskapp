@@ -18,6 +18,52 @@ USER_AGENT = (
     "(KHTML, like Gecko) Chrome/124 Safari/537.36"
 )
 
+import logging as _logging
+_wp_client_log = _logging.getLogger(__name__)
+
+# Mapping of SEO plugin slug → (title_meta_key, description_meta_key)
+SEO_META_FIELDS: Dict[str, Tuple[str, str]] = {
+    "yoast":    ("_yoast_wpseo_title",       "_yoast_wpseo_metadesc"),
+    "rankmath": ("rank_math_title",           "rank_math_description"),
+    "seopress": ("_seopress_titles_title",    "_seopress_titles_desc"),
+    "aioseo":   ("_aioseo_title",             "_aioseo_description"),
+}
+
+
+def detect_active_seo_plugin(site_url: str, auth_header: Optional[Dict] = None) -> Optional[str]:
+    """
+    Fetch the site's homepage HTML and detect which SEO plugin is active.
+
+    Returns one of: "yoast" | "rankmath" | "seopress" | "aioseo" | None
+    """
+    try:
+        import requests as _req
+        headers = {"User-Agent": USER_AGENT, "Accept": "text/html"}
+        if auth_header:
+            headers.update(auth_header)
+        r = _req.get(site_url.rstrip("/") + "/", headers=headers, timeout=10, allow_redirects=True)
+        html = r.text or ""
+        html_lower = html.lower()
+
+        if "yoast-seo" in html_lower or "yoast seo" in html_lower or "wpseo" in html_lower:
+            _wp_client_log.info("SEO plugin detected: yoast (site=%s)", site_url)
+            return "yoast"
+        if "rank-math" in html_lower or "rankmath" in html_lower:
+            _wp_client_log.info("SEO plugin detected: rankmath (site=%s)", site_url)
+            return "rankmath"
+        if "seopress" in html_lower:
+            _wp_client_log.info("SEO plugin detected: seopress (site=%s)", site_url)
+            return "seopress"
+        if "aioseo" in html_lower or "all in one seo" in html_lower or "all-in-one-seo" in html_lower:
+            _wp_client_log.info("SEO plugin detected: aioseo (site=%s)", site_url)
+            return "aioseo"
+
+        _wp_client_log.info("No known SEO plugin detected for site=%s", site_url)
+        return None
+    except Exception as exc:
+        _wp_client_log.warning("detect_active_seo_plugin failed for %s: %s", site_url, exc)
+        return None
+
 
 class WPClient:
     """
@@ -257,6 +303,7 @@ class WPClient:
         yoast_desc: Optional[str] = None,
         faq_jsonld: Optional[str] = None,
         featured_media: Optional[int] = None,
+        seo_plugin: Optional[str] = None,
     ) -> dict:
 
         cat_ids: Optional[list[int]] = None
@@ -289,12 +336,19 @@ class WPClient:
             else:
                 payload["date_gmt"] = publish_dt.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
 
-        # Yoast & custom meta
+        # SEO plugin meta — detect plugin if not supplied, map to correct field names
+        if seo_plugin is None and (yoast_title or yoast_desc):
+            seo_plugin = detect_active_seo_plugin(self.base, self._auth)
+
+        title_field, desc_field = SEO_META_FIELDS.get(
+            seo_plugin or "yoast", SEO_META_FIELDS["yoast"]
+        )
+
         meta = {}
         if yoast_title:
-            meta["_yoast_wpseo_title"] = yoast_title
+            meta[title_field] = yoast_title
         if yoast_desc:
-            meta["_yoast_wpseo_metadesc"] = yoast_desc
+            meta[desc_field] = yoast_desc
         if faq_jsonld:
             meta["_fs_faq_jsonld"] = faq_jsonld
         if meta:

@@ -66,6 +66,9 @@ def optimize():
         return redirect(url_for("account_bp.pricing"))
 
     tab = request.args.get("tab", "cockpit")
+    days = int(request.args.get("days", 30))
+    if days not in (7, 30, 90):
+        days = 30
     aid = current_account_id()
 
     connected = False
@@ -74,6 +77,40 @@ def optimize():
         connected = _is_connected(aid, "ads")
     except Exception:
         pass
+
+    # Data freshness — when did the last sync complete?
+    last_synced_at = None
+    last_synced_stale = False
+    if aid:
+        try:
+            from datetime import datetime as _dt, timedelta as _td
+            raw = db.session.execute(text(
+                "SELECT setting_value FROM account_settings "
+                "WHERE account_id = :aid AND setting_key = 'gads_last_synced_at' LIMIT 1"
+            ), {"aid": aid}).scalar()
+            if raw:
+                last_synced_at = _dt.fromisoformat(raw)
+                last_synced_stale = (_dt.utcnow() - last_synced_at) > _td(hours=24)
+        except Exception:
+            db.session.rollback()
+
+    # Owner-stated goals (target cost per lead, monthly budget cap)
+    gads_goals = {"target_cpl": None, "max_monthly_budget": None}
+    if aid:
+        try:
+            import json as _json
+            raw_goals = db.session.execute(text(
+                "SELECT setting_value FROM account_settings "
+                "WHERE account_id = :aid AND setting_key = 'gads_goals' LIMIT 1"
+            ), {"aid": aid}).scalar()
+            if raw_goals:
+                parsed = _json.loads(raw_goals)
+                for k in gads_goals:
+                    v = parsed.get(k)
+                    if v is not None:
+                        gads_goals[k] = float(v)
+        except Exception:
+            db.session.rollback()
 
     # ---- Command Center (cockpit) data ----
     cockpit: dict = {}
@@ -168,11 +205,17 @@ def optimize():
                 AIAction.created_at.desc()
             ).limit(10).all())
 
+            priority_action = _safe_list(lambda: OptimizerRecommendation.query.filter_by(
+                account_id=aid, status="open"
+            ).order_by(OptimizerRecommendation.severity.asc(), OptimizerRecommendation.id.asc()).first(),
+            default=None)
+
             cockpit = {
                 "health": health,
                 "kpis": {"spend": round(spend, 2), "clicks": clicks, "conversions": round(conversions, 1), "impressions": impressions, "ctr": round(ctr, 2), "cpa": round(spend / conversions, 2) if conversions else 0},
                 "needs_sync": not has_stats,
                 "top_actions": top_actions,
+                "priority_action": priority_action,
                 "active_rules": active_rules,
                 "actions_today": actions_today,
                 "badges": {"optimizer": pending_optimizer, "rules": active_rules, "search_terms": pending_terms, "ab_tests": ab_running},
@@ -182,6 +225,28 @@ def optimize():
         except Exception:
             current_app.logger.exception("Error loading cockpit data")
             cockpit = {"health": {"overall": 0, "grade": "N/A"}, "kpis": {}, "top_actions": [], "badges": {}, "recent_actions": [], "connected": connected}
+
+    # Latest stored weekly digest for the "Your Week in Review" card
+    weekly_digest = None
+    if tab == "cockpit" and aid:
+        try:
+            from app.services.google_ads_digest import get_latest_digest, render_digest_text
+            latest = get_latest_digest(aid)
+            if latest:
+                weekly_digest = render_digest_text(latest["digest"])
+                weekly_digest["week_start"] = latest["digest"].get("week_start")
+                weekly_digest["week_end"] = latest["digest"].get("week_end")
+        except Exception:
+            current_app.logger.exception("Error loading weekly digest for cockpit")
+
+    # Latest stored onboarding health check for the "Account Health" card
+    health_check = None
+    if tab == "cockpit" and aid:
+        try:
+            from app.services.google_ads_health_check import get_stored_health_check
+            health_check = get_stored_health_check(aid)
+        except Exception:
+            current_app.logger.exception("Error loading health check for cockpit")
 
     keywords_data: list = []
     negatives_data: list = []
@@ -219,7 +284,16 @@ def optimize():
                 text("""
                     SELECT k.id, k.text, k.match_type, k.status, k.max_cpc_cents,
                            ag.name as adgroup_name, ag.campaign_id,
-                           ac.name as campaign_name
+                           ac.name as campaign_name,
+                           (
+                               SELECT gs.quality_score
+                               FROM gads_stats_daily gs
+                               WHERE gs.entity_type = 'keyword'
+                                 AND gs.entity_id = k.id
+                                 AND gs.quality_score IS NOT NULL
+                               ORDER BY gs.date DESC
+                               LIMIT 1
+                           ) AS quality_score
                     FROM keywords k
                     JOIN ad_groups ag ON ag.id = k.ad_group_id
                     JOIN ads_campaigns ac ON ac.id = ag.campaign_id
@@ -364,19 +438,39 @@ def optimize():
             "cpa": kpis.get("cpa", 0),
         }
 
+    # Count pending optimizer recommendations for the "Fix Problems" badge
+    pending_recs_count = 0
+    if aid:
+        try:
+            pending_recs_count = OptimizerRecommendation.query.filter_by(
+                account_id=aid, status="pending"
+            ).count()
+        except Exception:
+            current_app.logger.exception("Error counting pending recs")
+
     return render_template(
         "google/ads/optimize.html",
         tab=tab,
+        days=days,
         connected=connected,
         gads_stats=gads_stats,
         keywords_data=keywords_data,
+        keywords_truncated=len(keywords_data) >= 1000,
         negatives_data=negatives_data,
+        negatives_truncated=len(negatives_data) >= 1000,
         campaigns_list=campaigns_list,
         adgroups_list=adgroups_list,
         campaigns_tab_data=campaigns_tab_data,
         adgroups_tab_data=adgroups_tab_data,
         ads_tab_data=ads_tab_data,
+        ads_truncated=len(ads_tab_data) >= 500,
         cockpit=cockpit,
+        weekly_digest=weekly_digest,
+        health_check=health_check,
+        last_synced_at=last_synced_at,
+        last_synced_stale=last_synced_stale,
+        gads_goals=gads_goals,
+        pending_recs_count=pending_recs_count,
     )
 
 
@@ -440,7 +534,8 @@ def optimizer_data():
         text(
             """
             SELECT id, scope_type, scope_id, category, title, details,
-                   expected_impact, severity, status, created_at
+                   expected_impact, severity, status, created_at,
+                   suggested_action_json
             FROM optimizer_recommendations
             ORDER BY severity ASC, created_at DESC
             LIMIT 200
@@ -492,7 +587,7 @@ def optimizer_apply():
                     errors.append({"id": rec_id, "error": "Not found or unauthorized"})
                     continue
                 if rec.status == "applied":
-                    applied.append(rec_id)
+                    applied.append({"id": rec_id, "api_status": "already_applied"})
                     continue
 
                 import json as _json
@@ -502,17 +597,61 @@ def optimizer_apply():
                 api_status = "local_only"
                 action_type = suggested.get("action_type") or rec.category
 
-                # --- Local DB mutations (always attempted) ---
-                if action_type in ("budget", "increase_budget") and suggested.get("new_budget_micros"):
-                    camp = AdsCampaign.query.get(suggested.get("campaign_id"))
-                    if camp:
-                        camp.daily_budget_cents = int(suggested["new_budget_micros"] / 10000)
-                        api_status = "local_db"
+                # --- Google Ads API mutation first, local DB mirror second ---
+                # The local row is only updated when the API push succeeds (or
+                # when no executor is available, in which case we surface
+                # "local_only" so the UI can warn the user).
+                if action_type in ("budget", "increase_budget"):
+                    new_micros = suggested.get("new_budget_micros") or (
+                        int(suggested["suggested_budget_cents"]) * 10000
+                        if suggested.get("suggested_budget_cents") else None
+                    )
+                    camp_id = suggested.get("campaign_id")
+                    if new_micros and camp_id:
+                        if executor:
+                            try:
+                                executor.execute_update_budget(int(camp_id), int(new_micros))
+                                api_status = "pushed_to_google"
+                            except Exception as api_err:
+                                current_app.logger.warning(f"Budget push failed for rec {rec_id}: {api_err}")
+                                errors.append({"id": rec_id, "error": f"Google Ads push failed: {api_err}"})
+                                continue
+                        camp = AdsCampaign.query.get(camp_id)
+                        if camp:
+                            camp.daily_budget_cents = int(new_micros / 10000)
+                            if api_status != "pushed_to_google":
+                                api_status = "local_db"
                 elif action_type in ("pause_keyword", "keyword_paused") and suggested.get("keyword_id"):
+                    if executor:
+                        try:
+                            executor.execute_pause_keyword(int(suggested["keyword_id"]))
+                            api_status = "pushed_to_google"
+                        except Exception as api_err:
+                            current_app.logger.warning(f"Keyword pause push failed for rec {rec_id}: {api_err}")
+                            errors.append({"id": rec_id, "error": f"Google Ads push failed: {api_err}"})
+                            continue
                     kw = AdsKeyword.query.get(suggested["keyword_id"])
                     if kw:
                         kw.status = "paused"
-                        api_status = "local_db"
+                        if api_status != "pushed_to_google":
+                            api_status = "local_db"
+                elif action_type in ("change_match_type", "broad_match") and suggested.get("keyword_id"):
+                    to_match = (suggested.get("to") or "phrase").lower()
+                    if executor:
+                        try:
+                            executor.execute_change_match_type(int(suggested["keyword_id"]), to=to_match)
+                            api_status = "pushed_to_google"
+                        except Exception as api_err:
+                            current_app.logger.warning(f"Match type push failed for rec {rec_id}: {api_err}")
+                            errors.append({"id": rec_id, "error": f"Google Ads push failed: {api_err}"})
+                            continue
+                    kw = AdsKeyword.query.get(suggested["keyword_id"])
+                    if kw:
+                        # In Google a match-type change = new keyword + pause old;
+                        # locally we mirror the end state on the same row.
+                        kw.match_type = to_match
+                        if api_status != "pushed_to_google":
+                            api_status = "local_db"
 
                 # --- Attempt real Google Ads API mutation via executor ---
                 if executor and action_type in ("negative_keyword", "wasted_spend") and suggested.get("negatives"):
@@ -554,18 +693,21 @@ def optimizer_apply():
 
                 # Mark recommendation applied
                 rec.status = "applied"
-                applied.append(rec_id)
+                applied.append({"id": rec_id, "api_status": api_status})
 
             except Exception as e:
                 current_app.logger.exception(f"Error applying rec {rec_id}")
                 errors.append({"id": rec_id, "error": str(e)})
 
         db.session.commit()
+        pushed = sum(1 for a in applied if a["api_status"] == "pushed_to_google")
+        local_only = len(applied) - pushed
         return jsonify({
             "applied": len(applied),
-            "applied_ids": applied,
+            "applied_ids": [a["id"] for a in applied],
+            "pushed_to_google": pushed,
+            "local_only": local_only,
             "errors": errors,
-            "api_status": "pushed_to_google" if executor else "local_only",
         })
 
     except Exception as e:
@@ -887,7 +1029,9 @@ def keywords_add():
 
     payload = request.get_json(force=True) or {}
     kw_text = (payload.get("text") or "").strip()
-    match_type = (payload.get("match_type") or "broad").lower()
+    # Default to phrase — broad match must be an explicit choice, since it
+    # routinely pulls in product/DIY queries for home-service advertisers.
+    match_type = (payload.get("match_type") or "phrase").lower()
     ad_group_id = payload.get("ad_group_id")
     max_cpc_cents = payload.get("max_cpc_cents")
 
@@ -1040,6 +1184,145 @@ def negatives_delete(neg_id: int):
 
 
 # ---------------------------
+# Smart Bulk Actions
+# ---------------------------
+
+@gads_bp.post("/bulk-pause-wasted")
+@login_required
+def bulk_pause_wasted():
+    """
+    Pause all enabled keywords with spend > $5 and 0 conversions in the given date window.
+    Query param: ?days=7|30|90 (default 30)
+    Returns {"paused": N, "saved_micros": M}
+    """
+    if not is_paid_account():
+        return jsonify({"error": "Paid plan required"}), 403
+
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    days = int(request.args.get("days", 30))
+    if days not in (7, 30, 90):
+        days = 30
+    preview = request.args.get("preview") == "1"
+
+    from datetime import date as _date, timedelta as _td
+    cutoff = _date.today() - _td(days=days)
+
+    try:
+        rows = db.session.execute(text("""
+            SELECT gs.entity_id AS kw_id,
+                   SUM(gs.cost_micros) AS total_cost_micros
+            FROM gads_stats_daily gs
+            JOIN keywords k ON k.id = gs.entity_id
+            JOIN ad_groups ag ON ag.id = k.ad_group_id
+            JOIN ads_campaigns ac ON ac.id = ag.campaign_id
+            WHERE gs.entity_type = 'keyword'
+              AND ac.account_id = :aid
+              AND gs.date >= :cutoff
+              AND k.status = 'enabled'
+            GROUP BY gs.entity_id
+            HAVING SUM(gs.cost_micros) >= 5000000 AND SUM(gs.conversions) = 0
+        """), {"aid": aid, "cutoff": cutoff}).mappings().all()
+
+        if preview:
+            count = len(rows)
+            total_micros = sum(int(r["total_cost_micros"]) for r in rows)
+            return jsonify({"paused": count, "saved_micros": total_micros})
+
+        paused = 0
+        saved_micros = 0
+        executor = None
+        try:
+            from app.services.google_ads_auto_executor import GoogleAdsAutoExecutor
+            executor = GoogleAdsAutoExecutor(account_id=aid)
+        except Exception:
+            pass
+
+        for row in rows:
+            kw = AdsKeyword.query.get(row["kw_id"])
+            if not kw:
+                continue
+            if executor:
+                try:
+                    executor.execute_pause_keyword(kw.id)
+                except Exception:
+                    pass
+            kw.status = "paused"
+            paused += 1
+            saved_micros += int(row["total_cost_micros"])
+
+        db.session.commit()
+        return jsonify({"paused": paused, "saved_micros": saved_micros})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("bulk_pause_wasted error")
+        return jsonify({"error": str(e)}), 500
+
+
+@gads_bp.post("/bulk-tighten-broad")
+@login_required
+def bulk_tighten_broad():
+    """
+    Change all open broad_match optimizer recommendations to phrase match.
+    Returns {"changed": N}
+    """
+    if not is_paid_account():
+        return jsonify({"error": "Paid plan required"}), 403
+
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    preview = request.args.get("preview") == "1"
+
+    try:
+        import json as _json
+        recs = OptimizerRecommendation.query.filter_by(
+            account_id=aid, status="open", category="broad_match"
+        ).all()
+
+        if preview:
+            return jsonify({"changed": len(recs)})
+
+        changed = 0
+        executor = None
+        try:
+            from app.services.google_ads_auto_executor import GoogleAdsAutoExecutor
+            executor = GoogleAdsAutoExecutor(account_id=aid)
+        except Exception:
+            pass
+
+        for rec in recs:
+            try:
+                suggested = _json.loads(rec.suggested_action_json) if isinstance(rec.suggested_action_json, str) else (rec.suggested_action_json or {})
+                kw_id = suggested.get("keyword_id")
+                if not kw_id:
+                    continue
+                kw = AdsKeyword.query.get(kw_id)
+                if not kw:
+                    continue
+                if executor:
+                    try:
+                        executor.execute_change_match_type(int(kw_id), to="phrase")
+                    except Exception:
+                        pass
+                kw.match_type = "phrase"
+                rec.status = "applied"
+                changed += 1
+            except Exception:
+                continue
+
+        db.session.commit()
+        return jsonify({"changed": changed})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("bulk_tighten_broad error")
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------
 # Cron: daily data sync
 # ---------------------------
 @gads_bp.post("/sync")
@@ -1057,6 +1340,13 @@ def sync():
 
     days = int(request.args.get("days", 30))
     result = {"sync": {}, "optimizer": {}, "errors": []}
+
+    try:
+        from app.services.google_ads_sync import sync_structure, sync_account
+        result["structure"] = sync_structure(aid)
+    except Exception as exc:
+        current_app.logger.exception("Google Ads structure sync failed for account %s", aid)
+        result["errors"].append(f"Structure: {exc}")
 
     try:
         from app.services.google_ads_sync import sync_account
@@ -1078,8 +1368,46 @@ def sync():
     except Exception as exc:
         current_app.logger.warning("Conversions sync failed for account %s: %s", aid, exc)
 
+    # Record sync timestamp so every tab can show data freshness
+    try:
+        from app.google.autonomous_routes import _save_setting
+        from datetime import datetime as _dt
+        _save_setting(aid, "gads_last_synced_at", _dt.utcnow().isoformat())
+    except Exception:
+        current_app.logger.warning("Could not record gads_last_synced_at for account %s", aid)
+
+    # Best-effort: refresh the onboarding health check with the new data
+    try:
+        from app.services.google_ads_health_check import run_health_check, store_health_check
+        hc = run_health_check(aid)
+        store_health_check(aid, hc)
+        result["health_check"] = {"score": hc["score"]}
+    except Exception:
+        current_app.logger.warning("Health check after sync failed for account %s", aid)
+
     status = 200 if not result["errors"] else 207
     return jsonify(result), status
+
+
+@gads_bp.post("/health-check")
+@login_required
+def health_check():
+    """
+    Run the onboarding account health check, store the result, and return it.
+    Returns {"score": 0-100, "ran_at": "...", "checks": [...]}.
+    """
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    try:
+        from app.services.google_ads_health_check import run_health_check, store_health_check
+        result = run_health_check(aid)
+        store_health_check(aid, result)
+        return jsonify(result)
+    except Exception as e:
+        current_app.logger.exception("Health check failed for account %s", aid)
+        return jsonify({"error": str(e)}), 500
 
 
 # ---------------------------
@@ -1207,44 +1535,66 @@ _BUYING_PATTERNS = {
 }
 
 
-def _classify_term(term: str, service_type: str) -> str:
-    """
-    Decide if a search term is 'relevant' (someone wants to hire us) or
-    'irrelevant' (someone wants to buy a product / DIY).
+_IRRELEVANT_REASONS = {
+    "diy": "People searching this want to do it themselves, not hire a professional",
+    "product": "People searching this want to buy a product, not hire a service",
+    "for_sale": "People searching this want to buy a product, not hire a service",
+    "retailer": "This search leads to a retail store, not a service provider",
+    "informational": "This is a research query, not a ready-to-buy search",
+    "price_comparison": "This searcher is comparison-shopping, not ready to call",
+    "buying_pattern": "This search is unlikely to convert to a paying customer",
+}
 
-    Order:
-      1. Generic service-intent → relevant (hire-me language is unambiguous)
-      2. Generic product/DIY intent → irrelevant (diy / for sale / amazon
-         override vertical verbs — "diy roof repair" is product even though
-         "repair" is a roofing service verb)
-      3. Vertical service signal → relevant
-      4. Vertical buying pattern → irrelevant
-      5. Default → relevant
+
+def _classify_term_with_reason(term: str, service_type: str) -> tuple:
+    """
+    Returns (classification, reason) where classification is 'relevant' or
+    'irrelevant' and reason is a plain-English string for irrelevant terms
+    (None for relevant terms).
     """
     import re
     t = (term or "").lower()
 
     # 1. Generic service-intent (hire-me language)
     if any(re.search(p, t) for p in _GENERIC_SERVICE_INTENT):
-        # Exception: "for sale near me" is still product intent
         if not re.search(r"\bfor sale\b", t):
-            return "relevant"
+            return "relevant", None
 
     # 2. Generic product/DIY intent — unambiguous shopping language
     if any(re.search(p, t) for p in _GENERIC_PRODUCT_INTENT):
-        return "irrelevant"
+        if re.search(r"\bdiy\b|\bdo it yourself\b|\bhow to\b", t):
+            reason = _IRRELEVANT_REASONS["diy"]
+        elif re.search(r"\bfor sale\b|\bon sale\b", t):
+            reason = _IRRELEVANT_REASONS["for_sale"]
+        elif re.search(r"\bamazon\b|\bhome depot\b|\blowes?\b|\bcostco\b|\bwalmart\b|\bebay\b|\bcraigslist\b|\bwayfair\b", t):
+            reason = _IRRELEVANT_REASONS["retailer"]
+        elif re.search(r"\breview[s]?\b|\bvs\b|\bversus\b|\bcompare\b|\bbest\b", t):
+            reason = _IRRELEVANT_REASONS["informational"]
+        elif re.search(r"\bcost[s]?\b|\bprice[sd]?\b|\bcheap\b|\baffordable\b", t):
+            reason = _IRRELEVANT_REASONS["price_comparison"]
+        else:
+            reason = _IRRELEVANT_REASONS["product"]
+        return "irrelevant", reason
 
     # 3. Vertical-specific service verbs
     signals = _SERVICE_SIGNALS.get(service_type, [])
     if signals and any(re.search(p, t) for p in signals):
-        return "relevant"
+        return "relevant", None
 
     # 4. Vertical-specific buying patterns (product nouns + price, brand names, etc.)
     patterns = _BUYING_PATTERNS.get(service_type, _BUYING_PATTERNS["generic"])
     if any(re.search(p, t) for p in patterns):
-        return "irrelevant"
+        if re.search(r"\bcost[s]?\b|\bprice[sd]?\b|\bcheap\b|\baffordable\b", t):
+            reason = _IRRELEVANT_REASONS["price_comparison"]
+        else:
+            reason = _IRRELEVANT_REASONS["buying_pattern"]
+        return "irrelevant", reason
 
-    return "relevant"
+    return "relevant", None
+
+
+def _classify_term(term: str, service_type: str) -> str:
+    return _classify_term_with_reason(term, service_type)[0]
 
 
 @gads_bp.get("/search-terms")
@@ -1286,7 +1636,7 @@ def search_terms():
         pass
 
     for t in terms_data:
-        t["relevance"] = _classify_term(t["search_term"], service_type)
+        t["relevance"], t["irrelevant_reason"] = _classify_term_with_reason(t["search_term"], service_type)
         conv = t.get("conversions")
         cost = t.get("cost_micros") or 0
         t["cpl"] = round(cost / 1_000_000 / conv, 2) if conv and conv > 0 else None
@@ -1396,6 +1746,87 @@ def search_term_add_negative(term_id: int):
     except Exception as exc:
         db.session.rollback()
         current_app.logger.exception("search_term_add_negative error")
+        return jsonify({"error": str(exc)}), 500
+
+
+@gads_bp.post("/block-irrelevant-search-terms")
+@login_required
+def block_irrelevant_search_terms():
+    """
+    Classify all unblocked search terms for this account and add the irrelevant
+    ones as campaign-level EXACT negative keywords. Saves one AIAction row per
+    blocked term and returns the count blocked.
+    """
+    if not is_paid_account():
+        return jsonify({"error": "Paid plan required"}), 403
+
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    from app.models_ads import SearchTerm
+
+    service_type = "generic"
+    try:
+        from app.google.forecasting_routes import _infer_service_type
+        service_type = _infer_service_type(aid)
+    except Exception:
+        pass
+
+    try:
+        rows = db.session.execute(text("""
+            SELECT st.id, st.search_term, st.campaign_id
+            FROM search_terms st
+            LEFT JOIN ads_campaigns ac ON ac.id = st.campaign_id
+            WHERE (ac.account_id = :aid OR st.campaign_id IS NULL)
+              AND st.date >= (CURRENT_DATE - INTERVAL 30 DAY)
+              AND st.added_as_negative = 0
+        """), {"aid": aid}).mappings().all()
+    except Exception as exc:
+        current_app.logger.exception("block_irrelevant_search_terms: query failed")
+        return jsonify({"error": str(exc)}), 500
+
+    blocked = 0
+    try:
+        from datetime import datetime as _dt
+        for row in rows:
+            classification, _ = _classify_term_with_reason(row["search_term"], service_type)
+            if classification != "irrelevant":
+                continue
+
+            st = SearchTerm.query.get(row["id"])
+            if not st:
+                continue
+
+            neg = NegativeKeyword(
+                scope="campaign",
+                campaign_id=st.campaign_id,
+                text=st.search_term,
+                match_type="EXACT",
+            )
+            db.session.add(neg)
+            st.added_as_negative = True
+
+            action = AIAction(
+                account_id=aid,
+                action_type="search_term_blocked",
+                title=f"Blocked irrelevant search term: {st.search_term}",
+                description=f"Added '{st.search_term}' as campaign-level EXACT negative keyword",
+                campaign_id=str(st.campaign_id) if st.campaign_id else None,
+                after_value={"search_term": st.search_term, "match_type": "EXACT", "scope": "campaign"},
+                status="executed",
+                executed_at=_dt.utcnow(),
+                executed_by="bulk_block",
+                can_undo=True,
+            )
+            db.session.add(action)
+            blocked += 1
+
+        db.session.commit()
+        return jsonify({"ok": True, "blocked": blocked})
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception("block_irrelevant_search_terms error")
         return jsonify({"error": str(exc)}), 500
 
 
@@ -1523,6 +1954,45 @@ def rules_delete(rule_id: int):
     db.session.delete(rule)
     db.session.commit()
     return jsonify({"ok": True})
+
+
+@gads_bp.post("/actions/<int:action_id>/undo")
+@login_required
+def action_undo(action_id: int):
+    """
+    Reverse an AI action in Google Ads and mark it as undone.
+    Supports: keyword_paused, bid_adjusted, negative_keyword_added.
+    """
+    from app.models_ai_actions import AIAction
+    from app.auth.utils import current_user_id
+
+    aid = current_account_id()
+    if not aid:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    action = AIAction.query.filter_by(id=action_id, account_id=aid).first()
+    if not action:
+        return jsonify({"error": "Action not found"}), 404
+
+    if not action.is_undoable:
+        if action.status == "undone":
+            return jsonify({"error": "Action already undone"}), 409
+        if not action.can_undo:
+            return jsonify({"error": "This action cannot be undone"}), 422
+        return jsonify({"error": f"Action cannot be undone (status: {action.status})"}), 422
+
+    try:
+        from app.services.google_ads_auto_executor import GoogleAdsAutoExecutor
+        executor = GoogleAdsAutoExecutor(account_id=aid)
+        uid = current_user_id() if callable(current_user_id) else None
+        success = executor.undo_action(action_id, user_id=uid)
+        if not success:
+            return jsonify({"error": "Undo failed — check server logs"}), 500
+        return jsonify({"ok": True, "status": "undone"})
+    except Exception as exc:
+        current_app.logger.exception("action_undo error for action %s", action_id)
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 500
 
 
 @gads_bp.post("/rules/run")
@@ -1856,8 +2326,44 @@ def goals_page():
 @gads_bp.post("/goals")
 @login_required
 def goals_save():
-    """Save or update account goals."""
+    """Save or update account goals.
+
+    JSON body ({"target_cpl": ..., "max_monthly_budget": ...}) → stored in
+    account_settings under 'gads_goals' so the optimizer engine can steer
+    recommendations toward the owner's goal; returns JSON.
+    Form body → legacy goal-setting wizard (AdsAccountGoal row + redirect).
+    """
     aid = current_account_id()
+
+    if request.is_json:
+        if not aid:
+            return jsonify({"error": "Not authenticated"}), 401
+        payload = request.get_json(silent=True) or {}
+        goals = {}
+        for key, label in (
+            ("target_cpl", "cost per lead"),
+            ("max_monthly_budget", "monthly budget cap"),
+        ):
+            val = payload.get(key)
+            if val is None or val == "":
+                goals[key] = None
+                continue
+            try:
+                num = float(val)
+            except (TypeError, ValueError):
+                return jsonify({"error": f"Please enter a number for {label}."}), 400
+            if num <= 0:
+                return jsonify({"error": f"Your {label} must be more than $0."}), 400
+            goals[key] = round(num, 2)
+        try:
+            import json as _json
+            from app.google.autonomous_routes import _save_setting
+            _save_setting(aid, "gads_goals", _json.dumps(goals))
+            return jsonify({"ok": True, "goals": goals})
+        except Exception:
+            current_app.logger.exception("goals_save (json) error")
+            return jsonify({"error": "Could not save your goals. Please try again."}), 500
+
     if not aid:
         flash("Not authenticated.", "error")
         return redirect(url_for("gads_bp.goals_page"))

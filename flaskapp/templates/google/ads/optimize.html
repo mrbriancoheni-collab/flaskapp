@@ -108,6 +108,11 @@ async function undoAction(actionId, btn) {
         <button data-days="30" class="date-range-btn px-3 py-2 hover:bg-gray-50 border-r">Last 30 days</button>
         <button data-days="90" class="date-range-btn px-3 py-2 hover:bg-gray-50">Last 90 days</button>
       </div>
+      <button type="button" onclick="if(window.FSStrategy) FSStrategy.open();"
+              class="inline-flex items-center gap-2 rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-700 px-3 py-2 text-sm hover:bg-indigo-100 transition-colors">
+        <i class="fa-solid fa-sliders"></i>
+        {% if strategy_setup_complete %}Edit Strategy{% else %}Strategy Setup{% endif %}
+      </button>
       <a href="{{ url_for('gads_bp.optimize') }}" class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"><i class="fa-solid fa-rotate-right"></i> Refresh</a>
       <button id="gads-sync-btn-top" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white px-4 py-2 text-sm hover:bg-indigo-500">
         <i class="fa-solid fa-rotate"></i> Sync Data
@@ -3053,4 +3058,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 </script>
+
+{# ── Strategy Setup Wizard Modal ── #}
+{% include "account/strategy_wizard_modal.html" %}
+
+{# Auto-open the wizard on cockpit if strategy_setup_complete is false, or if triggered via query param #}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var autoOpen = {% if tab == 'cockpit' and not strategy_setup_complete %}true{% else %}false{% endif %};
+  var paramOpen = new URLSearchParams(window.location.search).get('_open_strategy') === '1';
+  if ((autoOpen || paramOpen) && typeof window.FSStrategy !== 'undefined') {
+    window.FSStrategy.open();
+  }
+});
+</script>
+
 {% endblock %}

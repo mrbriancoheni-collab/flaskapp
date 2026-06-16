@@ -318,6 +318,33 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
+    # Facebook Ads AI Agents - Operational (every 6 hours)
+    # Runs FBStrategicDirectorAgent, FBAccountStructureAgent, FBCampaignManagerAgent,
+    # FBBudgetGuardianAgent, FBCreativeAnalystAgent, FBSpendOptimizerAgent,
+    # FBDaypartingAgent, FBGeoOptimizerAgent, FBRetargetingAgent, FBPixelHealthAgent
+    # Each account is cadence-gated (backs off on quiet accounts, up to 2 days)
+    scheduler.add_job(
+        func=run_fb_operational_agents,
+        trigger='interval',
+        hours=6,
+        id='run_fb_operational_agents',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    # Facebook Ads AI Agents - Tactical (every 4 hours)
+    # Runs FBAudienceOptimizerAgent, FBPlacementOptimizerAgent,
+    # FBBidOptimizerAgent, FBCreativeOptimizerAgent
+    # Each account is cadence-gated (backs off on quiet accounts)
+    scheduler.add_job(
+        func=run_fb_tactical_agents,
+        trigger='interval',
+        hours=4,
+        id='run_fb_tactical_agents',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
     # Google Ads Call View sync — daily at 4:30 AM UTC
     scheduler.add_job(
         func=sync_call_view_all_accounts,
@@ -430,7 +457,19 @@ def register_scheduled_jobs(scheduler, app):
         kwargs={'app': app}
     )
 
-    app.logger.info("Registered 23 scheduled background jobs")
+    # WordPress operational agents (daily at 02:00 UTC)
+    # Checks site health, queues content based on organic directive from orchestrator
+    scheduler.add_job(
+        func=run_wp_operational_agents,
+        trigger='cron',
+        hour=2,
+        minute=0,
+        id='run_wp_operational_agents',
+        replace_existing=True,
+        kwargs={'app': app}
+    )
+
+    app.logger.info("Registered 26 scheduled background jobs")
 
 
 # ===== Scheduled Job Functions =====
@@ -1145,6 +1184,67 @@ def sync_fb_all_accounts(app: Flask):
             )
 
 
+def run_fb_operational_agents(app: Flask):
+    """
+    Run Facebook Ads operational-layer AI agents for all accounts with a valid
+    Facebook token.
+
+    Agents run at operational layer (base interval 6 h, cadence-adaptive):
+    FBStrategicDirectorAgent, FBAccountStructureAgent, FBCampaignManagerAgent,
+    FBBudgetGuardianAgent, FBCreativeAnalystAgent, FBSpendOptimizerAgent,
+    FBDaypartingAgent, FBGeoOptimizerAgent, FBRetargetingAgent, FBPixelHealthAgent.
+
+    Each agent reads the strategy_directive_facebook written by the cross-channel
+    strategic orchestrator so its decisions are aligned with the top-level channel
+    priority (grow / maintain / cut).
+    """
+    with app.app_context():
+        try:
+            current_app.logger.info("[JOB] Starting FB operational agents for all accounts")
+
+            from app.tasks.fb_agent_scheduler import run_fb_operational_agents as _run
+
+            success_count, error_count = _run(app)
+
+            current_app.logger.info(
+                "[JOB] FB operational agents completed: %d succeeded, %d failed",
+                success_count, error_count,
+            )
+
+        except Exception as exc:
+            current_app.logger.error(
+                "[JOB] run_fb_operational_agents failed: %s", exc, exc_info=True
+            )
+
+
+def run_fb_tactical_agents(app: Flask):
+    """
+    Run Facebook Ads tactical-layer AI agents for all accounts with a valid
+    Facebook token.
+
+    Agents run at tactical layer (base interval 4 h, cadence-adaptive):
+    FBAudienceOptimizerAgent, FBPlacementOptimizerAgent,
+    FBBidOptimizerAgent, FBCreativeOptimizerAgent.
+    """
+    with app.app_context():
+        try:
+            current_app.logger.info("[JOB] Starting FB tactical agents for all accounts")
+
+            from app.tasks.fb_agent_scheduler import run_fb_tactical_agents as _run
+
+            success_count, error_count = _run(app)
+
+            current_app.logger.info(
+                "[JOB] FB tactical agents completed: %d succeeded, %d failed",
+                success_count, error_count,
+            )
+
+        except Exception as exc:
+            current_app.logger.error(
+                "[JOB] run_fb_tactical_agents failed: %s", exc, exc_info=True
+            )
+
+
 def snapshot_keyword_rankings_all_accounts(app: Flask):
     """
     Weekly keyword ranking snapshot for all accounts with GSC connected.
@@ -1669,3 +1769,27 @@ def sync_structure_all_accounts(app: Flask):
                     current_app.logger.warning("structure sync failed account %s: %s", auth.account_id, exc)
         except Exception as exc:
             current_app.logger.error("sync_structure_all_accounts error: %s", exc, exc_info=True)
+
+
+def run_wp_operational_agents(app: Flask):
+    """Run WordPress site health and content strategy agents for all WP accounts.
+
+    Delegates to app.tasks.wp_agent_scheduler.run_wp_operational_agents which
+    handles cadence gating, directive reading, and agent orchestration.
+    """
+    try:
+        from app.tasks.wp_agent_scheduler import run_wp_operational_agents as _run
+        result = _run(app)
+        with app.app_context():
+            current_app.logger.info(
+                "run_wp_operational_agents: checked=%s ran=%s skipped=%s errors=%s",
+                result.get("accounts_checked"),
+                result.get("accounts_run"),
+                result.get("accounts_skipped"),
+                result.get("errors"),
+            )
+    except Exception as exc:
+        with app.app_context():
+            current_app.logger.error(
+                "run_wp_operational_agents failed: %s", exc, exc_info=True
+            )

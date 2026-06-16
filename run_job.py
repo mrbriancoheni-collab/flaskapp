@@ -13,8 +13,14 @@ Example crontab entries (crontab -e):
     # Tactical agents — every 2 hours
     0 */2 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_tactical_agents >> logs/cron.log 2>&1
 
+    # Facebook Ads tactical agents — every 4 hours
+    0 */4 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_fb_tactical >> logs/cron.log 2>&1
+
     # Operational agents + auto-executor — every 4 hours
     0 */4 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_operational_agents >> logs/cron.log 2>&1
+
+    # Facebook Ads operational agents — every 6 hours
+    0 */6 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_fb_operational >> logs/cron.log 2>&1
     30 */4 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_google_ads_auto_executor >> logs/cron.log 2>&1
 
     # Offline conversion upload — every 4 hours
@@ -30,6 +36,7 @@ Example crontab entries (crontab -e):
     0  7 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_negative_keyword_agents >> logs/cron.log 2>&1
     0  7 * * * cd /home/fieldsprout/flaskapp && python run_job.py sync_skimmer_all_accounts >> logs/cron.log 2>&1
     30 7 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_overlap_detection_all_groups >> logs/cron.log 2>&1
+    0  2 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_wp_operational >> logs/cron.log 2>&1
     0  8 * * * cd /home/fieldsprout/flaskapp && python run_job.py run_lead_automation_daily >> logs/cron.log 2>&1
     0  9 * * * cd /home/fieldsprout/flaskapp && python run_job.py generate_google_ads_insights_daily >> logs/cron.log 2>&1
     0 12 * * * cd /home/fieldsprout/flaskapp && python run_job.py send_to_all_unsent_today >> logs/cron.log 2>&1
@@ -106,6 +113,9 @@ JOB_MAP = {
     'send_weekly_digest_all_accounts':         'send_weekly_digest_all_accounts',
     'sync_fb_all_accounts':                    'sync_fb_all_accounts',
     'snapshot_keyword_rankings':               'snapshot_keyword_rankings_all_accounts',
+    'run_fb_operational':                      'run_fb_operational_agents',
+    'run_fb_tactical':                         'run_fb_tactical_agents',
+    'run_wp_operational':                      'run_wp_operational_agents',
 }
 
 

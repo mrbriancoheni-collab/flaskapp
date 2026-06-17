@@ -627,8 +627,8 @@ def save_token():
                 current_app.logger.warning(f"Failed to exchange for long-lived token: {e}")
                 # Continue with short-lived token
 
-        # Save the token
-        _save_fb_token(aid, access_token)
+        # Save the token (60-day long-lived token from exchange above)
+        _store_fb_token(aid, access_token, expires_in=60 * 24 * 60 * 60)
 
         return jsonify({"success": True, "message": "Facebook connected successfully"})
 

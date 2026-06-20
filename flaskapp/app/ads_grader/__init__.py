@@ -350,16 +350,32 @@ def demo():
     Generate and view a demo report without logging in.
     Public lead-gen product — no authentication required.
     """
-    # Reuse an existing demo report from this session if available
-    existing_id = session.get("demo_report_id")
-    if existing_id:
-        existing = GoogleAdsGraderReport.query.get(existing_id)
-        if existing and existing.account_id is None:
-            return redirect(url_for("ads_grader_bp.report", report_id=existing.id))
+    try:
+        # Reuse an existing demo report from this session if available
+        existing_id = session.get("demo_report_id")
+        if existing_id:
+            try:
+                existing = GoogleAdsGraderReport.query.get(existing_id)
+            except Exception:
+                existing = None
+            if existing and existing.account_id is None:
+                return redirect(url_for("ads_grader_bp.report", report_id=existing.id))
 
-    report = _create_demo_report("demo-preview")
-    session["demo_report_id"] = report.id
-    return redirect(url_for("ads_grader_bp.report", report_id=report.id))
+        report = _create_demo_report("demo-preview")
+        session["demo_report_id"] = report.id
+        return redirect(url_for("ads_grader_bp.report", report_id=report.id))
+    except Exception as e:
+        logger.error(f"Demo route error: {e}", exc_info=True)
+        # Clear bad session state and try once more with a fresh report
+        session.pop("demo_report_id", None)
+        try:
+            report = _create_demo_report("demo-preview")
+            session["demo_report_id"] = report.id
+            return redirect(url_for("ads_grader_bp.report", report_id=report.id))
+        except Exception as e2:
+            logger.error(f"Demo route retry failed: {e2}", exc_info=True)
+            flash("Something went wrong generating the demo. Please try again.", "error")
+            return redirect(url_for("ads_grader_bp.index"))
 
 
 @ads_grader_bp.route("/report/<int:report_id>")
